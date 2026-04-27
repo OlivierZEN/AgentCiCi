@@ -1,0 +1,2 @@
+ALTER TABLE kb_chunk
+    ADD COLUMN IF NOT EXISTS vector_id VARCHAR(128);

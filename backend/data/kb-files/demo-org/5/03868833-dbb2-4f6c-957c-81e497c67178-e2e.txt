@@ -1,0 +1,1 @@
+This is an automated business acceptance document. Unique phrase: E2E_RAG_MARKER_1775102565_20518 for vector and chunk retrieval.

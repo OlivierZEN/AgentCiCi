@@ -1,0 +1,358 @@
+package com.codehouse.ciciassistant.ai.service;
+
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.email.service.EmailToolService;
+import com.codehouse.ciciassistant.memory.service.UserMemoryService;
+import com.codehouse.ciciassistant.mcp.service.McpServerService;
+import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
+import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
+import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+/**
+ * Converts MCP tools to OpenAI function-calling format and dispatches tool executions.
+ * Also manages built-in native tools (CloudCC OpenAPI, etc.).
+ */
+@Service
+public class ToolOrchestratorService {
+
+    private static final Logger log = LoggerFactory.getLogger(ToolOrchestratorService.class);
+
+    static final String TOOL_MEMORY_REMEMBER = "memory_remember";
+    static final String TOOL_MEMORY_FORGET = "memory_forget";
+
+    private final McpServerService mcpServerService;
+    private final CloudccOpenApiService cloudccOpenApiService;
+    private final EmailToolService emailToolService;
+    private final UserMemoryService userMemoryService;
+    private final TavilyToolService tavilyToolService;
+    private final ObjectMapper objectMapper;
+
+    public ToolOrchestratorService(McpServerService mcpServerService,
+                                   CloudccOpenApiService cloudccOpenApiService,
+                                   EmailToolService emailToolService,
+                                   UserMemoryService userMemoryService,
+                                   TavilyToolService tavilyToolService,
+                                   ObjectMapper objectMapper) {
+        this.mcpServerService = mcpServerService;
+        this.cloudccOpenApiService = cloudccOpenApiService;
+        this.emailToolService = emailToolService;
+        this.userMemoryService = userMemoryService;
+        this.tavilyToolService = tavilyToolService;
+        this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Get all available tools for the org in OpenAI function-calling format.
+     * Includes both MCP-discovered tools and built-in native tools.
+     */
+    public List<Map<String, Object>> getToolDefinitions(String orgId) {
+        return getToolDefinitions(orgId, null);
+    }
+
+    public List<Map<String, Object>> getToolDefinitions(String orgId, List<String> allowedToolNames) {
+        List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
+        List<Map<String, Object>> result = new ArrayList<>();
+
+        // 1. Built-in native tools
+        addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolName(),
+                CloudccOpenApiService.toolDescription(),
+                CloudccOpenApiService.toolSchema(objectMapper));
+        addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetStandardObjects(),
+                CloudccOpenApiService.toolDescriptionGetStandardObjects(),
+                CloudccOpenApiService.toolSchemaGetStandardObjects(objectMapper));
+        addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetCustomObjects(),
+                CloudccOpenApiService.toolDescriptionGetCustomObjects(),
+                CloudccOpenApiService.toolSchemaGetCustomObjects(objectMapper));
+        addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetObjectFields(),
+                CloudccOpenApiService.toolDescriptionGetObjectFields(),
+                CloudccOpenApiService.toolSchemaGetObjectFields(objectMapper));
+
+        // Memory built-in tools (always available, no skill restriction)
+        result.add(buildMemoryRememberTool());
+        result.add(buildMemoryForgetTool());
+
+        // Email built-in tools (POP3 + SMTP)
+        for (String toolName : EmailToolService.ALL_TOOL_NAMES) {
+            if (!isAllowed(normalizedAllowedToolNames, toolName, false)) {
+                continue;
+            }
+            result.add(emailToolService.toolDefinition(toolName));
+        }
+
+        // Tavily web-search / web-extract built-in tools
+        for (String toolName : TavilyToolService.ALL_TOOL_NAMES) {
+            if (!isAllowed(normalizedAllowedToolNames, toolName, false)) {
+                continue;
+            }
+            result.add(tavilyToolService.toolDefinition(toolName));
+        }
+
+        // 2. MCP-discovered tools
+        List<ResolvedTool> mcpTools = mcpServerService.getAllToolsForOrg(orgId);
+        for (ResolvedTool tool : mcpTools) {
+            if (!isAllowed(normalizedAllowedToolNames, tool.name(), true)) {
+                continue;
+            }
+            Map<String, Object> parameters;
+            try {
+                JsonNode schema = tool.inputSchema();
+                parameters = objectMapper.convertValue(schema, new TypeReference<Map<String, Object>>() {});
+            } catch (Exception e) {
+                parameters = Map.of("type", "object", "properties", Map.of());
+            }
+            result.add(Map.of(
+                    "type", "function",
+                    "function", Map.of(
+                            "name", tool.name(),
+                            "description", tool.description(),
+                            "parameters", parameters
+                    )
+            ));
+        }
+        return result;
+    }
+
+    private void addBuiltInTool(List<Map<String, Object>> result, List<String> allowedToolNames,
+                                String name, String description, JsonNode schema) {
+        if (!isAllowed(allowedToolNames, name, false)) {
+            return;
+        }
+        result.add(builtInTool(name, description, schema));
+    }
+
+    private Map<String, Object> builtInTool(String name, String description, JsonNode schema) {
+        Map<String, Object> parameters;
+        try {
+            parameters = objectMapper.convertValue(schema, new TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            parameters = Map.of("type", "object", "properties", Map.of());
+        }
+        return Map.of(
+                "type", "function",
+                "function", Map.of(
+                        "name", name,
+                        "description", description,
+                        "parameters", parameters
+                )
+        );
+    }
+
+    /**
+     * Execute a tool call. Routes to native tools first, then falls back to MCP servers.
+     */
+    public String executeTool(String orgId, String userId, String toolName, String argumentsJson) {
+        return executeTool(orgId, userId, toolName, argumentsJson, null);
+    }
+
+    public String executeTool(String orgId, String userId, String toolName, String argumentsJson, List<String> allowedToolNames) {
+        List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
+        String canonicalToolName = ToolNameNormalizer.canonicalize(toolName);
+        log.info("Executing tool: org={}, user={}, tool={}", orgId, userId, canonicalToolName);
+        if (!isAllowed(normalizedAllowedToolNames, canonicalToolName, false)
+                && !isAllowed(normalizedAllowedToolNames, canonicalToolName, true)) {
+            return "Tool is not allowed for the current skill policy: " + toolName;
+        }
+
+        // Native built-in tools
+        if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
+            return executeCloudccPageQuery(orgId, userId, argumentsJson);
+        }
+        if (CloudccOpenApiService.toolNameGetStandardObjects().equals(canonicalToolName)) {
+            return cloudccOpenApiService.getStandardObjects(orgId, userId);
+        }
+        if (CloudccOpenApiService.toolNameGetCustomObjects().equals(canonicalToolName)) {
+            return cloudccOpenApiService.getCustomObjects(orgId, userId);
+        }
+        if (CloudccOpenApiService.toolNameGetObjectFields().equals(canonicalToolName)) {
+            return executeGetObjectFields(orgId, userId, argumentsJson);
+        }
+
+        // Memory built-in tools
+        if (TOOL_MEMORY_REMEMBER.equals(canonicalToolName)) {
+            return executeMemoryRemember(orgId, userId, argumentsJson);
+        }
+        if (TOOL_MEMORY_FORGET.equals(canonicalToolName)) {
+            return executeMemoryForget(orgId, userId, argumentsJson);
+        }
+
+        // Email built-in tools
+        if (canonicalToolName != null && canonicalToolName.startsWith("email_") && EmailToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
+            return emailToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
+        }
+
+        // Tavily web-search / web-extract built-in tools
+        if (canonicalToolName != null && canonicalToolName.startsWith("tavily_") && TavilyToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
+            return tavilyToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
+        }
+
+        // MCP-discovered tools
+        return mcpServerService.executeTool(orgId, userId, canonicalToolName, argumentsJson);
+    }
+
+    private String executeCloudccPageQuery(String orgId, String userId, String argumentsJson) {
+        try {
+            JsonNode args = objectMapper.readTree(argumentsJson);
+            String objectApiName = args.path("objectApiName").asText(null);
+            if (objectApiName == null) {
+                return "❌ 缺少必需参数: objectApiName（对象 API 名称）";
+            }
+            String fields = args.path("fields").asText("");
+            if (fields.isEmpty()) fields = null;
+            String expressions = args.path("expressions").asText("");
+            if (expressions.isEmpty()) expressions = null;
+            Integer pageNum = args.path("pageNum").isInt() ? args.path("pageNum").asInt() : null;
+            Integer pageSize = args.path("pageSize").isInt() ? args.path("pageSize").asInt() : null;
+            return cloudccOpenApiService.pageQuery(orgId, userId, objectApiName, fields, expressions, pageNum, pageSize);
+        } catch (Exception e) {
+            log.error("cloudcc_pageQuery execution failed: {}", e.getMessage(), e);
+            return "❌ 执行失败: " + e.getMessage();
+        }
+    }
+
+    private String executeGetObjectFields(String orgId, String userId, String argumentsJson) {
+        try {
+            JsonNode args = objectMapper.readTree(argumentsJson);
+            String objprefix = args.path("objprefix").asText(null);
+            if (objprefix == null || objprefix.isBlank()) {
+                return "❌ 缺少必需参数: objprefix（对象前缀，可从对象列表中获取）";
+            }
+            return cloudccOpenApiService.getObjectFields(orgId, userId, objprefix);
+        } catch (Exception e) {
+            log.error("cloudcc_getObjectFields execution failed: {}", e.getMessage(), e);
+            return "❌ 执行失败: " + e.getMessage();
+        }
+    }
+
+    /**
+     * Legacy method kept for backward compatibility.
+     */
+    public Map<String, Object> maybeCallTools(String orgId, String question) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("toolCalls", List.of());
+        return result;
+    }
+
+    private String executeMemoryRemember(String orgId, String userId, String argumentsJson) {
+        try {
+            JsonNode args = objectMapper.readTree(argumentsJson);
+            String category = args.path("category").asText("FACT");
+            String content = args.path("content").asText(null);
+            String memoryKey = args.path("memoryKey").asText(null);
+            if (memoryKey != null && memoryKey.isBlank()) memoryKey = null;
+            if (content == null || content.isBlank()) {
+                return "❌ 缺少必需参数: content（记忆内容）";
+            }
+            BigDecimal confidence = args.path("confidence").isMissingNode()
+                    ? BigDecimal.ONE
+                    : new BigDecimal(args.path("confidence").asText("1.0"));
+            userMemoryService.upsertExtracted(orgId, userId, "cici-system", category, content, memoryKey, confidence);
+            return "✅ 已记住：" + content;
+        } catch (Exception e) {
+            log.error("memory_remember execution failed: {}", e.getMessage(), e);
+            return "❌ 记忆保存失败: " + e.getMessage();
+        }
+    }
+
+    private String executeMemoryForget(String orgId, String userId, String argumentsJson) {
+        try {
+            JsonNode args = objectMapper.readTree(argumentsJson);
+            Long id = args.path("id").isLong() ? args.path("id").asLong() : null;
+            if (id == null) {
+                return "❌ 缺少必需参数: id（记忆 ID）";
+            }
+            userMemoryService.delete(orgId, userId, id);
+            return "✅ 已删除记忆 #" + id;
+        } catch (Exception e) {
+            log.error("memory_forget execution failed: {}", e.getMessage(), e);
+            return "❌ 记忆删除失败: " + e.getMessage();
+        }
+    }
+
+    private Map<String, Object> buildMemoryRememberTool() {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        Map<String, Object> categoryProp = new LinkedHashMap<>();
+        categoryProp.put("type", "string");
+        categoryProp.put("enum", List.of("FACT", "PREFERENCE", "CONTEXT", "INSTRUCTION"));
+        categoryProp.put("description", "记忆类别：FACT=用户事实，PREFERENCE=个人偏好，CONTEXT=工作上下文，INSTRUCTION=行为指令");
+        properties.put("category", categoryProp);
+
+        Map<String, Object> contentProp = new LinkedHashMap<>();
+        contentProp.put("type", "string");
+        contentProp.put("description", "要记住的内容（中文，简洁清晰，不超过 200 字）");
+        properties.put("content", contentProp);
+
+        Map<String, Object> keyProp = new LinkedHashMap<>();
+        keyProp.put("type", "string");
+        keyProp.put("description", "可选的语义键，用于覆盖同类记忆，如 user.role、user.location、user.language");
+        properties.put("memoryKey", keyProp);
+
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("type", "object");
+        params.put("properties", properties);
+        params.put("required", List.of("category", "content"));
+
+        return Map.of(
+                "type", "function",
+                "function", Map.of(
+                        "name", TOOL_MEMORY_REMEMBER,
+                        "description", "当用户在对话中提到关于自己的重要信息（身份、偏好、工作背景、持久行为指令）时，将其保存为专属记忆。仅在对话中出现了明确值得长期记住的新信息时才调用。",
+                        "parameters", params
+                )
+        );
+    }
+
+    private Map<String, Object> buildMemoryForgetTool() {
+        Map<String, Object> properties = new LinkedHashMap<>();
+        Map<String, Object> idProp = new LinkedHashMap<>();
+        idProp.put("type", "integer");
+        idProp.put("description", "要删除的记忆 ID");
+        properties.put("id", idProp);
+
+        Map<String, Object> params = new LinkedHashMap<>();
+        params.put("type", "object");
+        params.put("properties", properties);
+        params.put("required", List.of("id"));
+
+        return Map.of(
+                "type", "function",
+                "function", Map.of(
+                        "name", TOOL_MEMORY_FORGET,
+                        "description", "当用户明确要求忘记某条记忆时，根据 ID 删除该记忆。",
+                        "parameters", params
+                )
+        );
+    }
+
+    private List<String> normalizeAllowedToolNames(List<String> allowedToolNames) {
+        if (allowedToolNames == null || allowedToolNames.isEmpty()) {
+            return List.of();
+        }
+        return ToolNameNormalizer.canonicalizeAll(allowedToolNames);
+    }
+
+    private boolean isAllowed(List<String> allowedToolNames, String toolName, boolean mcpTool) {
+        // memory tools are always available regardless of skill policy
+        if (TOOL_MEMORY_REMEMBER.equals(toolName) || TOOL_MEMORY_FORGET.equals(toolName)) {
+            return true;
+        }
+        if (allowedToolNames == null || allowedToolNames.isEmpty()) {
+            return true;
+        }
+        if (allowedToolNames.contains(toolName)) {
+            return true;
+        }
+        return mcpTool && ToolNameNormalizer.containsMcpWildcard(allowedToolNames);
+    }
+}

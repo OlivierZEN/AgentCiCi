@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: cc-cici-assistant-backend
+  datasource:
+    url: jdbc:h2:mem:cici;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+    open-in-view: false
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: cici
+    password: cici123
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  auth:
+    jwt-secret: "change-me-in-prod-change-me-in-prod-2026"
+    jwt-expiration-seconds: 7200
+    # Demo org-admin mobiles for local/H2 and README examples; override in prod (e.g. APP_AUTH_BOOTSTRAP_ADMIN_MOBILES).
+    bootstrap-admin-mobiles: "13800138111,13900009999"
+    sms:
+      store: memory
+  kb:
+    indexing:
+      mode: local
+    vector-store: memory
+    embedding:
+      dimension: 16
+    qdrant:
+      base-url: http://localhost:6333
+      collection: cici_kb_chunk
+      api-key: ""
+
+cici:
+  tool:
+    tavily:
+      # NOTE: API keys for Tavily are intentionally NOT configured here.
+      # They are managed per-tenant under "集成应用 → Tavily" (integration_app, encrypted).
+      api-base: https://api.tavily.com
+      default-max-results: 5
+      default-search-depth: basic
+      default-topic: general
+      default-include-answer:   # omit by default; Tavily treats omitted as false
+      default-extract-format: markdown
+      max-extract-chars: 20000
+      per-session-limit: 10
+      timeout: 10s

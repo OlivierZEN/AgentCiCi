@@ -1,0 +1,1058 @@
+---
+updated_at: 2026-04-27T17:50:00Z
+status: active
+---
+
+# Test Report
+
+## Latest Verified Results
+
+- Workbench composer UI redesign verification (2026-04-27):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `frontend`: `npx tsc -b --noEmit` -> **success**
+  - Notes:
+    - Added `+` button (bottom-left) with popup menu: "上传文件" / "添加快捷短语".
+    - Send button replaced with dark circle + white up-arrow icon.
+    - Removed original "发送"/"发送中" text button.
+    - Popup closes on outside click and after sending.
+
+- Workbench history delete + markdown export verification (2026-04-27):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+  - Notes:
+    - Workbench history item now includes `下载` and `删除` actions.
+    - Markdown export writes complete conversation turns to local `.md` file.
+    - Added backend endpoint `DELETE /ai/sessions/{sessionId}` and session cleanup logic for messages + session state.
+
+- Conversation grouping and new-dialog entry verification (2026-04-27):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added top-level "新对话" action in conversation list panel.
+    - New draft sessions now keep a stable session id and are reused across multi-turn messages.
+    - Session list refresh preserves unsent local drafts until first persisted turn is created.
+    - Loading messages for newly created unsent sessions now gracefully handles `404` as empty history.
+
+- Workbench session history alignment verification (2026-04-27):
+  - Commands:
+    - `frontend`: `npm run test -- src/assistant/workbenchSessions.test.ts` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added `workbenchSessions.test.ts` to verify per-agent workbench session id generation and chronological history extraction.
+    - `AssistantApp` workbench now fetches persisted session messages via `/ai/sessions/{sessionId}/messages` and refreshes after send completion.
+    - Workbench right-side history uses the same message source as the main chat stream to avoid mismatch.
+
+- FEAT-006 backend stream protocol verification (2026-04-25):
+  - Commands:
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - `ChatOrchestratorService.chatStream` now emits FEAT-006 scene events:
+      - `avatar_state` (`thinking` / `speaking` / `idle`)
+      - `task_created`
+      - `task_status`
+      - `task_delta`
+      - `task_done`
+    - Tool phase now updates task status and emits `waiting_user` when approval tool path is hit.
+    - Existing stream events remain compatible (`delta` / `tool_call` / `tool_result` / `phase` / `done` / `error`).
+
+- FEAT-006 virtual human scene MVP frontend verification (2026-04-25):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Extended `streamAiChat` with unknown-event passthrough callback to support task/avatar SSE event handling.
+    - `AssistantApp` scene page now consumes stream events and drives:
+      - avatar states (`idle` / `listening` / `thinking` / `speaking`)
+      - task cards (`task_created` / `task_status` / `task_delta` / `task_done`)
+      - text and voice input linked to the same stream runtime path.
+    - Updated immersive scene CSS for avatar motion states, task card stack, mic active state, and send/notice controls.
+
+- MCP admin scope + cache snapshot smoke closure (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=McpServerIntegrationTest,OrchestratorIntegrationTest,ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Added `McpServerIntegrationTest.shouldRejectOrgUserAndAllowOrgAdminForMcpServerApis`:
+      - verifies `/mcp-servers` rejects `ORG_USER`
+      - verifies `/mcp-servers` allows `ORG_ADMIN`
+    - Added `McpServerIntegrationTest.shouldKeepCachedSnapshotWhenDiscoverRefreshFails`:
+      - verifies cache-miss path can discover tools
+      - verifies discover failure response is returned
+      - verifies previously discovered snapshot remains readable after failure
+
+- FEAT-002 session reducer precision + no-repeat regression (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `ChatSessionStateService` now enriches session state from user turns with stable fields:
+      - `current_object_type`
+      - `current_object_name`
+      - `target_segment_summary`
+      - `missing_fields`
+      - `next_action`
+      - `no_repeat_questions`
+    - Reducer now sets deterministic no-repeat constraint marker when user says “不要再重复问”.
+    - Added integration coverage `shouldCaptureSessionFieldsAndNoRepeatConstraintAcrossTurns` to verify:
+      - second-turn continuity under same `sessionId`
+      - no-repeat constraint state persistence
+      - `missing_fields` does not regress to `target_segment` when segment already present.
+
+- Structured ioPayload + fallback/invalid replay assertions (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `nodeMetrics` now includes structured I/O payload:
+      - `ioPayload.input`
+      - `ioPayload.output`
+    - Added fallback replay coverage:
+      - `shouldExposeFallbackReplayMetadataInDebugRuntime`
+    - Added invalid runtime replay coverage:
+      - `shouldExposeInvalidReplayMetadataInDebugRuntime`
+    - Existing published chat/debug assertions now verify both `ioSummary` and `ioPayload`, plus replay hints.
+
+- Replayable node io-summary protocol (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `contextSnapshot.nodeMetrics` now includes per-node `ioSummary`:
+      - `ioSummary.input`
+      - `ioSummary.output`
+    - `contextSnapshot` now includes `replayHint` for ordered replay guidance.
+    - Both runtime paths expose the same replay-oriented fields:
+      - `/agents/{agentId}/debug` -> `contextSnapshot`
+      - `/ai/chat` -> `runtimeExecution.contextSnapshot`
+    - Integration assertions updated to verify `replayHint` and `ioSummary` presence in:
+      - `shouldUsePublishedWorkflowInDebugRuntime`
+      - `shouldExposePublishedRuntimePolicyInChatResponse`
+
+- Runtime execution metrics snapshot (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `contextSnapshot` now includes execution-time metrics and error protocol fields:
+      - `branchHit`
+      - `nodeMetrics` (`nodeId`, `costMs`, `status`)
+      - `errorNode`
+      - `errorType`
+    - Metrics are exposed in both runtime paths:
+      - `/agents/{agentId}/debug` -> `contextSnapshot`
+      - `/ai/chat` -> `runtimeExecution.contextSnapshot`
+    - Integration assertions updated to verify metrics snapshot presence in:
+      - `shouldUsePublishedWorkflowInDebugRuntime`
+      - `shouldExposePublishedRuntimePolicyInChatResponse`
+
+- Runtime context snapshot projection (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Execution results now include `contextSnapshot` for both debug and chat runtime paths.
+    - `/agents/{agentId}/debug` response now contains `contextSnapshot`.
+    - `/ai/chat` response now contains `runtimeExecution.contextSnapshot`.
+    - Snapshot fields include minimal runtime state projection:
+      - `runtimeSource`
+      - `inputRoute`
+      - `toolScopeSize`
+      - `intent`
+      - `parsedNodes`
+      - `knowledgeUsed`
+      - `toolInvoked`
+      - `responsePlanned`
+    - Integration assertions updated:
+      - `shouldUsePublishedWorkflowInDebugRuntime`
+      - `shouldExposePublishedRuntimePolicyInChatResponse`
+
+- Debug runtime minimal executor output (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `AgentWorkflowRuntimeService` now executes a minimal controlled runtime path in debug mode (published/fallback/invalid branches) instead of fixed `simulated-runtime`.
+    - `/agents/{agentId}/debug` now returns structured execution fields:
+      - `executionStatus`
+      - `executionOutput`
+    - `OrchestratorIntegrationTest.shouldUsePublishedWorkflowInDebugRuntime` now also verifies `executionStatus=published-executed` and non-empty published execution output.
+
+- Chat runtime execution visibility (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `/ai/chat` now includes `runtimeExecution` payload with:
+      - `status`
+      - `output`
+      - `publishedVersionId`
+    - `OrchestratorIntegrationTest.shouldExposePublishedRuntimePolicyInChatResponse` now additionally verifies chat response reports `runtimeExecution.status=published-executed` with published execution output text.
+
+- Node-level runtime trace projection (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `AgentWorkflowRuntimeService` now emits standardized node-level trace steps in minimal executor path:
+      - `workflow-node:start`
+      - `workflow-node:route-input:*`
+      - `workflow-node:tool-scope:size=*`
+      - `workflow-node:end:*`
+    - `/agents/{agentId}/debug` now returns `executionTrace`.
+    - `/ai/chat` now returns `runtimeExecution.trace`.
+    - Integration assertions updated:
+      - `shouldUsePublishedWorkflowInDebugRuntime`
+      - `shouldExposePublishedRuntimePolicyInChatResponse`
+
+- Workflow-code-driven node extraction (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Runtime now parses published `workflow_code` (`runAgent` body) to project code-level nodes into execution trace.
+    - Extracted node markers include:
+      - `intent-classify`
+      - `knowledge-search`
+      - `handoff-request`
+      - `tool-invoke-best`
+      - `response-generate`
+    - Integration assertions updated to verify trace now includes parsed code node marker `workflow-node:code:intent-classify`.
+
+- CiCi session continuity + state layer phase-1 implementation (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Flyway migrated to `v22` (`V22__chat_session_state.sql`) in integration test context.
+    - Verified `GET /ai/sessions/{sessionId}/state` returns persisted session state after a user intent turn (`先添加名单，先不要发邮件`) via `OrchestratorIntegrationTest.shouldPersistSessionStateAfterUserIntentHint`.
+    - Verified chat realtime stream integration still passes after `ChatOrchestratorService` message assembly changes.
+
+- Runtime binding to published workflow dependencies (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `SkillResolverService` now reads `agent_definition.published_version_id` and prefers `workflow_manifest.dependencies` as runtime capability boundaries when publish status is `PUBLISHED`.
+    - Added integration coverage `shouldPreferPublishedWorkflowDependenciesAtRuntime` to confirm runtime uses published dependency boundaries.
+    - Regression confirms realtime chat stream path is still green after runtime resolver change.
+
+- Session continuity 2-turn + published-version three-state regression (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Added `shouldKeepSessionStateAcrossSecondTurn`: verifies same `sessionId` two-turn conversation keeps session state (`hold_action` + `continue_current_plan`) and persists full turn history.
+    - Added `shouldSwitchRuntimeDependenciesAcrossPublishStates`: verifies runtime dependency boundary transitions across three states:
+      - publish V1 (`skillRefs=sales-copilot`) -> runtime tools contain CloudCC path,
+      - publish V2 (`skillRefs=web-search`) -> runtime tools switch to Tavily path,
+      - rollback to V1 -> runtime tools revert to CloudCC path.
+
+- Invalid published-manifest runtime resilience (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Added integration coverage `shouldGracefullyHandleInvalidPublishedManifest`.
+    - Test forces a published version with invalid `workflow_manifest` JSON and verifies chat runtime still responds successfully without crashing.
+
+- Published runtime policy injection (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `SkillResolverService` now parses `workflow_manifest.policies.maxToolCalls` and `publishedVersionId` into runtime context.
+    - `ChatOrchestratorService` now applies published `maxToolCalls` (bounded) to tool-loop rounds and returns `runtimePolicy` in `/ai/chat` response.
+    - Added integration coverage `shouldExposePublishedRuntimePolicyInChatResponse` to verify published policy values are visible and effective in runtime payload.
+
+- Debug runtime uses published workflow version (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Added `AgentWorkflowRuntimeService` as debug runtime entry for agent workflow execution context.
+    - `/agents/{agentId}/debug` now returns runtime metadata:
+      - `runtimeSource` (`published_version` / `capability_fallback`)
+      - `publishedVersionId`
+      - `workflowCodePreview`
+    - Added integration coverage `shouldUsePublishedWorkflowInDebugRuntime` to verify debug runtime prioritizes published workflow versions.
+
+- Skill authoring fallback alignment for campaign workflow (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Verified the no-model fallback path no longer relies on approval/CRM/contract built-in templates as the primary generation strategy.
+    - New integration coverage confirms:
+      - 通用审批需求会保留原始风险事实与输出要求，而不是强绑定某个内置模板编码。
+      - 营销活动需求会保留自定义工具名、编号步骤和 `email_send`，且不会被误导成 `CRM 线索分诊`。
+    - Logs confirm local default path still has no configured `skill-authoring` model (`Aliyun API key is not configured.`), so this verification specifically proves the generic fallback path is working.
+
+- Admin console SMS login bootstrap admins (2026-04-24):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,ManagementConsoleIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Default `application.yml` now sets `app.auth.bootstrap-admin-mobiles` to include `13900009999`, matching README / `application-local.yml` demo behavior when the process runs without `spring.profiles.active=local`.
+
+- MCP chat tool exposure fix + H2 migration compatibility (2026-04-23):
+  - Commands:
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+    - `backend`: `mvn -q -Dtest=OrchestratorIntegrationTest test` -> **BUILD SUCCESS**
+    - `backend`: `mvn -q -Dtest=ChatRealtimeIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - Verified legacy tool ids no longer cause the approval-agent tool whitelist to collapse to empty; `/agents/approval-agent/debug` now resolves `get_pending_approvals` instead of the stale alias `approval-fetch`.
+    - `V21__mcp_server_tool_cache_fields.sql` now runs successfully in H2 test context, restoring SpringBoot integration test startup.
+    - `McpServerService.getTools(...)` now attempts a one-shot cache refresh when both memory cache and database snapshot are absent, reducing first-chat MCP empty-catalog failures.
+
+- System MCP server cache implementation (2026-04-23):
+  - Commands:
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added persistent MCP tool snapshot fields on `mcp_server` via `V21__mcp_server_tool_cache_fields.sql`.
+    - `McpServerService` now separates cache read (`getTools`/`getToolCacheSnapshot`) from forced refresh (`refreshToolCache` / `/discover`) and keeps old snapshots on refresh failures.
+    - Admin tools page now shows MCP cache summary (`工具数 + 更新于 + 缓存状态`) in both list and detail tabs, and detail tab reads `GET /mcp-servers/{id}/tools` by default.
+
+- System MCP cache runtime smoke attempt (2026-04-23):
+  - Commands:
+    - `POST /auth/sms/send` with `mobile=13900009999` -> `SMS request too frequent, please retry later`
+    - `POST /auth/sms/send` + `POST /auth/sms/login` with `mobile=13800138111` -> login success (`roles=["ORG_ADMIN"]`)
+    - `GET /mcp-servers` with `13800138111` token -> `{"success":false,"message":"需要组织管理员权限"}`
+    - `POST /mcp-servers` with `13800138111` token -> `{"success":false,"message":"需要组织管理员权限"}`
+  - Result:
+    - Real runtime smoke for MCP cache flow is **blocked** in current local auth/session state.
+  - Notes:
+    - This blocker is tracked in `.claw/issue-list.md` as `ISSUE-2026-04-23-mcp-smoke-blocked-by-admin-auth-scope`.
+    - Build-level verification remains green (`backend compile`, `frontend build`).
+
+- Skill Creator model-driven authoring compiler (2026-04-23):
+  - Commands:
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `backend`: `mvn -q -Dtest=SkillAuthoringIntegrationTest test` -> **BUILD SUCCESS**
+  - Notes:
+    - `BuiltinSkillCreatorService` now attempts model-driven structured draft generation first and falls back to heuristic generation when model output is unavailable/invalid.
+    - Structured output is still normalized by `SkillSpecSchemaValidator` and org candidate whitelist checks to keep compatibility and safety boundaries.
+
+- Skill Authoring Phase 2 (authoring session + clarification loop) (2026-04-23):
+  - Commands:
+    - `backend`: `mvn -q -Dtest=SkillAuthoringIntegrationTest test` -> **BUILD SUCCESS**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Flyway migrated to `v20` (`V20__skill_authoring_session.sql`) in test context.
+    - New integration coverage: `shouldMergeClarificationAnswersWithinAuthoringSession` (UTF-8 response parsing for MockMvc).
+    - Regression coverage still includes generate/refine/create + hidden creator visibility checks.
+
+- Skill Authoring design gap implementation verification (2026-04-23):
+  - Commands:
+    - `backend`: `mvn -q -Dtest=SkillAuthoringIntegrationTest test` -> **BUILD SUCCESS**
+    - `frontend`: `npm run build` -> **success** (`tsc -b && vite build`)
+  - Notes:
+    - Flyway successfully migrated to `v19` (`V19__skill_authoring_source_fields.sql`) in integration test context.
+    - Verified new persistence fields are schema-valid with existing test suite and do not break authoring generate/refine/create flow.
+
+- V18 migration + full backend test suite restoration (2026-04-22):
+  - Commands:
+    - `backend`: `mvn test` → **Tests run: 21, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS**
+  - Breakdown:
+    - `AuthFlowIntegrationTest` 6/6
+    - `ManagementConsoleIntegrationTest` 1/1
+    - `ChatRealtimeIntegrationTest` 1/1 (after fixing `event:connected` assertion typo)
+    - `OrchestratorIntegrationTest` 2/2 (after using distinct admin mobiles + `callCount >= 1` to tolerate shared Spring test context)
+    - `TavilyToolServiceTest` 10/10
+    - `TavilyCatalogIntegrationTest` 1/1 — verifies `/tools` catalog exposes `tavily_search` + `tavily_extract` as builtins, `/skills` exposes `web-search` with Tavily `toolWhitelist`, and `/skills/agents/cici-system/bindings` auto-binds `web-search` with `activationMode=intent-route`
+  - Notes:
+    - Fix lands as a V18 rewrite (cross-DB `TIMESTAMP` + entity-aligned `user_id VARCHAR(64)` + regular `UNIQUE INDEX` instead of partial) plus two cascading preexisting test-design fixes. All recorded in `.claw/issue-list.md` → ISSUE-2026-04-22-v18-migration-blocks-h2-integration-tests (resolved).
+    - Previously the entire `@SpringBootTest` layer was unreachable because Flyway aborted on V18; today every integration test that existed before Tavily work is green again, and the new Tavily integration test is online.
+
+- Tavily Search + Extract built-in skill integration (Phase 1):
+  - Commands:
+    - `backend`: `mvn test -Dtest=TavilyToolServiceTest` → **Tests run: 10, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS**
+    - `backend`: `mvn test -Dtest=TavilyCatalogIntegrationTest` → **Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, BUILD SUCCESS**
+    - `backend`: `mvn -q test-compile` → success (whole project compiles clean)
+    - `frontend`: `npm run build` → success (321 modules, no TS errors)
+  - Covered by `TavilyToolServiceTest`:
+    1. `toolDefinitions()` returns OpenAI-style `tavily_search` + `tavily_extract` with required params (`query` / `urls`) and enum constraints.
+    2. Dispatching `tavily_search` without an `integration_app('tavily')` row returns `TAVILY_NOT_CONFIGURED`.
+    3. Dispatching `tavily_extract` without config returns `TAVILY_NOT_CONFIGURED`.
+    4. `max_results` is clamped to `[1, 20]` and missing values fall back to `properties.defaultMaxResults()`.
+    5. `search_depth` / `topic` / `include_answer` / `include_raw_content` enums fall back to defaults on invalid input.
+    6. Upstream non-2xx from Tavily is surfaced as `TAVILY_UPSTREAM_ERROR` with truncated body.
+    7. `urls` with >20 entries is trimmed to exactly 20 before hitting Tavily.
+    8. Queries >400 chars are truncated (no upstream rejection).
+    9. `tavily_extract` successful shaping truncates `raw_content` to `properties.maxExtractChars()` and records original length.
+    10. `IntegrationAppService.update("tavily", apiKey=...)` encrypts the key via `SecretCipherService` and masks it as `tvly-****` in the view, while preserving the stored cipher when the client resubmits the masked sentinel.
+  - Notes:
+    - Unit tests use hand-rolled fakes for `TavilyClient` + `IntegrationAppRepository` instead of Mockito to avoid JDK 25 inline-mock instrumentation issues.
+    - Integration test `TavilyCatalogIntegrationTest` verifies the full wiring through HTTP: `/tools`, `/skills`, `/skills/agents/cici-system/bindings`.
+
+
+- Frontend build (login preview conversation demo):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - 登录页左上欢迎区已从静态 `boot-lines` 文案升级为动态演示卡片，包含访客提问、思考摘要、流式回答三个阶段。
+    - 新增 `BootLoginConversationDemo` 组件，文案动画由前端本地状态驱动，不依赖登录接口或后端实时数据。
+    - 已补充独立播放轮次状态，单条场景在播完后也会自动重启，持续循环展示对话。
+    - 已删除对话文案中的“通过 Slack”，并修正登录框定位逻辑：从全屏 flex 对齐改为右侧固定浮层，避免与左侧演示区视觉重叠。
+    - `frontend/src/styles.css` 已补充该区域的终端式赛博视觉与移动端单列布局。
+    - 登录页副标题文案已改为更贴近当前系统能力的产品表达，突出专属数字员工、企业知识库、工作流与工具、审批推进等能力。
+    - 登录页副标题已进一步压缩，并改为“7x24 小时在线协作”表述，避免产生“登录后才唤醒”的语义偏差。
+    - 登录页副标题已补充“记忆系统”和“自定义 Skill”能力点，使描述更贴近当前产品能力边界。
+    - Vite chunk-size warning remains informational.
+
+- Agent/Skill entry refactor Phase 1 compile/build verification:
+  - Command:
+    - `backend`: `mvn -q -DskipTests compile`
+    - `frontend`: `npm run build`
+  - Result: success
+  - Notes:
+    - 后端新增 `/agents/{agentId}/skills` 读写接口，并在 agent 详情返回中携带 `skillBindings`。
+    - 前端 Agent Builder 已显式传递 `skillRefs`，并把 skills 与其他 draft 一起保存。
+    - AdminSkillsPage 已移除 agent 绑定管理区块，收口为 skill 资产中心。
+
+- Agent/Skill capability unification + debug trace verification:
+  - Command:
+    - `backend`: `mvn -q -DskipTests compile`
+    - `frontend`: `npm run build`
+  - Result: success
+  - Notes:
+    - 新增 `AgentCapabilityResolverService`，统一计算 effective skills/tools/kbs/handoff/outputContract。
+    - `AgentCompileService` 已改为复用统一 resolver，并在 warning 中输出 skill-agent 边界冲突提示。
+    - 新增 `POST /agents/{agentId}/debug`，返回 active skills、effective scope、trace steps 与 warnings。
+    - Agent Builder 调试面板已接入 debug 接口并展示 active skills。
+
+- User Workflow page/load + compile/publish regression fix:
+  - Command:
+    - `backend`: `mvn -q -DskipTests compile`
+    - restart backend on `8080` with `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local`
+    - `GET /me/agents/cici-system/workflow`
+    - `POST /me/agents/cici-system/workflow/compile`
+    - `POST /me/agents/cici-system/workflow/publish`
+  - Result: success
+  - Notes:
+    - Verified the page-load 500 root cause was a null-bearing `Map.of(...)` in `UserWorkflowController.get(...)`; after switching to `LinkedHashMap`, `GET /me/agents/cici-system/workflow` succeeds again.
+    - Verified the publish failure root cause was false-positive time parsing: text containing `8080` was previously compiled into invalid hour `80`; after tightening `inferTrigger(...)` and guarding `computeNextFire(...)`, the same text compiles as `MANUAL` and publishes successfully.
+    - Final state check:
+      - API `GET /me/agents/cici-system/workflow/versions` shows `v4 -> PUBLISHED`
+      - DB `user_workflow_version` shows `version_no=4, publish_status=PUBLISHED`
+
+- User Workflow Phase 1.5 Feishu DM end-to-end smoke:
+  - Command:
+    - `PUT /me/agents/cici-system/workflow/profile` with `notificationTarget={"type":"feishu_dm","value":""}`
+    - `POST /me/agents/cici-system/workflow/compile` with `sourceText="测试飞书私信送达 smoke"`
+    - `POST /me/agents/cici-system/workflow/publish` with `versionNo=1`
+    - `POST /me/agents/cici-system/workflow/run-now` with `routineKey="routine-1"`
+  - Result: success
+  - Notes:
+    - Test user `18611892001` had an active Feishu binding (`open_id=ou_efc396f23aec3375205d2fc72a5bcf54`), and `demo-org` already had an enabled `feishu_bot` integration config.
+    - `run-now` returned execution `status=SUCCESS`; trace notification node returned `status=SENT`, `targetType=feishu_dm`, and message `已通过飞书私信主动发送执行结果。`
+    - This validates the local runtime path: execution complete -> resolve bound `open_id` -> proactive Feishu DM send.
+
+- Feishu DM progress review recheck:
+  - Command:
+    - `backend`: `mvn -q -DskipTests compile`
+    - `frontend`: `npm run build`
+  - Result: success
+  - Notes:
+    - 代码复核确认：`FeishuBotMessenger.sendTextToOpenId(...)` 与 `UserWorkflowService.deliverNotification(...)` 已接入个人工作流执行完成后的主动私信发送链路。
+    - 前后端在当前仓库状态下仍可通过编译/构建，说明这条链路至少通过了静态集成层面的验证。
+    - 当时发现的状态口径滞后项已在后续会话中修正并完成真实 `run-now` smoke。
+
+- Feishu pairing entry frontend build:
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Added a user-facing Feishu pairing section to `MyWorkflowStudio`.
+    - The settings page now supports:
+      - reading current pairing status
+      - generating a one-time pairing code
+      - copying the pairing command
+      - unbinding the current Feishu account
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- User Workflow Phase 1.5 backend compile:
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - `FeishuBotMessenger` now supports proactive text send by `open_id`, in addition to reply-by-message-id.
+    - `UserWorkflowService` now attempts real Feishu DM delivery when `notificationTarget.type = feishu_dm`.
+    - When the profile has no explicit target value, runtime falls back to the current user's active Feishu binding if present.
+    - Delivery failures are captured into execution trace/output instead of being swallowed.
+
+- User Workflow Phase 1.5 frontend build:
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `MyWorkflowStudio` now explains that the Feishu target may be left blank and the system will try to reuse the current user's bound Feishu `open_id`.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- User Workflow Phase 1.5 runtime smoke:
+  - Command: pending
+  - Result: not yet executed
+  - Notes:
+    - Real end-to-end validation still needs an org with a working Feishu bot config plus a user who already has an active Feishu binding.
+    - Recommended next smoke: publish a personal workflow with `notificationTarget.type=feishu_dm`, leave target empty, then call `/me/agents/cici-system/workflow/run-now` and confirm message delivery.
+
+- User Workflow Phase 1 backend compile:
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added `V17__user_workflow_tables.sql` and five user-scoped workflow tables:
+      - `user_agent_profile`
+      - `user_workflow_spec`
+      - `user_workflow_version`
+      - `user_workflow_trigger`
+      - `user_workflow_execution`
+    - Added user-side workflow APIs under `/me/agents/{agentId}/workflow/**` for:
+      - profile/spec update
+      - compile / versions / publish / rollback
+      - trigger list/update
+      - run-now / debug / executions
+    - Added `@EnableScheduling` and `UserWorkflowScheduler` for due-trigger scanning.
+    - Build verifies source compatibility of the new user workflow domain/service/controller layer.
+
+- User Workflow Phase 1 frontend build:
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Avatar entry now opens a broader personal-settings modal instead of a mailbox-only view.
+    - Added `MyWorkflowStudio` with:
+      - personal workflow settings
+      - natural-language Spec editor
+      - compile / publish / rollback actions
+      - trigger list and manual run
+      - recent execution records
+    - Existing mailbox management remains available as a sibling tab.
+    - Vite chunk-size warning remains informational.
+
+- User Workflow Phase 1 runtime scope note:
+  - Command: N/A
+  - Result: partial by design
+  - Notes:
+    - This phase now records notification targets and execution summaries, but proactive Feishu direct-message delivery is not yet wired to a real active-send API.
+    - Routines backed by unavailable tools (for example news aggregation or meeting invitation) are preserved and executed as tracked skeletons with notes in execution output rather than silently failing.
+
+- Frontend build (workbench viewport lock / no page-scroll structure pass):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Added viewport-level width/height/max-width/overflow constraints from `.cici-app` down through the workbench canvas/layout chain.
+    - Replaced some fixed-width and `calc(100vh - padding)` style constraints with parent-height-based layout sizing to reduce whole-page overflow risk.
+    - Tightened workbench top-bar and sidebar column limits to reduce horizontal spillover.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- Frontend build (workbench compact styling + no page scrollbar pass):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Workbench palette was pulled back toward the main system's light gray/white surface tokens instead of the earlier beige-tinted prototype look.
+    - Typography, avatar sizes, paddings, and card spacing were reduced to produce a denser workbench layout.
+    - Workbench container heights and overflow handling were adjusted to avoid page-level scrollbars, and the top bar columns were constrained so the state machine card no longer covers the agent list.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- Frontend build (workbench layout aligned 1:1 to prototype):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Workbench layout was reworked to mirror `frontend/public/agent-workbench-prototype.html` structure: top dock strip, top-right state card, left chat panel, right overview/history sidebar.
+    - Workbench dock now uses local UI keys with `runtimeAgentId` mapping so visual dock expansion does not break existing chat runtime.
+    - Existing workbench stream chat path remains active; only the page structure and workbench-local state model changed.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- Frontend build (workbench state-machine Phase 1 refactor):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `AssistantApp.tsx` workbench view was refactored from hero layout into `Dock + 状态机条 + 主对话区 + 右侧概览/历史`.
+    - Workbench messages are now stored per agent, so switching the active dock keeps each agent's workbench dialogue state intact.
+    - Existing stream chat path remains active in workbench mode, and `agentId` still follows the selected agent during request submission.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- Email tool module (2026-04-19):
+  - `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success
+  - `mvn -q -Dmaven.repo.local=.m2 -DskipTests test-compile` -> success
+  - `npm run build` (frontend) -> success
+  - Scope verified by compilation only:
+    - `V16__email_account_table.sql` migration is present.
+    - `EmailAccountEntity/Repository`, `SecretCipherService`, `EmailProviderRegistry`, `EmailAccountService`, `EmailToolService`, `EmailAccountController`, `ToolOrchestratorService` wiring, `ToolController.list()` merge all compile.
+    - Frontend `MyEmailAccountsModal`, `AgentBuilderShell.TOOL_CATALOG` additions, Vite proxy for `/me`.
+  - Runtime smoke (POP3 login / SMTP send / `GET /tools` response / Agent Builder selecting `email_*`) still pending: needs a user mailbox with valid credentials and a running backend.
+
+- Backend compile (Agent Builder publish/rollback + compile-version persistence):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - `AgentCompileService` now persists draft versions into `agent_workflow_version` on `/agents/{agentId}/compile`.
+    - Added agent version governance APIs (`/agents/{agentId}/versions`, `/publish`, `/rollback`).
+    - Added publish config API (`PUT /agents/{agentId}/publish-configs`) and persistence wiring.
+- Frontend build (Agent Builder real save/publish/rollback wiring):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Agent Builder now attempts backend-first loading for `/agents` and details.
+    - Save action now calls real backend persistence endpoints for definition/spec/bindings/publish configs.
+    - Added publish/rollback actions in the builder header and compile success notice with `draftVersionNo`.
+- Runtime smoke (Agent Builder persistence APIs):
+  - Command: start backend and call health + `/agents` related CRUD/compile/publish endpoints with real JWT
+  - Result: blocked in current command sandbox
+  - Notes:
+    - Backend startup attempts in this environment repeatedly failed before serving HTTP due PostgreSQL connection errors (`SQL State 08001`, message: `尝试连线已失败。`).
+    - Because app context could not fully initialize, this run did not produce valid endpoint smoke evidence.
+    - Compile/build evidence above is valid; runtime smoke needs rerun in a stable DB-connectable environment.
+- Backend compile (Agent Builder Phase1 persistence skeleton):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added `V15__agent_builder_persistence_phase1.sql` with agent persistence tables:
+      - `agent_definition`, `agent_spec`, `agent_workflow_version`
+      - `agent_kb_binding`, `agent_tool_binding`, `agent_channel_binding`, `agent_publish_config`
+    - Added `AgentDefinitionController` admin APIs for persistence:
+      - `POST /agents`, `GET /agents`, `GET /agents/{agentId}`, `PUT /agents/{agentId}`
+      - `PUT /agents/{agentId}/spec`, `GET /agents/{agentId}/bindings`, `PUT /agents/{agentId}/bindings`
+    - Added `AgentDefinitionService` and related repositories/entities for definition/spec/bindings write/read path.
+    - Existing compile APIs (`/agents/compile`, `/agents/{agentId}/compile`) remain intact.
+- Frontend build (Skill Studio v2 redesign + CRM template actions):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `AdminSkillsPage` upgraded to a new console layout with hero metrics, CRM template strip, searchable skill cards, split editor, and binding workspace.
+    - Added CRM template quick actions: apply-to-form and one-click create.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+- Backend compile (built-in CRM skill seeds):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added 4 built-in CRM skills in `SkillDefinitionService` defaults:
+      - `crm-lead-intake`
+      - `crm-opportunity-health`
+      - `crm-followup-orchestrator`
+      - `crm-renewal-guard`
+    - Skills are created lazily by existing `ensurePhaseOneDefaults(...)` flow when missing.
+- Backend compile (SpecCompiler + SkillVersion phase A):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added `V14__skill_spec_compiler_phaseA.sql` migration (`draft_spec_text` + `skill_version`).
+    - `SkillDefinitionService` now writes draft `skill_version` snapshots on create/update.
+    - Added shared `SpecCompilerService` and connected both `AgentCompileService` and `SkillDefinitionService.previewCompile`.
+    - `AgentCompileService` compile payload now includes `resolvedSkillRefs`.
+- Backend test compile (phase A source compatibility):
+  - Command: `mvn -q -DskipTests test-compile`
+  - Result: success
+  - Notes:
+    - Confirms current test sources remain compilable after compile API and skill domain model expansion.
+    - This run validates source compatibility only; it does not execute runtime assertions.
+- Frontend build (skill draftSpecText form wiring):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `AdminSkillsPage` now supports `draftSpecText` editing and preview/save request passthrough.
+    - Build completed successfully; Vite chunk-size warning remains informational.
+
+- Runtime smoke (Skill Phase 2 API end-to-end):
+  - Command: `curl` against `/skills`, `/skills/{id}`, `/skills/preview`, `/skills/agents/{agentId}/bindings` with real JWT
+  - Result: success (after one bugfix)
+  - Notes:
+    - Verified `ORG_USER` token is rejected on `/skills` with permission error (expected).
+    - Verified `ORG_ADMIN` token can complete create/update/preview/binding/list/disable full flow.
+    - Initial binding update returned `500` due unique constraint conflict on `agent_skill_binding`.
+    - Root cause fixed by adding `agentSkillBindingRepository.flush()` after delete-before-insert in `replaceBindings(...)`.
+    - Re-run verified binding update and readback succeeded (`count=5`, smoke skill present).
+- Frontend build (Admin Skills page integration):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Added `/admin/skills` route and nav entry.
+    - Added admin page for skill list/create/update/disable, compile preview, and agent binding updates.
+    - Vite still reports chunk-size warning; build completed successfully.
+- Backend compile (Skill Phase 2 backend APIs):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Phase 2 core backend APIs compile successfully: skill CRUD, skill preview compile, and agent-skill binding management.
+    - `SkillDefinitionService` / `SkillController` / `skill` repositories and entities compile with the new contracts.
+- Backend test compile (Skill Phase 2):
+  - Command: `mvn -q -DskipTests test-compile`
+  - Result: success
+  - Notes:
+    - Existing test sources remain compilable after Phase 2 API/service expansion.
+    - This run only verifies compilation; no runtime/integration assertions were executed.
+
+- Runtime smoke (Skill Phase 1 agent routing + tool allowlist):
+  - Command:
+    - `curl -X POST /auth/sms/send` + `curl -X POST /auth/sms/login` to obtain JWT
+    - `curl -X POST /ai/chat` with `agentId=cici-system`
+    - `curl -X POST /ai/chat` with `agentId=sales-agent`
+    - `curl -X POST /ai/chat` with `agentId=approval-agent`
+  - Result: success
+  - Notes:
+    - `cici-system` returned `resolvedSkills=[conversation-core,knowledge-first,safe-handoff,general-assistant]`, `effectiveToolNames=[]`.
+    - `sales-agent` returned `resolvedSkills=[conversation-core,knowledge-first,safe-handoff,sales-copilot]`, `effectiveToolNames=[cloudcc_getStandardObjects,cloudcc_getCustomObjects,cloudcc_getObjectFields,cloudcc_pageQuery]`.
+    - `approval-agent` returned `resolvedSkills=[conversation-core,knowledge-first,safe-handoff,approval-assistant]`, `effectiveToolNames=[get_pending_approvals]`.
+    - Confirms Phase 1 runtime behavior is effective in real API responses.
+- Backend local startup (current source with local PostgreSQL):
+  - Command: `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local`
+  - Result: failed (default startup)
+  - Notes:
+    - Flyway validation failed: migration checksum mismatch on version `12`.
+    - Error indicates local DB stored checksum differs from current `V12` file.
+- Backend local startup (temporary workaround for smoke):
+  - Command: `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local -Dspring-boot.run.arguments=--spring.flyway.validate-on-migrate=false`
+  - Result: success
+  - Notes:
+    - Service started and applied `V13__skill_registry_phase1.sql` on the local DB.
+    - Used only to complete runtime smoke; migration checksum issue remains open for proper fix.
+
+- Backend compile (skill phase 1 implementation):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added `skill_definition` / `agent_skill_binding` phase 1 schema and `chat_session.agent_id`.
+    - Added skill runtime services, prompt assembly, default built-in skill seeds, and agent-skill default bindings.
+    - Chat orchestration now resolves skills at runtime and filters tool exposure by skill allowlist.
+- Backend test compile (skill phase 1 integration test sources):
+  - Command: `mvn -q -DskipTests test-compile`
+  - Result: success
+  - Notes:
+    - Added `OrchestratorIntegrationTest` coverage for `agentId=sales-agent`, checking resolved skill metadata and effective tool allowlist.
+    - Confirms new backend test sources compile with the current codebase.
+- Frontend build (agentId passthrough for skill runtime):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `streamAiChat` request body now supports optional `agentId`.
+    - Assistant workbench now forwards the currently selected `activeAgent.id` into `/ai/chat/stream`.
+- Backend targeted test execution (skill phase 1):
+  - Command: `mvn -q -Dtest=OrchestratorIntegrationTest test`
+  - Result: failed in this environment
+  - Notes:
+    - Fixed one real issue during this run: `V12__feishu_binding_profile_columns.sql` was not H2-compatible and blocked Spring Boot test startup; migration was rewritten as two `ALTER TABLE` statements and the application context then started successfully.
+    - Remaining failure is environment-specific and occurs after context startup: Mockito inline Byte Buddy self-attach still cannot initialize on the current local JDK 25 runtime, so test execution aborts in the Spring Boot mock reset listener.
+
+- Frontend build (fix stale message panel under session polling/cache):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `AssistantApp.tsx` now force-refreshes conversation messages when active conversation changes.
+    - 60-second fallback polling now refreshes both session list and current active conversation messages, preventing list/panel divergence when SSE reconnects or misses events.
+- Runtime diagnosis (Feishu user profile sync):
+  - Command: inspect backend runtime logs and `feishu_bot_binding` rows after receiving real Feishu message
+  - Result: partial (root cause confirmed; feature gated by platform permission)
+  - Notes:
+    - Backend log shows Feishu contact API error: `code=41050`, `msg=no user authority error`.
+    - `feishu_bot_binding.display_name` / `avatar_url` remain empty due missing Feishu-side user profile read permission, not due data pipeline failure.
+- Backend compile (Feishu auto-binding without pairing code):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Updated Feishu bridge path: when no active binding exists for `(orgId, tenantKey, openId)`, backend now auto-creates binding and continues conversation flow instead of returning pairing-code prompt.
+    - Added fallback user resolution for auto-binding (prefer `ORG_ADMIN`, else latest available org user).
+- Runtime verification (real Feishu -> agent -> Web realtime display, manual UAT):
+  - Command: real Feishu single-chat with opened web workbench (manual user acceptance run)
+  - Result: success
+  - Notes:
+    - Acceptance owner confirmed target achieved in-session.
+    - Verified behavior: external Feishu message can be bridged to agent conversation and reflected in web workbench in realtime without manual refresh.
+    - This closes the product acceptance gap previously tracked for live Feishu end-to-end confirmation.
+- Runtime verification (session SSE stream + dual update events):
+  - Command: restart backend on latest local code, then `GET /ai/sessions/stream` with valid JWT while calling `POST /ai/chat`
+  - Result: success
+  - Notes:
+    - Initially observed `GET /ai/sessions/stream` -> `404` on old running backend process; after restart, endpoint returned `200` with `text/event-stream`.
+    - SSE stream emitted `connected` first, then emitted `session_updated` for the same `sessionId` with both `trigger=user_message` and `trigger=assistant_message`.
+    - This verifies the realtime event transport and server-side emit points in local runtime.
+    - Remaining gap for product acceptance: one real Feishu single-chat to open Web workbench end-to-end verification.
+- Backend compile (session realtime SSE sync):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added backend session realtime event hub and `GET /ai/sessions/stream`.
+    - `ChatOrchestratorService` now commits and broadcasts user-message and assistant-message updates separately, so external-channel sessions can surface in the web workbench before and after CiCi replies.
+- Backend test compile (realtime sync regression test source):
+  - Command: `mvn -q -DskipTests test-compile`
+  - Result: success
+  - Notes:
+    - Added `ChatRealtimeIntegrationTest` source covering `/ai/sessions/stream` subscription and `session_updated` event expectations.
+    - Confirms the new test source compiles under the current project setup.
+- Backend targeted test execution (realtime sync regression):
+  - Command: `mvn -q -Dtest=ChatRealtimeIntegrationTest test`
+  - Result: failed in this environment
+  - Notes:
+    - Failure occurs before the test body runs.
+    - Root cause is environment-specific: Mockito inline Byte Buddy self-attach cannot initialize on the current local JDK 25 runtime, so Spring Boot test startup aborts.
+- Frontend build (session realtime subscription):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Replaced the 10-second conversation refresh loop with a long-lived `/ai/sessions/stream` subscription plus automatic reconnect.
+    - Workbench now force-refreshes the active conversation when `session_updated` arrives, while retaining a 60-second polling fallback.
+    - Vite still reports a chunk-size warning for the production bundle, but the build completed successfully.
+- Runtime verification (external-channel sessions visible to ordinary system users):
+  - Command: log in as `13900009996` (`ORG_USER`), then call `GET /ai/sessions` and `GET /ai/sessions/{sessionId}/messages` against restarted backend
+  - Result: success
+  - Notes:
+    - Verified the Feishu conversation is now visible without depending on the pairing user identity or admin role.
+    - Confirms the new visibility model: external-channel sessions are org/agent-scoped, while personal workbench sessions remain user-scoped.
+- Runtime verification (ORG_ADMIN visibility for Feishu sessions):
+  - Command: query `chat_session` / `feishu_bot_binding` in local PostgreSQL, log in as `18611892001`, then call `GET /ai/sessions` and `GET /ai/sessions/{sessionId}/messages` against restarted backend
+  - Result: success
+  - Notes:
+    - Verified the Feishu thread was already persisted under pairing user `13900009999`, not lost.
+    - Verified the previous empty web list was caused by user-scoped session filtering while the current web login used another admin account (`18611892001 / Owen`).
+    - After changing `ORG_ADMIN` visibility to org scope and restarting backend, `GET /ai/sessions` returned the Feishu session and the history endpoint returned the full “在吗” conversation.
+- Backend compile (real conversation list + history APIs):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Extended `/ai/sessions` to return richer conversation summaries required by the assistant workspace.
+    - Added `/ai/sessions/{sessionId}/messages` for conversation history loading.
+    - Verified backend compiles after wiring session summary parsing, latest-message lookup, and session ownership checks.
+- Frontend build (real conversation list wiring):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Assistant workbench conversation list no longer depends on hardcoded `CONVERSATION_THREADS`; it now loads real `/ai/sessions` data after login.
+    - Conversation detail pane now loads real history from `/ai/sessions/{sessionId}/messages`.
+    - Added periodic conversation refresh so newly bridged external sessions, including Feishu sessions, can appear in the list without manual page reload.
+    - Vite still reports a chunk-size warning for the production bundle, but the build completed successfully.
+- Runtime verification (project status check + local startup):
+  - Command: `docker compose up -d`, `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local`, `npm run dev`, then call `/actuator/health` and `/`
+  - Result: success
+  - Notes:
+    - `docker compose ps` shows `cici-postgres`, `cici-redis`, `cici-rabbitmq`, `cici-qdrant` all up; postgres/redis/rabbitmq report healthy.
+    - `GET http://127.0.0.1:8080/actuator/health` returned `{"status":"UP"}`.
+    - `HEAD http://127.0.0.1:5173/` returned `HTTP/1.1 200 OK`.
+    - Backend started with local profile and completed Flyway validation against PostgreSQL schema version 11.
+- Backend compile (Feishu bot bridge status audit):
+  - Command: `mvn -q -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Backend compiles with the Feishu SDK dependency and the current Feishu bot bridge classes in place.
+    - This verifies the code-level integration path is buildable, but does **not** prove real Feishu runtime connectivity.
+- Frontend build (Feishu pairing UI status audit):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Assistant workbench pairing UI and admin integration configuration UI both compile into the production bundle.
+    - Vite still reports a chunk-size warning for the production bundle, but the build completed successfully.
+- Frontend build (workbench chat alignment fix):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Changed the workbench message list from CSS grid to a vertical flex column so message rows no longer stretch across leftover height.
+    - User messages are now explicitly right-aligned inside the workbench, with a bounded message width better suited to the wider dashboard layout.
+    - Tightened the workbench composer action group so the voice and send buttons sit closer together and read as a single control cluster.
+- Frontend build (send-code proxy target correction):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `frontend/vite.config.ts` and `frontend/vite.config.js` now default the dev proxy target to `http://127.0.0.1:8080`.
+    - Added `VITE_BACKEND_TARGET` override support so remote backend targets can still be used without hardcoding a LAN IP.
+    - `vite.config.ts` switched to Vite `loadEnv(...)` so the TypeScript config can read `VITE_BACKEND_TARGET` without relying on Node typings.
+    - Restarted the Vite dev server after the config change so the new proxy target took effect immediately.
+- Runtime verification (send-code chain recovery):
+  - Command: start backend with `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local`, then call `/actuator/health`, `/auth/sms/send` via both `8080` and `5173`
+  - Result: success
+  - Notes:
+    - `GET http://127.0.0.1:8080/actuator/health` returned `{"status":"UP"}`.
+    - `POST http://127.0.0.1:8080/auth/sms/send` returned `200 OK` with `devCode`.
+    - `POST http://127.0.0.1:5173/auth/sms/send` returned `200 OK` with `devCode` after restarting the Vite dev server.
+    - Repeating the request for the same mobile now returns `400 SMS request too frequent, please retry later`, confirming the request reaches backend rate limiting instead of failing in the dev proxy layer.
+- Frontend build (workbench voice/chat/tool reconnect):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Workbench now reuses the original `streamAiChat` submit path and `/ws/asr` speech-input path instead of behaving like a static dashboard.
+    - Task cards, approval cards, and quick actions can now trigger the same conversation pipeline that the original CiCi page used.
+    - Added an approval drawer with `iframe` rendering so `get_pending_approvals` tool results can surface inside the workbench.
+    - Attempted runtime verification against local backend, but `127.0.0.1:8080` was not listening in this session, so real end-to-end verification could not be completed.
+- Frontend build (assistant hierarchy realignment):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Assistant workspace is now organized around `Agent -> Conversation -> Message` instead of a flat mixed session list.
+    - Added an agent directory, agent-scoped conversation thread list, richer chat header context, and a right-side structure summary.
+    - Added `docs/agent-conversation-hierarchy-design.md` and synced long-lived project docs/state files to this new IA direction.
+    - Vite still reports a chunk-size warning for the production bundle, but the build completed successfully.
+- Frontend build (Dify-style workflow preview canvas + minimap/zoom + channel merge):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Replaced the old Mermaid-style workflow preview surface with a Dify-inspired read-only canvas built from preview `nodes / edges`.
+    - Added zoom controls, fit-to-canvas behavior, and a clickable minimap with viewport box.
+    - Moved `发布渠道` into the `Agent 定义` section so it no longer occupies its own standalone card.
+    - Vite still reports chunk-size warnings for production build output; the build completed successfully.
+- Frontend build (compact layout + tabbed compiler workspace):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Removed the right-side builder info column and converted the page into a tighter single-main-workspace layout.
+    - Replaced the stacked compile result layout with tabs; default active tab is the workflow preview graph.
+    - Condensed the header from large KPI cards into compact meta chips and a shorter status notice.
+    - Vite still reports chunk-size warnings for production build output; the build completed successfully.
+- Backend runtime verification (after restart to latest code):
+  - Command: stop old 8080 Java process, restart backend with `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local`, then call health/auth/compile APIs
+  - Result: success
+  - Notes:
+    - `/actuator/health` returned `UP` after restart.
+    - SMS login for `demo-org` succeeded and issued a valid assistant token.
+    - `POST /agents/compile` returned `workflowCode`, `workflowManifest`, and `workflowPreview`, confirming the newly added compile API is live in the running backend.
+- Frontend build (debug path highlight on workflow preview):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Added a read-only debug panel that accepts test input, simulates a path, and highlights matched nodes on the Mermaid workflow preview.
+    - This iteration keeps debug execution on the frontend side, but the display layer is ready for a future real debug API.
+    - Vite still reports chunk-size warnings for production build output; the build completed successfully.
+- Backend compile (agent compile API skeleton):
+  - Command: `mvn -DskipTests compile`
+  - Result: success
+  - Notes:
+    - Added `AgentCompileController` with `POST /agents/compile` and `POST /agents/{agentId}/compile`.
+    - Added `AgentCompileService` to generate `workflowCode`, `workflowManifest`, `workflowPreview`, `compileSummary`, `warnings`, and `dependencies`.
+- Frontend build (real compile API wiring with workflow preview fallback):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Agent Builder now passes assistant token into the builder shell and prefers the real `/agents/{id}/compile` API when compiling.
+    - If the compile API is unavailable, the UI falls back to the existing frontend simulated compiler so the workflow preview experience remains usable.
+    - Vite still reports chunk-size warnings for production build output, and the Mermaid chunk remains large but lazily loaded.
+- Frontend build (workflow preview graph in Agent Builder):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Agent Builder compile output now includes a read-only workflow preview graph rendered from simulated compile artifacts (`workflowPreview`) alongside `workflow.ts` and `workflow.manifest.json`.
+    - Mermaid was added as the graph rendering dependency and loaded lazily from the preview panel instead of the main bundle.
+    - Vite still reports chunk-size warnings for production build output, and the Mermaid chunk is large, but the build completed successfully.
+- Frontend build (checklist layout fix):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - Fixed the Agent Builder checklist layout for knowledge/tool cards by switching item content to a more stable grid layout.
+    - Prevented Chinese titles from collapsing into one-character-per-line wrapping.
+    - Vite still reports a chunk-size warning for the production bundle, but build completed successfully.
+- Frontend build (Spec editor + compile output refactor):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - `AgentBuilderShell` was refactored from a field-based builder skeleton into a text-first Spec editor with compile result panels.
+    - Current compile action is a frontend simulated compiler that generates placeholder workflow code, manifest, dependency list, and risk warnings.
+    - Vite still reports a chunk-size warning for the production bundle, but build completed successfully.
+- Frontend build (no-code Agent Builder framework):
+  - Command: `npm run build`
+  - Result: success
+  - Notes:
+    - New assistant-side Agent Builder workspace compiles successfully after adding:
+      - left title-area workspace switch (`会话 / Agent 构建`)
+      - `AgentBuilderShell.tsx` framework UI
+      - Agent definition sections for identity, prompt, knowledge, tools, workflow, and release governance
+    - Vite emitted a chunk-size warning for the production bundle, but the build completed successfully.
+- Backend build (model provider center implementation):
+  - Command: `PATH=/opt/homebrew/bin:$PATH /opt/homebrew/bin/mvn -Dmaven.repo.local=.m2 -DskipTests package`
+  - Result: success
+  - Notes: added provider-config migration/table + service/controller for 4 providers (`aliyun-bailian`, `ollama-local`, `anthropic`, `openai`), and provider model list fetch endpoints.
+- Backend runtime verification (local profile):
+  - Command: restart backend jar with local profile and call APIs via auth token
+  - Result: success
+  - Notes:
+    - `GET /models/providers` returns exactly 4 providers.
+    - `POST /models/providers/aliyun-bailian/models/fetch` returned `count=222` with live model ids from DashScope compatible endpoint.
+- Frontend page verification (`/admin/models`):
+  - Command: browser automation snapshot on running Vite dev server
+  - Result: success
+  - Notes: page now shows Cherry-style provider center: left provider list + right panel (`API Key` / `API 地址` / `检测` / `获取模型列表` / model list / scene mapping).
+  - Enhancements (2026-04-14):
+    - Added model search bar with filter icon and clear button
+    - Models grouped by series prefix (e.g., `qwen`, `gpt`, `claude`) with group headers and counts
+    - Filtered count badge shows `X / total` for search results
+    - Switching provider resets search and reloads grouped models
+- Frontend full build status (existing baseline issue):
+  - Command: `PATH=/opt/homebrew/bin:$PATH /opt/homebrew/bin/npm run build`
+  - Result: failed (pre-existing)
+  - Notes: failure remains in `src/assistant/AssistantApp.tsx` (TS2774 / TS2322 / TS18048) and is unrelated to this model-center change-set.
+- Frontend full build — FIXED (2026-04-14 12:30):
+  - Command: `PATH=/opt/homebrew/bin:$PATH /opt/homebrew/bin/npm run build`
+  - Result: success ✅
+  - Notes: fixed 6 TS errors in `AssistantApp.tsx` (speech input feature):
+    - TS2774: replaced `typeof X !== "undefined"` with `"X" in window` / optional chaining for `MediaRecorder`, `WebSocket`, `AudioContext`, `getUserMedia`
+    - TS2322: changed `AudioContext | undefined` cast to `AudioContext` + added runtime null check
+    - TS18048: `ctx` possibly undefined — resolved by narrowing type after constructor
+  - Build output: `tsc -b && vite build` → 316 modules, 83KB CSS + 480KB JS, 2.92s
+
+- Frontend (auth parse hardening to prevent login crash):
+  - Command: `npm run build`
+  - Result: success
+  - Notes: assistant/admin auth flows now use safe JSON parsing; empty or non-JSON response bodies no longer throw `Unexpected end of JSON input` and crash the page.
+- Frontend-to-backend proxy runtime verification:
+  - Command: `curl -i -X POST http://127.0.0.1:5173/auth/sms/send -H 'Content-Type: application/json' -d '{"orgId":"demo-org","mobile":"18611892001"}'`
+  - Result: success (`HTTP/1.1 200 OK`)
+  - Notes: fixed Vite proxy target mismatch (`8081` -> `8080`) in both `vite.config.ts` and `vite.config.js`; send-code no longer returns proxy-side 500.
+- Frontend (after white-screen hook-order fix):
+  - Command: `npm run build`
+  - Result: success
+  - Notes: fixed `Rendered fewer hooks than expected` by ensuring hooks are declared before conditional auth return in `AssistantApp`.
+- Backend:
+  - Command: `mvn -Dmaven.repo.local=.m2 test`
+  - Result: failed in this environment
+  - Notes: Mockito inline mock maker cannot attach agent on current JDK 25 runtime in sandbox (`Could not initialize plugin: org.mockito.plugins.MockMaker`).
+- Backend compile/package:
+  - Command: `mvn -Dmaven.repo.local=.m2 -DskipTests package`
+  - Result: success
+  - Notes: confirms backend code compiles and packages with latest changes.
+- Backend compile/package after RabbitMQ+vector integrations:
+  - Command: `mvn -Dmaven.repo.local=.m2 -DskipTests package`
+  - Result: success
+  - Notes: verified compilation after introducing AMQP queue/worker, vector-store abstractions, Qdrant adapter, and Flyway V4 migration.
+- Full quality gate (post-Qdrant migration):
+  - Command: `./scripts/quality-check.sh` (with Qdrant on `6333`)
+  - Result: success
+  - Notes: 7 backend integration tests (default profile); `OrgModelConfigRepository.deleteByOrgIdAndSceneCode` uses `@Modifying` JPQL; `OrchestratorIntegrationTest` uses `@TestPropertySource` so Maven `local` profile does not bleed in; Qdrant smoke script passes against live container.
+- Full business E2E (local profile + Docker stack):
+  - Command: `./scripts/run-full-demo.sh` (or `./scripts/e2e-local-business.sh` if API already up)
+  - Result: success on 2026-04-02
+  - Notes: SMS login (**default mobile `13900009999`** aligned with `bootstrap-admin-mobiles` for ORG_ADMIN on new user) → KB → upload → publish → MQ worker → PUBLISHED → chat RAG hit unique marker; `ragContext` size ≥ 1 with Qdrant.
+- Frontend:
+  - Command: `npm run build`
+  - Result: success
+  - Notes: production bundle was generated under `frontend/dist`.
+- Frontend (after KB polling + selected-KB retrieval update):
+  - Command: `npm run build`
+  - Result: success
+  - Notes: confirms UI changes for async indexing visibility compile and bundle correctly.
+
+## Scope Verified In This Iteration
+
+- New backend APIs:
+  - `PUT /kb/{id}` update knowledge base
+  - `DELETE /kb/{id}` delete knowledge base
+  - `DELETE /kb/documents/{id}` delete document
+  - `DELETE /models?sceneCode=...` delete model config
+  - `DELETE /tools?toolName=...` disable tool
+- Frontend management views expanded and build-verified:
+  - **Admin app** (`/admin/*`): model/tool/ops/KB CRUD flows; **user role** management calling `/admin/users`
+  - **Assistant app** (`/`): chat + read-only KB multi-select for RAG (no management tabs)
+  - React Router + split `localStorage` keys (`cici_assistant_token` / `cici_admin_token`)
+- New backend integration scope (compile-verified):
+  - MQ indexing enqueue/consume flow classes added
+  - Vector recall path integrated into RAG service
+  - Qdrant + RabbitMQ local runtime config in `docker-compose.yml` (Qdrant on host `6333`)
+- Runtime environment startup:
+  - Command: `docker compose up -d && docker compose ps`
+  - Result: verify with `scripts/verify-qdrant-stack.sh` when Qdrant is up
+  - Notes: `cici-qdrant` exposes HTTP API on `6333`.
+
+- End-to-end API verification (local profile, MQ indexing enabled):
+  - Command: backend run on `8081` with `--app.kb.vector-store=memory`, then scripted API flow:
+    - `/auth/sms/send` -> `/auth/sms/login`
+    - `POST /kb` -> `POST /kb/documents/upload` -> `POST /kb/documents/{id}/publish`
+    - poll `GET /kb/{kbId}/documents` until indexed
+    - `POST /ai/chat` with `knowledgeBaseIds=[kbId]`
+  - Result: success
+  - Evidence: document reached `PUBLISHED`; chat returned `rag_count=1` and policy summary answer.
+
+## Planned Verification
+
+- Re-run `mvn test` under JDK 21 runtime (or with adjusted Mockito setup) to restore test gate.
+- Add backend integration tests for the newly added delete/update management APIs.
+- Add frontend E2E checks for new model/tool/ops management flows.
+- Add end-to-end local verification for publish-document -> MQ task -> chunk indexing -> vector recall path with live RabbitMQ/Qdrant (`app.kb.vector-store=qdrant` in local profile).

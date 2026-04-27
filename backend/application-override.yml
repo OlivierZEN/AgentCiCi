@@ -1,0 +1,7 @@
+# Override config for local dev - loaded from same directory as JAR
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: cici
+    password: cici123

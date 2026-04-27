@@ -1,0 +1,6 @@
+# Merge with main application.yml: keep jwt + test-only admin mobiles for integration tests.
+app:
+  auth:
+    jwt-secret: "change-me-in-prod-change-me-in-prod-2026"
+    jwt-expiration-seconds: 7200
+    bootstrap-admin-mobiles: "13800138111,13800138000,13800138001,13800138002,13800138003,13800138188,13800138006"

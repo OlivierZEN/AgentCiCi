@@ -1,0 +1,58 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cici-postgres
+    environment:
+      POSTGRES_DB: cici_assistant
+      POSTGRES_USER: cici
+      POSTGRES_PASSWORD: cici123
+    ports:
+      - "5432:5432"
+    volumes:
+      - cici_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cici -d cici_assistant"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    container_name: cici-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - cici_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: cici-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: cici
+      RABBITMQ_DEFAULT_PASS: cici123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.6
+    container_name: cici-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - cici_qdrant_data:/qdrant/storage
+
+volumes:
+  cici_pg_data:
+  cici_redis_data:
+  cici_qdrant_data:

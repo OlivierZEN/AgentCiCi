@@ -1,0 +1,102 @@
+package com.codehouse.ciciassistant.ai.api;
+
+import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
+import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.tenant.TenantContext;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import java.util.List;
+import java.util.Map;
+import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+@RestController
+@RequestMapping("/ai")
+public class ChatController {
+
+    private final ChatOrchestratorService chatOrchestratorService;
+
+    public ChatController(ChatOrchestratorService chatOrchestratorService) {
+        this.chatOrchestratorService = chatOrchestratorService;
+    }
+
+    @PostMapping("/chat")
+    public ApiResponse<Map<String, Object>> chat(@Valid @RequestBody ChatRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(chatOrchestratorService.chat(
+                orgId,
+                userId,
+                request.sessionId(),
+                request.question(),
+                request.knowledgeBaseIds(),
+                request.agentId()
+        ));
+    }
+
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(@Valid @RequestBody ChatRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        SseEmitter emitter = new SseEmitter(600_000L);
+        chatOrchestratorService.chatStream(
+                orgId,
+                userId,
+                request.sessionId(),
+                request.question(),
+                request.knowledgeBaseIds(),
+                request.agentId(),
+                emitter);
+        return emitter;
+    }
+
+    @GetMapping("/sessions")
+    public ApiResponse<List<Map<String, Object>>> sessions() {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(chatOrchestratorService.sessions(orgId, userId));
+    }
+
+    @GetMapping(value = "/sessions/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter sessionStream() {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return chatOrchestratorService.sessionStream(orgId, userId);
+    }
+
+    @GetMapping("/sessions/{sessionId}/messages")
+    public ApiResponse<List<Map<String, String>>> sessionMessages(@NotBlank @PathVariable String sessionId) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(chatOrchestratorService.sessionMessages(orgId, userId, sessionId));
+    }
+
+    @GetMapping("/sessions/{sessionId}/state")
+    public ApiResponse<Map<String, Object>> sessionState(@NotBlank @PathVariable String sessionId) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(chatOrchestratorService.sessionState(orgId, userId, sessionId));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ApiResponse<Map<String, Object>> deleteSession(@NotBlank @PathVariable String sessionId) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(chatOrchestratorService.deleteSession(orgId, userId, sessionId));
+    }
+
+    public record ChatRequest(
+            @NotBlank String sessionId,
+            @NotBlank String question,
+            List<String> knowledgeBaseIds,
+            String agentId
+    ) {
+    }
+}

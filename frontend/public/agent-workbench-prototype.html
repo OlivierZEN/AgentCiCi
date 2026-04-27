@@ -1,0 +1,1205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CiCi Agent Workbench Prototype</title>
+    <style>
+      :root {
+        --bg: #f3ede3;
+        --panel: rgba(255, 250, 243, 0.84);
+        --panel-solid: #fffaf3;
+        --ink: #182744;
+        --muted: #6d788a;
+        --line: rgba(24, 39, 68, 0.1);
+        --blue: #3d62ff;
+        --green: #37c68b;
+        --amber: #f0b44d;
+        --shadow: 0 16px 36px rgba(39, 49, 76, 0.1);
+        --radius-xl: 26px;
+        --radius-lg: 20px;
+        --radius-md: 16px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 0 0, rgba(61, 98, 255, 0.08), transparent 22%),
+          radial-gradient(circle at 100% 0, rgba(240, 180, 77, 0.1), transparent 20%),
+          linear-gradient(180deg, #f5efe4 0%, #efe7da 100%);
+        color: var(--ink);
+        font: 13px/1.55 "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background-image:
+          linear-gradient(rgba(24, 39, 68, 0.018) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(24, 39, 68, 0.018) 1px, transparent 1px);
+        background-size: 24px 24px;
+        mask-image: radial-gradient(circle at center, black 48%, transparent 92%);
+      }
+
+      .app {
+        width: min(1480px, calc(100vw - 24px));
+        height: calc(100vh - 24px);
+        margin: 12px auto;
+        padding: 12px;
+        border-radius: 30px;
+        background: rgba(255, 251, 246, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.76);
+        box-shadow: 0 22px 80px rgba(42, 50, 76, 0.12);
+        backdrop-filter: blur(14px);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 318px;
+        gap: 12px;
+        height: 100%;
+      }
+
+      .main {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr);
+        gap: 0;
+        min-width: 0;
+        min-height: 0;
+        overflow: visible;
+      }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid rgba(255, 255, 255, 0.82);
+        border-radius: var(--radius-xl);
+        box-shadow: var(--shadow);
+      }
+
+      .agent-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 360px;
+        align-items: center;
+        gap: 18px;
+        padding: 0 12px 8px;
+        background: transparent;
+        border: 0;
+        box-shadow: none;
+        overflow: visible;
+        position: relative;
+        z-index: 20;
+      }
+
+      .agent-strip-wrap {
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 14px;
+        min-width: 0;
+        overflow: visible;
+      }
+
+      .agent-strip-shell {
+        flex: 1;
+        min-width: 0;
+        overflow: visible;
+        padding: 0 8px 0 0;
+      }
+
+      .agent-strip-viewport {
+        min-width: 0;
+        overflow-x: auto;
+        overflow-y: visible;
+        scrollbar-width: none;
+      }
+
+      .agent-strip-viewport::-webkit-scrollbar {
+        display: none;
+      }
+
+      .agent-strip {
+        display: flex;
+        align-items: flex-end;
+        gap: 26px;
+        width: max-content;
+        min-width: 100%;
+        justify-content: flex-start;
+        padding: 34px 18px 8px;
+        position: relative;
+        z-index: 21;
+      }
+
+      .top-activity {
+        min-height: 108px;
+        padding: 10px 12px;
+        border-radius: 18px;
+        background: rgba(255, 250, 243, 0.42);
+        border: 1px solid rgba(255, 255, 255, 0.68);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        overflow: hidden;
+        display: grid;
+        grid-template-columns: 44px minmax(0, 1fr) 146px;
+        gap: 10px;
+        align-items: start;
+      }
+
+      .top-activity-title {
+        margin: 2px 0 0;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: #fff;
+        font-size: 16px;
+        line-height: 1;
+        background: linear-gradient(135deg, #3d62ff, #738cff);
+        box-shadow: 0 8px 18px rgba(61, 98, 255, 0.18);
+      }
+
+      .top-activity-machine {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0;
+      }
+
+      .machine-head {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .machine-head strong {
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .machine-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      .machine-status::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--amber);
+        box-shadow: 0 0 0 4px rgba(240, 180, 77, 0.12);
+        animation: state-pulse 1.8s ease-in-out infinite;
+      }
+
+      .machine-lane {
+        display: grid;
+        grid-template-columns: 50px 1fr;
+        gap: 8px;
+        align-items: center;
+        min-width: 0;
+      }
+
+      .machine-lane-label {
+        color: var(--muted);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+      }
+
+      .machine-lane-content {
+        position: relative;
+        min-width: 0;
+        padding-left: 14px;
+        font-size: 12px;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .machine-lane-content::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 50%;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        transform: translateY(-50%);
+      }
+
+      .machine-lane.is-prev .machine-lane-content {
+        color: var(--muted);
+        opacity: 0.78;
+      }
+
+      .machine-lane.is-prev .machine-lane-content::before {
+        background: rgba(24, 39, 68, 0.2);
+      }
+
+      .machine-lane.is-current .machine-lane-content {
+        color: var(--ink);
+        font-weight: 700;
+      }
+
+      .machine-lane.is-current .machine-lane-content::before {
+        background: var(--amber);
+        box-shadow: 0 0 0 5px rgba(240, 180, 77, 0.12);
+        animation: state-pulse 1.8s ease-in-out infinite;
+      }
+
+      .machine-lane.is-next .machine-lane-content {
+        color: var(--muted);
+      }
+
+      .machine-lane.is-next .machine-lane-content::before {
+        background: rgba(61, 98, 255, 0.18);
+      }
+
+      .top-activity-thoughts {
+        min-width: 0;
+        border-left: 1px solid rgba(24, 39, 68, 0.08);
+        padding-left: 10px;
+      }
+
+      .thought-label {
+        font-size: 10px;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 8px;
+      }
+
+      .thought-line {
+        font-size: 12px;
+        line-height: 1.45;
+        color: var(--ink);
+        min-height: 34px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .thought-line::after {
+        content: " ...";
+        animation: thinking-dots 1.2s steps(3, end) infinite;
+      }
+
+      @keyframes state-pulse {
+        0%, 100% { transform: translateY(-50%) scale(1); opacity: 1; }
+        50% { transform: translateY(-50%) scale(1.18); opacity: .62; }
+      }
+
+      @keyframes thinking-dots {
+        0% { opacity: .2; }
+        50% { opacity: 1; }
+        100% { opacity: .2; }
+      }
+
+      .agent-chip {
+        flex: 0 0 auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+        position: relative;
+        z-index: 1;
+      }
+
+      .agent-chip:hover,
+      .agent-chip.is-active {
+        z-index: 30;
+      }
+
+      .chip-avatar {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        color: white;
+        font-weight: 800;
+        font-size: 18px;
+        border: 3px solid rgba(255, 255, 255, 0.96);
+        box-shadow: 0 12px 24px rgba(39, 49, 76, 0.16);
+        transform-origin: center bottom;
+        transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+        position: relative;
+        z-index: 2;
+      }
+
+      .agent-chip.is-active .chip-avatar {
+        box-shadow: 0 16px 30px rgba(61, 98, 255, 0.22);
+      }
+
+      .agent-chip span {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--ink);
+        line-height: 1;
+      }
+
+      .nav-btn {
+        width: 34px;
+        height: 34px;
+        border: 0;
+        border-radius: 12px;
+        background: white;
+        color: #2848bb;
+        font-size: 16px;
+        cursor: pointer;
+        box-shadow: 0 8px 18px rgba(61, 98, 255, 0.1);
+      }
+
+      .nav-btn.is-hidden {
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      .sidebar-agent {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(24, 39, 68, 0.08);
+        margin-bottom: 10px;
+      }
+
+      .sidebar-agent .chip-avatar {
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+        border-width: 2px;
+        box-shadow: none;
+      }
+
+      .selected-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .selected-meta strong {
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .selected-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .selected-status::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(55, 198, 139, 0.12);
+      }
+
+      .selected-status.busy::before {
+        background: var(--amber);
+        box-shadow: 0 0 0 4px rgba(240, 180, 77, 0.14);
+      }
+
+      .chat-layout {
+        display: grid;
+        grid-template-rows: minmax(0, 1fr) auto;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .chat-thread {
+        overflow: auto;
+        padding: 16px 16px 12px;
+        background:
+          radial-gradient(circle at top right, rgba(61, 98, 255, 0.05), transparent 22%),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 248, 240, 0.94));
+        scrollbar-width: none;
+      }
+
+      .chat-thread::-webkit-scrollbar {
+        display: none;
+      }
+
+      .message {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .message.user {
+        justify-content: flex-end;
+      }
+
+      .message-body {
+        max-width: min(760px, 82%);
+      }
+
+      .message-meta {
+        margin-bottom: 4px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .bubble {
+        padding: 11px 13px;
+        border-radius: 18px;
+        background: white;
+        border: 1px solid rgba(24, 39, 68, 0.08);
+        box-shadow: 0 8px 16px rgba(32, 40, 68, 0.05);
+        line-height: 1.7;
+        white-space: pre-wrap;
+      }
+
+      .message.user .bubble {
+        background: linear-gradient(135deg, var(--blue), #6482ff);
+        color: white;
+      }
+
+      .composer {
+        padding: 8px 10px 10px;
+        border-top: 1px solid var(--line);
+      }
+
+      .composer-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: end;
+        gap: 8px;
+        padding: 10px;
+        border-radius: 18px;
+        background: white;
+        border: 1px solid rgba(24, 39, 68, 0.08);
+      }
+
+      .composer textarea {
+        width: 100%;
+        min-height: 62px;
+        resize: none;
+        border: 0;
+        outline: 0;
+        color: var(--ink);
+        font: inherit;
+        line-height: 1.65;
+      }
+
+      .composer-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        border: 0;
+        border-radius: 14px;
+        padding: 10px 14px;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .btn.ghost {
+        background: rgba(24, 39, 68, 0.06);
+        color: var(--ink);
+      }
+
+      .btn.primary {
+        background: linear-gradient(135deg, var(--blue), #6482ff);
+        color: white;
+        box-shadow: 0 10px 22px rgba(61, 98, 255, 0.22);
+      }
+
+      .sidebar {
+        display: grid;
+        grid-template-rows: minmax(0, 0.92fr) minmax(0, 1.08fr);
+        gap: 12px;
+        min-height: 0;
+        overflow: hidden;
+      }
+
+      .sidebar-card {
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding: 12px;
+        overflow: hidden;
+      }
+
+      .sidebar-title {
+        margin: 0 0 8px;
+        font-size: 14px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .metric {
+        padding: 9px 11px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.68);
+        border: 1px solid var(--line);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 3px;
+        font-size: 16px;
+      }
+
+      .task-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 8px;
+        min-height: 0;
+        overflow: auto;
+        scrollbar-width: none;
+      }
+
+      .task-list::-webkit-scrollbar {
+        display: none;
+      }
+
+      .task-item {
+        padding: 10px 11px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.74);
+        border: 1px solid rgba(24, 39, 68, 0.08);
+      }
+
+      .task-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .task-item strong {
+        font-size: 13px;
+      }
+
+      .task-item p {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .status-text {
+        color: #2d9d60;
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .activity-scroller {
+        overflow: auto;
+        min-height: 0;
+        padding-right: 2px;
+        scrollbar-width: none;
+      }
+
+      .activity-scroller::-webkit-scrollbar {
+        display: none;
+      }
+
+      .timeline {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding-left: 18px;
+      }
+
+      .timeline::before {
+        content: "";
+        position: absolute;
+        left: 3px;
+        top: 4px;
+        bottom: 4px;
+        width: 2px;
+        background: linear-gradient(180deg, rgba(61, 98, 255, 0.24), rgba(61, 98, 255, 0.04));
+      }
+
+      .timeline-item {
+        position: relative;
+        padding-left: 14px;
+      }
+
+      .timeline-item::before {
+        content: "";
+        position: absolute;
+        left: -19px;
+        top: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 0 4px rgba(55, 198, 139, 0.12);
+      }
+
+      .timeline-time {
+        display: block;
+        margin-bottom: 2px;
+        color: var(--muted);
+        font-size: 11px;
+      }
+
+      .timeline-item strong {
+        display: block;
+        font-size: 12px;
+      }
+
+      .timeline-item p {
+        margin: 2px 0 0;
+        color: var(--muted);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .history-list {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        overflow: auto;
+        min-height: 0;
+        scrollbar-width: none;
+      }
+
+      .history-list::-webkit-scrollbar {
+        display: none;
+      }
+
+      .history-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 8px;
+        align-items: center;
+        padding: 7px 2px;
+        border-bottom: 1px solid rgba(24, 39, 68, 0.06);
+      }
+
+      .history-row:last-child {
+        border-bottom: 0;
+      }
+
+      .history-row strong {
+        display: block;
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1.35;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .history-row span {
+        color: var(--muted);
+        font-size: 11px;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 1180px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .app {
+          width: calc(100vw - 12px);
+          height: calc(100vh - 12px);
+          margin: 6px auto;
+          padding: 8px;
+          border-radius: 20px;
+        }
+
+        .agent-bar {
+          grid-template-columns: 1fr;
+        }
+
+        .top-activity {
+          grid-template-columns: 32px minmax(0, 1fr);
+        }
+
+        .top-activity-thoughts {
+          display: none;
+        }
+
+        .composer-shell {
+          grid-template-columns: 1fr;
+        }
+
+        .composer-actions .btn {
+          flex: 1;
+        }
+
+        .sidebar {
+          grid-template-columns: 1fr;
+        }
+
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div class="layout">
+        <main class="main">
+          <section class="agent-bar">
+            <div class="agent-strip-wrap">
+              <button class="nav-btn" type="button" id="scrollPrev">‹</button>
+              <div class="agent-strip-shell">
+                <div class="agent-strip-viewport" id="agentStripViewport">
+                  <div class="agent-strip" id="agentStrip"></div>
+                </div>
+              </div>
+              <button class="nav-btn" type="button" id="scrollNext">›</button>
+            </div>
+            <section class="top-activity">
+              <h3 class="top-activity-title" id="topActivityIcon">思</h3>
+              <div class="top-activity-machine">
+                <div class="machine-head">
+                  <strong id="machineAgentName">思思总控</strong>
+                  <span class="machine-status" id="machineStatus">处理中</span>
+                </div>
+                <div class="machine-lane is-prev">
+                  <span class="machine-lane-label">上一项</span>
+                  <div class="machine-lane-content" id="machinePrev">客户摘要初筛</div>
+                </div>
+                <div class="machine-lane is-current">
+                  <span class="machine-lane-label">当前</span>
+                  <div class="machine-lane-content" id="machineCurrent">华东折扣审批核验</div>
+                </div>
+                <div class="machine-lane is-next">
+                  <span class="machine-lane-label">下一项</span>
+                  <div class="machine-lane-content" id="machineNext">生成补件通知</div>
+                </div>
+              </div>
+              <div class="top-activity-thoughts">
+                <div class="thought-label">处理中</div>
+                <div class="thought-line" id="machineThought">正在核验审批附件完整性</div>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel chat-layout">
+            <div class="chat-thread" id="chatThread"></div>
+
+            <div class="composer">
+              <div class="composer-shell">
+                <textarea placeholder="输入任务，例如：先判断今天最优先的审批，再生成客户跟进摘要。"></textarea>
+                <div class="composer-actions">
+                  <button class="btn ghost" type="button">语音</button>
+                  <button class="btn primary" type="button">发送</button>
+                </div>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <aside class="sidebar">
+          <section class="panel sidebar-card">
+            <div class="sidebar-agent">
+              <div class="chip-avatar" id="selectedAvatar">思</div>
+              <div class="selected-meta">
+                <strong id="selectedName">思思总控</strong>
+                <span class="selected-status" id="selectedStatus">空闲</span>
+              </div>
+            </div>
+            <h3 class="sidebar-title">今日工作概览</h3>
+            <div class="metrics" id="metricsGrid"></div>
+            <div class="task-list" id="taskList"></div>
+          </section>
+
+          <section class="panel sidebar-card">
+            <h3 class="sidebar-title">会话历史</h3>
+            <div class="history-list" id="historyList"></div>
+          </section>
+        </aside>
+      </div>
+    </div>
+
+    <script>
+      const dashboardMetrics = [
+        { label: "今日任务", value: "12" },
+        { label: "已完成", value: "5" },
+        { label: "待审批", value: "3" },
+        { label: "待跟进", value: "4" }
+      ];
+
+      const todayTasks = [
+        { title: "整理今日客户跟进摘要", status: "进行中", detail: "09:30 前同步给销售主管" },
+        { title: "复核华东折扣审批", status: "待审批", detail: "缺报价依据，需要补件说明" },
+        { title: "同步下午审批会材料", status: "已准备", detail: "14:00 前发给参会人" }
+      ];
+
+      const agents = [
+        {
+          key: "sisi",
+          name: "思思总控",
+          short: "思",
+          color: "linear-gradient(135deg, #3d62ff, #738cff)",
+          status: "busy",
+          statusText: "忙碌中",
+          stateMachine: {
+            status: "处理中",
+            previousTask: "客户摘要初筛",
+            currentTask: "华东折扣审批核验",
+            nextTask: "生成补件通知",
+            thoughts: ["正在核验审批附件完整性", "正在比对折扣政策阈值", "正在汇总销售助手结果", "正在生成统一回复"]
+          },
+          messages: [
+            { role: "assistant", name: "思思总控", time: "09:32", text: "早上好，今天我先帮你把待办拆成三块：审批确认、客户跟进摘要、以及下午会议材料准备。" },
+            { role: "assistant", name: "思思总控", time: "09:33", text: "其中客户摘要已经交给销售助手整理。审批部分建议先看华东区折扣审批，我已经把风险点筛出来了。" },
+            { role: "user", name: "你", time: "09:34", text: "先把最优先的审批和需要补的材料告诉我。" },
+            { role: "assistant", name: "思思总控", time: "09:35", text: "最优先的是华东区折扣审批，缺客户报价依据和商务让利说明。我建议先发补件消息，再并行整理销售摘要。" }
+          ],
+          activity: [
+            ["09:31", "任务拆解完成", "识别出审批、摘要、会议材料三项主任务。"],
+            ["09:32", "审批助手处理中", "正在核验附件完整性和折扣阈值。"],
+            ["09:33", "销售助手处理中", "汇总昨晚客户会话与 WebChat 新线索。"],
+            ["09:34", "知识检索已触发", "查询折扣政策与近三月相似审批案例。"],
+            ["09:35", "主回复整理中", "汇总多个智能体结果，准备统一回复。"]
+          ]
+        },
+        {
+          key: "approval",
+          name: "审批助手",
+          short: "批",
+          color: "linear-gradient(135deg, #ff9e67, #ffc370)",
+          status: "busy",
+          statusText: "忙碌中",
+          stateMachine: {
+            status: "处理中",
+            previousTask: "流程节点校验",
+            currentTask: "附件缺失识别",
+            nextTask: "生成补件话术",
+            thoughts: ["正在识别报价依据截图", "正在检查商务让利说明", "正在评估截止时间风险"]
+          },
+          messages: [
+            { role: "assistant", name: "审批助手", time: "09:36", text: "这单流程节点没有问题，主要风险是附件说明不足。" },
+            { role: "assistant", name: "审批助手", time: "09:36", text: "目前缺两项：客户报价依据截图、商务让利原因补充。" },
+            { role: "user", name: "你", time: "09:37", text: "如果现在发补件通知，还来得及 11 点前完成吗？" },
+            { role: "assistant", name: "审批助手", time: "09:37", text: "来得及。建议 10:20 前补齐，我已经准备好了补件通知文案。" }
+          ],
+          activity: [
+            ["09:35", "OCR 核验中", "识别附件页数，发现报价说明缺页。"],
+            ["09:36", "政策比对完成", "当前折扣幅度接近审批上限。"],
+            ["09:36", "风险提升", "截止时间临近，优先级调整为高。"],
+            ["09:37", "补件文案已生成", "可直接发送给区域负责人。"],
+            ["09:37", "等待确认", "待你决定是否立即发出通知。"]
+          ]
+        },
+        {
+          key: "sales",
+          name: "销售助手",
+          short: "销",
+          color: "linear-gradient(135deg, #22b7ab, #74dfd0)",
+          status: "busy",
+          statusText: "忙碌中",
+          stateMachine: {
+            status: "处理中",
+            previousTask: "会话抓取",
+            currentTask: "主管版摘要生成",
+            nextTask: "同步 CRM 跟进项",
+            thoughts: ["正在合并昨晚客户会话", "正在提炼高意向客户", "正在压缩成主管浏览版"]
+          },
+          messages: [
+            { role: "assistant", name: "销售助手", time: "09:40", text: "昨晚新增 3 条有效线索，其中 1 条来自 WebChat，客户对报价响应积极。" },
+            { role: "assistant", name: "销售助手", time: "09:40", text: "我已经整理出主管浏览版和团队播报版两个摘要。" },
+            { role: "user", name: "你", time: "09:41", text: "先给我主管浏览版，突出风险和机会。" },
+            { role: "assistant", name: "销售助手", time: "09:41", text: "好的，我会优先标出高意向客户和今天必须联系的联系人。" }
+          ],
+          activity: [
+            ["09:38", "会话抓取完成", "拉取昨晚企业微信和 WebChat 记录。"],
+            ["09:39", "线索去重完成", "重复联系人已归并到客户实体。"],
+            ["09:40", "高意向识别", "两位客户进入报价阶段。"],
+            ["09:40", "主管版摘要生成", "保留风险、机会、建议动作三个模块。"],
+            ["09:41", "待主对话调用", "准备回传给思思总控。"]
+          ]
+        },
+        {
+          key: "knowledge",
+          name: "知识助手",
+          short: "知",
+          color: "linear-gradient(135deg, #5c69ee, #a0b1ff)",
+          status: "idle",
+          statusText: "空闲",
+          stateMachine: {
+            status: "待命中",
+            previousTask: "政策文档命中",
+            currentTask: "相似案例检索",
+            nextTask: "整理来源引用",
+            thoughts: ["正在等待主控调用", "已准备好政策与案例来源", "可随时切入知识检索"]
+          },
+          messages: [
+            { role: "assistant", name: "知识助手", time: "09:42", text: "我已经定位到折扣政策和重点客户特殊报价说明两份文档。" },
+            { role: "user", name: "你", time: "09:43", text: "继续，把最接近这单的两个案例挑出来。" },
+            { role: "assistant", name: "知识助手", time: "09:43", text: "好的，我会按金额区间和客户等级优先返回。" }
+          ],
+          activity: [
+            ["09:41", "政策文档命中", "定位到 2026Q1 修订版。"],
+            ["09:42", "关键条款抽取", "提炼审批阈值和附件要求。"],
+            ["09:42", "相似案例检索", "筛选金额与区域接近样本。"],
+            ["09:43", "出处结构化", "为建议绑定文档与案例来源。"],
+            ["09:43", "等待展开", "需要时可展开完整引用列表。"]
+          ]
+        },
+        {
+          key: "schedule",
+          name: "日程助手",
+          short: "程",
+          color: "linear-gradient(135deg, #e0a53c, #f5d57b)",
+          status: "idle",
+          statusText: "空闲",
+          stateMachine: {
+            status: "待命中",
+            previousTask: "日历读取",
+            currentTask: "候选时间比对",
+            nextTask: "生成会议议程",
+            thoughts: ["正在等待会议指令", "已缓存核心成员空闲时段", "可立即生成邀请草案"]
+          },
+          messages: [
+            { role: "assistant", name: "日程助手", time: "09:44", text: "审批准备会建议锁定在 14:30 到 15:00，这个时间段冲突最少。" },
+            { role: "user", name: "你", time: "09:45", text: "先把议程结构给我，我看下要不要加销售复盘。" },
+            { role: "assistant", name: "日程助手", time: "09:45", text: "没问题，我会把销售复盘作为第三议题并控制在 5 分钟。" }
+          ],
+          activity: [
+            ["09:42", "日历读取完成", "分析核心成员 14:00-16:00 空闲段。"],
+            ["09:43", "候选时间锁定", "14:30-15:00 冲突最少。"],
+            ["09:44", "议程草案生成", "审批结论、客户更新、材料确认。"],
+            ["09:44", "提醒消息待发", "确认后可直接发起会议邀请。"],
+            ["09:45", "等待微调", "支持追加销售复盘议题。"]
+          ]
+        }
+      ];
+
+      const state = { activeKey: "sisi" };
+      const agentStrip = document.getElementById("agentStrip");
+      const agentStripViewport = document.getElementById("agentStripViewport");
+      const chatThread = document.getElementById("chatThread");
+      const selectedAvatar = document.getElementById("selectedAvatar");
+      const selectedName = document.getElementById("selectedName");
+      const selectedStatus = document.getElementById("selectedStatus");
+      const metricsGrid = document.getElementById("metricsGrid");
+      const taskList = document.getElementById("taskList");
+      const topActivityIcon = document.getElementById("topActivityIcon");
+      const machineAgentName = document.getElementById("machineAgentName");
+      const machineStatus = document.getElementById("machineStatus");
+      const machinePrev = document.getElementById("machinePrev");
+      const machineCurrent = document.getElementById("machineCurrent");
+      const machineNext = document.getElementById("machineNext");
+      const machineThought = document.getElementById("machineThought");
+      const historyList = document.getElementById("historyList");
+      const scrollPrev = document.getElementById("scrollPrev");
+      const scrollNext = document.getElementById("scrollNext");
+      let thoughtTicker = null;
+
+      function currentAgent() {
+        return agents.find((item) => item.key === state.activeKey) || agents[0];
+      }
+
+      function renderMetrics() {
+        metricsGrid.innerHTML = "";
+        dashboardMetrics.forEach((item) => {
+          const node = document.createElement("div");
+          node.className = "metric";
+          node.innerHTML = `<span>${item.label}</span><strong>${item.value}</strong>`;
+          metricsGrid.appendChild(node);
+        });
+      }
+
+      function renderTasks() {
+        taskList.innerHTML = "";
+        todayTasks.forEach((item) => {
+          const node = document.createElement("div");
+          node.className = "task-item";
+          node.innerHTML = `
+            <div class="task-top">
+              <strong>${item.title}</strong>
+              <span class="status-text">${item.status}</span>
+            </div>
+            <p>${item.detail}</p>
+          `;
+          taskList.appendChild(node);
+        });
+      }
+
+      function bindDockEffect() {
+        const chips = [...document.querySelectorAll(".agent-chip")];
+        const avatars = chips.map((chip) => chip.querySelector(".chip-avatar"));
+
+        const reset = () => {
+          avatars.forEach((avatar) => {
+            avatar.style.transform = "scale(1)";
+            avatar.style.opacity = "1";
+          });
+        };
+
+        agentStripViewport.onmousemove = (event) => {
+          chips.forEach((chip, index) => {
+            const rect = chip.getBoundingClientRect();
+            const center = rect.left + rect.width / 2;
+            const distance = Math.abs(event.clientX - center);
+            const scale = Math.max(1, 1.75 - distance / 90);
+            avatars[index].style.transform = `scale(${Math.min(scale, 1.75)})`;
+            avatars[index].style.opacity = `${Math.max(0.72, 1 - distance / 420)}`;
+          });
+        };
+
+        agentStripViewport.onmouseleave = reset;
+        reset();
+      }
+
+      function updateArrowVisibility() {
+        const overflow = agentStripViewport.scrollWidth - agentStripViewport.clientWidth > 6;
+        scrollPrev.classList.toggle("is-hidden", !overflow);
+        scrollNext.classList.toggle("is-hidden", !overflow);
+      }
+
+      function renderStrip() {
+        agentStrip.innerHTML = "";
+        agents.forEach((agent) => {
+          const chip = document.createElement("button");
+          chip.type = "button";
+          chip.className = `agent-chip${agent.key === state.activeKey ? " is-active" : ""}`;
+          chip.innerHTML = `
+            <div class="chip-avatar" style="background:${agent.color}">${agent.short}</div>
+            <span>${agent.name}</span>
+          `;
+          chip.addEventListener("click", () => {
+            state.activeKey = agent.key;
+            render();
+          });
+          agentStrip.appendChild(chip);
+        });
+        bindDockEffect();
+        requestAnimationFrame(updateArrowVisibility);
+      }
+
+      function renderMessages(agent) {
+        chatThread.innerHTML = "";
+        agent.messages.forEach((message) => {
+          const row = document.createElement("div");
+          row.className = `message${message.role === "user" ? " user" : ""}`;
+          const avatar = `<div class="chip-avatar" style="background:${message.role === "user" ? "linear-gradient(135deg, #253554, #64748e)" : agent.color}">${message.role === "user" ? "你" : agent.short}</div>`;
+          const body = `
+            <div class="message-body">
+              <div class="message-meta">${message.name} · ${message.time}</div>
+              <div class="bubble">${message.text}</div>
+            </div>
+          `;
+          row.innerHTML = message.role === "user" ? `${body}${avatar}` : `${avatar}${body}`;
+          chatThread.appendChild(row);
+        });
+        chatThread.scrollTop = 0;
+      }
+
+      function renderTopActivity(agent) {
+        const machine = agent.stateMachine;
+        machineAgentName.textContent = agent.name;
+        machineStatus.textContent = machine.status;
+        machinePrev.textContent = machine.previousTask;
+        machineCurrent.textContent = machine.currentTask;
+        machineNext.textContent = machine.nextTask;
+        machineThought.textContent = machine.thoughts[0] || "";
+
+        if (thoughtTicker) {
+          clearInterval(thoughtTicker);
+        }
+
+        let thoughtIndex = 0;
+        thoughtTicker = window.setInterval(() => {
+          thoughtIndex = (thoughtIndex + 1) % machine.thoughts.length;
+          machineThought.textContent = machine.thoughts[thoughtIndex];
+        }, 1800);
+      }
+
+      function renderHistory(agent) {
+        historyList.innerHTML = "";
+        agent.messages.forEach((message) => {
+          const node = document.createElement("div");
+          node.className = "history-row";
+          node.innerHTML = `
+            <strong>${message.text.replace(/\n+/g, " ").slice(0, 28)}${message.text.length > 28 ? "..." : ""}</strong>
+            <span>${message.time}</span>
+          `;
+          historyList.appendChild(node);
+        });
+      }
+
+      function render() {
+        const agent = currentAgent();
+        renderStrip();
+        renderMessages(agent);
+        renderTopActivity(agent);
+        renderHistory(agent);
+        topActivityIcon.textContent = agent.short;
+        selectedAvatar.textContent = agent.short;
+        selectedAvatar.style.background = agent.color;
+        selectedName.textContent = agent.name;
+        selectedStatus.textContent = agent.statusText;
+        selectedStatus.className = `selected-status${agent.status === "busy" ? " busy" : ""}`;
+      }
+
+      document.getElementById("scrollPrev").addEventListener("click", () => {
+        agentStripViewport.scrollBy({ left: -220, behavior: "smooth" });
+      });
+
+      document.getElementById("scrollNext").addEventListener("click", () => {
+        agentStripViewport.scrollBy({ left: 220, behavior: "smooth" });
+      });
+
+      window.addEventListener("resize", updateArrowVisibility);
+
+      renderMetrics();
+      renderTasks();
+      render();
+    </script>
+  </body>
+</html>

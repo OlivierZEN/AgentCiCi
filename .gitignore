@@ -1,0 +1,22 @@
+.DS_Store
+
+# Java
+backend/target/
+backend/.m2/
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/tsconfig.*.tsbuildinfo
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.claude/
+
+# Temp
+tmp-*.txt
+
+# OS
+.DS_Store
