@@ -629,9 +629,14 @@ public class AgentCompileService {
         List<String> agent = normalizeList(agentBoundary).stream().map(String::trim).filter(item -> !item.isBlank()).toList();
         List<String> skill = normalizeList(skillBoundary).stream().map(String::trim).filter(item -> !item.isBlank()).toList();
         if (!agent.isEmpty() && !skill.isEmpty()) {
-            LinkedHashSet<String> allowed = new LinkedHashSet<>(agent);
-            allowed.retainAll(skill);
-            return List.copyOf(allowed);
+            LinkedHashSet<String> intersection = new LinkedHashSet<>(agent);
+            intersection.retainAll(skill);
+            if (!intersection.isEmpty()) {
+                return List.copyOf(intersection);
+            }
+            LinkedHashSet<String> union = new LinkedHashSet<>(agent);
+            union.addAll(skill);
+            return List.copyOf(union);
         }
         if (!agent.isEmpty()) {
             return List.copyOf(new LinkedHashSet<>(agent));
@@ -646,9 +651,14 @@ public class AgentCompileService {
         List<Long> agent = normalizeList(agentBoundary);
         List<Long> skill = normalizeList(skillBoundary);
         if (!agent.isEmpty() && !skill.isEmpty()) {
-            LinkedHashSet<Long> allowed = new LinkedHashSet<>(agent);
-            allowed.retainAll(skill);
-            return List.copyOf(allowed);
+            LinkedHashSet<Long> intersection = new LinkedHashSet<>(agent);
+            intersection.retainAll(skill);
+            if (!intersection.isEmpty()) {
+                return List.copyOf(intersection);
+            }
+            LinkedHashSet<Long> union = new LinkedHashSet<>(agent);
+            union.addAll(skill);
+            return List.copyOf(union);
         }
         if (!agent.isEmpty()) {
             return List.copyOf(new LinkedHashSet<>(agent));

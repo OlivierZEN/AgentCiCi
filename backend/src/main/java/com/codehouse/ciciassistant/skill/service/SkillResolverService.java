@@ -1,11 +1,13 @@
 package com.codehouse.ciciassistant.skill.service;
 
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.agent.service.AgentCapabilityResolverService;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
+import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
@@ -18,6 +20,14 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SkillResolverService {
+
+    private static final List<String> CICI_DEFAULT_DISCOVERY_TOOLS = List.of(
+            CloudccOpenApiService.toolName(),
+            CloudccOpenApiService.toolNameGetStandardObjects(),
+            CloudccOpenApiService.toolNameGetCustomObjects(),
+            CloudccOpenApiService.toolNameGetObjectFields(),
+            ToolNameNormalizer.GET_PENDING_APPROVALS
+    );
 
     private final SkillDefinitionService skillDefinitionService;
     private final AgentDefinitionRepository agentDefinitionRepository;
@@ -94,12 +104,15 @@ public class SkillResolverService {
                 ))
                 .toList();
 
-        LinkedHashSet<String> toolNames = new LinkedHashSet<>(
-                publishedRuntimeBinding.toolNames().isEmpty() ? capability.effectiveToolNames() : publishedRuntimeBinding.toolNames());
+        // Always merge live capability with published-manifest snapshots. Published versions are a
+        // compile-time checkpoint, but chat/tool-calling must honor current agent_tool_binding rows
+        // as well — otherwise MCP 等工具在「已绑定未重新发布」或清单滞后时不会出现在模型侧。
+        LinkedHashSet<String> toolNames = new LinkedHashSet<>(capability.effectiveToolNames());
+        toolNames.addAll(ToolNameNormalizer.canonicalizeAll(publishedRuntimeBinding.toolNames()));
+        augmentBuiltinCiciToolset(agentId, toolNames);
         LinkedHashSet<String> kbIds = new LinkedHashSet<>(
-                publishedRuntimeBinding.knowledgeBaseIds().isEmpty()
-                        ? capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList()
-                        : publishedRuntimeBinding.knowledgeBaseIds());
+                capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList());
+        kbIds.addAll(publishedRuntimeBinding.knowledgeBaseIds());
         List<String> handoffRules = new ArrayList<>();
         String outputContract = null;
 
@@ -170,6 +183,13 @@ public class SkillResolverService {
             return "cici-system";
         }
         return "cici-system";
+    }
+
+    private void augmentBuiltinCiciToolset(String agentId, LinkedHashSet<String> toolNames) {
+        if (!"cici-system".equals(agentId)) {
+            return;
+        }
+        toolNames.addAll(CICI_DEFAULT_DISCOVERY_TOOLS);
     }
 
     private static List<String> splitCsv(String raw) {

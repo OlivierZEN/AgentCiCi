@@ -7,6 +7,24 @@ status: active
 
 ## Active Queue
 
+### TASK-018 Agent tool whitelist strict boundary and MCP enforcement verification
+
+- status: completed
+- priority: P0
+- owner_role: backend-agent-runtime
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 修复 Agent 对话运行时工具边界在“Agent 白名单与 Skill 白名单无交集”时被错误放宽为并集的问题，并验证 MCP 白名单约束生效。
+- done:
+  - `AgentCapabilityResolverService.mergeBoundary(...)` 已改为严格交集策略，不再在无交集时回退并集。
+  - 无交集场景 warning 文案已更新为“严格收敛为空”，便于排障定位。
+  - 新增 `OrchestratorIntegrationTest#shouldEnforceIntersectionForAgentToolWhitelistAndSkillToolWhitelistIncludingMcp`，构造“Agent 仅 tavily_search、Skill 仅 get_object_list（MCP）”场景，验证 `effectiveToolNames` 为空且存在 warnings。
+  - 已执行回归：
+    - `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldEnforceIntersectionForAgentToolWhitelistAndSkillToolWhitelistIncludingMcp test` -> success
+    - `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldResolvePhaseOneSkillsForSalesAgent,OrchestratorIntegrationTest#shouldNormalizeLegacyAgentToolIdsForApprovalAgent test` -> success
+- next_action: 在管理端手工回归“配置 MCP 白名单后发起真实对话”场景，确认 UI 展示与后端 `effectiveToolNames` 一致。
+- handoff_notes:
+  - 该修复会改变历史“无交集时仍可调用工具”的宽松行为，若业务需要放宽策略，应通过显式通配或统一白名单配置实现，不应隐式并集兜底。
+
 ### TASK-001 MCP cache runtime smoke closure
 
 - status: completed
@@ -268,3 +286,61 @@ status: active
 - handoff_notes:
   - 「上传文件」和「添加快捷短语」按钮当前为视觉占位，未接入实际功能逻辑。
   - 仅修改了工作台（workbench）对话框，未影响对话页（chat）`cici-composer`。
+
+### TASK-015 Fix CiCi default tool autonomy
+
+- status: completed
+- priority: P0
+- owner_role: backend-chat-runtime
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 修复思思默认对话中“有工具但难以自主调用有效工具”的问题，确保默认运行时既保留全局工具调用规则，也暴露 CloudCC 对象/字段发现能力。
+- done:
+  - `SkillPromptAssembler` 改为保留全局基础提示词，并叠加 agent 专属规则，避免既有 agent system prompt 覆盖掉全局“该用工具时主动调用工具”的约束。
+  - `AliyunBailianClient` 全局提示词新增“当可用工具能提供事实或记录时主动调用工具而不是猜测”规则。
+  - `SkillResolverService` 为运行时 `cici-system` 默认工具集补齐 `cloudcc_getStandardObjects`、`cloudcc_getCustomObjects`、`cloudcc_getObjectFields`。
+  - `AgentDefinitionService` 的新组织内置 `cici-system` agent 种子同步补齐 CloudCC 发现类工具和主动调工具提示。
+  - 新增回归 `OrchestratorIntegrationTest#shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent`，验证默认思思工具范围包含 CloudCC 发现工具。
+- verification:
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent test` -> success
+  - `backend`: `mvn -q -DskipTests compile` -> success
+- next_action: 在工作台人工回归“查客户资料 / 查对象字段 / 查待审批”等典型话术，确认思思会优先发起工具调用而不是只输出泛化文本。
+- handoff_notes:
+  - 本次修复对现有组织立即生效依赖运行时 resolver 兜底，不要求先重建 builtin agent 或重绑 skill。
+  - 更大范围的 `OrchestratorIntegrationTest` 当前仍受短信频控和既有调度唯一键问题影响，不能把整类失败解读为本任务回归失败。
+
+### TASK-016 Workbench reply-area blanking guard
+
+- status: completed
+- priority: P0
+- owner_role: frontend-assistant-experience
+- spec_path: `docs/specs/FEAT-006-virtual-human-multitask-workbench.md`
+- summary: 修复工作台发送后“先显示思考中，再整段变空白”的问题，避免后端暂时缺少 assistant 历史时把本地流式消息覆盖清空。
+- done:
+  - 在 `loadWorkbenchMessages(...)` 增加保护：若后端刷新结果没有 assistant 内容，而本地已有 assistant 流式文本，则保留本地消息，不做覆盖。
+  - 保持 `conversationMessages` 正常更新，避免影响历史同步和会话刷新路径。
+- verification:
+  - `frontend`: `npm run build` -> success
+- next_action: 人工复现“看下今天的潜在客户”等真实问题，确认 UI 不再从图1跳到空白图2。
+- handoff_notes:
+  - 该修复是前端防护层；若后端持续写入空 assistant 内容，仍需要继续排查后端流式落库链路。
+
+### TASK-017 Remove virtual human surface
+
+- status: completed
+- priority: P1
+- owner_role: fullstack-assistant-experience
+- spec_path: `docs/specs/FEAT-007-remove-virtual-human-surface.md`
+- summary: 按用户要求正式下线助手端“虚拟人”功能，移除菜单入口、scene 页面、专属 SSE 事件和静态封面页，并同步项目文档。
+- done:
+  - `AssistantApp` 已移除 `scene` 标签页、状态、语音分支和整段沉浸式页面渲染。
+  - `streamAiChat` 已回收仅供 scene 页使用的未知事件透传参数。
+  - `ChatOrchestratorService.chatStream` 已移除 `avatar_state/task_created/task_status/task_delta/task_done` 发送逻辑，保留通用聊天流事件。
+  - `frontend/public/ai-cover.html` 与 `frontend/public/vh-cover.html` 已删除。
+  - 已新增 `FEAT-007` 下线 spec，并将 `FEAT-006` 标记为 retired。
+- verification:
+  - `frontend`: `npm run build` -> success
+  - `backend`: `mvn -q -DskipTests compile` -> success
+- next_action: 人工回归工作台、监控、客户会话和 CRM 入口，确认移除 scene 分支后导航和语音输入无回归。
+- handoff_notes:
+  - `FEAT-006` 只保留历史设计上下文，当前产品能力以下线 spec 和 `.claw/current-status.md` 为准。
+  - 如果后续要恢复该方向，应重新立项，不要直接恢复旧 scene MVP 代码。

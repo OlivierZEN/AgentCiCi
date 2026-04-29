@@ -6,7 +6,6 @@ import {
   type StreamToolResultEvent,
   type StreamToolCallEvent,
   type StreamPhaseEvent,
-  type StreamUnknownEvent,
 } from "../chat/streamChat";
 import { BootLoginConversationDemo, BootLoginDataStream } from "../components/BootLoginEffects";
 import ChatMarkdown from "../components/ChatMarkdown";
@@ -118,24 +117,6 @@ type WorkbenchOverviewItem = {
   prompt: string;
 };
 
-type SceneLine = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-};
-
-type SceneAvatarState = "idle" | "listening" | "thinking" | "speaking";
-type SceneTaskStatus = "queued" | "running" | "waiting_user" | "blocked" | "done" | "failed";
-type SceneTaskCard = {
-  taskId: string;
-  title: string;
-  intent: string;
-  status: SceneTaskStatus;
-  phase: string;
-  summary: string;
-  content: string;
-};
-
 type WorkflowExecutionPayload = {
   id: number;
   routineKey?: string;
@@ -161,33 +142,6 @@ const DOCK_AGENT_COLORS = [
   "linear-gradient(135deg, #f0b44d, #f7cf69)",
   "linear-gradient(135deg, #e05c7a, #ff8fa0)",
   "linear-gradient(135deg, #3bb56e, #5edd8f)",
-];
-
-const SCENE_INITIAL_LINES: SceneLine[] = [
-  { id: "s1", role: "assistant", text: "Hi，我是 Aira。欢迎来到模拟场景演示，你可以先告诉我今天最想推进的目标。" },
-  { id: "s2", role: "user", text: "请按“客户成功”场景模拟一次晨会开场和当日任务分解。" },
-  { id: "s3", role: "assistant", text: "好的，我会先给出晨会开场词，再拆分跟进、风险提醒和协作动作。" },
-];
-
-const SCENE_DEFAULT_TASKS: SceneTaskCard[] = [
-  {
-    taskId: "task-demo-1",
-    title: "会议纪要",
-    intent: "meeting_summary",
-    status: "queued",
-    phase: "planning",
-    summary: "等待任务输入",
-    content: "",
-  },
-  {
-    taskId: "task-demo-2",
-    title: "英文摘要",
-    intent: "english_summary",
-    status: "queued",
-    phase: "planning",
-    summary: "等待任务输入",
-    content: "",
-  },
 ];
 
 function toWorkbenchDockAgent(agent: PublishedAgentPayload, colorIndex: number): WorkbenchDockAgent {
@@ -839,7 +793,7 @@ export default function AssistantApp() {
   const [activeConversationId, setActiveConversationId] = useState("");
   const [searchText, setSearchText] = useState("");
   const [activeChannel, setActiveChannel] = useState<"all" | ConversationThread["channel"]>("all");
-  const [workspaceTab, setWorkspaceTab] = useState<"chat" | "workbench" | "scene" | "monitor" | "customers" | "crm">("workbench");
+  const [workspaceTab, setWorkspaceTab] = useState<"chat" | "workbench" | "monitor" | "customers" | "crm">("workbench");
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
   const [conversationListNotice, setConversationListNotice] = useState("");
@@ -857,13 +811,8 @@ export default function AssistantApp() {
   const plusMenuRef = useRef<HTMLDivElement | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
-  const workspaceTabRef = useRef<"chat" | "workbench" | "scene" | "monitor" | "customers" | "crm">("workbench");
+  const workspaceTabRef = useRef<"chat" | "workbench" | "monitor" | "customers" | "crm">("workbench");
   const [monitorPulseTick, setMonitorPulseTick] = useState(0);
-  const [scenePrompt, setScenePrompt] = useState("");
-  const [sceneLines, setSceneLines] = useState<SceneLine[]>(SCENE_INITIAL_LINES);
-  const [sceneTasks, setSceneTasks] = useState<SceneTaskCard[]>(SCENE_DEFAULT_TASKS);
-  const [sceneAvatarState, setSceneAvatarState] = useState<SceneAvatarState>("idle");
-  const [sceneLoading, setSceneLoading] = useState(false);
 
   const persistAuth = (payload: AuthPayload | null) => {
     if (payload) {
@@ -1099,7 +1048,16 @@ export default function AssistantApp() {
       }
       const normalized = normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]);
       setConversationMessages((prev) => ({ ...prev, [sessionId]: normalized }));
-      setWorkbenchMessagesByAgent((prev) => ({ ...prev, [agentKey]: normalized }));
+      setWorkbenchMessagesByAgent((prev) => {
+        const existing = prev[agentKey] ?? [];
+        const existingHasAssistant = existing.some((item) => item.role === "assistant" && item.content.trim());
+        const normalizedHasAssistant = normalized.some((item) => item.role === "assistant" && item.content.trim());
+        // If backend history currently lacks assistant content, keep richer local stream result.
+        if (existingHasAssistant && !normalizedHasAssistant) {
+          return prev;
+        }
+        return { ...prev, [agentKey]: normalized };
+      });
     } catch {
       // Keep optimistic UI messages if refresh fails.
     }
@@ -1158,7 +1116,7 @@ export default function AssistantApp() {
     workspaceTabRef.current = workspaceTab;
   }, [workspaceTab]);
 
-  const sessionStreamActive = workspaceTab !== "workbench" && workspaceTab !== "scene" && workspaceTab !== "monitor" && workspaceTab !== "crm";
+  const sessionStreamActive = workspaceTab !== "workbench" && workspaceTab !== "monitor" && workspaceTab !== "crm";
 
   useEffect(() => {
     if (!auth || !sessionStreamActive) {
@@ -1183,7 +1141,6 @@ export default function AssistantApp() {
               await loadConversationThreads(activeConversationIdRef.current || sessionId);
               if (
                 workspaceTabRef.current === "workbench" ||
-                workspaceTabRef.current === "scene" ||
                 workspaceTabRef.current === "monitor" ||
                 workspaceTabRef.current === "crm"
               ) {
@@ -1216,7 +1173,6 @@ export default function AssistantApp() {
         await loadConversationThreads();
         if (
           workspaceTabRef.current !== "workbench" &&
-          workspaceTabRef.current !== "scene" &&
           workspaceTabRef.current !== "monitor" &&
           activeConversationIdRef.current
         ) {
@@ -1268,14 +1224,14 @@ export default function AssistantApp() {
   }, [activeAgentId, activeChannel, conversationsByAgent, searchText]);
 
   useEffect(() => {
-    if (workspaceTab === "workbench" || workspaceTab === "scene" || workspaceTab === "monitor" || workspaceTab === "crm" || !auth || !activeConversationId) {
+    if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm" || !auth || !activeConversationId) {
       return;
     }
     void loadConversationMessages(activeConversationId, true);
   }, [activeConversationId, auth?.token, workspaceTab]);
 
   useEffect(() => {
-    if (workspaceTab === "workbench" || workspaceTab === "scene" || workspaceTab === "monitor" || workspaceTab === "crm") {
+    if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm") {
       return;
     }
     if (availableThreads.some((thread) => thread.id === activeConversationId)) {
@@ -1689,7 +1645,8 @@ export default function AssistantApp() {
           setApprovalPageHtml(buildPendingApprovalsHtml(event.payload));
           setTimeout(() => setApprovalDrawerOpen(true), 24);
           renderedApproval = true;
-          suppress = true;
+          // Keep streaming visible in chat; approval drawer is an auxiliary surface.
+          suppress = false;
         },
         (event: StreamToolCallEvent) => {
           if (!isWorkbench) return;
@@ -1808,191 +1765,6 @@ export default function AssistantApp() {
     await submitQuestion(input.trim());
   };
 
-  const applySceneUnknownEvent = (event: StreamUnknownEvent) => {
-    if (event.eventName === "task_created") {
-      const payload = event.data as {
-        taskId?: string;
-        title?: string;
-        intent?: string;
-        status?: SceneTaskStatus;
-      };
-      const taskId = payload.taskId;
-      if (!taskId) return;
-      setSceneTasks((prev) => {
-        if (prev.some((item) => item.taskId === taskId)) {
-          return prev;
-        }
-        return [
-          ...prev,
-          {
-            taskId,
-            title: payload.title || "新任务",
-            intent: payload.intent || "general",
-            status: payload.status || "queued",
-            phase: "created",
-            summary: "任务已创建",
-            content: "",
-          },
-        ];
-      });
-      return;
-    }
-    if (event.eventName === "task_delta") {
-      const payload = event.data as { taskId?: string; text?: string };
-      if (!payload.taskId || !payload.text) return;
-      setSceneTasks((prev) =>
-        prev.map((item) =>
-          item.taskId === payload.taskId
-            ? { ...item, status: item.status === "queued" ? "running" : item.status, content: `${item.content}${payload.text}` }
-            : item,
-        ),
-      );
-      return;
-    }
-    if (event.eventName === "task_status") {
-      const payload = event.data as { taskId?: string; status?: SceneTaskStatus; phase?: string; message?: string };
-      const taskId = payload.taskId;
-      const nextStatus = payload.status;
-      if (!taskId || !nextStatus) return;
-      setSceneTasks((prev) =>
-        prev.map((item) =>
-          item.taskId === taskId
-            ? {
-                ...item,
-                status: nextStatus,
-                phase: payload.phase || item.phase,
-                summary: payload.message || item.summary,
-              }
-            : item,
-        ),
-      );
-      return;
-    }
-    if (event.eventName === "task_done") {
-      const payload = event.data as { taskId?: string; summary?: string; status?: SceneTaskStatus };
-      const taskId = payload.taskId;
-      const doneStatus: SceneTaskStatus = payload.status ?? "done";
-      if (!taskId) return;
-      setSceneTasks((prev) =>
-        prev.map((item) =>
-          item.taskId === taskId
-            ? {
-                ...item,
-                status: doneStatus,
-                phase: "done",
-                summary: payload.summary || "任务已完成",
-              }
-            : item,
-        ),
-      );
-      return;
-    }
-    if (event.eventName === "avatar_state") {
-      const payload = event.data as { state?: SceneAvatarState };
-      if (payload.state) {
-        setSceneAvatarState(payload.state);
-      }
-    }
-  };
-
-  const sendScenePrompt = async (promptOverride?: string) => {
-    const text = (promptOverride ?? scenePrompt).trim();
-    if (!text || !auth || sceneLoading) {
-      return;
-    }
-    const now = Date.now();
-    setSceneLines((prev) => [
-      ...prev,
-      { id: `u-${now}`, role: "user", text },
-      {
-        id: `a-${now}`,
-        role: "assistant",
-        text: "",
-      },
-    ]);
-    if (!promptOverride) {
-      setScenePrompt("");
-    }
-    setSceneLoading(true);
-    setSceneAvatarState("thinking");
-    setSceneTasks((prev) =>
-      prev.map((item) => ({
-        ...item,
-        status: "queued",
-        phase: "planning",
-        summary: "等待编排",
-        content: "",
-      })),
-    );
-    try {
-      await streamAiChat(
-        auth.token,
-        {
-          sessionId: "assistant-ui-virtual-human-scene",
-          question: text,
-          knowledgeBaseIds: selectedKbIds.map(String),
-          agentId: activeAgent.id,
-        },
-        (delta) => {
-          setSceneAvatarState("speaking");
-          setSceneLines((prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last && last.role === "assistant") {
-              next[next.length - 1] = { ...last, text: `${last.text}${delta}` };
-            }
-            return next;
-          });
-          setSceneTasks((prev) =>
-            prev.map((item, index) =>
-              index === 0
-                ? {
-                    ...item,
-                    status: item.status === "done" ? item.status : "running",
-                    phase: "generating",
-                    summary: "正在生成结果",
-                    content: `${item.content}${delta}`,
-                  }
-                : item,
-            ),
-          );
-        },
-        () => {
-          setSceneAvatarState("thinking");
-        },
-        () => {
-          setSceneAvatarState("thinking");
-        },
-        () => {
-          setSceneAvatarState("thinking");
-        },
-        applySceneUnknownEvent,
-      );
-      setSceneAvatarState("idle");
-      setSceneTasks((prev) =>
-        prev.map((item) =>
-          item.status === "running" || item.status === "queued"
-            ? { ...item, status: "done", phase: "done", summary: item.summary || "任务已完成" }
-            : item,
-        ),
-      );
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "请求失败";
-      setSceneAvatarState("idle");
-      setSceneLines((prev) => [...prev, { id: `err-${Date.now()}`, role: "assistant", text: `处理失败：${message}` }]);
-      setSceneTasks((prev) =>
-        prev.map((item) => ({
-          ...item,
-          status: "failed",
-          phase: "error",
-          summary: message,
-        })),
-      );
-    } finally {
-      setSceneLoading(false);
-    }
-  };
-
   const startSpeechInput = async () => {
     if (!auth) {
       setSpeechNotice("请先登录后再使用语音输入。");
@@ -2006,39 +1778,21 @@ export default function AssistantApp() {
       setSpeechNotice("当前浏览器不支持录音。");
       return;
     }
-    if (workspaceTab === "scene") {
-      setScenePrompt("");
-      setSceneAvatarState("listening");
-    } else {
-      setInput("");
-    }
+    setInput("");
     await startAsrSession({
       token: auth.token,
       getPrefix: () => "",
       onLiveText: (full) => {
-        if (workspaceTabRef.current === "scene") {
-          setScenePrompt(full);
-        } else {
-          setInput(full);
-        }
+        setInput(full);
       },
       onNotice: setSpeechNotice,
       onFinished: async ({ asrText, fullText }) => {
         if (asrText) {
-          if (workspaceTabRef.current === "scene") {
-            setScenePrompt(fullText);
-            setSpeechNotice("实时转写完成，已自动发送。");
-            await sendScenePrompt(fullText);
-            return;
-          }
           setInput(fullText);
           setSpeechNotice("实时转写完成，已自动发送。");
           await submitQuestion(fullText);
         } else {
           setSpeechNotice("未识别到有效语音内容。");
-        }
-        if (workspaceTabRef.current === "scene") {
-          setSceneAvatarState("idle");
         }
       },
     });
@@ -2046,9 +1800,6 @@ export default function AssistantApp() {
 
   const stopSpeechInput = () => {
     stopAsrSession();
-    if (workspaceTabRef.current === "scene") {
-      setSceneAvatarState("idle");
-    }
   };
 
   const logout = () => {
@@ -2194,19 +1945,6 @@ export default function AssistantApp() {
           >
             <svg viewBox="0 0 24 24">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-          </button>
-          <button
-            className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "scene" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("scene")}
-            title="虚拟人"
-            data-menu-label="虚拟人"
-            aria-label="虚拟人"
-          >
-            <svg viewBox="0 0 24 24">
-              <rect x="3.5" y="3.5" width="17" height="17" rx="4" />
-              <circle cx="12" cy="10" r="3.1" />
-              <path d="M7 17.2c1.2-2.1 2.9-3.1 5-3.1s3.8 1 5 3.1" strokeLinecap="round" />
             </svg>
           </button>
           <button
@@ -2535,90 +2273,6 @@ export default function AssistantApp() {
               </aside>
             </div>
           </div>
-        </main>
-      ) : workspaceTab === "scene" ? (
-        <main className="cici-scene">
-          <div className="cici-scene__backdrop" />
-          <section className="cici-scene__hero">
-            <div className="cici-scene__glow cici-scene__glow--left" />
-            <div className="cici-scene__glow cici-scene__glow--right" />
-            <div className="cici-scene__holo-card cici-scene__holo-card--l" />
-            <div className="cici-scene__holo-card cici-scene__holo-card--r" />
-              <div className={`cici-scene__avatar-shell is-${sceneAvatarState}`}>
-              <div className="cici-scene__avatar-core" />
-              <div className="cici-scene__avatar-ring" />
-            </div>
-
-            <article className="cici-scene-card cici-scene-card--left">
-              <h3>故事时间</h3>
-              <p>欢迎回来呀，今天我们先从你的关键目标开始。</p>
-              <span>沉浸式引导 · HUD</span>
-            </article>
-
-            <article className="cici-scene-card cici-scene-card--center">
-              <h3>● 虚拟人状态 · {sceneAvatarState}</h3>
-              <p>状态联动：listening / thinking / speaking / idle，和语音与任务流保持同步。</p>
-              <div className="cici-scene-card__pills">
-                <span>沉浸式工作台</span>
-                <span>{sceneLoading ? "处理中" : "待命中"}</span>
-              </div>
-              <div className="cici-scene-card__mini">{sceneLines.at(-1)?.text || "等待你的输入"}</div>
-            </article>
-
-            <article className="cici-scene-card cici-scene-card--right">
-              <h3>任务工作区</h3>
-              <div className="cici-scene__task-stack">
-                {sceneTasks.slice(0, 3).map((task) => (
-                  <div key={task.taskId} className={`cici-scene__task-card is-${task.status}`}>
-                    <div className="cici-scene__task-head">
-                      <strong>{task.title}</strong>
-                      <span>{task.status}</span>
-                    </div>
-                    <p>{task.summary || task.phase}</p>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </section>
-
-          <section className="cici-scene__dialog">
-            <div className="cici-scene__dialog-list">
-              {sceneLines.slice(-6).map((line) => (
-                <div key={line.id} className={`cici-scene__line${line.role === "user" ? " is-user" : ""}`}>
-                  {line.text}
-                </div>
-              ))}
-            </div>
-            <div className="cici-scene__composer">
-              <input
-                value={scenePrompt}
-                onChange={(event) => setScenePrompt(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    void sendScenePrompt();
-                  }
-                }}
-                placeholder="和 Aira 对话..."
-              />
-              <button
-                type="button"
-                className={`cici-scene__mic-btn${listening ? " is-active" : ""}`}
-                title={listening ? "结束语音并发送" : "开始语音输入"}
-                aria-label={listening ? "结束语音并发送" : "开始语音输入"}
-                onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
-              >
-                <svg viewBox="0 0 24 24" aria-hidden>
-                  <rect x="9" y="3" width="6" height="12" rx="3" />
-                  <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
-                </svg>
-              </button>
-              <button type="button" className="cici-scene__send-btn" disabled={sceneLoading} onClick={() => void sendScenePrompt()}>
-                {sceneLoading ? "处理中" : "发送"}
-              </button>
-            </div>
-            {speechNotice ? <div className="cici-scene__notice">{speechNotice}</div> : null}
-          </section>
         </main>
       ) : workspaceTab === "monitor" ? (
         <main className="cici-monitor">

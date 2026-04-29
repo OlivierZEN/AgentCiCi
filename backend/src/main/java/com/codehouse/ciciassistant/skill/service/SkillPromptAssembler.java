@@ -8,16 +8,11 @@ import org.springframework.stereotype.Service;
 public class SkillPromptAssembler {
 
     public String assemble(String basePrompt, SkillResolverService.ResolvedSkillContext context) {
-        // Agent-level system prompt takes precedence over the global default.
-        String effectiveBase = (context.agentSystemPrompt() != null && !context.agentSystemPrompt().isBlank())
-                ? context.agentSystemPrompt()
-                : basePrompt;
-
         if (context.skills().isEmpty()) {
-            return effectiveBase;
+            return composeBasePrompt(basePrompt, context.agentSystemPrompt());
         }
         List<String> lines = new ArrayList<>();
-        lines.add(effectiveBase);
+        lines.add(composeBasePrompt(basePrompt, context.agentSystemPrompt()));
         lines.add("");
         lines.add("Active business skills are attached below. Apply them as operating policy. When rules conflict, prefer the stricter safety rule.");
         if (!context.skillCodes().isEmpty()) {
@@ -37,5 +32,17 @@ public class SkillPromptAssembler {
             lines.add("Preferred output contract: " + context.outputContract());
         }
         return String.join("\n", lines);
+    }
+
+    private String composeBasePrompt(String basePrompt, String agentSystemPrompt) {
+        if (agentSystemPrompt == null || agentSystemPrompt.isBlank()) {
+            return basePrompt;
+        }
+        return String.join(
+                "\n\n",
+                basePrompt,
+                "Agent-specific operating policy:",
+                agentSystemPrompt.trim()
+        );
     }
 }

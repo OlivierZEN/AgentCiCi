@@ -10,10 +10,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentToolBindingEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentToolBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.agent.service.AgentCompileService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
+import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -50,6 +56,15 @@ class OrchestratorIntegrationTest {
 
     @Autowired
     private AgentDefinitionService agentDefinitionService;
+
+    @Autowired
+    private SkillDefinitionRepository skillDefinitionRepository;
+
+    @Autowired
+    private AgentToolBindingRepository agentToolBindingRepository;
+
+    @Autowired
+    private AgentSkillBindingRepository agentSkillBindingRepository;
 
     @Test
     void shouldRunChatWithRagAndToolsAndExposeOpsMetrics() throws Exception {
@@ -122,6 +137,35 @@ class OrchestratorIntegrationTest {
     }
 
     @Test
+    void shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent() throws Exception {
+        String token = loginToken("13800138119");
+
+        MvcResult result = mockMvc.perform(post("/ai/chat")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sessionId": "assistant-ui-cici-tool-scope",
+                                  "agentId": "cici-system",
+                                  "question": "帮我查一下客户资料，需要的话先确认可以查哪些对象和字段",
+                                  "knowledgeBaseIds": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        assertThat(root.path("agentId").asText()).isEqualTo("cici-system");
+        assertThat(root.path("effectiveToolNames")).extracting(JsonNode::asText)
+                .contains(
+                        "cloudcc_pageQuery",
+                        "cloudcc_getStandardObjects",
+                        "cloudcc_getCustomObjects",
+                        "cloudcc_getObjectFields"
+                );
+    }
+
+    @Test
     void shouldNormalizeLegacyAgentToolIdsForApprovalAgent() throws Exception {
         String token = loginToken("13800138112");
 
@@ -141,6 +185,47 @@ class OrchestratorIntegrationTest {
         assertThat(root.path("effectiveToolNames")).extracting(JsonNode::asText)
                 .contains("get_pending_approvals")
                 .doesNotContain("approval-fetch");
+    }
+
+    @Test
+    void shouldEnforceIntersectionForAgentToolWhitelistAndSkillToolWhitelistIncludingMcp() throws Exception {
+        String orgId = "demo-org";
+        String agentId = "whitelist-mcp-intersection";
+        String token = loginToken("13800138127");
+
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+                .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
+                        orgId, agentId, "Whitelist MCP Agent", "test", "hello",
+                        "cici-default", "", "", "MEDIUM", "MANUAL", "v1", false, true)));
+
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, "whitelist-mcp-only")
+                .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
+                        orgId, "whitelist-mcp-only", "Whitelist MCP Only", "test",
+                        false, true, "prompt", "spec", "get_object_list", "",
+                        "", "", "LOW")));
+
+        agentToolBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentSkillBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentToolBindingRepository.save(new AgentToolBindingEntity(orgId, agentId, "tavily_search", 1, true));
+        agentSkillBindingRepository.save(new AgentSkillBindingEntity(
+                orgId, agentId, skill.getId(), "ALWAYS", "", 1, true));
+
+        MvcResult result = mockMvc.perform(post("/agents/{agentId}/debug", agent.getAgentId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "input": "帮我查一下潜在客户",
+                                  "skillRefs": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        assertThat(root.path("effectiveToolNames")).isEmpty();
+        assertThat(root.path("warnings").isArray()).isTrue();
+        assertThat(root.path("warnings")).isNotEmpty();
     }
 
     @Test
@@ -333,8 +418,7 @@ class OrchestratorIntegrationTest {
                 .andReturn();
         JsonNode rootAfterBindingChange = objectMapper.readTree(chatAfterBindingChange.getResponse().getContentAsString()).path("data");
         assertThat(rootAfterBindingChange.path("effectiveToolNames")).extracting(JsonNode::asText)
-                .contains("cloudcc_pageQuery")
-                .doesNotContain("tavily_search", "get_pending_approvals");
+                .contains("cloudcc_pageQuery", "get_pending_approvals");
 
         MvcResult compileV2Result = mockMvc.perform(post("/agents/cici-system/compile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -377,7 +461,7 @@ class OrchestratorIntegrationTest {
                 .andReturn();
         JsonNode rootAfterPublishV2 = objectMapper.readTree(chatAfterPublishV2.getResponse().getContentAsString()).path("data");
         assertThat(rootAfterPublishV2.path("effectiveToolNames")).extracting(JsonNode::asText)
-                .contains("tavily_search")
+                .contains("tavily_search", "get_pending_approvals")
                 .doesNotContain("cloudcc_pageQuery");
 
         mockMvc.perform(post("/agents/cici-system/rollback")
@@ -404,8 +488,7 @@ class OrchestratorIntegrationTest {
                 .andReturn();
         JsonNode rootAfterRollback = objectMapper.readTree(chatAfterRollback.getResponse().getContentAsString()).path("data");
         assertThat(rootAfterRollback.path("effectiveToolNames")).extracting(JsonNode::asText)
-                .contains("cloudcc_pageQuery")
-                .doesNotContain("tavily_search");
+                .contains("cloudcc_pageQuery", "get_pending_approvals");
     }
 
     @Test

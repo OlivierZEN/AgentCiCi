@@ -1,10 +1,12 @@
 ---
-updated_at: 2026-04-25T15:38:00Z
-status: draft
+updated_at: 2026-04-29T07:00:00Z
+status: retired
 feature_id: FEAT-006
 ---
 
 # FEAT-006 Virtual Human Multitask Workbench
+
+> 历史说明：该特性曾用于虚拟人场景页 MVP 探索，已在 2026-04-29 按 `FEAT-007` 正式下线；本文档仅保留历史设计记录，不再代表当前产品能力。
 
 ## Goal
 

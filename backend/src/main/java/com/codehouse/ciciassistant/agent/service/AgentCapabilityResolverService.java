@@ -27,20 +27,26 @@ public class AgentCapabilityResolverService {
     private final AgentToolBindingRepository agentToolBindingRepository;
     private final AgentSkillBindingRepository agentSkillBindingRepository;
     private final SkillDefinitionRepository skillDefinitionRepository;
+    private final AgentDefinitionService agentDefinitionService;
 
     public AgentCapabilityResolverService(AgentDefinitionRepository agentDefinitionRepository,
                                           AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
                                           AgentToolBindingRepository agentToolBindingRepository,
                                           AgentSkillBindingRepository agentSkillBindingRepository,
-                                          SkillDefinitionRepository skillDefinitionRepository) {
+                                          SkillDefinitionRepository skillDefinitionRepository,
+                                          AgentDefinitionService agentDefinitionService) {
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
         this.agentToolBindingRepository = agentToolBindingRepository;
         this.agentSkillBindingRepository = agentSkillBindingRepository;
         this.skillDefinitionRepository = skillDefinitionRepository;
+        this.agentDefinitionService = agentDefinitionService;
     }
 
     public AgentCapabilityResolution resolve(String orgId, String agentId, List<String> explicitSkillRefs) {
+        if (orgId != null && !orgId.isBlank()) {
+            agentDefinitionService.warmupBuiltinAgents(orgId);
+        }
         String normalizedAgentId = normalizeAgentId(agentId);
         Optional<AgentDefinitionEntity> agentDefinition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, normalizedAgentId);
         List<String> agentToolBoundary = agentToolBindingRepository
@@ -89,13 +95,23 @@ public class AgentCapabilityResolverService {
                 .orElse(null);
 
         List<String> warnings = new ArrayList<>();
-        if (!normalizedAgentToolBoundary.isEmpty()
-                && !normalizedSkillToolUnion.isEmpty()
-                && effectiveToolNames.size() < normalizedAgentToolBoundary.size()) {
-            warnings.add("Agent.toolIds 与 Skill.toolWhitelist 存在边界冲突，已按交集收敛。");
+        if (!normalizedAgentToolBoundary.isEmpty() && !normalizedSkillToolUnion.isEmpty()) {
+            LinkedHashSet<String> toolInter = new LinkedHashSet<>(normalizedAgentToolBoundary);
+            toolInter.retainAll(normalizedSkillToolUnion);
+            if (toolInter.isEmpty()) {
+                warnings.add("Agent.toolIds 与 Skill.toolWhitelist 无交集，运行时工具边界已严格收敛为空；请在两侧补充同名工具后重试。");
+            } else if (effectiveToolNames.size() < normalizedAgentToolBoundary.size()) {
+                warnings.add("Agent.toolIds 与 Skill.toolWhitelist 存在重叠，已按交集收敛。");
+            }
         }
-        if (!agentKbBoundary.isEmpty() && !skillKbUnion.isEmpty() && effectiveKnowledgeBaseIds.size() < agentKbBoundary.size()) {
-            warnings.add("Agent.knowledgeBaseIds 与 Skill.kbWhitelist 存在边界冲突，已按交集收敛。");
+        if (!agentKbBoundary.isEmpty() && !skillKbUnion.isEmpty()) {
+            LinkedHashSet<Long> kbInter = new LinkedHashSet<>(agentKbBoundary);
+            kbInter.retainAll(skillKbUnion);
+            if (kbInter.isEmpty()) {
+                warnings.add("Agent.knowledgeBaseIds 与 Skill.kbWhitelist 无交集，为避免丢失 Agent 已绑定知识库，已合并为并集。");
+            } else if (effectiveKnowledgeBaseIds.size() < agentKbBoundary.size()) {
+                warnings.add("Agent.knowledgeBaseIds 与 Skill.kbWhitelist 存在重叠，已按交集收敛。");
+            }
         }
 
         return new AgentCapabilityResolution(
@@ -180,11 +196,13 @@ public class AgentCapabilityResolverService {
         LinkedHashSet<String> agent = new LinkedHashSet<>(agentBoundary == null ? List.of() : agentBoundary);
         LinkedHashSet<String> skill = new LinkedHashSet<>(skillBoundary == null ? List.of() : skillBoundary);
         if (!agent.isEmpty() && !skill.isEmpty()) {
-            agent.retainAll(skill);
+            LinkedHashSet<String> intersection = new LinkedHashSet<>(agent);
+            intersection.retainAll(skill);
+            LinkedHashSet<String> merged = intersection;
             if (ToolNameNormalizer.containsMcpWildcard(agentBoundary) || ToolNameNormalizer.containsMcpWildcard(skillBoundary)) {
-                agent.add(ToolNameNormalizer.MCP_WORKFLOW_WILDCARD);
+                merged.add(ToolNameNormalizer.MCP_WORKFLOW_WILDCARD);
             }
-            return List.copyOf(agent);
+            return List.copyOf(merged);
         }
         if (!agent.isEmpty()) {
             return List.copyOf(agent);
@@ -199,8 +217,14 @@ public class AgentCapabilityResolverService {
         LinkedHashSet<Long> agent = new LinkedHashSet<>(agentBoundary == null ? List.of() : agentBoundary);
         LinkedHashSet<Long> skill = new LinkedHashSet<>(skillBoundary == null ? List.of() : skillBoundary);
         if (!agent.isEmpty() && !skill.isEmpty()) {
-            agent.retainAll(skill);
-            return List.copyOf(agent);
+            LinkedHashSet<Long> intersection = new LinkedHashSet<>(agent);
+            intersection.retainAll(skill);
+            if (!intersection.isEmpty()) {
+                return List.copyOf(intersection);
+            }
+            LinkedHashSet<Long> union = new LinkedHashSet<>(agent);
+            union.addAll(skill);
+            return List.copyOf(union);
         }
         if (!agent.isEmpty()) {
             return List.copyOf(agent);

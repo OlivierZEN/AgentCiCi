@@ -18,11 +18,6 @@ export type StreamPhaseEvent = {
   phase: "generating" | string;
 };
 
-export type StreamUnknownEvent = {
-  eventName: string;
-  data: unknown;
-};
-
 export type SessionUpdateEvent = {
   sessionId?: string;
   scope?: "org" | "user";
@@ -98,7 +93,6 @@ export async function streamAiChat(
   onToolResult?: (event: StreamToolResultEvent) => void,
   onToolCall?: (event: StreamToolCallEvent) => void,
   onPhase?: (event: StreamPhaseEvent) => void,
-  onUnknownEvent?: (event: StreamUnknownEvent) => void,
 ): Promise<void> {
   const res = await fetch("/ai/chat/stream", {
     method: "POST",
@@ -183,16 +177,6 @@ export async function streamAiChat(
       }
       throw new Error(message);
     }
-    if (!onUnknownEvent) {
-      return;
-    }
-    let payload: unknown = data;
-    try {
-      payload = JSON.parse(data);
-    } catch {
-      /* keep raw string payload */
-    }
-    onUnknownEvent({ eventName, data: payload });
   });
 }
 

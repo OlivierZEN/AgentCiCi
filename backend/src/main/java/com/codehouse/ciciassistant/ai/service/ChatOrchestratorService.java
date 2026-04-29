@@ -181,15 +181,10 @@ public class ChatOrchestratorService {
                 List<Map<String, Object>> messages = buildInitialMessages(
                         sessionId, question, ragContext, showThinking, skillContext, orgId, userId);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
-                String primaryTaskId = buildTaskId(sessionId, 1);
-                safeSendAvatarState(emitter, "thinking");
-                safeSendTaskCreated(emitter, primaryTaskId, sessionId, skillContext.agentId(),
-                        deriveTaskTitle(question), deriveTaskIntent(question), "queued", 1);
-                safeSendTaskStatus(emitter, primaryTaskId, "running", "planning", "正在分析任务并规划执行步骤");
 
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
-                        showThinking, skillContext.agentId(), skillContext.allowedToolNames(), emitter, maxToolRounds, primaryTaskId);
+                        showThinking, skillContext.agentId(), skillContext.allowedToolNames(), emitter, maxToolRounds);
                 if (pendingApprovalsUsed) {
                     // Keep chat concise when a dedicated approvals page is rendered on frontend.
                     messages.add(Map.of(
@@ -200,8 +195,6 @@ public class ChatOrchestratorService {
                 }
 
                 safeSendPhase(emitter, "generating");
-                safeSendAvatarState(emitter, "speaking");
-                safeSendTaskStatus(emitter, primaryTaskId, "running", "generating", "正在生成任务结果");
                 StringBuilder acc = new StringBuilder();
                 log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
                         sessionId, modelName, messages.size(), tools.size());
@@ -215,7 +208,6 @@ public class ChatOrchestratorService {
                             piece -> {
                                 acc.append(piece);
                                 safeSendDelta(emitter, piece);
-                                safeSendTaskDelta(emitter, primaryTaskId, piece);
                             });
                     log.info("chatStream LLM stream done: session={} chars={} elapsedMs={}",
                             sessionId, acc.length(), System.currentTimeMillis() - streamStart);
@@ -228,7 +220,9 @@ public class ChatOrchestratorService {
                 }
 
                 String finalText = showThinking ? acc.toString() : AssistantContentSanitizer.stripThinkingSections(acc.toString());
-                safeSendTaskDone(emitter, primaryTaskId, "done", clip(finalText.replaceAll("\\s+", " "), 80));
+                if (finalText == null || finalText.trim().isEmpty()) {
+                    finalText = buildToolResultFallbackMessage(messages);
+                }
                 long wfStarted = System.nanoTime();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                         orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -245,11 +239,9 @@ public class ChatOrchestratorService {
                     // stream path must not fail on execution audit persistence
                 }
                 persistAssistantTurnCommitted(orgId, userId, sessionId, finalText, "AI_CHAT_STREAM", modelName);
-                safeSendAvatarState(emitter, "idle");
                 emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true)));
                 emitter.complete();
             } catch (Exception e) {
-                safeSendAvatarState(emitter, "idle");
                 try {
                     emitter.send(SseEmitter.event().name("error")
                             .data(Map.of("message", e.getMessage() == null ? "stream failed" : e.getMessage())));
@@ -293,7 +285,7 @@ public class ChatOrchestratorService {
                                   List<Map<String, Object>> tools, String orgId, String userId, String sessionId,
                                   boolean showThinking, String agentId,
                                   List<String> allowedToolNames, SseEmitter emitter,
-                                  int maxToolRounds, String primaryTaskId) {
+                                  int maxToolRounds) {
         if (tools.isEmpty()) return false;
         boolean pendingApprovalsUsed = false;
 
@@ -304,9 +296,8 @@ public class ChatOrchestratorService {
             if (!result.hasToolCalls()) {
                 break;
             }
-            safeSendTaskStatus(emitter, primaryTaskId, "running", "tool_calling", "正在调用工具处理任务");
             pendingApprovalsUsed = appendToolCallsAndResults(
-                    messages, result, orgId, userId, sessionId, agentId, allowedToolNames, emitter, primaryTaskId)
+                    messages, result, orgId, userId, sessionId, agentId, allowedToolNames, emitter)
                     || pendingApprovalsUsed;
         }
         return pendingApprovalsUsed;
@@ -316,15 +307,14 @@ public class ChatOrchestratorService {
                                             ChatCompletionResult result, String orgId, String userId,
                                             String sessionId, String agentId,
                                             List<String> allowedToolNames) {
-        appendToolCallsAndResults(messages, result, orgId, userId, sessionId, agentId, allowedToolNames, null, "");
+        appendToolCallsAndResults(messages, result, orgId, userId, sessionId, agentId, allowedToolNames, null);
     }
 
     private boolean appendToolCallsAndResults(List<Map<String, Object>> messages,
                                             ChatCompletionResult result, String orgId, String userId,
                                             String sessionId, String agentId,
                                             List<String> allowedToolNames,
-                                            SseEmitter emitter,
-                                            String primaryTaskId) {
+                                            SseEmitter emitter) {
         List<Map<String, Object>> toolCallMaps = new ArrayList<>();
         for (ToolCallInfo tc : result.toolCalls()) {
             toolCallMaps.add(Map.of(
@@ -343,7 +333,6 @@ public class ChatOrchestratorService {
         for (ToolCallInfo tc : result.toolCalls()) {
             if (emitter != null) {
                 safeSendToolCall(emitter, tc.name());
-                safeSendTaskStatus(emitter, primaryTaskId, "running", "tool_calling", "工具执行中：" + tc.name());
             }
             log.info("Calling MCP tool: {} with args: {}", tc.name(), tc.arguments());
             String toolResult = toolOrchestratorService.executeTool(orgId, userId, tc.name(), tc.arguments(), allowedToolNames);
@@ -351,7 +340,6 @@ public class ChatOrchestratorService {
             if (emitter != null && isPendingApprovalsTool(tc.name())) {
                 safeSendToolResult(emitter, tc.name(), toolResult);
                 pendingApprovalsUsed = true;
-                safeSendTaskStatus(emitter, primaryTaskId, "waiting_user", "approval_required", "需要你确认审批内容");
             }
             messages.add(Map.of(
                     "role", "tool",
@@ -735,90 +723,28 @@ public class ChatOrchestratorService {
         } catch (IOException ignored) {}
     }
 
-    private static void safeSendAvatarState(SseEmitter emitter, String state) {
-        try {
-            emitter.send(SseEmitter.event().name("avatar_state").data(Map.of("state", state)));
-        } catch (IOException ignored) {}
-    }
-
-    private static void safeSendTaskCreated(SseEmitter emitter,
-                                            String taskId,
-                                            String sessionId,
-                                            String agentId,
-                                            String title,
-                                            String intent,
-                                            String status,
-                                            int order) {
-        try {
-            emitter.send(SseEmitter.event().name("task_created").data(Map.of(
-                    "taskId", taskId,
-                    "sessionId", sessionId,
-                    "agentId", agentId,
-                    "title", title,
-                    "intent", intent,
-                    "status", status,
-                    "layout", Map.of("region", "right", "order", order)
-            )));
-        } catch (IOException ignored) {}
-    }
-
-    private static void safeSendTaskDelta(SseEmitter emitter, String taskId, String text) {
-        try {
-            emitter.send(SseEmitter.event().name("task_delta").data(Map.of(
-                    "taskId", taskId,
-                    "contentType", "markdown",
-                    "text", text
-            )));
-        } catch (IOException ignored) {}
-    }
-
-    private static void safeSendTaskStatus(SseEmitter emitter,
-                                           String taskId,
-                                           String status,
-                                           String phase,
-                                           String message) {
-        try {
-            emitter.send(SseEmitter.event().name("task_status").data(Map.of(
-                    "taskId", taskId,
-                    "status", status,
-                    "phase", phase,
-                    "message", message
-            )));
-        } catch (IOException ignored) {}
-    }
-
-    private static void safeSendTaskDone(SseEmitter emitter, String taskId, String status, String summary) {
-        try {
-            emitter.send(SseEmitter.event().name("task_done").data(Map.of(
-                    "taskId", taskId,
-                    "status", status,
-                    "summary", summary == null ? "" : summary
-            )));
-        } catch (IOException ignored) {}
-    }
-
-    private static String deriveTaskTitle(String question) {
-        String q = question == null ? "" : question.trim();
-        if (q.isEmpty()) {
-            return "智能任务";
-        }
-        return q.length() > 16 ? q.substring(0, 16) + "..." : q;
-    }
-
-    private static String deriveTaskIntent(String question) {
-        String q = question == null ? "" : question.toLowerCase(Locale.ROOT);
-        if (q.contains("纪要") || q.contains("会议")) return "meeting_summary";
-        if (q.contains("英文") || q.contains("翻译")) return "translation";
-        if (q.contains("审批")) return "approval";
-        return "general";
-    }
-
-    private static String buildTaskId(String sessionId, int seq) {
-        return "task_" + Integer.toHexString((sessionId + "_" + seq).hashCode());
-    }
-
     private static boolean isPendingApprovalsTool(String toolName) {
         return "get_pending_approvals".equalsIgnoreCase(toolName);
+    }
+
+    private static String buildToolResultFallbackMessage(List<Map<String, Object>> messages) {
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            Map<String, Object> msg = messages.get(i);
+            if (!"tool".equals(String.valueOf(msg.get("role")))) {
+                continue;
+            }
+            Object raw = msg.get("content");
+            if (!(raw instanceof String toolContent)) {
+                continue;
+            }
+            String normalized = toolContent.trim();
+            if (normalized.isEmpty()) {
+                continue;
+            }
+            String clipped = normalized.length() > 4000 ? normalized.substring(0, 4000) + "..." : normalized;
+            return "工具已返回结果：\n\n" + clipped;
+        }
+        return "本次工具调用已完成，但暂时没有可展示的数据。请调整筛选条件后重试。";
     }
 
     /**

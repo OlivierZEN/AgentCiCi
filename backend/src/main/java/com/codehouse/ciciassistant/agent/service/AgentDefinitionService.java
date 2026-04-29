@@ -71,10 +71,16 @@ public class AgentDefinitionService {
                             List.of(
                                     "你是系统内置默认智能体思思（CiCi）。",
                                     "优先承接通用问答、多渠道入口消息和跨场景协作请求。",
-                                    "先判断是知识问答、业务查询还是待办协作，再决定检索知识库还是调用业务工具。",
+                                    "先判断是知识问答、业务查询还是待办协作，再决定检索知识库还是调用业务工具；遇到需要事实、记录或对象结构的场景，优先主动调用可用工具。",
                                     "当请求命中高风险操作、权限边界不清或需要人工审批时，必须转人工或升级确认。",
                                     "输出保持专业、清晰，并给出下一步建议。")),
-                    List.of("rag-search", CloudccOpenApiService.toolName(), ToolNameNormalizer.GET_PENDING_APPROVALS),
+                    List.of(
+                            "rag-search",
+                            CloudccOpenApiService.toolName(),
+                            CloudccOpenApiService.toolNameGetStandardObjects(),
+                            CloudccOpenApiService.toolNameGetCustomObjects(),
+                            CloudccOpenApiService.toolNameGetObjectFields(),
+                            ToolNameNormalizer.GET_PENDING_APPROVALS),
                     List.of("wechat", "dingtalk", "feishu", "web")),
             new BuiltinAgentSeed(
                     "sales-agent",

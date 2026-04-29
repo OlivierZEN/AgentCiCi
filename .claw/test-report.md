@@ -1,11 +1,50 @@
 ---
-updated_at: 2026-04-27T17:50:00Z
+updated_at: 2026-04-29T07:00:00Z
 status: active
 ---
 
 # Test Report
 
 ## Latest Verified Results
+
+- Virtual human surface removal verification (2026-04-29):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+  - Notes:
+    - `AssistantApp` no longer exposes the `scene` tab or related state/render logic.
+    - `streamAiChat` no longer forwards scene-only unknown SSE events.
+    - `ChatOrchestratorService.chatStream` no longer emits `avatar_state` or `task_*` scene events.
+    - Removed static virtual-human cover pages from `frontend/public/`.
+
+- Workbench reply-area blanking guard verification (2026-04-29):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added guard in `loadWorkbenchMessages(...)`: if backend refreshed history has no assistant message while local stream already has assistant content, keep local assistant content and do not overwrite with empty backend snapshot.
+    - This prevents UI transition from “思考中” state to a blank chat area when backend assistant persistence is delayed or empty.
+
+- CiCi runtime binding probe on local backend (2026-04-29):
+  - Commands:
+    - `curl -sS -X GET http://127.0.0.1:8080/agents/cici-system` (admin token) -> **success**
+    - `curl -sS -X GET http://127.0.0.1:8080/skills/agents/cici-system/bindings` (admin token) -> **success**
+    - `curl -sS -X POST http://127.0.0.1:8080/ai/chat` (org user token) -> **success**
+  - Notes:
+    - Admin config confirms `cici-system.toolIds` contains `cloudcc_pageQuery` and CloudCC discovery tools.
+    - Runtime probe before backend restart showed `effectiveToolNames` was still narrowed to Tavily + CloudCC discovery tools and missed `cloudcc_pageQuery`; this matches the observed “查潜在客户” response quality issue under current published policy.
+
+- CiCi default tool autonomy fix verification (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent test` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+  - Notes:
+    - Default runtime `cici-system` now exposes CloudCC discovery tools:
+      - `cloudcc_getStandardObjects`
+      - `cloudcc_getCustomObjects`
+      - `cloudcc_getObjectFields`
+      - `cloudcc_pageQuery`
+    - Prompt assembly now preserves global tool-calling guidance even when the agent has a custom system prompt.
+    - A broader `OrchestratorIntegrationTest` class run was also attempted in this session, but it was polluted by pre-existing SMS rate-limit failures and an unrelated schedule-trigger unique-key failure; the targeted regression above is the reliable signal for this change set.
 
 - Workbench composer UI redesign verification (2026-04-27):
   - Commands:
