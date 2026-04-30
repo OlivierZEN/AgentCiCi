@@ -414,3 +414,18 @@ Runtime Policy：
 最重要的边界是：
 
 > Skill 依赖的 Tool 只在该 Skill 被触发执行期间有效，且只能服务于该 Skill 的执行流程。它不会变成 Agent 的全局 Tool 权限，也不能被 Agent 在 Skill 外部直接调用。
+
+## 12. 仓库实现状态（与本后端对齐）
+
+以下为截至实现时的行为摘要，便于与设计 §4–§6 对照；细节以代码为准。
+
+| 能力 | 状态 |
+|------|------|
+| Agent 直接绑定的工具 vs Skill `toolWhitelist` 声明分层展示 | **已实现**：`AgentCapabilityResolution` / `ResolvedSkillContext` 字段；`/ai/chat`、`/agents/{agentId}/debug` JSON |
+| 运行时可用工具面 | **已实现**：基线 = Agent 直接绑定 ∪ 已发布 manifest 依赖 ∪ CiCi 内置扩充（CloudCC 发现工具 + `tavily_search` / `tavily_extract`）；Skill 声明中**不在**基线的工具仅在绑定为 **ALWAYS**（ambient）或 **当前激活 Skill** 与会话态一致时并入 |
+| Skill 独有工具不写入 Agent 静态配置 | **已实现**：通过 `skillScopedToolNames` 与告警文案区分 |
+| 会话态「当前 Skill」 | **已实现**：`chat_session_state.state_json.active_skill_code`；`/ai/chat`、流式接口可选请求体 `activeSkillCode`（空字符串清除）；与绑定 Skill 列表校验 |
+| 工具调用审计 | **已实现**：`AuditService` 事件 `TOOL_INVOCATION`，载荷含 skill 上下文分类（agent_direct / skill_scoped / memory_builtin 等）；§5.4 高风险事前审批仍 **未实现** |
+| 高风险工具审批 / Runtime Policy 额外拒绝路径 | **未实现**（刻意延后）：仍以允许列表 + 业务策略为主；与设计 §5.4 对齐时再补 |
+
+变更参考：`TASK-019`（`.claw/task-board.md`）。

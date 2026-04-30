@@ -19,13 +19,16 @@ public class SmsCodeStore {
 
     private final SecureRandom random = new SecureRandom();
     private final String mode;
+    private final boolean rateLimitEnabled;
     private final StringRedisTemplate redisTemplate;
     private final Map<String, CodeEntry> codes = new ConcurrentHashMap<>();
     private final Map<String, RateEntry> rates = new ConcurrentHashMap<>();
 
     public SmsCodeStore(@Value("${app.auth.sms.store:memory}") String mode,
+                        @Value("${app.auth.sms.rate-limit-enabled:true}") boolean rateLimitEnabled,
                         ObjectProvider<StringRedisTemplate> redisTemplateProvider) {
         this.mode = mode;
+        this.rateLimitEnabled = rateLimitEnabled;
         this.redisTemplate = redisTemplateProvider.getIfAvailable();
     }
 
@@ -51,20 +54,23 @@ public class SmsCodeStore {
     private String createCodeInMemory(String orgId, String mobile) {
         String key = key(orgId, mobile);
         Instant now = Instant.now();
-        RateEntry rate = rates.computeIfAbsent(key, ignored -> new RateEntry(now, 0, Instant.EPOCH));
-        rate.rotateDayIfNeeded(now);
+        if (rateLimitEnabled) {
+            RateEntry rate = rates.computeIfAbsent(key, ignored -> new RateEntry(now, 0, Instant.EPOCH));
+            rate.rotateDayIfNeeded(now);
 
-        if (Duration.between(rate.lastSentAt, now).compareTo(SEND_WINDOW) < 0) {
-            throw new IllegalArgumentException("SMS request too frequent, please retry later");
-        }
-        if (rate.sentToday >= MAX_SEND_PER_DAY) {
-            throw new IllegalArgumentException("Daily SMS limit reached");
+            if (Duration.between(rate.lastSentAt, now).compareTo(SEND_WINDOW) < 0) {
+                throw new IllegalArgumentException("SMS request too frequent, please retry later");
+            }
+            if (rate.sentToday >= MAX_SEND_PER_DAY) {
+                throw new IllegalArgumentException("Daily SMS limit reached");
+            }
+
+            rate.sentToday += 1;
+            rate.lastSentAt = now;
         }
 
         String code = String.format("%06d", random.nextInt(1_000_000));
         codes.put(key, new CodeEntry(code, now.plus(CODE_TTL)));
-        rate.sentToday += 1;
-        rate.lastSentAt = now;
         return code;
     }
 
@@ -86,21 +92,25 @@ public class SmsCodeStore {
         String sendWindowKey = "auth:sms:window:" + key;
         String dailyLimitKey = "auth:sms:daily:" + key + ":" + Instant.now().toString().substring(0, 10);
 
-        if (Boolean.TRUE.equals(redisTemplate.hasKey(sendWindowKey))) {
-            throw new IllegalArgumentException("SMS request too frequent, please retry later");
-        }
+        if (rateLimitEnabled) {
+            if (Boolean.TRUE.equals(redisTemplate.hasKey(sendWindowKey))) {
+                throw new IllegalArgumentException("SMS request too frequent, please retry later");
+            }
 
-        Long sentToday = redisTemplate.opsForValue().increment(dailyLimitKey);
-        if (sentToday != null && sentToday == 1) {
-            redisTemplate.expire(dailyLimitKey, Duration.ofHours(24));
-        }
-        if (sentToday != null && sentToday > MAX_SEND_PER_DAY) {
-            throw new IllegalArgumentException("Daily SMS limit reached");
+            Long sentToday = redisTemplate.opsForValue().increment(dailyLimitKey);
+            if (sentToday != null && sentToday == 1) {
+                redisTemplate.expire(dailyLimitKey, Duration.ofHours(24));
+            }
+            if (sentToday != null && sentToday > MAX_SEND_PER_DAY) {
+                throw new IllegalArgumentException("Daily SMS limit reached");
+            }
         }
 
         String code = String.format("%06d", random.nextInt(1_000_000));
         redisTemplate.opsForValue().set(codeKey, code, CODE_TTL);
-        redisTemplate.opsForValue().set(sendWindowKey, "1", SEND_WINDOW);
+        if (rateLimitEnabled) {
+            redisTemplate.opsForValue().set(sendWindowKey, "1", SEND_WINDOW);
+        }
         return code;
     }
 

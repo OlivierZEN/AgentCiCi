@@ -1,5 +1,8 @@
 ---
-updated_at: 2026-04-25T14:32:00Z
+kind: decisions
+version: 3
+updated_at: 2026-04-30T11:54:33Z
+updated_by: ai
 status: active
 ---
 
@@ -235,3 +238,57 @@ status: active
   - Compile-time auto-write only: rejected — users lose manual control over when draft semantics should become runtime config.
   - Keep inferred-only forever: rejected — no durable audit trail and ambiguous ownership between compile and runtime.
   - Always auto-sync with no toggle: rejected — some teams need explicit manual sync gate during staged rollout.
+
+## DEC-020 Skill Governance Uses Layered Platform/Tenant Model
+
+- Status: accepted
+- Date: 2026-04-30T00:00:00Z
+- Decision: evolve Skill governance from a simple `builtin/custom` split into a layered model: platform core policy, platform standard Skill, tenant derived Skill, tenant custom Skill, and hidden platform service capability.
+- Why this won:
+  - Separates mandatory hidden safety/fallback policy from tenant-visible reusable business capabilities.
+  - Allows platform standard Skills to be visible and bindable while remaining platform-maintained and non-editable.
+  - Gives tenants a clean customization path through derived/custom Skills instead of modifying platform templates directly.
+  - Creates stable versioning and impact-analysis hooks for platform updates, Agent publish pinning, audit, and billing.
+- Alternatives considered:
+  - Keep only `builtin=true/false`: rejected because it cannot express visibility, editability, binding policy, update policy, or hidden platform service capabilities.
+  - Let tenants edit built-in standard Skills directly: rejected because platform upgrades and support would become ungovernable.
+
+## DEC-021 Platform Operations Console Starts As Modular Monolith Control Plane
+
+- Status: accepted
+- Date: 2026-04-30T00:00:00Z
+- Decision: implement the platform operations console first inside the existing codebase and backend service, with isolated `/platform/**` routes, platform RBAC, platform table prefixes, and usage-metering events; design boundaries so metering, billing, and platform config can be extracted later.
+- Why this won:
+  - Current Agent, Skill, KB, Tool, billing, and runtime domains are still evolving quickly, so premature microservice extraction would add coordination cost.
+  - A shared database and backend service make first-phase tenant operations, quota checks, and usage event writes easier to keep consistent.
+  - Separate routes, roles, audit logs, and domain packages prevent the platform console from becoming a loose extension of tenant admin.
+  - Event-based metering creates the future extraction path without blocking runtime delivery now.
+- Alternatives considered:
+  - Build a fully independent platform microservice immediately: rejected because interfaces and ownership boundaries are not stable enough yet.
+  - Add platform pages directly into the tenant admin console: rejected because it blurs platform-vs-tenant responsibility and weakens cross-tenant audit.
+
+## DEC-022 Platform RBAC Reuses Existing SMS Login and JWT Claims in Phase 1
+
+- Status: accepted
+- Date: 2026-04-30T07:35:00Z
+- Decision: for phase-1 `/platform/**`, continue using the existing SMS login flow and org-scoped JWT, then derive platform roles from configured mobile lists (`platform-admin/operator/support/billing/auditor-mobiles`) and inject them into the token `roles` claim and `/auth/me` response.
+- Why this won:
+  - Delivers an independent platform control plane and backend RBAC boundary without first introducing a second auth subsystem or platform-user table.
+  - Keeps the first implementation compatible with the existing `TenantContext` / AOP authorization path, so `/platform/**` can land with limited blast radius.
+  - Preserves room to later replace config-derived roles with dedicated platform identities once tenant operations, billing, and support workflows harden.
+- Alternatives considered:
+  - Create separate platform login and identity tables immediately: rejected because it adds schema and migration surface before platform workflows are validated.
+  - Reuse `ORG_ADMIN` as implicit platform access: rejected because it collapses tenant and platform responsibility boundaries.
+
+## DEC-023 Page Design Governance Uses Impeccable + Root Design Facts
+
+- Status: accepted
+- Date: 2026-04-30T11:54:33Z
+- Decision: adopt `impeccable` as the mandatory project-level workflow for all page design work, with root `PRODUCT.md`, `DESIGN.md`, and `DESIGN.json` as the shared design source of truth for authenticated product surfaces.
+- Why this won:
+  - Turns design quality from a one-off preference into a durable project rule that future agents can follow automatically.
+  - Gives assistant, admin, and platform pages one shared product-register baseline while still allowing route-level density tuning by workflow.
+  - Forces visual-language changes to update the design facts in the same session, reducing drift between code and documentation.
+- Alternatives considered:
+  - Keep design rules only in ad-hoc chat prompts: rejected because the guidance would not survive handoff or later sessions.
+  - Treat each surface as fully independent with no shared baseline: rejected because it would quickly fragment component vocabulary, tone, and interaction patterns.

@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class ChatSessionStateService {
+
+    private static final String ACTIVE_SKILL_CODE_KEY = "active_skill_code";
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private static final int MAX_SUMMARY_LENGTH = 480;
@@ -32,6 +35,50 @@ public class ChatSessionStateService {
 
     public Optional<ChatSessionStateEntity> get(String orgId, String sessionId) {
         return repository.findBySessionIdAndOrgId(sessionId, orgId);
+    }
+
+    /**
+     * Merges optional client override into persisted session state and returns the effective active skill code
+     * (validated against {@code allowedSkillCodes}). Empty-string override clears the active skill.
+     */
+    public Optional<String> mergeAndGetActiveSkillCode(String orgId,
+                                                         String sessionId,
+                                                         String agentId,
+                                                         Optional<String> requestOverride,
+                                                         List<String> allowedSkillCodes) {
+        Map<String, Object> state = loadState(orgId, sessionId);
+        List<String> allowedNormalized = allowedSkillCodes == null ? List.of() : allowedSkillCodes.stream()
+                .filter(Objects::nonNull)
+                .map(code -> code.trim().toLowerCase(Locale.ROOT))
+                .filter(code -> !code.isBlank())
+                .distinct()
+                .toList();
+
+        if (requestOverride.isPresent()) {
+            String raw = requestOverride.get();
+            if (raw == null || raw.isBlank()) {
+                state.remove(ACTIVE_SKILL_CODE_KEY);
+            } else {
+                String normalized = raw.trim().toLowerCase(Locale.ROOT);
+                if (allowedNormalized.contains(normalized)) {
+                    state.put(ACTIVE_SKILL_CODE_KEY, normalized);
+                }
+            }
+            upsert(orgId, sessionId, agentId, state, deriveSummary(state));
+        }
+
+        Map<String, Object> afterLoad = loadState(orgId, sessionId);
+        Object persistedObj = afterLoad.get(ACTIVE_SKILL_CODE_KEY);
+        String persisted = persistedObj == null ? "" : persistedObj.toString().trim().toLowerCase(Locale.ROOT);
+        if (!persisted.isEmpty() && !allowedNormalized.contains(persisted)) {
+            afterLoad.remove(ACTIVE_SKILL_CODE_KEY);
+            upsert(orgId, sessionId, agentId, afterLoad, deriveSummary(afterLoad));
+            return Optional.empty();
+        }
+        if (persisted.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(persisted);
     }
 
     public String buildPromptBlock(ChatSessionStateEntity state) {

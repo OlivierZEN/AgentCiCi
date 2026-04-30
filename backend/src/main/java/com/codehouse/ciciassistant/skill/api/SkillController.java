@@ -58,7 +58,11 @@ public class SkillController {
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> getSkill(@PathVariable Long id) {
         String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(toPayload(orgId, skillDefinitionService.getSkill(orgId, id)));
+        SkillDefinitionEntity skill = skillDefinitionService.getSkill(orgId, id);
+        if (!skill.isVisibleToTenant()) {
+            throw new IllegalArgumentException("Skill not found");
+        }
+        return ApiResponse.ok(toPayload(orgId, skill));
     }
 
     @PutMapping("/{id}")
@@ -74,6 +78,18 @@ public class SkillController {
         String orgId = TenantContext.requireOrgId();
         skillDefinitionService.deleteSkill(orgId, id);
         return ApiResponse.ok(Map.of("id", id, "status", "DISABLED"));
+    }
+
+    @PostMapping("/{id}/derive")
+    public ApiResponse<Map<String, Object>> deriveSkill(@PathVariable Long id,
+                                                        @Valid @RequestBody DeriveSkillRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        SkillDefinitionEntity derived = skillDefinitionService.deriveSkill(orgId, id, new SkillDefinitionService.DeriveCommand(
+                request.skillCode(),
+                request.name(),
+                request.description()
+        ));
+        return ApiResponse.ok(toPayload(orgId, derived));
     }
 
     @PostMapping("/preview")
@@ -245,6 +261,15 @@ public class SkillController {
         payload.put("builtin", item.isBuiltin());
         payload.put("enabled", item.isEnabled());
         payload.put("riskLevel", item.getRiskLevel());
+        payload.put("sourceType", item.getSourceType().name());
+        payload.put("visibility", item.getVisibility().name());
+        payload.put("editPolicy", item.getEditPolicy().name());
+        payload.put("bindingPolicy", item.getBindingPolicy().name());
+        payload.put("updatePolicy", item.getUpdatePolicy().name());
+        payload.put("templateCode", item.getTemplateCode());
+        payload.put("baseTemplateVersion", item.getBaseTemplateVersion());
+        payload.put("currentPublishedVersionId", item.getCurrentPublishedVersionId());
+        payload.put("latestDraftVersionId", item.getLatestDraftVersionId());
         payload.put("promptFragment", item.getPromptFragment());
         payload.put("draftSpecText", item.getDraftSpecText());
         payload.put("toolWhitelist", splitCsv(item.getToolWhitelist()));
@@ -279,6 +304,13 @@ public class SkillController {
             String handoffRule,
             String outputContract,
             String riskLevel
+    ) {
+    }
+
+    public record DeriveSkillRequest(
+            @NotBlank String skillCode,
+            @NotBlank String name,
+            String description
     ) {
     }
 

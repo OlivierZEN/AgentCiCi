@@ -15,6 +15,7 @@ import {
   type SkillTemplate,
   riskBadgeClass,
   riskLabel,
+  skillSourceLabel,
   splitCsv,
 } from "../skills/skillStudioShared";
 
@@ -179,6 +180,13 @@ export default function AdminSkillComposePage() {
         description: skill.description ?? "",
         enabled: skill.enabled,
         riskLevel: skill.riskLevel,
+        sourceType: skill.sourceType,
+        visibility: skill.visibility,
+        editPolicy: skill.editPolicy,
+        bindingPolicy: skill.bindingPolicy,
+        updatePolicy: skill.updatePolicy,
+        templateCode: skill.templateCode ?? "",
+        baseTemplateVersion: skill.baseTemplateVersion,
         promptFragment: skill.promptFragment ?? "",
         draftSpecText: skill.draftSpecText ?? "",
         toolWhitelistText: joinCsv(skill.toolWhitelist),
@@ -261,6 +269,35 @@ export default function AdminSkillComposePage() {
       if (!isUpdate && saved?.id) {
         nav(`/admin/skills/${saved.id}/edit`, { replace: true });
       }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deriveSkill = async () => {
+    if (!form.id) return;
+    const nextCode = `${form.skillCode}-derived`;
+    const nextName = `${form.name}（派生）`;
+    setBusy(true);
+    try {
+      const res = await fetch(`/skills/${form.id}/derive`, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({
+          skillCode: nextCode,
+          name: nextName,
+          description: form.description.trim(),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        flash(`派生失败：${json.message ?? `HTTP ${res.status}`}`);
+        return;
+      }
+      const saved = json.data as Skill;
+      await loadExistingCodes();
+      flash("已派生租户技能 · Derived");
+      nav(`/admin/skills/${saved.id}/edit`, { replace: true });
     } finally {
       setBusy(false);
     }
@@ -388,21 +425,20 @@ export default function AdminSkillComposePage() {
   );
 
   const applyGeneratedSkill = (result: SkillAuthoringResult) => {
-    setForm({
-      ...EMPTY_FORM,
-      skillCode: result.skillSpec.skillCode,
-      name: result.skillSpec.name,
+      setForm({
+        ...EMPTY_FORM,
+        skillCode: result.skillSpec.skillCode,
+        name: result.skillSpec.name,
       description: result.skillSpec.description ?? "",
       riskLevel: result.skillSpec.riskLevel,
       promptFragment: result.skillSpec.promptFragment ?? "",
       draftSpecText: result.skillSpec.draftSpecText ?? "",
       toolWhitelistText: joinCsv(result.skillSpec.toolWhitelist),
-      kbWhitelistText: joinCsv(result.skillSpec.kbWhitelist),
-      handoffRule: result.skillSpec.handoffRule ?? "",
-      outputContract: result.skillSpec.outputContract ?? "",
-      builtin: false,
-      enabled: true,
-    });
+        kbWhitelistText: joinCsv(result.skillSpec.kbWhitelist),
+        handoffRule: result.skillSpec.handoffRule ?? "",
+        outputContract: result.skillSpec.outputContract ?? "",
+        enabled: true,
+      });
     setPreview(result.preview);
     setAuthoringResult(result);
     setAuthoringSessionId(result.sessionId ?? null);
@@ -560,7 +596,13 @@ export default function AdminSkillComposePage() {
         kbWhitelistText: joinCsv(result.skillSpec.kbWhitelist),
         handoffRule: result.skillSpec.handoffRule ?? "",
         outputContract: result.skillSpec.outputContract ?? "",
-        builtin: false,
+        sourceType: result.createdSkill.sourceType,
+        visibility: result.createdSkill.visibility,
+        editPolicy: result.createdSkill.editPolicy,
+        bindingPolicy: result.createdSkill.bindingPolicy,
+        updatePolicy: result.createdSkill.updatePolicy,
+        templateCode: result.createdSkill.templateCode ?? "",
+        baseTemplateVersion: result.createdSkill.baseTemplateVersion,
         enabled: true,
       }));
       setPreview(result.preview);
@@ -579,6 +621,12 @@ export default function AdminSkillComposePage() {
   };
 
   const pageTitle = form.id ? "编辑技能 · Edit skill" : "新建技能 · New skill";
+  const tenantEditable = form.editPolicy === "EDITABLE";
+  const tenantConfigurable = form.editPolicy === "CONFIGURABLE";
+  const canChangeContent = tenantEditable;
+  const canDisable = Boolean(form.id && (form.sourceType === "TENANT_CUSTOM" || form.sourceType === "TENANT_DERIVED"));
+  const canDerive = Boolean(form.id && form.sourceType === "PLATFORM_STANDARD");
+  const isPlatformManaged = form.sourceType === "PLATFORM_STANDARD";
 
   if (Number.isFinite(skillId) && skillId >= 1 && loadError) {
     return (
@@ -626,12 +674,12 @@ export default function AdminSkillComposePage() {
           type="button"
           className="secondary"
           onClick={() => setLibraryModalOpen(true)}
-          disabled={busy || form.builtin}
+          disabled={busy || !tenantEditable}
         >
           从技能库导入 · Import from skill library
         </button>
-        {form.builtin ? (
-          <span className="subtle skills-compose__library-note">内置技能不可用模板 · Not available for built-in skills</span>
+        {!tenantEditable ? (
+          <span className="subtle skills-compose__library-note">平台标准技能当前仅支持启停；请先派生再编辑正文。</span>
         ) : null}
       </div>
 
@@ -831,6 +879,18 @@ export default function AdminSkillComposePage() {
         <div className="skills-template-strip__head">
           <h3 className="skills-compose__h3">技能字段 · Skill fields</h3>
         </div>
+        <div className="skills-compose__meta-row">
+          <span className="skills-pill">{skillSourceLabel(form.sourceType)}</span>
+          <span className="skills-pill">{form.editPolicy}</span>
+          <span className="skills-pill">{form.bindingPolicy}</span>
+          {form.templateCode ? <span className="skills-pill">{form.templateCode}</span> : null}
+          {form.baseTemplateVersion ? <span className="skills-pill">base v{form.baseTemplateVersion}</span> : null}
+        </div>
+        {isPlatformManaged ? (
+          <p className="subtle skills-compose__library-note">
+            平台标准技能正文由平台维护；租户侧本阶段只支持启停和派生，不直接改写内容。
+          </p>
+        ) : null}
         <div className="skills-form-grid">
           <BilingualField
             titleZh="技能代码"
@@ -840,7 +900,7 @@ export default function AdminSkillComposePage() {
           >
             <input
               value={form.skillCode}
-              disabled={form.builtin}
+              disabled={!canChangeContent}
               onChange={(e) => setForm((prev) => ({ ...prev, skillCode: e.target.value }))}
             />
           </BilingualField>
@@ -850,7 +910,7 @@ export default function AdminSkillComposePage() {
             hintZh="面向运营与编排侧展示的名称。"
             hintEn="Display name for console and routing."
           >
-            <input value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
+            <input value={form.name} disabled={!canChangeContent} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} />
           </BilingualField>
           <BilingualField
             titleZh="风险等级"
@@ -860,7 +920,7 @@ export default function AdminSkillComposePage() {
           >
             <select
               value={form.riskLevel}
-              disabled={form.builtin}
+              disabled={!canChangeContent}
               onChange={(e) => setForm((prev) => ({ ...prev, riskLevel: e.target.value as SkillForm["riskLevel"] }))}
             >
               <option value="LOW">LOW</option>
@@ -875,7 +935,12 @@ export default function AdminSkillComposePage() {
                 关闭后不会被调度 · Off = not scheduled
               </span>
             </span>
-            <input type="checkbox" checked={form.enabled} onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.checked }))} />
+            <input
+              type="checkbox"
+              checked={form.enabled}
+              disabled={busy || (!tenantEditable && !tenantConfigurable)}
+              onChange={(e) => setForm((prev) => ({ ...prev, enabled: e.target.checked }))}
+            />
           </label>
         </div>
 
@@ -888,7 +953,7 @@ export default function AdminSkillComposePage() {
           <textarea
             rows={2}
             value={form.description}
-            disabled={form.builtin}
+            disabled={!canChangeContent}
             onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
           />
         </BilingualField>
@@ -901,7 +966,7 @@ export default function AdminSkillComposePage() {
           <textarea
             rows={4}
             value={form.promptFragment}
-            disabled={form.builtin}
+            disabled={!canChangeContent}
             onChange={(e) => setForm((prev) => ({ ...prev, promptFragment: e.target.value }))}
           />
         </BilingualField>
@@ -914,7 +979,7 @@ export default function AdminSkillComposePage() {
           <textarea
             rows={6}
             value={form.draftSpecText}
-            disabled={form.builtin}
+            disabled={!canChangeContent}
             onChange={(e) => setForm((prev) => ({ ...prev, draftSpecText: e.target.value }))}
           />
         </BilingualField>
@@ -927,7 +992,7 @@ export default function AdminSkillComposePage() {
           >
             <input
               value={form.toolWhitelistText}
-              disabled={form.builtin}
+              disabled={!canChangeContent}
               onChange={(e) => setForm((prev) => ({ ...prev, toolWhitelistText: e.target.value }))}
             />
           </BilingualField>
@@ -939,7 +1004,7 @@ export default function AdminSkillComposePage() {
           >
             <input
               value={form.kbWhitelistText}
-              disabled={form.builtin}
+              disabled={!canChangeContent}
               onChange={(e) => setForm((prev) => ({ ...prev, kbWhitelistText: e.target.value }))}
             />
           </BilingualField>
@@ -952,7 +1017,7 @@ export default function AdminSkillComposePage() {
         >
           <input
             value={form.handoffRule}
-            disabled={form.builtin}
+            disabled={!canChangeContent}
             onChange={(e) => setForm((prev) => ({ ...prev, handoffRule: e.target.value }))}
           />
         </BilingualField>
@@ -964,7 +1029,7 @@ export default function AdminSkillComposePage() {
         >
           <input
             value={form.outputContract}
-            disabled={form.builtin}
+            disabled={!canChangeContent}
             onChange={(e) => setForm((prev) => ({ ...prev, outputContract: e.target.value }))}
           />
         </BilingualField>
@@ -979,7 +1044,12 @@ export default function AdminSkillComposePage() {
           <button type="button" className="secondary" onClick={resetForm}>
             重置 · Reset
           </button>
-          {form.id && !form.builtin ? (
+          {canDerive ? (
+            <button type="button" className="secondary" onClick={() => void deriveSkill()} disabled={busy}>
+              派生 · Derive
+            </button>
+          ) : null}
+          {canDisable ? (
             <button type="button" className="secondary" onClick={() => void disableSkill()} disabled={busy}>
               停用 · Disable
             </button>

@@ -7,8 +7,10 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -24,14 +26,21 @@ public class AgentWorkflowExecutionLogService {
 
     private final AgentWorkflowExecutionLogRepository repository;
     private final AgentWorkflowVersionRepository workflowVersionRepository;
+    /** Lazy self-proxy so {@link #appendFromChat} invokes transactional {@link #append} correctly. */
+    private final AgentWorkflowExecutionLogService self;
 
     public AgentWorkflowExecutionLogService(AgentWorkflowExecutionLogRepository repository,
-                                            AgentWorkflowVersionRepository workflowVersionRepository) {
+                                            AgentWorkflowVersionRepository workflowVersionRepository,
+                                            @Lazy AgentWorkflowExecutionLogService self) {
         this.repository = repository;
         this.workflowVersionRepository = workflowVersionRepository;
+        this.self = self;
     }
 
-    @Transactional
+    /**
+     * Best-effort observability: separate transaction so callers that catch failures do not poison their outer transaction.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void append(
             String orgId,
             String agentId,
@@ -73,7 +82,7 @@ public class AgentWorkflowExecutionLogService {
                     .orElse(null);
         }
         String summary = "CHANNEL chat · status=" + executionStatus + " · " + truncate(output == null ? "" : output, 400);
-        append(
+        self.append(
                 orgId,
                 agentId,
                 workflowVersionId,

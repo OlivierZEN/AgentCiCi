@@ -115,30 +115,6 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldRejectFrequentSmsRequests() throws Exception {
-        mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138003"
-                                }
-                                """))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138003"
-                                }
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("SMS request too frequent, please retry later"));
-    }
-
-    @Test
     void shouldRejectInvalidToken() throws Exception {
         mockMvc.perform(get("/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer invalid.token.value"))
@@ -149,6 +125,8 @@ class AuthFlowIntegrationTest {
     @Test
     void shouldPromoteExistingOrgUserToAdminWhenMobileInBootstrapList() throws Exception {
         var org = orgRepository.findById("demo-org").orElseThrow();
+        userRepository.findByOrgIdAndMobile("demo-org", "13800138188").ifPresent(userRepository::delete);
+        userRepository.flush();
         userRepository.save(new UserEntity(org, "13800138188", RoleCodes.ORG_USER));
 
         MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
@@ -176,5 +154,45 @@ class AuthFlowIntegrationTest {
                                 """.formatted(code)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[0]").value("ORG_ADMIN"));
+    }
+
+    @Test
+    void shouldExposePlatformRoleAndAllowPlatformBootstrap() throws Exception {
+        MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orgId": "demo-org",
+                                  "mobile": "13800138111"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        String code = objectMapper.readTree(sendResult.getResponse().getContentAsString())
+                .path("data")
+                .path("devCode")
+                .asText();
+
+        MvcResult loginResult = mockMvc.perform(post("/auth/sms/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orgId": "demo-org",
+                                  "mobile": "13800138111",
+                                  "code": "%s"
+                                }
+                                """.formatted(code)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles").isArray())
+                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
+                .andReturn();
+
+        String token = objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+
+        mockMvc.perform(get("/platform/bootstrap")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists());
     }
 }

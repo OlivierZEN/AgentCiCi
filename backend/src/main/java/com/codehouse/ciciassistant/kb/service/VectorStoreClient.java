@@ -4,7 +4,13 @@ import java.util.List;
 
 public interface VectorStoreClient {
 
-    String upsert(String orgId, String knowledgeBaseId, String content, List<Float> embedding);
+    String upsert(VectorUpsertCommand command);
 
-    List<String> search(String orgId, List<String> knowledgeBaseIds, String query, List<Float> queryEmbedding, int topK);
+    List<VectorSearchHit> search(VectorSearchQuery query);
+
+    VectorDeleteResult deleteByVectorIds(String orgId, List<String> vectorIds);
+
+    VectorDeleteResult deleteByDocument(String orgId, String knowledgeBaseId, Long documentId);
+
+    VectorDeleteResult deleteByKnowledgeBase(String orgId, String knowledgeBaseId);
 }

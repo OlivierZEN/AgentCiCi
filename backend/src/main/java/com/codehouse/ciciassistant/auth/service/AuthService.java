@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -24,17 +25,32 @@ public class AuthService {
     private final SmsCodeStore smsCodeStore;
     private final JwtService jwtService;
     private final Set<String> bootstrapAdminMobiles;
+    private final Set<String> platformAdminMobiles;
+    private final Set<String> platformOperatorMobiles;
+    private final Set<String> platformSupportMobiles;
+    private final Set<String> platformBillingMobiles;
+    private final Set<String> platformAuditorMobiles;
 
     public AuthService(OrgRepository orgRepository,
                        UserRepository userRepository,
                        SmsCodeStore smsCodeStore,
                        JwtService jwtService,
-                       @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw) {
+                       @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw,
+                       @Value("${app.auth.platform-admin-mobiles:}") String platformAdminMobilesRaw,
+                       @Value("${app.auth.platform-operator-mobiles:}") String platformOperatorMobilesRaw,
+                       @Value("${app.auth.platform-support-mobiles:}") String platformSupportMobilesRaw,
+                       @Value("${app.auth.platform-billing-mobiles:}") String platformBillingMobilesRaw,
+                       @Value("${app.auth.platform-auditor-mobiles:}") String platformAuditorMobilesRaw) {
         this.orgRepository = orgRepository;
         this.userRepository = userRepository;
         this.smsCodeStore = smsCodeStore;
         this.jwtService = jwtService;
         this.bootstrapAdminMobiles = parseMobileSet(bootstrapAdminMobilesRaw);
+        this.platformAdminMobiles = parseMobileSet(platformAdminMobilesRaw);
+        this.platformOperatorMobiles = parseMobileSet(platformOperatorMobilesRaw);
+        this.platformSupportMobiles = parseMobileSet(platformSupportMobilesRaw);
+        this.platformBillingMobiles = parseMobileSet(platformBillingMobilesRaw);
+        this.platformAuditorMobiles = parseMobileSet(platformAuditorMobilesRaw);
     }
 
     private static Set<String> parseMobileSet(String raw) {
@@ -73,13 +89,14 @@ public class AuthService {
             user.setRoleCode(RoleCodes.ORG_ADMIN);
             user = userRepository.save(user);
         }
-        String token = jwtService.issueToken(user);
+        List<String> roles = resolveRoles(user);
+        String token = jwtService.issueToken(user, roles);
 
         return Map.of(
                 "token", token,
                 "orgId", org.getId(),
                 "userId", user.getId(),
-                "roles", List.of(user.getRoleCode()),
+                "roles", roles,
                 "issuedAt", Instant.now().toString()
         );
     }
@@ -96,8 +113,30 @@ public class AuthService {
                 "mobile", user.getMobile(),
                 "nickname", user.getNickname() == null ? "" : user.getNickname(),
                 "avatarBase64", user.getAvatarBase64() == null ? "" : user.getAvatarBase64(),
-                "roles", List.of(user.getRoleCode())
+                "roles", resolveRoles(user)
         );
+    }
+
+    private List<String> resolveRoles(UserEntity user) {
+        LinkedHashSet<String> roles = new LinkedHashSet<>();
+        roles.add(user.getRoleCode());
+        String mobile = user.getMobile() == null ? "" : user.getMobile().trim();
+        if (platformAdminMobiles.contains(mobile)) {
+            roles.add(RoleCodes.PLATFORM_ADMIN);
+        }
+        if (platformOperatorMobiles.contains(mobile)) {
+            roles.add(RoleCodes.PLATFORM_OPERATOR);
+        }
+        if (platformSupportMobiles.contains(mobile)) {
+            roles.add(RoleCodes.PLATFORM_SUPPORT);
+        }
+        if (platformBillingMobiles.contains(mobile)) {
+            roles.add(RoleCodes.PLATFORM_BILLING);
+        }
+        if (platformAuditorMobiles.contains(mobile)) {
+            roles.add(RoleCodes.PLATFORM_AUDITOR);
+        }
+        return List.copyOf(roles);
     }
 
     private OrgEntity requireOrg(String orgId) {

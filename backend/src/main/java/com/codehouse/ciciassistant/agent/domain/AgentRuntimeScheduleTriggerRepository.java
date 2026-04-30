@@ -11,4 +11,6 @@ public interface AgentRuntimeScheduleTriggerRepository extends JpaRepository<Age
             String orgId,
             String agentId,
             String triggerKey);
+
+    long deleteByOrgIdAndAgentIdAndSource(String orgId, String agentId, String source);
 }

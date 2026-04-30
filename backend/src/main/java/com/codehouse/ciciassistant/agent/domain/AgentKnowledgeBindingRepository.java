@@ -8,4 +8,8 @@ public interface AgentKnowledgeBindingRepository extends JpaRepository<AgentKnow
     List<AgentKnowledgeBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String orgId, String agentId);
 
     void deleteByOrgIdAndAgentId(String orgId, String agentId);
+
+    void deleteByOrgIdAndKnowledgeBaseId(String orgId, Long knowledgeBaseId);
+
+    long countByOrgIdAndKnowledgeBaseId(String orgId, Long knowledgeBaseId);
 }

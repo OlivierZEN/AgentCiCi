@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "specs/FEAT-003 SaaS 计费方案评审.md",
+                "file": "specs/FEAT-008-knowledge-base-lifecycle-completion.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "FEAT-003 SaaS 计费方案评审"
+              "title": "FEAT-008-knowledge-base-lifecycle-completion"
             }
           }
         ]
@@ -185,6 +185,13 @@
   },
   "active": "0786f8d5badec4bd",
   "lastOpenFiles": [
+    "specs/FEAT-012-project-design-governance.md",
+    "specs/FEAT-012-assistant-workbench-gilded-refresh.md",
+    "specs/FEAT-011-platform-console-visual-refresh.md",
+    "specs/FEAT-010-platform-operations-console.md",
+    "specs/FEAT-009-skill-layering-and-governance.md",
+    "specs/FEAT-003 SaaS 计费方案评审.md",
+    "specs/FEAT-008-knowledge-base-lifecycle-completion.md",
     "agent-skill-tool-permission-model.md",
     "specs/FEAT-007-remove-virtual-human-surface.md",
     "specs/_project-baseline-template.md",
@@ -192,7 +199,6 @@
     "AI助手实现设计方案.md",
     "specs/FEAT-007-cici-workbench.md",
     "specs/FEAT-003-saas-billing-and-packaging.md",
-    "specs/FEAT-003 SaaS 计费方案评审.md",
     "ai-agent-product-feature-comparison.md",
     "agent-skill-binding-entry-refactor-design.md",
     "agent-conversation-hierarchy-design.md",

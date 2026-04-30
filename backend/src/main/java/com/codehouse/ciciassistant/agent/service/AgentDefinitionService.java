@@ -19,6 +19,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
+import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,7 +81,9 @@ public class AgentDefinitionService {
                             CloudccOpenApiService.toolNameGetStandardObjects(),
                             CloudccOpenApiService.toolNameGetCustomObjects(),
                             CloudccOpenApiService.toolNameGetObjectFields(),
-                            ToolNameNormalizer.GET_PENDING_APPROVALS),
+                            ToolNameNormalizer.GET_PENDING_APPROVALS,
+                            TavilyToolService.TOOL_SEARCH,
+                            TavilyToolService.TOOL_EXTRACT),
                     List.of("wechat", "dingtalk", "feishu", "web")),
             new BuiltinAgentSeed(
                     "sales-agent",
@@ -139,6 +142,7 @@ public class AgentDefinitionService {
     private final ObjectMapper objectMapper;
     private final AgentWorkflowExecutionLogService workflowExecutionLogService;
     private final AgentRuntimeScheduleSyncService runtimeScheduleSyncService;
+    private final AgentWorkflowSkillRefService agentWorkflowSkillRefService;
 
     public AgentDefinitionService(AgentDefinitionRepository agentDefinitionRepository,
                                   AgentSpecRepository agentSpecRepository,
@@ -149,7 +153,8 @@ public class AgentDefinitionService {
                                   AgentPublishConfigRepository agentPublishConfigRepository,
                                   ObjectMapper objectMapper,
                                   AgentWorkflowExecutionLogService workflowExecutionLogService,
-                                  AgentRuntimeScheduleSyncService runtimeScheduleSyncService) {
+                                  AgentRuntimeScheduleSyncService runtimeScheduleSyncService,
+                                  AgentWorkflowSkillRefService agentWorkflowSkillRefService) {
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentSpecRepository = agentSpecRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
@@ -160,6 +165,7 @@ public class AgentDefinitionService {
         this.objectMapper = objectMapper;
         this.workflowExecutionLogService = workflowExecutionLogService;
         this.runtimeScheduleSyncService = runtimeScheduleSyncService;
+        this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
     }
 
     /**
@@ -345,6 +351,7 @@ public class AgentDefinitionService {
                 .ifPresent(previous -> previous.setPublishStatus("ARCHIVED"));
         target.setPublishStatus("PUBLISHED");
         definition.setPublishedVersionId(target.getId());
+        agentWorkflowSkillRefService.ensureWorkflowSkillRefs(orgId, agentId, target);
         try {
             workflowExecutionLogService.append(
                     orgId,

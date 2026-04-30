@@ -2,6 +2,8 @@ package com.codehouse.ciciassistant.skill.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -55,6 +57,38 @@ public class SkillDefinitionEntity {
     @Column(name = "risk_level", nullable = false, length = 32)
     private String riskLevel;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "source_type", nullable = false, length = 32)
+    private SkillSourceType sourceType;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "visibility", nullable = false, length = 32)
+    private SkillVisibility visibility;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "edit_policy", nullable = false, length = 32)
+    private SkillEditPolicy editPolicy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "binding_policy", nullable = false, length = 32)
+    private SkillBindingPolicy bindingPolicy;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "update_policy", nullable = false, length = 32)
+    private SkillUpdatePolicy updatePolicy;
+
+    @Column(name = "template_code", length = 64)
+    private String templateCode;
+
+    @Column(name = "base_template_version")
+    private Integer baseTemplateVersion;
+
+    @Column(name = "current_published_version_id")
+    private Long currentPublishedVersionId;
+
+    @Column(name = "latest_draft_version_id")
+    private Long latestDraftVersionId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -76,7 +110,14 @@ public class SkillDefinitionEntity {
                                  String kbWhitelist,
                                  String handoffRule,
                                  String outputContract,
-                                 String riskLevel) {
+                                 String riskLevel,
+                                 SkillSourceType sourceType,
+                                 SkillVisibility visibility,
+                                 SkillEditPolicy editPolicy,
+                                 SkillBindingPolicy bindingPolicy,
+                                 SkillUpdatePolicy updatePolicy,
+                                 String templateCode,
+                                 Integer baseTemplateVersion) {
         this.orgId = orgId;
         this.skillCode = skillCode;
         this.name = name;
@@ -90,6 +131,13 @@ public class SkillDefinitionEntity {
         this.handoffRule = handoffRule;
         this.outputContract = outputContract;
         this.riskLevel = riskLevel;
+        this.sourceType = sourceType;
+        this.visibility = visibility;
+        this.editPolicy = editPolicy;
+        this.bindingPolicy = bindingPolicy;
+        this.updatePolicy = updatePolicy;
+        this.templateCode = templateCode;
+        this.baseTemplateVersion = baseTemplateVersion;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -150,6 +198,42 @@ public class SkillDefinitionEntity {
         return riskLevel;
     }
 
+    public SkillSourceType getSourceType() {
+        return sourceType;
+    }
+
+    public SkillVisibility getVisibility() {
+        return visibility;
+    }
+
+    public SkillEditPolicy getEditPolicy() {
+        return editPolicy;
+    }
+
+    public SkillBindingPolicy getBindingPolicy() {
+        return bindingPolicy;
+    }
+
+    public SkillUpdatePolicy getUpdatePolicy() {
+        return updatePolicy;
+    }
+
+    public String getTemplateCode() {
+        return templateCode;
+    }
+
+    public Integer getBaseTemplateVersion() {
+        return baseTemplateVersion;
+    }
+
+    public Long getCurrentPublishedVersionId() {
+        return currentPublishedVersionId;
+    }
+
+    public Long getLatestDraftVersionId() {
+        return latestDraftVersionId;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -181,8 +265,63 @@ public class SkillDefinitionEntity {
         this.updatedAt = Instant.now();
     }
 
+    public boolean isVisibleToTenant() {
+        return visibility == SkillVisibility.VISIBLE;
+    }
+
+    public boolean isTenantEditable() {
+        return editPolicy == SkillEditPolicy.EDITABLE;
+    }
+
+    public boolean isTenantConfigurable() {
+        return editPolicy == SkillEditPolicy.CONFIGURABLE;
+    }
+
+    public boolean isTenantDeletable() {
+        return sourceType == SkillSourceType.TENANT_DERIVED || sourceType == SkillSourceType.TENANT_CUSTOM;
+    }
+
+    public boolean isInternalOnly() {
+        return bindingPolicy == SkillBindingPolicy.INTERNAL_ONLY;
+    }
+
+    public boolean isMandatoryBinding() {
+        return bindingPolicy == SkillBindingPolicy.MANDATORY;
+    }
+
+    public boolean isPlatformCorePolicyCandidate() {
+        return sourceType == SkillSourceType.PLATFORM_STANDARD
+                && visibility == SkillVisibility.HIDDEN
+                && bindingPolicy == SkillBindingPolicy.MANDATORY;
+    }
+
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setLatestDraftVersionId(Long latestDraftVersionId) {
+        this.latestDraftVersionId = latestDraftVersionId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setCurrentPublishedVersionId(Long currentPublishedVersionId) {
+        this.currentPublishedVersionId = currentPublishedVersionId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setVisibility(SkillVisibility visibility) {
+        this.visibility = visibility;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setBindingPolicy(SkillBindingPolicy bindingPolicy) {
+        this.bindingPolicy = bindingPolicy;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setUpdatePolicy(SkillUpdatePolicy updatePolicy) {
+        this.updatePolicy = updatePolicy;
         this.updatedAt = Instant.now();
     }
 }

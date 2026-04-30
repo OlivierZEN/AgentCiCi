@@ -58,41 +58,53 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
     }
 
     @Override
-    public String upsert(String orgId, String knowledgeBaseId, String content, List<Float> embedding) {
+    public String upsert(VectorUpsertCommand command) {
         String id = UUID.randomUUID().toString();
-        String text = content == null ? "" : content;
+        String text = command.content() == null ? "" : command.content();
         if (text.length() > 4000) {
             text = text.substring(0, 4000);
         }
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("org_id", orgId);
-        payload.put("knowledge_base_id", knowledgeBaseId);
+        payload.put("org_id", command.orgId());
+        payload.put("knowledge_base_id", command.knowledgeBaseId());
+        if (command.documentId() != null) {
+            payload.put("document_id", command.documentId());
+        }
+        if (command.chunkId() != null) {
+            payload.put("chunk_id", command.chunkId());
+        }
+        if (command.chunkIndex() != null) {
+            payload.put("chunk_index", command.chunkIndex());
+        }
+        if (StringUtils.hasText(command.contentHash())) {
+            payload.put("content_hash", command.contentHash());
+        }
         payload.put("content", text);
         Map<String, Object> point = new LinkedHashMap<>();
         point.put("id", id);
-        point.put("vector", embedding);
+        point.put("vector", command.embedding());
         point.put("payload", payload);
         Map<String, Object> body = Map.of("points", List.of(point));
         try {
             putJson("/collections/" + collection + "/points?wait=true", body);
         } catch (Exception ex) {
-            log.debug("Qdrant upsert failed: {}", ex.getMessage());
+            throw new IllegalStateException("Qdrant upsert failed: " + ex.getMessage(), ex);
         }
         return id;
     }
 
     @Override
-    public List<String> search(String orgId, List<String> knowledgeBaseIds, String query, List<Float> queryEmbedding, int topK) {
-        if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty()) {
+    public List<VectorSearchHit> search(VectorSearchQuery query) {
+        if (query.knowledgeBaseIds() == null || query.knowledgeBaseIds().isEmpty()) {
             return List.of();
         }
         List<Map<String, Object>> must = new ArrayList<>();
-        must.add(matchField("org_id", orgId));
-        must.add(matchKnowledgeBases(knowledgeBaseIds));
+        must.add(matchField("org_id", query.orgId()));
+        must.add(matchKnowledgeBases(query.knowledgeBaseIds()));
         Map<String, Object> filter = Map.of("must", must);
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("vector", queryEmbedding);
-        body.put("limit", Math.max(1, topK));
+        body.put("vector", query.queryEmbedding());
+        body.put("limit", Math.max(1, query.topK()));
         body.put("filter", filter);
         body.put("with_payload", true);
         try {
@@ -101,11 +113,23 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             if (!result.isArray()) {
                 return List.of();
             }
-            List<String> out = new ArrayList<>();
+            List<VectorSearchHit> out = new ArrayList<>();
             for (JsonNode hit : result) {
-                String c = hit.path("payload").path("content").asText("");
-                if (!c.isBlank()) {
-                    out.add(c);
+                JsonNode payload = hit.path("payload");
+                String content = payload.path("content").asText("");
+                Long chunkId = nullableLong(payload, "chunk_id");
+                Long documentId = nullableLong(payload, "document_id");
+                Integer chunkIndex = nullableInteger(payload, "chunk_index");
+                String kbId = payload.path("knowledge_base_id").asText("");
+                if (!content.isBlank()) {
+                    out.add(new VectorSearchHit(
+                            hit.path("id").asText(""),
+                            kbId,
+                            documentId,
+                            chunkId,
+                            chunkIndex,
+                            content,
+                            hit.path("score").asDouble(0.0)));
                 }
             }
             return out;
@@ -115,7 +139,51 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
         }
     }
 
-    private static Map<String, Object> matchField(String key, String value) {
+    @Override
+    public VectorDeleteResult deleteByVectorIds(String orgId, List<String> vectorIds) {
+        if (vectorIds == null || vectorIds.isEmpty()) {
+            return VectorDeleteResult.success(0, 0);
+        }
+        try {
+            postJson("/collections/" + collection + "/points/delete?wait=true", Map.of("points", vectorIds));
+            return VectorDeleteResult.success(vectorIds.size(), vectorIds.size());
+        } catch (Exception ex) {
+            log.warn("Qdrant delete by vector ids failed for org {}: {}", orgId, ex.getMessage());
+            return VectorDeleteResult.failure(vectorIds.size(), ex.getMessage());
+        }
+    }
+
+    @Override
+    public VectorDeleteResult deleteByDocument(String orgId, String knowledgeBaseId, Long documentId) {
+        if (documentId == null) {
+            return VectorDeleteResult.success(0, 0);
+        }
+        List<Map<String, Object>> must = new ArrayList<>();
+        must.add(matchField("org_id", orgId));
+        must.add(matchField("knowledge_base_id", knowledgeBaseId));
+        must.add(matchField("document_id", documentId));
+        return deleteByFilter(orgId, Map.of("must", must), "document " + documentId);
+    }
+
+    @Override
+    public VectorDeleteResult deleteByKnowledgeBase(String orgId, String knowledgeBaseId) {
+        List<Map<String, Object>> must = new ArrayList<>();
+        must.add(matchField("org_id", orgId));
+        must.add(matchField("knowledge_base_id", knowledgeBaseId));
+        return deleteByFilter(orgId, Map.of("must", must), "knowledge base " + knowledgeBaseId);
+    }
+
+    private VectorDeleteResult deleteByFilter(String orgId, Map<String, Object> filter, String scope) {
+        try {
+            postJson("/collections/" + collection + "/points/delete?wait=true", Map.of("filter", filter));
+            return VectorDeleteResult.success(1, 1);
+        } catch (Exception ex) {
+            log.warn("Qdrant delete by {} failed for org {}: {}", scope, orgId, ex.getMessage());
+            return VectorDeleteResult.failure(1, ex.getMessage());
+        }
+    }
+
+    private static Map<String, Object> matchField(String key, Object value) {
         return Map.of("key", key, "match", Map.of("value", value == null ? "" : value));
     }
 
@@ -124,6 +192,44 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             return matchField("knowledge_base_id", knowledgeBaseIds.get(0));
         }
         return Map.of("key", "knowledge_base_id", "match", Map.of("any", knowledgeBaseIds));
+    }
+
+    private static Long nullableLong(JsonNode payload, String field) {
+        JsonNode value = payload.path(field);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        if (value.canConvertToLong()) {
+            return value.asLong();
+        }
+        String text = value.asText("");
+        if (text.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private static Integer nullableInteger(JsonNode payload, String field) {
+        JsonNode value = payload.path(field);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        if (value.canConvertToInt()) {
+            return value.asInt();
+        }
+        String text = value.asText("");
+        if (text.isBlank()) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
     }
 
     private boolean collectionExists() {

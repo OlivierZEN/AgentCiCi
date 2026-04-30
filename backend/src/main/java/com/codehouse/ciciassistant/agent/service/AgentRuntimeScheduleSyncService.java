@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -81,18 +82,18 @@ public class AgentRuntimeScheduleSyncService {
         }
     }
 
-    @Transactional
+    /**
+     * Separate transaction so failures during publish do not mark the caller's outer transaction rollback-only
+     * when {@link AgentDefinitionService#publishVersion} catches exceptions best-effort.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Map<String, Object> syncFromCompiledVersion(String orgId, String agentId, Long publishedVersionId) {
+        // Replace inferred-from-spec rows wholesale; deactivating would accumulate inactive duplicates and violate
+        // uq_agent_runtime_sched_org_agent_key_active (org_id, agent_id, trigger_key, active).
+        scheduleRepository.deleteByOrgIdAndAgentIdAndSource(orgId, agentId, "SPEC_SYNC");
+        scheduleRepository.flush();
+
         Optional<AgentWorkflowVersionEntity> source = resolveSourceVersion(orgId, agentId, publishedVersionId);
-        List<AgentRuntimeScheduleTriggerEntity> current =
-                scheduleRepository.findByOrgIdAndAgentIdAndActiveTrueOrderByIdAsc(orgId, agentId);
-        for (AgentRuntimeScheduleTriggerEntity row : current) {
-            row.deactivate();
-        }
-        if (!current.isEmpty()) {
-            scheduleRepository.saveAll(current);
-            scheduleRepository.flush();
-        }
 
         if (source.isEmpty()) {
             return Map.of(

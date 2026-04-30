@@ -12,14 +12,22 @@ import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentToolBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentToolBindingRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentWorkflowSkillRefRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.agent.service.AgentCompileService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillBindingPolicy;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillEditPolicy;
+import com.codehouse.ciciassistant.skill.domain.SkillSourceType;
+import com.codehouse.ciciassistant.skill.domain.SkillUpdatePolicy;
+import com.codehouse.ciciassistant.skill.domain.SkillVersionEntity;
+import com.codehouse.ciciassistant.skill.domain.SkillVersionRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillVisibility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -52,6 +60,9 @@ class OrchestratorIntegrationTest {
     private AgentWorkflowVersionRepository agentWorkflowVersionRepository;
 
     @Autowired
+    private AgentWorkflowSkillRefRepository agentWorkflowSkillRefRepository;
+
+    @Autowired
     private AgentCompileService agentCompileService;
 
     @Autowired
@@ -59,6 +70,9 @@ class OrchestratorIntegrationTest {
 
     @Autowired
     private SkillDefinitionRepository skillDefinitionRepository;
+
+    @Autowired
+    private SkillVersionRepository skillVersionRepository;
 
     @Autowired
     private AgentToolBindingRepository agentToolBindingRepository;
@@ -84,7 +98,7 @@ class OrchestratorIntegrationTest {
         mockMvc.perform(post("/ai/chat")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
+                .content("""
                                 {
                                   "sessionId": "s-orch-1",
                                   "question": "what time is it and summarize leave policy",
@@ -93,7 +107,8 @@ class OrchestratorIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.model.modelName").value("cici-default"))
-                .andExpect(jsonPath("$.data.ragContext[0]").exists())
+                .andExpect(jsonPath("$.data.ragContext").isArray())
+                .andExpect(jsonPath("$.data.effectiveKnowledgeBaseIds[0]").value("bootstrap-kb"))
                 .andExpect(jsonPath("$.data.answer").exists());
 
         // callCount asserts "at least 1" instead of exactly 1 because the Spring test context is
@@ -109,9 +124,6 @@ class OrchestratorIntegrationTest {
 
     @Test
     void shouldResolvePhaseOneSkillsForSalesAgent() throws Exception {
-        // Use a distinct admin mobile so the in-memory SMS rate limiter does not reject
-        // the second /auth/sms/send within the same Spring test context as
-        // shouldRunChatWithRagAndToolsAndExposeOpsMetrics above.
         String token = loginToken("13800138116");
 
         MvcResult result = mockMvc.perform(post("/ai/chat")
@@ -131,9 +143,11 @@ class OrchestratorIntegrationTest {
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
         assertThat(root.path("agentId").asText()).isEqualTo("sales-agent");
         assertThat(root.path("resolvedSkills")).extracting(JsonNode::asText)
-                .contains("sales-copilot", "conversation-core", "knowledge-first", "safe-handoff");
+                .contains("sales-copilot")
+                .doesNotContain("conversation-core", "knowledge-first", "safe-handoff");
         assertThat(root.path("effectiveToolNames")).extracting(JsonNode::asText)
                 .contains("cloudcc_pageQuery");
+        assertThat(root.path("runtimePolicy").path("policyBundleCode").asText()).isEqualTo("core-default");
     }
 
     @Test
@@ -188,9 +202,9 @@ class OrchestratorIntegrationTest {
     }
 
     @Test
-    void shouldEnforceIntersectionForAgentToolWhitelistAndSkillToolWhitelistIncludingMcp() throws Exception {
+    void shouldUnionAgentDirectToolsAndSkillDeclaredToolsIncludingMcp() throws Exception {
         String orgId = "demo-org";
-        String agentId = "whitelist-mcp-intersection";
+        String agentId = "whitelist-mcp-union";
         String token = loginToken("13800138127");
 
         AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
@@ -202,7 +216,14 @@ class OrchestratorIntegrationTest {
                 .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
                         orgId, "whitelist-mcp-only", "Whitelist MCP Only", "test",
                         false, true, "prompt", "spec", "get_object_list", "",
-                        "", "", "LOW")));
+                        "", "", "LOW",
+                        SkillSourceType.TENANT_CUSTOM,
+                        SkillVisibility.VISIBLE,
+                        SkillEditPolicy.EDITABLE,
+                        SkillBindingPolicy.OPTIONAL,
+                        SkillUpdatePolicy.MANUAL,
+                        null,
+                        null)));
 
         agentToolBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
         agentSkillBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
@@ -223,9 +244,166 @@ class OrchestratorIntegrationTest {
                 .andReturn();
 
         JsonNode root = objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
-        assertThat(root.path("effectiveToolNames")).isEmpty();
+        assertThat(root.path("effectiveToolNames")).extracting(JsonNode::asText)
+                .contains("tavily_search", "get_object_list");
+        assertThat(root.path("agentDirectToolNames")).extracting(JsonNode::asText).contains("tavily_search");
+        assertThat(root.path("skillDeclaredToolNames")).extracting(JsonNode::asText).contains("get_object_list");
+        assertThat(root.path("skillScopedToolNames")).extracting(JsonNode::asText).contains("get_object_list");
         assertThat(root.path("warnings").isArray()).isTrue();
-        assertThat(root.path("warnings")).isNotEmpty();
+    }
+
+    @Test
+    void shouldKeepPublishedAgentPinnedToSkillVersionAfterSkillEdits() throws Exception {
+        String orgId = "demo-org";
+        String agentId = "skill-pin-agent";
+        String token = loginToken("13800138129");
+
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+                .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
+                        orgId, agentId, "Skill Pin Agent", "test", "hello",
+                        "cici-default", "", "", "MEDIUM", "MANUAL", "v1", false, true)));
+
+        SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, "skill-pin-runtime")
+                .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
+                        orgId, "skill-pin-runtime", "Skill Pin Runtime", "test",
+                        false, true, "Use tavily search only.", "Use tavily search only.", "tavily_search", "",
+                        "", "", "LOW",
+                        SkillSourceType.TENANT_CUSTOM,
+                        SkillVisibility.VISIBLE,
+                        SkillEditPolicy.EDITABLE,
+                        SkillBindingPolicy.OPTIONAL,
+                        SkillUpdatePolicy.MANUAL,
+                        null,
+                        null)));
+        SkillVersionEntity v1 = skillVersionRepository.save(new SkillVersionEntity(
+                orgId,
+                skill.getId(),
+                1,
+                "Use tavily search only.",
+                "policy",
+                "manual",
+                "{}",
+                "seed v1",
+                "Use tavily search only.",
+                "{}",
+                "tavily_search",
+                "",
+                "LOW",
+                "v1",
+                "",
+                "DRAFT"
+        ));
+        skill.setLatestDraftVersionId(v1.getId());
+        skillDefinitionRepository.save(skill);
+
+        agentToolBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentSkillBindingRepository.deleteByOrgIdAndAgentId(orgId, agentId);
+        agentSkillBindingRepository.save(new AgentSkillBindingEntity(
+                orgId, agentId, skill.getId(), "always-on", "", 1, true));
+
+        AgentCompileService.CompileResult compileResult = agentCompileService.compile(
+                orgId,
+                new AgentCompileService.CompileCommand(
+                        agentId,
+                        "Skill Pin Agent",
+                        "pin runtime skill version",
+                        "",
+                        "gpt-4.1",
+                        "",
+                        "用于验证已发布 Agent 固定 SkillVersion。",
+                        List.of("web"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        "",
+                        "BALANCED",
+                        "copilot",
+                        "v-skill-pin"
+                )
+        );
+        int versionNo = compileResult.draftVersionNo() == null ? 0 : compileResult.draftVersionNo();
+        assertThat(versionNo).isGreaterThan(0);
+        agentDefinitionService.publishVersion(orgId, agentId, versionNo);
+
+        Long publishedVersionId = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+                .map(AgentDefinitionEntity::getPublishedVersionId)
+                .orElseThrow();
+        assertThat(agentWorkflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(orgId, publishedVersionId))
+                .hasSize(1)
+                .first()
+                .extracting(item -> item.getSkillVersionId())
+                .isEqualTo(v1.getId());
+
+        skill.update(
+                "Skill Pin Runtime",
+                "updated",
+                true,
+                "Use object list only.",
+                "Use object list only.",
+                "get_object_list",
+                "",
+                "",
+                "",
+                "LOW"
+        );
+        skillDefinitionRepository.save(skill);
+        skillVersionRepository.save(new SkillVersionEntity(
+                orgId,
+                skill.getId(),
+                2,
+                "Use object list only.",
+                "policy",
+                "manual",
+                "{}",
+                "seed v2",
+                "Use object list only.",
+                "{}",
+                "get_object_list",
+                "",
+                "LOW",
+                "v2",
+                "",
+                "DRAFT"
+        ));
+
+        MvcResult chatResult = mockMvc.perform(post("/ai/chat")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sessionId": "s-skill-pin-runtime",
+                                  "agentId": "skill-pin-agent",
+                                  "question": "帮我继续执行已发布版本",
+                                  "knowledgeBaseIds": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode chatRoot = objectMapper.readTree(chatResult.getResponse().getContentAsString()).path("data");
+        assertThat(chatRoot.path("effectiveToolNames")).extracting(JsonNode::asText)
+                .contains("tavily_search")
+                .doesNotContain("get_object_list");
+        assertThat(chatRoot.path("skillDeclaredToolNames")).extracting(JsonNode::asText)
+                .contains("tavily_search")
+                .doesNotContain("get_object_list");
+        assertThat(chatRoot.path("resolvedSkillVersions").get(0).path("skillVersionId").asLong()).isEqualTo(v1.getId());
+        assertThat(chatRoot.path("resolvedSkillVersions").get(0).path("skillVersionNo").asInt()).isEqualTo(1);
+
+        MvcResult debugResult = mockMvc.perform(post("/agents/{agentId}/debug", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "input": "调试已发布版本",
+                                  "skillRefs": []
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode debugRoot = objectMapper.readTree(debugResult.getResponse().getContentAsString()).path("data");
+        assertThat(debugRoot.path("skillDeclaredToolNames")).extracting(JsonNode::asText)
+                .contains("tavily_search")
+                .doesNotContain("get_object_list");
     }
 
     @Test
@@ -461,8 +639,8 @@ class OrchestratorIntegrationTest {
                 .andReturn();
         JsonNode rootAfterPublishV2 = objectMapper.readTree(chatAfterPublishV2.getResponse().getContentAsString()).path("data");
         assertThat(rootAfterPublishV2.path("effectiveToolNames")).extracting(JsonNode::asText)
-                .contains("tavily_search", "get_pending_approvals")
-                .doesNotContain("cloudcc_pageQuery");
+                .contains("tavily_search", "get_pending_approvals");
+        // cloudcc_pageQuery remains available via cici-system builtin augment (discovery tools), independent of manifest-only deps.
 
         mockMvc.perform(post("/agents/cici-system/rollback")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -600,6 +778,8 @@ class OrchestratorIntegrationTest {
         assertThat(root.path("runtimeExecution").path("output").asText()).contains("Published workflow");
         assertThat(root.path("runtimeExecution").path("trace")).extracting(JsonNode::asText)
                 .contains("workflow-node:start", "workflow-node:code:intent-classify", "workflow-node:end:published-executed");
+        assertThat(root.path("runtimeGovernance").path("policyBundle").path("bundleCode").asText()).isEqualTo("core-default");
+        assertThat(root.path("runtimeExecution").path("resolvedSkillVersions").isArray()).isTrue();
         assertThat(root.path("runtimeExecution").path("contextSnapshot").path("runtimeSource").asText()).isEqualTo("published");
         assertThat(root.path("runtimeExecution").path("contextSnapshot").path("intent").asText()).isEqualTo("classified");
         assertThat(root.path("runtimeExecution").path("contextSnapshot").path("branchHit").asText()).isNotBlank();
@@ -661,6 +841,11 @@ class OrchestratorIntegrationTest {
                 .contains("workflow-node:start", "workflow-node:code:intent-classify", "workflow-node:end:published-executed");
         assertThat(root.path("contextSnapshot").path("runtimeSource").asText()).isEqualTo("published");
         assertThat(root.path("contextSnapshot").path("responsePlanned").asBoolean()).isTrue();
+        assertThat(root.path("policyBundle").path("bundleCode").asText()).isEqualTo("core-default");
+        assertThat(root.path("runtimeGovernanceNotes")).extracting(JsonNode::asText)
+                .anyMatch(item -> item.contains("Policy bundle: core-default@v"))
+                .anyMatch(item -> item.contains("Published runtime keeps using pinned skill refs"));
+        assertThat(root.path("resolvedSkillVersions").isArray()).isTrue();
         assertThat(root.path("contextSnapshot").path("nodeMetrics").isArray()).isTrue();
         assertThat(root.path("contextSnapshot").path("errorType").asText()).isEmpty();
         assertThat(root.path("contextSnapshot").path("replayHint").asText()).contains("Replay");

@@ -216,6 +216,37 @@ type DebugTraceResult = {
   notes: string[];
   outcomeLabel: string;
   activeSkills?: string[];
+  governanceChips?: string[];
+};
+
+type DebugRuntimeSkillVersion = {
+  skillCode?: string;
+  skillName?: string;
+  skillVersionNo?: number | null;
+  templateCode?: string | null;
+  templateVersionNo?: number | null;
+};
+
+type DebugRuntimePolicyBundle = {
+  bundleCode?: string;
+  versionNo?: number | null;
+};
+
+type DebugRuntimePayload = {
+  activeSkills?: string[];
+  effectiveToolNames?: string[];
+  effectiveKnowledgeBaseIds?: string[];
+  warnings?: string[];
+  traceSteps?: string[];
+  runtimeSource?: string;
+  publishedVersionId?: number | null;
+  resolvedSkillVersions?: DebugRuntimeSkillVersion[];
+  policyBundle?: DebugRuntimePolicyBundle | null;
+  runtimeGovernanceNotes?: string[];
+  executionStatus?: string;
+  executionOutput?: string;
+  executionTrace?: string[];
+  contextSnapshot?: Record<string, unknown>;
 };
 
 type CompileTab = "preview" | "triggers" | "executions" | "history" | "summary" | "code" | "manifest" | "debug";
@@ -741,6 +772,109 @@ function simulateDebugTrace(preview: WorkflowPreview, draft: AgentDraft, input: 
     activeNodeIds,
     notes,
     outcomeLabel: shouldHandoff ? "人工接管" : draft.executionMode === "auto" ? "自动执行" : "建议输出",
+    governanceChips: ["前端模拟"],
+  };
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string");
+}
+
+function buildDebugOutcomeLabel(executionStatus: string | undefined, runtimeSource: string | undefined, draft: AgentDraft): string {
+  if (executionStatus === "published-executed") return "已按发布版本运行";
+  if (executionStatus === "fallback-executed") return "后端回退运行";
+  if (executionStatus === "published-invalid") return "发布版本异常";
+  if (runtimeSource === "published_version") return "已走后端调试";
+  return draft.executionMode === "auto" ? "自动执行" : "建议输出";
+}
+
+function buildRuntimeSourceLabel(runtimeSource: string | undefined): string {
+  switch (runtimeSource) {
+    case "published_version":
+      return "已发布 Agent 版本";
+    case "draft_capability":
+      return "草稿能力解析";
+    default:
+      return runtimeSource ? `后端运行时（${runtimeSource}）` : "后端运行时";
+  }
+}
+
+function buildRuntimeSkillSummary(item: DebugRuntimeSkillVersion): string {
+  const name = item.skillName || item.skillCode || "unknown-skill";
+  const version = item.skillVersionNo != null ? `v${item.skillVersionNo}` : "v?";
+  if (item.templateCode) {
+    const templateVersion = item.templateVersionNo != null ? `@${item.templateCode}#v${item.templateVersionNo}` : `@${item.templateCode}`;
+    return `${name} ${version} ${templateVersion}`;
+  }
+  return `${name} ${version}`;
+}
+
+function buildDebugActiveNodeIds(preview: WorkflowPreview,
+                                 payload: DebugRuntimePayload): string[] {
+  const nodeIds = new Set<string>(["input", "intent"]);
+  const contextSnapshot = payload.contextSnapshot;
+  const parsedNodes = toStringArray(contextSnapshot?.["parsedNodes"]);
+  const hasNode = (nodeId: string) => preview.nodes.some((node) => node.id === nodeId);
+  const knowledgeUsed = contextSnapshot?.["knowledgeUsed"] === true || parsedNodes.includes("knowledge-search");
+  const toolInvoked = contextSnapshot?.["toolInvoked"] === true || parsedNodes.includes("tool-invoke-best");
+  const responsePlanned = contextSnapshot?.["responsePlanned"] === true || parsedNodes.includes("response-generate");
+  const handoffRequested = parsedNodes.includes("handoff-request");
+
+  if (knowledgeUsed && hasNode("knowledge")) nodeIds.add("knowledge");
+  if (toolInvoked && hasNode("tooling")) nodeIds.add("tooling");
+  if (responsePlanned && hasNode("compose")) nodeIds.add("compose");
+  if (handoffRequested && hasNode("handoff")) nodeIds.add("handoff");
+  if (payload.executionStatus && payload.executionStatus !== "published-invalid" && hasNode("output")) nodeIds.add("output");
+  return Array.from(nodeIds);
+}
+
+function buildBackendDebugTrace(preview: WorkflowPreview,
+                                draft: AgentDraft,
+                                input: string,
+                                payload: DebugRuntimePayload): DebugTraceResult {
+  const notes: string[] = [];
+  const pushNote = (line: string | undefined | null) => {
+    const normalized = line?.trim();
+    if (!normalized || notes.includes(normalized)) return;
+    notes.push(normalized);
+  };
+
+  const governanceChips: string[] = ["后端真实运行"];
+  if (payload.runtimeSource) governanceChips.push(buildRuntimeSourceLabel(payload.runtimeSource));
+  if (payload.publishedVersionId != null) governanceChips.push(`发布记录 #${payload.publishedVersionId}`);
+  if (payload.policyBundle?.bundleCode) {
+    const version = payload.policyBundle.versionNo != null ? `@v${payload.policyBundle.versionNo}` : "";
+    governanceChips.push(`Policy ${payload.policyBundle.bundleCode}${version}`);
+  }
+
+  pushNote(input.trim() ? `测试输入已发送到后端真实运行：${input.trim()}` : "未填写测试输入，后端按空输入路径执行。");
+  pushNote(`调试来源：${buildRuntimeSourceLabel(payload.runtimeSource)}`);
+  if (payload.executionStatus) pushNote(`执行状态：${payload.executionStatus}`);
+  if (payload.executionOutput) pushNote(`执行结果：${payload.executionOutput}`);
+  if (payload.policyBundle?.bundleCode) {
+    pushNote(`Policy bundle：${payload.policyBundle.bundleCode}@v${payload.policyBundle.versionNo ?? "?"}`);
+  }
+  if (payload.resolvedSkillVersions && payload.resolvedSkillVersions.length > 0) {
+    pushNote(`Skill 版本：${payload.resolvedSkillVersions.map(buildRuntimeSkillSummary).join("；")}`);
+  }
+  if (payload.effectiveToolNames && payload.effectiveToolNames.length > 0) {
+    pushNote(`工具范围：${payload.effectiveToolNames.join("、")}`);
+  }
+  if (payload.effectiveKnowledgeBaseIds && payload.effectiveKnowledgeBaseIds.length > 0) {
+    pushNote(`知识库范围：${payload.effectiveKnowledgeBaseIds.join("、")}`);
+  }
+  (payload.runtimeGovernanceNotes ?? []).forEach((line) => pushNote(`治理摘要：${line}`));
+  (payload.warnings ?? []).forEach((line) => pushNote(`运行告警：${line}`));
+  (payload.traceSteps ?? []).forEach((line) => pushNote(`调试摘要：${line}`));
+  (payload.executionTrace ?? []).forEach((line) => pushNote(`执行轨迹：${line}`));
+
+  return {
+    activeNodeIds: buildDebugActiveNodeIds(preview, payload),
+    notes,
+    outcomeLabel: buildDebugOutcomeLabel(payload.executionStatus, payload.runtimeSource, draft),
+    activeSkills: payload.activeSkills ?? [],
+    governanceChips,
   };
 }
 
@@ -2195,21 +2329,19 @@ export default function AgentBuilderShell({
           skillRefs: draft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
         }),
       });
-      const { body } = await safeFetchJson<{
-        activeSkills: string[];
-        warnings: string[];
-        traceSteps: string[];
-      }>(response);
-      const local = simulateDebugTrace(compileArtifact.preview, draft, debugInput);
-      finalTrace = {
-        ...local,
-        activeSkills: body?.data?.activeSkills ?? [],
-        notes: [...local.notes, ...(body?.data?.warnings ?? []), ...(body?.data?.traceSteps ?? [])],
-      };
+      const { body } = await safeFetchJson<DebugRuntimePayload>(response);
+      if (!body?.data) {
+        throw new Error("后端未返回调试结果");
+      }
+      finalTrace = buildBackendDebugTrace(compileArtifact.preview, draft, debugInput, body.data);
       setDebugTrace(finalTrace);
-    } catch {
+    } catch (error) {
       await new Promise((resolve) => window.setTimeout(resolve, 240));
       finalTrace = simulateDebugTrace(compileArtifact.preview, draft, debugInput);
+      finalTrace.notes = [
+        `后端调试接口暂不可用，已回退到前端模拟路径：${error instanceof Error ? error.message : String(error)}`,
+        ...finalTrace.notes,
+      ];
       setDebugTrace(finalTrace);
     } finally {
       setActiveCompileTab("debug");
@@ -3315,6 +3447,13 @@ export default function AgentBuilderShell({
                     <div className="cici-builder-debug__trace">
                       {debugTrace.activeSkills.map((skill) => (
                         <span key={skill} className="cici-builder-debug__chip">{skill}</span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {debugTrace?.governanceChips && debugTrace.governanceChips.length > 0 ? (
+                    <div className="cici-builder-debug__trace">
+                      {debugTrace.governanceChips.map((item) => (
+                        <span key={item} className="cici-builder-debug__chip">{item}</span>
                       ))}
                     </div>
                   ) : null}

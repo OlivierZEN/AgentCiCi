@@ -455,17 +455,12 @@ function toolCallLabel(toolName: string): string {
 function WorkbenchAgentBar({
   agents,
   activeKey,
-  activeState,
-  activeThought,
   onSelect,
 }: {
   agents: WorkbenchDockAgent[];
   activeKey: string;
-  activeState: WorkbenchStateMachine;
-  activeThought: string;
   onSelect: (agentKey: string) => void;
 }) {
-  const activeAgent = agents.find((a) => a.key === activeKey) ?? agents[0] ?? WORKBENCH_DOCK_AGENTS[0];
   return (
     <section className="cici-workbench__agent-bar">
       <div className="cici-workbench__agent-strip-wrap">
@@ -488,34 +483,42 @@ function WorkbenchAgentBar({
           })}
         </div>
       </div>
+    </section>
+  );
+}
 
-      <section className="cici-workbench__top-activity">
-        <div className="cici-workbench__top-activity-icon" style={{ background: activeAgent.color }}>
-          {activeAgent.short}
+function WorkbenchStateCard({
+  agent,
+  state,
+  busy,
+}: {
+  agent: WorkbenchDockAgent;
+  state: WorkbenchStateMachine;
+  busy: boolean;
+}) {
+  return (
+    <section className="cici-workbench__top-activity cici-workbench__top-activity--sidebar">
+      <div className="cici-workbench__top-activity-icon" style={{ background: agent.color }}>
+        {agent.short}
+      </div>
+      <div className="cici-workbench__top-activity-machine">
+        <div className="cici-workbench__machine-head">
+          <strong>{agent.name}</strong>
+          <span className={`cici-workbench__machine-status${busy ? " is-busy" : ""}`}>{state.status}</span>
         </div>
-        <div className="cici-workbench__top-activity-machine">
-          <div className="cici-workbench__machine-head">
-            <strong>{activeAgent.name}</strong>
-            <span className="cici-workbench__machine-status">{activeState.status}</span>
-          </div>
-          <div className="cici-workbench__machine-lane is-prev">
-            <span className="cici-workbench__machine-lane-label">上一项</span>
-            <div className="cici-workbench__machine-lane-content">{activeState.previousTask}</div>
-          </div>
-          <div className="cici-workbench__machine-lane is-current">
-            <span className="cici-workbench__machine-lane-label">当前</span>
-            <div className="cici-workbench__machine-lane-content">{activeState.currentTask}</div>
-          </div>
-          <div className="cici-workbench__machine-lane is-next">
-            <span className="cici-workbench__machine-lane-label">下一项</span>
-            <div className="cici-workbench__machine-lane-content">{activeState.nextTask}</div>
-          </div>
+        <div className="cici-workbench__machine-lane is-prev">
+          <span className="cici-workbench__machine-lane-label">上一项</span>
+          <div className="cici-workbench__machine-lane-content">{state.previousTask}</div>
         </div>
-        <div className="cici-workbench__top-activity-thoughts">
-          <div className="cici-workbench__thought-label">{activeState.status}</div>
-          <div className="cici-workbench__thought-line">{activeThought}</div>
+        <div className="cici-workbench__machine-lane is-current">
+          <span className="cici-workbench__machine-lane-label">当前</span>
+          <div className="cici-workbench__machine-lane-content">{state.currentTask}</div>
         </div>
-      </section>
+        <div className="cici-workbench__machine-lane is-next">
+          <span className="cici-workbench__machine-lane-label">下一项</span>
+          <div className="cici-workbench__machine-lane-content">{state.nextTask}</div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -1264,7 +1267,6 @@ export default function AssistantApp() {
   const workbenchMessages = workbenchMessagesByAgent[activeWorkbenchKey] ?? [];
   const activeWorkbenchState = workbenchRuntimeByAgent[activeWorkbenchKey] ?? getWorkbenchDefaultState(activeWorkbenchKey);
   const activeWorkbenchThoughts = activeWorkbenchState.thoughts.length ? activeWorkbenchState.thoughts : ["等待新的业务上下文"];
-  const activeWorkbenchThought = activeWorkbenchThoughts[workbenchThoughtIndex % activeWorkbenchThoughts.length];
   // Keep the streaming assistant placeholder even when content is still empty so the
   // bubble appears immediately and text flows in incrementally.
   const workbenchConversation = workbenchMessages.filter(
@@ -1275,8 +1277,6 @@ export default function AssistantApp() {
   const userInitial = me?.nickname?.[0] || me?.mobile?.slice(-2) || "我";
   const agentUnread = (conversationsByAgent.get(activeAgent.id) ?? []).reduce((count, thread) => count + thread.unread, 0);
   const activeWorkbenchBusy = activeWorkbenchState.status !== "待命中" && activeWorkbenchState.status !== "已完成";
-  const activeWorkbenchStatusText =
-    activeWorkbenchState.status === "待命中" ? "空闲中" : activeWorkbenchState.status === "已完成" ? "已完成" : "忙碌中";
   const monitorRows = workbenchDockAgents.map((agent, index) => {
     const runtime = workbenchRuntimeByAgent[agent.key] ?? getWorkbenchDefaultState(agent.key);
     const threads = conversationsByAgent.get(agent.runtimeAgentId ?? agent.key) ?? [];
@@ -1932,14 +1932,21 @@ export default function AssistantApp() {
   return (
     <div className="cici-app cici-app--hierarchy">
       <nav className="cici-rail">
-        <div className="cici-rail__logo">
-          <div className="cici-rail__logo-icon">CB</div>
+        <div className="cici-rail__top">
+          <button
+            type="button"
+            className="cici-rail__avatar cici-rail__avatar--button"
+            onClick={() => setProfilePanelOpen(true)}
+            data-menu-label="个人设置"
+            aria-label="个人设置"
+          >
+            {userInitial}
+          </button>
         </div>
         <div className="cici-rail__nav">
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "workbench" ? " is-active" : ""}`}
             onClick={() => setWorkspaceTab("workbench")}
-            title="思思工作台"
             data-menu-label="会话工作台"
             aria-label="会话工作台"
           >
@@ -1950,7 +1957,6 @@ export default function AssistantApp() {
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "monitor" ? " is-active" : ""}`}
             onClick={() => setWorkspaceTab("monitor")}
-            title="智能体监控"
             data-menu-label="智能体监控"
             aria-label="智能体监控"
           >
@@ -1964,7 +1970,6 @@ export default function AssistantApp() {
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "customers" ? " is-active" : ""}`}
             onClick={() => setWorkspaceTab("customers")}
-            title="客户"
             data-menu-label="客户会话"
             aria-label="客户会话"
           >
@@ -1978,7 +1983,6 @@ export default function AssistantApp() {
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "crm" ? " is-active" : ""}`}
             onClick={() => setWorkspaceTab("crm")}
-            title="CRM"
             data-menu-label="CRM 系统"
             aria-label="CRM 系统"
           >
@@ -1990,7 +1994,7 @@ export default function AssistantApp() {
           </button>
         </div>
         <div className="cici-rail__bottom">
-          <button className="cici-rail__nav-item cici-rail__menu-btn" title="设置" data-menu-label="系统设置" aria-label="系统设置">
+          <button className="cici-rail__nav-item cici-rail__menu-btn" data-menu-label="系统设置" aria-label="系统设置">
             <svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -1999,7 +2003,6 @@ export default function AssistantApp() {
           <button
             className="cici-rail__logout-btn cici-rail__menu-btn"
             onClick={logout}
-            title="退出登录"
             data-menu-label="退出登录"
             aria-label="退出登录"
           >
@@ -2009,16 +2012,9 @@ export default function AssistantApp() {
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </button>
-          <button
-            type="button"
-            className="cici-rail__avatar cici-rail__avatar--button"
-            onClick={() => setProfilePanelOpen(true)}
-            title="个人设置"
-            data-menu-label="个人设置"
-            aria-label="个人设置"
-          >
-            {userInitial}
-          </button>
+          <div className="cici-rail__logo">
+            <div className="cici-rail__logo-icon">CB</div>
+          </div>
         </div>
       </nav>
       {auth?.token ? (
@@ -2037,8 +2033,6 @@ export default function AssistantApp() {
                 <WorkbenchAgentBar
                   agents={workbenchDockAgents}
                   activeKey={activeWorkbenchKey}
-                  activeState={activeWorkbenchState}
-                  activeThought={activeWorkbenchThought}
                   onSelect={setActiveWorkbenchKey}
                 />
 
@@ -2155,119 +2149,98 @@ export default function AssistantApp() {
               </section>
 
               <aside className="cici-workbench__sidebar">
-                <section className="cici-workbench__sidebar-card">
-                  <div className="cici-workbench__selected-agent">
-                    <div className="cici-workbench__selected-avatar" style={{ background: activeWorkbenchAgent.color }}>
-                      {activeWorkbenchAgent.short}
-                    </div>
-                    <div className="cici-workbench__selected-meta">
-                      <strong>{activeWorkbenchAgent.name}</strong>
-                      <span className={`cici-workbench__selected-status${activeWorkbenchBusy ? " is-busy" : ""}`}>{activeWorkbenchStatusText}</span>
-                    </div>
-                  </div>
-
-                  <h3 className="cici-workbench__sidebar-title">今日工作概览</h3>
-                  <div className="cici-workbench__metrics">
-                    {workbenchMetrics.map((metric) => (
-                      <div key={metric.label} className="cici-workbench__metric">
-                        <span>{metric.label}</span>
-                        <strong>{metric.value}</strong>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="cici-workbench__task-list">
-                    {workbenchOverviewItems.length === 0 ? (
-                      <p className="cici-workbench__overview-empty">暂无近期任务记录。发布个人工作流并执行后，这里会自动展示执行概览。</p>
-                    ) : (
-                      workbenchOverviewItems.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="cici-workbench__task-item"
-                          onClick={() => void runWorkbenchPrompt(item.prompt)}
-                        >
-                          <div className="cici-workbench__task-top">
-                            <strong>{item.title}</strong>
-                            <span className="cici-workbench__task-status">{item.status}</span>
-                          </div>
-                          <p>{item.detail}</p>
-                        </button>
-                      ))
-                    )}
-                  </div>
+                <section className="cici-workbench__sidebar-card cici-workbench__sidebar-card--top">
+                  <WorkbenchStateCard
+                    agent={activeWorkbenchAgent}
+                    state={activeWorkbenchState}
+                    busy={activeWorkbenchBusy}
+                  />
                 </section>
 
-                <section className="cici-workbench__sidebar-card">
-                  <div className="cici-workbench__history-header">
-                    <h3 className="cici-workbench__sidebar-title">会话历史</h3>
-                    <button type="button" className="cici-workbench__new-session-btn" onClick={startNewWorkbenchConversation}>
-                      新对话
-                    </button>
-                  </div>
-                  <div className="cici-workbench__history-list">
-                    {workbenchSessionThreads.map((session) => (
-                      <div
-                        key={session.id}
-                        className={`cici-workbench__session-row${activeWorkbenchSessionId === session.id ? " is-active" : ""}`}
-                        onMouseLeave={() => {
-                          setOpenWorkbenchSessionMenuId((current) => (current === session.id ? "" : current));
-                        }}
-                      >
-                        <button type="button" className="cici-workbench__session-main" onClick={() => void selectWorkbenchConversation(session.id)}>
-                          <strong>{session.title || session.participantName || "未命名会话"}</strong>
-                        </button>
-                        <div className="cici-workbench__session-actions">
-                          <button
-                            type="button"
-                            className="cici-workbench__session-more-btn"
-                            title="更多操作"
-                            aria-label="更多操作"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setOpenWorkbenchSessionMenuId((current) => (current === session.id ? "" : session.id));
-                            }}
-                          >
-                            <span aria-hidden>⋯</span>
-                          </button>
-                          {openWorkbenchSessionMenuId === session.id ? (
-                            <div className="cici-workbench__session-menu">
-                              <button
-                                type="button"
-                                className="cici-workbench__session-menu-btn"
-                                title="下载 Markdown"
-                                aria-label="下载 Markdown"
-                                onClick={() => {
-                                  void downloadWorkbenchConversation(session);
-                                  setOpenWorkbenchSessionMenuId("");
-                                }}
-                              >
-                                <svg className="cici-workbench__session-menu-icon" viewBox="0 0 24 24" aria-hidden>
-                                  <path d="M12 4v9" />
-                                  <path d="m8.5 10.5 3.5 3.5 3.5-3.5" />
-                                  <path d="M5 19h14" />
-                                </svg>
-                              </button>
-                              <button
-                                type="button"
-                                className="cici-workbench__session-menu-btn is-danger"
-                                title="删除会话"
-                                aria-label="删除会话"
-                                onClick={() => {
-                                  void deleteWorkbenchConversation(session);
-                                  setOpenWorkbenchSessionMenuId("");
-                                }}
-                              >
-                                <span className="cici-workbench__session-menu-glyph" aria-hidden>🗑</span>
-                              </button>
-                            </div>
-                          ) : null}
+                <section className="cici-workbench__sidebar-card cici-workbench__sidebar-card--bottom">
+                  <div className="cici-workbench__sidebar-block">
+                    <h3 className="cici-workbench__sidebar-title">今日工作概览</h3>
+                    <div className="cici-workbench__metrics">
+                      {workbenchMetrics.map((metric) => (
+                        <div key={metric.label} className="cici-workbench__metric">
+                          <span>{metric.label}</span>
+                          <strong>{metric.value}</strong>
                         </div>
-                      </div>
-                    ))}
-                    {workbenchSessionThreads.length === 0 ? (
-                      <div className="cici-workbench__history-empty">暂无会话，点击“新对话”开始。</div>
-                    ) : null}
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="cici-workbench__sidebar-block cici-workbench__sidebar-block--history">
+                    <div className="cici-workbench__history-header">
+                      <h3 className="cici-workbench__sidebar-title">会话历史</h3>
+                      <button type="button" className="cici-workbench__new-session-btn" onClick={startNewWorkbenchConversation}>
+                        新对话
+                      </button>
+                    </div>
+                    <div className="cici-workbench__history-list">
+                      {workbenchSessionThreads.map((session) => (
+                        <div
+                          key={session.id}
+                          className={`cici-workbench__session-row${activeWorkbenchSessionId === session.id ? " is-active" : ""}`}
+                          onMouseLeave={() => {
+                            setOpenWorkbenchSessionMenuId((current) => (current === session.id ? "" : current));
+                          }}
+                        >
+                          <button type="button" className="cici-workbench__session-main" onClick={() => void selectWorkbenchConversation(session.id)}>
+                            <strong>{session.title || session.participantName || "未命名会话"}</strong>
+                          </button>
+                          <div className="cici-workbench__session-actions">
+                            <button
+                              type="button"
+                              className="cici-workbench__session-more-btn"
+                              title="更多操作"
+                              aria-label="更多操作"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setOpenWorkbenchSessionMenuId((current) => (current === session.id ? "" : session.id));
+                              }}
+                            >
+                              <span aria-hidden>⋯</span>
+                            </button>
+                            {openWorkbenchSessionMenuId === session.id ? (
+                              <div className="cici-workbench__session-menu">
+                                <button
+                                  type="button"
+                                  className="cici-workbench__session-menu-btn"
+                                  title="下载 Markdown"
+                                  aria-label="下载 Markdown"
+                                  onClick={() => {
+                                    void downloadWorkbenchConversation(session);
+                                    setOpenWorkbenchSessionMenuId("");
+                                  }}
+                                >
+                                  <svg className="cici-workbench__session-menu-icon" viewBox="0 0 24 24" aria-hidden>
+                                    <path d="M12 4v9" />
+                                    <path d="m8.5 10.5 3.5 3.5 3.5-3.5" />
+                                    <path d="M5 19h14" />
+                                  </svg>
+                                </button>
+                                <button
+                                  type="button"
+                                  className="cici-workbench__session-menu-btn is-danger"
+                                  title="删除会话"
+                                  aria-label="删除会话"
+                                  onClick={() => {
+                                    void deleteWorkbenchConversation(session);
+                                    setOpenWorkbenchSessionMenuId("");
+                                  }}
+                                >
+                                  <span className="cici-workbench__session-menu-glyph" aria-hidden>🗑</span>
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                      {workbenchSessionThreads.length === 0 ? (
+                        <div className="cici-workbench__history-empty">暂无会话，点击“新对话”开始。</div>
+                      ) : null}
+                    </div>
                   </div>
                 </section>
               </aside>

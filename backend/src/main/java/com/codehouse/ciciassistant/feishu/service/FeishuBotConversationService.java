@@ -23,7 +23,8 @@ public class FeishuBotConversationService {
                 sessionId,
                 question,
                 List.of(),
-                binding.getAgentCode()
+                binding.getAgentCode(),
+                null
         );
         Object answer = result.get("answer");
         return answer == null ? "" : String.valueOf(answer);

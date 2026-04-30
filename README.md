@@ -12,6 +12,14 @@
 
 **文档同步**：变更前端路由、鉴权、`bootstrap-admin-mobiles`、E2E 默认账号或管理 API 时，请同时更新 `AI助手实现设计方案.md`、本 README 与 `.claw/current-status.md`。
 
+## UI Design Governance
+
+- 本仓库所有页面设计与 UI 改版默认都要遵循 `impeccable` 技能，不再接受“先写页面、再补风格说明”的做法。
+- 设计事实源固定为根目录 `PRODUCT.md`、`DESIGN.md`、`DESIGN.json`。如果页面改动改变了视觉语言、token 或组件表达，需要同会话一起更新。
+- `/`、`/admin/*`、`/platform/*` 全部按 `product` register 处理，默认共享 `鎏金账房` 基线：暖白底、墨色字、紧凑密度、香槟金结构线。
+- 禁止装饰性渐变文字、厚侧边强调线、默认玻璃拟态、产品页大号 hero 指标模板、无差别重复卡片网格，以及把 modal 当作第一反应。
+- 若新增品牌页、活动页或需要显著偏离当前基线，必须先完成 `impeccable shape` 并把例外写入 `docs/specs/`。
+
 ## Quick Start
 
 ### Backend
@@ -102,3 +110,19 @@ npm run dev
 - Tools（**ORG_ADMIN**）: `GET/POST/DELETE /tools`
 - Ops（**ORG_ADMIN**）: `/ops/audit/logs`, `/ops/metrics/cost`
 - Admin 用户管理（**ORG_ADMIN**）: `GET /admin/users`，`PUT /admin/users/{userId}/role`（body 字段 `roleCode` 为 `ORG_ADMIN` 或 `ORG_USER`）
+
+<!-- cc-aidev-guidelines-common:begin -->
+## AI Development Protocol
+
+This project follows the `cc-aidev-guidelines-common` skill.
+
+- All AI agents must automatically use this skill before project analysis, planning, implementation, testing, or maintenance.
+- If the current agent does not have this skill installed, install it first from GitHub: https://github.com/CloudCCAI/cloudcc-aidev-guidelines-common
+- When the environment supports `AGENTS.md`, treat both this README section and `AGENTS.md` as mandatory project instructions.
+
+本项目遵循 `cc-aidev-guidelines-common` 技能规范。
+
+- 所有 AI 智能体在进行项目分析、规划、编码、测试和维护前，必须自动使用此技能。
+- 如果当前智能体尚未安装此技能，必须先从 GitHub 安装：https://github.com/CloudCCAI/cloudcc-aidev-guidelines-common
+- 如果当前环境支持 `AGENTS.md`，应将 README 中的本节和 `AGENTS.md` 同时视为必须遵守的项目级指令。
+<!-- cc-aidev-guidelines-common:end -->

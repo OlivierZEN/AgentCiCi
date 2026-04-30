@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-04-30T11:54:33Z",
+  "title": "Design System: CiCi Product Surfaces",
+  "extensions": {
+    "colorMeta": {
+      "accent-primary": {
+        "role": "primary",
+        "displayName": "Champagne Gold",
+        "canonical": "#a67c2f",
+        "tonalRamp": ["#fbf2dd", "#f4e7c7", "#d7bc84", "#a67c2f", "#876223"]
+      },
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Ivory Canvas",
+        "canonical": "#f7f3eb",
+        "tonalRamp": ["#fffdf8", "#faf4e8", "#f7f3eb", "#f3e8d3", "#ded2bb"]
+      },
+      "ink-900": {
+        "role": "neutral",
+        "displayName": "Ledger Ink",
+        "canonical": "#2b2217",
+        "tonalRamp": ["#7c6d59", "#5f523f", "#473b2d", "#2b2217", "#17110b"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page titles and login headline only."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default table, form, and metadata reading."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, table headers, and compact status markers."
+      }
+    },
+    "elevation": {
+      "shellLift": "0 12px 32px rgba(15, 23, 42, 0.06)",
+      "panelLift": "0 8px 20px rgba(15, 23, 42, 0.04)"
+    },
+    "motion": {
+      "fast": "150ms ease-out",
+      "standard": "180ms ease-out"
+    },
+    "breakpoints": {
+      "compact": "980px",
+      "stacked": "720px"
+    },
+    "narrative": {
+      "northStar": "The Gilded Ledger",
+      "styleName": "鎏金账房",
+      "componentPhilosophy": "Compact product-surface controls for assistant, admin, and platform workflows with restrained gold linework.",
+      "dos": [
+        "Keep information dense but readable.",
+        "Use gold only for intent, focus, and structural emphasis.",
+        "Prefer border and tonal separation over decorative depth."
+      ],
+      "donts": [
+        "Do not use decorative gradients.",
+        "Do not use large dark surfaces.",
+        "Do not use glassmorphism or marketing-page styling."
+      ],
+      "reuseGuidance": [
+        "Preserve warm ivory surfaces, ink-heavy typography, and bright champagne-gold edge contrast as a matched set.",
+        "Use the style as the default baseline for authenticated assistant, admin, and platform product surfaces, not marketing pages.",
+        "Keep gold on lines, focus, active states, and premium actions instead of flooding large fills."
+      ]
+    }
+  }
+}

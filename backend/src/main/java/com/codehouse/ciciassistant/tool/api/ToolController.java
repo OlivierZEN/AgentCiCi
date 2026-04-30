@@ -1,15 +1,12 @@
 package com.codehouse.ciciassistant.tool.api;
 
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
-import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
-import com.codehouse.ciciassistant.email.service.EmailToolService;
+import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.codehouse.ciciassistant.tool.domain.ToolDefinitionEntity;
 import com.codehouse.ciciassistant.tool.domain.ToolDefinitionRepository;
-import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog;
 import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog.ToolCatalogItem;
-import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.ArrayList;
@@ -30,9 +27,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class ToolController {
 
     private final ToolDefinitionRepository repository;
+    private final PlatformGovernanceService platformGovernanceService;
 
-    public ToolController(ToolDefinitionRepository repository) {
+    public ToolController(ToolDefinitionRepository repository,
+                          PlatformGovernanceService platformGovernanceService) {
         this.repository = repository;
+        this.platformGovernanceService = platformGovernanceService;
     }
 
     /**
@@ -43,7 +43,8 @@ public class ToolController {
     public ApiResponse<List<Map<String, Object>>> list() {
         String orgId = TenantContext.requireOrgId();
         List<Map<String, Object>> out = new ArrayList<>();
-        for (ToolCatalogItem b : BuiltinToolCatalog.list()) {
+        List<ToolCatalogItem> builtinTools = platformGovernanceService.listEffectiveBuiltinTools(orgId);
+        for (ToolCatalogItem b : builtinTools) {
             Map<String, Object> row = new LinkedHashMap<>();
             row.put("toolName", b.toolName());
             row.put("displayName", b.displayName());
@@ -54,7 +55,8 @@ public class ToolController {
             out.add(row);
         }
         for (ToolDefinitionEntity item : repository.findByOrgIdAndEnabledTrue(orgId)) {
-            if (BuiltinToolCatalog.list().stream().anyMatch(b -> b.toolName().equalsIgnoreCase(item.getToolName()))) {
+            if (builtinTools.stream()
+                    .anyMatch(b -> b.toolName().equalsIgnoreCase(item.getToolName()))) {
                 continue;
             }
             Map<String, Object> row = new LinkedHashMap<>();

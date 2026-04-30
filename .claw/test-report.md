@@ -1,11 +1,271 @@
 ---
-updated_at: 2026-04-29T07:00:00Z
+kind: test-report
+version: 3
+updated_at: 2026-04-30T11:28:00Z
+updated_by: ai
 status: active
+last_run_at: 2026-04-30T11:28:00Z
+last_run_status: success
 ---
 
 # Test Report
 
+## Latest Run Summary
+
+- 状态：`success`
+- 范围：`assistant workbench rail cleanup and reorder`
+- 命令：`frontend`: `npm run build`
+- 环境：`local workspace`
+
 ## Latest Verified Results
+
+- Assistant workbench rail cleanup and reorder (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 已移除左侧 rail 按钮的原生 `title` 提示，仅保留 `data-menu-label` 自定义 tooltip，避免重复悬浮提示。
+    - 已将用户头像按钮移到左侧顶部，将 `CB` logo 调整到底部。
+    - 已将左侧 rail 的背景、按钮和 tooltip 配色收口到和主页面一致的暖白、香槟金、墨色语言。
+    - 本轮仅调整 `frontend/src/assistant/AssistantApp.tsx` 与 `frontend/src/assistant/cici-ui.css` 的结构与样式，没有改动功能逻辑或路由语义。
+
+- Assistant workbench sidebar state layout refinement (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 已移除右侧侧栏顶部旧的“思思头像 + 状态条”卡片。
+    - 已将左侧顶部状态机移动到右侧侧栏顶端，并删除原状态机右侧的过程摘要区，只保留头像、名称、状态和三行任务轨道。
+    - 已将“今日工作概览”下移到侧栏下半区，与“会话历史”形成连续衔接布局。
+    - 本轮仅调整 `frontend/src/assistant/AssistantApp.tsx` 与 `frontend/src/assistant/cici-ui.css` 的结构与样式，没有改动聊天逻辑、数据模型或后端接口。
+
+- Assistant workbench avatar scale refinement (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 已将顶部智能体切换头像整体缩小一档，减轻右侧统一控制带的视觉重量。
+    - 已将右侧状态机头像和消息区头像同步缩小，让工作台在当前极简版式下更克制。
+    - 本轮仅调整 `frontend/src/assistant/cici-ui.css` 的尺寸样式，没有改动结构、逻辑或接口。
+
+- FEAT-011 platform console visual refresh verification (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 已完成 `/platform/login`、概览、平台技能、内置工具、平台审计的浅色、紧凑、克制风格重构。
+    - 本轮仅调整前端样式、信息层级与工作区布局，没有改动平台业务功能或后端接口语义。
+    - 平台控制面的深色渐变/玻璃化 scoped 主题已替换为受限浅色系统，统一了导航、页头、表格、表单、按钮和提示条语言。
+
+- FEAT-011 platform console gold-line refinement verification (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 已将平台控制面从冷白蓝强调进一步收口为暖白、香槟金、墨色的简约金线风格。
+    - 金色主要落在边框、选中态、按钮、标签和输入聚焦细节上，没有引入夸张装饰或功能改动。
+    - `DESIGN.md` 与 `DESIGN.json` 已同步到新的配色事实源，便于后续继续沿同一方向微调。
+
+- CloudCC runtime smoke (2026-04-30):
+  - Commands:
+    - `backend`: `GET http://127.0.0.1:8080/integrations` with org-admin token -> **success**
+    - `backend`: `GET http://127.0.0.1:8080/admin/users` with org-admin token -> **success**
+    - `backend`: `POST http://127.0.0.1:8080/mcp-servers/1/health` with org-admin token -> **success**
+    - `backend`: `GET http://127.0.0.1:8080/mcp-servers/1/tools` with org-admin token -> **success**
+    - `backend`: `POST http://127.0.0.1:8080/auth/sms/send` + `POST http://127.0.0.1:8080/auth/sms/login` with `mobile=13800000001` -> **success**
+    - `backend`: `POST http://127.0.0.1:8080/ai/chat` with `agentId=sales-agent` and CloudCC question -> **failed**
+    - `external`: `GET https://developer.apis.cloudcc.cn/oauth/apidomain?scope=cloudccCRM&orgId=2010000000050855WyHh` -> **success**
+    - `external`: `POST https://szyd.apis.cloudcc.cn/lightningapi/api/cauth/token` with current tenant config + bound user credential -> **failed**
+  - Notes:
+    - 组织级 `cloudcc_crm` 集成配置存在且启用，真实绑定用户为 `13800000001/哪吒`，已保存 `cc_username/cc_safetymark`。
+    - `POST /mcp-servers/1/health` 返回 `status=connected`、`toolCount=43`；`GET /mcp-servers/1/tools` 返回 `cacheStatus=ready`，说明 CloudCC MCP server 本身可连通。
+    - CloudCC 组织网关解析成功，返回 `orgapi_address=https://szyd.apis.cloudcc.cn/lightningapi`。
+    - 使用当前系统内保存的真实绑定凭证请求 `/api/cauth/token` 时，CloudCC 返回 `Please check your username and password.`，本轮 smoke 失败的主因是用户绑定凭证失效或不正确。
+    - 助手聊天入口另有独立阻塞：`POST /ai/chat` 返回 `Aliyun API key is not configured.`；同次响应里 `effectiveToolNames` 已包含 `cloudcc_pageQuery/cloudcc_getStandardObjects/cloudcc_getCustomObjects/cloudcc_getObjectFields`，但 `toolInvoked=false`，说明工具暴露面正常，失败发生在模型调用阶段。
+
+- MCP cache runtime smoke closure (2026-04-30):
+  - Commands:
+    - `backend`: `POST http://127.0.0.1:8080/auth/sms/send` with `mobile=13800138111` -> **success**
+    - `backend`: `POST http://127.0.0.1:8080/auth/sms/login` with `mobile=13800138111` -> **success** (`roles=["ORG_ADMIN","PLATFORM_ADMIN"]`)
+    - `backend`: `GET http://127.0.0.1:8080/auth/me` with admin token -> **success**
+    - `backend`: `GET http://127.0.0.1:8080/mcp-servers` with admin token -> **success**
+    - `backend`: `GET http://127.0.0.1:8080/mcp-servers/1/tools` with admin token -> **success**
+    - `backend`: `POST http://127.0.0.1:8080/mcp-servers/1/discover` with admin token -> **success**
+    - `backend`: `POST http://127.0.0.1:8080/auth/sms/send` + `POST http://127.0.0.1:8080/auth/sms/login` with `mobile=13800138121` -> **success** (`roles=["ORG_USER"]`)
+    - `backend`: `GET http://127.0.0.1:8080/mcp-servers` with org-user token -> **expected forbidden**
+  - Notes:
+    - 本轮真实运行态已不再复现 2026-04-23 的“登录成功但 `/mcp-servers` 仍提示需要组织管理员权限”问题。
+    - `13800138111` 登录后 `/auth/me` 返回 `roles=["ORG_ADMIN","PLATFORM_ADMIN"]`，说明短信登录、JWT、`TenantContext` 与 `@RequireOrgAdmin` 在本地运行态链路上已对齐。
+    - `GET /mcp-servers` 返回真实 CloudCC MCP server 列表；`GET /mcp-servers/1/tools` 返回 `toolCount=43`、`cacheStatus=ready`、`cacheVersion=8f1c37b671d47e76`。
+    - `POST /mcp-servers/1/discover` 成功后，缓存时间戳已刷新到本轮执行时间，说明强制 discover 刷新在真实管理员链路上可用。
+    - `ORG_USER` 账号访问同一路径仍被拒绝，说明 MCP 管理接口的组织管理员边界保持有效。
+
+- FEAT-009 / FEAT-010 platform console page regression verification (2026-04-30):
+  - Commands:
+    - `browser`: 平台登录后逐页验证 `/platform`、`/platform/skills`、`/platform/tools`、`/platform/audit` -> **success**
+    - `browser`: 在平台技能页创建 `core-default` 新草稿版本 `v3`，并在平台审计页确认对应审计记录 -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 初始回归发现平台页直接请求 `/platform/**` 时，在 Vite 开发环境会与 SPA 路由冲突，返回 `index.html` 并触发 `Unexpected token '<'` JSON 解析错误。
+    - 已将平台前端请求统一切到 `/api/platform/**`，并在 `vite.config.{js,ts}` 中 rewrite 到后端 `/platform/**`，技能页、工具页和审计页现已恢复真实数据加载。
+    - 页面级人工回归确认：平台技能页可展示 PolicyBundle/Skill 版本历史，内置工具页可加载治理详情与依赖面，平台审计页可显示本轮草稿创建审计记录。
+
+- Agent Builder debug runtime-first verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldUsePublishedWorkflowInDebugRuntime test` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Agent Builder debug now prefers `/agents/{agentId}/debug` and renders backend runtime evidence instead of mixing simulated notes into successful runs.
+    - Debug UI now surfaces backend governance context such as runtime source, policy bundle summary, resolved skill versions, execution status, and execution trace; the old local simulation path remains only as a fallback when the debug API is unavailable.
+
+- FEAT-009 S6 PolicyBundle release panel verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformGovernanceIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - `/platform/policies/core/versions` now supports draft creation, independent publish, and rollback for `core-default`.
+    - Platform console now exposes a PolicyBundle editor and version-history panel with immediate-impact summaries for live published Agents.
+    - `PlatformGovernanceIntegrationTest` now covers `platform.policy.version.create/publish/rollback` audit events alongside the runtime kill-switch and platform skill governance assertions.
+
+- FEAT-009 S6 runtime governance summary verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest,PlatformGovernanceIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - `/platform/policies/core` now exposes the live `PolicyBundle` summary, including source core skills, handoff-rule count, prompt-line count, and live published-agent coverage.
+    - `/platform/skills` version history now returns structured `impact` data with diff summary, pinned workflow / agent counts, and rollout / rollback hints based on published workflow snapshots.
+    - `/agents/{agentId}/debug` now returns `runtimeGovernanceNotes`, `policyBundle`, and structured `resolvedSkillVersions`; `/ai/chat` now exposes the same governance snapshot via `runtimeGovernance` and `runtimeExecution`.
+
+- FEAT-009 agent workflow skill pin verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` -> **success**
+  - Notes:
+    - Added `V33__agent_workflow_skill_ref.sql`, creating workflow-level pinned skill refs for published Agents.
+    - `AgentDefinitionService.publishVersion(...)` now snapshots referenced skills into `agent_workflow_skill_ref`; chat/debug runtime prefers pinned refs over mutable current skill definitions.
+    - `/ai/chat` now returns `resolvedSkillVersions`, and `OrchestratorIntegrationTest.shouldKeepPublishedAgentPinnedToSkillVersionAfterSkillEdits` verifies that later skill edits do not change the published Agent's tool scope or pinned version summary.
+
+- FEAT-009 / FEAT-010 policy bundle + runtime kill switch verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformGovernanceIntegrationTest,OrchestratorIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> **success**
+  - Notes:
+    - Added `V32__platform_policy_bundle_runtime_controls.sql`, creating `platform_policy_bundle` and seeding `core-default@v1` from `conversation-core / knowledge-first / safe-handoff`.
+    - Runtime prompt assembly now injects the platform core policy bundle before business skills; `/ai/chat` returns `runtimePolicy.policyBundleCode/policyBundleVersionNo`, and debug/chat traces include bundle refs.
+    - Platform-disabled builtin tools are now removed from runtime tool definitions and hard-blocked in `ToolOrchestratorService.executeTool`.
+    - Added platform acceptance coverage for `ORG_ADMIN` denial on `/platform/**` and for the runtime kill switch path.
+
+- FEAT-009 / FEAT-010 platform template and writable governance verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SkillGovernanceIntegrationTest,PlatformGovernanceIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added `V31__platform_skill_template_and_tool_governance.sql`, creating `platform_skill_template`, `platform_skill_template_version`, and `platform_tool_definition`.
+    - `/platform/skills` now supports template version history, draft creation, publish, and rollback; publishing also syncs the platform standard Skill snapshot and governance fields.
+    - `/platform/tools` now supports writable governance for display name, description, risk level, category, and enabled state, with dependency summaries for related Skill / Agent usage.
+    - Added `PlatformGovernanceIntegrationTest`, covering platform template draft/publish, platform tool update, audit log writes, and hiding platform-disabled builtin tools from tenant `/tools`.
+
+- FEAT-009 / FEAT-010 foundation verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SkillGovernanceIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added `V30__skill_governance_and_platform_audit.sql`, extending `skill_definition` with source/visibility/edit/binding/update/template fields and creating `platform_audit_log`.
+    - Tenant `/skills` now hides core platform policies (`conversation-core` / `knowledge-first` / `safe-handoff`), treats platform standard skills as `CONFIGURABLE`, and supports derive-to-tenant flow.
+    - Agent skill binding save now preserves hidden mandatory/internal platform bindings instead of silently dropping them from Agent Builder.
+    - Added `/platform/**` phase-1 control-plane shell: platform roles in JWT `/auth/me`, backend guard, bootstrap/skills/tools/audit read APIs, and frontend `/platform/login` + `/platform` routes.
+
+- FEAT-008 admin KB regression round-4 verification (2026-04-29):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `local backend`: `/tmp/feat008_reg.sh` -> **success**
+  - Notes:
+    - Added inline batch-action feedback panel with preserved result context (success/partial failure + failed samples).
+    - Added empty-input disabled state for chunk preview and retrieval test actions to reduce no-op clicks.
+    - Re-ran local backend regression after restart; FEAT-008 key endpoint paths remain stable.
+
+- FEAT-008 admin KB regression round-3 verification (2026-04-29):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `local backend`: `/tmp/feat008_reg.sh` -> **success**
+  - Notes:
+    - Real-backend regression covered KB create, metadata field create, unknown metadata filter error, document upload+publish, metadata-filter retrieval, retrieval logs, and document batch enable/disable.
+    - Added frontend pre-check for unknown metadata keys in retrieval filter and document metadata edit to provide actionable hints before request.
+    - Reset empty-result hints when related inputs change, avoiding stale “0 results” cues during continued editing.
+
+- FEAT-008 admin KB UX regression round-2 verification (2026-04-29):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added input-format validation feedback for retrieval metadata filters and document metadata edits.
+    - Added explicit empty-result feedback for chunk preview and retrieval test.
+    - Added “清空选择” affordance to document/chunk batch action bars.
+    - Converted settings grids to responsive classes to improve narrow-screen readability.
+
+- FEAT-008 admin KB visual refinement verification (2026-04-29):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Reworked Admin KB page style to a compact and neutral operations-console look.
+    - Removed flashy gradient/button effects on this surface by introducing a scoped dense theme override.
+    - Tightened spacing, border radius, and hover/active emphasis for sidebar, table, forms, actions, and modal.
+
+- FEAT-008 knowledge base lifecycle P0 second-stage batch-4 verification (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added integration case `shouldRejectUnknownMetadataFilterField`.
+    - Retrieval test now validates metadata filter keys and returns explicit error for unknown fields.
+    - Admin KB page now shows selectable-count/disabled state for batch actions and displays available metadata filter keys.
+
+- FEAT-008 knowledge base lifecycle P0 second-stage batch-3 verification (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added batch operation APIs for documents and chunks.
+    - Added integration case `shouldSupportBatchDocumentOperations`.
+    - Admin KB page now supports checkbox-based batch actions and shows failed-item summary for batch results.
+    - Document status column now shows `errorMessage` for `FAILED` and `CLEANUP_FAILED`.
+
+- FEAT-008 knowledge base lifecycle P0 second-stage batch-2 verification (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added migration `V29__kb_metadata_and_chunk_ops.sql` for metadata field and document metadata tables.
+    - Added document/chunk lifecycle APIs: rename/enable/disable/archive, chunk list/update/enable/disable/delete.
+    - Retrieval test now supports `metadataFilters`.
+    - Added integration case `shouldSupportChunkToggleAndMetadataFilteringInRetrievalTest`.
+    - Admin KB page now supports chunk operations modal and document metadata editing entry.
+
+- FEAT-008 knowledge base lifecycle P0 second-stage batch-1 verification (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added migration `V28__kb_chunking_and_retrieval_settings.sql` for KB chunk/retrieval settings and `kb_retrieval_log`.
+    - Added KB APIs: settings get/update, chunking preview, retrieval test, retrieval logs.
+    - Added integration case `shouldSupportChunkPreviewAndRetrievalTestWithKbSettings`.
+    - Admin KB settings page now supports chunk preview, retrieval test, and recent retrieval logs.
+
+- FEAT-008 knowledge base lifecycle P0 verification (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - Added lifecycle coverage for deleting document chunks/vectors, unpublishing documents, idempotent reindex, and deleting a knowledge base with Agent KB binding cleanup.
+    - RAG now filters vector hits through DB chunk/document/KB state and applies the same guard to DB fallback.
+    - Management UI build includes document reindex/unpublish actions, chunk counts, cleanup statuses, and stronger delete confirmation copy.
+
+- Agent / Skill / Tool permission model backend (2026-04-29):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldUnionAgentDirectToolsAndSkillDeclaredToolsIncludingMcp test` -> **success**
+  - Notes:
+    - Runtime `effectiveToolNames` merges Agent direct tool bindings with bound Skill `toolWhitelist` declarations (union).
+    - `/ai/chat` and `/agents/{agentId}/debug` expose `agentDirectToolNames`, `skillDeclaredToolNames`, `skillScopedToolNames`.
+    - `ToolOrchestratorService` logs `invocationType` for audit (`agent_direct`, `skill_scoped`, etc.).
+    - Full-class `OrchestratorIntegrationTest` runs may still flake on SMS rate limits in shared contexts; targeted method above is the reliable signal for this change.
 
 - Virtual human surface removal verification (2026-04-29):
   - Commands:
@@ -352,7 +612,7 @@ status: active
     - `McpServerService` now separates cache read (`getTools`/`getToolCacheSnapshot`) from forced refresh (`refreshToolCache` / `/discover`) and keeps old snapshots on refresh failures.
     - Admin tools page now shows MCP cache summary (`工具数 + 更新于 + 缓存状态`) in both list and detail tabs, and detail tab reads `GET /mcp-servers/{id}/tools` by default.
 
-- System MCP cache runtime smoke attempt (2026-04-23):
+- System MCP cache runtime smoke attempt (2026-04-23, superseded by 2026-04-30 runtime closure):
   - Commands:
     - `POST /auth/sms/send` with `mobile=13900009999` -> `SMS request too frequent, please retry later`
     - `POST /auth/sms/send` + `POST /auth/sms/login` with `mobile=13800138111` -> login success (`roles=["ORG_ADMIN"]`)

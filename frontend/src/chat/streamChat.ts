@@ -3,6 +3,8 @@ export type StreamChatBody = {
   question: string;
   knowledgeBaseIds: string[];
   agentId?: string;
+  /** When set, authorizes skill-scoped tools for this skill code for the session (see backend permission model). */
+  activeSkillCode?: string;
 };
 
 export type StreamToolResultEvent = {

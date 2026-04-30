@@ -25,6 +25,13 @@ export default defineConfig(({ mode }) => {
         "/skills": { target: backendTarget, changeOrigin: true },
         "/feishu": { target: backendTarget, changeOrigin: true },
         "/me": { target: backendTarget, changeOrigin: true },
+        "/api/platform": {
+          target: backendTarget,
+          changeOrigin: true,
+          rewrite(path) {
+            return path.replace(/^\/api\/platform/, "/platform");
+          },
+        },
       },
     },
   };

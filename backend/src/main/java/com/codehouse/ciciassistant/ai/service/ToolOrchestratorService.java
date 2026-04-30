@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
+import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -37,6 +38,7 @@ public class ToolOrchestratorService {
     private final EmailToolService emailToolService;
     private final UserMemoryService userMemoryService;
     private final TavilyToolService tavilyToolService;
+    private final PlatformGovernanceService platformGovernanceService;
     private final ObjectMapper objectMapper;
 
     public ToolOrchestratorService(McpServerService mcpServerService,
@@ -44,12 +46,14 @@ public class ToolOrchestratorService {
                                    EmailToolService emailToolService,
                                    UserMemoryService userMemoryService,
                                    TavilyToolService tavilyToolService,
+                                   PlatformGovernanceService platformGovernanceService,
                                    ObjectMapper objectMapper) {
         this.mcpServerService = mcpServerService;
         this.cloudccOpenApiService = cloudccOpenApiService;
         this.emailToolService = emailToolService;
         this.userMemoryService = userMemoryService;
         this.tavilyToolService = tavilyToolService;
+        this.platformGovernanceService = platformGovernanceService;
         this.objectMapper = objectMapper;
     }
 
@@ -68,16 +72,20 @@ public class ToolOrchestratorService {
         // 1. Built-in native tools
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolName(),
                 CloudccOpenApiService.toolDescription(),
-                CloudccOpenApiService.toolSchema(objectMapper));
+                CloudccOpenApiService.toolSchema(objectMapper),
+                orgId);
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetStandardObjects(),
                 CloudccOpenApiService.toolDescriptionGetStandardObjects(),
-                CloudccOpenApiService.toolSchemaGetStandardObjects(objectMapper));
+                CloudccOpenApiService.toolSchemaGetStandardObjects(objectMapper),
+                orgId);
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetCustomObjects(),
                 CloudccOpenApiService.toolDescriptionGetCustomObjects(),
-                CloudccOpenApiService.toolSchemaGetCustomObjects(objectMapper));
+                CloudccOpenApiService.toolSchemaGetCustomObjects(objectMapper),
+                orgId);
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetObjectFields(),
                 CloudccOpenApiService.toolDescriptionGetObjectFields(),
-                CloudccOpenApiService.toolSchemaGetObjectFields(objectMapper));
+                CloudccOpenApiService.toolSchemaGetObjectFields(objectMapper),
+                orgId);
 
         // Memory built-in tools (always available, no skill restriction)
         result.add(buildMemoryRememberTool());
@@ -88,12 +96,18 @@ public class ToolOrchestratorService {
             if (!isAllowed(normalizedAllowedToolNames, toolName, false)) {
                 continue;
             }
+            if (!platformGovernanceService.isRuntimeToolEnabled(orgId, toolName)) {
+                continue;
+            }
             result.add(emailToolService.toolDefinition(toolName));
         }
 
         // Tavily web-search / web-extract built-in tools
         for (String toolName : TavilyToolService.ALL_TOOL_NAMES) {
             if (!isAllowed(normalizedAllowedToolNames, toolName, false)) {
+                continue;
+            }
+            if (!platformGovernanceService.isRuntimeToolEnabled(orgId, toolName)) {
                 continue;
             }
             result.add(tavilyToolService.toolDefinition(toolName));
@@ -125,8 +139,11 @@ public class ToolOrchestratorService {
     }
 
     private void addBuiltInTool(List<Map<String, Object>> result, List<String> allowedToolNames,
-                                String name, String description, JsonNode schema) {
+                                String name, String description, JsonNode schema, String orgId) {
         if (!isAllowed(allowedToolNames, name, false)) {
+            return;
+        }
+        if (!platformGovernanceService.isRuntimeToolEnabled(orgId, name)) {
             return;
         }
         result.add(builtInTool(name, description, schema));
@@ -153,16 +170,28 @@ public class ToolOrchestratorService {
      * Execute a tool call. Routes to native tools first, then falls back to MCP servers.
      */
     public String executeTool(String orgId, String userId, String toolName, String argumentsJson) {
-        return executeTool(orgId, userId, toolName, argumentsJson, null);
+        return executeTool(orgId, userId, toolName, argumentsJson, null, null);
     }
 
     public String executeTool(String orgId, String userId, String toolName, String argumentsJson, List<String> allowedToolNames) {
+        return executeTool(orgId, userId, toolName, argumentsJson, allowedToolNames, null);
+    }
+
+    /**
+     * @param agentDirectToolNames when non-null, used only for audit logging (agent_direct vs skill_scoped).
+     */
+    public String executeTool(String orgId, String userId, String toolName, String argumentsJson,
+                              List<String> allowedToolNames, List<String> agentDirectToolNames) {
         List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
         String canonicalToolName = ToolNameNormalizer.canonicalize(toolName);
-        log.info("Executing tool: org={}, user={}, tool={}", orgId, userId, canonicalToolName);
+        String invocationType = resolveInvocationType(canonicalToolName, normalizeAllowedToolNames(agentDirectToolNames));
+        log.info("Executing tool: org={}, user={}, tool={}, invocationType={}", orgId, userId, canonicalToolName, invocationType);
         if (!isAllowed(normalizedAllowedToolNames, canonicalToolName, false)
                 && !isAllowed(normalizedAllowedToolNames, canonicalToolName, true)) {
             return "Tool is not allowed for the current skill policy: " + toolName;
+        }
+        if (!platformGovernanceService.isRuntimeToolEnabled(orgId, canonicalToolName)) {
+            return "Tool is disabled by platform runtime control: " + canonicalToolName;
         }
 
         // Native built-in tools
@@ -333,6 +362,19 @@ public class ToolOrchestratorService {
                         "parameters", params
                 )
         );
+    }
+
+    private String resolveInvocationType(String canonicalToolName, List<String> normalizedDirectToolNames) {
+        if (TOOL_MEMORY_REMEMBER.equals(canonicalToolName) || TOOL_MEMORY_FORGET.equals(canonicalToolName)) {
+            return "memory_builtin";
+        }
+        if (normalizedDirectToolNames == null || normalizedDirectToolNames.isEmpty()) {
+            return "runtime_union";
+        }
+        if (normalizedDirectToolNames.contains(canonicalToolName)) {
+            return "agent_direct";
+        }
+        return "skill_scoped";
     }
 
     private List<String> normalizeAllowedToolNames(List<String> allowedToolNames) {

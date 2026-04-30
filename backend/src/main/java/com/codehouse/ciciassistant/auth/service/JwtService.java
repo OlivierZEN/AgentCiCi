@@ -25,12 +25,16 @@ public class JwtService {
     }
 
     public String issueToken(UserEntity user) {
+        return issueToken(user, List.of(user.getRoleCode()));
+    }
+
+    public String issueToken(UserEntity user, List<String> roles) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(expirationSeconds);
         return Jwts.builder()
                 .subject(user.getId())
                 .claim("org_id", user.getOrg().getId())
-                .claim("roles", List.of(user.getRoleCode()))
+                .claim("roles", roles == null ? List.of(user.getRoleCode()) : roles)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(signingKey)

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAdminToken } from "../useAdminToken";
 import type { Skill } from "../skills/skillStudioShared";
-import { riskBadgeClass, riskLabel } from "../skills/skillStudioShared";
+import { riskBadgeClass, riskLabel, skillSourceLabel } from "../skills/skillStudioShared";
 
 function formatTs(iso: string | undefined): string {
   if (!iso) return "—";
@@ -16,7 +16,7 @@ export default function AdminSkillsListPage() {
   const [notice, setNotice] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
   const [search, setSearch] = useState("");
-  const [scope, setScope] = useState<"all" | "crm" | "builtin">("all");
+  const [scope, setScope] = useState<"all" | "platform" | "derived" | "custom">("all");
 
   const flash = (msg: string) => {
     setNotice(msg);
@@ -38,11 +38,11 @@ export default function AdminSkillsListPage() {
   }, [token]);
 
   const filtered = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+      const keyword = search.trim().toLowerCase();
     return skills.filter((skill) => {
-      const isCrm = skill.skillCode.startsWith("crm-") || skill.skillCode.includes("sales");
-      if (scope === "crm" && !isCrm) return false;
-      if (scope === "builtin" && !skill.builtin) return false;
+      if (scope === "platform" && skill.sourceType !== "PLATFORM_STANDARD") return false;
+      if (scope === "derived" && skill.sourceType !== "TENANT_DERIVED") return false;
+      if (scope === "custom" && skill.sourceType !== "TENANT_CUSTOM") return false;
       if (!keyword) return true;
       return (
         skill.skillCode.toLowerCase().includes(keyword) ||
@@ -80,11 +80,14 @@ export default function AdminSkillsListPage() {
           <button type="button" className={scope === "all" ? "active" : ""} onClick={() => setScope("all")}>
             全部
           </button>
-          <button type="button" className={scope === "crm" ? "active" : ""} onClick={() => setScope("crm")}>
-            CRM
+          <button type="button" className={scope === "platform" ? "active" : ""} onClick={() => setScope("platform")}>
+            平台标准
           </button>
-          <button type="button" className={scope === "builtin" ? "active" : ""} onClick={() => setScope("builtin")}>
-            内置
+          <button type="button" className={scope === "derived" ? "active" : ""} onClick={() => setScope("derived")}>
+            派生
+          </button>
+          <button type="button" className={scope === "custom" ? "active" : ""} onClick={() => setScope("custom")}>
+            自定义
           </button>
         </div>
       </div>
@@ -109,8 +112,9 @@ export default function AdminSkillsListPage() {
                   <div className="skills-data-table__skill-name">{skill.name}</div>
                   <div className="skills-data-table__skill-code">{skill.skillCode}</div>
                   <div className="skills-data-table__flags">
-                    {skill.builtin ? <span className="skills-pill">内置</span> : null}
+                    <span className="skills-pill">{skillSourceLabel(skill.sourceType)}</span>
                     <span className="skills-pill">{skill.enabled ? "启用" : "停用"}</span>
+                    {skill.templateCode ? <span className="skills-pill">{skill.templateCode}</span> : null}
                   </div>
                 </td>
                 <td className="skills-data-table__summary">{skill.description?.trim() || "—"}</td>

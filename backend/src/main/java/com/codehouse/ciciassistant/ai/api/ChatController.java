@@ -37,7 +37,8 @@ public class ChatController {
                 request.sessionId(),
                 request.question(),
                 request.knowledgeBaseIds(),
-                request.agentId()
+                request.agentId(),
+                request.activeSkillCode()
         ));
     }
 
@@ -53,6 +54,7 @@ public class ChatController {
                 request.question(),
                 request.knowledgeBaseIds(),
                 request.agentId(),
+                request.activeSkillCode(),
                 emitter);
         return emitter;
     }
@@ -96,7 +98,9 @@ public class ChatController {
             @NotBlank String sessionId,
             @NotBlank String question,
             List<String> knowledgeBaseIds,
-            String agentId
+            String agentId,
+            /** Normalized skill code to authorize skill-only tools for this session (optional). Empty clears persisted selection. */
+            String activeSkillCode
     ) {
     }
 }

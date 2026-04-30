@@ -1,18 +1,28 @@
 package com.codehouse.ciciassistant.skill.service;
 
-import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
-import com.codehouse.ciciassistant.agent.service.AgentCapabilityResolverService;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.agent.service.AgentCapabilityResolverService;
+import com.codehouse.ciciassistant.agent.service.AgentWorkflowSkillRefService;
+import com.codehouse.ciciassistant.ai.service.ChatSessionStateService;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
+import com.codehouse.ciciassistant.skill.domain.SkillVersionEntity;
+import com.codehouse.ciciassistant.skill.domain.SkillVersionRepository;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
+import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -33,21 +43,45 @@ public class SkillResolverService {
     private final AgentDefinitionRepository agentDefinitionRepository;
     private final AgentWorkflowVersionRepository agentWorkflowVersionRepository;
     private final AgentCapabilityResolverService agentCapabilityResolverService;
+    private final AgentSkillBindingRepository agentSkillBindingRepository;
+    private final ChatSessionStateService chatSessionStateService;
+    private final PlatformGovernanceService platformGovernanceService;
+    private final AgentWorkflowSkillRefService agentWorkflowSkillRefService;
+    private final SkillVersionRepository skillVersionRepository;
     private final ObjectMapper objectMapper;
 
     public SkillResolverService(SkillDefinitionService skillDefinitionService,
                                 AgentDefinitionRepository agentDefinitionRepository,
                                 AgentWorkflowVersionRepository agentWorkflowVersionRepository,
                                 AgentCapabilityResolverService agentCapabilityResolverService,
+                                AgentSkillBindingRepository agentSkillBindingRepository,
+                                ChatSessionStateService chatSessionStateService,
+                                PlatformGovernanceService platformGovernanceService,
+                                AgentWorkflowSkillRefService agentWorkflowSkillRefService,
+                                SkillVersionRepository skillVersionRepository,
                                 ObjectMapper objectMapper) {
         this.skillDefinitionService = skillDefinitionService;
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.agentCapabilityResolverService = agentCapabilityResolverService;
+        this.agentSkillBindingRepository = agentSkillBindingRepository;
+        this.chatSessionStateService = chatSessionStateService;
+        this.platformGovernanceService = platformGovernanceService;
+        this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
+        this.skillVersionRepository = skillVersionRepository;
         this.objectMapper = objectMapper;
     }
 
     public ResolvedSkillContext resolve(String orgId, String requestedAgentId, String sessionId) {
+        return resolve(orgId, requestedAgentId, sessionId, Optional.empty());
+    }
+
+    /**
+     * Resolves skills/tools for chat. Optional {@code activeSkillOverride} updates persisted {@code active_skill_code}
+     * in session state before computing the effective tool list per skill activation rules.
+     */
+    public ResolvedSkillContext resolve(String orgId, String requestedAgentId, String sessionId,
+                                        Optional<String> activeSkillOverride) {
         String agentId = resolveAgentId(requestedAgentId, sessionId);
         AgentCapabilityResolverService.AgentCapabilityResolution capability = agentCapabilityResolverService.resolve(
                 orgId,
@@ -55,43 +89,47 @@ public class SkillResolverService {
                 List.of()
         );
         PublishedRuntimeBinding publishedRuntimeBinding = resolvePublishedRuntimeBinding(orgId, agentId);
-        List<String> effectiveSkillCodes = publishedRuntimeBinding.skillCodes().isEmpty()
+        PlatformGovernanceService.RuntimePolicyBundle runtimePolicyBundle =
+                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+        List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs = publishedRuntimeBinding.skillRefs();
+        List<String> effectiveSkillCodes = pinnedSkillRefs.isEmpty()
+                ? (publishedRuntimeBinding.skillCodes().isEmpty()
                 ? capability.effectiveSkillCodes()
-                : publishedRuntimeBinding.skillCodes();
-        List<SkillDefinitionEntity> entities = effectiveSkillCodes.isEmpty()
-                ? skillDefinitionService.listSkillsForAgent(orgId, agentId)
-                : effectiveSkillCodes.stream()
-                .map(code -> skillDefinitionService.listSkills(orgId).stream().filter(item -> code.equals(item.getSkillCode())).findFirst().orElse(null))
-                .filter(Objects::nonNull)
-                .toList();
-        if (entities.isEmpty() && !"cici-system".equals(agentId)) {
+                : publishedRuntimeBinding.skillCodes())
+                : pinnedSkillRefs.stream().map(AgentWorkflowSkillRefService.RuntimeSkillRef::skillCode).toList();
+        List<SkillDefinitionEntity> entities = pinnedSkillRefs.isEmpty()
+                ? resolveSkillEntities(orgId, agentId, effectiveSkillCodes)
+                : List.of();
+        if (pinnedSkillRefs.isEmpty() && entities.isEmpty() && !"cici-system".equals(agentId)) {
             agentId = "cici-system";
             capability = agentCapabilityResolverService.resolve(orgId, agentId, List.of());
             publishedRuntimeBinding = resolvePublishedRuntimeBinding(orgId, agentId);
-            effectiveSkillCodes = publishedRuntimeBinding.skillCodes().isEmpty()
+            runtimePolicyBundle = platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+            pinnedSkillRefs = publishedRuntimeBinding.skillRefs();
+            effectiveSkillCodes = pinnedSkillRefs.isEmpty()
+                    ? (publishedRuntimeBinding.skillCodes().isEmpty()
                     ? capability.effectiveSkillCodes()
-                    : publishedRuntimeBinding.skillCodes();
-            entities = effectiveSkillCodes.isEmpty()
-                    ? skillDefinitionService.listSkillsForAgent(orgId, agentId)
-                    : effectiveSkillCodes.stream()
-                    .map(code -> skillDefinitionService.listSkills(orgId).stream().filter(item -> code.equals(item.getSkillCode())).findFirst().orElse(null))
-                    .filter(Objects::nonNull)
-                    .toList();
+                    : publishedRuntimeBinding.skillCodes())
+                    : pinnedSkillRefs.stream().map(AgentWorkflowSkillRefService.RuntimeSkillRef::skillCode).toList();
+            entities = pinnedSkillRefs.isEmpty()
+                    ? resolveSkillEntities(orgId, agentId, effectiveSkillCodes)
+                    : List.of();
         }
 
-        // Load agent-level configuration (system prompt, handoff rule, preferred model).
         Optional<AgentDefinitionEntity> agentDef = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
         String agentSystemPrompt = agentDef.map(AgentDefinitionEntity::getSystemPrompt)
-                .filter(s -> s != null && !s.isBlank())
-                .orElse(null);
-        String agentHandoffRule = agentDef.map(AgentDefinitionEntity::getHandoffRule)
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
         String agentModel = agentDef.map(AgentDefinitionEntity::getModel)
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
 
-        List<ResolvedSkill> skills = entities.stream()
+        Map<Long, String> activationBySkillId = loadActivationModes(orgId, agentId);
+        List<ResolvedSkillVersionRef> resolvedSkillRefs = pinnedSkillRefs.isEmpty()
+                ? entities.stream().map(item -> buildCurrentSkillVersionRef(orgId, item, activationBySkillId)).toList()
+                : pinnedSkillRefs.stream().map(this::toResolvedSkillVersionRef).toList();
+        List<ResolvedSkill> skills = pinnedSkillRefs.isEmpty()
+                ? entities.stream()
                 .map(item -> new ResolvedSkill(
                         item.getSkillCode(),
                         item.getName(),
@@ -100,16 +138,54 @@ public class SkillResolverService {
                         splitCsv(item.getKbWhitelist()),
                         item.getHandoffRule(),
                         item.getOutputContract(),
-                        item.getRiskLevel()
+                        item.getRiskLevel(),
+                        activationBySkillId.getOrDefault(item.getId(), "always-on")
+                ))
+                .toList()
+                : pinnedSkillRefs.stream()
+                .map(item -> new ResolvedSkill(
+                        item.skillCode(),
+                        item.skillName(),
+                        item.promptFragment(),
+                        item.toolWhitelist(),
+                        item.kbWhitelist(),
+                        item.handoffRule(),
+                        item.outputContract(),
+                        item.riskLevel(),
+                        item.referenceMode()
                 ))
                 .toList();
+        List<String> agentDirectToolNames = List.copyOf(ToolNameNormalizer.canonicalizeAll(capability.agentDirectToolNames()));
+        List<String> skillDeclaredToolNames = pinnedSkillRefs.isEmpty()
+                ? List.copyOf(capability.skillDeclaredToolNames())
+                : List.copyOf(ToolNameNormalizer.canonicalizeAll(
+                pinnedSkillRefs.stream().flatMap(item -> item.toolWhitelist().stream()).toList()));
+        LinkedHashSet<String> skillScopedToolNames = new LinkedHashSet<>(skillDeclaredToolNames);
+        skillScopedToolNames.removeAll(new LinkedHashSet<>(agentDirectToolNames));
 
-        // Always merge live capability with published-manifest snapshots. Published versions are a
-        // compile-time checkpoint, but chat/tool-calling must honor current agent_tool_binding rows
-        // as well — otherwise MCP 等工具在「已绑定未重新发布」或清单滞后时不会出现在模型侧。
-        LinkedHashSet<String> toolNames = new LinkedHashSet<>(capability.effectiveToolNames());
-        toolNames.addAll(ToolNameNormalizer.canonicalizeAll(publishedRuntimeBinding.toolNames()));
-        augmentBuiltinCiciToolset(agentId, toolNames);
+        List<String> boundSkillCodes = skills.stream().map(s -> s.skillCode().toLowerCase(Locale.ROOT)).toList();
+        Optional<String> activeSkillEffective = chatSessionStateService.mergeAndGetActiveSkillCode(
+                orgId, sessionId, agentId, activeSkillOverride, boundSkillCodes);
+
+        LinkedHashSet<String> baselineUniversal = new LinkedHashSet<>(agentDirectToolNames);
+        baselineUniversal.addAll(ToolNameNormalizer.canonicalizeAll(publishedRuntimeBinding.toolNames()));
+        augmentBuiltinCiciToolset(agentId, baselineUniversal);
+
+        LinkedHashSet<String> toolNames = new LinkedHashSet<>(baselineUniversal);
+        for (ResolvedSkill skill : skills) {
+            LinkedHashSet<String> declared = new LinkedHashSet<>(ToolNameNormalizer.canonicalizeAll(skill.toolWhitelist()));
+            boolean ambient = isAmbientActivation(skill.activationMode());
+            boolean activeMatches = activeSkillEffective.map(cur -> cur.equalsIgnoreCase(skill.skillCode())).orElse(false);
+            for (String tool : declared) {
+                if (baselineUniversal.contains(tool)) {
+                    continue;
+                }
+                if (ambient || activeMatches) {
+                    toolNames.add(tool);
+                }
+            }
+        }
+
         LinkedHashSet<String> kbIds = new LinkedHashSet<>(
                 capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList());
         kbIds.addAll(publishedRuntimeBinding.knowledgeBaseIds());
@@ -117,9 +193,6 @@ public class SkillResolverService {
         String outputContract = null;
 
         for (ResolvedSkill skill : skills) {
-            if (capability.effectiveToolNames().isEmpty()) {
-                toolNames.addAll(skill.toolWhitelist());
-            }
             if (capability.effectiveKnowledgeBaseIds().isEmpty()) {
                 kbIds.addAll(skill.kbWhitelist());
             }
@@ -131,7 +204,6 @@ public class SkillResolverService {
             }
         }
 
-        // Merge agent-level handoff rule into skill handoff rules if not already present.
         capability.effectiveHandoffRules().forEach(rule -> {
             if (!handoffRules.contains(rule)) {
                 handoffRules.add(rule);
@@ -141,20 +213,57 @@ public class SkillResolverService {
                 && !handoffRules.contains(publishedRuntimeBinding.handoffRule())) {
             handoffRules.add(publishedRuntimeBinding.handoffRule());
         }
+        runtimePolicyBundle.handoffRules().forEach(rule -> {
+            if (!handoffRules.contains(rule)) {
+                handoffRules.add(rule);
+            }
+        });
+
+        List<String> runtimeAllowedToolNames = platformGovernanceService.filterRuntimeAllowedToolNames(
+                orgId,
+                List.copyOf(toolNames)
+        );
 
         return new ResolvedSkillContext(
                 agentId,
                 skills,
                 skills.stream().map(ResolvedSkill::skillCode).toList(),
-                List.copyOf(toolNames),
+                runtimeAllowedToolNames,
+                agentDirectToolNames,
+                skillDeclaredToolNames,
+                List.copyOf(skillScopedToolNames),
                 List.copyOf(kbIds),
                 handoffRules,
                 outputContract,
                 agentSystemPrompt,
                 agentModel,
+                activeSkillEffective.orElse(null),
                 publishedRuntimeBinding.maxToolCalls(),
-                publishedRuntimeBinding.publishedVersionId()
+                publishedRuntimeBinding.publishedVersionId(),
+                resolvedSkillRefs,
+                new ResolvedPolicyBundle(
+                        runtimePolicyBundle.bundleCode(),
+                        runtimePolicyBundle.versionNo(),
+                        runtimePolicyBundle.promptFragment(),
+                        runtimePolicyBundle.handoffRules()
+                )
         );
+    }
+
+    private Map<Long, String> loadActivationModes(String orgId, String agentId) {
+        Map<Long, String> map = new LinkedHashMap<>();
+        for (AgentSkillBindingEntity binding : agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId)) {
+            map.put(binding.getSkillId(), binding.getActivationMode());
+        }
+        return map;
+    }
+
+    private static boolean isAmbientActivation(String activationMode) {
+        if (activationMode == null || activationMode.isBlank()) {
+            return true;
+        }
+        String normalized = activationMode.trim();
+        return "ALWAYS".equalsIgnoreCase(normalized) || "always-on".equalsIgnoreCase(normalized);
     }
 
     public List<String> resolveKnowledgeBaseIds(ResolvedSkillContext context, List<String> requestedKnowledgeBaseIds) {
@@ -190,6 +299,8 @@ public class SkillResolverService {
             return;
         }
         toolNames.addAll(CICI_DEFAULT_DISCOVERY_TOOLS);
+        toolNames.addAll(ToolNameNormalizer.canonicalizeAll(
+                List.of(TavilyToolService.TOOL_SEARCH, TavilyToolService.TOOL_EXTRACT)));
     }
 
     private static List<String> splitCsv(String raw) {
@@ -219,17 +330,76 @@ public class SkillResolverService {
                     version.get().getWorkflowManifest(), new TypeReference<Map<String, Object>>() {});
             Map<String, Object> dependencies = getMap(manifest.get("dependencies"));
             Map<String, Object> policies = getMap(manifest.get("policies"));
+            List<AgentWorkflowSkillRefService.RuntimeSkillRef> skillRefs =
+                    agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, version.get().getId());
             return new PublishedRuntimeBinding(
                     toStringList(dependencies.get("skills")),
                     toStringList(dependencies.get("tools")),
                     toStringList(dependencies.get("knowledgeBases")),
                     asString(policies.get("handoffRule")),
                     toInteger(policies.get("maxToolCalls")),
-                    version.get().getId()
+                    version.get().getId(),
+                    skillRefs
             );
         } catch (Exception ex) {
             return PublishedRuntimeBinding.EMPTY;
         }
+    }
+
+    private List<SkillDefinitionEntity> resolveSkillEntities(String orgId, String agentId, List<String> effectiveSkillCodes) {
+        if (effectiveSkillCodes.isEmpty()) {
+            return skillDefinitionService.listSkillsForAgent(orgId, agentId);
+        }
+        return effectiveSkillCodes.stream()
+                .map(code -> skillDefinitionService.listSkills(orgId).stream()
+                        .filter(item -> code.equals(item.getSkillCode()))
+                        .findFirst()
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
+    private ResolvedSkillVersionRef buildCurrentSkillVersionRef(String orgId,
+                                                                SkillDefinitionEntity skill,
+                                                                Map<Long, String> activationBySkillId) {
+        SkillVersionEntity version = resolveCurrentSkillVersion(orgId, skill).orElse(null);
+        return new ResolvedSkillVersionRef(
+                skill.getSkillCode(),
+                skill.getId(),
+                version == null ? null : version.getId(),
+                version == null ? null : version.getVersionNo(),
+                skill.getTemplateCode(),
+                skill.getBaseTemplateVersion(),
+                activationBySkillId.getOrDefault(skill.getId(), "always-on")
+        );
+    }
+
+    private Optional<SkillVersionEntity> resolveCurrentSkillVersion(String orgId, SkillDefinitionEntity skill) {
+        if (skill.getCurrentPublishedVersionId() != null) {
+            Optional<SkillVersionEntity> currentPublished = skillVersionRepository.findById(skill.getCurrentPublishedVersionId())
+                    .filter(version -> orgId.equals(version.getOrgId()) && Objects.equals(skill.getId(), version.getSkillId()));
+            if (currentPublished.isPresent()) {
+                return currentPublished;
+            }
+        }
+        Optional<SkillVersionEntity> published = skillVersionRepository
+                .findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(orgId, skill.getId(), "PUBLISHED");
+        if (published.isPresent()) {
+            return published;
+        }
+        return skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId());
+    }
+
+    private ResolvedSkillVersionRef toResolvedSkillVersionRef(AgentWorkflowSkillRefService.RuntimeSkillRef item) {
+        return new ResolvedSkillVersionRef(
+                item.skillCode(),
+                item.skillId(),
+                item.skillVersionId(),
+                item.skillVersionNo(),
+                item.templateCode(),
+                item.templateVersionNo(),
+                item.referenceMode()
+        );
     }
 
     private static Map<String, Object> getMap(Object value) {
@@ -242,7 +412,7 @@ public class SkillResolverService {
                         entry -> entry.getKey().toString(),
                         Map.Entry::getValue,
                         (left, right) -> right,
-                        java.util.LinkedHashMap::new
+                        LinkedHashMap::new
                 ));
     }
 
@@ -283,10 +453,11 @@ public class SkillResolverService {
             List<String> knowledgeBaseIds,
             String handoffRule,
             Integer maxToolCalls,
-            Long publishedVersionId
+            Long publishedVersionId,
+            List<AgentWorkflowSkillRefService.RuntimeSkillRef> skillRefs
     ) {
         private static final PublishedRuntimeBinding EMPTY =
-                new PublishedRuntimeBinding(List.of(), List.of(), List.of(), "", null, null);
+                new PublishedRuntimeBinding(List.of(), List.of(), List.of(), "", null, null, List.of());
     }
 
     public record ResolvedSkill(
@@ -297,7 +468,8 @@ public class SkillResolverService {
             List<String> kbWhitelist,
             String handoffRule,
             String outputContract,
-            String riskLevel
+            String riskLevel,
+            String activationMode
     ) {
     }
 
@@ -305,7 +477,14 @@ public class SkillResolverService {
             String agentId,
             List<ResolvedSkill> skills,
             List<String> skillCodes,
+            /** Effective tools exposed to the model for this session turn (policy-filtered). */
             List<String> allowedToolNames,
+            /** Agent tool bindings only (allowed_tools). */
+            List<String> agentDirectToolNames,
+            /** Union of selected skills' toolWhitelist declarations. */
+            List<String> skillDeclaredToolNames,
+            /** Tools declared on skills but not on Agent direct bindings (audit). */
+            List<String> skillScopedToolNames,
             List<String> defaultKnowledgeBaseIds,
             List<String> handoffRules,
             String outputContract,
@@ -313,10 +492,40 @@ public class SkillResolverService {
             String agentSystemPrompt,
             /** Preferred model name from AgentDefinition; null means use org routing. */
             String agentModel,
+            /** Normalized skill code when skill-scoped tools are authorized for this session (nullable). */
+            String activeSkillCode,
             /** Runtime policy max tool calls from published workflow manifest (if available). */
             Integer maxToolCalls,
             /** Bound published workflow version id (if available). */
-            Long publishedVersionId
+            Long publishedVersionId,
+            List<ResolvedSkillVersionRef> resolvedSkillRefs,
+            ResolvedPolicyBundle policyBundle
     ) {
+    }
+
+    public record ResolvedSkillVersionRef(
+            String skillCode,
+            Long skillId,
+            Long skillVersionId,
+            Integer skillVersionNo,
+            String templateCode,
+            Integer templateVersionNo,
+            String referenceMode
+    ) {
+    }
+
+    public record ResolvedPolicyBundle(
+            String bundleCode,
+            Integer versionNo,
+            String promptFragment,
+            List<String> handoffRules
+    ) {
+        public static final ResolvedPolicyBundle EMPTY =
+                new ResolvedPolicyBundle("", null, "", List.of());
+
+        public boolean hasContent() {
+            return (promptFragment != null && !promptFragment.isBlank())
+                    || (handoffRules != null && !handoffRules.isEmpty());
+        }
     }
 }

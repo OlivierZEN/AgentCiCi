@@ -6,6 +6,15 @@ export type Skill = {
   builtin: boolean;
   enabled: boolean;
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  sourceType: "PLATFORM_STANDARD" | "TENANT_DERIVED" | "TENANT_CUSTOM";
+  visibility: "VISIBLE" | "HIDDEN";
+  editPolicy: "LOCKED" | "CONFIGURABLE" | "EDITABLE";
+  bindingPolicy: "MANDATORY" | "DEFAULT_ON" | "OPTIONAL" | "INTERNAL_ONLY";
+  updatePolicy: "AUTO" | "MANUAL" | "PINNED";
+  templateCode?: string;
+  baseTemplateVersion?: number;
+  currentPublishedVersionId?: number;
+  latestDraftVersionId?: number;
   promptFragment?: string;
   draftSpecText?: string;
   toolWhitelist: string[];
@@ -68,6 +77,13 @@ export type SkillForm = {
   description: string;
   enabled: boolean;
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  sourceType: Skill["sourceType"];
+  visibility: Skill["visibility"];
+  editPolicy: Skill["editPolicy"];
+  bindingPolicy: Skill["bindingPolicy"];
+  updatePolicy: Skill["updatePolicy"];
+  templateCode: string;
+  baseTemplateVersion?: number;
   promptFragment: string;
   draftSpecText: string;
   toolWhitelistText: string;
@@ -98,6 +114,12 @@ export const EMPTY_FORM: SkillForm = {
   description: "",
   enabled: true,
   riskLevel: "MEDIUM",
+  sourceType: "TENANT_CUSTOM",
+  visibility: "VISIBLE",
+  editPolicy: "EDITABLE",
+  bindingPolicy: "OPTIONAL",
+  updatePolicy: "MANUAL",
+  templateCode: "",
   promptFragment: "",
   draftSpecText: "",
   toolWhitelistText: "",
@@ -225,4 +247,10 @@ export function riskLabel(risk: Skill["riskLevel"]): string {
   if (risk === "HIGH") return "高风险";
   if (risk === "LOW") return "低风险";
   return "中风险";
+}
+
+export function skillSourceLabel(sourceType: Skill["sourceType"]): string {
+  if (sourceType === "PLATFORM_STANDARD") return "平台标准";
+  if (sourceType === "TENANT_DERIVED") return "租户派生";
+  return "租户自定义";
 }

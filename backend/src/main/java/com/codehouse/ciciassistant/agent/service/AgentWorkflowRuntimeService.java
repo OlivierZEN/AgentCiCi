@@ -4,9 +4,12 @@ import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
+import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -19,15 +22,21 @@ public class AgentWorkflowRuntimeService {
     private final AgentDefinitionRepository agentDefinitionRepository;
     private final AgentWorkflowVersionRepository agentWorkflowVersionRepository;
     private final AgentWorkflowExecutionLogService executionLogService;
+    private final PlatformGovernanceService platformGovernanceService;
+    private final AgentWorkflowSkillRefService agentWorkflowSkillRefService;
 
     public AgentWorkflowRuntimeService(AgentCapabilityResolverService capabilityResolverService,
                                        AgentDefinitionRepository agentDefinitionRepository,
                                        AgentWorkflowVersionRepository agentWorkflowVersionRepository,
-                                       AgentWorkflowExecutionLogService executionLogService) {
+                                       AgentWorkflowExecutionLogService executionLogService,
+                                       PlatformGovernanceService platformGovernanceService,
+                                       AgentWorkflowSkillRefService agentWorkflowSkillRefService) {
         this.capabilityResolverService = capabilityResolverService;
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.executionLogService = executionLogService;
+        this.platformGovernanceService = platformGovernanceService;
+        this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
     }
 
     public DebugRuntimeResult debug(String orgId, String agentId, String input,
@@ -36,19 +45,35 @@ public class AgentWorkflowRuntimeService {
         AgentCapabilityResolverService.AgentCapabilityResolution capability = capabilityResolverService.resolve(
                 orgId, agentId, skillRefs == null ? List.of() : skillRefs);
         Optional<AgentWorkflowVersionEntity> publishedVersion = resolvePublishedVersion(orgId, capability.agentId());
+        PlatformGovernanceService.RuntimePolicyBundle policyBundle =
+                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
         String runtimeSource = publishedVersion.isPresent() ? "published_version" : "capability_fallback";
+        RuntimeResolution runtimeResolution = resolveRuntimeResolution(orgId, capability, publishedVersion.orElse(null));
+        List<RuntimeSkillGovernanceView> resolvedSkillVersions = buildRuntimeSkillGovernanceViews(
+                orgId, capability.agentId(), capability, publishedVersion.orElse(null));
+        RuntimePolicyBundleView policyBundleView = new RuntimePolicyBundleView(
+                policyBundle.bundleCode(),
+                policyBundle.versionNo(),
+                policyBundle.handoffRules().size(),
+                countPromptLines(policyBundle.promptFragment())
+        );
+        List<String> governanceNotes = buildGovernanceNotes(runtimeSource, policyBundleView, resolvedSkillVersions);
 
         List<String> traceSteps = new ArrayList<>();
         traceSteps.add("resolve-agent:" + capability.agentId());
         traceSteps.add("resolve-runtime-source:" + runtimeSource);
+        if (policyBundle.versionNo() != null) {
+            traceSteps.add("resolve-policy-bundle:" + policyBundle.bundleCode() + "@v" + policyBundle.versionNo());
+        }
         publishedVersion.ifPresent(version -> {
             traceSteps.add("load-workflow-version:" + version.getVersionNo());
             traceSteps.add("workflow-entry:runAgent");
         });
-        traceSteps.add("resolve-skills:" + String.join(",", capability.effectiveSkillCodes()));
-        traceSteps.add("resolve-tools:" + String.join(",", capability.effectiveToolNames()));
-        traceSteps.add("resolve-kbs:" + capability.effectiveKnowledgeBaseIds());
-        ExecutionResult executionResult = executeWorkflow(publishedVersion.orElse(null), input, capability);
+        traceSteps.add("resolve-skills:" + String.join(",", runtimeResolution.skillCodes()));
+        traceSteps.add("resolve-tools:" + String.join(",", runtimeResolution.effectiveToolNames()));
+        traceSteps.add("resolve-kbs:" + runtimeResolution.effectiveKnowledgeBaseIds());
+        ExecutionResult executionResult = executeWorkflow(
+                publishedVersion.orElse(null), input, runtimeResolution.effectiveToolNames(), policyBundle);
         traceSteps.add("execute-workflow-code:" + executionResult.status());
         traceSteps.add("route-input:" + ((input == null || input.isBlank()) ? "default" : "input-based"));
 
@@ -59,14 +84,20 @@ public class AgentWorkflowRuntimeService {
 
         DebugRuntimeResult result = new DebugRuntimeResult(
                 capability.agentId(),
-                capability.effectiveSkillCodes(),
-                capability.effectiveToolNames(),
-                capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList(),
+                runtimeResolution.skillCodes(),
+                runtimeResolution.effectiveToolNames(),
+                runtimeResolution.agentDirectToolNames(),
+                runtimeResolution.skillDeclaredToolNames(),
+                runtimeResolution.skillScopedToolNames(),
+                runtimeResolution.effectiveKnowledgeBaseIds(),
                 capability.warnings(),
                 traceSteps,
                 runtimeSource,
                 publishedVersion.map(AgentWorkflowVersionEntity::getId).orElse(null),
                 workflowCodePreview,
+                resolvedSkillVersions,
+                policyBundleView,
+                governanceNotes,
                 executionResult.status(),
                 executionResult.output(),
                 executionResult.trace(),
@@ -113,18 +144,107 @@ public class AgentWorkflowRuntimeService {
 
     public RuntimeExecutionResult evaluateForChat(String orgId, String agentId, String input, List<String> effectiveToolNames) {
         Optional<AgentWorkflowVersionEntity> publishedVersion = resolvePublishedVersion(orgId, agentId);
+        PlatformGovernanceService.RuntimePolicyBundle policyBundle =
+                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
         ExecutionResult executionResult = executeWorkflow(
                 publishedVersion.orElse(null),
                 input,
-                effectiveToolNames == null ? List.of() : effectiveToolNames
+                effectiveToolNames == null ? List.of() : effectiveToolNames,
+                policyBundle
         );
         return new RuntimeExecutionResult(
                 executionResult.status(),
                 executionResult.output(),
                 publishedVersion.map(AgentWorkflowVersionEntity::getId).orElse(null),
+                buildRuntimeSkillGovernanceViews(orgId, agentId, null, publishedVersion.orElse(null)),
+                new RuntimePolicyBundleView(
+                        policyBundle.bundleCode(),
+                        policyBundle.versionNo(),
+                        policyBundle.handoffRules().size(),
+                        countPromptLines(policyBundle.promptFragment())
+                ),
                 executionResult.trace(),
                 executionResult.contextSnapshot()
         );
+    }
+
+    private List<RuntimeSkillGovernanceView> buildRuntimeSkillGovernanceViews(String orgId,
+                                                                              String agentId,
+                                                                              AgentCapabilityResolverService.AgentCapabilityResolution capability,
+                                                                              AgentWorkflowVersionEntity publishedVersion) {
+        RuntimeResolution runtimeResolution = resolveRuntimeResolution(
+                orgId,
+                capability == null
+                        ? capabilityResolverService.resolve(orgId, agentId, List.of())
+                        : capability,
+                publishedVersion
+        );
+        List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs = publishedVersion == null || publishedVersion.getId() == null
+                ? List.of()
+                : agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, publishedVersion.getId());
+        if (!pinnedSkillRefs.isEmpty()) {
+            return pinnedSkillRefs.stream()
+                    .map(item -> new RuntimeSkillGovernanceView(
+                            item.skillCode(),
+                            item.skillVersionNo(),
+                            item.templateCode(),
+                            item.templateVersionNo(),
+                            item.referenceMode(),
+                            item.toolWhitelist().size(),
+                            item.kbWhitelist().size()
+                    ))
+                    .toList();
+        }
+        return runtimeResolution.skillCodes().stream()
+                .map(skillCode -> new RuntimeSkillGovernanceView(
+                        skillCode,
+                        null,
+                        null,
+                        null,
+                        "capability-fallback",
+                        0,
+                        0
+                ))
+                .toList();
+    }
+
+    private List<String> buildGovernanceNotes(String runtimeSource,
+                                              RuntimePolicyBundleView policyBundleView,
+                                              List<RuntimeSkillGovernanceView> skillViews) {
+        List<String> notes = new ArrayList<>();
+        if (policyBundleView.versionNo() != null) {
+            notes.add("Policy bundle: " + policyBundleView.bundleCode() + "@v" + policyBundleView.versionNo()
+                    + " · handoffRules=" + policyBundleView.handoffRuleCount()
+                    + " · promptLines=" + policyBundleView.promptLineCount());
+        }
+        if (skillViews.isEmpty()) {
+            notes.add("Skill snapshot: none");
+        } else {
+            notes.add("Skill snapshot: " + skillViews.stream()
+                    .map(item -> item.skillCode()
+                            + (item.skillVersionNo() == null ? "" : "@skill-v" + item.skillVersionNo())
+                            + (item.templateVersionNo() == null ? "" : "/template-v" + item.templateVersionNo())
+                            + " [" + item.referenceMode() + "]")
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse("none"));
+        }
+        if ("published_version".equals(runtimeSource)) {
+            notes.add("Published runtime keeps using pinned skill refs; later platform template updates only affect Agents after republish.");
+        }
+        return notes;
+    }
+
+    private int countPromptLines(String promptFragment) {
+        if (promptFragment == null || promptFragment.isBlank()) {
+            return 0;
+        }
+        int count = 0;
+        for (String line : promptFragment.replace("\r", "").split("\n")) {
+            if (!line.trim().isBlank()) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private Optional<AgentWorkflowVersionEntity> resolvePublishedVersion(String orgId, String agentId) {
@@ -148,13 +268,61 @@ public class AgentWorkflowRuntimeService {
 
     private ExecutionResult executeWorkflow(AgentWorkflowVersionEntity publishedVersion,
                                             String input,
-                                            AgentCapabilityResolverService.AgentCapabilityResolution capability) {
-        return executeWorkflow(publishedVersion, input, capability.effectiveToolNames());
+                                            AgentCapabilityResolverService.AgentCapabilityResolution capability,
+                                            PlatformGovernanceService.RuntimePolicyBundle policyBundle) {
+        return executeWorkflow(publishedVersion, input, capability.effectiveToolNames(), policyBundle);
+    }
+
+    private RuntimeResolution resolveRuntimeResolution(String orgId,
+                                                       AgentCapabilityResolverService.AgentCapabilityResolution capability,
+                                                       AgentWorkflowVersionEntity publishedVersion) {
+        if (publishedVersion == null || publishedVersion.getId() == null) {
+            return new RuntimeResolution(
+                    capability.effectiveSkillCodes(),
+                    capability.effectiveToolNames(),
+                    capability.agentDirectToolNames(),
+                    capability.skillDeclaredToolNames(),
+                    capability.skillScopedToolNames(),
+                    capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList()
+            );
+        }
+        List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs =
+                agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, publishedVersion.getId());
+        if (pinnedSkillRefs.isEmpty()) {
+            return new RuntimeResolution(
+                    capability.effectiveSkillCodes(),
+                    capability.effectiveToolNames(),
+                    capability.agentDirectToolNames(),
+                    capability.skillDeclaredToolNames(),
+                    capability.skillScopedToolNames(),
+                    capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList()
+            );
+        }
+        List<String> agentDirectToolNames = List.copyOf(ToolNameNormalizer.canonicalizeAll(capability.agentDirectToolNames()));
+        List<String> skillDeclaredToolNames = List.copyOf(ToolNameNormalizer.canonicalizeAll(
+                pinnedSkillRefs.stream().flatMap(item -> item.toolWhitelist().stream()).toList()));
+        LinkedHashSet<String> effectiveTools = new LinkedHashSet<>(agentDirectToolNames);
+        effectiveTools.addAll(skillDeclaredToolNames);
+        LinkedHashSet<String> skillScopedTools = new LinkedHashSet<>(skillDeclaredToolNames);
+        skillScopedTools.removeAll(new LinkedHashSet<>(agentDirectToolNames));
+        LinkedHashSet<String> kbIds = new LinkedHashSet<>(capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList());
+        if (kbIds.isEmpty()) {
+            pinnedSkillRefs.forEach(item -> kbIds.addAll(item.kbWhitelist()));
+        }
+        return new RuntimeResolution(
+                pinnedSkillRefs.stream().map(AgentWorkflowSkillRefService.RuntimeSkillRef::skillCode).toList(),
+                List.copyOf(effectiveTools),
+                agentDirectToolNames,
+                skillDeclaredToolNames,
+                List.copyOf(skillScopedTools),
+                List.copyOf(kbIds)
+        );
     }
 
     private ExecutionResult executeWorkflow(AgentWorkflowVersionEntity publishedVersion,
                                             String input,
-                                            List<String> effectiveToolNames) {
+                                            List<String> effectiveToolNames,
+                                            PlatformGovernanceService.RuntimePolicyBundle policyBundle) {
         List<String> executionTrace = new ArrayList<>();
         Map<String, Object> contextSnapshot = new LinkedHashMap<>();
         List<Map<String, Object>> nodeMetrics = new ArrayList<>();
@@ -164,7 +332,12 @@ public class AgentWorkflowRuntimeService {
         contextSnapshot.put("toolScopeSize", effectiveToolNames.size());
         contextSnapshot.put("intent", "classified");
         contextSnapshot.put("branchHit", "default".equals(route) ? "route-default" : "route-input-based");
+        contextSnapshot.put("policyBundleCode", policyBundle.bundleCode());
+        contextSnapshot.put("policyBundleVersionNo", policyBundle.versionNo());
         executionTrace.add("workflow-node:start");
+        if (policyBundle.versionNo() != null) {
+            executionTrace.add("workflow-node:policy-bundle:" + policyBundle.bundleCode() + "@v" + policyBundle.versionNo());
+        }
         executionTrace.add("workflow-node:route-input:" + route);
         executionTrace.add("workflow-node:tool-scope:size=" + effectiveToolNames.size());
         nodeMetrics.add(nodeMetric("start", 1L, "ok",
@@ -282,16 +455,32 @@ public class AgentWorkflowRuntimeService {
             String agentId,
             List<String> activeSkills,
             List<String> effectiveToolNames,
+            List<String> agentDirectToolNames,
+            List<String> skillDeclaredToolNames,
+            List<String> skillScopedToolNames,
             List<String> effectiveKnowledgeBaseIds,
             List<String> warnings,
             List<String> traceSteps,
             String runtimeSource,
             Long publishedVersionId,
             String workflowCodePreview,
+            List<RuntimeSkillGovernanceView> resolvedSkillVersions,
+            RuntimePolicyBundleView policyBundle,
+            List<String> runtimeGovernanceNotes,
             String executionStatus,
             String executionOutput,
             List<String> executionTrace,
             Map<String, Object> contextSnapshot
+    ) {
+    }
+
+    private record RuntimeResolution(
+            List<String> skillCodes,
+            List<String> effectiveToolNames,
+            List<String> agentDirectToolNames,
+            List<String> skillDeclaredToolNames,
+            List<String> skillScopedToolNames,
+            List<String> effectiveKnowledgeBaseIds
     ) {
     }
 
@@ -362,8 +551,29 @@ public class AgentWorkflowRuntimeService {
             String executionStatus,
             String executionOutput,
             Long publishedVersionId,
+            List<RuntimeSkillGovernanceView> resolvedSkillVersions,
+            RuntimePolicyBundleView policyBundle,
             List<String> executionTrace,
             Map<String, Object> contextSnapshot
+    ) {
+    }
+
+    public record RuntimeSkillGovernanceView(
+            String skillCode,
+            Integer skillVersionNo,
+            String templateCode,
+            Integer templateVersionNo,
+            String referenceMode,
+            Integer toolCount,
+            Integer kbCount
+    ) {
+    }
+
+    public record RuntimePolicyBundleView(
+            String bundleCode,
+            Integer versionNo,
+            Integer handoffRuleCount,
+            Integer promptLineCount
     ) {
     }
 }

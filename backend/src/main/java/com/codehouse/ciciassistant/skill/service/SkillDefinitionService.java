@@ -2,11 +2,17 @@ package com.codehouse.ciciassistant.skill.service;
 
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillBindingPolicy;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillEditPolicy;
+import com.codehouse.ciciassistant.skill.domain.SkillSourceType;
+import com.codehouse.ciciassistant.skill.domain.SkillUpdatePolicy;
 import com.codehouse.ciciassistant.skill.domain.SkillVersionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillVersionRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillVisibility;
 import com.codehouse.ciciassistant.spec.SpecCompilerService;
+import com.codehouse.ciciassistant.platform.domain.PlatformSkillTemplateRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -15,11 +21,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class SkillDefinitionService {
+
+    private static final Set<String> CORE_POLICY_CODES = Set.of(
+            "conversation-core",
+            "knowledge-first",
+            "safe-handoff"
+    );
 
     private static final List<BuiltinSkillSpec> BUILTIN_SKILLS = List.of(
             new BuiltinSkillSpec(
@@ -226,19 +239,22 @@ public class SkillDefinitionService {
     private final SkillVersionRepository skillVersionRepository;
     private final SpecCompilerService specCompilerService;
     private final ObjectMapper objectMapper;
+    private final PlatformSkillTemplateRepository platformSkillTemplateRepository;
 
     public SkillDefinitionService(SkillDefinitionRepository skillDefinitionRepository,
                                   AgentSkillBindingRepository agentSkillBindingRepository,
                                   SkillPromptAssembler skillPromptAssembler,
                                   SkillVersionRepository skillVersionRepository,
                                   SpecCompilerService specCompilerService,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  PlatformSkillTemplateRepository platformSkillTemplateRepository) {
         this.skillDefinitionRepository = skillDefinitionRepository;
         this.agentSkillBindingRepository = agentSkillBindingRepository;
         this.skillPromptAssembler = skillPromptAssembler;
         this.skillVersionRepository = skillVersionRepository;
         this.specCompilerService = specCompilerService;
         this.objectMapper = objectMapper;
+        this.platformSkillTemplateRepository = platformSkillTemplateRepository;
     }
 
     @Transactional
@@ -249,7 +265,9 @@ public class SkillDefinitionService {
 
     public List<SkillDefinitionEntity> listSkills(String orgId) {
         ensurePhaseOneDefaults(orgId);
-        return skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId);
+        return skillDefinitionRepository.findByOrgIdOrderByBuiltinDescNameAsc(orgId).stream()
+                .filter(SkillDefinitionEntity::isVisibleToTenant)
+                .toList();
     }
 
     public SkillDefinitionEntity getSkill(String orgId, Long id) {
@@ -271,6 +289,7 @@ public class SkillDefinitionService {
         return skillIds.stream()
                 .map(byId::get)
                 .filter(java.util.Objects::nonNull)
+                .filter(SkillDefinitionEntity::isVisibleToTenant)
                 .toList();
     }
 
@@ -294,21 +313,34 @@ public class SkillDefinitionService {
                 joinCsv(command.kbWhitelist()),
                 trimToNull(command.handoffRule()),
                 trimToNull(command.outputContract()),
-                normalizeRiskLevel(command.riskLevel())
+                normalizeRiskLevel(command.riskLevel()),
+                SkillSourceType.TENANT_CUSTOM,
+                SkillVisibility.VISIBLE,
+                SkillEditPolicy.EDITABLE,
+                SkillBindingPolicy.OPTIONAL,
+                SkillUpdatePolicy.MANUAL,
+                null,
+                null
         );
         SkillDefinitionEntity saved = skillDefinitionRepository.save(created);
-        createDraftVersion(orgId, saved, command);
-        return saved;
+        SkillVersionEntity draft = createDraftVersion(orgId, saved, command);
+        saved.setLatestDraftVersionId(draft.getId());
+        return skillDefinitionRepository.save(saved);
     }
 
     @Transactional
     public SkillDefinitionEntity updateSkill(String orgId, Long id, UpsertCommand command) {
         ensurePhaseOneDefaults(orgId);
         SkillDefinitionEntity entity = getSkill(orgId, id);
-        if (entity.isBuiltin()) {
-            // Built-in skills are platform maintained: org admins can only toggle enabled.
+        if (!entity.isVisibleToTenant()) {
+            throw new IllegalArgumentException("Skill not found");
+        }
+        if (entity.isTenantConfigurable()) {
             entity.setEnabled(command.enabled() == null || command.enabled());
             return skillDefinitionRepository.save(entity);
+        }
+        if (!entity.isTenantEditable()) {
+            throw new IllegalArgumentException("Skill is platform managed and cannot be edited");
         }
 
         String requestedCode = normalizeSkillCode(command.skillCode());
@@ -330,19 +362,85 @@ public class SkillDefinitionService {
                 normalizeRiskLevel(command.riskLevel())
         );
         SkillDefinitionEntity saved = skillDefinitionRepository.save(entity);
-        createDraftVersion(orgId, saved, command);
-        return saved;
+        SkillVersionEntity draft = createDraftVersion(orgId, saved, command);
+        saved.setLatestDraftVersionId(draft.getId());
+        return skillDefinitionRepository.save(saved);
     }
 
     @Transactional
     public void deleteSkill(String orgId, Long id) {
         ensurePhaseOneDefaults(orgId);
         SkillDefinitionEntity entity = getSkill(orgId, id);
-        if (entity.isBuiltin()) {
-            throw new IllegalArgumentException("Built-in skills cannot be deleted");
+        if (!entity.isVisibleToTenant() || !entity.isTenantDeletable()) {
+            throw new IllegalArgumentException("Platform managed skills cannot be deleted");
         }
         entity.setEnabled(false);
         skillDefinitionRepository.save(entity);
+    }
+
+    @Transactional
+    public SkillDefinitionEntity deriveSkill(String orgId, Long sourceSkillId, DeriveCommand command) {
+        ensurePhaseOneDefaults(orgId);
+        SkillDefinitionEntity source = getSkill(orgId, sourceSkillId);
+        if (!source.isVisibleToTenant() || source.getSourceType() != SkillSourceType.PLATFORM_STANDARD) {
+            throw new IllegalArgumentException("Only platform standard skills can be derived");
+        }
+        String skillCode = normalizeSkillCode(command.skillCode());
+        if (skillDefinitionRepository.existsByOrgIdAndSkillCode(orgId, skillCode)) {
+            throw new IllegalArgumentException("Skill code already exists: " + skillCode);
+        }
+        Integer baseTemplateVersion = platformSkillTemplateRepository.findByOrgIdAndTemplateCode(
+                        orgId,
+                        fallback(source.getTemplateCode(), source.getSkillCode())
+                )
+                .map(template -> template.getCurrentVersionNo() == null ? 1 : template.getCurrentVersionNo())
+                .or(() -> Optional.ofNullable(source.getCurrentPublishedVersionId())
+                        .flatMap(skillVersionRepository::findById)
+                        .map(SkillVersionEntity::getVersionNo))
+                .or(() -> skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, source.getId())
+                        .map(SkillVersionEntity::getVersionNo))
+                .orElse(1);
+        SkillDefinitionEntity derived = new SkillDefinitionEntity(
+                orgId,
+                skillCode,
+                requireText(command.name(), "name"),
+                trimToNull(fallback(command.description(), source.getDescription())),
+                false,
+                true,
+                source.getPromptFragment(),
+                source.getDraftSpecText(),
+                source.getToolWhitelist(),
+                source.getKbWhitelist(),
+                source.getHandoffRule(),
+                source.getOutputContract(),
+                source.getRiskLevel(),
+                SkillSourceType.TENANT_DERIVED,
+                SkillVisibility.VISIBLE,
+                SkillEditPolicy.EDITABLE,
+                SkillBindingPolicy.OPTIONAL,
+                SkillUpdatePolicy.MANUAL,
+                fallback(source.getTemplateCode(), source.getSkillCode()),
+                baseTemplateVersion
+        );
+        SkillDefinitionEntity saved = skillDefinitionRepository.save(derived);
+        SkillVersionEntity draft = createDraftVersion(orgId, saved, new UpsertCommand(
+                saved.getSkillCode(),
+                saved.getName(),
+                saved.getDescription(),
+                saved.isEnabled(),
+                saved.getPromptFragment(),
+                saved.getDraftSpecText(),
+                splitCsv(saved.getToolWhitelist()),
+                splitCsv(saved.getKbWhitelist()),
+                saved.getHandoffRule(),
+                saved.getOutputContract(),
+                saved.getRiskLevel(),
+                "derive",
+                null,
+                "derivedFrom=" + source.getSkillCode() + "@v" + baseTemplateVersion
+        ));
+        saved.setLatestDraftVersionId(draft.getId());
+        return skillDefinitionRepository.save(saved);
     }
 
     public List<AgentSkillBindingEntity> listBindings(String orgId, String agentId) {
@@ -425,17 +523,32 @@ public class SkillDefinitionService {
                         kbIds,
                         handoffRule,
                         outputContract,
-                        riskLevel
+                        riskLevel,
+                        "always-on"
                 )),
                 List.of(normalizeSkillCode(command.skillCode())),
+                tools,
+                List.of(),
+                tools,
                 tools,
                 kbIds,
                 handoffRule == null ? List.of() : List.of(handoffRule),
                 outputContract,
                 null,
                 null,
+                normalizeSkillCode(command.skillCode()),
                 null,
-                null
+                null,
+                List.of(new SkillResolverService.ResolvedSkillVersionRef(
+                        normalizeSkillCode(command.skillCode()),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        "always-on"
+                )),
+                SkillResolverService.ResolvedPolicyBundle.EMPTY
         );
         String promptPreview = skillPromptAssembler.assemble(
                 "You are CiCi assistant. Follow platform policy and answer safely.",
@@ -558,7 +671,7 @@ public class SkillDefinitionService {
         return trimToNull(promptFragment);
     }
 
-    private void createDraftVersion(String orgId, SkillDefinitionEntity skill, UpsertCommand command) {
+    private SkillVersionEntity createDraftVersion(String orgId, SkillDefinitionEntity skill, UpsertCommand command) {
         Integer nextVersionNo = skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId())
                 .map(existing -> existing.getVersionNo() + 1)
                 .orElse(1);
@@ -575,7 +688,7 @@ public class SkillDefinitionService {
                 command.handoffRule(),
                 riskLevel
         ));
-        skillVersionRepository.save(new SkillVersionEntity(
+        return skillVersionRepository.save(new SkillVersionEntity(
                 orgId,
                 skill.getId(),
                 nextVersionNo,
@@ -622,9 +735,39 @@ public class SkillDefinitionService {
                     spec.kbWhitelist(),
                     spec.handoffRule(),
                     spec.outputContract(),
-                    spec.riskLevel()
+                    spec.riskLevel(),
+                    SkillSourceType.PLATFORM_STANDARD,
+                    visibilityForBuiltin(spec.skillCode()),
+                    editPolicyForBuiltin(spec.skillCode()),
+                    bindingPolicyForBuiltin(spec.skillCode()),
+                    SkillUpdatePolicy.AUTO,
+                    spec.skillCode(),
+                    null
             ));
         }
+    }
+
+    private SkillVisibility visibilityForBuiltin(String skillCode) {
+        return CORE_POLICY_CODES.contains(skillCode) ? SkillVisibility.HIDDEN : SkillVisibility.VISIBLE;
+    }
+
+    private SkillEditPolicy editPolicyForBuiltin(String skillCode) {
+        return CORE_POLICY_CODES.contains(skillCode) ? SkillEditPolicy.LOCKED : SkillEditPolicy.CONFIGURABLE;
+    }
+
+    private SkillBindingPolicy bindingPolicyForBuiltin(String skillCode) {
+        return CORE_POLICY_CODES.contains(skillCode) ? SkillBindingPolicy.MANDATORY : SkillBindingPolicy.OPTIONAL;
+    }
+
+    private List<String> splitCsv(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .distinct()
+                .toList();
     }
 
     private void ensureDefaultBindings(String orgId) {
@@ -706,6 +849,13 @@ public class SkillDefinitionService {
             List<String> warnings,
             List<String> compileSummary,
             String specIr
+    ) {
+    }
+
+    public record DeriveCommand(
+            String skillCode,
+            String name,
+            String description
     ) {
     }
 

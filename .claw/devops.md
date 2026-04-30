@@ -1,5 +1,8 @@
 ---
+kind: devops
+version: 3
 updated_at: 2026-04-19T08:20:00Z
+updated_by: ai
 status: active
 ---
 

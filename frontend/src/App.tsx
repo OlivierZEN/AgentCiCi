@@ -12,6 +12,13 @@ import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
 import AdminAgentBuilderPage from "./admin/pages/AdminAgentBuilderPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
+import PlatformGuard from "./platform/PlatformGuard";
+import PlatformLogin from "./platform/PlatformLogin";
+import PlatformShell from "./platform/PlatformShell";
+import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
+import PlatformHomePage from "./platform/pages/PlatformHomePage";
+import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
+import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 
 export default function App() {
   return (
@@ -33,6 +40,15 @@ export default function App() {
             <Route path="integrations" element={<AdminIntegrationsPage />} />
             <Route path="ops" element={<AdminOpsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+          </Route>
+        </Route>
+        <Route path="/platform/login" element={<PlatformLogin />} />
+        <Route path="/platform" element={<PlatformGuard />}>
+          <Route element={<PlatformShell />}>
+            <Route index element={<PlatformHomePage />} />
+            <Route path="skills" element={<PlatformSkillsPage />} />
+            <Route path="tools" element={<PlatformToolsPage />} />
+            <Route path="audit" element={<PlatformAuditPage />} />
           </Route>
         </Route>
       </Routes>

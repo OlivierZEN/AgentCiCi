@@ -18,6 +18,7 @@ import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService.ResolvedSkillContext;
+import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -106,8 +107,10 @@ public class ChatOrchestratorService {
     }
 
     public Map<String, Object> chat(String orgId, String userId, String sessionId,
-                                     String question, List<String> kbIds, String requestedAgentId) {
-        ResolvedSkillContext skillContext = skillResolverService.resolve(orgId, requestedAgentId, sessionId);
+                                     String question, List<String> kbIds, String requestedAgentId,
+                                     String activeSkillCode) {
+        ResolvedSkillContext skillContext = skillResolverService.resolve(
+                orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
         persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
 
         Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
@@ -122,7 +125,7 @@ public class ChatOrchestratorService {
                 sessionId, question, ragContext, showThinking, skillContext, orgId, userId);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
-                showThinking, skillContext.agentId(), skillContext.allowedToolNames(), maxToolRounds);
+                showThinking, skillContext, maxToolRounds);
         long wfStarted = System.nanoTime();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -148,27 +151,44 @@ public class ChatOrchestratorService {
         payload.put("ragContext", ragContext);
         payload.put("effectiveKnowledgeBaseIds", effectiveKnowledgeBaseIds);
         payload.put("resolvedSkills", skillContext.skillCodes());
+        payload.put("resolvedSkillVersions", skillContext.resolvedSkillRefs());
         payload.put("effectiveToolNames", skillContext.allowedToolNames());
+        payload.put("agentDirectToolNames", skillContext.agentDirectToolNames());
+        payload.put("skillDeclaredToolNames", skillContext.skillDeclaredToolNames());
+        payload.put("skillScopedToolNames", skillContext.skillScopedToolNames());
+        payload.put("activeSkillCode", skillContext.activeSkillCode() == null ? "" : skillContext.activeSkillCode());
         payload.put("runtimePolicy", Map.of(
                 "maxToolCalls", maxToolRounds,
-                "publishedVersionId", skillContext.publishedVersionId() == null ? "" : skillContext.publishedVersionId().toString()
+                "publishedVersionId", skillContext.publishedVersionId() == null ? "" : skillContext.publishedVersionId().toString(),
+                "policyBundleCode", skillContext.policyBundle() == null ? "" : skillContext.policyBundle().bundleCode(),
+                "policyBundleVersionNo", skillContext.policyBundle() == null || skillContext.policyBundle().versionNo() == null
+                        ? ""
+                        : skillContext.policyBundle().versionNo().toString()
         ));
         payload.put("runtimeExecution", Map.of(
                 "status", executionResult.executionStatus(),
                 "output", executionResult.executionOutput(),
                 "publishedVersionId", executionResult.publishedVersionId() == null ? "" : executionResult.publishedVersionId().toString(),
+                "resolvedSkillVersions", executionResult.resolvedSkillVersions(),
+                "policyBundle", executionResult.policyBundle(),
                 "trace", executionResult.executionTrace(),
                 "contextSnapshot", executionResult.contextSnapshot()
+        ));
+        payload.put("runtimeGovernance", Map.of(
+                "resolvedSkillVersions", executionResult.resolvedSkillVersions(),
+                "policyBundle", executionResult.policyBundle()
         ));
         payload.put("timestamp", Instant.now().toString());
         return payload;
     }
 
     public void chatStream(String orgId, String userId, String sessionId,
-                           String question, List<String> kbIds, String requestedAgentId, SseEmitter emitter) {
+                           String question, List<String> kbIds, String requestedAgentId,
+                           String activeSkillCode, SseEmitter emitter) {
         CompletableFuture.runAsync(() -> {
             try {
-                ResolvedSkillContext skillContext = skillResolverService.resolve(orgId, requestedAgentId, sessionId);
+                ResolvedSkillContext skillContext = skillResolverService.resolve(
+                        orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
                 persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
 
                 Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
@@ -184,7 +204,7 @@ public class ChatOrchestratorService {
 
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
-                        showThinking, skillContext.agentId(), skillContext.allowedToolNames(), emitter, maxToolRounds);
+                        showThinking, skillContext, emitter, maxToolRounds);
                 if (pendingApprovalsUsed) {
                     // Keep chat concise when a dedicated approvals page is rendered on frontend.
                     messages.add(Map.of(
@@ -259,7 +279,7 @@ public class ChatOrchestratorService {
      */
     private String runToolLoop(String modelName, List<Map<String, Object>> messages,
                                List<Map<String, Object>> tools, String orgId, String userId, String sessionId,
-                               boolean showThinking, String agentId, List<String> allowedToolNames, int maxToolRounds) {
+                               boolean showThinking, ResolvedSkillContext skillContext, int maxToolRounds) {
         for (int round = 0; round < maxToolRounds; round++) {
             ChatCompletionResult result = aliyunBailianClient.chatCompletion(
                     modelName, messages, tools.isEmpty() ? null : tools, !showThinking);
@@ -271,7 +291,7 @@ public class ChatOrchestratorService {
                 return showThinking ? result.content() : AssistantContentSanitizer.stripThinkingSections(result.content());
             }
 
-            appendToolCallsAndResults(messages, result, orgId, userId, sessionId, agentId, allowedToolNames);
+            appendToolCallsAndResults(messages, result, orgId, userId, sessionId, skillContext, null);
         }
         return "Tool calling exceeded maximum rounds.";
     }
@@ -283,8 +303,9 @@ public class ChatOrchestratorService {
      */
     private boolean resolveToolCalls(String modelName, List<Map<String, Object>> messages,
                                   List<Map<String, Object>> tools, String orgId, String userId, String sessionId,
-                                  boolean showThinking, String agentId,
-                                  List<String> allowedToolNames, SseEmitter emitter,
+                                  boolean showThinking,
+                                  ResolvedSkillContext skillContext,
+                                  SseEmitter emitter,
                                   int maxToolRounds) {
         if (tools.isEmpty()) return false;
         boolean pendingApprovalsUsed = false;
@@ -297,23 +318,16 @@ public class ChatOrchestratorService {
                 break;
             }
             pendingApprovalsUsed = appendToolCallsAndResults(
-                    messages, result, orgId, userId, sessionId, agentId, allowedToolNames, emitter)
+                    messages, result, orgId, userId, sessionId, skillContext, emitter)
                     || pendingApprovalsUsed;
         }
         return pendingApprovalsUsed;
     }
 
-    private void appendToolCallsAndResults(List<Map<String, Object>> messages,
-                                            ChatCompletionResult result, String orgId, String userId,
-                                            String sessionId, String agentId,
-                                            List<String> allowedToolNames) {
-        appendToolCallsAndResults(messages, result, orgId, userId, sessionId, agentId, allowedToolNames, null);
-    }
-
     private boolean appendToolCallsAndResults(List<Map<String, Object>> messages,
                                             ChatCompletionResult result, String orgId, String userId,
-                                            String sessionId, String agentId,
-                                            List<String> allowedToolNames,
+                                            String sessionId,
+                                            ResolvedSkillContext skillContext,
                                             SseEmitter emitter) {
         List<Map<String, Object>> toolCallMaps = new ArrayList<>();
         for (ToolCallInfo tc : result.toolCalls()) {
@@ -335,8 +349,16 @@ public class ChatOrchestratorService {
                 safeSendToolCall(emitter, tc.name());
             }
             log.info("Calling MCP tool: {} with args: {}", tc.name(), tc.arguments());
-            String toolResult = toolOrchestratorService.executeTool(orgId, userId, tc.name(), tc.arguments(), allowedToolNames);
-            chatSessionStateService.mergeToolResult(orgId, sessionId, agentId, tc.name(), toolResult);
+            String canonicalTool = ToolNameNormalizer.canonicalize(tc.name());
+            String toolResult = toolOrchestratorService.executeTool(
+                    orgId,
+                    userId,
+                    tc.name(),
+                    tc.arguments(),
+                    skillContext.allowedToolNames(),
+                    skillContext.agentDirectToolNames());
+            logToolInvocationAudit(orgId, userId, sessionId, skillContext, canonicalTool != null ? canonicalTool : tc.name());
+            chatSessionStateService.mergeToolResult(orgId, sessionId, skillContext.agentId(), tc.name(), toolResult);
             if (emitter != null && isPendingApprovalsTool(tc.name())) {
                 safeSendToolResult(emitter, tc.name(), toolResult);
                 pendingApprovalsUsed = true;
@@ -348,6 +370,49 @@ public class ChatOrchestratorService {
             ));
         }
         return pendingApprovalsUsed;
+    }
+
+    private void logToolInvocationAudit(String orgId, String userId, String sessionId,
+                                       ResolvedSkillContext skillContext, String canonicalToolName) {
+        try {
+            String tool = canonicalToolName == null ? "" : canonicalToolName;
+            String invocationType = classifyInvocationForAudit(tool, skillContext);
+            String skillJson = skillContext.activeSkillCode() == null
+                    ? "null"
+                    : ("\"" + escapeJson(skillContext.activeSkillCode()) + "\"");
+            String detail = String.format(Locale.ROOT,
+                    "{\"timestamp\":\"%s\",\"agent_id\":\"%s\",\"skill_id\":%s,\"session_id\":\"%s\",\"user_id\":\"%s\","
+                            + "\"tool\":\"%s\",\"invocation_type\":\"%s\",\"policy\":\"runtime_tool_allowlist_v2\",\"decision\":\"allowed\"}",
+                    Instant.now(),
+                    escapeJson(skillContext.agentId()),
+                    skillJson,
+                    escapeJson(sessionId),
+                    escapeJson(userId),
+                    escapeJson(tool),
+                    invocationType);
+            String clipped = detail.length() > 1900 ? detail.substring(0, 1900) + "…" : detail;
+            auditService.log(orgId, userId, "TOOL_INVOCATION", clipped);
+        } catch (RuntimeException ignored) {
+            // chat path must not fail on audit persistence
+        }
+    }
+
+    private static String escapeJson(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        return raw.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static String classifyInvocationForAudit(String canonicalTool, ResolvedSkillContext ctx) {
+        if ("memory_remember".equals(canonicalTool) || "memory_forget".equals(canonicalTool)) {
+            return "memory_builtin";
+        }
+        LinkedHashSet<String> direct = new LinkedHashSet<>(ToolNameNormalizer.canonicalizeAll(ctx.agentDirectToolNames()));
+        if (direct.contains(canonicalTool)) {
+            return "agent_direct";
+        }
+        return "skill_scoped";
     }
 
     // ── Helpers ──

@@ -61,25 +61,30 @@ public class AgentCapabilityResolverService {
                 .toList();
 
         List<SkillDefinitionEntity> selectedSkills = loadSelectedSkills(orgId, normalizedAgentId, explicitSkillRefs);
-        List<String> effectiveSkillCodes = selectedSkills.stream().map(SkillDefinitionEntity::getSkillCode).toList();
-        List<String> skillToolUnion = selectedSkills.stream()
+        List<SkillDefinitionEntity> runtimeSkills = selectedSkills.stream()
+                .filter(skill -> !skill.isPlatformCorePolicyCandidate())
+                .toList();
+        List<String> effectiveSkillCodes = runtimeSkills.stream().map(SkillDefinitionEntity::getSkillCode).toList();
+        List<String> skillToolUnion = runtimeSkills.stream()
                 .flatMap(skill -> splitCsv(skill.getToolWhitelist()).stream())
                 .distinct()
                 .toList();
         List<String> normalizedAgentToolBoundary = ToolNameNormalizer.canonicalizeAll(agentToolBoundary);
         List<String> normalizedSkillToolUnion = ToolNameNormalizer.canonicalizeAll(skillToolUnion);
-        List<Long> skillKbUnion = selectedSkills.stream()
+        LinkedHashSet<String> skillScopedToolOnly = new LinkedHashSet<>(normalizedSkillToolUnion);
+        skillScopedToolOnly.removeAll(new LinkedHashSet<>(normalizedAgentToolBoundary));
+        List<Long> skillKbUnion = runtimeSkills.stream()
                 .flatMap(skill -> splitLongCsv(skill.getKbWhitelist()).stream())
                 .distinct()
                 .toList();
-        List<String> effectiveToolNames = mergeBoundary(normalizedAgentToolBoundary, normalizedSkillToolUnion);
+        List<String> effectiveToolNames = mergeToolUnion(normalizedAgentToolBoundary, normalizedSkillToolUnion);
         List<Long> effectiveKnowledgeBaseIds = mergeBoundaryLong(agentKbBoundary, skillKbUnion);
 
         List<String> effectiveHandoffRules = new ArrayList<>();
         agentDefinition.map(AgentDefinitionEntity::getHandoffRule)
                 .filter(item -> item != null && !item.isBlank())
                 .ifPresent(effectiveHandoffRules::add);
-        selectedSkills.stream()
+        runtimeSkills.stream()
                 .map(SkillDefinitionEntity::getHandoffRule)
                 .filter(item -> item != null && !item.isBlank())
                 .forEach(item -> {
@@ -88,21 +93,16 @@ public class AgentCapabilityResolverService {
                     }
                 });
 
-        String outputContract = selectedSkills.stream()
+        String outputContract = runtimeSkills.stream()
                 .map(SkillDefinitionEntity::getOutputContract)
                 .filter(item -> item != null && !item.isBlank())
                 .findFirst()
                 .orElse(null);
 
         List<String> warnings = new ArrayList<>();
-        if (!normalizedAgentToolBoundary.isEmpty() && !normalizedSkillToolUnion.isEmpty()) {
-            LinkedHashSet<String> toolInter = new LinkedHashSet<>(normalizedAgentToolBoundary);
-            toolInter.retainAll(normalizedSkillToolUnion);
-            if (toolInter.isEmpty()) {
-                warnings.add("Agent.toolIds 与 Skill.toolWhitelist 无交集，运行时工具边界已严格收敛为空；请在两侧补充同名工具后重试。");
-            } else if (effectiveToolNames.size() < normalizedAgentToolBoundary.size()) {
-                warnings.add("Agent.toolIds 与 Skill.toolWhitelist 存在重叠，已按交集收敛。");
-            }
+        if (!skillScopedToolOnly.isEmpty()) {
+            warnings.add("部分工具仅来自已绑定 Skill 的 toolWhitelist（未出现在 Agent 直接绑定中）；运行时与 Agent 直接工具合并为并集。"
+                    + "Skill 独有工具不会自动写入 Agent 静态 toolIds，仅在运行时与该 Skill 一并生效。");
         }
         if (!agentKbBoundary.isEmpty() && !skillKbUnion.isEmpty()) {
             LinkedHashSet<Long> kbInter = new LinkedHashSet<>(agentKbBoundary);
@@ -123,7 +123,10 @@ public class AgentCapabilityResolverService {
                 outputContract,
                 warnings,
                 agentDefinition.map(AgentDefinitionEntity::getSystemPrompt).orElse(null),
-                agentDefinition.map(AgentDefinitionEntity::getModel).orElse(null)
+                agentDefinition.map(AgentDefinitionEntity::getModel).orElse(null),
+                List.copyOf(normalizedAgentToolBoundary),
+                List.copyOf(normalizedSkillToolUnion),
+                List.copyOf(skillScopedToolOnly)
         );
     }
 
@@ -192,25 +195,22 @@ public class AgentCapabilityResolverService {
         return result;
     }
 
-    private List<String> mergeBoundary(List<String> agentBoundary, List<String> skillBoundary) {
-        LinkedHashSet<String> agent = new LinkedHashSet<>(agentBoundary == null ? List.of() : agentBoundary);
-        LinkedHashSet<String> skill = new LinkedHashSet<>(skillBoundary == null ? List.of() : skillBoundary);
-        if (!agent.isEmpty() && !skill.isEmpty()) {
-            LinkedHashSet<String> intersection = new LinkedHashSet<>(agent);
-            intersection.retainAll(skill);
-            LinkedHashSet<String> merged = intersection;
-            if (ToolNameNormalizer.containsMcpWildcard(agentBoundary) || ToolNameNormalizer.containsMcpWildcard(skillBoundary)) {
-                merged.add(ToolNameNormalizer.MCP_WORKFLOW_WILDCARD);
-            }
-            return List.copyOf(merged);
+    /**
+     * Agent 直接绑定工具与已选 Skill 声明工具的并集（运行时可用工具面），符合 agent/skill/tool 权限模型：
+     * Skill 依赖工具不提升为 Agent 静态全局权限，但在会话运行时与 Agent 直接工具合并。
+     */
+    private List<String> mergeToolUnion(List<String> agentBoundary, List<String> skillBoundary) {
+        LinkedHashSet<String> merged = new LinkedHashSet<>();
+        if (agentBoundary != null) {
+            merged.addAll(agentBoundary);
         }
-        if (!agent.isEmpty()) {
-            return List.copyOf(agent);
+        if (skillBoundary != null) {
+            merged.addAll(skillBoundary);
         }
-        if (!skill.isEmpty()) {
-            return List.copyOf(skill);
+        if (ToolNameNormalizer.containsMcpWildcard(agentBoundary) || ToolNameNormalizer.containsMcpWildcard(skillBoundary)) {
+            merged.add(ToolNameNormalizer.MCP_WORKFLOW_WILDCARD);
         }
-        return List.of();
+        return List.copyOf(merged);
     }
 
     private List<Long> mergeBoundaryLong(List<Long> agentBoundary, List<Long> skillBoundary) {
@@ -244,7 +244,13 @@ public class AgentCapabilityResolverService {
             String outputContract,
             List<String> warnings,
             String agentSystemPrompt,
-            String agentModel
+            String agentModel,
+            /** Tools bound directly on the agent (allowed_tools). */
+            List<String> agentDirectToolNames,
+            /** Union of toolWhitelist from selected skills (required + optional). */
+            List<String> skillDeclaredToolNames,
+            /** Tools declared only on skills, not in agent direct bindings (for audit/UI). */
+            List<String> skillScopedToolNames
     ) {
     }
 }

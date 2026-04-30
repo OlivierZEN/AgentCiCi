@@ -2,9 +2,9 @@ spring:
   application:
     name: cc-cici-assistant-backend
   datasource:
-    url: jdbc:h2:mem:cici;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
+    url: jdbc:postgresql://localhost:5432/cici_assistant
+    username: cici
+    password: cici123
   jpa:
     hibernate:
       ddl-auto: validate
@@ -14,6 +14,7 @@ spring:
     open-in-view: false
   flyway:
     enabled: true
+    baseline-on-migrate: true
   rabbitmq:
     host: localhost
     port: 5672
@@ -33,10 +34,17 @@ app:
   auth:
     jwt-secret: "change-me-in-prod-change-me-in-prod-2026"
     jwt-expiration-seconds: 7200
-    # Demo org-admin mobiles for local/H2 and README examples; override in prod (e.g. APP_AUTH_BOOTSTRAP_ADMIN_MOBILES).
+    # Demo org-admin mobiles for local and README examples; override in prod (e.g. APP_AUTH_BOOTSTRAP_ADMIN_MOBILES).
     bootstrap-admin-mobiles: "13800138111,13900009999"
+    platform-admin-mobiles: "13800138111"
+    platform-operator-mobiles: ""
+    platform-support-mobiles: ""
+    platform-billing-mobiles: ""
+    platform-auditor-mobiles: ""
     sms:
       store: memory
+      # When false, send-window and per-day SMS caps are skipped (useful for integration tests).
+      rate-limit-enabled: true
   kb:
     indexing:
       mode: local

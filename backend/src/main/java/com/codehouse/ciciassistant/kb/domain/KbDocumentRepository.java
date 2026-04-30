@@ -8,7 +8,15 @@ public interface KbDocumentRepository extends JpaRepository<KbDocumentEntity, Lo
 
     List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(String orgId, Long knowledgeBaseId);
 
+    List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(String orgId, Long knowledgeBaseId, String status);
+
+    List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, Long knowledgeBaseId, String status);
+
     Optional<KbDocumentEntity> findByIdAndOrgId(Long id, String orgId);
+
+    long countByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, Long knowledgeBaseId, String status);
+
+    long countByOrgIdAndKnowledgeBaseIdAndStatus(String orgId, Long knowledgeBaseId, String status);
 
     void deleteByIdAndOrgId(Long id, String orgId);
 }

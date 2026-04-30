@@ -37,7 +37,7 @@ public class AgentSkillBindingService {
         List<AgentSkillBindingView> result = new ArrayList<>();
         for (AgentSkillBindingEntity binding : bindings) {
             SkillDefinitionEntity skill = skillById.get(binding.getSkillId());
-            if (skill == null) {
+            if (skill == null || !skill.isVisibleToTenant()) {
                 continue;
             }
             result.add(new AgentSkillBindingView(
@@ -60,15 +60,22 @@ public class AgentSkillBindingService {
     @Transactional
     public List<AgentSkillBindingView> replaceBindings(String orgId, String agentId, List<ReplaceBindingInput> inputs) {
         String normalizedAgentId = normalizeAgentId(agentId);
+        List<AgentSkillBindingEntity> existing = agentSkillBindingRepository
+                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId);
+        Map<Long, SkillDefinitionEntity> existingSkills = new LinkedHashMap<>();
+        for (AgentSkillBindingEntity item : existing) {
+            existingSkills.computeIfAbsent(
+                    item.getSkillId(),
+                    id -> skillDefinitionRepository.findByIdAndOrgId(id, orgId).orElse(null)
+            );
+        }
         agentSkillBindingRepository.deleteByOrgIdAndAgentId(orgId, normalizedAgentId);
         agentSkillBindingRepository.flush();
-        if (inputs == null || inputs.isEmpty()) {
-            return List.of();
-        }
         Map<Long, SkillDefinitionEntity> skillById = new LinkedHashMap<>();
         List<AgentSkillBindingEntity> entities = new ArrayList<>();
+        List<Long> selectedSkillIds = new ArrayList<>();
         int fallbackPriority = 10;
-        for (ReplaceBindingInput input : inputs) {
+        for (ReplaceBindingInput input : inputs == null ? List.<ReplaceBindingInput>of() : inputs) {
             Long skillId = resolveSkillId(orgId, input);
             SkillDefinitionEntity skill = skillById.computeIfAbsent(
                     skillId,
@@ -78,6 +85,10 @@ public class AgentSkillBindingService {
             if (!skill.isEnabled()) {
                 throw new IllegalArgumentException("skill is disabled: " + skill.getSkillCode());
             }
+            if (!skill.isVisibleToTenant() || skill.isInternalOnly()) {
+                throw new IllegalArgumentException("skill is platform managed and cannot be bound manually");
+            }
+            selectedSkillIds.add(skillId);
             entities.add(new AgentSkillBindingEntity(
                     orgId,
                     normalizedAgentId,
@@ -88,6 +99,29 @@ public class AgentSkillBindingService {
                     input.enabled() == null || input.enabled()
             ));
             fallbackPriority += 10;
+        }
+        for (AgentSkillBindingEntity binding : existing) {
+            SkillDefinitionEntity skill = existingSkills.get(binding.getSkillId());
+            if (skill == null) {
+                continue;
+            }
+            if (!skill.isVisibleToTenant() || skill.isMandatoryBinding() || skill.isInternalOnly()) {
+                if (selectedSkillIds.contains(binding.getSkillId())) {
+                    continue;
+                }
+                entities.add(new AgentSkillBindingEntity(
+                        orgId,
+                        normalizedAgentId,
+                        binding.getSkillId(),
+                        binding.getActivationMode(),
+                        binding.getActivationCondition(),
+                        binding.getPriority(),
+                        binding.isEnabled()
+                ));
+            }
+        }
+        if (entities.isEmpty()) {
+            return List.of();
         }
         agentSkillBindingRepository.saveAll(entities);
         return listBindings(orgId, normalizedAgentId);

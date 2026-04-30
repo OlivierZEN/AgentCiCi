@@ -1,6 +1,25 @@
 # Merge with main application.yml: keep jwt + test-only admin mobiles for integration tests.
+spring:
+  datasource:
+    url: jdbc:h2:mem:cici_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
 app:
   auth:
     jwt-secret: "change-me-in-prod-change-me-in-prod-2026"
     jwt-expiration-seconds: 7200
     bootstrap-admin-mobiles: "13800138111,13800138000,13800138001,13800138002,13800138003,13800138188,13800138006"
+    platform-admin-mobiles: "13800138111"
+    platform-operator-mobiles: ""
+    platform-support-mobiles: ""
+    platform-billing-mobiles: ""
+    platform-auditor-mobiles: ""
+    sms:
+      # Integration tests call /auth/sms/send many times per JVM; disable send-window / daily caps in test.
+      rate-limit-enabled: false

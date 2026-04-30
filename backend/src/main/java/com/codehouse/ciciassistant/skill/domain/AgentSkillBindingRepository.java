@@ -9,5 +9,7 @@ public interface AgentSkillBindingRepository extends JpaRepository<AgentSkillBin
 
     List<AgentSkillBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String orgId, String agentId);
 
+    List<AgentSkillBindingEntity> findByOrgIdAndSkillIdInAndEnabledTrue(String orgId, List<Long> skillIds);
+
     void deleteByOrgIdAndAgentId(String orgId, String agentId);
 }
