@@ -69,7 +69,7 @@ export default function AdminShell() {
     <div className="admin-layout">
       <aside className="admin-nav">
         <p className="brand admin-brand">
-          CONSOLE / 运维
+          控制台 / 运维
         </p>
         <p className="subtle">组织：{auth.orgId}</p>
         <div className="admin-current-user">
@@ -92,7 +92,7 @@ export default function AdminShell() {
             技能
           </NavLink>
           <NavLink to="/admin/agent-builder" className={({ isActive }) => (isActive ? "active" : "")}>
-            Agent 构建
+            智能体构建
           </NavLink>
           <NavLink to="/admin/integrations" className={({ isActive }) => (isActive ? "active" : "")}>
             集成应用

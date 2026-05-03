@@ -89,6 +89,24 @@ public class SkillDefinitionEntity {
     @Column(name = "latest_draft_version_id")
     private Long latestDraftVersionId;
 
+    @Column(name = "lifecycle_status", length = 32)
+    private String lifecycleStatus;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
+    @Column(name = "deleted_by", length = 128)
+    private String deletedBy;
+
+    @Column(name = "delete_reason", columnDefinition = "TEXT")
+    private String deleteReason;
+
+    @Column(name = "last_published_at")
+    private Instant lastPublishedAt;
+
+    @Column(name = "last_published_by", length = 128)
+    private String lastPublishedBy;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -138,6 +156,7 @@ public class SkillDefinitionEntity {
         this.updatePolicy = updatePolicy;
         this.templateCode = templateCode;
         this.baseTemplateVersion = baseTemplateVersion;
+        this.lifecycleStatus = "DRAFT";
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -234,6 +253,30 @@ public class SkillDefinitionEntity {
         return latestDraftVersionId;
     }
 
+    public String getLifecycleStatus() {
+        return lifecycleStatus == null ? (enabled ? "DRAFT" : "DISABLED") : lifecycleStatus;
+    }
+
+    public Instant getDeletedAt() {
+        return deletedAt;
+    }
+
+    public String getDeletedBy() {
+        return deletedBy;
+    }
+
+    public String getDeleteReason() {
+        return deleteReason;
+    }
+
+    public Instant getLastPublishedAt() {
+        return lastPublishedAt;
+    }
+
+    public String getLastPublishedBy() {
+        return lastPublishedBy;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -266,7 +309,7 @@ public class SkillDefinitionEntity {
     }
 
     public boolean isVisibleToTenant() {
-        return visibility == SkillVisibility.VISIBLE;
+        return visibility == SkillVisibility.VISIBLE && !"DELETED".equals(getLifecycleStatus());
     }
 
     public boolean isTenantEditable() {
@@ -278,7 +321,7 @@ public class SkillDefinitionEntity {
     }
 
     public boolean isTenantDeletable() {
-        return sourceType == SkillSourceType.TENANT_DERIVED || sourceType == SkillSourceType.TENANT_CUSTOM;
+        return sourceType == SkillSourceType.TENANT_CUSTOM && editPolicy == SkillEditPolicy.EDITABLE;
     }
 
     public boolean isInternalOnly() {
@@ -297,6 +340,9 @@ public class SkillDefinitionEntity {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+        if (!"DELETED".equals(getLifecycleStatus())) {
+            this.lifecycleStatus = enabled ? fallbackLifecycleStatus() : "DISABLED";
+        }
         this.updatedAt = Instant.now();
     }
 
@@ -307,7 +353,49 @@ public class SkillDefinitionEntity {
 
     public void setCurrentPublishedVersionId(Long currentPublishedVersionId) {
         this.currentPublishedVersionId = currentPublishedVersionId;
+        this.lifecycleStatus = "PUBLISHED";
+        this.lastPublishedAt = Instant.now();
         this.updatedAt = Instant.now();
+    }
+
+    public void markPublished(Long currentPublishedVersionId, String publishedBy) {
+        this.currentPublishedVersionId = currentPublishedVersionId;
+        this.lifecycleStatus = "PUBLISHED";
+        this.lastPublishedAt = Instant.now();
+        this.lastPublishedBy = publishedBy;
+        this.updatedAt = Instant.now();
+    }
+
+    public void markDraft(Long latestDraftVersionId) {
+        this.latestDraftVersionId = latestDraftVersionId;
+        if (!"DELETED".equals(getLifecycleStatus()) && currentPublishedVersionId == null) {
+            this.lifecycleStatus = "DRAFT";
+        }
+        this.updatedAt = Instant.now();
+    }
+
+    public void markDeleted(String deletedBy, String reason) {
+        this.enabled = false;
+        this.visibility = SkillVisibility.HIDDEN;
+        this.lifecycleStatus = "DELETED";
+        this.deletedAt = Instant.now();
+        this.deletedBy = deletedBy;
+        this.deleteReason = reason;
+        archiveDeletedSkillCode();
+        this.updatedAt = Instant.now();
+    }
+
+    public void archiveDeletedSkillCode() {
+        if (!"DELETED".equals(getLifecycleStatus()) || id == null) {
+            return;
+        }
+        String suffix = "__deleted_" + id;
+        if (skillCode != null && skillCode.endsWith(suffix)) {
+            return;
+        }
+        String base = skillCode == null || skillCode.isBlank() ? "skill" : skillCode;
+        int maxBaseLength = Math.max(1, 64 - suffix.length());
+        this.skillCode = base.substring(0, Math.min(base.length(), maxBaseLength)) + suffix;
     }
 
     public void setVisibility(SkillVisibility visibility) {
@@ -323,5 +411,9 @@ public class SkillDefinitionEntity {
     public void setUpdatePolicy(SkillUpdatePolicy updatePolicy) {
         this.updatePolicy = updatePolicy;
         this.updatedAt = Instant.now();
+    }
+
+    private String fallbackLifecycleStatus() {
+        return currentPublishedVersionId == null ? "DRAFT" : "PUBLISHED";
     }
 }

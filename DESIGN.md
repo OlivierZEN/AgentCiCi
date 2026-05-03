@@ -179,6 +179,14 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 - **Primary:** Solid bronze-gold fill with warm white text, medium weight, compact horizontal padding
 - **Hover / Focus:** Darker bronze on hover, visible warm-gold focus ring, no flashy gradient
 - **Secondary / Ghost:** White or tinted neutral background with line border and dark text
+- **Default discipline:** Buttons on product pages must use the shared primary / secondary / danger vocabulary. Do not let page-local buttons fall back to legacy blue, teal, black, gradient, or unscoped global button styles.
+- **Dialog actions:** Modal footers use secondary for cancel / close actions and primary gold for confirm / save actions. Both buttons must share height, radius, padding, weight, and hover / focus behavior.
+
+### Modals
+- **Default behavior:** Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless the feature spec explicitly says it should be a popover, drawer, toast, or inline disclosure.
+- **Structure:** Modal windows use a blocking overlay, `role="dialog"`, `aria-modal="true"`, a labelled heading, an opaque surface, and a fixed footer when actions are present.
+- **Visual language:** Modal surfaces inherit `鎏金账房`: warm ivory background, thin gold-tinted borders, compact density, ink typography, and restrained shadows. Close controls are quiet icon buttons, not bordered button blocks.
+- **Exception rule:** Non-modal popups require a task-specific reason and must be documented in the relevant spec or design note before implementation.
 
 ### Cards / Containers
 - **Corner Style:** Soft but not pill-like (`14px` to `18px`)
@@ -198,6 +206,33 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 ### Tables and Workspace Rows
 - **Style:** Fixed header feel, compact row padding, muted header strip, selected rows use champagne tint instead of saturated fill**
 
+### Admin CRUD Lists
+
+Admin list pages must be stable before they are decorative. Lists, filters, search fields, and row actions are repeated work surfaces, so they must not shift, stretch, or change component vocabulary when data, filters, focus, or hover state changes.
+
+**Layout and density rules:**
+- Keep list pages compact. Page title, toolbar, filters, and table should use content-height rows (`auto`) and `align-content: start`; do not let CSS grid distribute extra vertical space across controls.
+- Any full-width search or input in a toolbar must use `box-sizing: border-box`, `max-width: 100%`, and an explicit compact height. Focus rings must not change layout size.
+- Page, toolbar, table wrapper, and table elements must use `min-width: 0` inside grid or flex parents so child content cannot widen the whole page.
+- Empty states must not create oversized blank panels unless the page intentionally needs a full empty-state composition. CRUD tables should keep the same compact table frame with a concise empty row or note.
+
+**Table implementation rules:**
+- Never apply `display: flex`, `display: grid`, `display: block`, or `display: -webkit-box` directly to real `table`, `thead`, `tbody`, `tr`, `th`, or `td` elements. This breaks column alignment.
+- If a cell needs clamping, wrapping, chips, or flex actions, put an inner element inside the `td` and style that inner element.
+- Use `table-layout: fixed` plus an explicit `colgroup` or equivalent column contract for dense admin tables. Long text should truncate or wrap inside the cell, not widen the table.
+- Avoid horizontal scroll in normal admin CRUD tables. If a route truly needs horizontal scroll, document it in the feature spec and keep it local to that table.
+
+**Toolbar buttons and filters:**
+- Buttons in the same toolbar must share the same component family, height, border radius, padding, font weight, and hover/focus behavior. Do not mix button classes from compose pages, modal footers, and list pages in one toolbar.
+- Secondary toolbar buttons on admin lists use warm white surfaces, gold-tinted borders, ink or bronze text, and restrained hover. Gold fill is reserved for high-value primary actions, not every list action.
+- Filter categories that only switch list scope should look like text tabs, not large pill buttons. Active state should use the gold family (`#876223` text with `#b99652` underline) on `鎏金账房` pages. Do not use teal or green active states in gold-led admin surfaces unless the state is explicitly semantic success.
+
+**Row action rules:**
+- Do not show multiple row action buttons permanently in dense tables. Use a hover/focus "more" trigger for secondary row actions when the actions are not the main task of the page.
+- Row action menus must be opaque, use the same menu-item styling for links and buttons, and avoid button chrome inside the menu. Dangerous actions may use danger text and hover background, but should still align with normal menu item sizing.
+- Do not expose actions that violate the page's responsibility. For example, if publishing must happen in an editor or governance flow, do not add publish buttons to a list page.
+- Standard or read-only rows should not show edit/view affordances if the product decision is that users cannot inspect or change them from that surface.
+
 ## Do's and Don'ts
 
 ### Do:
@@ -207,6 +242,7 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 - **Do** align numbers and timestamps for fast scanning.
 - **Do** keep success and error feedback inline, quiet, and close to the action that triggered it.
 - **Do** preserve standard enterprise patterns for side navigation, data tables, and form layouts.
+- **Do** protect list pages against layout shifts caused by filtering, searching, empty results, long text, focus rings, hover menus, or conditional actions.
 
 ### Don't:
 - **Don't** use decorative gradients, dark-mode hero backgrounds, or glassmorphism in authenticated product surfaces.
@@ -215,3 +251,4 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 - **Don't** use heavy saturated fills for inactive states.
 - **Don't** make cards oversized or airy enough to reduce operational density.
 - **Don't** ship controls that look different from page to page without a functional reason.
+- **Don't** style table cells themselves as flex/grid/clamped boxes, and don't allow a search field or empty result state to stretch the page.

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   streamAiChat,
@@ -8,11 +8,20 @@ import {
   type StreamPhaseEvent,
 } from "../chat/streamChat";
 import { BootLoginConversationDemo, BootLoginDataStream } from "../components/BootLoginEffects";
+import AvatarView from "../components/AvatarView";
 import ChatMarkdown from "../components/ChatMarkdown";
 import { LS_ASSISTANT_TOKEN } from "../constants";
+import { getDisplayInitial } from "../shared/avatar";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
+import {
+  appendAssistantDelta,
+  markTrailingAssistantModel,
+  preserveAssistantModelNames,
+  replaceTrailingAssistant,
+  shouldKeepLocalStreamingMessages,
+} from "./chatMessageState";
 import {
   buildWorkbenchSessionId,
   createWorkbenchSessionId,
@@ -22,9 +31,10 @@ import {
 const LS_LOGIN_MODE = "cici_login_mode";
 
 type AuthPayload = { token: string; orgId: string; userId: string; roles: string[] };
-type ChatBubble = { role: "user" | "assistant"; content: string; time?: string };
+type ChatBubble = { role: "user" | "assistant"; content: string; time?: string; modelName?: string };
 type KnowledgeBase = { id: number; name: string; description: string; status: string };
 type MeProfile = { nickname?: string; mobile?: string; avatarBase64?: string };
+type CurrentUserUpdatedDetail = { userId?: string; mobile?: string; nickname?: string; avatarBase64?: string };
 type LoginMode = "agent" | "human";
 type WorkbenchStateStatus = "处理中" | "检索中" | "等待确认" | "已完成" | "待命中";
 
@@ -32,6 +42,7 @@ type AgentWorkspace = {
   id: string;
   name: string;
   avatar: string;
+  avatarBase64?: string;
   category: "system" | "published";
   status: string;
   subtitle: string;
@@ -85,6 +96,7 @@ type WorkbenchDockAgent = {
   name: string;
   label: string;
   short: string;
+  avatarBase64?: string;
   color: string;
   stateMachine: WorkbenchStateMachine;
   messages: ChatBubble[];
@@ -101,6 +113,7 @@ type WorkbenchStateMachine = {
 type PublishedAgentPayload = {
   agentId: string;
   name: string;
+  avatarBase64?: string | null;
   summary?: string | null;
   greeting?: string | null;
   builtin?: boolean;
@@ -146,14 +159,22 @@ const DOCK_AGENT_COLORS = [
 
 function toWorkbenchDockAgent(agent: PublishedAgentPayload, colorIndex: number): WorkbenchDockAgent {
   const preset = WORKBENCH_DOCK_AGENTS.find((a) => a.key === agent.agentId);
-  if (preset) return preset;
-  const short = (agent.name ?? "A").slice(0, 1);
+  if (preset) {
+    return {
+      ...preset,
+      avatarBase64: (agent.avatarBase64 ?? preset.avatarBase64 ?? "").trim(),
+      stateMachine: { ...preset.stateMachine, thoughts: [...preset.stateMachine.thoughts] },
+      messages: preset.messages.map((item) => ({ ...item })),
+    };
+  }
+  const short = getDisplayInitial(agent.name ?? "A", "A").slice(0, 1);
   return {
     key: agent.agentId,
     runtimeAgentId: agent.agentId,
     name: agent.name ?? agent.agentId,
     label: agent.name ?? agent.agentId,
     short,
+    avatarBase64: agent.avatarBase64 ?? "",
     color: DOCK_AGENT_COLORS[colorIndex % DOCK_AGENT_COLORS.length],
     stateMachine: {
       status: "待命中",
@@ -269,7 +290,13 @@ function normalizeConversationMessages(payloads: ConversationMessagePayload[]): 
     .filter((item) => item.content);
 }
 
-function createDraftConversationThread(sessionId: string, agentId: string, participantName: string, title = "新对话"): ConversationThread {
+function createDraftConversationThread(
+  sessionId: string,
+  agentId: string,
+  participantName: string,
+  title = "新对话",
+  avatarUrl = "",
+): ConversationThread {
   const nowIso = new Date().toISOString();
   return {
     id: sessionId,
@@ -284,7 +311,7 @@ function createDraftConversationThread(sessionId: string, agentId: string, parti
     unread: 0,
     owner: "CiCi",
     summary: "新建会话，等待首条消息。",
-    avatarUrl: "",
+    avatarUrl,
   };
 }
 
@@ -474,9 +501,13 @@ function WorkbenchAgentBar({
                 className={`cici-workbench__agent-chip${isActive ? " is-active" : ""}`}
                 onClick={() => onSelect(agent.key)}
               >
-                <span className="cici-workbench__agent-avatar" style={{ background: agent.color }}>
-                  {agent.short}
-                </span>
+                <AvatarView
+                  src={agent.avatarBase64}
+                  fallback={agent.short}
+                  className="cici-workbench__agent-avatar"
+                  style={{ background: agent.color }}
+                  alt={`${agent.name} 头像`}
+                />
                 <span className="cici-workbench__agent-label">{agent.label}</span>
               </button>
             );
@@ -498,9 +529,13 @@ function WorkbenchStateCard({
 }) {
   return (
     <section className="cici-workbench__top-activity cici-workbench__top-activity--sidebar">
-      <div className="cici-workbench__top-activity-icon" style={{ background: agent.color }}>
-        {agent.short}
-      </div>
+      <AvatarView
+        src={agent.avatarBase64}
+        fallback={agent.short}
+        className="cici-workbench__top-activity-icon"
+        style={{ background: agent.color }}
+        alt={`${agent.name} 状态头像`}
+      />
       <div className="cici-workbench__top-activity-machine">
         <div className="cici-workbench__machine-head">
           <strong>{agent.name}</strong>
@@ -791,6 +826,7 @@ export default function AssistantApp() {
   const [kbs, setKbs] = useState<KnowledgeBase[]>([]);
   const [selectedKbIds, setSelectedKbIds] = useState<number[]>([]);
   const [conversationThreads, setConversationThreads] = useState<ConversationThread[]>([]);
+  const [agentWorkspaces, setAgentWorkspaces] = useState<AgentWorkspace[]>(AGENT_WORKSPACES);
   const [activeAgentId, setActiveAgentId] = useState(AGENT_WORKSPACES[0].id);
   const [activeWorkbenchKey, setActiveWorkbenchKey] = useState(WORKBENCH_DOCK_AGENTS[0].key);
   const [activeConversationId, setActiveConversationId] = useState("");
@@ -812,6 +848,7 @@ export default function AssistantApp() {
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const chatStreamRef = useRef<HTMLDivElement | null>(null);
   const plusMenuRef = useRef<HTMLDivElement | null>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
   const workspaceTabRef = useRef<"chat" | "workbench" | "monitor" | "customers" | "crm">("workbench");
@@ -824,6 +861,14 @@ export default function AssistantApp() {
       localStorage.removeItem(LS_ASSISTANT_TOKEN);
     }
     setAuth(payload);
+  };
+
+  const attachComposerTextareaRef = (element: HTMLTextAreaElement | null) => {
+    composerInputRef.current = element;
+  };
+
+  const attachComposerTextInputRef = (element: HTMLInputElement | null) => {
+    composerInputRef.current = element;
   };
 
   const loadMe = async (tokenOverride?: string) => {
@@ -867,13 +912,55 @@ export default function AssistantApp() {
       const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
 
       const nextDockAgents = visible.map((a, i) => {
-        const dockAgent = toWorkbenchDockAgent(a, i);
-        // Sync real name and greeting from API
-        dockAgent.name = a.name ?? dockAgent.name;
-        dockAgent.label = a.name ?? dockAgent.label;
-        return dockAgent;
+        const base = toWorkbenchDockAgent(a, i);
+        return {
+          ...base,
+          name: a.name ?? base.name,
+          label: a.name ?? base.label,
+          avatarBase64: (a.avatarBase64 ?? "").trim(),
+          stateMachine: { ...base.stateMachine, thoughts: [...base.stateMachine.thoughts] },
+          messages: base.messages.map((item) => ({ ...item })),
+        };
       });
       setWorkbenchDockAgents(nextDockAgents);
+      setAgentWorkspaces((prev) => {
+        const next = prev.map((workspace) => {
+          const matched = visible.find((item) => item.agentId === workspace.id);
+          if (!matched) return workspace;
+          const nextName = matched.name?.trim() || workspace.name;
+          const avatarBase64 = (matched.avatarBase64 ?? "").trim();
+          return {
+            ...workspace,
+            name: nextName,
+            avatar: getDisplayInitial(nextName, workspace.avatar),
+            avatarBase64,
+            description: matched.summary?.trim() || workspace.description,
+          };
+        });
+
+        for (const item of visible) {
+          if (next.some((workspace) => workspace.id === item.agentId)) {
+            continue;
+          }
+          const name = item.name?.trim() || item.agentId;
+          next.push({
+            id: item.agentId,
+            name,
+            avatar: getDisplayInitial(name, "A"),
+            avatarBase64: (item.avatarBase64 ?? "").trim(),
+            category: item.builtin ? "system" : "published",
+            status: item.publishedVersionId != null ? "已发布" : (item.builtin ? "系统内置" : "待发布"),
+            subtitle: item.builtin ? "系统智能体" : "自定义智能体",
+            description: item.summary?.trim() || "由组织管理员配置的智能体。",
+            channels: ["web"],
+            knowledgeMode: "按智能体配置",
+            accent: "#5b7ff4",
+            pinned: item.builtin === true,
+          });
+        }
+        return next;
+      });
+      setActiveAgentId((current) => (visible.some((item) => item.agentId === current) ? current : (visible[0]?.agentId ?? current)));
 
       // Populate initial greeting messages from agent settings (only if chat is still empty)
       setWorkbenchMessagesByAgent((prev) => {
@@ -1006,7 +1093,13 @@ export default function AssistantApp() {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       if (response.status === 404) {
-        setConversationMessages((prev) => ({ ...prev, [conversationId]: [] }));
+        setConversationMessages((prev) => {
+          const existing = prev[conversationId] ?? [];
+          if (shouldKeepLocalStreamingMessages(existing, [])) {
+            return prev;
+          }
+          return { ...prev, [conversationId]: [] };
+        });
         return;
       }
       const { body } = await safeFetchJson<ConversationMessagePayload[]>(response);
@@ -1014,10 +1107,14 @@ export default function AssistantApp() {
         setConversationListNotice(body?.message ?? "加载会话消息失败");
         return;
       }
-      setConversationMessages((prev) => ({
-        ...prev,
-        [conversationId]: normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]),
-      }));
+      const normalized = normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]);
+      setConversationMessages((prev) => {
+        const existing = prev[conversationId] ?? [];
+        if (shouldKeepLocalStreamingMessages(existing, normalized)) {
+          return prev;
+        }
+        return { ...prev, [conversationId]: preserveAssistantModelNames(existing, normalized) };
+      });
     } catch {
       setConversationListNotice("加载会话消息失败");
     } finally {
@@ -1041,8 +1138,20 @@ export default function AssistantApp() {
         headers: { Authorization: `Bearer ${auth.token}` },
       });
       if (response.status === 404) {
-        setConversationMessages((prev) => ({ ...prev, [sessionId]: [] }));
-        setWorkbenchMessagesByAgent((prev) => ({ ...prev, [agentKey]: [] }));
+        setConversationMessages((prev) => {
+          const existing = prev[sessionId] ?? [];
+          if (shouldKeepLocalStreamingMessages(existing, [])) {
+            return prev;
+          }
+          return { ...prev, [sessionId]: [] };
+        });
+        setWorkbenchMessagesByAgent((prev) => {
+          const existing = prev[agentKey] ?? [];
+          if (shouldKeepLocalStreamingMessages(existing, [])) {
+            return prev;
+          }
+          return { ...prev, [agentKey]: [] };
+        });
         return;
       }
       const { body } = await safeFetchJson<ConversationMessagePayload[]>(response);
@@ -1050,16 +1159,21 @@ export default function AssistantApp() {
         return;
       }
       const normalized = normalizeConversationMessages((body.data ?? []) as ConversationMessagePayload[]);
-      setConversationMessages((prev) => ({ ...prev, [sessionId]: normalized }));
-      setWorkbenchMessagesByAgent((prev) => {
-        const existing = prev[agentKey] ?? [];
-        const existingHasAssistant = existing.some((item) => item.role === "assistant" && item.content.trim());
-        const normalizedHasAssistant = normalized.some((item) => item.role === "assistant" && item.content.trim());
-        // If backend history currently lacks assistant content, keep richer local stream result.
-        if (existingHasAssistant && !normalizedHasAssistant) {
+      setConversationMessages((prev) => {
+        const existing = prev[sessionId] ?? [];
+        if (shouldKeepLocalStreamingMessages(existing, normalized)) {
           return prev;
         }
-        return { ...prev, [agentKey]: normalized };
+        return { ...prev, [sessionId]: preserveAssistantModelNames(existing, normalized) };
+      });
+      setWorkbenchMessagesByAgent((prev) => {
+        const existing = prev[agentKey] ?? [];
+        // The backend commits the user turn before the assistant turn. A history refresh
+        // during that window is older than the local streaming placeholder/partial text.
+        if (shouldKeepLocalStreamingMessages(existing, normalized)) {
+          return prev;
+        }
+        return { ...prev, [agentKey]: preserveAssistantModelNames(existing, normalized) };
       });
     } catch {
       // Keep optimistic UI messages if refresh fails.
@@ -1088,6 +1202,7 @@ export default function AssistantApp() {
       void loadWorkbenchAgents(auth.token);
       void loadWorkbenchStats(auth.token);
     } else {
+      setAgentWorkspaces(AGENT_WORKSPACES);
       setWorkbenchDockAgents(WORKBENCH_DOCK_AGENTS);
       setWorkbenchMetrics(WORKBENCH_METRICS_DEFAULT);
       setWorkbenchOverviewItems([]);
@@ -1099,6 +1214,22 @@ export default function AssistantApp() {
       void loadMe();
     }
   }, [auth?.token]);
+
+  useEffect(() => {
+    if (!auth) return;
+    const onCurrentUserUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<CurrentUserUpdatedDetail>).detail;
+      if (!detail || detail.userId !== auth.userId) return;
+      setMe((prev) => ({
+        ...(prev ?? {}),
+        mobile: detail.mobile ?? prev?.mobile,
+        nickname: detail.nickname ?? prev?.nickname,
+        avatarBase64: detail.avatarBase64 ?? prev?.avatarBase64,
+      }));
+    };
+    window.addEventListener("assistant-current-user-updated", onCurrentUserUpdated);
+    return () => window.removeEventListener("assistant-current-user-updated", onCurrentUserUpdated);
+  }, [auth]);
 
   useEffect(() => {
     if (auth) {
@@ -1204,8 +1335,8 @@ export default function AssistantApp() {
   }, [conversationThreads]);
 
   const activeAgent = useMemo(
-    () => AGENT_WORKSPACES.find((item) => item.id === activeAgentId) ?? AGENT_WORKSPACES[0],
-    [activeAgentId],
+    () => agentWorkspaces.find((item) => item.id === activeAgentId) ?? agentWorkspaces[0] ?? AGENT_WORKSPACES[0],
+    [activeAgentId, agentWorkspaces],
   );
 
   const availableThreads = useMemo(() => {
@@ -1274,7 +1405,7 @@ export default function AssistantApp() {
   );
   const visibleMessages = workspaceTab === "workbench" ? workbenchMessages : messages;
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
-  const userInitial = me?.nickname?.[0] || me?.mobile?.slice(-2) || "我";
+  const userInitial = getDisplayInitial(me?.nickname || me?.mobile || "我", "我");
   const agentUnread = (conversationsByAgent.get(activeAgent.id) ?? []).reduce((count, thread) => count + thread.unread, 0);
   const activeWorkbenchBusy = activeWorkbenchState.status !== "待命中" && activeWorkbenchState.status !== "已完成";
   const monitorRows = workbenchDockAgents.map((agent, index) => {
@@ -1290,6 +1421,7 @@ export default function AssistantApp() {
       key: agent.key,
       name: agent.name,
       short: agent.short,
+      avatarBase64: agent.avatarBase64,
       color: agent.color,
       status: runtime.status,
       currentTask: runtime.currentTask,
@@ -1336,7 +1468,7 @@ export default function AssistantApp() {
       setWorkbenchThoughtIndex((current) => current + 1);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [activeWorkbenchKey, activeWorkbenchSessionId, activeWorkbenchThoughts.length, auth?.token, workspaceTab]);
+  }, [activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab !== "monitor") {
@@ -1427,6 +1559,7 @@ export default function AssistantApp() {
       activeWorkbenchAgent.runtimeAgentId,
       me?.nickname ?? me?.mobile ?? "我",
       "新工作台对话",
+      me?.avatarBase64 ?? "",
     );
     setConversationThreads((prev) => [draft, ...prev.filter((item) => item.id !== sessionId)]);
     setConversationMessages((prev) => ({ ...prev, [sessionId]: [] }));
@@ -1536,6 +1669,8 @@ export default function AssistantApp() {
     const isWorkbench = workspaceTab === "workbench";
     const conversationId = activeConversation?.id ?? "workbench";
     const sessionId = isWorkbench ? activeWorkbenchSessionId : conversationId;
+    const userBubble: ChatBubble = { role: "user", content: cleanQuestion, time: timestamp };
+    const assistantPlaceholder: ChatBubble = { role: "assistant", content: "", time: timestamp };
     if (isWorkbench) {
       const agentKey = activeWorkbenchAgent.key;
       setConversationThreads((prev) =>
@@ -1557,18 +1692,14 @@ export default function AssistantApp() {
       }));
       setWorkbenchMessagesByAgent((prev) => ({
         ...prev,
-        [agentKey]: [
-          ...(prev[agentKey] ?? []),
-          { role: "user", content: cleanQuestion, time: timestamp },
-          { role: "assistant", content: "", time: timestamp },
-        ],
+        [agentKey]: [...(prev[agentKey] ?? []), userBubble, assistantPlaceholder],
+      }));
+      setConversationMessages((prev) => ({
+        ...prev,
+        [sessionId]: [...(prev[sessionId] ?? workbenchMessages), userBubble, assistantPlaceholder],
       }));
     } else {
-      updateConversationMessages(conversationId, (prev) => [
-        ...prev,
-        { role: "user", content: cleanQuestion, time: timestamp },
-        { role: "assistant", content: "", time: timestamp },
-      ]);
+      updateConversationMessages(conversationId, (prev) => [...prev, userBubble, assistantPlaceholder]);
     }
     setChatLoading(true);
 
@@ -1606,23 +1737,16 @@ export default function AssistantApp() {
           }
           if (isWorkbench) {
             const agentKey = activeWorkbenchAgent.key;
-            setWorkbenchMessagesByAgent((prev) => {
-              const next = [...(prev[agentKey] ?? [])];
-              const last = next[next.length - 1];
-              if (last?.role === "assistant") {
-                next[next.length - 1] = { ...last, role: "assistant", content: last.content + delta };
-              }
-              return { ...prev, [agentKey]: next };
-            });
+            setWorkbenchMessagesByAgent((prev) => ({
+              ...prev,
+              [agentKey]: appendAssistantDelta(prev[agentKey] ?? [], delta, timestamp),
+            }));
+            setConversationMessages((prev) => ({
+              ...prev,
+              [sessionId]: appendAssistantDelta(prev[sessionId] ?? [], delta, timestamp),
+            }));
           } else {
-            updateConversationMessages(conversationId, (prev) => {
-              const next = [...prev];
-              const last = next[next.length - 1];
-              if (last?.role === "assistant") {
-                next[next.length - 1] = { role: "assistant", content: last.content + delta };
-              }
-              return next;
-            });
+            updateConversationMessages(conversationId, (prev) => appendAssistantDelta(prev, delta, timestamp));
           }
         },
         (event: StreamToolResultEvent) => {
@@ -1663,31 +1787,41 @@ export default function AssistantApp() {
             },
           }));
         },
-        (_event: StreamPhaseEvent) => {
-          // phase:generating is handled via firstDeltaSeen in the delta callback
+        (event: StreamPhaseEvent) => {
+          if (!event.modelName?.trim()) {
+            return;
+          }
+          if (isWorkbench) {
+            const agentKey = activeWorkbenchAgent.key;
+            setWorkbenchMessagesByAgent((prev) => ({
+              ...prev,
+              [agentKey]: markTrailingAssistantModel(prev[agentKey] ?? [], event.modelName ?? "", timestamp),
+            }));
+            setConversationMessages((prev) => ({
+              ...prev,
+              [sessionId]: markTrailingAssistantModel(prev[sessionId] ?? [], event.modelName ?? "", timestamp),
+            }));
+          } else {
+            updateConversationMessages(conversationId, (prev) =>
+              markTrailingAssistantModel(prev, event.modelName ?? "", timestamp),
+            );
+          }
         },
       );
 
       if (renderedApproval) {
         if (isWorkbench) {
           const agentKey = activeWorkbenchAgent.key;
-          setWorkbenchMessagesByAgent((prev) => {
-            const next = [...(prev[agentKey] ?? [])];
-            const last = next[next.length - 1];
-            if (last?.role === "assistant") {
-              next[next.length - 1] = { role: "assistant", content: "已为你生成审批页面。", time: timestamp };
-            }
-            return { ...prev, [agentKey]: next };
-          });
+          setWorkbenchMessagesByAgent((prev) => ({
+            ...prev,
+            [agentKey]: replaceTrailingAssistant(prev[agentKey] ?? [], "已为你生成审批页面。", timestamp),
+          }));
+          setConversationMessages((prev) => ({
+            ...prev,
+            [sessionId]: replaceTrailingAssistant(prev[sessionId] ?? [], "已为你生成审批页面。", timestamp),
+          }));
         } else {
-          updateConversationMessages(conversationId, (prev) => {
-            const next = [...prev];
-            const last = next[next.length - 1];
-            if (last?.role === "assistant") {
-              next[next.length - 1] = { role: "assistant", content: "已为你生成审批页面。" };
-            }
-            return next;
-          });
+          updateConversationMessages(conversationId, (prev) => replaceTrailingAssistant(prev, "已为你生成审批页面。"));
         }
       }
       if (isWorkbench) {
@@ -1716,32 +1850,29 @@ export default function AssistantApp() {
           },
         }));
         setWorkbenchMessagesByAgent((prev) => {
-          const next = [...(prev[agentKey] ?? [])];
-          const last = next[next.length - 1];
-          if (last?.role === "assistant") {
-            next[next.length - 1] = {
-              role: "assistant",
-              content: last.content.trim()
-                ? `${last.content}\n\n*(流式输出中断：${message})*`
-                : `暂时无法完成回答：${message}`,
-              time: timestamp,
-            };
-          }
+          const current = prev[agentKey] ?? [];
+          const last = current[current.length - 1];
+          const content = last?.role === "assistant" && last.content.trim()
+            ? `${last.content}\n\n*(流式输出中断：${message})*`
+            : `暂时无法完成回答：${message}`;
+          const next = replaceTrailingAssistant(current, content, timestamp);
           return { ...prev, [agentKey]: next };
+        });
+        setConversationMessages((prev) => {
+          const current = prev[sessionId] ?? [];
+          const last = current[current.length - 1];
+          const content = last?.role === "assistant" && last.content.trim()
+            ? `${last.content}\n\n*(流式输出中断：${message})*`
+            : `暂时无法完成回答：${message}`;
+          return { ...prev, [sessionId]: replaceTrailingAssistant(current, content, timestamp) };
         });
       } else {
         updateConversationMessages(conversationId, (prev) => {
-          const next = [...prev];
-          const last = next[next.length - 1];
-          if (last?.role === "assistant") {
-            next[next.length - 1] = {
-              role: "assistant",
-              content: last.content.trim()
-                ? `${last.content}\n\n*(流式输出中断：${message})*`
-                : `暂时无法完成回答：${message}`,
-            };
-          }
-          return next;
+          const last = prev[prev.length - 1];
+          const content = last?.role === "assistant" && last.content.trim()
+            ? `${last.content}\n\n*(流式输出中断：${message})*`
+            : `暂时无法完成回答：${message}`;
+          return replaceTrailingAssistant(prev, content);
         });
       }
     } finally {
@@ -1756,13 +1887,32 @@ export default function AssistantApp() {
     await submitQuestion(prompt);
   };
 
-  const ask = async (event: FormEvent) => {
-    event.preventDefault();
+  const submitCurrentInput = async () => {
     if (!input.trim()) {
       return;
     }
     setShowPlusMenu(false);
     await submitQuestion(input.trim());
+  };
+
+  const ask = async (event: FormEvent) => {
+    event.preventDefault();
+    await submitCurrentInput();
+  };
+
+  const handleComposerTextareaKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (
+      event.key !== "Enter" ||
+      event.shiftKey ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.nativeEvent.isComposing
+    ) {
+      return;
+    }
+    event.preventDefault();
+    void submitCurrentInput();
   };
 
   const startSpeechInput = async () => {
@@ -1778,10 +1928,10 @@ export default function AssistantApp() {
       setSpeechNotice("当前浏览器不支持录音。");
       return;
     }
-    setInput("");
+    const prefixBeforeSpeech = input;
     await startAsrSession({
       token: auth.token,
-      getPrefix: () => "",
+      getPrefix: () => prefixBeforeSpeech,
       onLiveText: (full) => {
         setInput(full);
       },
@@ -1789,12 +1939,13 @@ export default function AssistantApp() {
       onFinished: async ({ asrText, fullText }) => {
         if (asrText) {
           setInput(fullText);
-          setSpeechNotice("实时转写完成，已自动发送。");
-          await submitQuestion(fullText);
+          setSpeechNotice("实时转写完成，内容已生成到输入框。");
         } else {
           setSpeechNotice("未识别到有效语音内容。");
         }
+        window.setTimeout(() => composerInputRef.current?.focus(), 0);
       },
+      autoStopAfterNoSpeechMs: 5000,
     });
   };
 
@@ -1814,6 +1965,7 @@ export default function AssistantApp() {
     setConversationThreads([]);
     setConversationMessages({});
     setConversationListNotice("");
+    setAgentWorkspaces(AGENT_WORKSPACES);
     setWorkbenchDockAgents(WORKBENCH_DOCK_AGENTS);
     setWorkbenchMessagesByAgent(createInitialWorkbenchMessages());
     setWorkbenchRuntimeByAgent(createInitialWorkbenchRuntime());
@@ -1837,8 +1989,8 @@ export default function AssistantApp() {
     localStorage.setItem(LS_LOGIN_MODE, loginMode);
   }, [loginMode]);
 
-  const systemAgents = AGENT_WORKSPACES.filter((item) => item.category === "system");
-  const publishedAgents = AGENT_WORKSPACES.filter((item) => item.category === "published");
+  const systemAgents = agentWorkspaces.filter((item) => item.category === "system");
+  const publishedAgents = agentWorkspaces.filter((item) => item.category === "published");
 
   if (!auth) {
     if (loginMode === "human") {
@@ -1940,7 +2092,12 @@ export default function AssistantApp() {
             data-menu-label="个人设置"
             aria-label="个人设置"
           >
-            {userInitial}
+            <AvatarView
+              src={me?.avatarBase64}
+              fallback={userInitial}
+              className="cici-rail__avatar-content"
+              alt="当前用户头像"
+            />
           </button>
         </div>
         <div className="cici-rail__nav">
@@ -2043,14 +2200,21 @@ export default function AssistantApp() {
                       return (
                         <div key={`workbench-${index}`} className={`cici-workbench__message${isUser ? " is-user" : ""}`}>
                           {!isUser ? (
-                            <div className="cici-workbench__message-avatar" style={{ background: activeWorkbenchAgent.color }}>
-                              {activeWorkbenchAgent.short}
-                            </div>
+                            <AvatarView
+                              src={activeWorkbenchAgent.avatarBase64}
+                              fallback={activeWorkbenchAgent.short}
+                              className="cici-workbench__message-avatar"
+                              style={{ background: activeWorkbenchAgent.color }}
+                              alt={`${activeWorkbenchAgent.name} 消息头像`}
+                            />
                           ) : null}
                           <div className="cici-workbench__message-body">
                             <div className="cici-workbench__message-meta">
                               {isUser ? "你" : activeWorkbenchAgent.name}
                               {message.time ? ` · ${message.time}` : ""}
+                              {!isUser && message.modelName ? (
+                                <span className="cici-message-model">{message.modelName}</span>
+                              ) : null}
                             </div>
                             <div className={`cici-workbench__bubble${isUser ? " is-user" : ""}`}>
                               {isUser ? (
@@ -2060,7 +2224,14 @@ export default function AssistantApp() {
                               )}
                             </div>
                           </div>
-                          {isUser ? <div className="cici-workbench__message-avatar cici-workbench__message-avatar--user">{userInitial}</div> : null}
+                          {isUser ? (
+                            <AvatarView
+                              src={me?.avatarBase64}
+                              fallback={userInitial}
+                              className="cici-workbench__message-avatar cici-workbench__message-avatar--user"
+                              alt="当前用户头像"
+                            />
+                          ) : null}
                         </div>
                       );
                     })}
@@ -2114,8 +2285,10 @@ export default function AssistantApp() {
                       </div>
                       {/* textarea (center, fills remaining space) */}
                       <textarea
+                        ref={attachComposerTextareaRef}
                         value={input}
                         onChange={(event) => setInput(event.target.value)}
+                        onKeyDown={handleComposerTextareaKeyDown}
                         placeholder="输入任务，例如：先判断今天最优先的审批，再生成客户跟进摘要。"
                         disabled={chatLoading}
                       />
@@ -2127,7 +2300,7 @@ export default function AssistantApp() {
                           className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
                           onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
                           disabled={!speechSupported}
-                          title={listening ? "结束语音并发送" : "开始语音输入"}
+                          title={listening ? "结束语音并生成文字" : "开始语音输入"}
                         >
                           <svg viewBox="0 0 24 24">
                             <rect x="9" y="3" width="6" height="12" rx="3" />
@@ -2275,9 +2448,13 @@ export default function AssistantApp() {
             {monitorRows.map((row) => (
               <article key={row.key} className={`cici-monitor-card cici-monitor-card--${row.severity}`}>
                 <div className="cici-monitor-card__head">
-                  <div className="cici-monitor-card__avatar" style={{ background: row.color }}>
-                    {row.short}
-                  </div>
+                  <AvatarView
+                    src={row.avatarBase64}
+                    fallback={row.short}
+                    className="cici-monitor-card__avatar"
+                    style={{ background: row.color }}
+                    alt={`${row.name} 监控头像`}
+                  />
                   <div>
                     <h3>{row.name}</h3>
                     <p>
@@ -2380,9 +2557,13 @@ export default function AssistantApp() {
           <aside className="cici-threads">
             <div className="cici-threads__header">
               <div className="cici-threads__meta">
-                <div className="cici-threads__agent-avatar" style={{ background: activeAgent.accent }}>
-                  {activeAgent.avatar}
-                </div>
+                <AvatarView
+                  src={activeAgent.avatarBase64}
+                  fallback={activeAgent.avatar}
+                  className="cici-threads__agent-avatar"
+                  style={{ background: activeAgent.accent }}
+                  alt={`${activeAgent.name} 头像`}
+                />
                 <div>
                   <p className="cici-threads__eyebrow">{activeAgent.status}</p>
                   <h2>{activeAgent.name}</h2>
@@ -2472,9 +2653,13 @@ export default function AssistantApp() {
           <section className="cici-chat">
             <header className="cici-chat__header cici-chat__header--hierarchy">
               <div className="cici-chat__header-left">
-                <div className="cici-chat__header-avatar" style={{ background: activeAgent.accent }}>
-                  {activeAgent.avatar}
-                </div>
+                <AvatarView
+                  src={activeAgent.avatarBase64}
+                  fallback={activeAgent.avatar}
+                  className="cici-chat__header-avatar"
+                  style={{ background: activeAgent.accent }}
+                  alt={`${activeAgent.name} 头像`}
+                />
                 <div>
                   <div className="cici-chat__header-path">
                     <span>{activeAgent.name}</span>
@@ -2504,7 +2689,14 @@ export default function AssistantApp() {
               {conversationHistoryLoading ? <div className="cici-threads__empty">会话消息加载中…</div> : null}
               {messages.map((message, index) => (
                 <div key={`${activeConversation?.id ?? "empty"}-${index}`} className={`cici-msg${message.role === "user" ? " cici-msg--user" : ""}`}>
-                  {message.role === "assistant" ? <div className="cici-msg__avatar">{activeAgent.avatar}</div> : null}
+                  {message.role === "assistant" ? (
+                    <AvatarView
+                      src={activeAgent.avatarBase64}
+                      fallback={activeAgent.avatar}
+                      className="cici-msg__avatar"
+                      alt={`${activeAgent.name} 头像`}
+                    />
+                  ) : null}
                   <div className={`cici-msg__bubble${message.role === "user" ? " cici-msg__bubble--user" : ""}`}>
                     {message.role === "assistant" ? (
                       <ChatMarkdown content={message.content} busy={chatLoading && index === messages.length - 1} />
@@ -2512,7 +2704,14 @@ export default function AssistantApp() {
                       message.content
                     )}
                   </div>
-                  {message.role === "user" ? <div className="cici-msg__avatar cici-msg__avatar--user">{userInitial}</div> : null}
+                  {message.role === "user" ? (
+                    <AvatarView
+                      src={me?.avatarBase64}
+                      fallback={userInitial}
+                      className="cici-msg__avatar cici-msg__avatar--user"
+                      alt="当前用户头像"
+                    />
+                  ) : null}
                 </div>
               ))}
               {!conversationHistoryLoading && activeConversation && messages.length === 0 ? (
@@ -2523,6 +2722,7 @@ export default function AssistantApp() {
             <form className="cici-composer" onSubmit={ask}>
               <div className="cici-composer__wrapper">
                 <input
+                  ref={attachComposerTextInputRef}
                   value={input}
                   onChange={(event) => setInput(event.target.value)}
                   placeholder={
@@ -2538,7 +2738,7 @@ export default function AssistantApp() {
                     className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
                     onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
                     disabled={!speechSupported || !activeConversation}
-                    title={listening ? "结束语音并发送" : "开始语音输入"}
+                    title={listening ? "结束语音并生成文字" : "开始语音输入"}
                   >
                     <svg viewBox="0 0 24 24">
                       <rect x="9" y="3" width="6" height="12" rx="3" />
@@ -2561,9 +2761,13 @@ export default function AssistantApp() {
             <div className="cici-right-section">
               <h3 className="cici-right-section__title">智能体档案</h3>
               <div className="cici-right-card cici-right-card--agent">
-                <div className="cici-right-card__avatar" style={{ background: activeAgent.accent }}>
-                  {activeAgent.avatar}
-                </div>
+                <AvatarView
+                  src={activeAgent.avatarBase64}
+                  fallback={activeAgent.avatar}
+                  className="cici-right-card__avatar"
+                  style={{ background: activeAgent.accent }}
+                  alt={`${activeAgent.name} 档案头像`}
+                />
                 <div>
                   <div className="cici-right-card__name">{activeAgent.name}</div>
                   <div className="cici-right-card__sub">{activeAgent.subtitle}</div>
@@ -2579,7 +2783,12 @@ export default function AssistantApp() {
             <div className="cici-right-section">
               <h3 className="cici-right-section__title">会话对象</h3>
               <div className="cici-right-card">
-                <div className="cici-right-card__avatar">{getDisplayInitial(activeConversation?.participantName ?? "会")}</div>
+                <AvatarView
+                  src={activeConversation?.avatarUrl}
+                  fallback={getDisplayInitial(activeConversation?.participantName ?? "会", "会")}
+                  className="cici-right-card__avatar"
+                  alt={`${activeConversation?.participantName ?? "会话对象"} 头像`}
+                />
                 <div>
                   <div className="cici-right-card__name">{activeConversation?.participantName ?? "未选择"}</div>
                   <div className="cici-right-card__sub">
@@ -2666,9 +2875,13 @@ function AgentCard({ agent, conversations, active, onSelect }: AgentCardProps) {
   return (
     <button type="button" className={`cici-agent-card${active ? " is-active" : ""}`} onClick={onSelect}>
       <div className="cici-agent-card__top">
-        <div className="cici-agent-card__avatar" style={{ background: agent.accent }}>
-          {agent.avatar}
-        </div>
+        <AvatarView
+          src={agent.avatarBase64}
+          fallback={agent.avatar}
+          className="cici-agent-card__avatar"
+          style={{ background: agent.accent }}
+          alt={`${agent.name} 头像`}
+        />
         <div className="cici-agent-card__meta">
           <div className="cici-agent-card__title-row">
             <span className="cici-agent-card__title">{agent.name}</span>
@@ -2683,10 +2896,6 @@ function AgentCard({ agent, conversations, active, onSelect }: AgentCardProps) {
       </div>
     </button>
   );
-}
-
-function getDisplayInitial(value: string) {
-  return value.slice(0, 2);
 }
 
 function getAvatarColor(seed: string) {

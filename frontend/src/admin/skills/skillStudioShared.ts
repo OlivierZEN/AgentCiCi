@@ -11,6 +11,7 @@ export type Skill = {
   editPolicy: "LOCKED" | "CONFIGURABLE" | "EDITABLE";
   bindingPolicy: "MANDATORY" | "DEFAULT_ON" | "OPTIONAL" | "INTERNAL_ONLY";
   updatePolicy: "AUTO" | "MANUAL" | "PINNED";
+  lifecycleStatus?: "DRAFT" | "PUBLISHED" | "DISABLED" | "DELETED";
   templateCode?: string;
   baseTemplateVersion?: number;
   currentPublishedVersionId?: number;
@@ -27,6 +28,112 @@ export type Skill = {
   latestVersionPublishStatus?: string;
   latestVersionCreatedAt?: string;
   lastPublishedAt?: string;
+  lastPublishedBy?: string;
+};
+
+export type SkillVersion = {
+  id: number;
+  skillId: number;
+  versionNo: number;
+  publishStatus: "DRAFT" | "PUBLISHED" | string;
+  changeLog?: string;
+  diffSummary?: string;
+  versionSource?: string;
+  createdBy?: string;
+  restoreVisible?: boolean;
+  retentionState?: string;
+  restoredFromVersionId?: number;
+  riskLevel?: Skill["riskLevel"];
+  createdAt?: string;
+  effectiveToolWhitelist?: string[];
+  effectiveKbWhitelist?: string[];
+};
+
+export type SkillExportJob = {
+  exportId: string;
+  status: string;
+  filename: string;
+  skillVersionId: number;
+  versionNo: number;
+  standardizationEngine: string;
+  warnings: string[];
+};
+
+export async function downloadSkillExportPackage(token: string, job: SkillExportJob): Promise<void> {
+  const res = await fetch(`/skills/exports/${encodeURIComponent(job.exportId)}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) {
+    throw new Error(await readDownloadError(res));
+  }
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = resolveDownloadFilename(res.headers.get("Content-Disposition")) || job.filename || "skill-package.zip";
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 0);
+}
+
+async function readDownloadError(res: Response): Promise<string> {
+  try {
+    const json = await res.json();
+    return json?.message ?? `HTTP ${res.status}`;
+  } catch {
+    return `HTTP ${res.status}`;
+  }
+}
+
+function resolveDownloadFilename(disposition: string | null): string | null {
+  if (!disposition) return null;
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    return decodeURIComponent(utf8Match[1].replace(/"/g, ""));
+  }
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  return plainMatch?.[1] ?? null;
+}
+
+export type SkillImportDraft = {
+  skillCode: string;
+  name: string;
+  description?: string;
+  promptFragment?: string;
+  draftSpecText?: string;
+  toolWhitelist: string[];
+  kbWhitelist: string[];
+  handoffRule?: string;
+  outputContract?: string;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | string;
+  warnings: string[];
+};
+
+export type SkillImportResourceMappingItem = {
+  requested: string;
+  resolved?: string | null;
+  matched: boolean;
+  note?: string;
+};
+
+export type SkillImportResourceMapping = {
+  toolMappings: SkillImportResourceMappingItem[];
+  knowledgeBaseMappings: SkillImportResourceMappingItem[];
+  matchedToolNames: string[];
+  matchedKnowledgeBaseIds: string[];
+  unmatchedToolNames: string[];
+  unmatchedKnowledgeBaseNames: string[];
+  hasUnmatchedResources: boolean;
+};
+
+export type SkillImportPreview = {
+  importId: string;
+  status: string;
+  draft: SkillImportDraft;
+  files: string[];
+  warnings: string[];
+  resourceMapping?: SkillImportResourceMapping;
 };
 
 export type SkillPreview = {
@@ -84,12 +191,16 @@ export type SkillForm = {
   updatePolicy: Skill["updatePolicy"];
   templateCode: string;
   baseTemplateVersion?: number;
+  lifecycleStatus?: Skill["lifecycleStatus"];
+  currentPublishedVersionId?: number;
+  latestDraftVersionId?: number;
   promptFragment: string;
   draftSpecText: string;
   toolWhitelistText: string;
   kbWhitelistText: string;
   handoffRule: string;
   outputContract: string;
+  changeLog: string;
   builtin: boolean;
 };
 
@@ -126,6 +237,7 @@ export const EMPTY_FORM: SkillForm = {
   kbWhitelistText: "",
   handoffRule: "",
   outputContract: "",
+  changeLog: "",
   builtin: false,
 };
 

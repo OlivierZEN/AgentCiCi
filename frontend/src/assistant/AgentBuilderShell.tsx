@@ -1,5 +1,8 @@
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import AvatarView from "../components/AvatarView";
+import AvatarCropperDialog from "../components/AvatarCropperDialog";
+import { getDisplayInitial, readAvatarFileAsDataUrl } from "../shared/avatar";
 import { safeFetchJson } from "../utils/http";
 import { buildCompileNotice, isCompileRequired, keepRecentVersionHistory } from "./compile-history";
 
@@ -14,6 +17,7 @@ type PublishChannelId = "wechat" | "dingtalk" | "feishu" | "web";
 
 type AgentDraft = {
   name: string;
+  avatarBase64: string;
   summary: string;
   greeting: string;
   model: string;
@@ -150,6 +154,7 @@ type VersionHistoryItem = {
 type AgentApiRecord = {
   agentId: string;
   name: string;
+  avatarBase64?: string;
   summary?: string;
   greeting?: string;
   model?: string;
@@ -390,6 +395,7 @@ const PREVIEW_PADDING_Y = 56;
 function createDraft(orgId: string, kbIds: number[]): AgentDraft {
   return {
     name: "未命名 Agent",
+    avatarBase64: "",
     summary: `${orgId} 的业务助手，负责把规则、知识和动作串起来。`,
     greeting: "你好，我是你的业务智能体，可以帮你检索知识、调用工具并生成标准化输出。",
     model: "",
@@ -1318,6 +1324,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
   );
   const draft: AgentDraft = {
     name: item.name ?? fallbackDraft.name,
+    avatarBase64: item.avatarBase64 ?? "",
     summary: item.summary ?? fallbackDraft.summary,
     greeting: item.greeting ?? fallbackDraft.greeting,
     model,
@@ -1360,6 +1367,7 @@ export default function AgentBuilderShell({
   const [library, setLibrary] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
   const [draft, setDraft] = useState<AgentDraft>(() => createDraft(orgId, []));
+  const [avatarCropSource, setAvatarCropSource] = useState("");
   const [publishConfig, setPublishConfig] = useState<PublishConfigDraft>(() => createPublishConfigDraft());
   const [searchText, setSearchText] = useState("");
   const [notice, setNoticeText] = useState("自然语言 Spec 已作为主输入，编译结果默认显示流程图预览。");
@@ -1409,6 +1417,16 @@ export default function AgentBuilderShell({
     setNoticeVisible(true);
     setNoticeTick((current) => current + 1);
   };
+
+  const beginAvatarCrop = useCallback(async (file: File) => {
+    try {
+      const dataUrl = await readAvatarFileAsDataUrl(file);
+      setAvatarCropSource(dataUrl);
+      setNotice("");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "头像处理失败，请稍后重试");
+    }
+  }, []);
 
   useEffect(() => {
     if (!notice || !notice.trim()) {
@@ -2072,6 +2090,7 @@ export default function AgentBuilderShell({
         body: JSON.stringify({
           agentId,
           name: proposedName,
+          avatarBase64: nextDraft.avatarBase64,
           summary: nextDraft.summary,
           greeting: nextDraft.greeting,
           model: nextDraft.model,
@@ -2134,6 +2153,7 @@ export default function AgentBuilderShell({
         },
         body: JSON.stringify({
           name: draft.name,
+          avatarBase64: draft.avatarBase64,
           summary: draft.summary,
           greeting: draft.greeting,
           model: draft.model,
@@ -2999,6 +3019,39 @@ export default function AgentBuilderShell({
                     {renderFieldTitle("Agent 名称", true, "用于身份标识与编译摘要")}
                     <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例如：售前跟进 Agent" />
                   </label>
+                  <div className="cici-builder-field">
+                    {renderFieldTitle("智能体头像", false, "用于工作台、会话消息和智能体档案展示")}
+                    <div className="cici-builder-avatar-row">
+                      <AvatarView
+                        src={draft.avatarBase64}
+                        fallback={getDisplayInitial(draft.name || "A", "A")}
+                        className="cici-builder-avatar-preview"
+                        alt={`${draft.name || "Agent"} 头像`}
+                      />
+                      <div className="cici-builder-avatar-actions">
+                        <label className="cici-builder__action cici-builder__action--ghost cici-builder-avatar-upload">
+                          上传图片
+                          <input
+                            type="file"
+                            accept="image/png,image/jpeg,image/webp"
+                            onChange={(event) => {
+                              const file = event.target.files?.[0];
+                              event.currentTarget.value = "";
+                              if (!file) return;
+                              void beginAvatarCrop(file);
+                            }}
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          className="cici-builder__action cici-builder__action--ghost"
+                          onClick={() => updateDraft("avatarBase64", "")}
+                        >
+                          清除头像
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                   <label className="cici-builder-field">
                     {renderFieldTitle("开场白", false, "仅用于会话欢迎文案展示")}
                     <textarea rows={3} value={draft.greeting} onChange={(event) => updateDraft("greeting", event.target.value)} placeholder="用户首次进入时看到的欢迎语。" />
@@ -3611,6 +3664,18 @@ export default function AgentBuilderShell({
           </div>
         </div>
       ) : null}
+
+      <AvatarCropperDialog
+        open={Boolean(avatarCropSource)}
+        sourceDataUrl={avatarCropSource}
+        title="裁剪智能体头像"
+        onCancel={() => setAvatarCropSource("")}
+        onConfirm={async (avatarBase64) => {
+          updateDraft("avatarBase64", avatarBase64);
+          setAvatarCropSource("");
+          setNotice("");
+        }}
+      />
     </>
   );
 }

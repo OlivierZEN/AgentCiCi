@@ -10,6 +10,7 @@ import java.util.Map;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -42,6 +43,13 @@ public class AuthController {
         return ApiResponse.ok(authService.currentUser(orgId, userId));
     }
 
+    @PutMapping("/me/avatar")
+    public ApiResponse<Map<String, Object>> updateMyAvatar(@Valid @RequestBody UpdateMyAvatarRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.updateCurrentUserAvatar(orgId, userId, request.avatarBase64()), "Avatar updated");
+    }
+
     public record SendSmsCodeRequest(
             @NotBlank String orgId,
             @NotBlank
@@ -57,5 +65,8 @@ public class AuthController {
             String mobile,
             @NotBlank String code
     ) {
+    }
+
+    public record UpdateMyAvatarRequest(String avatarBase64) {
     }
 }

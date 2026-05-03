@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "specs/FEAT-008-knowledge-base-lifecycle-completion.md",
+                "file": "specs/FEAT-014-skill-versioning-import-export.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "FEAT-008-knowledge-base-lifecycle-completion"
+              "title": "FEAT-014-skill-versioning-import-export"
             }
           }
         ]
@@ -185,13 +185,18 @@
   },
   "active": "0786f8d5badec4bd",
   "lastOpenFiles": [
+    "specs/FEAT-016-external-agent-skill-package-optimization.md",
+    "specs/FEAT-016-openclaw-skill-package-optimization.md",
+    "specs/FEAT-015-skill-declarative-api-runtime.md",
+    "specs/FEAT-008-knowledge-base-lifecycle-completion.md",
+    "specs/FEAT-014-skill-versioning-import-export.md",
+    "specs/FEAT-013-global-avatar-settings.md",
     "specs/FEAT-012-project-design-governance.md",
     "specs/FEAT-012-assistant-workbench-gilded-refresh.md",
     "specs/FEAT-011-platform-console-visual-refresh.md",
     "specs/FEAT-010-platform-operations-console.md",
     "specs/FEAT-009-skill-layering-and-governance.md",
     "specs/FEAT-003 SaaS 计费方案评审.md",
-    "specs/FEAT-008-knowledge-base-lifecycle-completion.md",
     "agent-skill-tool-permission-model.md",
     "specs/FEAT-007-remove-virtual-human-surface.md",
     "specs/_project-baseline-template.md",

@@ -18,6 +18,7 @@ export type StreamToolCallEvent = {
 
 export type StreamPhaseEvent = {
   phase: "generating" | string;
+  modelName?: string;
 };
 
 export type SessionUpdateEvent = {
@@ -147,9 +148,9 @@ export async function streamAiChat(
     }
     if (eventName === "phase") {
       try {
-        const parsed = JSON.parse(data) as { phase?: string };
+        const parsed = JSON.parse(data) as { phase?: string; modelName?: string };
         if (parsed.phase && onPhase) {
-          onPhase({ phase: parsed.phase });
+          onPhase({ phase: parsed.phase, modelName: parsed.modelName });
         }
       } catch {
         /* ignore */

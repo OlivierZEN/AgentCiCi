@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.auth.service;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -80,7 +81,7 @@ public class AdminUserService {
         target.setNickname(trimOrNull(nickname));
         target.setCcUsername(ccUsernameValue);
         target.setCcSafetymark(trimOrNull(ccSafetymark));
-        target.setAvatarBase64(trimOrNull(avatarBase64));
+        target.setAvatarBase64(AvatarDataUrlValidator.normalizeNullableDataUrl(avatarBase64, "avatarBase64"));
         userRepository.save(target);
         return toRow(target);
     }

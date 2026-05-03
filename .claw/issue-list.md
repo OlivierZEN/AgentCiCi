@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-04-30T03:41:48Z
+updated_at: 2026-05-03T13:35:06Z
 updated_by: ai
 status: active
 ---
@@ -15,11 +15,6 @@ status: active
   - Verified root cause: `SpecCompilerService` 仅做文本分行、关键词推断、简单规则抽取；`AgentCompileService.buildWorkflowCode(...)` 输出固定 TypeScript 模板，并未调用 LLM 做真实编译。
   - Evidence: code inspection on 2026-04-21 of `SpecCompilerService` and `AgentCompileService`.
   - Status: open (P1，属于产品能力差距而非单点 bug)。
-- ISSUE-2026-04-17-jdk25-mockito-inline:
-  - Symptom: targeted backend test execution (`mvn -q -Dtest=ChatRealtimeIntegrationTest test`) fails before entering the test body.
-  - Verified root cause: current local JDK 25 runtime cannot satisfy Mockito inline Byte Buddy self-attach, so Spring Boot's `ResetMocksTestExecutionListener` aborts test startup with `Could not initialize plugin: org.mockito.plugins.MockMaker`.
-  - Evidence: local Maven test run on 2026-04-17; stack trace points to `InlineDelegateByteBuddyMockMaker` / `ByteBuddyAgent.installExternal(...)`.
-  - Status: open (verification can continue with compile/test-compile for now; full Maven test execution needs a compatible JDK or Mockito configuration adjustment).
 - ISSUE-2026-04-08-cloudcc-token-invalid-credential:
   - Symptom: CloudCC MCP tool calls still use placeholder args (`{open_api_token}`, `{base_url}`) because backend cannot obtain session token.
   - Verified root cause: 2026-04-30 重新验证后，组织级 `cloudcc_crm` 配置与 CloudCC 网关解析均正常，但使用系统内已绑定账号的真实用户 `13800000001/哪吒`（`ccUsername=nezha@cloudcc.com`）请求已解析网关 `https://szyd.apis.cloudcc.cn/lightningapi/api/cauth/token` 仍返回 `result=false`, `returnInfo=Please check your username and password.`，说明阻塞点仍是用户绑定凭证无效或已失效。
@@ -39,6 +34,46 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-04-17-jdk25-mockito-inline:
+  - Symptom: targeted backend test execution (`mvn -q -Dtest=ChatRealtimeIntegrationTest test`) previously failed before entering the test body with Mockito inline Byte Buddy self-attach initialization errors on JDK 25.
+  - Previous root cause: local Maven runtime used JDK 25 and Spring Boot's `ResetMocksTestExecutionListener` aborted test startup with `Could not initialize plugin: org.mockito.plugins.MockMaker`.
+  - Resolution (2026-05-03):
+    - Re-verified the exact targeted command under Maven's active Java runtime.
+    - Current `mvn -version` shows Maven using Java `25.0.2`.
+    - `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` now succeeds.
+  - Verification (2026-05-03): Surefire report `com.codehouse.ciciassistant.ai.ChatRealtimeIntegrationTest.txt` shows `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`; no `Mockito`, `ByteBuddy`, or `Could not initialize plugin` failure appeared.
+  - Status: resolved; no current JDK25 Mockito blocker reproduced.
+
+- ISSUE-2026-05-03-skill-import-code-held-by-soft-delete:
+  - Symptom: 管理端导入技能 zip 并创建时返回 `Skill code already exists: email-marketing-campaign2`，但用户已经在页面中手动删除过同 code 技能。
+  - Verified root cause: 自定义 Skill 删除采用软删除，旧 `skill_definition` 记录被标记为 `lifecycle_status=DELETED` 并隐藏，但数据库唯一索引 `uk_skill_definition_org_code` 仍占用原 `skill_code`；导入创建阶段复用 `createSkill(...)`，因此同 code 包会被判定为已存在。
+  - Resolution (2026-05-03):
+    - `SkillDefinitionEntity.markDeleted(...)` 删除时将旧记录 `skill_code` 归档为 `原code__deleted_{id}`，释放原 code 给后续导入或新建。
+    - `SkillDefinitionService.createSkill(...)` 遇到同 code 的历史 `DELETED` 记录时，先归档并 `saveAndFlush` 旧记录，再创建新 Skill。
+    - 新增 Flyway `V36__archive_deleted_skill_codes.sql`，处理已经软删除但仍占用原 code 的历史数据。
+  - Verification (2026-05-03): `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> success; `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test` -> success.
+
+- ISSUE-2026-04-30-assistant-claims-claude-on-bailian:
+  - Symptom: 前台询问“你现在自己在调用的是什么大模型吗？”时，思思回答“基于 Claude（Anthropic 的 Claude 模型）构建”，但用户后台实际接入的是百炼。
+  - Verified root cause: 数据库中 `anthropic` provider 处于 disabled 且 API key 为空，`demo-org/chat` 路由为 `aliyun-bailian / deepseek-v4-pro`，`cici-system.model=deepseek-v4-pro`，相关 agent system prompt 和 skill prompt 未包含 Claude；错误回答来自模型在缺少“当前运行 provider/model”事实时对自身身份的幻觉。
+  - Resolution (2026-04-30):
+    - `ChatOrchestratorService.buildInitialMessages(...)` 新增运行模型上下文 block，注入当前服务端模型供应商和模型名称。
+    - 对模型身份类问题增加约束：只能依据运行上下文回答，不得在 provider/model 不匹配时自称 Claude、Anthropic、OpenAI、GPT、Gemini。
+    - 新增 `ChatOrchestratorServiceModelIdentityTest` 覆盖 `aliyun-bailian / deepseek-v4-pro` 的提示块。
+  - Verification (2026-04-30): `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> success; `backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success.
+  - Note: 当前数据是“百炼供应商 + deepseek-v4-pro 模型”，不是 qwen；若产品预期是通义千问，需要调整 chat 模型路由或智能体 model 字段。
+
+- ISSUE-2026-04-30-workbench-streaming-placeholder-overwritten:
+  - Symptom: 会话工作台中，用户发送消息后助手回复区域有时先消失，等待一段时间后再整段出现最终回复，看起来不是流式输出。
+  - Verified root cause: 前端先乐观插入用户消息与空助手占位，但后端流式链路会先持久化 user turn，再执行工具调用/模型生成，assistant turn 最后才持久化；这个窗口内 `loadWorkbenchMessages(..., true)` 可能拉到“只有用户消息”的服务端旧历史，并覆盖本地占位。占位被覆盖后，后续 `delta` 追加逻辑发现最后一条不是助手消息，无法继续追加，最终只能等结束后重拉完整历史。
+  - Resolution (2026-04-30):
+    - 新增 `frontend/src/assistant/chatMessageState.ts`，统一保护本地流式消息状态。
+    - `loadConversationMessages` / `loadWorkbenchMessages` 遇到远端历史缺少有效助手内容时保留本地助手占位或部分流式文本。
+    - delta 到达时如尾部助手消息已丢失，会自动补回助手气泡并继续追加。
+    - 工作台提交时同步更新 `conversationMessages[sessionId]`，避免工作台消息与历史缓存分叉。
+    - 移除工作台 effect 对 `activeWorkbenchThoughts.length` 的依赖，状态机提示变化不再导致历史重拉。
+  - Verification (2026-04-30): `frontend npm run build` -> success; `frontend npm test` -> success (`3` files, `12` tests，含 `chatMessageState.test.ts`)。
 
 - ISSUE-2026-04-23-mcp-smoke-blocked-by-admin-auth-scope:
   - Symptom: MCP cache Phase 1 implementation后，计划执行真实管理端 smoke（`/mcp-servers`、`/mcp-servers/{id}/tools`、`/mcp-servers/{id}/discover`）时，当前可登录账号链路无法稳定取得可用 ORG_ADMIN 权限上下文。

@@ -36,9 +36,14 @@ feature_id: FEAT-001
 
 - 对任意行业需求，只要用户写得足够明确，生成草稿应优先反映用户原文，而不是被内置样例“带偏”。
 - 当 sourceText 中存在显式工具名时，`toolWhitelist` 必须优先保留这些工具。
+- 当 sourceText 或生成后的规格/提示中明确引用候选工具、MCP 工具或知识库名称时，系统必须自动补入 `toolWhitelist` / `kbWhitelist`，避免只在文本中提到资源但保存后未授权。
 - 当 sourceText 中存在编号步骤时，`draftSpecText` 和 `promptFragment` 应保留这些步骤顺序。
+- 现有 Skill 编辑页应允许管理员输入增量自然语言说明继续优化当前技能；优化结果必须保留当前 Skill 的 `id`、启用状态和治理字段，保存时更新原技能而不是误创建新技能。
+- 对“增加 / 补充 / 加入 / 再增加”类继续优化请求，系统必须保留当前 `promptFragment` 与 `draftSpecText` 的既有步骤顺序、工具调用链、兜底规则和输出结构，只追加增量要求；除非管理员明确要求删除、替换、重写或改顺序，不得让模型整段改写旧草稿。
+- 继续优化成功后，页面必须提供“回退本次优化”入口；在用户保存前可恢复优化前的表单草稿、编译预览、需求解析结果、会话 ID 与追问答案，避免不满意的模型结果只能手工修复。
 - 没有模型时，fallback 仍应生成可编辑、可预览、可创建的结构化草稿。
 
 ## Verification
 
 - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test`
+- `frontend`: `npm run build`

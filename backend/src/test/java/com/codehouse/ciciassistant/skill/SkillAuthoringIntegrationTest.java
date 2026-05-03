@@ -225,6 +225,121 @@ class SkillAuthoringIntegrationTest {
         assertThat(skillSpec.path("promptFragment").asText()).contains("不要改写成别的行业场景");
     }
 
+    @Test
+    void shouldAppendAdditiveRefinementWithoutRewritingCampaignPromptFragment() throws Exception {
+        String token = loginToken(ADMIN_MOBILE);
+        ObjectNode currentSpec = objectMapper.createObjectNode();
+        currentSpec.put("skillCode", "email-campaign-orchestrator");
+        currentSpec.put("name", "邮件市场营销活动执行");
+        currentSpec.put("description", "协助创建并执行邮件市场营销活动。");
+        currentSpec.put("promptFragment", "先确认用户的市场活动目标（如产品推广、客户挖掘等）。然后按以下步骤执行：1. 进行市场调研分析（如使用tavily_search获取行业趋势），根据分析结果构思活动内容；2. 调用insert_campaign_data_with_role_right工具创建市场活动；3. 根据用户描述的活动目标，调用get_lead_data工具筛选符合条件的潜在客户；4. 调用add_campaign_member工具将潜在客户加入活动成员；5. 制作HTML格式的邮件模板；6. 调用email_send工具向活动成员发送邮件，每发送成功一封，更新对应成员状态。执行过程中收集每一步结果，最终输出活动创建状态、客户筛选数量、发送成功数与失败数。");
+        currentSpec.put("draftSpecText", "处理步骤：1. 市场调研分析；2. 创建市场活动；3. 筛选潜在客户；4. 加入活动成员；5. 制作HTML邮件模板；6. 发送邮件并更新成员状态。");
+        currentSpec.putArray("toolWhitelist")
+                .add("tavily_search")
+                .add("insert_campaign_data_with_role_right")
+                .add("get_lead_data")
+                .add("add_campaign_member")
+                .add("email_send");
+        currentSpec.putArray("kbWhitelist");
+        currentSpec.put("handoffRule", "核心工具不可用或批量发送失败时转人工处理。");
+        currentSpec.put("outputContract", "输出活动创建状态、客户筛选数量、发送成功数与失败数。");
+        currentSpec.put("riskLevel", "HIGH");
+        currentSpec.putArray("triggerHints").add("邮件市场营销活动");
+        currentSpec.putArray("userIntentExamples").add("帮我创建一次邮件营销活动");
+        currentSpec.putArray("clarificationQuestions");
+        currentSpec.putArray("warnings");
+
+        MvcResult refined = mockMvc.perform(post("/skills/authoring/refine")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sourceText": "再增加百度搜索",
+                                  "currentSkillSpec": %s,
+                                  "clarificationAnswers": []
+                                }
+                                """.formatted(objectMapper.writeValueAsString(currentSpec))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode refinedSpec = objectMapper.readTree(
+                refined.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("skillSpec");
+        String promptFragment = refinedSpec.path("promptFragment").asText();
+        assertThat(promptFragment).contains("先确认用户的市场活动目标");
+        assertThat(promptFragment).contains("调用insert_campaign_data_with_role_right工具创建市场活动");
+        assertThat(promptFragment).contains("调用get_lead_data工具筛选符合条件的潜在客户");
+        assertThat(promptFragment).contains("调用add_campaign_member工具将潜在客户加入活动成员");
+        assertThat(promptFragment).contains("每发送成功一封，更新对应成员状态");
+        assertThat(promptFragment).contains("增量优化要求");
+        assertThat(promptFragment).contains("百度搜索");
+        assertThat(promptFragment).doesNotContain("潜在客户数量（无法获取");
+    }
+
+    @Test
+    void shouldAutoWhitelistReferencedToolsAndKnowledgeBases() throws Exception {
+        String token = loginToken(ADMIN_MOBILE);
+        createCustomTool(token, "lead_match_tool", "潜客检索工具", "MEDIUM");
+        long kbId = createKnowledgeBase(token, "销售知识库", "销售话术、客户分层和产品资料。");
+
+        MvcResult generated = mockMvc.perform(post("/skills/authoring/generate")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sourceText": "创建销售问答技能：先使用潜客检索工具识别客户画像，再引用销售知识库回答产品问题。输出包含客户画像、引用依据和建议动作。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode skillSpec = objectMapper.readTree(
+                generated.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("skillSpec");
+
+        assertThat(jsonArrayTexts(skillSpec.path("toolWhitelist"))).contains("lead_match_tool");
+        assertThat(jsonArrayTexts(skillSpec.path("kbWhitelist"))).contains(String.valueOf(kbId));
+    }
+
+    @Test
+    void shouldRefineExistingSkillWithoutAuthoringSession() throws Exception {
+        String token = loginToken(ADMIN_MOBILE);
+
+        MvcResult generated = mockMvc.perform(post("/skills/authoring/generate")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sourceText": "客户服务质检技能，检查回复是否符合服务规范。"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode generatedSpec = objectMapper.readTree(
+                generated.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("skillSpec");
+
+        MvcResult refined = mockMvc.perform(post("/skills/authoring/refine")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "sourceText": "继续优化：输出中增加质检结论、扣分原因和建议回复。",
+                                  "currentSkillSpec": %s,
+                                  "clarificationAnswers": []
+                                }
+                                """.formatted(objectMapper.writeValueAsString(generatedSpec))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode data = objectMapper.readTree(
+                refined.getResponse().getContentAsString(StandardCharsets.UTF_8)).path("data");
+        JsonNode refinedSpec = data.path("skillSpec");
+        assertThat(data.path("sessionId").isNull() || data.path("sessionId").asText().isBlank()).isTrue();
+        assertThat(refinedSpec.path("skillCode").asText()).isEqualTo(generatedSpec.path("skillCode").asText());
+        assertThat(refinedSpec.path("outputContract").asText()).contains("建议");
+    }
+
     private void createCustomTool(String token, String toolName, String description, String riskLevel) throws Exception {
         mockMvc.perform(post("/tools")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -237,6 +352,22 @@ class SkillAuthoringIntegrationTest {
                                 }
                                 """.formatted(toolName, description, riskLevel)))
                 .andExpect(status().isOk());
+    }
+
+    private long createKnowledgeBase(String token, String name, String description) throws Exception {
+        MvcResult result = mockMvc.perform(post("/kb")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "%s",
+                                  "description": "%s"
+                                }
+                                """.formatted(name, description)))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data").path("id").asLong();
     }
 
     private JsonNode findByField(JsonNode arr, String field, String value) {

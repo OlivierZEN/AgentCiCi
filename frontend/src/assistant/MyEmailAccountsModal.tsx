@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import AvatarView from "../components/AvatarView";
+import AvatarCropperDialog from "../components/AvatarCropperDialog";
+import { getDisplayInitial, readAvatarFileAsDataUrl } from "../shared/avatar";
 import MyWorkflowStudio from "./MyWorkflowStudio";
 import UserMemoryPanel from "./UserMemoryPanel";
 
@@ -6,6 +9,13 @@ type Props = {
   open: boolean;
   token: string;
   onClose: () => void;
+};
+
+type MeProfile = {
+  userId?: string;
+  nickname?: string;
+  mobile?: string;
+  avatarBase64?: string;
 };
 
 type ProviderPreset = {
@@ -103,11 +113,14 @@ async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<Api
 }
 
 export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
-  const [tab, setTab] = useState<"workflow" | "email" | "memory">("workflow");
+  const [tab, setTab] = useState<"profile" | "workflow" | "email" | "memory">("profile");
+  const [meProfile, setMeProfile] = useState<MeProfile>({});
+  const [avatarPreview, setAvatarPreview] = useState("");
   const [providers, setProviders] = useState<ProviderPreset[]>([]);
   const [accounts, setAccounts] = useState<AccountPayload[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<AccountForm>(DEFAULT_FORM);
+  const [avatarCropSource, setAvatarCropSource] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -120,10 +133,15 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
     if (!token) return;
     setBusy(true);
     try {
-      const [providersRes, listRes] = await Promise.all([
+      const [meRes, providersRes, listRes] = await Promise.all([
+        fetchJson<MeProfile>("/auth/me", { headers: { Authorization: `Bearer ${token}` } }),
         fetchJson<ProviderPreset[]>("/me/email-accounts/providers", { headers }),
         fetchJson<AccountPayload[]>("/me/email-accounts", { headers }),
       ]);
+      if (meRes.success && meRes.data) {
+        setMeProfile(meRes.data);
+        setAvatarPreview(meRes.data.avatarBase64 ?? "");
+      }
       if (providersRes.success && providersRes.data) {
         setProviders(providersRes.data);
       }
@@ -286,6 +304,48 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
     }
   };
 
+  const saveMyAvatar = async () => {
+    if (!token) return;
+    setBusy(true);
+    setNotice("");
+    try {
+      const res = await fetchJson<MeProfile>("/auth/me/avatar", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ avatarBase64: avatarPreview }),
+      });
+      if (!res.success || !res.data) {
+        setNotice(res.message ?? "头像保存失败，请稍后重试");
+        return;
+      }
+      setMeProfile(res.data);
+      setAvatarPreview(res.data.avatarBase64 ?? "");
+      setNotice("头像已更新");
+      window.dispatchEvent(
+        new CustomEvent("assistant-current-user-updated", {
+          detail: {
+            userId: res.data.userId,
+            mobile: res.data.mobile,
+            nickname: res.data.nickname,
+            avatarBase64: res.data.avatarBase64,
+          },
+        }),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const beginAvatarCrop = async (file: File) => {
+    try {
+      const dataUrl = await readAvatarFileAsDataUrl(file);
+      setAvatarCropSource(dataUrl);
+      setNotice("");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "头像处理失败，请稍后重试");
+    }
+  };
+
   if (!open) return null;
 
   return (
@@ -298,6 +358,13 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           </button>
         </header>
         <div className="cici-settings-tabs">
+          <button
+            type="button"
+            className={`cici-settings-tabs__item${tab === "profile" ? " is-active" : ""}`}
+            onClick={() => setTab("profile")}
+          >
+            个人资料
+          </button>
           <button
             type="button"
             className={`cici-settings-tabs__item${tab === "workflow" ? " is-active" : ""}`}
@@ -321,7 +388,56 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           </button>
         </div>
 
-        {tab === "workflow" ? (
+        {tab === "profile" ? (
+          <>
+            <p className="cici-modal__intro">头像会用于工作台、会话消息和个人入口展示，仅你本人可修改。</p>
+            {notice ? <div className="cici-modal__notice">{notice}</div> : null}
+            <section className="cici-modal__section">
+              <header className="cici-modal__section-head">
+                <h4>我的头像</h4>
+              </header>
+              <div className="cici-profile-avatar-block">
+                <AvatarView
+                  src={avatarPreview}
+                  fallback={getDisplayInitial(meProfile.nickname || meProfile.mobile || "我", "我")}
+                  className="cici-profile-avatar"
+                  alt="当前用户头像"
+                />
+                <div className="cici-profile-avatar-actions">
+                  <label className="cici-btn cici-btn--ghost cici-profile-avatar-upload">
+                    上传图片
+                    <input
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      onChange={(event) => {
+                        const file = event.target.files?.[0];
+                        event.currentTarget.value = "";
+                        if (!file) return;
+                        void beginAvatarCrop(file);
+                      }}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="cici-btn cici-btn--ghost"
+                    onClick={() => setAvatarPreview("")}
+                    disabled={busy}
+                  >
+                    清除头像
+                  </button>
+                  <button
+                    type="button"
+                    className="cici-btn cici-btn--primary"
+                    onClick={() => void saveMyAvatar()}
+                    disabled={busy}
+                  >
+                    保存头像
+                  </button>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : tab === "workflow" ? (
           <MyWorkflowStudio token={token} active={tab === "workflow"} />
         ) : tab === "memory" ? (
           <UserMemoryPanel token={token} agentId="cici-system" />
@@ -527,6 +643,18 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
             </section>
           </>
         )}
+
+        <AvatarCropperDialog
+          open={Boolean(avatarCropSource)}
+          sourceDataUrl={avatarCropSource}
+          title="裁剪我的头像"
+          onCancel={() => setAvatarCropSource("")}
+          onConfirm={async (avatarBase64) => {
+            setAvatarPreview(avatarBase64);
+            setAvatarCropSource("");
+            setNotice("");
+          }}
+        />
       </div>
     </div>
   );

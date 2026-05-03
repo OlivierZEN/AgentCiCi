@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-04-30T11:54:33Z
+updated_at: 2026-05-03T13:31:57Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,278 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-037 External agent skill package optimization loop
+
+- status: completed
+- priority: P1
+- owner_role: product-admin-skill-governance
+- spec_path: `docs/specs/FEAT-016-external-agent-skill-package-optimization.md`
+- summary: 将技能导出 zip 调整为包含通用入口 `SKILL.md`、Cici 规格 `cici-skill.md` 和包内规范 `PACKAGE_SPEC.md` 的 8 文件结构，并依赖通用 `cici-skill-package-optimizer/SKILL.md` 规则，让具备技能/规则文件能力的外部智能体对导出包进行离线优化后反向导入系统。
+- done:
+  - 已新增设计文档 `docs/specs/FEAT-016-external-agent-skill-package-optimization.md`。
+  - 已明确导出包采用 8 文件结构：`manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。
+  - 已明确 OpenClaw、Codex、Claude Code、Cursor 等外部智能体工具都只是代表；方案不绑定具体平台，外部工具不直接运行或发布本系统业务技能。
+  - 已明确不做导入前 diff 预览增强，导入仍沿用现有预览和资源映射。
+  - 后端 `SkillPackageService` 已在导出包中生成 `SKILL.md` 和 `PACKAGE_SPEC.md`，并在 `README.md` 追加外部智能体优化说明。
+  - 导入白名单已切换到当前 8 文件结构，`cici-skill.md` 是 Cici 导入规格正文。
+  - 已新增 `.agents/skills/cici-skill-package-optimizer/SKILL.md` 初版。
+  - 已完成验证：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` 成功。
+- next_action: 可选补充真实外部智能体端到端验收：导出 zip，交给加载了 `cici-skill-package-optimizer/SKILL.md` 的外部工具优化，重新打包后导入系统。
+- handoff_notes:
+  - `PACKAGE_SPEC.md` 是包内格式规范，不是外部智能体的优化器规则文件。
+  - `SKILL.md` 是导出包内的行业通用业务技能入口；`.agents/skills/cici-skill-package-optimizer/SKILL.md` 是项目内外部优化器规则，两者用途不同。
+  - `cici-skill-package-optimizer/SKILL.md` 应作为通用外部优化器规则维护，不打入每个业务技能 zip。
+  - 优化后 zip 仍必须符合 `universal-skill-package@1.0`，导入后只落为草稿，发布仍在 Cici Assistant 内完成。
+  - 本轮没有新增管理端 UI，也没有导入前 diff 预览。
+
+### TASK-036 Skill declarative API runtime
+
+- status: in_progress
+- priority: P0
+- owner_role: backend-agent-runtime
+- spec_path: `docs/specs/FEAT-015-skill-declarative-api-runtime.md`
+- summary: 在 Skill 中声明远程 API 契约，发布时编译为 Skill 专属 function schema 和后端 execution plan；运行时只在当前激活 Skill 中注入这些隐藏 API 工具，由后端按固定契约执行远程 API，模型只负责填写业务参数。
+- done:
+  - 已明确产品与架构语义：该能力不属于普通 `toolWhitelist`，而是 Skill 私有的内嵌 API 动作；对最终用户不可见，对模型只暴露抽象 function schema，对管理员和平台治理可见。
+  - 已新增 `docs/specs/FEAT-015-skill-declarative-api-runtime.md`，覆盖背景目标、范围、运行链路、发布期编译、运行时注入、执行器、安全策略、数据模型、接口影响、前端影响、验收标准和回滚策略。
+  - 已将该能力提升为 P0 任务，任务编号 `TASK-036`。
+- next_action: 进入后端最小闭环设计实现：新增 Skill API 契约数据模型和发布版本快照，创建 `SkillApiToolService` 的编译/执行骨架，并让 `ToolOrchestratorService` 能识别 `skillapi__` 命名空间。
+- handoff_notes:
+  - 第一版优先实现 `triggerMode=model_decide`，复用当前 tool-calling loop；暂不做 `auto_before_answer`。
+  - 模型不能看到或提交 URL、Method、Header、Token；只能提交 `inputSchema` 中声明的业务参数。
+  - 必须把 SSRF 防护、host 白名单、响应裁剪、脱敏、超时和审计作为后端 P0 范围，不允许作为后续补丁处理。
+  - 管理端 UI 第二阶段跟进也可以，但后端契约和运行时闭环必须先保证可测。
+
+### TASK-035 Admin skill versioning import export
+
+- status: completed
+- priority: P1
+- owner_role: product-admin-skill-governance
+- spec_path: `docs/specs/FEAT-014-skill-versioning-import-export.md`
+- summary: 设计并实现管理端技能版本控制、最近三版恢复、仅自定义技能导出、外部通用技能包导入、自定义技能删除、草稿/发布状态机和列表/新建/编辑页入口。
+- done:
+  - 已新增 `docs/specs/FEAT-014-skill-versioning-import-export.md`，覆盖版本生成时机、最近三版保留策略、运行时 pinned 快照保护、changelog/diff summary、恢复流程。
+  - 已定义通用技能 zip 包当前格式：`manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。
+  - 已明确导出权限边界：第一版仅 `TENANT_CUSTOM + EDITABLE` 可导出，平台标准和租户派生不直接导出。
+  - 已明确导入流程：zip 安全校验、大模型字段映射、资源匹配、导入预览、确认后创建 `TENANT_CUSTOM` 技能。
+  - 已补管理端技能列表页、新建页、编辑页的低保真原型和交互说明。
+  - 已按补充需求补齐自定义技能删除、标准技能只读、导出前大模型标准化整理、隐藏派生入口、保存草稿/正式发布状态机。
+  - 已补齐补充需求落地矩阵、服务端权限守卫、任务拆分和验收映射，明确前端隐藏入口不能替代后端权限拦截。
+  - 已完成第一轮后端实现：`V35` 迁移、`skill_version` changelog/diff/source/retention 字段、`skill_definition` lifecycle/delete/publish 字段、版本列表/恢复、发布、删除影响分析、软删除、导出 zip、导入 zip 解析并创建自定义技能、派生入口服务端拒绝。
+  - 已完成第一轮前端实现：列表页导入/发布/导出/删除入口、列表按钮视觉回到 `鎏金账房` 金线基线、编辑页版本侧栏、恢复、发布、导出、删除、导入 zip、变更日志和标准技能只读态入口。
+  - 已完成验证：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` 通过；`frontend npm run build` 通过。
+  - 已完成导出硬化第二轮：`SkillPackageService` 已新增“模型标准化优先 + 确定性回退”链路，导出前执行 manifest/schema 校验和敏感信息扫描；导出作业会返回实际标准化引擎与告警。
+  - 已完成导入硬化第二轮：导入预览返回 `resourceMapping`（工具/知识库匹配与未匹配项）；`/skills/imports/{importId}/create` 支持可编辑 `draftOverride` 提交，创建前会按当前组织资源重新映射白名单。
+  - 已完成前端导入预览收口：`/admin/skills/new` 导入 zip 改为“载入可编辑草稿，不自动创建”；列表页导入遇到未匹配资源会拦截并引导去新建页处理。
+  - 已完善导入预览工作区：补充升级处理规则/输出约定可编辑字段，并在“直接创建草稿”前增加技能代码与显示名称前端必填校验。
+  - 已补 Agent runtime pin 保留回归：`SkillGovernanceIntegrationTest` 新增被 pin 旧版本在 retention prune 后应标记 `PROTECTED_RUNTIME` 且 `restoreVisible=false` 的断言。
+  - 已修复管理端 Skill 列表表格错位和横向滚动：摘要截断与操作按钮布局不再直接改变 `<td>` display，列表表格改为固定列宽 100% 布局。
+  - 已按用户反馈继续收紧管理端 Skill 列表：页面文案纯中文，移除历史派生筛选；标准技能不显示查看入口，自定义技能不在列表页显示发布入口；右上新建技能恢复列表页主按钮样式。
+  - 已按用户截图把自定义技能行级编辑/导出/删除改为 hover 三点按钮 + 点击后纵向菜单，支持外部点击和 Escape 关闭。
+  - 已按用户截图继续调整列表页头：移除辅助标题文字，统一右上导入/新建按钮样式。
+  - 已按用户反馈修正新建/编辑页版本管理可见性：字段页签新增“版本管理”，新建页显示版本生成说明，自定义技能编辑页展示最近三版恢复列表，页头“版本管理”按钮直接切到该页签。
+  - 已按用户反馈把“发布”设为新建/编辑页自定义技能主动作；新建页点击发布会先创建草稿再发布，草稿保存入口保留但降为次级按钮。
+  - 已按用户反馈移除新建/编辑页导入 zip 入口和导入预览工作区；导入技能保留在列表页入口。
+  - 已按用户反馈移除基础信息中的“变更日志”，改为点击“发布”时弹出输入框录入版本发布说明，取消或留空不发布。
+  - 已按用户截图反馈把版本发布说明从浏览器原生 prompt 改为统一风格的居中模式窗口，使用文本区录入，确认发布按钮在说明为空时禁用。
+  - 已按用户反馈统一 Skill 相关弹框关闭样式：发布说明、添加工具白名单、添加知识库白名单弹框右上角均为无边框 × 图标。
+  - 已按用户反馈统一 Skill 弹框按钮样式：白名单弹框“取消”改回暖白金线次级按钮，确认按钮保持香槟金主按钮；项目设计源新增“产品页按钮统一”和“弹出框默认模式窗口”规则。
+  - 已按用户截图给管理端 Skill 新建/编辑页右侧页面滚动条留出内容间距，避免页头按钮和右侧摘要区紧贴滚动条。
+  - 已按用户截图互换管理端 Skill 新建/编辑页字段页签顺序：“编译预览”现在位于“版本管理”之前。
+  - 已按用户截图调整管理端 Skill 新建/编辑页页头按钮：“创建草稿”改为“保存草稿”，“预览编译”改为“编译预览”，且两者互换位置。
+  - 已按用户要求把自然语言生成区“摘要预览”改为“需求解析”，空态改为“暂无待解析的需求”，生成草稿期间显示解析中动态进程。
+  - 已将“继续优化”接入同一套需求解析动态进程，且在清空旧解析前缓存当前草稿与追问答案。
+  - 已修复“继续优化”对增量请求整段改写旧草稿的问题：对“增加/补充/加入/再增加”类需求，服务端会保留当前提示片段和规格正文，只追加增量要求；已用“邮件市场营销活动 + 再增加百度搜索”场景补回归。
+  - 已为“继续优化”增加未保存结果回退能力：优化成功后展示“回退本次优化”，可恢复优化前的表单、编译预览、需求解析、会话 ID 与追问答案；保存、重新生成、清空、重置或重新加载上下文后回退入口清除。
+  - 已定位并修复自定义技能删除检查本地报错：运行中的 8080 后端未加载 `/skills/{id}/delete-impact`，导致请求被当作静态资源缺失并包装为 `Unexpected server error`；本轮已重启后端到当前源码并将未匹配路由改为 404、路径参数错误改为 400。
+  - 已修复管理端 Skill 导出下载链路：前端不再用 `window.location.href` 打开受保护下载地址，改为带管理员 token 的 blob 下载；后端响应类型改为 `application/zip`。
+  - 已补导出包回归断言：下载内容必须是 universal-skill-package zip，并包含 `manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。
+  - 已追加导出下载双保险：`/skills/exports/{exportId}/download` 不再受类级 `@RequireOrgAdmin` 拦截，直接打开新导出 URL 也会返回 zip；其他 Skill 管理接口仍逐个保留组织管理员权限。
+  - 已重启本地后端，并用真实 localhost 探针验证新导出 URL 返回 `200 application/zip`。
+  - 已修复删除后导入同 code 技能包仍报 `Skill code already exists`：软删除时归档旧 `skill_code`，创建新 Skill 时会归档历史 `DELETED` 冲突记录并 flush，Flyway `V36` 会处理已存在的软删除占用数据。
+  - 已补删除同 code 后导入创建回归：`SkillGovernanceIntegrationTest` 覆盖删除 `feat014-custom-skill` 后再次导入同 code zip 并成功创建 `DRAFT`。
+  - 已修复自定义技能删除的运行时引用误判：`delete-impact` 只按启用 Agent 当前发布版本的 Skill ref 判断运行时 pin，历史 archived 发布快照不再阻断删除。
+  - 已补回归：当前发布版本引用 Skill 时删除仍被阻断；切到不含该 Skill 的新发布版本后，旧快照保留但删除检查通过。
+  - 用户已确认管理端 Skill 版本、导入导出、删除治理、发布说明模式窗口、白名单弹框、页签顺序和需求解析动态进程完成人工验收。
+- next_action: 已完成；后续仅按常规回归覆盖管理端 Skill 版本、导入导出与删除治理链路。
+- handoff_notes:
+  - 本任务已完成第一轮业务代码与 UI 入口，不再是纯设计态。
+  - 当前导出已支持“模型标准化优先 + 回退”和 schema/敏感信息扫描；若模型不可用会自动回退到确定性标准化。
+  - 当前导入已支持资源匹配预览和可编辑草稿覆盖提交；列表页快导仍是轻流程，不展示完整预览面板。
+  - UI 实现必须继续遵守 `PRODUCT.md` / `DESIGN.md` 的 `鎏金账房` 管理端 product register。
+
+### TASK-034 Admin skill authoring resource whitelist and edit refinement
+
+- status: completed
+- priority: P1
+- owner_role: fullstack-product-admin
+- spec_path: `docs/specs/FEAT-001-skill-authoring-generic-generation.md`
+- summary: 优化管理端 Skill 自然语言生成与编辑：资源引用自动进入白名单，并允许已有 Skill 用自然语言继续优化后保存回原技能。
+- done:
+  - 已更新 FEAT-001 验收标准：自然语言生成/优化中明确引用候选工具、MCP 工具或知识库时，必须补入 `toolWhitelist` / `kbWhitelist`。
+  - 后端 `BuiltinSkillCreatorService` 已在模型生成与 fallback 生成后追加资源引用扫描，覆盖 sourceText、描述、提示片段、规格正文、升级处理规则和输出约定。
+  - 自定义工具匹配已从 toolName/displayName 扩展到 description，管理员说“潜客检索工具”这类工具描述时也能补入真实 toolName。
+  - 前端 `AdminSkillComposePage` 套用生成/优化结果时保留当前表单的 `id`、启用状态和治理字段，已有 Skill “继续优化”后保存会更新原技能。
+  - 不可编辑的平台标准 Skill 已禁用自然语言生成/继续优化正文入口，并提示先派生。
+  - 已新增 `SkillAuthoringIntegrationTest` 覆盖工具/知识库引用自动白名单、无 session 的已有草稿继续优化。
+  - 已完成验证：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test` 通过；`frontend npm run build` 通过。
+- next_action: 如继续人工验收，优先在 `/admin/skills/new` 输入带工具描述和知识库名称的需求，确认边界规则页白名单自动出现；再在 `/admin/skills/:id/edit` 输入增量优化说明，保存后确认仍是同一个 Skill ID。
+- handoff_notes:
+  - 本轮不改变 Skill 保存 API 的字段契约，仍使用 `toolWhitelist` / `kbWhitelist` 数组和前端 CSV 文本中转。
+  - 知识库授权和工具授权保持分离；提到知识库会进入 `kbWhitelist`，不强制把 `rag-search` 一并加入工具白名单。
+
+### TASK-033 Admin skill editor visual refresh
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-admin
+- summary: 按已确认效果图优化管理端 Skill 新建/编辑页的信息结构与视觉风格，使其符合 `鎏金账房` 产品页基线。
+- done:
+  - 已将 Skill Compose 页头重构为面包屑、标题、状态 chips 与右侧操作区，导入、预览、保存动作从首屏散点收拢到页头。
+  - 已将 Authoring 区重排为“自然语言生成”工作台，保留模型选择、AI 生成草稿、继续优化、按草稿创建和清空动作，并补充需求描述 placeholder 与字数计数。
+  - 已将摘要区改为“摘要预览”只读面板，生成前展示目标、触发、输出三行结构化空态。
+  - 已将 Skill fields 拆成基础信息、提示与规格、输入输出与边界三个紧凑字段组，让字段区在首屏更早露出。
+  - 已将管理端 shell 与 Skill Compose 局部样式从蓝色默认后台调整到暖象牙、墨色、香槟金结构线的产品基线。
+  - 已按用户要求将页面解释性/说明性文字收进标题旁小问号提示，覆盖页面标题、Authoring 区、模型选择、摘要预览、字段标题、字段分组、启用和编译预览。
+  - 已按用户要求去掉 Skill fields 区域最外层背景、内部分组背景，并移除“基础信息 / 提示与规格 / 输入输出与边界”分组标题。
+  - 已按用户要求继续去掉 `技能字段 · Skill fields` 总标题，并去掉页头“新建技能”区域的横向背景块与分隔线。
+  - 已修复字段标题 tooltip 靠左时被滚动容器裁切的问题：字段区问号提示改为从问号右侧展开。
+  - 已按用户确认的第二版效果继续调整：字段区改为基础信息、执行提示、边界规则、编译预览页签；顶部统一收拢导入、重置、预览编译、创建/保存草稿等操作；移除底部重复操作按钮；`转人工规则` 改为 `升级处理规则`，问号说明补充价格承诺、合同、合规、权限不清、事实不足、工具异常与审批动作等升级场景。
+  - 已按“简约、不要框套框”要求精简布局边框：页面主体不再做上下多层面板堆叠，主要以顶部底线、左右分隔线、页签底线、输入框边框表达层级；长文本集中到执行提示页签的大面积编辑区，并保持局部滚动。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已按截图反馈微调左侧自然语言生成区：标题从“草稿助手”改为“自然语言生成”；左侧宽度增加约 2cm，右侧相应收窄；需求描述输入区改为固定可控高度，避免生成/优化/清空按钮被遮住。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已继续修复左侧重叠问题：自然语言生成标题 tooltip 改为向右展开；左侧面板改为局部纵向滚动；需求描述输入区高度下调到 `clamp(190px, 23vh, 260px)`，按钮行获得独立布局空间，不再被输入区或摘要预览盖住。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已按最新截图调整整体排布：自然语言生成区置顶整行展示，内部需求描述与摘要预览横排；基础信息、执行提示、边界规则、编译预览页签整体移动到生成区下方，并占满下方编辑区。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已继续微调：需求描述与摘要预览标题行、内容区高度对齐；去掉下方基础信息区域中间的竖向分割线；页面问号提示图标整体缩小。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已继续按截图修正：需求描述标题拆为与摘要预览同构的标题行，左右内容框统一高度；问号提示图标缩到 10px；移除自然语言生成区与页签之间的横线；页面恢复整体纵向滚动，便于滚动查看基础信息等内容。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已按用户截图将原“执行提示”页签拆成“提示片段”和“规格正文”两个独立 tab；每个 tab 分别展示一个大文本编辑区。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已将“提示片段”输入框高度规则改为与“规格正文”一致。
+  - 已完成验证：`frontend npm run build` 通过。
+  - 已按用户截图继续重排“边界规则”页：升级处理规则和输出约定收窄到左侧；右侧改为知识库白名单与工具白名单资源面板，支持通过添加选择器选择知识库、内置工具和 MCP 工具，并保留 CSV 字段保存契约。
+  - 已完成验证：`frontend npm run build` 通过；`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已按用户最新截图继续重排“边界规则”页：升级处理规则与输出约定各自独占上方一整行；知识库白名单与工具白名单在下方同一行并排展示，窄屏降级为单列。
+  - 已完成验证：`frontend npm run build` 通过；已重启前端 dev server 到 `http://127.0.0.1:5173/`，`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已按用户要求将“基础信息”中的启用控件从 checkbox 换为按钮式 switch，保留原 `enabled` 字段和禁用规则。
+  - 已完成验证：`frontend npm run build` 通过；`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已按用户要求去掉启用开关外层字段框，改为与其他字段一致的标题/控件上下节奏。
+  - 已完成验证：`frontend npm run build` 通过；`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已按用户要求将启用开关从基础信息字段区移到页面顶部按钮条最右侧，保留原 `enabled` 状态、禁用规则和保存契约。
+  - 已完成验证：`frontend npm run build` 通过；`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已按用户截图去掉“编译预览”tab 框内重复标题和问号，将问号说明文案改为框内常显说明。
+  - 已完成验证：`frontend npm run build` 通过；`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已按用户截图将页头启用开关移到按钮条最左侧，并去掉启用旁问号。
+  - 已完成验证：`frontend npm run build` 通过；`curl -sS -I http://127.0.0.1:5173/admin/skills/new` 返回 200。
+  - 已完成验证：`frontend npm run build` 通过；本地浏览器打开并刷新 `http://127.0.0.1:5173/admin/skills/new` 验证窄视口无重叠，说明文字已从页面表面隐藏，字段区已平铺，页头背景块已移除。
+- next_action: 如继续验收，优先在桌面宽屏检查 `/admin/skills/new` 与某个 `/admin/skills/:id/edit` 的页头启用开关顺序、编译预览说明、边界规则页上下排布、资源添加、MCP 工具展开、资源移除和保存后字段回填。
+- handoff_notes:
+  - 本轮只改前端结构与样式，不改后端接口和 Skill authoring 行为。
+
+### TASK-032 Assistant workbench model label display
+
+- status: completed
+- priority: P1
+- owner_role: frontend-backend-chat-runtime
+- summary: 在智能体回答问题时，在工作台助手消息 meta 中标记当前主模型名称，只展示模型名，不展示其他运行信息。
+- done:
+  - 后端 `/ai/chat/stream` 的 `phase` SSE 已携带当前实际 `modelName`，包括工具调用前的早期 phase 与生成 phase。
+  - 前端 `StreamPhaseEvent` 已支持 `modelName` 字段。
+  - 前端将 `modelName` 标记到当前尾部助手消息；如果助手占位不存在，会补一个空助手消息承载模型名。
+  - 工作台助手消息 meta 已新增模型名小标签，仅显示模型名。
+  - 远端历史刷新替换消息时会保留本地助手消息上的模型名标签，避免生成完成后标签丢失。
+  - 已新增 `chatMessageState.test.ts` 覆盖模型名标记与远端历史替换时保留模型名。
+  - 已完成验证：`frontend npm run build`、`frontend npm test`、`backend ChatOrchestratorServiceModelIdentityTest`、`backend compile` 均通过。
+- next_action: 前台工作台发送任意消息后，确认助手名/时间旁显示模型名，例如 `deepseek-v4-pro` 或当前配置的 qwen 模型。
+- handoff_notes:
+  - 本轮按用户要求只展示模型名；不要追加 provider、token、耗时、上下文长度等运行指标。
+
+### TASK-031 Assistant model identity hallucination fix
+
+- status: completed
+- priority: P1
+- owner_role: backend-agent-runtime
+- summary: 排查并修复智能体在询问当前调用模型时错误自称 Claude 的问题，确保模型身份回答来自服务端真实路由配置。
+- done:
+  - 已查询本地数据库：`model_provider_config` 中 `anthropic` 为 disabled 且 API key 为空；`org_model_config` 当前 `demo-org/chat` 为 `aliyun-bailian / deepseek-v4-pro`。
+  - 已确认 `agent_definition` 中 `cici-system.model=deepseek-v4-pro`，其 system prompt 不包含 Claude；`skill_definition` 中未命中 Claude prompt。
+  - 已确认错误回答来自模型在缺少运行模型事实时自我身份幻觉，而不是 Anthropic 后台配置被调用。
+  - 已在 `ChatOrchestratorService.buildInitialMessages(...)` 注入运行模型上下文，包含当前服务端模型供应商与模型名称。
+  - 已明确提示模型：当用户问当前模型/供应商时只能依据运行上下文回答；不得在 provider/model 不匹配时自称 Claude、Anthropic、OpenAI、GPT、Gemini。
+  - 已新增 `ChatOrchestratorServiceModelIdentityTest` 覆盖 `aliyun-bailian / deepseek-v4-pro` 的身份提示。
+  - 已完成后端验证：`mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` 成功；`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 成功。
+- next_action: 可在前台重新询问“你现在调用的是什么大模型”，预期回答基于 `阿里云百炼 / deepseek-v4-pro`，不会再自称 Claude。
+- handoff_notes:
+  - 当前配置是“百炼供应商 + deepseek-v4-pro 模型”，不是 qwen；如果产品预期是通义千问，需要在管理端模型配置或数据库中把 chat 场景切换到 qwen 系列。
+  - 本轮不修改现有模型配置数据，只修复模型身份事实注入与回答约束。
+
+### TASK-030 Assistant workbench streaming message preservation
+
+- status: completed
+- priority: P1
+- owner_role: frontend-assistant-workbench
+- summary: 修复会话工作台中助手回复占位/流式内容被服务端旧历史覆盖，导致气泡短暂消失、最终回复整段出现的问题。
+- done:
+  - 已定位根因：`persistUserTurnCommitted` 后到 `persistAssistantTurnCommitted` 前，服务端历史可能只包含用户消息；工作台状态机 thought 变化触发 `loadWorkbenchMessages(..., true)` 后会用旧历史覆盖本地助手占位。
+  - 已新增 `chatMessageState.ts`，统一处理“是否保留本地流式消息”、delta 追加和尾部助手消息替换。
+  - 已让 `loadConversationMessages` / `loadWorkbenchMessages` 在远端历史缺少有效助手内容时保留本地占位或部分流式内容；404 早期竞态也保留本地流式状态。
+  - 已让 delta 到达时如果最后一条已不是助手消息，则自动补回助手气泡并继续追加，避免流式内容丢失。
+  - 已让工作台本地乐观消息同步写入 `conversationMessages[sessionId]`，避免工作台与历史缓存分叉。
+  - 已移除工作台 effect 对 `activeWorkbenchThoughts.length` 的依赖，状态机提示变化不再触发历史重拉。
+  - 已新增 `chatMessageState.test.ts` 覆盖占位保留、远端有效助手替换、占位丢失后 delta 自动补回、尾部助手替换。
+  - 已完成前端验证：`npm run build` 成功，`npm test` 成功（3 个文件，12 个测试）。
+- next_action: 如继续验收，优先用“明天天气 + 城市补充”这类会触发工具调用的工作台对话，确认等待工具期间助手气泡不会消失，生成阶段逐步追加。
+- handoff_notes:
+  - 本轮只改前端消息状态竞争处理，不改后端 SSE 协议和视觉样式。
+  - 后端工具调用本身仍会发生在最终模型流式生成之前，因此工具执行期间可能只有占位/状态提示；关键修复是占位不再被旧历史清掉，流式 delta 不再丢失。
+
+### TASK-029 Assistant workbench enter send and ASR finish behavior
+
+- status: completed
+- priority: P1
+- owner_role: frontend-assistant-workbench
+- summary: 调整前台会话工作台输入与语音识别体验：回车可触发送出；语音识别结束不再自动发送，只生成输入框内容；5 秒无语音自动关闭识别。
+- done:
+  - 已为工作台多行输入框增加 `Enter` 发送，保留 `Shift+Enter` 换行，并避开组合输入与带修饰键的回车。
+  - 已将工作台语音识别完成逻辑从“自动发送”改为“回填输入框并提示内容已生成”。
+  - 已为共享 ASR hook 增加可选静默自动停止参数，当前工作台传入 `5000ms`，管理端 Skill 语音录入不受影响。
+  - 已追加修复语音按钮焦点问题：语音结束后焦点回到 composer 输入框，避免按 Enter 重新触发麦克风；重新开始语音时也保留已有输入作为前缀，避免误触发导致转写文本丢失。
+  - 已完成前端验证：`npm run build` 与 `npm test` 均通过；追加修复后已复跑通过。
+- next_action: 如继续验收，优先在浏览器实测工作台 `Enter`、`Shift+Enter`、手动结束语音和静默自动结束四条路径。
+- handoff_notes:
+  - 本轮只改 `frontend/src/assistant/AssistantApp.tsx` 与 `frontend/src/shared/useAsrVoiceInput.ts` 的交互逻辑，不改视觉语言、接口或后端 ASR 协议。
+  - `autoStopAfterNoSpeechMs` 是 opt-in 配置，后续其他页面如需同款静默关闭可显式传入。
+
+### TASK-028 Global avatar settings for agents and current user
+
+- status: completed
+- priority: P1
+- owner_role: fullstack-product-avatar
+- spec_path: `docs/specs/FEAT-013-global-avatar-settings.md`
+- summary: 设计并实现全局头像设置能力：智能体头像仅由管理员在管理端 Agent Builder 设置，当前登录用户头像仅由本人在前台个人设置入口设置，并统一前台头像展示规则。
+- done:
+  - 已确认产品边界：智能体头像只能由管理员设置；用户头像只能自己设置；第一版采用上传图片、前端裁剪压缩、默认字母头像兜底。
+  - 已补充展示覆盖要求：系统中所有需要显示头像的位置都必须显示对应身份头像，包括智能体、当前登录用户和外部会话参与人。
+  - 已完成现状检查：`app_user.avatar_base64` 与管理端用户头像压缩逻辑已存在；`agent_definition` 尚无头像字段。
+  - 已新增 `docs/specs/FEAT-013-global-avatar-settings.md`，沉淀 UX、权限、数据模型、API、前端结构与验收标准。
+  - 已完成后端实现：新增 `V34__agent_definition_avatar_base64.sql`；`agent_definition` 支持 `avatar_base64`；`/agents` 定义读写已支持 `avatarBase64`；新增 `/auth/me/avatar` 仅允许当前用户更新本人头像；头像数据 URL 校验已统一收口。
+  - 已完成前端实现：管理端 Agent Builder 已支持智能体头像上传/清除；前台个人设置已新增“个人资料/我的头像”并支持本人上传/清除；抽取 `AvatarView` 与 `processAvatarFile` 复用组件/逻辑。
+  - 已完成头像展示覆盖替换：前台 rail、工作台消息、会话消息、智能体切换条、状态卡、监控卡、会话头部、右侧档案卡、智能体卡、会话对象卡等位置已接入对应头像来源。
+  - 已完成编译验证：`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、`frontend npm run build` 均通过。
+  - 已修复前台左上角 rail 头像显示异常：头像入口 button 不再继承全局 button padding，内容区恢复为完整圆形，并改走 `AvatarView`。
+  - 已新增交互式头像裁剪：用户与智能体上传头像时均支持缩放、拖动取景、应用裁剪后再保存。
+  - 用户已确认 `/auth/me/avatar`、`/agents` 头像字段读写、头像裁剪、个人头像入口、Agent Builder 智能体头像入口和前台头像展示覆盖完成人工验收。
+- next_action: 已完成；后续仅按常规回归覆盖头像读写权限、裁剪保存和主要头像展示点。
+- handoff_notes:
+  - 本卡已进入实现验收收口，后续重点是接口权限回归与页面人工验收。
+  - 不要把头像功能做成社交装扮或营销形象库；第一版是产品工作台身份识别能力。
+  - 实现时必须按 spec 的“展示覆盖矩阵”逐项替换头像展示点，不能只完成设置页。
+  - 注意旧的管理端用户头像维护能力已存在，本轮用户确认的新边界是“前台当前用户头像只能本人设置”，实现时需避免扩大管理员代设入口。
 
 ### TASK-027 Project-wide impeccable design governance
 
@@ -23,6 +295,7 @@ board_status: active
   - 已在 `README.md` 中补充面向开发者的人类可读设计治理入口。
   - 已将根 `PRODUCT.md` 从平台单页上下文扩展为全项目认证产品面的统一战略上下文。
   - 已将 `DESIGN.md` / `DESIGN.json` 扩展为 assistant、admin、platform 共用的产品面设计基线，并保留 `鎏金账房` 作为默认视觉语言。
+  - 已将管理端 Skill 列表本轮所有调整沉淀为 `Admin CRUD Lists` 规范：保护原生表格对齐、禁止横向滚动、搜索/筛选/空态不得撑开页面、筛选使用金色文本 tab、按钮统一、行操作使用 hover 三点菜单、列表页不暴露越权动作。
   - 已新增 `docs/specs/FEAT-012-project-design-governance.md` 作为本轮规范落地的事实源，并在 `decisions.md` 中记录项目级设计治理决策。
 - next_action: 后续任意页面改版先按 `AGENTS.md` 的 `impeccable` 预检执行；若引入品牌页或活动页，先单独 `shape` 并补 spec。
 - handoff_notes:

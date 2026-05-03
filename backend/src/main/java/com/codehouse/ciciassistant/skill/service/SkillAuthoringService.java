@@ -113,7 +113,9 @@ public class SkillAuthoringService {
                         skillSpec.riskLevel(),
                         "builtin-skill-creator",
                         toJson(specIr),
-                        buildAuthoringNotes(skillSpec)
+                        buildAuthoringNotes(skillSpec),
+                        "AI 生成技能草稿",
+                        "builtin-skill-creator"
                 )
         );
         SkillDefinitionService.PreviewResult preview = skillDefinitionService.previewCompile(
@@ -150,11 +152,14 @@ public class SkillAuthoringService {
         List<String> parts = new ArrayList<>();
         parts.add("当前技能名称：" + current.name());
         parts.add("当前描述：" + safe(current.description()));
+        parts.add("当前提示片段：" + safe(current.promptFragment()));
+        parts.add("当前规格正文：" + safe(current.draftSpecText()));
         parts.add("当前输出要求：" + safe(current.outputContract()));
         parts.add("当前转人工规则：" + safe(current.handoffRule()));
         parts.add("当前工具：" + join(current.toolWhitelist()));
         parts.add("当前知识库：" + join(current.kbWhitelist()));
         parts.add("优化要求：" + instruction);
+        parts.add("合并规则：本次是对当前草稿的增量优化。除非优化要求明确要求删除、替换、重写或改顺序，否则必须保留当前提示片段和规格正文中的既有步骤、工具调用链、兜底规则和输出结构；遇到“增加、补充、加入、再增加”类要求，只在原流程基础上追加相关步骤或约束。");
         return String.join("\n", parts);
     }
 
@@ -235,8 +240,8 @@ public class SkillAuthoringService {
                 current.skillCode(),
                 chooseText(current.name(), refined.name()),
                 chooseText(current.description(), refined.description()),
-                chooseText(current.promptFragment(), refined.promptFragment()),
-                mergeDraftSpecText(current.draftSpecText(), refined.draftSpecText()),
+                mergePromptFragment(current.promptFragment(), refined.promptFragment(), normalizedInstruction),
+                mergeDraftSpecText(current.draftSpecText(), refined.draftSpecText(), normalizedInstruction),
                 mergeRefs(current.toolWhitelist(), refined.toolWhitelist()),
                 mergeRefs(current.kbWhitelist(), refined.kbWhitelist()),
                 shouldRefreshHandoff(normalizedInstruction) ? chooseText(current.handoffRule(), refined.handoffRule()) : current.handoffRule(),
@@ -275,11 +280,21 @@ public class SkillAuthoringService {
         return current;
     }
 
+    private String mergePromptFragment(String current, String refined, String sourceText) {
+        if (shouldAppendIncrementalRequirement(sourceText) && trimToNull(current) != null) {
+            return appendIncrementalRequirement(current, sourceText);
+        }
+        return chooseText(current, refined);
+    }
+
     /**
      * Preserve clarification answer blocks appended during Phase 2 session flow; refined generator may
      * otherwise replace the whole draft spec with a fresh template and drop the administrator replies.
      */
-    private String mergeDraftSpecText(String current, String refined) {
+    private String mergeDraftSpecText(String current, String refined, String sourceText) {
+        if (shouldAppendIncrementalRequirement(sourceText) && trimToNull(current) != null) {
+            return appendIncrementalRequirement(current, sourceText);
+        }
         String refinedText = refined == null || refined.isBlank() ? "" : refined;
         String currentText = current == null ? "" : current;
         String marker = "管理员对结构化追问的补充答复";
@@ -297,6 +312,31 @@ public class SkillAuthoringService {
             return refinedText;
         }
         return currentText;
+    }
+
+    private boolean shouldAppendIncrementalRequirement(String sourceText) {
+        if (sourceText == null || sourceText.isBlank()) {
+            return false;
+        }
+        return containsAny(sourceText, "再增加", "增加", "新增", "补充", "加入", "添加", "加上", "也要", "同时")
+                && !containsAny(sourceText, "改成", "改为", "替换", "重写", "删除", "移除", "去掉", "不要", "不再", "重新生成");
+    }
+
+    private String appendIncrementalRequirement(String current, String sourceText) {
+        String base = current == null ? "" : current.stripTrailing();
+        String instruction = sourceText == null ? "" : sourceText.trim();
+        if (instruction.isBlank() || base.contains(instruction)) {
+            return base;
+        }
+        return base + "\n\n增量优化要求：在不改变上述既有步骤顺序和工具调用链的前提下，补充执行：" + stripTrailingSentencePunctuation(instruction) + "。";
+    }
+
+    private String stripTrailingSentencePunctuation(String raw) {
+        String out = raw == null ? "" : raw.trim();
+        while (out.endsWith("。") || out.endsWith("；") || out.endsWith(";") || out.endsWith(".") || out.endsWith("！") || out.endsWith("!")) {
+            out = out.substring(0, out.length() - 1).trim();
+        }
+        return out;
     }
 
     private String join(List<String> items) {

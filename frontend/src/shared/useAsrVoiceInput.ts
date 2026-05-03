@@ -21,6 +21,8 @@ export type AsrVoiceStartOptions = {
   onNotice: (msg: string) => void;
   /** Invoked when the ASR WebSocket has closed. */
   onFinished?: (p: { asrText: string; fullText: string }) => void | Promise<void>;
+  /** Stop automatically after this many milliseconds without audible input. */
+  autoStopAfterNoSpeechMs?: number;
 };
 
 /**
@@ -38,6 +40,8 @@ export function useAsrVoiceInput() {
   const finalAsrTextRef = useRef("");
   const partialAsrTextRef = useRef("");
   const prefixSnapshotRef = useRef("");
+  const silenceTimerRef = useRef<number | null>(null);
+  const silenceTimeoutMsRef = useRef<number | null>(null);
   const liveHandlerRef = useRef<(text: string) => void>(() => {});
   const noticeHandlerRef = useRef<(msg: string) => void>(() => {});
   const finishHandlerRef = useRef<(p: { asrText: string; fullText: string }) => void | Promise<void>>(async () => {});
@@ -76,6 +80,13 @@ export function useAsrVoiceInput() {
     }
   }, []);
 
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current != null) {
+      window.clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+  }, []);
+
   const pushLive = () => {
     const asr = (finalAsrTextRef.current + partialAsrTextRef.current).trim();
     const full = mergePrefixAsr(prefixSnapshotRef.current, asr);
@@ -85,6 +96,7 @@ export function useAsrVoiceInput() {
   };
 
   const stop = useCallback(() => {
+    clearSilenceTimer();
     setListening(false);
     const websocket = asrWsRef.current;
     if (websocket && websocket.readyState === 1) {
@@ -98,9 +110,10 @@ export function useAsrVoiceInput() {
         }
       }, 300);
     }
-  }, [disconnectAudio]);
+  }, [clearSilenceTimer, disconnectAudio]);
 
   const abort = useCallback(() => {
+    clearSilenceTimer();
     try {
       asrWsRef.current?.close();
     } catch {
@@ -109,7 +122,19 @@ export function useAsrVoiceInput() {
     asrWsRef.current = null;
     disconnectAudio();
     setListening(false);
-  }, [disconnectAudio]);
+  }, [clearSilenceTimer, disconnectAudio]);
+
+  const armSilenceTimer = useCallback(() => {
+    clearSilenceTimer();
+    const timeoutMs = silenceTimeoutMsRef.current;
+    if (!timeoutMs || timeoutMs <= 0) {
+      return;
+    }
+    silenceTimerRef.current = window.setTimeout(() => {
+      noticeHandlerRef.current("5 秒未检测到语音，已结束识别。");
+      stop();
+    }, timeoutMs);
+  }, [clearSilenceTimer, stop]);
 
   useEffect(() => {
     return () => {
@@ -130,6 +155,10 @@ export function useAsrVoiceInput() {
       noticeHandlerRef.current = options.onNotice;
       finishHandlerRef.current = options.onFinished ?? (async () => {});
       prefixSnapshotRef.current = options.getPrefix();
+      silenceTimeoutMsRef.current =
+        typeof options.autoStopAfterNoSpeechMs === "number" && options.autoStopAfterNoSpeechMs > 0
+          ? options.autoStopAfterNoSpeechMs
+          : null;
       finalAsrTextRef.current = "";
       partialAsrTextRef.current = "";
 
@@ -145,10 +174,16 @@ export function useAsrVoiceInput() {
             const message = JSON.parse(String(event.data)) as AsrWsMessage;
             if (message.type === "partial") {
               partialAsrTextRef.current = message.text ?? "";
+              if (partialAsrTextRef.current.trim()) {
+                armSilenceTimer();
+              }
               pushLive();
             } else if (message.type === "final") {
               finalAsrTextRef.current += message.text ?? "";
               partialAsrTextRef.current = "";
+              if ((message.text ?? "").trim()) {
+                armSilenceTimer();
+              }
               pushLive();
             } else if (message.type === "error") {
               noticeHandlerRef.current(`阿里云实时识别失败：${message.message ?? "unknown"}`);
@@ -161,6 +196,7 @@ export function useAsrVoiceInput() {
           noticeHandlerRef.current("实时语音连接异常，请重试。");
         };
         websocket.onclose = async () => {
+          clearSilenceTimer();
           disconnectAudio();
           asrWsRef.current = null;
           setListening(false);
@@ -201,7 +237,14 @@ export function useAsrVoiceInput() {
           if (!currentSocket || currentSocket.readyState !== 1) {
             return;
           }
-          const downsampled = downsampleTo16k(ev.inputBuffer.getChannelData(0), context.sampleRate);
+          const channelData = ev.inputBuffer.getChannelData(0);
+          for (let i = 0; i < channelData.length; i += 32) {
+            if (Math.abs(channelData[i] ?? 0) > 0.018) {
+              armSilenceTimer();
+              break;
+            }
+          }
+          const downsampled = downsampleTo16k(channelData, context.sampleRate);
           if (downsampled.byteLength > 0) {
             currentSocket.send(downsampled);
           }
@@ -211,12 +254,13 @@ export function useAsrVoiceInput() {
 
         setListening(true);
         noticeHandlerRef.current("实时听写中...（边说边出字）");
+        armSilenceTimer();
       } catch (error) {
         noticeHandlerRef.current(`实时语音启动失败：${error instanceof Error ? error.message : String(error)}`);
         abort();
       }
     },
-    [speechSupported, abort, disconnectAudio],
+    [speechSupported, abort, armSilenceTimer, clearSilenceTimer, disconnectAudio],
   );
 
   return { listening, speechSupported, start, stop, abort };

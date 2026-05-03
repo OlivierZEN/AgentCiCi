@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.domain.OrgEntity;
 import com.codehouse.ciciassistant.auth.domain.OrgRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
 import java.time.Instant;
 import java.util.LinkedHashSet;
@@ -115,6 +116,16 @@ public class AuthService {
                 "avatarBase64", user.getAvatarBase64() == null ? "" : user.getAvatarBase64(),
                 "roles", resolveRoles(user)
         );
+    }
+
+    @Transactional
+    public Map<String, Object> updateCurrentUserAvatar(String orgId, String userId, String avatarBase64) {
+        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+        String normalizedAvatar = AvatarDataUrlValidator.normalizeNullableDataUrl(avatarBase64, "avatarBase64");
+        user.setAvatarBase64(normalizedAvatar);
+        userRepository.save(user);
+        return currentUser(orgId, userId);
     }
 
     private List<String> resolveRoles(UserEntity user) {

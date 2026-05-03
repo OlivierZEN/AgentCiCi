@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-04-30T11:54:33Z",
+  "generatedAt": "2026-05-01T09:33:50Z",
   "title": "Design System: CiCi Product Surfaces",
   "extensions": {
     "colorMeta": {
@@ -48,6 +48,65 @@
     "breakpoints": {
       "compact": "980px",
       "stacked": "720px"
+    },
+    "componentRules": {
+      "buttons": [
+        "Product-page buttons must use the shared primary, secondary, and danger vocabulary instead of legacy blue, teal, black, gradient, or unscoped global button styles.",
+        "Primary actions use champagne gold fill (#a67c2f) with warm white text; hover and focus use stronger bronze (#876223).",
+        "Secondary and cancel actions use warm white or ivory surfaces, gold-tinted borders (#ded2bb), bronze or ink text, and restrained hover (#faf4e8 / #b99652).",
+        "Buttons that appear together, especially in toolbars or modal footers, must share height, radius, padding, weight, and focus behavior."
+      ],
+      "modals": [
+        "Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless a feature spec explicitly requires a popover, drawer, toast, or inline disclosure.",
+        "Modal windows use a blocking overlay, role=dialog, aria-modal=true, a labelled heading, an opaque warm ivory surface, and a fixed footer when actions are present.",
+        "Modal footers use secondary buttons for cancel or close actions and primary champagne-gold buttons for confirm or save actions.",
+        "Close controls are quiet icon buttons without bordered button blocks."
+      ]
+    },
+    "adminCrudLists": {
+      "purpose": "Durable guardrails for authenticated admin CRUD list pages, based on the /admin/skills list hardening.",
+      "density": {
+        "pageRows": "auto",
+        "gridAlignContent": "start",
+        "searchHeight": "compact explicit height",
+        "emptyState": "compact table row or concise note, not a tall blank composition"
+      },
+      "layoutRules": [
+        "Keep title, toolbar, filters, and table in content-height rows so filtering or empty results cannot stretch the page.",
+        "Full-width toolbar inputs must use box-sizing:border-box, max-width:100%, min-width:0, and focus rings that do not change layout size.",
+        "Grid and flex parents that contain lists, toolbars, tables, or cells must provide min-width:0 so long content cannot widen the page.",
+        "Normal admin CRUD lists must not create horizontal scroll. If horizontal scroll is unavoidable, document the exception in the feature spec and keep it local to that table."
+      ],
+      "tableRules": [
+        "Never apply display:flex, display:grid, display:block, or display:-webkit-box directly to table, thead, tbody, tr, th, or td.",
+        "Put text clamps, wrapping, chips, and flex action groups inside inner cell elements, while real table cells remain table cells.",
+        "Dense admin tables should use table-layout:fixed with an explicit colgroup or equivalent column contract.",
+        "Long names, codes, summaries, and empty values must truncate or wrap inside the cell instead of widening the table."
+      ],
+      "toolbarRules": [
+        "Buttons in the same toolbar must share height, radius, padding, font weight, border, hover, and focus vocabulary.",
+        "Secondary admin toolbar buttons use warm white surfaces, gold-tinted borders, ink or bronze text, and restrained hover.",
+        "List scope filters are text tabs, not large pill buttons.",
+        "Active filter tabs on gold-led product pages use accent-primary-strong text (#876223) and line-strong underline (#b99652), not teal or green unless the state is semantic success."
+      ],
+      "rowActionRules": [
+        "Dense list rows should not permanently show multiple secondary buttons.",
+        "Use a hover/focus more trigger for secondary row actions such as edit, export, and delete.",
+        "More triggers should be vertically centered in the row, borderless, and visually quiet until hover or focus.",
+        "Menus must be opaque and use consistent menu-item styling for links and buttons; destructive actions may change text color but not sizing vocabulary.",
+        "List pages must not expose actions outside their responsibility, such as publishing from a page where publishing belongs to the editor or governance flow.",
+        "Standard or read-only rows should not show edit/view affordances when product rules disallow inspection or modification from that surface."
+      ],
+      "copyRules": [
+        "Admin list UI labels should stay Chinese-only unless the feature spec explicitly asks for bilingual labels.",
+        "Remove auxiliary eyebrow or subtitle text when it does not improve scanning or task completion."
+      ],
+      "regressionChecks": [
+        "Switch each filter tab and confirm search width, table width, row height, and page spacing remain stable.",
+        "Type a query that returns no results and confirm the page does not stretch vertically or horizontally.",
+        "Hover rows and open action menus, then confirm row height, column alignment, and menu opacity remain stable.",
+        "Check desktop and compact widths for no incoherent overlap, no horizontal scrollbar, and consistent button styling."
+      ]
     },
     "narrative": {
       "northStar": "The Gilded Ledger",

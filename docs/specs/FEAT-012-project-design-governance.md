@@ -7,7 +7,7 @@ owner_role: design-governance
 task_ids: TASK-027
 related_decisions: DEC-023
 related_issues: none
-updated_at: 2026-04-30T11:54:33Z
+updated_at: 2026-05-01T09:33:50Z
 updated_by: ai
 ---
 
@@ -47,6 +47,7 @@ updated_by: ai
 - 现有 `PRODUCT.md` / `DESIGN.md` 最初更偏 `/platform/*` 语境，若不升级到项目级，很容易误导后续页面任务。
 - 规范必须与 `cc-aidev-guidelines-common` 兼容，因此需要同时更新任务卡、当前状态和决策记录。
 - 由于仓库工作区较脏，本任务只能收敛在规范文档，不回退或混改已有业务代码。
+- 2026-05-01 的 `/admin/skills` 列表修复暴露出前端高风险模式：直接修改原生表格单元格 display 会造成列错位；搜索框、筛选切换和空态若缺少固定布局约束会撑开页面；按钮与菜单如果混用不同组件类会造成风格不统一。
 
 ## 方案设计
 
@@ -54,6 +55,7 @@ updated_by: ai
 - 在 `README.md` 中补充面向开发者的简短设计治理说明，降低人类协作者的进入成本。
 - 将根 `PRODUCT.md` 升级为全项目认证产品面的战略上下文，覆盖 assistant、admin、platform 三类用户与目的。
 - 将根 `DESIGN.md` / `DESIGN.json` 升级为项目级产品面设计基线，并明确 route-level tuning 与 brand exception rule。
+- 将 `/admin/skills` 本轮修复沉淀为 `Admin CRUD Lists` 规范，覆盖表格实现、搜索框尺寸、筛选文本 tab、工具栏按钮、行级三点菜单和禁止越权动作。
 - 在 `.claw/decisions.md` 中记录项目决策，在 `.claw/task-board.md` 和 `.claw/current-status.md` 中记录本轮完成事实。
 
 ## 接口与数据影响
@@ -73,6 +75,7 @@ updated_by: ai
 - `README.md` 提供简洁的人类可读设计治理说明。
 - 根 `PRODUCT.md` 明确 `/`、`/admin/*`、`/platform/*` 的项目级产品上下文与共享设计原则。
 - 根 `DESIGN.md` / `DESIGN.json` 明确共享基线、route-level tuning 和例外机制。
+- `DESIGN.md` / `DESIGN.json` 明确管理端 CRUD 列表不得再出现表格列错位、搜索/空态撑开页面、横向滚动条、筛选按钮化、按钮样式混乱、透明菜单或行操作权限越界。
 - `.claw/decisions.md`、`.claw/task-board.md`、`.claw/current-status.md` 记录了本轮已完成事实。
 
 ## 风险与回滚
@@ -87,6 +90,8 @@ updated_by: ai
 - 已完成项：
   - `AGENTS.md`、`README.md` 的入口规范已补齐。
   - `PRODUCT.md`、`DESIGN.md`、`DESIGN.json` 已升级为项目级产品面设计事实源。
+  - `DESIGN.md` 新增 `Admin CRUD Lists` 章节，`DESIGN.json` 新增 `extensions.adminCrudLists` 结构化规则。
+  - 管理端列表页规范已沉淀 `/admin/skills` 本轮调整：中文单语、紧凑布局、金色文本 tab、统一按钮、无横向滚动、原生表格对齐、hover 三点菜单、不在列表页暴露禁止动作。
   - `DEC-023`、`TASK-027`、`current-status` 已同步。
 - 未完成项：
   - 无代码层改造，本轮只完成治理落文。

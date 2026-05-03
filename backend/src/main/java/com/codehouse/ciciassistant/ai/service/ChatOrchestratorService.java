@@ -10,6 +10,7 @@ import com.codehouse.ciciassistant.ai.domain.ChatSessionStateEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionStateRepository;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatCompletionResult;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
+import com.codehouse.ciciassistant.ai.service.RuntimeContextPromptService.RuntimeContext;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
 import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
@@ -64,6 +65,7 @@ public class ChatOrchestratorService {
     private final UserMemoryService userMemoryService;
     private final ChatSessionStateService chatSessionStateService;
     private final ChatSessionStateRepository chatSessionStateRepository;
+    private final RuntimeContextPromptService runtimeContextPromptService;
     private final AgentWorkflowRuntimeService agentWorkflowRuntimeService;
     private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService;
     private final TransactionTemplate tx;
@@ -83,6 +85,7 @@ public class ChatOrchestratorService {
                                    UserMemoryService userMemoryService,
                                    ChatSessionStateService chatSessionStateService,
                                    ChatSessionStateRepository chatSessionStateRepository,
+                                   RuntimeContextPromptService runtimeContextPromptService,
                                    AgentWorkflowRuntimeService agentWorkflowRuntimeService,
                                    AgentWorkflowExecutionLogService agentWorkflowExecutionLogService,
                                    PlatformTransactionManager transactionManager) {
@@ -101,6 +104,7 @@ public class ChatOrchestratorService {
         this.userMemoryService = userMemoryService;
         this.chatSessionStateService = chatSessionStateService;
         this.chatSessionStateRepository = chatSessionStateRepository;
+        this.runtimeContextPromptService = runtimeContextPromptService;
         this.agentWorkflowRuntimeService = agentWorkflowRuntimeService;
         this.agentWorkflowExecutionLogService = agentWorkflowExecutionLogService;
         this.tx = new TransactionTemplate(transactionManager);
@@ -119,10 +123,12 @@ public class ChatOrchestratorService {
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> ragContext = ragService.retrieveContext(orgId, effectiveKnowledgeBaseIds, question);
         List<Map<String, Object>> tools = toolOrchestratorService.getToolDefinitions(orgId, skillContext.allowedToolNames());
+        RuntimeContext runtimeContext = runtimeContextPromptService.current();
 
         chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
         List<Map<String, Object>> messages = buildInitialMessages(
-                sessionId, question, ragContext, showThinking, skillContext, orgId, userId);
+                sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
+                runtimeContext, routedModel.get("provider"), modelName);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds);
@@ -157,6 +163,7 @@ public class ChatOrchestratorService {
         payload.put("skillDeclaredToolNames", skillContext.skillDeclaredToolNames());
         payload.put("skillScopedToolNames", skillContext.skillScopedToolNames());
         payload.put("activeSkillCode", skillContext.activeSkillCode() == null ? "" : skillContext.activeSkillCode());
+        payload.put("runtimeContext", runtimeContextPromptService.toPayload(runtimeContext));
         payload.put("runtimePolicy", Map.of(
                 "maxToolCalls", maxToolRounds,
                 "publishedVersionId", skillContext.publishedVersionId() == null ? "" : skillContext.publishedVersionId().toString(),
@@ -197,10 +204,13 @@ public class ChatOrchestratorService {
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> ragContext = ragService.retrieveContext(orgId, effectiveKnowledgeBaseIds, question);
                 List<Map<String, Object>> tools = toolOrchestratorService.getToolDefinitions(orgId, skillContext.allowedToolNames());
+                RuntimeContext runtimeContext = runtimeContextPromptService.current();
                 chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
                 List<Map<String, Object>> messages = buildInitialMessages(
-                        sessionId, question, ragContext, showThinking, skillContext, orgId, userId);
+                        sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
+                        runtimeContext, routedModel.get("provider"), modelName);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
+                safeSendPhase(emitter, "model", modelName);
 
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
@@ -214,7 +224,7 @@ public class ChatOrchestratorService {
                     ));
                 }
 
-                safeSendPhase(emitter, "generating");
+                safeSendPhase(emitter, "generating", modelName);
                 StringBuilder acc = new StringBuilder();
                 log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
                         sessionId, modelName, messages.size(), tools.size());
@@ -420,10 +430,14 @@ public class ChatOrchestratorService {
     private List<Map<String, Object>> buildInitialMessages(String sessionId, String question, List<String> ragContext,
                                                            boolean showThinking,
                                                            ResolvedSkillContext skillContext,
-                                                           String orgId, String userId) {
+                                                           String orgId, String userId,
+                                                           RuntimeContext runtimeContext,
+                                                           String routedProvider,
+                                                           String modelName) {
         List<Map<String, Object>> messages = new ArrayList<>();
         String baseSystem = showThinking ? AliyunBailianClient.SYSTEM_PROMPT_WITH_THINKING : AliyunBailianClient.SYSTEM_PROMPT;
         String system = skillPromptAssembler.assemble(baseSystem, skillContext);
+        system = buildModelIdentityPromptBlock(routedProvider, modelName) + "\n---\n\n" + system;
         // Prepend user memories if available
         List<UserMemoryEntity> memories = userMemoryService.listForInjection(orgId, userId, skillContext.agentId());
         if (!memories.isEmpty()) {
@@ -433,6 +447,7 @@ public class ChatOrchestratorService {
         if (sessionState.isPresent()) {
             system = chatSessionStateService.buildPromptBlock(sessionState.get()) + "\n---\n\n" + system;
         }
+        system = runtimeContextPromptService.buildPromptBlock(runtimeContext) + "\n---\n\n" + system;
         messages.add(Map.of("role", "system", "content", system));
         messages.addAll(buildRecentHistoryMessages(orgId, sessionId, question));
 
@@ -783,8 +798,17 @@ public class ChatOrchestratorService {
     }
 
     private static void safeSendPhase(SseEmitter emitter, String phase) {
+        safeSendPhase(emitter, phase, null);
+    }
+
+    private static void safeSendPhase(SseEmitter emitter, String phase, String modelName) {
         try {
-            emitter.send(SseEmitter.event().name("phase").data(Map.of("phase", phase)));
+            Map<String, String> payload = new LinkedHashMap<>();
+            payload.put("phase", phase);
+            if (modelName != null && !modelName.isBlank()) {
+                payload.put("modelName", modelName);
+            }
+            emitter.send(SseEmitter.event().name("phase").data(payload));
         } catch (IOException ignored) {}
     }
 
@@ -810,6 +834,27 @@ public class ChatOrchestratorService {
             return "工具已返回结果：\n\n" + clipped;
         }
         return "本次工具调用已完成，但暂时没有可展示的数据。请调整筛选条件后重试。";
+    }
+
+    static String buildModelIdentityPromptBlock(String routedProvider, String modelName) {
+        String provider = routedProvider == null || routedProvider.isBlank() ? "unknown" : routedProvider.trim();
+        String model = modelName == null || modelName.isBlank() ? "unknown" : modelName.trim();
+        String providerLabel = switch (provider) {
+            case "aliyun-bailian" -> "阿里云百炼 (aliyun-bailian)";
+            case "anthropic" -> "Anthropic";
+            case "openai" -> "OpenAI";
+            case "deepseek" -> "深度求索 (deepseek)";
+            case "ollama-local" -> "本地 Ollama (ollama-local)";
+            default -> provider;
+        };
+        return """
+                [运行模型上下文]
+                - 当前服务端模型供应商：%s
+                - 当前服务端模型名称：%s
+                - 当用户询问“你现在调用的是什么模型/供应商/是不是 Claude/OpenAI”等问题时，只能依据以上两项回答。
+                - 不得自称 Claude、Anthropic、OpenAI、GPT、Gemini 等第三方模型，除非当前供应商或模型名称明确如此。
+                - 不要透露 API key、密钥、内部路由实现细节或不可见配置。
+                """.formatted(providerLabel, model).trim();
     }
 
     /**

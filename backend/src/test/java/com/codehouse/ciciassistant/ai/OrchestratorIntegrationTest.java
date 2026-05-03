@@ -31,6 +31,8 @@ import com.codehouse.ciciassistant.skill.domain.SkillVisibility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,6 +111,8 @@ class OrchestratorIntegrationTest {
                 .andExpect(jsonPath("$.data.model.modelName").value("cici-default"))
                 .andExpect(jsonPath("$.data.ragContext").isArray())
                 .andExpect(jsonPath("$.data.effectiveKnowledgeBaseIds[0]").value("bootstrap-kb"))
+                .andExpect(jsonPath("$.data.runtimeContext.currentDate").value(LocalDate.now(ZoneId.of("Asia/Shanghai")).toString()))
+                .andExpect(jsonPath("$.data.runtimeContext.timezone").value("Asia/Shanghai"))
                 .andExpect(jsonPath("$.data.answer").exists());
 
         // callCount asserts "at least 1" instead of exactly 1 because the Spring test context is
@@ -210,7 +214,7 @@ class OrchestratorIntegrationTest {
         AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
                 .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
                         orgId, agentId, "Whitelist MCP Agent", "test", "hello",
-                        "cici-default", "", "", "MEDIUM", "MANUAL", "v1", false, true)));
+                        "cici-default", "", "", "MEDIUM", "MANUAL", "v1", null, false, true)));
 
         SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, "whitelist-mcp-only")
                 .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(
@@ -261,7 +265,7 @@ class OrchestratorIntegrationTest {
         AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
                 .orElseGet(() -> agentDefinitionRepository.save(new AgentDefinitionEntity(
                         orgId, agentId, "Skill Pin Agent", "test", "hello",
-                        "cici-default", "", "", "MEDIUM", "MANUAL", "v1", false, true)));
+                        "cici-default", "", "", "MEDIUM", "MANUAL", "v1", null, false, true)));
 
         SkillDefinitionEntity skill = skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, "skill-pin-runtime")
                 .orElseGet(() -> skillDefinitionRepository.save(new SkillDefinitionEntity(

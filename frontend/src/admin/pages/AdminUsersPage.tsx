@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAdminToken } from "../useAdminToken";
+import { processAvatarFile } from "../../shared/avatar";
 
 type UserRow = {
   id: string;
@@ -118,44 +119,6 @@ export default function AdminUsersPage() {
     });
     setAvatarPreview(selected.avatarBase64 ?? "");
   }, [selected?.id]);
-
-  const processAvatar = async (file: File) => {
-    const dataUrl = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result ?? ""));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const node = new Image();
-      node.onload = () => resolve(node);
-      node.onerror = reject;
-      node.src = dataUrl;
-    });
-
-    const size = 256;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const srcSide = Math.min(img.width, img.height);
-    const sx = Math.floor((img.width - srcSide) / 2);
-    const sy = Math.floor((img.height - srcSide) / 2);
-
-    ctx.clearRect(0, 0, size, size);
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(img, sx, sy, srcSide, srcSide, 0, 0, size, size);
-    ctx.restore();
-
-    const compressed = canvas.toDataURL("image/webp", 0.82);
-    setAvatarPreview(compressed);
-  };
 
   const formatBeijingDateTime = (value: string) => {
     const date = new Date(value);
@@ -284,7 +247,16 @@ export default function AdminUsersPage() {
                         accept="image/*"
                         onChange={(e) => {
                           const file = e.target.files?.[0];
-                          if (file) void processAvatar(file);
+                          if (!file) return;
+                          void (async () => {
+                            try {
+                              const avatar = await processAvatarFile(file);
+                              setAvatarPreview(avatar);
+                              setNotice("");
+                            } catch (error) {
+                              setNotice(error instanceof Error ? error.message : "头像处理失败，请稍后重试");
+                            }
+                          })();
                         }}
                       />
                     </div>

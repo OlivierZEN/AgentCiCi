@@ -132,7 +132,11 @@ public class BuiltinSkillCreatorService {
                 clarificationQuestions,
                 warnings
         );
-        return schemaValidator.sanitize(draft, availableToolNames, availableKbIds);
+        return schemaValidator.sanitize(
+                augmentResourceWhitelists(draft, sourceText, tools, knowledgeBases),
+                availableToolNames,
+                availableKbIds
+        );
     }
 
     private GeneratedSkillDraft tryGenerateByModel(String orgId,
@@ -191,7 +195,11 @@ public class BuiltinSkillCreatorService {
                     list(root, "clarificationQuestions"),
                     list(root, "warnings")
             );
-            GeneratedSkillDraft sanitized = schemaValidator.sanitize(draft, availableToolNames, availableKbIds);
+            GeneratedSkillDraft sanitized = schemaValidator.sanitize(
+                    augmentResourceWhitelists(draft, command.sourceText(), tools, knowledgeBases),
+                    availableToolNames,
+                    availableKbIds
+            );
             List<String> warnings = new ArrayList<>(sanitized.warnings());
             warnings.add("由模型驱动结构化生成，已经过 schema 与资源白名单校验。");
             if (command.preferredSkillCode() != null && !command.preferredSkillCode().isBlank()) {
@@ -334,6 +342,50 @@ public class BuiltinSkillCreatorService {
             }
         }
         return List.copyOf(out);
+    }
+
+    private GeneratedSkillDraft augmentResourceWhitelists(GeneratedSkillDraft draft,
+                                                          String sourceText,
+                                                          List<ToolOption> tools,
+                                                          List<KnowledgeBaseOption> knowledgeBases) {
+        String haystack = buildResourceReferenceHaystack(sourceText, draft);
+        LinkedHashSet<String> nextTools = new LinkedHashSet<>(draft.toolWhitelist() == null ? List.of() : draft.toolWhitelist());
+        LinkedHashSet<String> nextKbs = new LinkedHashSet<>(draft.kbWhitelist() == null ? List.of() : draft.kbWhitelist());
+        nextTools.addAll(inferToolWhitelist(haystack, haystack.toLowerCase(Locale.ROOT), tools));
+        nextKbs.addAll(inferKnowledgeBaseIds(haystack.toLowerCase(Locale.ROOT), knowledgeBases));
+        if (nextTools.equals(new LinkedHashSet<>(draft.toolWhitelist() == null ? List.of() : draft.toolWhitelist()))
+                && nextKbs.equals(new LinkedHashSet<>(draft.kbWhitelist() == null ? List.of() : draft.kbWhitelist()))) {
+            return draft;
+        }
+        List<String> warnings = new ArrayList<>(draft.warnings() == null ? List.of() : draft.warnings());
+        warnings.add("已根据需求或生成内容中提到的工具/知识库自动补充资源白名单，请保存前核对授权范围。");
+        return new GeneratedSkillDraft(
+                draft.skillCode(),
+                draft.name(),
+                draft.description(),
+                draft.promptFragment(),
+                draft.draftSpecText(),
+                List.copyOf(nextTools),
+                List.copyOf(nextKbs),
+                draft.handoffRule(),
+                draft.outputContract(),
+                draft.riskLevel(),
+                draft.triggerHints(),
+                draft.userIntentExamples(),
+                draft.clarificationQuestions(),
+                warnings
+        );
+    }
+
+    private String buildResourceReferenceHaystack(String sourceText, GeneratedSkillDraft draft) {
+        return String.join("\n",
+                safe(sourceText),
+                safe(draft.description()),
+                safe(draft.promptFragment()),
+                safe(draft.draftSpecText()),
+                safe(draft.handoffRule()),
+                safe(draft.outputContract())
+        );
     }
 
     private List<ToolOption> loadToolOptions(String orgId) {
@@ -521,7 +573,10 @@ public class BuiltinSkillCreatorService {
         for (ToolOption tool : tools) {
             String toolName = tool.toolName().toLowerCase(Locale.ROOT);
             String displayName = safe(tool.displayName()).toLowerCase(Locale.ROOT);
-            if (lowered.contains(toolName) || (!displayName.isBlank() && lowered.contains(displayName))) {
+            String description = safe(tool.description()).toLowerCase(Locale.ROOT);
+            if (lowered.contains(toolName)
+                    || (!displayName.isBlank() && lowered.contains(displayName))
+                    || (!description.isBlank() && lowered.contains(description))) {
                 selected.add(tool.toolName());
             }
         }

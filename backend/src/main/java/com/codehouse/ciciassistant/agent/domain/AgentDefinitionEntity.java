@@ -49,6 +49,9 @@ public class AgentDefinitionEntity {
     @Column(name = "version_label", length = 32)
     private String versionLabel;
 
+    @Column(name = "avatar_base64", columnDefinition = "TEXT")
+    private String avatarBase64;
+
     @Column(name = "builtin", nullable = false)
     private boolean builtin;
 
@@ -78,6 +81,7 @@ public class AgentDefinitionEntity {
                                  String safetyLevel,
                                  String executionMode,
                                  String versionLabel,
+                                 String avatarBase64,
                                  boolean builtin,
                                  boolean enabled) {
         this.orgId = orgId;
@@ -91,6 +95,7 @@ public class AgentDefinitionEntity {
         this.safetyLevel = safetyLevel;
         this.executionMode = executionMode;
         this.versionLabel = versionLabel;
+        this.avatarBase64 = avatarBase64;
         this.builtin = builtin;
         this.enabled = enabled;
         this.createdAt = Instant.now();
@@ -149,6 +154,10 @@ public class AgentDefinitionEntity {
         return builtin;
     }
 
+    public String getAvatarBase64() {
+        return avatarBase64;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -179,6 +188,8 @@ public class AgentDefinitionEntity {
                        String safetyLevel,
                        String executionMode,
                        String versionLabel,
+                       String avatarBase64,
+                       boolean replaceAvatarBase64,
                        boolean enabled) {
         this.name = name;
         this.summary = summary;
@@ -189,6 +200,9 @@ public class AgentDefinitionEntity {
         this.safetyLevel = safetyLevel;
         this.executionMode = executionMode;
         this.versionLabel = versionLabel;
+        if (replaceAvatarBase64) {
+            this.avatarBase64 = avatarBase64;
+        }
         this.enabled = enabled;
         this.updatedAt = Instant.now();
     }

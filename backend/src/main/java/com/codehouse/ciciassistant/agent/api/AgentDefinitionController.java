@@ -61,6 +61,7 @@ public class AgentDefinitionController {
                 request.safetyLevel(),
                 request.executionMode(),
                 request.versionLabel(),
+                request.avatarBase64(),
                 request.builtin(),
                 request.enabled(),
                 request.specText(),
@@ -92,6 +93,7 @@ public class AgentDefinitionController {
                 request.safetyLevel(),
                 request.executionMode(),
                 request.versionLabel(),
+                request.avatarBase64(),
                 request.enabled()
         ));
         return ApiResponse.ok(toDefinitionPayload(updated));
@@ -228,6 +230,7 @@ public class AgentDefinitionController {
         payload.put("safetyLevel", item.getSafetyLevel());
         payload.put("executionMode", item.getExecutionMode());
         payload.put("versionLabel", item.getVersionLabel());
+        payload.put("avatarBase64", item.getAvatarBase64());
         payload.put("builtin", item.isBuiltin());
         payload.put("enabled", item.isEnabled());
         payload.put("publishedVersionId", item.getPublishedVersionId());
@@ -279,6 +282,7 @@ public class AgentDefinitionController {
             String safetyLevel,
             String executionMode,
             String versionLabel,
+            String avatarBase64,
             Boolean builtin,
             Boolean enabled,
             String specText,
@@ -299,6 +303,7 @@ public class AgentDefinitionController {
             String safetyLevel,
             String executionMode,
             String versionLabel,
+            String avatarBase64,
             Boolean enabled
     ) {
     }

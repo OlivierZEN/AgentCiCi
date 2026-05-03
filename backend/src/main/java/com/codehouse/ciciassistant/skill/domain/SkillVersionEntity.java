@@ -64,6 +64,30 @@ public class SkillVersionEntity {
     @Column(name = "publish_status", nullable = false, length = 32)
     private String publishStatus;
 
+    @Column(name = "change_log", columnDefinition = "TEXT")
+    private String changeLog;
+
+    @Column(name = "diff_summary", columnDefinition = "TEXT")
+    private String diffSummary;
+
+    @Column(name = "version_source", length = 32)
+    private String versionSource;
+
+    @Column(name = "created_by", length = 128)
+    private String createdBy;
+
+    @Column(name = "restore_visible")
+    private Boolean restoreVisible;
+
+    @Column(name = "retention_state", length = 32)
+    private String retentionState;
+
+    @Column(name = "restored_from_version_id")
+    private Long restoredFromVersionId;
+
+    @Column(name = "package_manifest_json", columnDefinition = "TEXT")
+    private String packageManifestJson;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -102,6 +126,12 @@ public class SkillVersionEntity {
         this.compileSummary = compileSummary;
         this.warnings = warnings;
         this.publishStatus = publishStatus;
+        this.changeLog = "保存技能配置";
+        this.diffSummary = compileSummary;
+        this.versionSource = sourceType == null || sourceType.isBlank() ? "SAVE" : sourceType.trim().toUpperCase();
+        this.createdBy = "system";
+        this.restoreVisible = true;
+        this.retentionState = "ACTIVE_RECENT";
         this.createdAt = Instant.now();
     }
 
@@ -173,7 +203,73 @@ public class SkillVersionEntity {
         return publishStatus;
     }
 
+    public String getChangeLog() {
+        return changeLog;
+    }
+
+    public String getDiffSummary() {
+        return diffSummary;
+    }
+
+    public String getVersionSource() {
+        return versionSource;
+    }
+
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public Boolean getRestoreVisible() {
+        return restoreVisible;
+    }
+
+    public String getRetentionState() {
+        return retentionState;
+    }
+
+    public Long getRestoredFromVersionId() {
+        return restoredFromVersionId;
+    }
+
+    public String getPackageManifestJson() {
+        return packageManifestJson;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void applyGovernance(String changeLog,
+                                String diffSummary,
+                                String versionSource,
+                                String createdBy,
+                                Boolean restoreVisible,
+                                String retentionState,
+                                Long restoredFromVersionId,
+                                String packageManifestJson) {
+        this.changeLog = blankToDefault(changeLog, "保存技能配置");
+        this.diffSummary = diffSummary;
+        this.versionSource = blankToDefault(versionSource, "SAVE").toUpperCase();
+        this.createdBy = blankToDefault(createdBy, "system");
+        this.restoreVisible = restoreVisible == null || restoreVisible;
+        this.retentionState = blankToDefault(retentionState, "ACTIVE_RECENT");
+        this.restoredFromVersionId = restoredFromVersionId;
+        this.packageManifestJson = packageManifestJson;
+    }
+
+    public void markRetention(String retentionState, boolean restoreVisible) {
+        this.retentionState = blankToDefault(retentionState, "ACTIVE_RECENT");
+        this.restoreVisible = restoreVisible;
+    }
+
+    public void markPublished() {
+        this.publishStatus = "PUBLISHED";
+    }
+
+    private String blankToDefault(String raw, String fallback) {
+        if (raw == null || raw.isBlank()) {
+            return fallback;
+        }
+        return raw.trim();
     }
 }

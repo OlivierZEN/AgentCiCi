@@ -14,6 +14,7 @@ import com.codehouse.ciciassistant.agent.domain.AgentToolBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentToolBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -224,6 +225,7 @@ public class AgentDefinitionService {
                 normalizeSafetyLevel(command.safetyLevel()),
                 normalizeExecutionMode(command.executionMode()),
                 trimToNull(command.versionLabel()),
+                AvatarDataUrlValidator.normalizeNullableDataUrl(command.avatarBase64(), "avatarBase64"),
                 command.builtin() != null && command.builtin(),
                 command.enabled() == null || command.enabled()
         );
@@ -245,6 +247,7 @@ public class AgentDefinitionService {
     public AgentDefinitionEntity updateDefinition(String orgId, String requestedAgentId, UpsertDefinitionCommand command) {
         ensureBuiltinAgents(orgId);
         AgentDefinitionEntity definition = getDefinition(orgId, normalizeAgentId(requestedAgentId));
+        AvatarPatch avatarPatch = resolveAvatarPatch(command.avatarBase64());
         definition.update(
                 requireText(command.name(), "name"),
                 trimToNull(command.summary()),
@@ -255,6 +258,8 @@ public class AgentDefinitionService {
                 normalizeSafetyLevel(command.safetyLevel()),
                 normalizeExecutionMode(command.executionMode()),
                 trimToNull(command.versionLabel()),
+                avatarPatch.avatarBase64(),
+                avatarPatch.replace(),
                 command.enabled() == null || command.enabled()
         );
         return definition;
@@ -407,9 +412,10 @@ public class AgentDefinitionService {
                             DEFAULT_HANDOFF_RULE,
                             "BALANCED",
                             seed.executionMode().toUpperCase(Locale.ROOT),
-                            "v0.1",
-                            seed.builtin(),
-                            true,
+                    "v0.1",
+                    null,
+                    seed.builtin(),
+                    true,
                             seed.specText(),
                             List.of(),
                             seed.toolIds(),
@@ -452,6 +458,14 @@ public class AgentDefinitionService {
             return "AUTO";
         }
         return "COPILOT";
+    }
+
+    private AvatarPatch resolveAvatarPatch(String rawAvatarBase64) {
+        if (rawAvatarBase64 == null) {
+            return new AvatarPatch(false, null);
+        }
+        String normalized = AvatarDataUrlValidator.normalizeNullableDataUrl(rawAvatarBase64, "avatarBase64");
+        return new AvatarPatch(true, normalized);
     }
 
     private String normalizeChannel(String raw) {
@@ -549,6 +563,9 @@ public class AgentDefinitionService {
     ) {
     }
 
+    private record AvatarPatch(boolean replace, String avatarBase64) {
+    }
+
     public record CreateCommand(
             String agentId,
             String name,
@@ -560,6 +577,7 @@ public class AgentDefinitionService {
             String safetyLevel,
             String executionMode,
             String versionLabel,
+            String avatarBase64,
             Boolean builtin,
             Boolean enabled,
             String specText,
@@ -580,6 +598,7 @@ public class AgentDefinitionService {
             String safetyLevel,
             String executionMode,
             String versionLabel,
+            String avatarBase64,
             Boolean enabled
     ) {
     }

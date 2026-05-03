@@ -1,7 +1,7 @@
 ---
 kind: decisions
 version: 3
-updated_at: 2026-04-30T11:54:33Z
+updated_at: 2026-05-01T09:33:50Z
 updated_by: ai
 status: active
 ---
@@ -283,12 +283,13 @@ status: active
 ## DEC-023 Page Design Governance Uses Impeccable + Root Design Facts
 
 - Status: accepted
-- Date: 2026-04-30T11:54:33Z
+- Date: 2026-04-30T11:54:33Z; updated 2026-05-01T09:33:50Z
 - Decision: adopt `impeccable` as the mandatory project-level workflow for all page design work, with root `PRODUCT.md`, `DESIGN.md`, and `DESIGN.json` as the shared design source of truth for authenticated product surfaces.
 - Why this won:
   - Turns design quality from a one-off preference into a durable project rule that future agents can follow automatically.
   - Gives assistant, admin, and platform pages one shared product-register baseline while still allowing route-level density tuning by workflow.
   - Forces visual-language changes to update the design facts in the same session, reducing drift between code and documentation.
+  - Captures `/admin/skills` list hardening as a reusable admin CRUD list rule set: native table alignment is protected, search/filter/empty states cannot stretch the page, toolbar buttons stay unified, filters use gold text tabs, and row actions move behind an opaque hover/focus more menu.
 - Alternatives considered:
   - Keep design rules only in ad-hoc chat prompts: rejected because the guidance would not survive handoff or later sessions.
   - Treat each surface as fully independent with no shared baseline: rejected because it would quickly fragment component vocabulary, tone, and interaction patterns.

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-04-30T11:28:00Z
+updated_at: 2026-05-03T13:35:06Z
 updated_by: ai
 status: active
-last_run_at: 2026-04-30T11:28:00Z
+last_run_at: 2026-05-03T13:35:06Z
 last_run_status: success
 ---
 
@@ -13,11 +13,467 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`assistant workbench rail cleanup and reorder`
-- 命令：`frontend`: `npm run build`
+- 范围：`JDK25 Mockito inline blocker recheck`
+- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test`
 - 环境：`local workspace`
 
 ## Latest Verified Results
+
+- JDK25 Mockito inline blocker recheck (2026-05-03):
+  - Commands:
+    - `backend`: `mvn -version` -> Maven uses Java `25.0.2`.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test` -> **success**
+  - Notes:
+    - Surefire report: `Tests run: 1, Failures: 0, Errors: 0, Skipped: 0`.
+    - The previous Mockito inline / Byte Buddy self-attach startup failure did not reproduce.
+    - Local shell `java -version` reports JDK `21.0.10`, but Maven's active runtime for this test is JDK `25.0.2`, so the recheck covers the original JDK25 concern.
+
+- Admin skill delete active published runtime impact (2026-05-03):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success**
+  - Notes:
+    - 删除影响分析现在只统计启用 Agent 当前 `published_version_id` 对应的 `PUBLISHED` 工作流版本 Skill ref。
+    - 回归覆盖当前发布运行时仍引用 Skill 时 `canDelete=false`、`hasRuntimePins=true`。
+    - 回归覆盖 Agent 切到不含该 Skill 的新发布版本后，旧 archived ref 保留但 `canDelete=true`、`hasRuntimePins=false`。
+
+- External agent skill package SKILL.md and cici-skill.md structure (2026-05-03):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success**
+  - Notes:
+    - 导出 zip 现在包含 `manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。
+    - 回归断言 `SKILL.md` 包含外部智能体入口说明，`cici-skill.md` 包含 Cici 技能规格正文。
+    - 回归断言 `PACKAGE_SPEC.md` 包含 `universal-skill-package@1.0` 和 `cici-skill-package-optimizer`，`README.md` 包含 `cici-skill-package-optimizer/SKILL.md` 与 `PACKAGE_SPEC.md`。
+
+- Admin skill import after soft delete code reuse (2026-05-03):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test` -> **success**
+  - Notes:
+    - 验证 Flyway `V36__archive_deleted_skill_codes.sql` 可在 H2 PostgreSQL compatibility test runtime 中成功应用。
+    - 回归覆盖删除 `feat014-custom-skill` 后上传同 code zip，并调用 `/skills/imports/{importId}/create` 成功创建新的 `DRAFT` 技能。
+    - `SkillDefinitionService.createSkill(...)` 遇到同 code 的历史 `DELETED` 记录时会先归档旧 code 并 `flush`，避免唯一索引继续阻断导入创建。
+
+- Admin skill export authenticated zip download (2026-05-02):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -Dmaven.repo.local=.m2 spring-boot:run` -> **success**, local backend restarted on `http://127.0.0.1:8080/`
+    - `localhost probe`: create export as admin, then `GET /skills/exports/{newExportId}/download` without Authorization -> **success**, returned `200 application/zip`, `attachment; filename="email-marketing-campaign2-skill-package.zip"`
+  - Notes:
+    - 导出下载由地址栏跳转改为带管理员 token 的 blob 下载，避免受保护下载接口返回权限 JSON。
+    - 后端下载响应 `Content-Type` 改为 `application/zip`，且直接打开新导出 URL 也可下载 zip。
+    - 集成测试已解压导出结果并断言包含当前通用技能包必需文件：`manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`；`manifest.format=universal-skill-package` 且 `formatVersion=1.0`。
+    - 集成测试同时断言未登录访问 `/skills` 仍返回 403，避免下载兜底误放开其他管理接口。
+
+- Admin skill delete impact route (2026-05-02):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success**
+    - `backend`: `mvn -Dmaven.repo.local=.m2 spring-boot:run` -> **success**, local backend restarted on `http://127.0.0.1:8080/`
+    - `curl`: `curl -sS -i http://127.0.0.1:8080/health` -> **success**, returned `404 Resource not found`
+  - Notes:
+    - Runtime log showed the failing browser request was `GET /skills/7/delete-impact`, handled by the old backend as `NoResourceFoundException`.
+    - Current backend source already contains `/skills/{id}/delete-impact`; restarting 8080 loaded the route and applied Flyway `V35`.
+    - `GlobalExceptionHandler` now maps missing routes to 404 and path variable type mismatches to 400 instead of returning generic 500.
+
+- Admin skill compose refine rollback (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - “继续优化”成功后会出现“回退本次优化”按钮。
+    - 回退恢复优化前的表单草稿、编译预览、需求解析结果、会话 ID、需求描述和追问答案；保存、重新生成、清空、重置、加载技能或填充模板会清除回退快照。
+
+- Admin skill authoring refine incremental merge (2026-05-01):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test` -> **success**
+  - Notes:
+    - 已覆盖“邮件市场营销活动草稿 + 继续优化：再增加百度搜索”的回归场景。
+    - 断言优化后的提示片段保留原市场活动步骤、关键 MCP 工具调用链和邮件发送状态更新规则，并追加“百度搜索”增量要求。
+
+- Admin skill compose requirement parsing state (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - “摘要预览”已改为“需求解析”。
+    - 空态改为“暂无待解析的需求”，生成草稿期间显示解析中的动态进程。
+    - “继续优化”期间也会显示同一套解析中动态进程，并保留提交前的草稿与追问答案上下文。
+
+- Admin skill compose header action labels and order (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 新建态自定义技能按钮从“创建草稿”改为“保存草稿”。
+    - “预览编译”改为“编译预览”，并调整到“保存草稿”之后。
+
+- Admin skill compose tab order (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - `AdminSkillComposePage` 的字段页签顺序已调整为“编译预览”在“版本管理”之前。
+
+- Admin skill compose scrollbar spacing (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - `.skills-compose` 增加右侧 padding 与稳定滚动槽位，避免新建/编辑页内容紧贴右侧滚动条。
+    - 窄屏下右侧留白缩小，避免过度挤占可用宽度。
+
+- Admin skill modal button style unification (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**
+    - `python3 /Users/owenspace/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw` -> **success**
+    - `git diff --check -- frontend/src/styles.css DESIGN.md DESIGN.json AGENTS.md README.md .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> **success**
+  - Notes:
+    - 白名单弹框“取消”按钮不再回退到旧蓝色渐变，改为暖白金线次级按钮。
+    - 管理端 `dify` 主/次按钮更新为香槟金主按钮与暖白金线次级按钮。
+    - `DESIGN.md` / `DESIGN.json` / `AGENTS.md` / `README.md` 已沉淀产品页按钮统一和弹出框默认模式窗口规则。
+
+- Admin skill modal close unification (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 发布说明弹框、添加工具白名单弹框、添加知识库白名单弹框共用无边框 × 图标关闭样式。
+    - 弹框头部样式通过 `skills-modal-head` 统一。
+
+- Admin skill publish modal (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 发布说明已从浏览器原生 prompt 改为统一风格居中模式窗口。
+    - 模式窗口使用 textarea 录入版本发布说明；说明为空时“确认发布”禁用。
+
+- Admin skill publish changelog prompt (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 基础信息页签已移除“变更日志”字段。
+    - 点击“发布”时会弹出输入框收集版本发布说明；取消或空输入不会继续发布。
+    - 草稿保存不再从表单提交用户填写的 changelog。
+
+- Admin skill compose import entry removal (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 新建/编辑页顶部“导入zip”入口已移除。
+    - 新建/编辑页导入预览工作区及相关状态/样式已清理；列表页导入入口不受影响。
+
+- Admin skill compose publish primary action (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 新建页自定义技能现在直接显示主按钮“发布”。
+    - 无 `id` 的新技能点击发布时会先创建草稿，再调用发布接口；“创建草稿/保存草稿”保留为次级动作。
+
+- Admin skill compose version management visibility (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success**, returned `HTTP/1.1 200 OK`
+  - Notes:
+    - 新建/编辑页字段页签新增“版本管理”，避免版本能力只藏在页头按钮和底部展开面板。
+    - 新建页会提示创建草稿后生成 v1；自定义技能编辑页会展示最近三版恢复列表与恢复动作。
+
+- Project design governance admin CRUD list documentation (2026-05-01):
+  - Commands:
+    - `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**
+    - `python3 /Users/owenspace/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw` -> **success**
+  - Notes:
+    - `DESIGN.json` 新增 `extensions.adminCrudLists` 后仍为合法 JSON。
+    - `.claw` 状态文件通过 `cc-aidev-guidelines-common` 状态校验；首次误用项目根路径运行校验时失败，改用 `.claw` 状态目录后通过。
+    - 本轮为规范文档更新，未改运行时代码，因此未重复执行前后端构建。
+
+- Admin skills list header cleanup and button style unification (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 已移除列表页头“技能工作台”和“技能列表”辅助文字。
+    - 右上“导入技能”和“新建技能”统一为列表页同款按钮样式，避免混用编辑页按钮类导致样式不一致。
+
+- Admin skills list hover actions menu (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 自定义技能行级操作已从常驻按钮改为 hover 出现三点按钮。
+    - 点击三点按钮后展示编辑、导出、删除纵向菜单；点击外部或按 Escape 可关闭。
+    - 标准技能仍不显示行级操作入口。
+
+- Admin skills list Chinese-only labels and action cleanup (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 技能列表可见标题、表头、搜索占位和空态已去掉英文双语。
+    - 已移除“历史派生”筛选按钮。
+    - 标准技能列表行不再显示“查看”按钮；自定义技能列表行不再显示“发布”按钮。
+    - 右上“新建技能”不再复用 compose 页主按钮类，改回列表页自己的主按钮样式。
+
+- Admin skills list table alignment and no horizontal scroll (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 表格错位根因是 `td` 被改成 `display: -webkit-box` / `display: flex`，破坏原生表格单元格对齐。
+    - 已把摘要截断和操作按钮 flex 移到单元格内部元素，列表表格改为固定列宽 100% 布局，并关闭该列表容器的横向 overflow；平台页复用的 `td.skills-data-table__actions` 也显式恢复为 table-cell。
+    - in-app browser 打开 `/admin/skills` 时跳转到 `/admin/login`；未在未获确认时提交手机号登录，因此本轮未完成登录后的真实页面截图验收。
+
+- FEAT-014 import preview workspace final polish (2026-05-01):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 导入预览工作区补充“升级处理规则 / 输出约定”可编辑字段。
+    - “直接创建草稿”前新增技能代码与显示名称必填校验。
+
+- FEAT-014 admin skill versioning/import/export hardening round 2 (2026-05-01):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 后端导出新增模型标准化优先链路、schema 校验和敏感信息扫描，模型不可用时回退到确定性标准化。
+    - 后端导入预览新增 `resourceMapping`，并支持 `POST /skills/imports/{importId}/create` 的 `draftOverride` 可编辑覆盖创建。
+    - 新增回归 `shouldKeepPinnedOldVersionAsProtectedRuntimeAfterRetentionPrune`，覆盖被 pin 旧版本在 retention prune 后应保留为 `PROTECTED_RUNTIME`。
+    - 前端导入流程调整：新建页导入 zip 不再直接创建技能，先载入可编辑草稿；列表页遇到未匹配资源时会拦截并引导去新建页处理。
+
+- FEAT-014 admin skill versioning/import/export first implementation pass (2026-05-01):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 后端集成覆盖自定义 Skill 创建草稿、发布版本、版本列表 changelog、导出 zip 下载、删除影响检查、软删除、导入 zip 解析。
+    - 前端构建确认管理端 Skill 列表页导入入口与编辑页版本/发布/导出/删除/导入入口类型检查通过。
+    - 首次后端测试曾因 `SkillGovernanceIntegrationTest` 用默认编码读取中文响应导致 changelog 断言乱码失败；已改为 UTF-8 读取后复跑通过。
+
+- Admin skill editor remove duplicate disable action (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 页头“停用”按钮和对应前端 DELETE 调用入口已移除。
+    - 页头“启用”开关继续保留，作为该页唯一启停入口。
+
+- Admin skill authoring resource whitelist and edit refinement (2026-05-01):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillAuthoringIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 新增集成覆盖：自然语言中提到自定义工具描述与知识库名称时，生成草稿会回填 `toolWhitelist` / `kbWhitelist`。
+    - 新增集成覆盖：没有 authoring session 的当前 Skill 草稿也可以调用 `/skills/authoring/refine` 继续优化。
+    - 前端构建确认 `AdminSkillComposePage` 的编辑态自然语言优化改动类型检查通过。
+
+- Admin skill editor header enabled switch order (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - 页头“启用”开关已移到按钮条最左侧。
+    - “启用”旁问号已移除。
+
+- Admin skill editor compile preview inline intro (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - “编译预览”tab 的框内重复标题和问号已移除。
+    - 原问号说明“保存前可预览运行时编译结果，包括风险等级、有效工具、知识库和警告信息。”已改为框内常显文案。
+
+- Admin skill editor header enabled switch (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - “启用”开关已从基础信息字段区移到页面顶部按钮条最右侧。
+    - 开关继续使用原 `enabled` 状态、禁用规则和保存契约。
+
+- Admin skill editor enabled switch alignment (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - “基础信息”中的启用开关外层字段框已移除。
+    - 启用字段改为标题在上、开关在下的无框布局，与同区其他字段节奏对齐。
+
+- Admin skill editor enabled switch control (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - “基础信息”中的启用控件已从原生 checkbox 改为 `role="switch"` 的按钮式开关。
+    - 开关仍写入原 `enabled` 字段，禁用规则保持 `busy || (!tenantEditable && !tenantConfigurable)`。
+
+- Admin skill editor boundary vertical rules and resource row (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `frontend`: `npm run dev -- --host 127.0.0.1` -> **success** (`http://127.0.0.1:5173/`)
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - “升级处理规则”和“输出约定”现在各自独占上方一整行。
+    - “知识库白名单”和“工具白名单”现在并排放在下方同一行，窄屏会降级为单列。
+
+- Admin skill editor boundary whitelist resource picker (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success** (`HTTP/1.1 200 OK`)
+  - Notes:
+    - “边界规则”页已改为左侧升级处理规则/输出约定，右侧知识库白名单/工具白名单资源面板。
+    - 工具白名单添加器支持内置工具与 MCP 工具分组，知识库白名单添加器读取 `/kb`；保存契约仍回写 `toolWhitelistText` / `kbWhitelistText` 的 CSV 字段。
+
+- Admin skill editor prompt textarea height parity (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - “提示片段”输入框现在使用与“规格正文”相同的大文本框高度规则。
+
+- Admin skill editor prompt/spec split tabs (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 原“执行提示”页签已拆成“提示片段”和“规格正文”两个独立 tab。
+    - “提示片段”和“规格正文”分别渲染单个大文本编辑区，避免同页上下堆叠。
+
+- Admin skill editor final alignment and page scroll polish (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 需求描述标题已拆成与摘要预览相同的标题行结构，左右内容框使用同一高度规则。
+    - 问号提示图标已缩到 10px，小于字段标题文字。
+    - 自然语言生成区与下方页签之间的横向分割线已移除。
+    - Skill Compose 页面恢复整体纵向滚动，基础信息等下方内容可通过页面滚动查看。
+
+- Admin skill editor alignment and tooltip size polish (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 需求描述与摘要预览标题行和内容区高度已按同一网格对齐。
+    - 下方基础信息编辑区与状态摘要之间的竖向分割线已去掉。
+    - 页面问号提示图标整体缩小，保留 hover/focus 提示。
+
+- Admin skill editor vertical layout and authoring two-column refresh (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 自然语言生成区调整为顶部整行，内部需求描述与摘要预览横排展示。
+    - 基础信息、执行提示、边界规则、编译预览页签整体移动到自然语言生成下方，并占满下方编辑区。
+
+- Admin skill editor left pane overlap fix (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 自然语言生成标题 tooltip 改为向右展开，避免覆盖标题。
+    - 左侧面板允许局部纵向滚动，需求描述输入区高度下调，按钮行不再与输入框或摘要预览重叠。
+
+- Admin skill editor natural language pane adjustment (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 左侧标题已从“草稿助手”改为“自然语言生成”。
+    - 左侧自然语言生成区宽度增加约 2cm，右侧页签编辑区相应收窄。
+    - 需求描述输入区改为固定可控高度，避免下方生成/优化/清空按钮被遮住。
+
+- Admin skill editor tabbed layout refresh (2026-05-01):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 管理端 Skill 新建/编辑页已改为左侧草稿助手 + 右侧页签编辑器结构。
+    - 顶部操作已统一收拢，底部重复创建/预览/重置按钮已移除。
+    - `转人工规则` 展示名改为 `升级处理规则`，并在问号说明中解释升级场景。
+    - 执行提示页签提供大面积 `promptFragment` 与 `draftSpecText` 文本编辑区，页面以局部滚动为主。
+
+- Assistant workbench model label display (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `frontend`: `npm test` -> **success** (`3` files, `14` tests)
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+  - Notes:
+    - `/ai/chat/stream` 的 `phase` SSE 现在携带 `modelName`。
+    - 工作台助手消息 meta 展示当前模型名标签，只显示模型名。
+    - 本地消息被远端历史替换时会保留模型名标签。
+
+- Assistant model identity hallucination fix (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+  - Notes:
+    - 数据库确认 `anthropic` provider disabled 且无 key；当前聊天路由是 `aliyun-bailian / deepseek-v4-pro`。
+    - `ChatOrchestratorService` 已向 system prompt 注入运行模型上下文，要求模型身份类问题按真实 provider/model 回答。
+    - 单元测试覆盖 `aliyun-bailian / deepseek-v4-pro` 提示包含百炼与模型名，并包含“不得自称 Claude”的约束。
+
+- Assistant workbench streaming message preservation (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `frontend`: `npm test` -> **success** (`3` files, `12` tests)
+  - Notes:
+    - 修复工作台本地助手占位/流式内容被仅包含用户 turn 的远端旧历史覆盖的问题。
+    - delta 到达时如果尾部助手气泡已被旧历史覆盖，会重新补回助手消息并继续追加。
+    - 工作台状态机提示变化不再触发历史重拉，降低流式中途覆盖概率。
+    - 新增 `chatMessageState.test.ts` 覆盖占位保留、有效远端助手替换、delta 补回助手气泡、尾部助手替换。
+
+- Assistant workbench enter send and ASR finish behavior (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+    - `frontend`: `npm test` -> **success** (`2` files, `8` tests)
+  - Notes:
+    - 工作台 textarea 现在支持 `Enter` 发送，`Shift+Enter` 保持换行，组合输入或修饰键回车不会误触发发送。
+    - 工作台语音识别结束后只回填输入框，不再自动提交问题。
+    - 共享 ASR hook 新增 opt-in 静默关闭参数；工作台传入 `5000ms`，5 秒无语音会自动结束识别并保留已识别内容。
+    - 追加修复语音结束后的焦点归位：composer 输入框重新获得焦点，避免回车命中麦克风按钮并再次开启语音；重新开启语音时保留已有输入作为前缀，避免误触发清空转写文本。
+
+- Assistant runtime current date context (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=RuntimeContextPromptServiceTest test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldRunChatWithRagAndToolsAndExposeOpsMetrics test` -> **success**
+  - Notes:
+    - 新增运行时日期上下文 prompt block，固定以 `Asia/Shanghai` 注入当前日期、中文日期、星期、时间和时区。
+    - `/ai/chat` 响应新增 `runtimeContext`，集成测试已断言 `currentDate` 与 `timezone=Asia/Shanghai`。
+    - 流式与非流式聊天路径都通过 `ChatOrchestratorService.buildInitialMessages(...)` 进入同一 system prompt 注入逻辑。
+
+- Assistant workbench conversation busy indicator (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 已将 `ChatMarkdown` 的 busy 空内容占位从“CiCi 正在组织语言…”改为无可见文字的三个动态点。
+    - 动态点使用香槟金、错峰缩放动画，并提供 `prefers-reduced-motion` 静态降级；普通非 busy 空响应仍保留可见兜底文案。
+
+- TASK-028 avatar cropper visible range alignment (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 裁剪画布改为完整圆形头像预览，避免较小圆孔遮罩与最终圆形头像范围不一致。
+    - 当前裁剪界面中可见的圆形头像范围就是最终保存头像的可见范围。
+
+- TASK-028 avatar cropper geometry alignment v2 (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 裁剪预览从 transform 方案改为显式几何布局（`left/top/width/height`），移除矩阵顺序带来的偏差。
+    - 预览与导出共用同一 display scale 与 offset 公式，进一步对齐取景范围与最终头像结果。
+
+- TASK-028 avatar cropper alignment fix (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 修复头像裁剪预览与最终导出不一致的问题，统一预览渲染与导出裁剪的坐标系。
+    - 裁剪预览改为按原图比例与基准缩放渲染，不再依赖 `object-fit: cover`，避免取景偏移。
+
+- TASK-028 avatar cropper flow (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 新增 `AvatarCropperDialog`，支持头像上传后缩放、拖动取景、应用裁剪再保存。
+    - 智能体与当前用户头像上传入口都已接入同一裁剪流程，裁剪输出统一为 256x256 WebP。
+
+- TASK-028 rail avatar display fix (2026-04-30):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 修复前台左上角 rail 头像入口继承全局 `button` padding 后内容区被压缩的问题。
+    - rail 头像入口已改为统一 `AvatarView`，并在 CSS 中重置头像 button 的 padding、box sizing 和内容容器尺寸。
+
+- TASK-028 global avatar settings implementation compile verification (2026-04-30):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**
+  - Notes:
+    - 新增 `agent_definition.avatar_base64` 迁移与 `AgentDefinition` 头像字段读写，`/agents` 列表与详情 payload 已包含 `avatarBase64`。
+    - 新增 `PUT /auth/me/avatar` 自助接口，当前用户可在前台个人设置中上传/清除本人头像。
+    - 管理端 Agent Builder 已支持智能体头像上传/清除；前台会话与工作台的主要头像位已统一接入对应身份头像来源。
 
 - Assistant workbench rail cleanup and reorder (2026-04-30):
   - Commands:
