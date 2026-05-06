@@ -47,6 +47,7 @@ public class SkillAuthoringService {
                         draft.kbWhitelist(),
                         draft.handoffRule(),
                         draft.outputContract(),
+                        List.of(),
                         draft.riskLevel()
                 )
         );
@@ -84,6 +85,7 @@ public class SkillAuthoringService {
                         merged.kbWhitelist(),
                         merged.handoffRule(),
                         merged.outputContract(),
+                        List.of(),
                         merged.riskLevel()
                 )
         );
@@ -110,6 +112,7 @@ public class SkillAuthoringService {
                         skillSpec.kbWhitelist(),
                         skillSpec.handoffRule(),
                         skillSpec.outputContract(),
+                        List.of(),
                         skillSpec.riskLevel(),
                         "builtin-skill-creator",
                         toJson(specIr),
@@ -129,6 +132,7 @@ public class SkillAuthoringService {
                         skillSpec.kbWhitelist(),
                         skillSpec.handoffRule(),
                         skillSpec.outputContract(),
+                        List.of(),
                         skillSpec.riskLevel()
                 )
         );

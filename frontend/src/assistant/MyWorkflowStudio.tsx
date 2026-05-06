@@ -85,22 +85,6 @@ type WorkflowBundle = {
   latestDraftVersion?: WorkflowCompileArtifact;
 };
 
-type FeishuBindingStatus = {
-  paired?: boolean;
-  agentCode?: string;
-  tenantKey?: string;
-  openId?: string;
-  pairedAt?: string;
-  lastMessageAt?: string;
-};
-
-type FeishuPairingCode = {
-  code: string;
-  agentCode: string;
-  expiresInSeconds: number;
-  command: string;
-};
-
 type ApiEnvelope<T> = {
   success?: boolean;
   data?: T;
@@ -124,8 +108,6 @@ export default function MyWorkflowStudio({ token, active }: Props) {
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
   const [compileArtifact, setCompileArtifact] = useState<WorkflowCompileArtifact | null>(null);
-  const [feishuBinding, setFeishuBinding] = useState<FeishuBindingStatus | null>(null);
-  const [pairingCode, setPairingCode] = useState<FeishuPairingCode | null>(null);
 
   const headers = useMemo(
     () => ({ Authorization: `Bearer ${token}`, "Content-Type": "application/json" }),
@@ -136,10 +118,7 @@ export default function MyWorkflowStudio({ token, active }: Props) {
     if (!token) return;
     setBusy(true);
     try {
-      const [workflowRes, bindingRes] = await Promise.all([
-        fetchJson<WorkflowBundle>("/me/agents/cici-system/workflow", { headers }),
-        fetchJson<FeishuBindingStatus>("/feishu/bot/pairing/me", { headers }),
-      ]);
+      const workflowRes = await fetchJson<WorkflowBundle>("/me/agents/cici-system/workflow", { headers });
       if (!workflowRes.success || !workflowRes.data) {
         setNotice(workflowRes.message ?? "加载个人工作流失败");
         return;
@@ -151,9 +130,6 @@ export default function MyWorkflowStudio({ token, active }: Props) {
       setNotificationValue(workflowRes.data.profile?.notificationTarget?.value ?? "");
       setWorkflowEnabled(workflowRes.data.profile?.enabled ?? true);
       setCompileArtifact(workflowRes.data.latestDraftVersion ?? null);
-      if (bindingRes.success && bindingRes.data) {
-        setFeishuBinding(bindingRes.data);
-      }
     } catch (error) {
       setNotice(`加载失败：${error instanceof Error ? error.message : String(error)}`);
     } finally {
@@ -319,56 +295,7 @@ export default function MyWorkflowStudio({ token, active }: Props) {
     }
   };
 
-  const generatePairingCode = async () => {
-    setBusy(true);
-    setNotice("");
-    try {
-      const res = await fetchJson<FeishuPairingCode>("/feishu/bot/pairing/code", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ agentCode: "cici" }),
-      });
-      if (!res.success || !res.data) {
-        setNotice(res.message ?? "生成配对码失败");
-        return;
-      }
-      setPairingCode(res.data);
-      setNotice("已生成飞书配对码，请复制命令到飞书机器人单聊发送。");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const unbindFeishu = async () => {
-    if (!window.confirm("确认解除当前飞书绑定？")) return;
-    setBusy(true);
-    setNotice("");
-    try {
-      const res = await fetchJson<void>("/feishu/bot/pairing/me", {
-        method: "DELETE",
-        headers,
-      });
-      if (!res.success) {
-        setNotice(res.message ?? "解除绑定失败");
-        return;
-      }
-      setPairingCode(null);
-      setNotice("已解除当前飞书绑定");
-      await refresh();
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const copyPairingCommand = async () => {
-    if (!pairingCode?.command) return;
-    try {
-      await navigator.clipboard.writeText(pairingCode.command);
-      setNotice("配对指令已复制");
-    } catch {
-      setNotice("复制失败，请手动复制配对指令");
-    }
-  };
+  const allowedToolIds = bundle?.agent?.allowedToolIds ?? [];
 
   return (
     <div className="cici-workflow-studio">
@@ -376,17 +303,25 @@ export default function MyWorkflowStudio({ token, active }: Props) {
         这里配置的是“思思”的个人工作流 Overlay。共享助手能力保持系统统一维护，你只管理属于自己的日程、提醒和个人执行流程。
       </p>
       <p className="cici-email-list__meta">
-        选择“飞书私信”后，如未填写通知目标，系统会优先尝试使用你当前已绑定的飞书 open_id 主动发送执行结果。
+        选择“飞书私信”后，如未填写通知目标，系统会优先尝试使用“绑定沟通渠道”里的飞书 open_id 主动发送执行结果。
       </p>
 
       {notice ? <div className="cici-modal__notice">{notice}</div> : null}
 
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>个人工作流设置</h4>
-          <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void refresh()} disabled={busy}>
-            刷新
-          </button>
+      <section className="cici-modal__section cici-workflow-panel">
+        <header className="cici-modal__section-head cici-workflow-panel__head">
+          <div>
+            <h4>基础配置</h4>
+            <span className="cici-workflow-studio__meta">通知、时区和个人工作流总开关</span>
+          </div>
+          <div className="cici-workflow-panel__actions">
+            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void refresh()} disabled={busy}>
+              刷新
+            </button>
+            <button type="button" className="cici-btn cici-btn--primary" onClick={() => void saveProfile()} disabled={busy}>
+              保存设置
+            </button>
+          </div>
         </header>
         <div className="cici-form-grid">
           <label>
@@ -413,66 +348,41 @@ export default function MyWorkflowStudio({ token, active }: Props) {
             <span>启用个人工作流总开关</span>
           </label>
         </div>
-        <footer className="cici-modal__footer">
-          <button type="button" className="cici-btn cici-btn--primary" onClick={() => void saveProfile()} disabled={busy}>
-            保存设置
-          </button>
-        </footer>
       </section>
 
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>飞书配对</h4>
-          <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void refresh()} disabled={busy}>
-            刷新状态
-          </button>
-        </header>
-        <div className="cici-workflow-list">
-          <div className="cici-workflow-list__item">
-            <div className="cici-workflow-list__row">
-              <div>
-                <strong>{feishuBinding?.paired ? "已绑定飞书" : "未绑定飞书"}</strong>
-                <div className="cici-email-list__meta">
-                  {feishuBinding?.paired
-                    ? `agent=${feishuBinding.agentCode || "cici"} · openId=${feishuBinding.openId || "—"}`
-                    : "生成配对码后，到飞书机器人单聊发送“配对 xxxxxx”完成绑定。"}
-                </div>
-                {feishuBinding?.pairedAt ? <div className="cici-email-list__meta">绑定时间：{feishuBinding.pairedAt}</div> : null}
-                {feishuBinding?.lastMessageAt ? <div className="cici-email-list__meta">最近消息：{feishuBinding.lastMessageAt}</div> : null}
-              </div>
-              <div className="cici-email-list__ops">
-                <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void generatePairingCode()} disabled={busy}>
-                  生成配对码
-                </button>
-                {feishuBinding?.paired ? (
-                  <button type="button" className="cici-btn cici-btn--danger" onClick={() => void unbindFeishu()} disabled={busy}>
-                    解除绑定
-                  </button>
-                ) : null}
-              </div>
+      <section className="cici-modal__section cici-workflow-panel">
+        <header className="cici-modal__section-head cici-workflow-panel__head cici-workflow-panel__head--editor">
+          <div className="cici-workflow-editor__summary">
+            <div>
+              <h4>工作流编排</h4>
+              <span className="cici-workflow-studio__meta">共享助手：{bundle?.agent?.name ?? "思思"}</span>
             </div>
-            {pairingCode ? (
-              <div className="cici-pairing-card">
-                <div className="cici-pairing-card__code">{pairingCode.code}</div>
-                <div className="cici-email-list__meta">有效期：{Math.round(pairingCode.expiresInSeconds / 60)} 分钟</div>
-                <pre className="cici-workflow-code">{pairingCode.command}</pre>
-                <div className="cici-modal__footer">
-                  <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void copyPairingCommand()} disabled={busy}>
-                    复制配对指令
-                  </button>
+            {allowedToolIds.length ? (
+              <details className="cici-workflow-tools">
+                <summary>已授权 {allowedToolIds.length} 个工具</summary>
+                <div className="cici-workflow-tools__list">
+                  {allowedToolIds.map((toolId) => (
+                    <span key={toolId} className="cici-workflow-tools__chip">
+                      {toolId}
+                    </span>
+                  ))}
                 </div>
-              </div>
-            ) : null}
+              </details>
+            ) : (
+              <span className="cici-email-list__tag">暂无授权工具</span>
+            )}
           </div>
-        </div>
-      </section>
-
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>我的工作流 Spec</h4>
-          <span className="cici-workflow-studio__meta">
-            共享助手：{bundle?.agent?.name ?? "思思"} · 已授权工具：{bundle?.agent?.allowedToolIds?.join("、") ?? "—"}
-          </span>
+          <div className="cici-workflow-panel__actions">
+            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void saveSpec()} disabled={busy}>
+              保存草稿
+            </button>
+            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void compile()} disabled={busy}>
+              编译
+            </button>
+            <button type="button" className="cici-btn cici-btn--primary" onClick={() => void publish()} disabled={busy}>
+              发布最新版本
+            </button>
+          </div>
         </header>
         <textarea
           className="cici-workflow-studio__textarea"
@@ -480,150 +390,162 @@ export default function MyWorkflowStudio({ token, active }: Props) {
           onChange={(e) => setSpecText(e.target.value)}
           placeholder="例如：上午9点检查今天和昨天的新邮件，并将摘要发送到我的飞书。"
         />
-        <footer className="cici-modal__footer">
-          <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void saveSpec()} disabled={busy}>
-            保存草稿
-          </button>
-          <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void compile()} disabled={busy}>
-            编译
-          </button>
-          <button type="button" className="cici-btn cici-btn--primary" onClick={() => void publish()} disabled={busy}>
-            发布最新版本
-          </button>
-        </footer>
       </section>
 
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>最新编译结果</h4>
-          <span className="cici-workflow-studio__meta">
-            {compileArtifact ? `v${compileArtifact.versionNo} · ${compileArtifact.publishStatus}` : "尚未编译"}
-          </span>
-        </header>
-        {compileArtifact ? (
-          <div className="cici-workflow-list">
-            <div className="cici-workflow-list__item">
-              <strong>编译摘要</strong>
-              <ul>
-                {(compileArtifact.compileSummary ?? []).map((item, index) => (
-                  <li key={`summary-${index}`}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="cici-workflow-list__item">
-              <strong>Warnings</strong>
-              <ul>
-                {(compileArtifact.warnings ?? []).map((item, index) => (
-                  <li key={`warning-${index}`}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="cici-workflow-list__item">
-              <strong>依赖</strong>
-              <ul>
-                {(compileArtifact.dependencies ?? []).map((item, index) => (
-                  <li key={`dep-${index}`}>{item}</li>
-                ))}
-              </ul>
-            </div>
-            <div className="cici-workflow-list__item">
-              <strong>workflow.ts</strong>
-              <pre className="cici-workflow-code">{compileArtifact.workflowCode ?? ""}</pre>
-            </div>
+      <section className="cici-modal__section cici-workflow-panel">
+        <header className="cici-modal__section-head cici-workflow-panel__head">
+          <div>
+            <h4>运行与历史</h4>
+            <span className="cici-workflow-studio__meta">编译结果、版本、触发器和执行记录按需展开查看</span>
           </div>
-        ) : (
-          <div className="cici-modal__empty">先写 Spec 并点击编译，系统会生成个人 workflow draft。</div>
-        )}
-      </section>
-
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>版本</h4>
-          <span className="cici-workflow-studio__meta">发布只对当前登录用户生效</span>
-        </header>
-        {bundle?.versions?.length ? (
-          <ul className="cici-workflow-list">
-            {bundle.versions.map((item) => (
-              <li key={item.id} className="cici-workflow-list__row">
-                <div>
-                  <strong>v{item.versionNo}</strong>
-                  <span className="cici-email-list__tag">{item.publishStatus}</span>
-                </div>
-                <div className="cici-email-list__ops">
-                  <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void publish(item.versionNo)} disabled={busy}>
-                    发布
-                  </button>
-                  <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void rollback(item.versionNo)} disabled={busy}>
-                    回滚到此
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="cici-modal__empty">还没有版本，先编译一次。</div>
-        )}
-      </section>
-
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>触发器</h4>
-          <span className="cici-workflow-studio__meta">发布后自动从 routine 物化</span>
-        </header>
-        {bundle?.triggers?.length ? (
-          <ul className="cici-workflow-list">
-            {bundle.triggers.map((item) => (
-              <li key={item.id} className="cici-workflow-list__row">
-                <div>
-                  <strong>{item.routineName}</strong>
-                  <div className="cici-email-list__meta">
-                    {item.triggerType}
-                    {item.cronExpr ? ` · ${item.cronExpr}` : ""}
-                    {item.intervalSeconds ? ` · 每 ${Math.round(item.intervalSeconds / 60)} 分钟` : ""}
-                  </div>
-                </div>
-                <div className="cici-email-list__ops">
-                  <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void toggleTrigger(item)} disabled={busy}>
-                    {item.enabled ? "停用" : "启用"}
-                  </button>
-                  <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void runNow(item.routineKey)} disabled={busy}>
-                    立即执行
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="cici-modal__empty">发布后会在这里看到定时/周期触发器。</div>
-        )}
-      </section>
-
-      <section className="cici-modal__section">
-        <header className="cici-modal__section-head">
-          <h4>最近执行记录</h4>
           <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void runNow()} disabled={busy}>
             执行默认 routine
           </button>
         </header>
-        {bundle?.executions?.length ? (
-          <ul className="cici-workflow-list">
-            {bundle.executions.map((item) => (
-              <li key={item.id} className="cici-workflow-list__item">
-                <div className="cici-workflow-list__row">
-                  <strong>{item.routineKey}</strong>
-                  <span className="cici-email-list__tag">{item.status}</span>
+        <div className="cici-workflow-disclosures">
+          <details className="cici-workflow-disclosure">
+            <summary>
+              <span>
+                <strong>最新编译结果</strong>
+                <small>{compileArtifact ? `v${compileArtifact.versionNo} · ${compileArtifact.publishStatus}` : "尚未编译"}</small>
+              </span>
+              <span className="cici-email-list__tag">{compileArtifact ? "可查看" : "待生成"}</span>
+            </summary>
+            {compileArtifact ? (
+              <div className="cici-workflow-disclosure__body">
+                <div className="cici-workflow-list">
+                  <div className="cici-workflow-list__item">
+                    <strong>编译摘要</strong>
+                    <ul>
+                      {(compileArtifact.compileSummary ?? []).map((item, index) => (
+                        <li key={`summary-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="cici-workflow-list__item">
+                    <strong>Warnings</strong>
+                    <ul>
+                      {(compileArtifact.warnings ?? []).map((item, index) => (
+                        <li key={`warning-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="cici-workflow-list__item">
+                    <strong>依赖</strong>
+                    <ul>
+                      {(compileArtifact.dependencies ?? []).map((item, index) => (
+                        <li key={`dep-${index}`}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <details className="cici-workflow-code-details">
+                    <summary>查看 workflow.ts</summary>
+                    <pre className="cici-workflow-code">{compileArtifact.workflowCode ?? ""}</pre>
+                  </details>
                 </div>
-                <div className="cici-email-list__meta">
-                  来源：{item.triggerSource} · 开始：{item.startedAt || item.scheduledAt || "—"}
-                </div>
-                {item.outputSummary ? <pre className="cici-workflow-code">{item.outputSummary}</pre> : null}
-                {item.errorMessage ? <div className="cici-email-list__meta">错误：{item.errorMessage}</div> : null}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="cici-modal__empty">还没有执行记录，发布后可手动执行或等待调度触发。</div>
-        )}
+              </div>
+            ) : (
+              <div className="cici-modal__empty">先写 Spec 并点击编译，系统会生成个人 workflow draft。</div>
+            )}
+          </details>
+
+          <details className="cici-workflow-disclosure">
+            <summary>
+              <span>
+                <strong>版本</strong>
+                <small>发布只对当前登录用户生效</small>
+              </span>
+              <span className="cici-email-list__tag">{bundle?.versions?.length ?? 0} 个</span>
+            </summary>
+            {bundle?.versions?.length ? (
+              <ul className="cici-workflow-list cici-workflow-disclosure__body">
+                {bundle.versions.map((item) => (
+                  <li key={item.id} className="cici-workflow-list__row">
+                    <div>
+                      <strong>v{item.versionNo}</strong>
+                      <span className="cici-email-list__tag">{item.publishStatus}</span>
+                    </div>
+                    <div className="cici-email-list__ops">
+                      <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void publish(item.versionNo)} disabled={busy}>
+                        发布
+                      </button>
+                      <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void rollback(item.versionNo)} disabled={busy}>
+                        回滚到此
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="cici-modal__empty">还没有版本，先编译一次。</div>
+            )}
+          </details>
+
+          <details className="cici-workflow-disclosure">
+            <summary>
+              <span>
+                <strong>触发器</strong>
+                <small>发布后自动从 routine 物化</small>
+              </span>
+              <span className="cici-email-list__tag">{bundle?.triggers?.length ?? 0} 个</span>
+            </summary>
+            {bundle?.triggers?.length ? (
+              <ul className="cici-workflow-list cici-workflow-disclosure__body">
+                {bundle.triggers.map((item) => (
+                  <li key={item.id} className="cici-workflow-list__row">
+                    <div>
+                      <strong>{item.routineName}</strong>
+                      <div className="cici-email-list__meta">
+                        {item.triggerType}
+                        {item.cronExpr ? ` · ${item.cronExpr}` : ""}
+                        {item.intervalSeconds ? ` · 每 ${Math.round(item.intervalSeconds / 60)} 分钟` : ""}
+                      </div>
+                    </div>
+                    <div className="cici-email-list__ops">
+                      <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void toggleTrigger(item)} disabled={busy}>
+                        {item.enabled ? "停用" : "启用"}
+                      </button>
+                      <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void runNow(item.routineKey)} disabled={busy}>
+                        立即执行
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="cici-modal__empty">发布后会在这里看到定时/周期触发器。</div>
+            )}
+          </details>
+
+          <details className="cici-workflow-disclosure">
+            <summary>
+              <span>
+                <strong>最近执行记录</strong>
+                <small>手动或调度触发后的运行结果</small>
+              </span>
+              <span className="cici-email-list__tag">{bundle?.executions?.length ?? 0} 条</span>
+            </summary>
+            {bundle?.executions?.length ? (
+              <ul className="cici-workflow-list cici-workflow-disclosure__body">
+                {bundle.executions.map((item) => (
+                  <li key={item.id} className="cici-workflow-list__item">
+                    <div className="cici-workflow-list__row">
+                      <strong>{item.routineKey}</strong>
+                      <span className="cici-email-list__tag">{item.status}</span>
+                    </div>
+                    <div className="cici-email-list__meta">
+                      来源：{item.triggerSource} · 开始：{item.startedAt || item.scheduledAt || "—"}
+                    </div>
+                    {item.outputSummary ? <pre className="cici-workflow-code">{item.outputSummary}</pre> : null}
+                    {item.errorMessage ? <div className="cici-email-list__meta">错误：{item.errorMessage}</div> : null}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="cici-modal__empty">还没有执行记录，发布后可手动执行或等待调度触发。</div>
+            )}
+          </details>
+        </div>
       </section>
     </div>
   );

@@ -54,6 +54,9 @@ public class SkillDefinitionEntity {
     @Column(name = "output_contract", columnDefinition = "TEXT")
     private String outputContract;
 
+    @Column(name = "runtime_api_draft_json", columnDefinition = "TEXT")
+    private String runtimeApiDraftJson;
+
     @Column(name = "risk_level", nullable = false, length = 32)
     private String riskLevel;
 
@@ -213,6 +216,10 @@ public class SkillDefinitionEntity {
         return outputContract;
     }
 
+    public String getRuntimeApiDraftJson() {
+        return runtimeApiDraftJson;
+    }
+
     public String getRiskLevel() {
         return riskLevel;
     }
@@ -285,7 +292,8 @@ public class SkillDefinitionEntity {
         return updatedAt;
     }
 
-    public void update(String name,
+    public void update(String skillCode,
+                       String name,
                        String description,
                        boolean enabled,
                        String promptFragment,
@@ -294,7 +302,9 @@ public class SkillDefinitionEntity {
                        String kbWhitelist,
                        String handoffRule,
                        String outputContract,
+                       String runtimeApiDraftJson,
                        String riskLevel) {
+        this.skillCode = skillCode;
         this.name = name;
         this.description = description;
         this.enabled = enabled;
@@ -304,7 +314,13 @@ public class SkillDefinitionEntity {
         this.kbWhitelist = kbWhitelist;
         this.handoffRule = handoffRule;
         this.outputContract = outputContract;
+        this.runtimeApiDraftJson = runtimeApiDraftJson;
         this.riskLevel = riskLevel;
+        this.updatedAt = Instant.now();
+    }
+
+    public void setRuntimeApiDraftJson(String runtimeApiDraftJson) {
+        this.runtimeApiDraftJson = runtimeApiDraftJson;
         this.updatedAt = Instant.now();
     }
 

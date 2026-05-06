@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   appendAssistantDelta,
+  assistantResponseNeedsUserFollowup,
   markTrailingAssistantModel,
   preserveAssistantModelNames,
   replaceTrailingAssistant,
@@ -86,5 +87,14 @@ describe("chatMessageState", () => {
     );
 
     expect(next[1]).toMatchObject({ content: "您好，老板。", modelName: "qwen3.6-plus" });
+  });
+
+  it("detects final assistant text that still needs user confirmation or retry", () => {
+    expect(assistantResponseNeedsUserFollowup("订阅台账查询成功，明细调用出现参数问题，让我重新查询明细。")).toBe(true);
+    expect(assistantResponseNeedsUserFollowup("查询失败：缺少必需参数 objectApiName。")).toBe(true);
+    expect(assistantResponseNeedsUserFollowup("工具已返回 10 条结果，但模型本轮未能生成最终自然语言总结。")).toBe(true);
+    expect(assistantResponseNeedsUserFollowup("数据已基本齐全，后续处理将继续整理洞察简报。")).toBe(true);
+    expect(assistantResponseNeedsUserFollowup("数据比较丰富，接下来我再抽取 CRM 中的客户反馈数据。")).toBe(true);
+    expect(assistantResponseNeedsUserFollowup("已查询到 3 条订阅台账，并按更新时间排序。")).toBe(false);
   });
 });

@@ -20,6 +20,7 @@ export type Skill = {
   draftSpecText?: string;
   toolWhitelist: string[];
   kbWhitelist: string[];
+  runtimeApis?: SkillRuntimeApi[];
   handoffRule?: string;
   outputContract?: string;
   createdAt?: string;
@@ -29,6 +30,37 @@ export type Skill = {
   latestVersionCreatedAt?: string;
   lastPublishedAt?: string;
   lastPublishedBy?: string;
+};
+
+export type SkillRuntimeApi = {
+  apiCode: string;
+  displayName: string;
+  description: string;
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | string;
+  triggerMode?: string;
+  method: string;
+  url: string;
+  authRef?: string;
+  timeoutSeconds?: number;
+  confirmationRequired?: boolean;
+  inputSchema?: Record<string, unknown>;
+  request?: Record<string, unknown>;
+  response?: Record<string, unknown>;
+};
+
+export type SkillRuntimeApiForm = {
+  apiCode: string;
+  displayName: string;
+  description: string;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH";
+  method: string;
+  url: string;
+  authRef: string;
+  timeoutSeconds: string;
+  confirmationRequired: boolean;
+  inputSchemaText: string;
+  requestText: string;
+  responseText: string;
 };
 
 export type SkillVersion = {
@@ -143,6 +175,11 @@ export type SkillPreview = {
   riskLevel: string;
   warnings: string[];
   compileSummary: string[];
+  runtimeApiPreview?: {
+    toolDefinitions: Array<Record<string, unknown>>;
+    errors: string[];
+    warnings: string[];
+  };
 };
 
 export type GeneratedSkillSpec = {
@@ -198,6 +235,7 @@ export type SkillForm = {
   draftSpecText: string;
   toolWhitelistText: string;
   kbWhitelistText: string;
+  runtimeApis: SkillRuntimeApiForm[];
   handoffRule: string;
   outputContract: string;
   changeLog: string;
@@ -235,6 +273,7 @@ export const EMPTY_FORM: SkillForm = {
   draftSpecText: "",
   toolWhitelistText: "",
   kbWhitelistText: "",
+  runtimeApis: [],
   handoffRule: "",
   outputContract: "",
   changeLog: "",

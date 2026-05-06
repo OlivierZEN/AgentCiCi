@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-03T13:35:06Z
+updated_at: 2026-05-06T20:54:00+08:00
 updated_by: ai
 status: active
-last_run_at: 2026-05-03T13:35:06Z
+last_run_at: 2026-05-06T20:54:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,623 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`JDK25 Mockito inline blocker recheck`
-- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatRealtimeIntegrationTest test`
+- 范围：`Agent observability trace timing and skill activation semantics`
+- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`; `frontend npm run build`; `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test`
 - 环境：`local workspace`
 
 ## Latest Verified Results
+
+- Agent observability trace timing and skill activation semantics (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test` -> **success**
+  - Notes:
+    - Trace detail 已返回 `boundSkillCodes` 与 `activatedSkillCodes`，绑定/候选技能不再被误标为“命中技能”。
+    - 模型调用已拆成工具规划、工具规划收口、最终流式生成或最终非流式生成等节点，`MODEL` 节点不再复用总链路耗时。
+    - 工具调用记录 per-tool `startedAt` / `endedAt` / `elapsedMs`，监控页大模型与工具明细会展示分段耗时。
+
+- Agent observability run logs and trace detail (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test` -> **success**
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceEntity.java backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceRepository.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java backend/src/main/java/com/codehouse/ciciassistant/ai/api/AgentRunTraceController.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/main/resources/db/migration/V39__agent_run_trace.sql backend/src/test/java/com/codehouse/ciciassistant/ai/AgentRunTraceIntegrationTest.java frontend/src/assistant/AssistantApp.tsx` -> **success**
+  - Notes:
+    - 新增 `agent_run_trace` 表与 `/me/agents/run-logs` / `/me/agents/run-logs/{traceId}` 接口，普通用户可查询自己可见会话的最近 7 天运行日志和详情。
+    - `/ai/chat` 与 `/ai/chat/stream` 完成后会 best-effort 写入 trace，覆盖模型、RAG、工具、技能/工作流和消息落库节点。
+    - 监控页已改读新接口；历史会话无细粒度 trace 时以 message-only 方式回填，不伪造工具/RAG/耗时。
+
+- Agent observability search icon cleanup (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/styles.css` -> **success**
+  - Notes:
+    - 搜索框放大镜不再使用字体字符 `⌕`，改为 CSS 绘制图标，避免不同字体下出现怪异字形。
+    - 搜索框内部仍保持透明底线样式，没有新增背景框、阴影或按钮化外观。
+
+- Agent observability tab scrollbar removal (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/styles.css` -> **success**
+  - Notes:
+    - `.cici-monitor-tabs` 从 `overflow-x: auto` 改为 `overflow: visible`，避免 tab 行成为滚动容器。
+    - active tab 下划线从 `bottom: -1px` 收回到 `bottom: 0`，避免 1px 外溢触发滚动槽。
+
+- Agent observability selected-state shadow and border cleanup (2026-05-06):
+  - Commands:
+    - `node`: `JSON.parse(DESIGN.json)` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/styles.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**
+  - Notes:
+    - 监控页左侧智能体行、中间日志行和日志范围 tab 的 selected、active、hover、pressed、focus、focus-visible 状态均不再加阴影、发光、内阴影或浮起卡片感。
+    - 日志行选中态不再新增金色边框，只用标题文字色表达；tab 选中态只保留文字色与 2px 金色下划线。
+    - 项目规范已补充产品页选中态硬规则：不加阴影，能不加边框就不加边框。
+
+- Agent observability monitor tab selected shadow removal (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/styles.css` -> **success**
+  - Notes:
+    - 监控页日志范围 tab 的默认、选中、hover、点击、focus 和 focus-visible 状态均已强制无背景、无 `box-shadow`、无 `text-shadow` 和无滤镜。
+    - 选中效果只保留文字色与 2px 金色下划线，避免截图中“运行中”一类 tab 出现浅框或阴影感。
+
+- Lightweight skill picker visual cleanup (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `node`: `JSON.parse(DESIGN.json)` -> **success**
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**
+    - `local`: `curl -sS -I http://127.0.0.1:5173/` -> **success** (`200 OK`)
+  - Notes:
+    - 工作台技能菜单项已改为只显示技能名称，不显示 `skillCode`。
+    - 技能菜单外层使用不透明暖象牙背景，避免后方聊天文字透出；行项目不使用背景或阴影，hover/selected 不出现背景块。
+    - 项目规范已补充轻量浮层菜单使用不透明暖象牙表面，轻量技能/指令/picker 行默认不显示实现代码或 slug，且不得使用 hover 背景、选中背景、逐行背景块或行阴影。
+
+- Workbench skill picker initial load retry fix (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx` -> **success**
+    - `local`: `curl -sS -I http://127.0.0.1:5173/` -> **success** (`200 OK`)
+  - Notes:
+    - 前端技能绑定请求失败不再缓存为空列表；会自动延迟重试一次，用户再次打开技能菜单也可重试。
+    - 技能菜单现在区分成功空态与加载失败，避免首次登录瞬时失败被展示成“当前智能体暂无绑定技能”。
+
+- Chat deferred tool result guard fix (2026-05-06):
+  - Commands:
+    - `frontend`: `npm test -- chatMessageState.test.ts` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `git`: `git diff --check -- frontend/src/assistant/chatMessageState.ts frontend/src/assistant/chatMessageState.test.ts backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java` -> **success**
+  - Notes:
+    - 前端已识别“后续处理 / 接下来我再抽取 / 数据已基本齐全后继续整理”类最终承诺，状态机会进入等待确认而非已完成。
+    - 后端在已有工具结果但最终回答仍是后续承诺时，会追加本轮工具结果可读摘要并通过 SSE delta 展示，避免已拿到的数据不展现。
+
+- Skill import unmatched resource create fix (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/admin/pages/AdminSkillsListPage.tsx` -> **success**
+  - Notes:
+    - 前端导入流程在资源未匹配时不再跳转空白新建页，而是继续创建导入草稿并导航到编辑页。
+    - 未匹配工具/知识库仍通过 toast 提醒，需管理员在编辑页补齐或调整资源白名单。
+
+- Chat CloudCC tool args and workbench skill picker fix (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=McpServerIntegrationTest#shouldStripCloudccCredentialArgumentsWhenToolSchemaDoesNotDeclareThem test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest#shouldListDefaultSystemAgentSkillBindingsFromAgentEndpoint test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/mcp/service/McpServerService.java backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentSkillBindingService.java backend/src/main/java/com/codehouse/ciciassistant/agent/api/AgentSkillBindingQueryController.java backend/src/test/java/com/codehouse/ciciassistant/mcp/McpServerIntegrationTest.java backend/src/test/java/com/codehouse/ciciassistant/ai/OrchestratorIntegrationTest.java frontend/src/assistant/AssistantApp.tsx` -> **success**
+  - Notes:
+    - MCP 测试确认 `get_object_fields` schema 未声明凭证字段时，实际传给 MCP 的 arguments 不再包含 `open_api_token` / `base_url` / `token`。
+    - 工作台技能查询测试确认普通用户可访问 `/me/agents/cici-system/skills`，并能看到默认绑定的 `general-assistant` 与 `web-search`。
+    - 曾并行启动两个 Maven 测试导致一次 Surefire fork 报 `Unable to create test class`，单独重跑 MCP 用例成功，判定为并行测试进程共享 target 目录干扰，不是代码失败。
+
+- Chat tool empty final fallback (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `frontend`: `npm test -- chatMessageState.test.ts` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java frontend/src/assistant/chatMessageState.ts frontend/src/assistant/chatMessageState.test.ts` -> **success**
+  - Notes:
+    - 后端结构化工具兜底会把 `results[]` 整理为标题、来源、摘要列表，不再把 `success/results` JSON 原样展示给用户。
+    - 前端状态机将这类“工具已返回但模型未能生成最终总结”的兜底文本识别为需要跟进，避免误报已完成。
+
+- Skill code draft publish fix (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldPersistUpdatedSkillCodeBeforePublishingTenantCustomSkill test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success** after escalation. First sandbox run failed with `java.net.SocketException: Operation not permitted` because the declarative Skill API runtime test binds a local HTTP server.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/skill/domain/SkillDefinitionEntity.java backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillDefinitionService.java backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformGovernanceService.java backend/src/test/java/com/codehouse/ciciassistant/skill/SkillGovernanceIntegrationTest.java backend/src/test/java/com/codehouse/ciciassistant/ai/OrchestratorIntegrationTest.java` -> **success**
+  - Notes:
+    - 覆盖保存草稿时修改 `skillCode` 后，发布版本和重新查询详情仍使用新 code。
+    - 平台模板同步与历史恢复路径显式保留现有 code，避免实体方法签名调整影响非租户自定义更新。
+
+- Chat conditional knowledge retrieval (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentDefinitionService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/AgentBuilderShell.tsx docs/specs/FEAT-018-chat-conditional-knowledge-retrieval.md .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> **success**
+  - Notes:
+    - 后端新增 RAG 意图门控，覆盖显式知识库选择、知识型问题、寒暄/轻量创作、业务数据查询和无有效知识库场景。
+    - 前端工作台初始状态不再预设“检索中”；真实检索状态仍由后端 `retrieving` phase 驱动。
+
+- Chat tool final state alignment (2026-05-06):
+  - Commands:
+    - `frontend`: `npm test -- chatMessageState.test.ts` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/chatMessageState.ts frontend/src/assistant/chatMessageState.test.ts frontend/src/assistant/AssistantApp.tsx backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java` -> **success**
+  - Notes:
+    - 后端工具结果后的最终回答新增约束，禁止模型在最终回复里承诺未来自动继续查询，必须说明未完成部分和需要补充的信息。
+    - 前端工作台流结束后会识别参数错误、查询失败、缺参和“继续/重新查询”类最终文本，把状态机置为等待确认而非已完成。
+    - 流式路径在最终文本为空但工具结果可兜底时会把兜底文本发给前端展示。
+
+- Feishu chat casual tool boundary (2026-05-06):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java` -> **success**
+  - Notes:
+    - `ChatOrchestratorService` now injects a tool-use boundary prompt telling the model to answer casual chat, greetings, role play, talent/performance requests, light creative writing, and common explanations directly without tools.
+    - Feishu sessions receive an additional channel rule: default to ordinary conversation unless the user explicitly asks for business data lookup or action.
+    - The non-streaming tool loop now returns a Chinese friendly fallback when tool-call rounds hit the protection limit.
+
+- Assistant profile workflow expanded tools layout (2026-05-06):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 工具清单展开后不再与保存草稿、编译、发布按钮并排；按钮单独显示在工具区下方操作行。
+    - 运行与历史四个折叠面板已改为单列布局，每个折叠项独占一整行。
+
+- Assistant profile workflow editor cleanup (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/MyWorkflowStudio.tsx frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 工作流编排区授权工具长列表已改为“已授权 N 个工具”可展开清单。
+    - 展开后的工具以紧凑 chip 展示并限制高度滚动，避免撑乱标题区。
+    - 工作流编排区操作按钮禁止换行，避免主按钮被挤成两行。
+
+- Assistant profile workflow compact structure (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/MyWorkflowStudio.tsx frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - “我的工作流”页签已重排为基础配置、工作流编排、运行与历史三类。
+    - 编译结果、版本、触发器和执行记录改为折叠面板，`workflow.ts` 改为二级折叠查看。
+    - 本轮只改前端结构和样式，不改个人工作流接口契约。
+
+- Assistant profile avatar action alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - “上传图片 / 清除头像 / 保存头像”三个控件已统一 34px 高度、盒模型、行高和 `inline-flex` 排布。
+    - 本轮只改个人资料头像操作区按钮样式，不改头像上传、裁剪或保存逻辑。
+
+- Assistant profile settings visual unification (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/MyEmailAccountsModal.tsx frontend/src/assistant/UserMemoryPanel.tsx frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 个人设置主弹窗已补 `role="dialog"` / `aria-modal` / labelled heading，并改为固定头部 + 可滚内容区。
+    - 页签、按钮、表单、列表、工作流、沟通渠道、邮箱和专属记忆视觉已统一到 `鎏金账房` 产品页语汇。
+    - 邮箱表单新增基础信息、POP3、SMTP、发送策略分组；专属记忆页移除旧 emoji 装饰和彩色杂项。
+    - 当前会话没有可复用的前台登录 token，本轮未做真实登录态截图验收。
+
+- Assistant profile settings communication channel binding (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/MyWorkflowStudio.tsx frontend/src/assistant/MyEmailAccountsModal.tsx frontend/src/assistant/CommunicationChannelBinding.tsx frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 前台个人设置弹窗新增“绑定沟通渠道”页签。
+    - 飞书绑定状态、生成配对码、复制配对指令和解除绑定能力已从“我的工作流”拆入独立组件。
+    - 本轮未改飞书绑定后端接口、个人工作流 profile 契约或通知发送逻辑。
+
+- Admin agent builder execution filters (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AgentBuilderShell.tsx frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 执行记录中的“全部 / 生产类 / 试运行”改为表格工具条内的“记录范围”筛选组，并显示各范围数量。
+    - `.cici-builder-runtime__filter` 不再继承主 tab 的文字下划线样式，避免执行记录 tab 内出现二级 tab 观感。
+    - 本轮未改执行记录数据来源、筛选语义、刷新或试运行逻辑。
+
+- Admin agent builder workflow preview full-height canvas (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - `.cici-builder-graph--full` 改为纵向 flex 容器，`.cici-builder-graph__canvas` 使用 `flex: 1 1 auto` 填满标题栏以下的剩余高度。
+    - 修复流程图预览底部父容器白底露出的问题，点阵画布背景应铺满底部。
+    - 本轮只改 CSS 布局填充，未改流程图节点、边线、缩放逻辑或编译发布流程。
+
+- Admin agent builder workflow preview fixed overlays (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AgentBuilderShell.tsx frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/agent-builder` -> **success**, returned `200 OK`
+  - Notes:
+    - 流程图预览图表滚动区域已拆为内层 `.cici-builder-graph__scroll`。
+    - 左下小地图与右下缩放控制器从随内容流计算的 sticky + 负 margin 改为外层 viewport 绝对定位覆盖层，缩放、适配和滚动时不再跟随画布内容漂移。
+    - 本轮未改流程图节点布局、边线计算、保存/编译/发布流程。
+
+- Admin agent builder workflow preview caption cleanup (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AgentBuilderShell.tsx` -> **success**
+  - Notes:
+    - 流程图预览标题栏右侧 `Dify 风格只读流程画布 · START 可跳转「触发与调度」` 非功能说明文案已移除。
+    - 本轮只改 UI 文案，未改流程图交互、运行时逻辑、保存/编译/发布流程。
+
+- Admin agent builder publish channel single-list style (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 发布渠道菜单由多张内嵌卡片改为单层列表。
+    - 渠道项去掉独立卡片边框、圆角、阴影和浮起动效，使用行分隔、浅香槟 hover/active 背景和 active 底部金线表达状态。
+    - 本轮只改 CSS 覆盖层，未改 React 页面结构、布局、路由、接口调用或保存/编译/发布流程。
+
+- Admin agent builder tab content width alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 编译结果区各 tab 直接内容统一 100% 宽度与 border-box。
+    - runtime tab 去除左右 padding，触发器/执行记录/版本历史等内部面板外边界与 tab 区域外边界对齐。
+    - 本轮只改 CSS 覆盖层，未改 React 页面结构、布局、路由、接口调用或保存/编译/发布流程。
+
+- Admin agent builder tab rule alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 编辑页标题区下方多余横线已移除。
+    - Tab 容器底线去除额外 bottom padding，active 金色下划线与 tab 行底线对齐。
+    - 本轮只改 CSS 覆盖层，未改 React 页面结构、布局、路由、接口调用或保存/编译/发布流程。
+
+- Admin agent builder avatar action alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 上传图片 `label` 伪按钮和清除头像 `button` 已统一为 border-box、34px 固定高度、清零 margin 和一致外观，避免两个按钮上沿错位。
+    - 本轮只改 CSS 覆盖层，未改 React 页面结构、布局、路由、接口调用或保存/编译/发布流程。
+
+- Admin agent builder editor visual simplification (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 编辑页外层 editor/composer/compile 面板框线已撤掉，内层只保留必要单层边界，资源行改为轻量底部分隔。
+    - 页签去除背景框、圆角和阴影，回到 `鎏金账房` 产品页文本 tab 状态。
+    - 头像预览和上传/清除按钮已按 58px 头像行、34px 按钮高度居中对齐。
+    - 本轮只改 CSS 覆盖层，未改 React 页面结构、布局、路由、接口调用或保存/编译/发布流程。
+
+- Admin agent builder editor edge frame alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 管理端“智能体构建”编辑页根容器已吃满 `admin-main` 内边距，左侧边缘不再露出白色内框。
+    - 本轮只改 CSS 覆盖层，未改 React 页面结构、路由、接口调用或保存/编译/发布流程。
+
+- Quick command add button vertical alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 快捷指令菜单“添加快捷指令”按钮改为 flex 垂直居中布局。
+    - 通过 `line-height: 1` 与轻微底部内边距修正中文视觉基线，避免文字贴近底线。
+
+- Quick command modal alignment and modal close rule (2026-05-05):
+  - Commands:
+    - `node`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**
+  - Notes:
+    - 快捷指令添加 modal 已统一 header/body 水平内边距，字段、输入框、文本域和页脚动作同一宽度栅格对齐。
+    - 关闭 `×` 明确为无边框、无按钮块、无阴影的纯图标/字形。
+    - `DESIGN.md`、`DESIGN.json`、`AGENTS.md`、`README.md` 已记录所有弹出框/模式窗口关闭 `×` 外不得出现边框。
+
+- Assistant workbench quick command add modal (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css docs/specs/FEAT-017-workbench-user-quick-commands.md .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> **success**
+  - Notes:
+    - “添加快捷指令”已从快捷指令菜单内联表单改为独立 modal。
+    - Modal 带阻塞遮罩、`role="dialog"`、`aria-modal="true"`、关联标题、暖象牙面板和统一页脚按钮。
+    - 本轮未做真实登录态浏览器人工点击验收。
+
+- Assistant workbench user quick commands (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css backend/src/main/java/com/codehouse/ciciassistant/userworkflow/api/UserWorkflowController.java backend/src/main/java/com/codehouse/ciciassistant/userworkflow/service/UserWorkflowService.java backend/src/main/java/com/codehouse/ciciassistant/userworkflow/domain/UserQuickCommandEntity.java backend/src/main/java/com/codehouse/ciciassistant/userworkflow/domain/UserQuickCommandRepository.java backend/src/main/resources/db/migration/V38__user_quick_command.sql docs/specs/FEAT-017-workbench-user-quick-commands.md` -> **success**
+  - Notes:
+    - 会话工作台“快捷指令”按钮已改为当前用户 + 当前智能体维度的个人快捷指令菜单。
+    - 空态支持直接添加自定义快捷指令；点击已有快捷指令只填入 composer，不自动发送。
+    - 本轮未做真实登录态浏览器人工点击验收。
+
+- Assistant skill picker lightweight menu style (2026-05-05):
+  - Commands:
+    - `node`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**
+  - Notes:
+    - 技能选择列表进一步改为轻量浮层菜单：宽度约 176px、行高约 28px、主文字 12px、副文字 10px、图标 13px。
+    - 菜单颜色统一为 `鎏金账房` 暖象牙底、浅金边、墨色/暖棕文字和浅香槟选中态。
+    - 轻量浮层菜单尺寸与颜色规则已同步到项目设计规范。
+
+- Assistant skill picker compact scale and design governance (2026-05-05):
+  - Commands:
+    - `node`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**
+  - Notes:
+    - 技能选择列表已收为紧凑 popover：主文本 13px，副文本 11px，图标 16px。
+    - `DESIGN.md` / `DESIGN.json` / `AGENTS.md` / `README.md` 已新增后续产品 UI 字号与控件尺寸统一规则。
+
+- Assistant workbench composer font unification (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 前台工作台 composer 输入区桌面字号降到 13px，移动端为 12px。
+    - 上传、快捷指令、技能按钮统一为 32px 高，图标统一为 15px，更接近页面其他产品控件尺度。
+
+- Assistant workbench composer compact controls (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - 前台工作台 composer 已收紧输入区高度、字号和外边距。
+    - 上传、快捷指令、技能按钮统一为系统紧凑尺寸，长技能名省略以避免撑大工具条。
+
+- Assistant workbench composer upload and skill picker (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 前台工作台 composer 新增上传、快捷指令、技能选择工具条，移除旧 `+` 菜单。
+    - 技能选择会加载当前智能体启用绑定技能，并把所选 `activeSkillCode` 传入聊天请求。
+    - 当前仅接入文件选择入口，聊天附件上传发送链路仍需后续单独定义。
+
+- Front login mode2 loading spin duration 0.1s (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 点击登录后的 `loading` 旋转动画时长从 `0.3s` 调整为 `0.1s`。
+    - `LOGIN_MODE2_ENTER_DELAY_MS` 和登录接口流程未改，仍保持约 3 秒过渡后进入系统。
+
+- Front login mode2 loading spin duration 0.3s (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+  - Notes:
+    - 点击登录后的 `loading` 旋转动画时长从 `0.93s` 调整为 `0.3s`。
+    - `LOGIN_MODE2_ENTER_DELAY_MS` 和登录接口流程未改，仍保持约 3 秒过渡后进入系统。
+
+- Front login mode2 loading spin speed 1.5x (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+  - Notes:
+    - 点击登录后的 `loading` 旋转动画时长从 `1.4s` 调整为 `0.93s`，旋转速度约为上一版 1.5 倍。
+    - `LOGIN_MODE2_ENTER_DELAY_MS` 和登录接口流程未改，仍保持约 3 秒过渡后进入系统。
+
+- Front login mode2 3s fast spin direct enter (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 登录成功过渡不再加载或切换智能体头像，`loginMode2CubePhase` 只保留 `brand` / `loading`。
+    - `loading` 阶段隐藏登录框并让品牌立方体高速旋转约 3 秒，随后直接进入系统。
+
+- Front login mode2 loading spin before agent avatar transition (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - `loginMode2CubePhase` 已扩展为 `brand` / `loading` / `agents`，点击登录成功后先进入 `loading` 高速旋转。
+    - `loading` 阶段至少保持 `650ms`，直到头像池请求返回；切到 `agents` 后立方体旋转降速并保持 `3000ms` 再进入系统。
+
+- Front login mode2 3s agent avatar transition (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - `LOGIN_MODE2_ENTER_DELAY_MS` 已调整为 `3000`。
+    - 登录成功进入阶段新增 `loginMode2Entering`，隐藏登录表单，只显示切换到智能体头像池的立方体；头像池拉取失败时使用默认面兜底，不阻断已成功登录。
+
+- Front login mode2 remove cube diamond frame (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 已删除 `.login-mode2__cube-stage::before` / `::after` 两个菱形框线伪元素。
+    - 本轮只改立方体背后装饰框线，不改立方体图片集合、星链背景、短信登录或登录成功后头像切换逻辑。
+
+- Front login mode2 expanded cube face image set (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 新增 `login-cube-openai.webp`、`login-cube-deepseek.webp`、`login-cube-ai-chip.webp` 三张 512x512 WebP 立方体面资源。
+    - DeepSeek 原图已裁掉下方文字，仅保留鲸鱼标识；本轮只改未登录默认立方体图片集合，不改短信登录或登录成功后智能体头像池切换逻辑。
+
+- Front login mode2 clean background and no pause control (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 已移除 `login_mode2` 立方体下方“暂停旋转”按钮。
+    - 已移除 `login_mode2` 背景网格线与 ledger 线层，保留暖象牙渐变背景。
+
+- Front login mode2 brand-to-agent cube transition (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 未登录默认立方体六面循环重复使用 CICI 与 CloudCC 两张品牌图。
+    - 登录成功后才切换到系统智能体头像池，并延迟进入系统；本轮通过前端构建覆盖 TypeScript 与资源引用，未执行短信登录端到端人工点击。
+
+- Front login mode2 cube agent avatar pool (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> **success**
+    - `git`: `git diff --check` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - 新增公开只读头像池接口回归，覆盖未登录请求可读取当前组织已启用内置/已发布智能体头像，并排除禁用智能体。
+    - 前端构建覆盖 `login_mode2` 未登录页按组织 ID 拉取头像池、随机分配六面和无头像兜底的 TypeScript 编译。
+
+- Front login mode2 rotating cube variant (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `Chrome headless`: screenshot `http://127.0.0.1:5173/` -> **success**, verified the visible top switches and `login_mode*` text are gone, the title/description copy above the cube is gone, and the cube plus account form remain visible
+  - Notes:
+    - 本轮只验证前端未登录态 UI 可达性、构建和首屏视觉；未执行短信登录接口端到端。
+    - 登录页版本选择已改为代码配置常量，不再依赖 URL query 或本地存储切换。
+    - Chrome stderr included allocator / GPU mailbox warnings, but screenshots were written successfully and command exited `0`.
+
+- Assistant knowledge retrieval latency and state visibility (2026-05-05):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `frontend`: `npm test` -> **success**, 14 tests passed
+    - `curl`: `curl -sS -I http://127.0.0.1:8080/actuator/health` -> **success**, returned `200`
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, returned `200 OK`
+  - Notes:
+    - RAG 检索明细、知识库名称和耗时字段已覆盖到后端回归。
+    - 前端构建通过，工作台状态机可消费 `retrieving` / `rag_done` SSE phase。
+
+- Admin knowledge document row action menu standardization (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `node`: `JSON.parse(DESIGN.json)` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/kb` -> **success**, returned `200 OK`
+  - Notes:
+    - 知识库文档列表操作列已改为统一 `admin-row-menu` 三点菜单结构。
+    - 系统设计规范已记录新管理端表格优先使用三点 hover/focus 菜单，菜单放在表格单元格内部子容器中，不直接修改真实表格元素 display。
+
+- Admin agent builder search cursor alignment (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 搜索图标改为绝对定位，输入框使用固定左 padding，文本光标不再挤在图标与 placeholder 中间。
+    - 本轮只改 CSS，不改变 Agent Builder 页面结构、路由或业务逻辑。
+
+- Admin agent builder visual lint fix (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/agent-builder` -> **success**, returned `200 OK`
+  - Notes:
+    - 修正管理端 Agent 构建列表页左侧露白、搜索框旧蓝色 focus/高亮、标题 uppercase 与字距问题。
+    - 本轮只改 CSS，不改变 Agent Builder 页面结构、路由或业务逻辑。
+
+- Admin integrations action alignment fix (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+  - Notes:
+    - 修正集成应用卡片底部设置图标随描述行数不同而纵向错位的问题。
+    - 本轮只改 CSS：卡片改为纵向 flex，操作行固定在卡片底部，不改变页面结构或业务逻辑。
+
+- Admin resource pages visual style unification (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/kb` -> **success**, returned `200 OK`
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/models` -> **success**, returned `200 OK`
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/tools` -> **success**, returned `200 OK`
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/integrations` -> **success**, returned `200 OK`
+  - Notes:
+    - 组织控制台“知识库 / 模型 / 工具 / 集成应用”通过 `frontend/src/styles.css` 样式覆盖统一为 `鎏金账房` 风格。
+    - 本轮未修改四个页面的 JSX 结构、路由、数据请求或原有列表/详情布局。
+
+- Admin agent builder visual style unification (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/agent-builder` -> **success**, returned `200 OK`
+  - Notes:
+    - 管理端“智能体构建”列表和编辑页通过 CSS 作用域覆盖统一为 `鎏金账房` 风格，未改 React 页面结构。
+    - 浏览器插件安全策略拒绝通过 `javascript:` URL 注入本地登录态，因此未完成已登录页截图验收。
+
+- Admin product tab style standardization (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `node`: `JSON.parse(DESIGN.json)` -> **success**
+  - Notes:
+    - 用户信息 tab 已调整为标准文本 tab：浅金底线、暖棕未选中、深金选中、2px 金色下划线。
+    - `DESIGN.md`、`DESIGN.json`、`AGENTS.md`、`README.md` 已记录 Product Tabs 规则，后续产品页 tab 默认遵循该样式。
+
+- Admin users page visual refresh (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/kb` -> **success**, returned `200 OK`
+  - Notes:
+    - `/admin/users` 在本地 dev proxy 中与后端 `/admin/users` API 路径冲突，直接 `curl` 会命中后端权限返回 403；前端用户页需从已登录管理端侧栏导航进入。
+    - 用户页已统一为 `鎏金账房` 风格：简洁列表 + 详情分栏、金色文本页签、暖白表单、金线 hover/active 状态，减少列表项卡片框、详情统计框和胶囊页签的叠框感。
+
+- Admin left navigation visual refresh (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/kb` -> **success**, returned `200 OK`
+  - Notes:
+    - 菜单上方用户信息按最新截图调整为大圆头像、用户名主标题、组织名单行次级截断文本。
+    - 按截图反馈去掉管理端侧栏大标题，将当前组织与管理员合并为无外框身份区，菜单只保留单行标题，退出后台改为顶部图标按钮。
+    - 管理端左侧菜单保留 `鎏金账房` 产品面基线：暖象牙侧栏、香槟金结构线、紧凑单行导航和克制 hover/active 状态。
+
+- FEAT-015 skill declarative API CloudCC authRef smoke (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldPublishDeclarativeSkillApiAndInjectOnlyWhenSkillIsActive test` -> **success**（需允许测试在 localhost 绑定临时端口）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` -> **success**（需允许测试在 localhost 绑定临时端口）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success**, returned `200 OK`
+  - Notes:
+    - 回归继续覆盖管理端 Skill 新建/编辑页“内嵌 API”保存与编译预览提交 `runtimeApis`。
+    - 回归继续覆盖 `authRef=integration:tavily.apiKey` 解密服务端密钥并注入 `Authorization: Bearer ...`。
+    - 新增覆盖 `authRef=integration:cloudcc.accessToken` 按当前用户解析 CloudCC session token，并向固定 API 注入 `accessToken` header。
+    - 新增本地 CloudCC mock smoke 覆盖 domain 解析、token 换取、业务 API 调用和 `$..accessToken` 响应脱敏。
+
+- FEAT-015 skill declarative API config UI and authRef smoke (2026-05-05):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldPublishDeclarativeSkillApiAndInjectOnlyWhenSkillIsActive test` -> **success**（需允许测试在 localhost 绑定临时端口）
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` -> **success**（需允许测试在 localhost 绑定临时端口）
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/skills/new` -> **success**, returned `200 OK`
+  - Notes:
+    - 管理端 Skill 新建/编辑页新增“内嵌 API”页签，保存和编译预览会提交 `runtimeApis`。
+    - 回归覆盖 `authRef=integration:tavily.apiKey` 从集成配置解密服务端密钥，并在运行时注入 `Authorization: Bearer ...`。
+    - 回归覆盖本地 HTTP endpoint 调用、响应结果返回和 `$..token` 脱敏。
+
+- FEAT-015 skill declarative API backend minimal loop (2026-05-03):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldPublishDeclarativeSkillApiAndInjectOnlyWhenSkillIsActive test` -> **success**
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest test` -> **success**
+  - Notes:
+    - Flyway `V37__skill_declarative_api_runtime.sql` 在 H2 PostgreSQL compatibility test runtime 中成功应用。
+    - 回归覆盖 Skill `runtimeApis` 预览生成 `skillapi__...` function schema。
+    - 回归覆盖 `127.0.0.1` API URL 被发布/预览校验阻断。
+    - 回归覆盖发布后 `skill_api_tool` 生成、手动激活 Skill 才注入 Skill API 工具、未激活上下文拒绝执行。
 
 - JDK25 Mockito inline blocker recheck (2026-05-03):
   - Commands:

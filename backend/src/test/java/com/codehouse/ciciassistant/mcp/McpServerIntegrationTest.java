@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,9 +16,15 @@ import com.codehouse.ciciassistant.auth.domain.OrgRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.auth.service.JwtService;
+import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService;
+import com.codehouse.ciciassistant.mcp.domain.McpServerEntity;
+import com.codehouse.ciciassistant.mcp.domain.McpServerRepository;
 import com.codehouse.ciciassistant.mcp.service.McpClient;
+import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -27,6 +34,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.mockito.ArgumentCaptor;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,8 +55,17 @@ class McpServerIntegrationTest {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private McpServerRepository mcpServerRepository;
+
+    @Autowired
+    private McpServerService mcpServerService;
+
     @MockBean
     private McpClient mcpClient;
+
+    @MockBean
+    private CloudccAccessTokenService cloudccAccessTokenService;
 
     @Test
     void shouldRejectOrgUserAndAllowOrgAdminForMcpServerApis() throws Exception {
@@ -119,6 +136,60 @@ class McpServerIntegrationTest {
                         org.hamcrest.Matchers.equalTo("error")
                 )))
                 .andExpect(jsonPath("$.data.tools[0].name").value("demo_tool"));
+    }
+
+    @Test
+    void shouldStripCloudccCredentialArgumentsWhenToolSchemaDoesNotDeclareThem() throws Exception {
+        ObjectNode inputSchema = objectMapper.createObjectNode();
+        ObjectNode properties = inputSchema.putObject("properties");
+        properties.putObject("object_api_name").put("type", "string");
+        McpClient.McpTool tool = new McpClient.McpTool("get_object_fields", "object fields", inputSchema);
+
+        given(cloudccAccessTokenService.getSessionContext("demo-org", "u-cloudcc-mcp"))
+                .willReturn(Optional.of(new CloudccAccessTokenService.CloudccSessionContext(
+                        "secret-access-token",
+                        "example.lightningapi.cloudcc.com"
+                )));
+        given(mcpClient.initialize(any(), anyMap())).willReturn(objectMapper.createObjectNode());
+        given(mcpClient.listTools(any(), anyMap())).willReturn(List.of(tool));
+        given(mcpClient.callTool(any(), any(), any(), anyMap())).willReturn("{\"success\":true}");
+
+        McpServerEntity server = mcpServerRepository.save(new McpServerEntity(
+                "demo-org",
+                "CloudCC MCP",
+                "cloudcc schema-aware test",
+                "streamable-http",
+                "https://mcp.cloudcc.example/mcp",
+                "",
+                10
+        ));
+        mcpServerService.refreshToolCache("demo-org", server.getId());
+
+        String result = mcpServerService.executeTool(
+                "demo-org",
+                "u-cloudcc-mcp",
+                "get_object_fields",
+                """
+                        {
+                          "object_api_name": "lead",
+                          "open_api_token": "model-leaked-token",
+                          "openApiToken": "model-leaked-token",
+                          "base_url": "https://model.example",
+                          "baseUrl": "https://model.example",
+                          "token": "model-leaked-token"
+                        }
+                        """
+        );
+
+        assertThat(result).isEqualTo("{\"success\":true}");
+        ArgumentCaptor<String> argsCaptor = ArgumentCaptor.forClass(String.class);
+        verify(mcpClient).callTool(any(), org.mockito.ArgumentMatchers.eq("get_object_fields"), argsCaptor.capture(), anyMap());
+        assertThat(argsCaptor.getValue()).contains("\"object_api_name\":\"lead\"");
+        assertThat(argsCaptor.getValue()).doesNotContain("open_api_token");
+        assertThat(argsCaptor.getValue()).doesNotContain("openApiToken");
+        assertThat(argsCaptor.getValue()).doesNotContain("base_url");
+        assertThat(argsCaptor.getValue()).doesNotContain("baseUrl");
+        assertThat(argsCaptor.getValue()).doesNotContain("\"token\"");
     }
 
     private String loginTokenExpectingRole(String mobile, String expectedRole) throws Exception {

@@ -125,6 +125,7 @@ export default function AdminKnowledgePage() {
   const [selectedChunkIds, setSelectedChunkIds] = useState<Set<number>>(new Set());
   const [docBatchFeedback, setDocBatchFeedback] = useState<BatchFeedback | null>(null);
   const [chunkBatchFeedback, setChunkBatchFeedback] = useState<BatchFeedback | null>(null);
+  const [openDocActionMenuId, setOpenDocActionMenuId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const flash = (msg: string) => {
@@ -769,6 +770,23 @@ export default function AdminKnowledgePage() {
   }, [selectedKb, detailTab, loadKbSettings, loadRetrievalLogs, loadMetadataFields]);
 
   useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest("[data-admin-row-menu]")) return;
+      setOpenDocActionMenuId(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenDocActionMenuId(null);
+    };
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  useEffect(() => {
     setPreviewExecuted(false);
   }, [previewText, chunkSize, chunkOverlap, chunkDelimiter, selectedKb?.id]);
 
@@ -1116,7 +1134,7 @@ export default function AdminKnowledgePage() {
                       </tr>
                     )}
                     {filteredDocs.map((doc, i) => (
-                      <tr key={doc.id}>
+                      <tr key={doc.id} className={openDocActionMenuId === doc.id ? "is-action-menu-open" : ""}>
                         <td>
                           <input
                             type="checkbox"
@@ -1156,84 +1174,127 @@ export default function AdminKnowledgePage() {
                           )}
                         </td>
                         <td className="dify-doc-table__actions">
-                          {(doc.status === "UPLOADED" || doc.status === "FAILED") && (
+                          <div className={`admin-row-menu${openDocActionMenuId === doc.id ? " is-open" : ""}`} data-admin-row-menu>
                             <button
                               type="button"
-                              className="dify-btn dify-btn--text dify-btn--xs"
-                              onClick={() => void publishDocument(doc.id)}
+                              className="admin-row-menu__trigger"
+                              aria-haspopup="menu"
+                              aria-expanded={openDocActionMenuId === doc.id}
+                              aria-label={`打开「${doc.name}」操作菜单`}
+                              onClick={() => setOpenDocActionMenuId((current) => (current === doc.id ? null : doc.id))}
                             >
-                              {doc.status === "FAILED" ? "重试" : "发布"}
+                              <span aria-hidden="true">•••</span>
                             </button>
-                          )}
-                          {doc.status === "UNPUBLISHED" && (
-                            <button
-                              type="button"
-                              className="dify-btn dify-btn--text dify-btn--xs"
-                              onClick={() => void publishDocument(doc.id)}
-                            >
-                              发布
-                            </button>
-                          )}
-                          {doc.status === "PUBLISHED" && (
-                            <>
-                              <button
-                                type="button"
-                                className="dify-btn dify-btn--text dify-btn--xs"
-                                onClick={() => void reindexDocument(doc.id)}
-                              >
-                                重建
-                              </button>
-                              <button
-                                type="button"
-                                className="dify-btn dify-btn--text dify-btn--xs"
-                                onClick={() => void unpublishDocument(doc.id)}
-                              >
-                                下线
-                              </button>
-                            </>
-                          )}
-                          <button
-                            type="button"
-                            className="dify-btn dify-btn--text dify-btn--xs"
-                            onClick={() => void renameDocument(doc)}
-                          >
-                            重命名
-                          </button>
-                          <button
-                            type="button"
-                            className="dify-btn dify-btn--text dify-btn--xs"
-                            onClick={() => void setDocumentEnabled(doc, !(doc.enabled ?? true))}
-                          >
-                            {doc.enabled === false ? "启用文档" : "停用文档"}
-                          </button>
-                          <button
-                            type="button"
-                            className="dify-btn dify-btn--text dify-btn--xs"
-                            onClick={() => void setDocumentArchived(doc, !(doc.archived ?? false))}
-                          >
-                            {doc.archived ? "取消归档" : "归档"}
-                          </button>
-                          <button
-                            type="button"
-                            className="dify-btn dify-btn--text dify-btn--xs"
-                            onClick={() => void openChunkPanel(doc)}
-                          >
-                            切片
-                          </button>
-                          <button
-                            type="button"
-                            className="dify-btn dify-btn--text dify-btn--xs"
-                            onClick={() => void updateDocumentMetadata(doc)}
-                          >
-                            元数据
-                          </button>
-                          <button
-                            type="button"
-                            className="dify-btn dify-btn--text dify-btn--xs dify-btn--danger"
-                            onClick={() => void deleteDocument(doc.id)}
-                          >
-                            删除
-                          </button>
+                            {openDocActionMenuId === doc.id ? (
+                              <div className="admin-row-menu__panel" role="menu" aria-label={`${doc.name}操作`}>
+                                {(doc.status === "UPLOADED" || doc.status === "FAILED" || doc.status === "UNPUBLISHED") && (
+                                  <button
+                                    type="button"
+                                    className="admin-row-menu__item"
+                                    role="menuitem"
+                                    onClick={() => {
+                                      setOpenDocActionMenuId(null);
+                                      void publishDocument(doc.id);
+                                    }}
+                                  >
+                                    {doc.status === "FAILED" ? "重试" : "发布"}
+                                  </button>
+                                )}
+                                {doc.status === "PUBLISHED" && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="admin-row-menu__item"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenDocActionMenuId(null);
+                                        void reindexDocument(doc.id);
+                                      }}
+                                    >
+                                      重建
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="admin-row-menu__item"
+                                      role="menuitem"
+                                      onClick={() => {
+                                        setOpenDocActionMenuId(null);
+                                        void unpublishDocument(doc.id);
+                                      }}
+                                    >
+                                      下线
+                                    </button>
+                                  </>
+                                )}
+                                <button
+                                  type="button"
+                                  className="admin-row-menu__item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenDocActionMenuId(null);
+                                    void renameDocument(doc);
+                                  }}
+                                >
+                                  重命名
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-row-menu__item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenDocActionMenuId(null);
+                                    void setDocumentEnabled(doc, !(doc.enabled ?? true));
+                                  }}
+                                >
+                                  {doc.enabled === false ? "启用文档" : "停用文档"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-row-menu__item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenDocActionMenuId(null);
+                                    void setDocumentArchived(doc, !(doc.archived ?? false));
+                                  }}
+                                >
+                                  {doc.archived ? "取消归档" : "归档"}
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-row-menu__item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenDocActionMenuId(null);
+                                    void openChunkPanel(doc);
+                                  }}
+                                >
+                                  切片
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-row-menu__item"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenDocActionMenuId(null);
+                                    void updateDocumentMetadata(doc);
+                                  }}
+                                >
+                                  元数据
+                                </button>
+                                <button
+                                  type="button"
+                                  className="admin-row-menu__item admin-row-menu__item--danger"
+                                  role="menuitem"
+                                  onClick={() => {
+                                    setOpenDocActionMenuId(null);
+                                    void deleteDocument(doc.id);
+                                  }}
+                                >
+                                  删除
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     ))}

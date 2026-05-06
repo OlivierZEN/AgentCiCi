@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "specs/FEAT-014-skill-versioning-import-export.md",
+                "file": "specs/FEAT-015-skill-declarative-api-runtime.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "FEAT-014-skill-versioning-import-export"
+              "title": "FEAT-015-skill-declarative-api-runtime"
             }
           }
         ]
@@ -185,11 +185,19 @@
   },
   "active": "0786f8d5badec4bd",
   "lastOpenFiles": [
+    "specs/mockups/agent-observability-monitoring.png",
+    "specs/mockups/agent-observability-monitoring.svg",
+    "specs/mockups/agent-observability-monitoring.html",
+    "specs/FEAT-019-agent-observability-monitoring.md",
+    "specs/mockups",
+    "specs/FEAT-018-chat-conditional-knowledge-retrieval.md",
+    "specs/FEAT-017-workbench-user-quick-commands.md",
+    "specs/PROJECT-BASELINE.md",
     "specs/FEAT-016-external-agent-skill-package-optimization.md",
+    "specs/FEAT-014-skill-versioning-import-export.md",
     "specs/FEAT-016-openclaw-skill-package-optimization.md",
     "specs/FEAT-015-skill-declarative-api-runtime.md",
     "specs/FEAT-008-knowledge-base-lifecycle-completion.md",
-    "specs/FEAT-014-skill-versioning-import-export.md",
     "specs/FEAT-013-global-avatar-settings.md",
     "specs/FEAT-012-project-design-governance.md",
     "specs/FEAT-012-assistant-workbench-gilded-refresh.md",
@@ -205,10 +213,6 @@
     "specs/FEAT-007-cici-workbench.md",
     "specs/FEAT-003-saas-billing-and-packaging.md",
     "ai-agent-product-feature-comparison.md",
-    "agent-skill-binding-entry-refactor-design.md",
-    "agent-conversation-hierarchy-design.md",
-    "workbench-state-machine-implementation-design.md",
-    "skill-system-design.md",
-    "agent-skill-fusion-design.md"
+    "agent-skill-binding-entry-refactor-design.md"
   ]
 }

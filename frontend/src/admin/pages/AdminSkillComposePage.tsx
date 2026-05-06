@@ -15,6 +15,8 @@ import {
   type SkillExportJob,
   type SkillForm,
   type SkillPreview,
+  type SkillRuntimeApi,
+  type SkillRuntimeApiForm,
   type SkillTemplate,
   type SkillVersion,
   riskBadgeClass,
@@ -110,7 +112,7 @@ type McpPickerTool = {
 
 type WhitelistPickerType = "tool" | "kb";
 
-type SkillEditorTab = "basic" | "promptFragment" | "draftSpec" | "boundaries" | "versions" | "preview";
+type SkillEditorTab = "basic" | "promptFragment" | "draftSpec" | "boundaries" | "runtimeApis" | "versions" | "preview";
 
 type AuthoringRestoreSnapshot = {
   form: SkillForm;
@@ -126,9 +128,76 @@ const EDITOR_TABS: Array<{ key: SkillEditorTab; label: string }> = [
   { key: "promptFragment", label: "提示片段" },
   { key: "draftSpec", label: "规格正文" },
   { key: "boundaries", label: "边界规则" },
+  { key: "runtimeApis", label: "内嵌 API" },
   { key: "preview", label: "编译预览" },
   { key: "versions", label: "版本管理" },
 ];
+
+const RUNTIME_API_INPUT_SCHEMA = JSON.stringify({
+  type: "object",
+  properties: {
+    keyword: {
+      type: "string",
+      description: "搜索关键词",
+    },
+  },
+  required: ["keyword"],
+}, null, 2);
+
+const RUNTIME_API_REQUEST = JSON.stringify({
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: {
+    q: "{{keyword}}",
+  },
+}, null, 2);
+
+const RUNTIME_API_RESPONSE = JSON.stringify({
+  resultPath: "$.data",
+  maxItems: 20,
+  maxBytes: 12000,
+  redactPaths: ["$..token", "$..password"],
+}, null, 2);
+
+function newRuntimeApiForm(): SkillRuntimeApiForm {
+  return {
+    apiCode: "",
+    displayName: "",
+    description: "",
+    riskLevel: "LOW",
+    method: "POST",
+    url: "",
+    authRef: "",
+    timeoutSeconds: "10",
+    confirmationRequired: false,
+    inputSchemaText: RUNTIME_API_INPUT_SCHEMA,
+    requestText: RUNTIME_API_REQUEST,
+    responseText: RUNTIME_API_RESPONSE,
+  };
+}
+
+function stringifyApiSection(value: unknown, fallback: string): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return fallback;
+  return JSON.stringify(value, null, 2);
+}
+
+function runtimeApiToForm(api: SkillRuntimeApi): SkillRuntimeApiForm {
+  return {
+    apiCode: api.apiCode ?? "",
+    displayName: api.displayName ?? "",
+    description: api.description ?? "",
+    riskLevel: ["LOW", "MEDIUM", "HIGH"].includes(String(api.riskLevel)) ? (api.riskLevel as SkillRuntimeApiForm["riskLevel"]) : "LOW",
+    method: (api.method ?? "POST").toUpperCase(),
+    url: api.url ?? "",
+    authRef: api.authRef ?? "",
+    timeoutSeconds: api.timeoutSeconds ? String(api.timeoutSeconds) : "10",
+    confirmationRequired: Boolean(api.confirmationRequired),
+    inputSchemaText: stringifyApiSection(api.inputSchema, RUNTIME_API_INPUT_SCHEMA),
+    requestText: stringifyApiSection(api.request, RUNTIME_API_REQUEST),
+    responseText: stringifyApiSection(api.response, RUNTIME_API_RESPONSE),
+  };
+}
 
 function editPolicyLabel(policy: Skill["editPolicy"]): string {
   if (policy === "EDITABLE") return "可编辑";
@@ -218,6 +287,62 @@ export default function AdminSkillComposePage() {
   const flash = (msg: string) => {
     setNotice(msg);
     window.setTimeout(() => setNotice(""), 3200);
+  };
+
+  const parseRuntimeApiObject = (raw: string, label: string, index: number): Record<string, unknown> | null => {
+    try {
+      const parsed = JSON.parse(raw || "{}") as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        flash(`第 ${index + 1} 个 API 的${label}必须是 JSON 对象`);
+        return null;
+      }
+      return parsed as Record<string, unknown>;
+    } catch {
+      flash(`第 ${index + 1} 个 API 的${label}不是合法 JSON`);
+      return null;
+    }
+  };
+
+  const buildRuntimeApisPayload = (draft: SkillForm): SkillRuntimeApi[] | null => {
+    const payload: SkillRuntimeApi[] = [];
+    for (let index = 0; index < draft.runtimeApis.length; index += 1) {
+      const api = draft.runtimeApis[index];
+      const hasAnyValue = [
+        api.apiCode,
+        api.displayName,
+        api.description,
+        api.url,
+        api.authRef,
+        api.inputSchemaText,
+        api.requestText,
+        api.responseText,
+      ].some((value) => value.trim());
+      if (!hasAnyValue) continue;
+      if (!api.apiCode.trim() || !api.displayName.trim() || !api.description.trim() || !api.url.trim()) {
+        flash(`第 ${index + 1} 个内嵌 API 缺少编码、名称、描述或 URL`);
+        return null;
+      }
+      const inputSchema = parseRuntimeApiObject(api.inputSchemaText, "参数 schema", index);
+      const request = parseRuntimeApiObject(api.requestText, "请求映射", index);
+      const response = parseRuntimeApiObject(api.responseText, "返回映射", index);
+      if (!inputSchema || !request || !response) return null;
+      payload.push({
+        apiCode: api.apiCode.trim(),
+        displayName: api.displayName.trim(),
+        description: api.description.trim(),
+        riskLevel: api.riskLevel,
+        triggerMode: "model_decide",
+        method: api.method.trim().toUpperCase(),
+        url: api.url.trim(),
+        authRef: api.authRef.trim() || undefined,
+        timeoutSeconds: Math.max(1, Math.min(30, Number.parseInt(api.timeoutSeconds, 10) || 10)),
+        confirmationRequired: api.riskLevel === "HIGH" ? true : api.confirmationRequired,
+        inputSchema,
+        request,
+        response,
+      });
+    }
+    return payload;
   };
 
   const loadExistingCodes = useCallback(async () => {
@@ -412,6 +537,7 @@ export default function AdminSkillComposePage() {
         draftSpecText: skill.draftSpecText ?? "",
         toolWhitelistText: joinCsv(skill.toolWhitelist),
         kbWhitelistText: joinCsv(skill.kbWhitelist),
+        runtimeApis: (skill.runtimeApis ?? []).map(runtimeApiToForm),
         handoffRule: skill.handoffRule ?? "",
         outputContract: skill.outputContract ?? "",
         changeLog: "",
@@ -477,6 +603,8 @@ export default function AdminSkillComposePage() {
     const flashSuccess = options.flashSuccess !== false;
     setBusy(true);
     try {
+      const runtimeApis = buildRuntimeApisPayload(draft);
+      if (runtimeApis === null) return null;
       const body = {
         skillCode: draft.skillCode.trim(),
         name: draft.name.trim(),
@@ -487,6 +615,7 @@ export default function AdminSkillComposePage() {
         draftSpecText: draft.draftSpecText.trim(),
         toolWhitelist: splitCsv(draft.toolWhitelistText),
         kbWhitelist: splitCsv(draft.kbWhitelistText),
+        runtimeApis,
         handoffRule: draft.handoffRule.trim(),
         outputContract: draft.outputContract.trim(),
         changeLog: "",
@@ -531,6 +660,8 @@ export default function AdminSkillComposePage() {
     }
     setBusy(true);
     try {
+      const runtimeApis = buildRuntimeApisPayload(form);
+      if (runtimeApis === null) return;
       const body = {
         skillCode: form.skillCode.trim(),
         name: form.name.trim(),
@@ -538,6 +669,7 @@ export default function AdminSkillComposePage() {
         promptFragment: form.promptFragment.trim(),
         toolWhitelist: splitCsv(form.toolWhitelistText),
         kbWhitelist: splitCsv(form.kbWhitelistText),
+        runtimeApis,
         handoffRule: form.handoffRule.trim(),
         outputContract: form.outputContract.trim(),
         riskLevel: form.riskLevel,
@@ -621,6 +753,7 @@ export default function AdminSkillComposePage() {
       form.draftSpecText.trim() ||
       form.toolWhitelistText.trim() ||
       form.kbWhitelistText.trim() ||
+      form.runtimeApis.length > 0 ||
       form.handoffRule.trim() ||
       form.outputContract.trim(),
   );
@@ -636,6 +769,7 @@ export default function AdminSkillComposePage() {
       draftSpecText: result.skillSpec.draftSpecText ?? "",
       toolWhitelistText: joinCsv(result.skillSpec.toolWhitelist),
       kbWhitelistText: joinCsv(result.skillSpec.kbWhitelist),
+      runtimeApis: prev.runtimeApis,
       handoffRule: result.skillSpec.handoffRule ?? "",
       outputContract: result.skillSpec.outputContract ?? "",
       enabled: prev.id ? prev.enabled : true,
@@ -838,6 +972,7 @@ export default function AdminSkillComposePage() {
         draftSpecText: result.skillSpec.draftSpecText ?? "",
         toolWhitelistText: joinCsv(result.skillSpec.toolWhitelist),
         kbWhitelistText: joinCsv(result.skillSpec.kbWhitelist),
+        runtimeApis: prev.runtimeApis,
         handoffRule: result.skillSpec.handoffRule ?? "",
         outputContract: result.skillSpec.outputContract ?? "",
         sourceType: result.createdSkill.sourceType,
@@ -870,7 +1005,7 @@ export default function AdminSkillComposePage() {
   };
 
   const submitSkill = async () => {
-    if (!form.id && authoringResult) {
+    if (!form.id && authoringResult && form.runtimeApis.length === 0) {
       await createFromAuthoring();
       return;
     }
@@ -1116,6 +1251,32 @@ export default function AdminSkillComposePage() {
     );
   };
 
+  const addRuntimeApi = () => {
+    setForm((prev) => ({
+      ...prev,
+      runtimeApis: [...prev.runtimeApis, newRuntimeApiForm()],
+    }));
+    setActiveEditorTab("runtimeApis");
+  };
+
+  const updateRuntimeApi = <K extends keyof SkillRuntimeApiForm>(
+    index: number,
+    key: K,
+    value: SkillRuntimeApiForm[K],
+  ) => {
+    setForm((prev) => ({
+      ...prev,
+      runtimeApis: prev.runtimeApis.map((item, idx) => (idx === index ? { ...item, [key]: value } : item)),
+    }));
+  };
+
+  const removeRuntimeApi = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      runtimeApis: prev.runtimeApis.filter((_, idx) => idx !== index),
+    }));
+  };
+
   const pageTitle = form.id ? "编辑技能" : "新建技能";
   const tenantEditable = form.editPolicy === "EDITABLE";
   const tenantConfigurable = form.editPolicy === "CONFIGURABLE";
@@ -1137,6 +1298,7 @@ export default function AdminSkillComposePage() {
     form.description.trim(),
     form.promptFragment.trim(),
     form.draftSpecText.trim(),
+    form.runtimeApis.length > 0 ? "runtimeApis" : "",
     form.handoffRule.trim(),
     form.outputContract.trim(),
   ];
@@ -1734,6 +1896,171 @@ export default function AdminSkillComposePage() {
                 </div>
               ) : null}
 
+              {activeEditorTab === "runtimeApis" ? (
+                <div className="skills-compose__field-section skills-runtime-api-panel">
+                  <div className="skills-runtime-api-panel__head">
+                    <div>
+                      <h3>
+                        内嵌 API
+                        <HelpTip text="Skill 私有远程 API，不进入普通工具白名单；模型只看到抽象函数名和参数 schema。" />
+                      </h3>
+                      <span>{form.runtimeApis.length} 个 API 动作</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary skills-compose__header-btn"
+                      disabled={!canChangeContent}
+                      onClick={addRuntimeApi}
+                    >
+                      添加 API
+                    </button>
+                  </div>
+
+                  {form.runtimeApis.length === 0 ? (
+                    <div className="skills-runtime-api-empty">
+                      暂无内嵌 API。需要让 Skill 调用固定业务接口时，在这里添加动作并通过编译预览校验。
+                    </div>
+                  ) : null}
+
+                  <div className="skills-runtime-api-list">
+                    {form.runtimeApis.map((api, index) => (
+                      <article key={index} className="skills-runtime-api-card">
+                        <div className="skills-runtime-api-card__head">
+                          <div>
+                            <strong>{api.displayName.trim() || `API 动作 ${index + 1}`}</strong>
+                            <span>{api.apiCode.trim() || "未填写编码"}</span>
+                          </div>
+                          <button
+                            type="button"
+                            className="skills-whitelist-row__remove"
+                            disabled={!canChangeContent}
+                            onClick={() => removeRuntimeApi(index)}
+                            aria-label="移除内嵌 API"
+                          >
+                            ×
+                          </button>
+                        </div>
+
+                        <div className="skills-form-grid skills-runtime-api-grid">
+                          <BilingualField titleZh="API 编码" titleEn="apiCode" hintZh="仅允许小写字母、数字和下划线；发布后会生成 Skill 专属工具名。" hintEn="Lowercase code for generated tool name.">
+                            <input
+                              value={api.apiCode}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "apiCode", e.target.value)}
+                              placeholder="query_leads"
+                            />
+                          </BilingualField>
+                          <BilingualField titleZh="显示名称" titleEn="displayName" hintZh="管理端识别用名称，不直接暴露给最终用户。" hintEn="Admin-facing label.">
+                            <input
+                              value={api.displayName}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "displayName", e.target.value)}
+                              placeholder="查询线索"
+                            />
+                          </BilingualField>
+                          <BilingualField titleZh="风险等级" titleEn="riskLevel" hintZh="高风险 API 会强制要求确认标记，运行时未确认前不会执行。" hintEn="HIGH requires confirmation guard.">
+                            <select
+                              value={api.riskLevel}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "riskLevel", e.target.value as SkillRuntimeApiForm["riskLevel"])}
+                            >
+                              <option value="LOW">低风险</option>
+                              <option value="MEDIUM">中风险</option>
+                              <option value="HIGH">高风险</option>
+                            </select>
+                          </BilingualField>
+                          <BilingualField titleZh="HTTP 方法" titleEn="method" hintZh="第一版支持 GET、POST、PUT、PATCH、DELETE。" hintEn="Supported HTTP method.">
+                            <select
+                              value={api.method}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "method", e.target.value)}
+                            >
+                              <option value="GET">GET</option>
+                              <option value="POST">POST</option>
+                              <option value="PUT">PUT</option>
+                              <option value="PATCH">PATCH</option>
+                              <option value="DELETE">DELETE</option>
+                            </select>
+                          </BilingualField>
+                          <BilingualField titleZh="固定 URL" titleEn="url" hintZh="发布时校验协议、host 白名单和内网地址；URL 可引用参数模板。" hintEn="Validated fixed endpoint URL.">
+                            <input
+                              value={api.url}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "url", e.target.value)}
+                              placeholder="https://api.example.com/leads/search"
+                            />
+                          </BilingualField>
+                          <BilingualField titleZh="鉴权引用" titleEn="authRef" hintZh="引用服务端凭证，不填明文密钥。当前支持 integration:tavily.apiKey、integration:cloudcc.accessToken。" hintEn="Server-side credential reference.">
+                            <input
+                              value={api.authRef}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "authRef", e.target.value)}
+                              placeholder="integration:cloudcc.accessToken"
+                            />
+                          </BilingualField>
+                          <BilingualField titleZh="超时秒数" titleEn="timeoutSeconds" hintZh="运行时会限制在 1 到 30 秒。" hintEn="Clamped between 1 and 30 seconds.">
+                            <input
+                              type="number"
+                              min={1}
+                              max={30}
+                              value={api.timeoutSeconds}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "timeoutSeconds", e.target.value)}
+                            />
+                          </BilingualField>
+                          <label className="skills-runtime-api-check">
+                            <input
+                              type="checkbox"
+                              checked={api.riskLevel === "HIGH" || api.confirmationRequired}
+                              disabled={!canChangeContent || api.riskLevel === "HIGH"}
+                              onChange={(e) => updateRuntimeApi(index, "confirmationRequired", e.target.checked)}
+                            />
+                            <span>需要确认</span>
+                          </label>
+                        </div>
+
+                        <BilingualField titleZh="调用描述" titleEn="description" hintZh="给模型看的调用时机描述，不要写 URL、Header 或密钥。" hintEn="Model-facing invocation description.">
+                          <textarea
+                            rows={3}
+                            value={api.description}
+                            disabled={!canChangeContent}
+                            onChange={(e) => updateRuntimeApi(index, "description", e.target.value)}
+                            placeholder="当用户询问潜在客户、线索或客户列表时调用。"
+                          />
+                        </BilingualField>
+
+                        <div className="skills-runtime-api-json-grid">
+                          <BilingualField titleZh="参数 schema" titleEn="inputSchema" hintZh="模型只能填写这里声明的业务参数。" hintEn="Model-visible parameter schema.">
+                            <textarea
+                              value={api.inputSchemaText}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "inputSchemaText", e.target.value)}
+                              spellCheck={false}
+                            />
+                          </BilingualField>
+                          <BilingualField titleZh="请求映射" titleEn="request" hintZh="把业务参数映射到 query、headers 和 body，可用 {{field}} 模板。" hintEn="Request template mapping.">
+                            <textarea
+                              value={api.requestText}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "requestText", e.target.value)}
+                              spellCheck={false}
+                            />
+                          </BilingualField>
+                          <BilingualField titleZh="返回映射" titleEn="response" hintZh="配置结果路径、最大条数、最大字节数与脱敏路径。" hintEn="Response extraction and redaction.">
+                            <textarea
+                              value={api.responseText}
+                              disabled={!canChangeContent}
+                              onChange={(e) => updateRuntimeApi(index, "responseText", e.target.value)}
+                              spellCheck={false}
+                            />
+                          </BilingualField>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {activeEditorTab === "versions" ? (
                 <section className="skills-version-panel skills-version-panel--embedded" aria-label="版本管理">
                   <div className="skills-version-panel__head">
@@ -1800,6 +2127,8 @@ export default function AdminSkillComposePage() {
                       <pre>{JSON.stringify(preview.compileSummary, null, 2)}</pre>
                       <h5>警告</h5>
                       <pre>{JSON.stringify(preview.warnings, null, 2)}</pre>
+                      <h5>内嵌 API</h5>
+                      <pre>{JSON.stringify(preview.runtimeApiPreview ?? { toolDefinitions: [], errors: [], warnings: [] }, null, 2)}</pre>
                     </>
                   ) : null}
                 </div>
@@ -1809,7 +2138,7 @@ export default function AdminSkillComposePage() {
             <aside className="skills-compose__inspector" aria-label="技能状态摘要">
               <div>
                 <span>字段完成度</span>
-                <strong>{completedFieldCount}/7</strong>
+                <strong>{completedFieldCount}/8</strong>
               </div>
               <div>
                 <span>风险等级</span>
@@ -1822,6 +2151,10 @@ export default function AdminSkillComposePage() {
               <div>
                 <span>知识库</span>
                 <strong>{splitCsv(form.kbWhitelistText).length}</strong>
+              </div>
+              <div>
+                <span>内嵌 API</span>
+                <strong>{form.runtimeApis.length}</strong>
               </div>
               <div>
                 <span>边界字段</span>

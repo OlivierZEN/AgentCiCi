@@ -60,7 +60,60 @@
         "Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless a feature spec explicitly requires a popover, drawer, toast, or inline disclosure.",
         "Modal windows use a blocking overlay, role=dialog, aria-modal=true, a labelled heading, an opaque warm ivory surface, and a fixed footer when actions are present.",
         "Modal footers use secondary buttons for cancel or close actions and primary champagne-gold buttons for confirm or save actions.",
-        "Close controls are quiet icon buttons without bordered button blocks."
+        "Close controls are quiet icon buttons without bordered button blocks.",
+        "The top-right close x must render as a bare icon or glyph with no visible border, no bordered square or circle, and no button chrome; hover and focus may use a subtle tinted background but must remain borderless."
+      ],
+      "tabs": [
+        "Product-page tabs use text tabs, not pills, chips, segmented controls, or bordered mini-cards.",
+        "Tab rows may use a single Gold Mist Line bottom rule (#ded2bb) when separating tabs from following content; do not wrap the tab row in a rounded container.",
+        "Inactive tabs use Warm Bronze Secondary text (#5f523f), compact bold weight, and no background fill.",
+        "Active tabs use accent-primary-strong text (#876223) with a 2px line-strong underline (#b99652) aligned to the label; no rounded active background.",
+        "Detail panes such as user information, skill fields, and settings sections should reuse this tab style unless a feature spec explicitly requires another pattern."
+      ],
+      "noNestedBackgroundFrames": [
+        "Do not add background boxes inside already framed product panels.",
+        "Rows, tabs, search interiors, status labels, trace details, metric groups, and detail summaries should use text hierarchy and the minimum necessary 1px divider lines.",
+        "No box-in-box, per-row background blocks, selected-row fills, hover fills, chip backgrounds, row shadows, or inner box-shadow focus frames inside product panels.",
+        "Selected states inside panels should use strong text color, font weight, or tab underline instead of rounded background containers.",
+        "Selected, active, hover, pressed, focus, and focus-visible states inside product panels must never add box-shadow, glow, row shadow, inset shadow, raised-card treatment, or browser-like focus shadow.",
+        "Do not add a new border for selection when text hierarchy or an existing divider can carry the state."
+      ]
+    },
+    "productUiScale": {
+      "purpose": "Default scale rules for newly added authenticated product UI, including assistant composer tools, popovers, pickers, menus, toolbar controls, and inline settings.",
+      "defaultTextPx": 13,
+      "secondaryTextPx": [11, 12],
+      "compactControlHeightPx": [32, 34],
+      "compactIconPx": [15, 16],
+      "defaultRadiusPx": 10,
+      "lightweightFloatingMenu": {
+        "primaryTextPx": 12,
+        "metadataTextPx": [10, 11],
+        "iconPx": [13, 14],
+        "rowHeightPx": [26, 30],
+        "widthPx": [168, 220],
+        "surface": "#fffdf8",
+        "border": "#ded2bb",
+        "selectedBackground": "transparent",
+        "primaryTextColor": "#2b2217",
+        "metadataTextColor": "#7c6d59",
+        "selectedTextColor": "#876223"
+      },
+      "rules": [
+        "New product controls, chooser rows, popovers, composer tools, table actions, toolbar buttons, menu items, and inline settings must default to 13px text unless they are true section titles or page headings.",
+        "Codes, descriptions, helper text, menu metadata, and compact badges should use 11px to 12px with muted bronze or metadata color only when that secondary detail is required for the task.",
+        "Small product tools and icon buttons should use 32px to 34px height, 10px radius, 13px text, and 15px to 16px icons.",
+        "Larger 38px or taller controls are reserved for primary actions, dialog footers, or touch-heavy contexts.",
+        "Skill lists, command menus, row menus, and lightweight pickers must use compact row density instead of card-like rows, per-item background blocks, row shadows, oversized icons, or 15px+ menu labels.",
+        "Inside framed product panels, rows, tabs, search interiors, status labels, trace details, metric groups, and detail summaries must not use nested background boxes or card-like wrappers.",
+        "Selected, active, hover, pressed, focus, and focus-visible states inside product panels must never use box-shadow, glow, row shadow, inset shadow, or raised-card treatment.",
+        "Selection inside product panels should prefer text color, font weight, or tab underline; avoid adding a new border when text hierarchy or an existing divider is enough.",
+        "Small floating menus attached to composer tools, icon buttons, or row actions should use 12px primary text, optional 10px to 11px metadata only when needed, 13px to 14px icons, 26px to 30px rows, and 168px to 220px width.",
+        "Lightweight floating menus use opaque warm ivory surfaces, gold-mist borders, restrained shadows only when needed, ink primary text, and transparent rows instead of stacked-card styling or per-row background blocks.",
+        "Compact skill, command, and picker lists should display the human-facing name as the primary label and should not show implementation codes, slugs, ids, or secondary metadata by default.",
+        "Compact picker rows must not use hover backgrounds, selected backgrounds, per-row background blocks, row shadows, or card-like rounded row containers by default.",
+        "Search fields inside dense product workspaces should use either one simple outer control or a bottom rule; the native input itself must stay transparent with no inner border, no box shadow, and no blue browser focus frame.",
+        "Any newly added product UI must reuse this typography and control scale before adding page-local large fonts, fat buttons, or oversized menu rows."
       ]
     },
     "adminCrudLists": {
@@ -92,8 +145,10 @@
       "rowActionRules": [
         "Dense list rows should not permanently show multiple secondary buttons.",
         "Use a hover/focus more trigger for secondary row actions such as edit, export, and delete.",
+        "The unified row action structure is a three-dot trigger plus an opaque vertical menu; new admin tables should prefer the shared admin-row-menu class family.",
         "More triggers should be vertically centered in the row, borderless, and visually quiet until hover or focus.",
         "Menus must be opaque and use consistent menu-item styling for links and buttons; destructive actions may change text color but not sizing vocabulary.",
+        "Keep the real td as a table cell and place the trigger/menu inside a child wrapper; never make td/th/tr flex, grid, block, or clamped boxes.",
         "List pages must not expose actions outside their responsibility, such as publishing from a page where publishing belongs to the editor or governance flow.",
         "Standard or read-only rows should not show edit/view affordances when product rules disallow inspection or modification from that surface."
       ],
@@ -120,7 +175,8 @@
       "donts": [
         "Do not use decorative gradients.",
         "Do not use large dark surfaces.",
-        "Do not use glassmorphism or marketing-page styling."
+        "Do not use glassmorphism or marketing-page styling.",
+        "Do not create box-in-box product panels, nested background frames, row cards, selected-row fills, hover fills, chip backgrounds, or row shadows inside framed product surfaces."
       ],
       "reuseGuidance": [
         "Preserve warm ivory surfaces, ink-heavy typography, and bright champagne-gold edge contrast as a matched set.",

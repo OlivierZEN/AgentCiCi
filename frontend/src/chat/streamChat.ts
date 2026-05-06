@@ -17,8 +17,14 @@ export type StreamToolCallEvent = {
 };
 
 export type StreamPhaseEvent = {
-  phase: "generating" | string;
+  phase: string;
   modelName?: string;
+  knowledgeBaseIds?: string[];
+  knowledgeBaseNames?: string[];
+  contextCount?: number;
+  elapsedMs?: number;
+  timingsMs?: Record<string, number>;
+  fallbackUsed?: boolean;
 };
 
 export type SessionUpdateEvent = {
@@ -148,9 +154,34 @@ export async function streamAiChat(
     }
     if (eventName === "phase") {
       try {
-        const parsed = JSON.parse(data) as { phase?: string; modelName?: string };
+        const parsed = JSON.parse(data) as {
+          phase?: string;
+          modelName?: string;
+          knowledgeBaseIds?: unknown;
+          knowledgeBaseNames?: unknown;
+          contextCount?: unknown;
+          elapsedMs?: unknown;
+          timingsMs?: unknown;
+          fallbackUsed?: unknown;
+        };
         if (parsed.phase && onPhase) {
-          onPhase({ phase: parsed.phase, modelName: parsed.modelName });
+          onPhase({
+            phase: parsed.phase,
+            modelName: parsed.modelName,
+            knowledgeBaseIds: Array.isArray(parsed.knowledgeBaseIds)
+              ? parsed.knowledgeBaseIds.map(String).filter(Boolean)
+              : undefined,
+            knowledgeBaseNames: Array.isArray(parsed.knowledgeBaseNames)
+              ? parsed.knowledgeBaseNames.map(String).filter(Boolean)
+              : undefined,
+            contextCount: typeof parsed.contextCount === "number" ? parsed.contextCount : undefined,
+            elapsedMs: typeof parsed.elapsedMs === "number" ? parsed.elapsedMs : undefined,
+            timingsMs:
+              parsed.timingsMs && typeof parsed.timingsMs === "object" && !Array.isArray(parsed.timingsMs)
+                ? (parsed.timingsMs as Record<string, number>)
+                : undefined,
+            fallbackUsed: typeof parsed.fallbackUsed === "boolean" ? parsed.fallbackUsed : undefined,
+          });
         }
       } catch {
         /* ignore */

@@ -1,0 +1,263 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="920" viewBox="0 0 1440 920">
+  <defs>
+    <linearGradient id="canvas" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#f7f3eb"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#2b2217" flood-opacity="0.08"/>
+    </filter>
+    <style>
+      .bg { fill: url(#canvas); }
+      .panel { fill: #fffdf8; stroke: #ded2bb; stroke-width: 1; }
+      .muted-panel { fill: #faf4e8; stroke: #ded2bb; stroke-width: 1; }
+      .active { fill: #fffaf0; stroke: #b99652; stroke-width: 1.2; }
+      .text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif; fill: #2b2217; }
+      .muted { fill: #7c6d59; }
+      .bronze { fill: #876223; }
+      .label { font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+      .title { font-size: 24px; font-weight: 650; }
+      .h2 { font-size: 14px; font-weight: 650; }
+      .body { font-size: 13px; font-weight: 550; }
+      .small { font-size: 11px; font-weight: 600; }
+      .metric { font-size: 22px; font-weight: 700; }
+      .chip { fill: #faf4e8; stroke: #ded2bb; stroke-width: 1; }
+      .gold-fill { fill: #a67c2f; }
+      .running { fill: #fff8df; stroke: #c9b16f; }
+      .running-text { fill: #8a5c00; }
+      .ok { fill: #f1f7ea; stroke: #c7dfb8; }
+      .ok-text { fill: #166534; }
+      .danger { fill: #fff3ef; stroke: #efc7bc; }
+      .danger-text { fill: #b42318; }
+      .line { stroke: #ded2bb; stroke-width: 1; }
+      .gold-line { stroke: #b99652; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="920"/>
+  <g opacity=".34">
+    <path d="M0 82 H1440 M0 154 H1440 M0 226 H1440 M0 298 H1440 M0 370 H1440 M0 442 H1440 M0 514 H1440 M0 586 H1440 M0 658 H1440 M0 730 H1440 M0 802 H1440 M0 874 H1440" stroke="#ded2bb" stroke-width="1"/>
+    <path d="M72 0 V920 M144 0 V920 M216 0 V920 M288 0 V920 M360 0 V920 M432 0 V920 M504 0 V920 M576 0 V920 M648 0 V920 M720 0 V920 M792 0 V920 M864 0 V920 M936 0 V920 M1008 0 V920 M1080 0 V920 M1152 0 V920 M1224 0 V920 M1296 0 V920 M1368 0 V920" stroke="#ded2bb" stroke-width="1"/>
+  </g>
+
+  <rect x="18" y="18" width="1404" height="106" rx="14" class="panel" filter="url(#softShadow)"/>
+  <text x="40" y="48" class="text label bronze">AGENT OBSERVABILITY</text>
+  <text x="40" y="78" class="text title">智能体监控</text>
+  <text x="40" y="104" class="text body muted">查看每个智能体当前运行状态，并追踪最近 7 天的会话、任务、模型、工具、技能与知识库链路。</text>
+
+  <g transform="translate(802 40)">
+    <rect width="112" height="62" rx="10" class="muted-panel"/>
+    <text x="11" y="22" class="text small muted">在线智能体</text>
+    <text x="11" y="51" class="text metric">8</text>
+  </g>
+  <g transform="translate(922 40)">
+    <rect width="112" height="62" rx="10" class="muted-panel"/>
+    <text x="11" y="22" class="text small muted">运行中</text>
+    <text x="11" y="51" class="text metric">3</text>
+  </g>
+  <g transform="translate(1042 40)">
+    <rect width="112" height="62" rx="10" class="muted-panel"/>
+    <text x="11" y="22" class="text small muted">异常/待确认</text>
+    <text x="11" y="51" class="text metric">2</text>
+  </g>
+  <g transform="translate(1162 40)">
+    <rect width="112" height="62" rx="10" class="muted-panel"/>
+    <text x="11" y="22" class="text small muted">7 天会话</text>
+    <text x="11" y="51" class="text metric">428</text>
+  </g>
+  <g transform="translate(1282 40)">
+    <rect width="112" height="62" rx="10" class="muted-panel"/>
+    <text x="11" y="22" class="text small muted">平均耗时</text>
+    <text x="11" y="51" class="text metric">1.8s</text>
+  </g>
+
+  <g transform="translate(18 136)">
+    <rect width="142" height="34" rx="10" class="panel"/>
+    <text x="13" y="22" class="text body muted">近 7 天</text>
+    <text x="116" y="22" class="text body muted">⌄</text>
+    <rect x="152" width="142" height="34" rx="10" class="panel"/>
+    <text x="165" y="22" class="text body muted">全部智能体</text>
+    <text x="267" y="22" class="text body muted">⌄</text>
+    <rect x="304" width="970" height="34" rx="10" class="panel"/>
+    <text x="318" y="22" class="text body muted">搜索 trace id、会话、工具或知识库</text>
+    <rect x="1286" width="118" height="34" rx="10" class="gold-fill"/>
+    <text x="1318" y="22" fill="#fffdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif" font-size="13" font-weight="650">刷新状态</text>
+  </g>
+
+  <g transform="translate(18 182)">
+    <rect width="278" height="708" rx="14" class="panel"/>
+    <line x1="0" y1="48" x2="278" y2="48" class="line"/>
+    <text x="14" y="30" class="text h2">智能体状态</text>
+    <text x="238" y="30" class="text small muted">实时</text>
+
+    <g transform="translate(8 58)">
+      <rect width="262" height="58" rx="10" class="active"/>
+      <rect x="9" y="12" width="34" height="34" rx="10" fill="#b98a3c"/>
+      <text x="20" y="34" fill="#fffdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" font-weight="800">思</text>
+      <text x="52" y="24" class="text body">思思</text>
+      <text x="52" y="43" class="text small muted">正在执行客户邮件归纳</text>
+      <rect x="204" y="18" width="48" height="22" rx="11" class="running"/>
+      <text x="211" y="33" class="text small running-text">运行中</text>
+    </g>
+    <g transform="translate(8 124)">
+      <rect width="262" height="58" rx="10" fill="transparent"/>
+      <rect x="9" y="12" width="34" height="34" rx="10" fill="#b46a5a"/>
+      <text x="20" y="34" fill="#fffdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" font-weight="800">客</text>
+      <text x="52" y="24" class="text body">客户成功</text>
+      <text x="52" y="43" class="text small muted">等待用户确认回写 CRM</text>
+      <rect x="204" y="18" width="48" height="22" rx="11" class="chip"/>
+      <text x="211" y="33" class="text small muted">待确认</text>
+    </g>
+    <g transform="translate(8 190)">
+      <rect width="262" height="58" rx="10" fill="transparent"/>
+      <rect x="9" y="12" width="34" height="34" rx="10" fill="#667f4c"/>
+      <text x="20" y="34" fill="#fffdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" font-weight="800">搜</text>
+      <text x="52" y="24" class="text body">行业搜索</text>
+      <text x="52" y="43" class="text small muted">近 7 天 96 次调用</text>
+      <rect x="210" y="18" width="42" height="22" rx="11" class="ok"/>
+      <text x="218" y="33" class="text small ok-text">正常</text>
+    </g>
+    <g transform="translate(8 256)">
+      <rect width="262" height="58" rx="10" fill="transparent"/>
+      <rect x="9" y="12" width="34" height="34" rx="10" fill="#b46a5a"/>
+      <text x="20" y="34" fill="#fffdf8" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" font-weight="800">审</text>
+      <text x="52" y="24" class="text body">审批助手</text>
+      <text x="52" y="43" class="text small muted">CloudCC 工具参数缺失</text>
+      <rect x="210" y="18" width="42" height="22" rx="11" class="danger"/>
+      <text x="218" y="33" class="text small danger-text">异常</text>
+    </g>
+  </g>
+
+  <g transform="translate(308 182)">
+    <rect width="720" height="708" rx="14" class="panel"/>
+    <line x1="0" y1="48" x2="720" y2="48" class="line"/>
+    <text x="14" y="30" class="text h2">最近 7 天运行日志</text>
+    <text x="650" y="30" class="text small muted">428 条记录</text>
+    <g transform="translate(14 59)">
+      <text x="0" y="22" class="text body bronze">全部</text>
+      <line x1="0" y1="34" x2="26" y2="34" class="gold-line"/>
+      <text x="48" y="22" class="text body muted">运行中</text>
+      <text x="112" y="22" class="text body muted">异常</text>
+      <text x="164" y="22" class="text body muted">待确认</text>
+      <text x="230" y="22" class="text body muted">工具调用</text>
+      <text x="314" y="22" class="text body muted">知识库检索</text>
+    </g>
+    <line x1="0" y1="94" x2="720" y2="94" class="line"/>
+
+    <g transform="translate(0 94)">
+      <rect width="720" height="84" class="active"/>
+      <text x="14" y="28" class="text body">检查收件箱并总结未读邮件</text>
+      <text x="14" y="49" class="text small muted">trace ac91f2 · Web 会话 · 18:02:11</text>
+      <rect x="292" y="20" width="48" height="22" rx="11" class="running"/>
+      <text x="299" y="35" class="text small running-text">运行中</text>
+      <text x="372" y="28" class="text body">思思</text>
+      <text x="372" y="49" class="text small muted">会话 34</text>
+      <rect x="456" y="17" width="54" height="21" rx="7" class="chip"/>
+      <text x="464" y="31" class="text small muted">GPT-4.1</text>
+      <rect x="516" y="17" width="58" height="21" rx="7" class="chip"/>
+      <text x="523" y="31" class="text small muted">邮箱工具</text>
+      <rect x="580" y="17" width="82" height="21" rx="7" class="chip"/>
+      <text x="588" y="31" class="text small muted">邮件总结技能</text>
+      <text x="662" y="28" class="text body">1.42s</text>
+      <text x="662" y="49" class="text small muted">3 节点</text>
+    </g>
+    <g transform="translate(0 178)">
+      <line x1="0" y1="0" x2="720" y2="0" class="line"/>
+      <text x="14" y="28" class="text body">订阅台账字段查询</text>
+      <text x="14" y="49" class="text small muted">trace b7810c · 飞书 · 17:48:33</text>
+      <rect x="292" y="20" width="42" height="22" rx="11" class="danger"/>
+      <text x="300" y="35" class="text small danger-text">异常</text>
+      <text x="372" y="28" class="text body">审批助手</text>
+      <text x="372" y="49" class="text small muted">会话 12</text>
+      <rect x="456" y="17" width="76" height="21" rx="7" class="chip"/>
+      <text x="464" y="31" class="text small muted">CloudCC MCP</text>
+      <rect x="538" y="17" width="58" height="21" rx="7" class="chip"/>
+      <text x="546" y="31" class="text small muted">字段发现</text>
+      <text x="662" y="28" class="text body">3.86s</text>
+      <text x="662" y="49" class="text small muted">参数缺失</text>
+    </g>
+    <g transform="translate(0 262)">
+      <line x1="0" y1="0" x2="720" y2="0" class="line"/>
+      <text x="14" y="28" class="text body">白糖客户感知报告生成</text>
+      <text x="14" y="49" class="text small muted">trace f04c21 · Web 会话 · 16:30:08</text>
+      <rect x="292" y="20" width="48" height="22" rx="11" class="chip"/>
+      <text x="299" y="35" class="text small muted">待确认</text>
+      <text x="372" y="28" class="text body">行业搜索</text>
+      <text x="372" y="49" class="text small muted">会话 8</text>
+      <rect x="456" y="17" width="45" height="21" rx="7" class="chip"/>
+      <text x="464" y="31" class="text small muted">Tavily</text>
+      <rect x="507" y="17" width="34" height="21" rx="7" class="chip"/>
+      <text x="515" y="31" class="text small muted">RAG</text>
+      <rect x="547" y="17" width="58" height="21" rx="7" class="chip"/>
+      <text x="555" y="31" class="text small muted">白糖技能</text>
+      <text x="662" y="28" class="text body">8.64s</text>
+      <text x="662" y="49" class="text small muted">9 节点</text>
+    </g>
+    <g transform="translate(0 346)">
+      <line x1="0" y1="0" x2="720" y2="0" class="line"/>
+      <text x="14" y="28" class="text body">客户回访任务创建</text>
+      <text x="14" y="49" class="text small muted">trace e76d91 · 定时任务 · 昨天 09:00</text>
+      <rect x="292" y="20" width="48" height="22" rx="11" class="ok"/>
+      <text x="299" y="35" class="text small ok-text">已完成</text>
+      <text x="372" y="28" class="text body">客户成功</text>
+      <text x="372" y="49" class="text small muted">自动任务</text>
+      <rect x="456" y="17" width="58" height="21" rx="7" class="chip"/>
+      <text x="464" y="31" class="text small muted">任务技能</text>
+      <rect x="520" y="17" width="58" height="21" rx="7" class="chip"/>
+      <text x="528" y="31" class="text small muted">CRM 写回</text>
+      <text x="662" y="28" class="text body">2.12s</text>
+      <text x="662" y="49" class="text small muted">5 节点</text>
+    </g>
+  </g>
+
+  <g transform="translate(1040 182)">
+    <rect width="382" height="708" rx="14" class="panel"/>
+    <line x1="0" y1="48" x2="382" y2="48" class="line"/>
+    <text x="14" y="30" class="text h2">链路追踪</text>
+    <text x="296" y="30" class="text small muted">trace ac91f2</text>
+    <g transform="translate(14 62)">
+      <text x="0" y="14" class="text small muted">智能体</text>
+      <text x="0" y="35" class="text body">思思</text>
+      <text x="176" y="14" class="text small muted">状态</text>
+      <text x="176" y="35" class="text body">运行中</text>
+      <text x="0" y="72" class="text small muted">渠道</text>
+      <text x="0" y="93" class="text body">Web 会话</text>
+      <text x="176" y="72" class="text small muted">总耗时</text>
+      <text x="176" y="93" class="text body">1.42s</text>
+    </g>
+    <line x1="0" y1="178" x2="382" y2="178" class="line"/>
+    <g transform="translate(14 194)">
+      <circle cx="5" cy="6" r="5" fill="#fffdf8" stroke="#b99652" stroke-width="2"/>
+      <text x="24" y="9" class="text body">用户输入</text>
+      <text x="24" y="29" class="text small muted">检查收件箱，未读邮件飞书通知并总结。</text>
+      <text x="326" y="9" class="text small muted">0ms</text>
+      <circle cx="5" cy="68" r="5" fill="#fffdf8" stroke="#b99652" stroke-width="2"/>
+      <text x="24" y="71" class="text body">技能命中</text>
+      <text x="24" y="91" class="text small muted">邮件总结技能 v3，检查输出契约。</text>
+      <text x="320" y="71" class="text small muted">82ms</text>
+      <circle cx="5" cy="130" r="5" fill="#fffdf8" stroke="#b99652" stroke-width="2"/>
+      <text x="24" y="133" class="text body">工具调用</text>
+      <text x="24" y="153" class="text small muted">email.listUnread 返回 3 封未读邮件。</text>
+      <text x="314" y="133" class="text small muted">641ms</text>
+      <circle cx="5" cy="192" r="5" fill="#fffdf8" stroke="#b99652" stroke-width="2"/>
+      <text x="24" y="195" class="text body">模型总结</text>
+      <text x="24" y="215" class="text small muted">GPT-4.1 生成摘要，准备飞书通知。</text>
+      <text x="314" y="195" class="text small muted">1.42s</text>
+    </g>
+    <line x1="0" y1="438" x2="382" y2="438" class="line"/>
+    <g transform="translate(14 454)">
+      <rect width="354" height="72" rx="10" class="muted-panel"/>
+      <text x="10" y="22" class="text body">大模型交互</text>
+      <text x="10" y="43" class="text small muted">GPT-4.1，输入 2.4k tokens，输出 318 tokens。</text>
+      <text x="10" y="61" class="text small muted">展示摘要，不展示内部推理。</text>
+      <rect y="82" width="354" height="72" rx="10" class="muted-panel"/>
+      <text x="10" y="104" class="text body">工具与技能</text>
+      <text x="10" y="125" class="text small muted">email.listUnread、feishu.notify，邮件总结技能 v3。</text>
+      <text x="10" y="143" class="text small muted">Authorization、accessToken 字段已脱敏。</text>
+      <rect y="164" width="354" height="72" rx="10" class="muted-panel"/>
+      <text x="10" y="186" class="text body">知识库</text>
+      <text x="10" y="207" class="text small muted">本次未触发检索。触发时展示命中片段和耗时。</text>
+      <text x="10" y="225" class="text small muted">不可见知识库全文不会直接暴露。</text>
+    </g>
+  </g>
+</svg>

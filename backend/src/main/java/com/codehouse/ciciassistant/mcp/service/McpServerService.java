@@ -239,7 +239,7 @@ public class McpServerService {
                         String result = mcpClient.callTool(server, toolName, args, extraHeaders);
                         result = rewriteKnownToolFailure(toolName, result);
                         if (isCloudccRelatedServer(server) && isCloudccAuthFailure(result)) {
-                            String refreshed = retryCloudccToolOnce(orgId, userId, server, toolName, argumentsJson);
+                            String refreshed = retryCloudccToolOnce(orgId, userId, server, toolName, argumentsJson, tool.inputSchema());
                             if (refreshed != null) {
                                 return refreshed;
                             }
@@ -247,7 +247,7 @@ public class McpServerService {
                         return result;
                     } catch (Exception e) {
                         if (isCloudccRelatedServer(server) && isCloudccAuthFailure(e.getMessage())) {
-                            String refreshed = retryCloudccToolOnce(orgId, userId, server, toolName, argumentsJson);
+                            String refreshed = retryCloudccToolOnce(orgId, userId, server, toolName, argumentsJson, tool.inputSchema());
                             if (refreshed != null) {
                                 return refreshed;
                             }
@@ -407,11 +407,11 @@ public class McpServerService {
      */
     private boolean toolSchemaAcceptsField(JsonNode inputSchema, String fieldName) {
         if (inputSchema == null) {
-            return true; // unknown schema – fall back to always injecting (legacy behaviour)
+            return false;
         }
         JsonNode props = inputSchema.path("properties");
         if (props.isMissingNode() || !props.isObject()) {
-            return true; // schema has no properties block – treat as accepting everything
+            return false;
         }
         return props.has(fieldName);
     }
@@ -455,6 +455,9 @@ public class McpServerService {
                 args.put("base_url", baseUrl);
                 args.remove("baseUrl");
             }
+        } else {
+            args.remove("base_url");
+            args.remove("baseUrl");
         }
         String accessToken = ctx.accessToken();
         if (accessToken != null && !accessToken.isBlank()) {
@@ -464,9 +467,14 @@ public class McpServerService {
             if (toolSchemaAcceptsField(inputSchema, "open_api_token")) {
                 args.put("open_api_token", accessToken);
                 args.remove("openApiToken");
+            } else {
+                args.remove("open_api_token");
+                args.remove("openApiToken");
             }
             if (toolSchemaAcceptsField(inputSchema, "token")) {
                 args.put("token", accessToken);
+            } else {
+                args.remove("token");
             }
         }
 
@@ -533,14 +541,15 @@ public class McpServerService {
     }
 
     private String retryCloudccToolOnce(
-            String orgId, String userId, McpServerEntity server, String toolName, String originalArgsJson) {
+            String orgId, String userId, McpServerEntity server, String toolName, String originalArgsJson,
+            JsonNode inputSchema) {
         try {
             cloudccAccessTokenService.invalidateSessionContext(orgId, userId);
             Optional<CloudccSessionContext> fresh = cloudccAccessTokenService.getSessionContext(orgId, userId);
             if (fresh.isEmpty()) {
                 return "CloudCC 调用失败：令牌已失效且刷新失败，请检查 CloudCC 账号绑定信息后重试。";
             }
-            String retriedArgs = mergeCloudccToolArguments(originalArgsJson, fresh.get());
+            String retriedArgs = mergeCloudccToolArguments(originalArgsJson, fresh.get(), inputSchema);
             Map<String, String> headers = Map.of(
                     "accessToken", fresh.get().accessToken(),
                     "base_url", ensureUrlWithScheme(fresh.get().baseUrl())
@@ -560,7 +569,9 @@ public class McpServerService {
         String s = text.toLowerCase();
         return s.contains("登录失败")
                 || s.contains("请再次登录")
-                || s.contains("token")
+                || s.contains("token expired")
+                || s.contains("invalid token")
+                || s.contains("access token expired")
                 || s.contains("鉴权失败")
                 || s.contains("unauthorized")
                 || s.contains("401")

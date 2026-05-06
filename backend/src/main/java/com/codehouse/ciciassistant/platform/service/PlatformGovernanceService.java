@@ -877,6 +877,7 @@ public class PlatformGovernanceService {
                                         PlatformSkillTemplateVersionEntity version,
                                         SkillGovernanceCommand command) {
         skill.update(
+                skill.getSkillCode(),
                 version.getName(),
                 version.getDescription(),
                 command.enabled() == null ? skill.isEnabled() : command.enabled(),
@@ -886,6 +887,7 @@ public class PlatformGovernanceService {
                 version.getKbWhitelist(),
                 version.getHandoffRule(),
                 version.getOutputContract(),
+                skill.getRuntimeApiDraftJson(),
                 normalizeRiskLevel(version.getRiskLevel())
         );
         if (command.visibility() != null) {

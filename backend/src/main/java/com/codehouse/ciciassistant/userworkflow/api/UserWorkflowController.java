@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.userworkflow.api;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.codehouse.ciciassistant.userworkflow.domain.UserAgentProfileEntity;
+import com.codehouse.ciciassistant.userworkflow.domain.UserQuickCommandEntity;
 import com.codehouse.ciciassistant.userworkflow.domain.UserWorkflowExecutionEntity;
 import com.codehouse.ciciassistant.userworkflow.domain.UserWorkflowSpecEntity;
 import com.codehouse.ciciassistant.userworkflow.domain.UserWorkflowTriggerEntity;
@@ -116,6 +117,26 @@ public class UserWorkflowController {
         String orgId = TenantContext.requireOrgId();
         String userId = currentUser();
         return ApiResponse.ok(userWorkflowService.listVersions(orgId, userId, agentId).stream().map(this::toVersionPayload).toList());
+    }
+
+    @GetMapping("/quick-commands")
+    public ApiResponse<List<Map<String, Object>>> quickCommands(@PathVariable String agentId) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = currentUser();
+        return ApiResponse.ok(userWorkflowService.listQuickCommands(orgId, userId, agentId).stream().map(this::toQuickCommandPayload).toList());
+    }
+
+    @PostMapping("/quick-commands")
+    public ApiResponse<Map<String, Object>> createQuickCommand(@PathVariable String agentId,
+                                                               @Valid @RequestBody CreateQuickCommandRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = currentUser();
+        return ApiResponse.ok(toQuickCommandPayload(userWorkflowService.createQuickCommand(
+                orgId,
+                userId,
+                agentId,
+                new UserWorkflowService.CreateQuickCommandCommand(request.title(), request.promptText())
+        )));
     }
 
     @PostMapping("/publish")
@@ -233,6 +254,18 @@ public class UserWorkflowController {
         return payload;
     }
 
+    private Map<String, Object> toQuickCommandPayload(UserQuickCommandEntity item) {
+        return Map.of(
+                "id", item.getId(),
+                "title", item.getTitle(),
+                "promptText", item.getPromptText(),
+                "sortOrder", item.getSortOrder(),
+                "enabled", item.isEnabled(),
+                "createdAt", item.getCreatedAt().toString(),
+                "updatedAt", item.getUpdatedAt().toString()
+        );
+    }
+
     private Map<String, Object> toTriggerPayload(UserWorkflowTriggerEntity item) {
         return Map.of(
                 "id", item.getId(),
@@ -290,6 +323,9 @@ public class UserWorkflowController {
     }
 
     public record UpdateSpecRequest(String sourceText) {
+    }
+
+    public record CreateQuickCommandRequest(String title, String promptText) {
     }
 
     public record VersionActionRequest(Integer versionNo) {

@@ -127,6 +127,24 @@ class OrchestratorIntegrationTest {
     }
 
     @Test
+    void shouldListDefaultSystemAgentSkillBindingsFromAgentEndpoint() throws Exception {
+        String token = loginToken("13800138036");
+
+        MvcResult result = mockMvc.perform(get("/me/agents/cici-system/skills")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andReturn();
+
+        JsonNode bindings = objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data")
+                .path("bindings");
+        assertThat(bindings.isArray()).isTrue();
+        assertThat(bindings).extracting(item -> item.path("skillCode").asText())
+                .contains("general-assistant", "web-search");
+    }
+
+    @Test
     void shouldResolvePhaseOneSkillsForSalesAgent() throws Exception {
         String token = loginToken("13800138116");
 
@@ -339,6 +357,7 @@ class OrchestratorIntegrationTest {
                 .isEqualTo(v1.getId());
 
         skill.update(
+                skill.getSkillCode(),
                 "Skill Pin Runtime",
                 "updated",
                 true,
@@ -348,6 +367,7 @@ class OrchestratorIntegrationTest {
                 "",
                 "",
                 "",
+                null,
                 "LOW"
         );
         skillDefinitionRepository.save(skill);

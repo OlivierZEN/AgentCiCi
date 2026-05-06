@@ -10,6 +10,8 @@ public interface KnowledgeBaseRepository extends JpaRepository<KnowledgeBaseEnti
 
     List<KnowledgeBaseEntity> findByOrgIdAndStatusNotOrderByIdDesc(String orgId, String status);
 
+    List<KnowledgeBaseEntity> findByOrgIdAndIdIn(String orgId, List<Long> ids);
+
     Optional<KnowledgeBaseEntity> findByIdAndOrgId(Long id, String orgId);
 
     void deleteByIdAndOrgId(Long id, String orgId);

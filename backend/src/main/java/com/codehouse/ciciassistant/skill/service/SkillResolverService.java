@@ -49,6 +49,7 @@ public class SkillResolverService {
     private final AgentWorkflowSkillRefService agentWorkflowSkillRefService;
     private final SkillVersionRepository skillVersionRepository;
     private final ObjectMapper objectMapper;
+    private final SkillApiToolService skillApiToolService;
 
     public SkillResolverService(SkillDefinitionService skillDefinitionService,
                                 AgentDefinitionRepository agentDefinitionRepository,
@@ -59,7 +60,8 @@ public class SkillResolverService {
                                 PlatformGovernanceService platformGovernanceService,
                                 AgentWorkflowSkillRefService agentWorkflowSkillRefService,
                                 SkillVersionRepository skillVersionRepository,
-                                ObjectMapper objectMapper) {
+                                ObjectMapper objectMapper,
+                                SkillApiToolService skillApiToolService) {
         this.skillDefinitionService = skillDefinitionService;
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
@@ -70,6 +72,7 @@ public class SkillResolverService {
         this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
         this.skillVersionRepository = skillVersionRepository;
         this.objectMapper = objectMapper;
+        this.skillApiToolService = skillApiToolService;
     }
 
     public ResolvedSkillContext resolve(String orgId, String requestedAgentId, String sessionId) {
@@ -172,10 +175,18 @@ public class SkillResolverService {
         augmentBuiltinCiciToolset(agentId, baselineUniversal);
 
         LinkedHashSet<String> toolNames = new LinkedHashSet<>(baselineUniversal);
+        LinkedHashSet<Long> runtimeApiVersionIds = new LinkedHashSet<>();
         for (ResolvedSkill skill : skills) {
             LinkedHashSet<String> declared = new LinkedHashSet<>(ToolNameNormalizer.canonicalizeAll(skill.toolWhitelist()));
             boolean ambient = isAmbientActivation(skill.activationMode());
             boolean activeMatches = activeSkillEffective.map(cur -> cur.equalsIgnoreCase(skill.skillCode())).orElse(false);
+            if (ambient || activeMatches) {
+                resolvedSkillRefs.stream()
+                        .filter(ref -> ref.skillVersionId() != null)
+                        .filter(ref -> ref.skillCode().equalsIgnoreCase(skill.skillCode()))
+                        .map(ResolvedSkillVersionRef::skillVersionId)
+                        .forEach(runtimeApiVersionIds::add);
+            }
             for (String tool : declared) {
                 if (baselineUniversal.contains(tool)) {
                     continue;
@@ -185,6 +196,9 @@ public class SkillResolverService {
                 }
             }
         }
+        List<SkillApiToolService.ResolvedSkillApiTool> skillApiTools =
+                skillApiToolService.findRuntimeTools(orgId, runtimeApiVersionIds);
+        skillApiTools.stream().map(SkillApiToolService.ResolvedSkillApiTool::toolName).forEach(toolNames::add);
 
         LinkedHashSet<String> kbIds = new LinkedHashSet<>(
                 capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList());
@@ -241,6 +255,7 @@ public class SkillResolverService {
                 publishedRuntimeBinding.maxToolCalls(),
                 publishedRuntimeBinding.publishedVersionId(),
                 resolvedSkillRefs,
+                skillApiTools,
                 new ResolvedPolicyBundle(
                         runtimePolicyBundle.bundleCode(),
                         runtimePolicyBundle.versionNo(),
@@ -499,6 +514,7 @@ public class SkillResolverService {
             /** Bound published workflow version id (if available). */
             Long publishedVersionId,
             List<ResolvedSkillVersionRef> resolvedSkillRefs,
+            List<SkillApiToolService.ResolvedSkillApiTool> skillApiTools,
             ResolvedPolicyBundle policyBundle
     ) {
     }

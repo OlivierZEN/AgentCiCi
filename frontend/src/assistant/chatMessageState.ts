@@ -69,6 +69,19 @@ export function markTrailingAssistantModel(
   return next;
 }
 
+export function assistantResponseNeedsUserFollowup(content: string): boolean {
+  const normalized = content.replace(/\s+/g, "");
+  if (!normalized) {
+    return false;
+  }
+  return /参数(问题|错误|缺失|不正确)|缺少必需参数|查询失败|调用失败|执行失败|无法|未能|出错|错误|请补充|请确认|需要(你|您)?(提供|补充|确认)|未找到|无权限|令牌.*失败/.test(normalized)
+    || /工具已返回.*模型本轮未能生成最终自然语言总结|本次工具调用已完成.*模型本轮未能生成/.test(normalized)
+    || /后续(继续|再|将)?(处理|查询|检索|调用|获取|抽取|整理|分析|生成|补充|展示|展现|输出)/.test(normalized)
+    || /接下来.*(我|会|将|再).*(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)/.test(normalized)
+    || /(让我|我来|我会|我再|将)(继续|重新|再)?(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)/.test(normalized)
+    || /(继续|重新|再)(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)/.test(normalized);
+}
+
 export function preserveAssistantModelNames(
   local: ChatMessageBubble[],
   remote: ChatMessageBubble[],

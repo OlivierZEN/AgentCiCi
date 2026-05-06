@@ -399,7 +399,7 @@ function createDraft(orgId: string, kbIds: number[]): AgentDraft {
     summary: `${orgId} 的业务助手，负责把规则、知识和动作串起来。`,
     greeting: "你好，我是你的业务智能体，可以帮你检索知识、调用工具并生成标准化输出。",
     model: "",
-    systemPrompt: "你是企业内部可执行 Agent。回答前先检索知识库；命中不足时再追问，不允许编造制度、价格或承诺。",
+    systemPrompt: "你是企业内部可执行 Agent。先判断用户请求类型，再决定是直接回答、检索知识库还是调用业务工具；不允许编造制度、价格或承诺。",
     specText: [
       "你是企业内部业务 Agent。",
       "先判断用户请求类型，再决定是检索知识库还是调用业务工具。",
@@ -985,94 +985,96 @@ function WorkflowPreviewCanvas({
   };
 
   return (
-    <div className="cici-builder-graph__canvas cici-builder-graph__canvas--dify" ref={containerRef} onScroll={syncViewport}>
-      <div className="cici-builder-graph__stage" style={{ width: scaledWidth, height: scaledHeight }}>
-        <div className="cici-builder-graph__viewport" style={{ width: layout.width, height: layout.height, transform: `scale(${scale})` }}>
-          <svg className="cici-builder-graph__edges" viewBox={`0 0 ${layout.width} ${layout.height}`} aria-hidden>
+    <div className="cici-builder-graph__canvas cici-builder-graph__canvas--dify">
+      <div className="cici-builder-graph__scroll" ref={containerRef} onScroll={syncViewport}>
+        <div className="cici-builder-graph__stage" style={{ width: scaledWidth, height: scaledHeight }}>
+          <div className="cici-builder-graph__viewport" style={{ width: layout.width, height: layout.height, transform: `scale(${scale})` }}>
+            <svg className="cici-builder-graph__edges" viewBox={`0 0 ${layout.width} ${layout.height}`} aria-hidden>
+              {layout.edges.map((edge) => (
+                <path
+                  key={`${edge.from}-${edge.to}-${edge.label ?? "plain"}`}
+                  className={`cici-builder-graph__edge${edge.isActive ? " is-active" : ""}`}
+                  d={edge.path}
+                />
+              ))}
+            </svg>
+
             {layout.edges.map((edge) => (
-              <path
-                key={`${edge.from}-${edge.to}-${edge.label ?? "plain"}`}
-                className={`cici-builder-graph__edge${edge.isActive ? " is-active" : ""}`}
-                d={edge.path}
-              />
-            ))}
-          </svg>
-
-          {layout.edges.map((edge) => (
-            edge.label ? (
-              <div
-                key={`${edge.from}-${edge.to}-${edge.label}-label`}
-                className={`cici-builder-graph__edge-label${edge.isActive ? " is-active" : ""}`}
-                style={{ left: edge.labelX, top: edge.labelY }}
-              >
-                {edge.label}
-              </div>
-            ) : null
-          ))}
-
-          {layout.nodes.map((node) => {
-            const theme = getWorkflowNodeTheme(node.kind);
-            const isActive = activeNodeIds.includes(node.id);
-            const isStart = node.kind === "start";
-            const nodeStyle = {
-              left: node.x,
-              top: node.y,
-              "--node-accent": theme.accent,
-              "--node-surface": theme.surface,
-            } as CSSProperties;
-            return (
-              <article
-                key={node.id}
-                role={isStart && onInspectStartTriggers ? "button" : undefined}
-                tabIndex={isStart && onInspectStartTriggers ? 0 : undefined}
-                className={`cici-builder-flow-node cici-builder-flow-node--${node.kind}${isActive ? " is-active" : ""}${
-                  isStart && onInspectStartTriggers ? " cici-builder-flow-node--start-clickable" : ""
-                }`}
-                style={nodeStyle}
-                onClick={isStart && onInspectStartTriggers ? () => onInspectStartTriggers() : undefined}
-                onKeyDown={
-                  isStart && onInspectStartTriggers
-                    ? (event) => {
-                        if (event.key === "Enter" || event.key === " ") {
-                          event.preventDefault();
-                          onInspectStartTriggers();
-                        }
-                      }
-                    : undefined
-                }
-              >
-                <span className="cici-builder-flow-node__port cici-builder-flow-node__port--in" />
-                <span className="cici-builder-flow-node__port cici-builder-flow-node__port--out" />
-                <div className="cici-builder-flow-node__head">
-                  <span className="cici-builder-flow-node__icon">
-                    <PreviewNodeIcon kind={node.kind} />
-                  </span>
-                  <div className="cici-builder-flow-node__meta">
-                    <span className="cici-builder-flow-node__eyebrow">{theme.eyebrow}</span>
-                    <strong>{node.label}</strong>
-                  </div>
+              edge.label ? (
+                <div
+                  key={`${edge.from}-${edge.to}-${edge.label}-label`}
+                  className={`cici-builder-graph__edge-label${edge.isActive ? " is-active" : ""}`}
+                  style={{ left: edge.labelX, top: edge.labelY }}
+                >
+                  {edge.label}
                 </div>
-                <p className="cici-builder-flow-node__detail">{node.detail}</p>
-                {isStart && (startChannelSummary || startScheduleBadge) ? (
-                  <div className="cici-builder-flow-node__badges">
-                    {startChannelSummary ? (
-                      <span className="cici-builder-flow-node__badge" title="入口与发布渠道（详见「触发与调度」）">
-                        {startChannelSummary}
-                      </span>
-                    ) : null}
-                    {startScheduleBadge ? (
-                      <span className="cici-builder-flow-node__badge cici-builder-flow-node__badge--muted" title="定时触发（发布后由平台同步）">
-                        {startScheduleBadge}
-                      </span>
-                    ) : null}
-                    {onInspectStartTriggers ? (
-                      <span className="cici-builder-flow-node__badge cici-builder-flow-node__badge--link">查看触发与调度 →</span>
-                    ) : null}
+              ) : null
+            ))}
+
+            {layout.nodes.map((node) => {
+              const theme = getWorkflowNodeTheme(node.kind);
+              const isActive = activeNodeIds.includes(node.id);
+              const isStart = node.kind === "start";
+              const nodeStyle = {
+                left: node.x,
+                top: node.y,
+                "--node-accent": theme.accent,
+                "--node-surface": theme.surface,
+              } as CSSProperties;
+              return (
+                <article
+                  key={node.id}
+                  role={isStart && onInspectStartTriggers ? "button" : undefined}
+                  tabIndex={isStart && onInspectStartTriggers ? 0 : undefined}
+                  className={`cici-builder-flow-node cici-builder-flow-node--${node.kind}${isActive ? " is-active" : ""}${
+                    isStart && onInspectStartTriggers ? " cici-builder-flow-node--start-clickable" : ""
+                  }`}
+                  style={nodeStyle}
+                  onClick={isStart && onInspectStartTriggers ? () => onInspectStartTriggers() : undefined}
+                  onKeyDown={
+                    isStart && onInspectStartTriggers
+                      ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            onInspectStartTriggers();
+                          }
+                        }
+                      : undefined
+                  }
+                >
+                  <span className="cici-builder-flow-node__port cici-builder-flow-node__port--in" />
+                  <span className="cici-builder-flow-node__port cici-builder-flow-node__port--out" />
+                  <div className="cici-builder-flow-node__head">
+                    <span className="cici-builder-flow-node__icon">
+                      <PreviewNodeIcon kind={node.kind} />
+                    </span>
+                    <div className="cici-builder-flow-node__meta">
+                      <span className="cici-builder-flow-node__eyebrow">{theme.eyebrow}</span>
+                      <strong>{node.label}</strong>
+                    </div>
                   </div>
-                ) : null}
-              </article>
-            );
-          })}
+                  <p className="cici-builder-flow-node__detail">{node.detail}</p>
+                  {isStart && (startChannelSummary || startScheduleBadge) ? (
+                    <div className="cici-builder-flow-node__badges">
+                      {startChannelSummary ? (
+                        <span className="cici-builder-flow-node__badge" title="入口与发布渠道（详见「触发与调度」）">
+                          {startChannelSummary}
+                        </span>
+                      ) : null}
+                      {startScheduleBadge ? (
+                        <span className="cici-builder-flow-node__badge cici-builder-flow-node__badge--muted" title="定时触发（发布后由平台同步）">
+                          {startScheduleBadge}
+                        </span>
+                      ) : null}
+                      {onInspectStartTriggers ? (
+                        <span className="cici-builder-flow-node__badge cici-builder-flow-node__badge--link">查看触发与调度 →</span>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -1645,6 +1647,15 @@ export default function AgentBuilderShell({
     if (executionFilter === "try_run") return rows.filter((row) => row.source === "try_run");
     return rows.filter((row) => row.source !== "try_run");
   }, [executionFilter, executionRecordsFromServer, selectedAgentId]);
+  const executionRecordCounts = useMemo(() => {
+    const rows = executionRecordsFromServer.filter((row) => row.agentId === selectedAgentId);
+    const tryRun = rows.filter((row) => row.source === "try_run").length;
+    return {
+      all: rows.length,
+      production: rows.length - tryRun,
+      try_run: tryRun,
+    };
+  }, [executionRecordsFromServer, selectedAgentId]);
 
   const openTriggersFromGraph = useCallback(() => {
     setActiveCompileTab("triggers");
@@ -2761,7 +2772,8 @@ export default function AgentBuilderShell({
   const renderExecutionsRuntimePanel = () => (
     <div className="cici-builder-runtime">
       <div className="cici-builder-runtime__toolbar">
-        <div className="cici-builder-runtime__filters" role="group" aria-label="执行记录筛选">
+        <div className="cici-builder-runtime__filters cici-builder-runtime__filters--scope" role="group" aria-label="执行记录筛选">
+          <span className="cici-builder-runtime__filter-label">记录范围</span>
           {(["all", "production", "try_run"] as const).map((key) => (
             <button
               key={key}
@@ -2769,7 +2781,8 @@ export default function AgentBuilderShell({
               className={`cici-builder-runtime__filter${executionFilter === key ? " is-active" : ""}`}
               onClick={() => setExecutionFilter(key)}
             >
-              {key === "all" ? "全部" : key === "production" ? "仅生产类" : "仅试运行"}
+              <span>{key === "all" ? "全部" : key === "production" ? "生产类" : "试运行"}</span>
+              <strong>{executionRecordCounts[key]}</strong>
             </button>
           ))}
         </div>
@@ -2797,7 +2810,7 @@ export default function AgentBuilderShell({
         </div>
       </div>
       <p className="cici-builder-runtime__muted">
-        数据来自 `agent_workflow_execution_log`（试运行 / 发布 / 会话渠道执行）。筛选「仅生产类」隐藏 TRY_RUN。
+        来源：`agent_workflow_execution_log`，包含试运行、发布和会话渠道执行。
       </p>
       {runtimeExecutionsError ? <div className="cici-builder-runtime__empty">执行记录接口暂不可用：{runtimeExecutionsError}</div> : null}
       {runtimeExecutionsLoading && filteredExecutionRecords.length === 0 ? (
@@ -3385,7 +3398,6 @@ export default function AgentBuilderShell({
                 <div className="cici-builder-graph cici-builder-graph--full">
                   <div className="cici-builder-code__title">
                     workflow.preview.graph
-                    <span className="cici-builder-code__meta">Dify 风格只读流程画布 · START 可跳转「触发与调度」</span>
                   </div>
                   <WorkflowPreviewCanvas
                     preview={compileArtifact.preview}

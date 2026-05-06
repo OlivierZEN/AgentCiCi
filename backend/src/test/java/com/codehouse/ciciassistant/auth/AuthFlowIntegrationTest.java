@@ -6,11 +6,16 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.auth.domain.OrgRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -35,6 +40,9 @@ class AuthFlowIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AgentDefinitionRepository agentDefinitionRepository;
 
     @Test
     void shouldLoginBySmsAndReadCurrentUser() throws Exception {
@@ -194,5 +202,67 @@ class AuthFlowIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists());
+    }
+
+    @Test
+    void shouldExposePublicAgentAvatarsForLoginModeCube() throws Exception {
+        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", "public-avatar-agent")
+                .ifPresent(agentDefinitionRepository::delete);
+        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", "public-avatar-disabled")
+                .ifPresent(agentDefinitionRepository::delete);
+        agentDefinitionRepository.flush();
+
+        String avatarDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+                + "AAAADUlEQVR42mP8z8BQDwAFgwJ/lx6mHQAAAABJRU5ErkJggg==";
+        agentDefinitionRepository.save(new AgentDefinitionEntity(
+                "demo-org",
+                "public-avatar-agent",
+                "登录立方体智能体",
+                "登录页展示头像",
+                "",
+                "deepseek-v4-pro",
+                "",
+                "",
+                "standard",
+                "autonomous",
+                "v1",
+                avatarDataUrl,
+                true,
+                true
+        ));
+        agentDefinitionRepository.save(new AgentDefinitionEntity(
+                "demo-org",
+                "public-avatar-disabled",
+                "禁用智能体",
+                "不应出现在公开头像池",
+                "",
+                "deepseek-v4-pro",
+                "",
+                "",
+                "standard",
+                "autonomous",
+                "v1",
+                avatarDataUrl,
+                true,
+                false
+        ));
+        agentDefinitionRepository.flush();
+
+        MvcResult result = mockMvc.perform(get("/public/agents/avatars")
+                        .queryParam("orgId", "demo-org"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).path("data");
+        List<JsonNode> items = new ArrayList<>();
+        data.forEach(items::add);
+        JsonNode avatarItem = items.stream()
+                .filter(item -> item.path("agentId").asText().equals("public-avatar-agent"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(avatarItem.path("name").asText()).isEqualTo("登录立方体智能体");
+        assertThat(avatarItem.path("avatarBase64").asText()).isEqualTo(avatarDataUrl);
+        assertThat(items.stream().map(item -> item.path("agentId").asText()))
+                .doesNotContain("public-avatar-disabled");
     }
 }

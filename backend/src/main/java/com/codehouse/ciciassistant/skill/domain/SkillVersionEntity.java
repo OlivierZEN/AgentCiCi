@@ -88,6 +88,9 @@ public class SkillVersionEntity {
     @Column(name = "package_manifest_json", columnDefinition = "TEXT")
     private String packageManifestJson;
 
+    @Column(name = "runtime_api_snapshot_json", columnDefinition = "TEXT")
+    private String runtimeApiSnapshotJson;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -235,6 +238,10 @@ public class SkillVersionEntity {
         return packageManifestJson;
     }
 
+    public String getRuntimeApiSnapshotJson() {
+        return runtimeApiSnapshotJson;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -264,6 +271,10 @@ public class SkillVersionEntity {
 
     public void markPublished() {
         this.publishStatus = "PUBLISHED";
+    }
+
+    public void setRuntimeApiSnapshotJson(String runtimeApiSnapshotJson) {
+        this.runtimeApiSnapshotJson = runtimeApiSnapshotJson;
     }
 
     private String blankToDefault(String raw, String fallback) {

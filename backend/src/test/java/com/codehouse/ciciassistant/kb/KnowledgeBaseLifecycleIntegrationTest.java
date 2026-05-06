@@ -97,6 +97,15 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 .first()
                 .asString()
                 .contains("stable support policy");
+        RagService.RetrievalResult detailed = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "support gamma");
+        assertThat(detailed.context()).isNotEmpty();
+        assertThat(detailed.knowledgeBases())
+                .extracting(RagService.RetrievedKnowledgeBase::name)
+                .contains("Lifecycle KB");
+        assertThat(detailed.timingsMs()).containsKey("total");
     }
 
     @Test

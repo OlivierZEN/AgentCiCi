@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-015
 title: Skill Declarative API Runtime
-status: draft
+status: in_progress
 owner_role: backend-agent-runtime
 task_ids: TASK-036
 related_decisions: FEAT-009
 related_issues: none
-updated_at: 2026-05-02T07:30:00Z
+updated_at: 2026-05-05T00:50:29Z
 updated_by: ai
 ---
 
@@ -465,18 +465,26 @@ npm run build
 
 ## 实现进展
 
-- 当前状态：设计规格已创建，待实现。
+- 当前状态：后端最小闭环和管理端配置 UI 已完成第一轮，`authRef=integration:tavily.apiKey` 与 `authRef=integration:cloudcc.accessToken` 已接入服务端凭证解析，并通过本地 HTTP / CloudCC mock smoke。
 - 已完成项：
   - 明确 `runtimeApis` 与普通 `toolWhitelist` 分层。
   - 明确发布期 function schema / execution plan 双产物。
   - 明确运行时只注入当前激活 Skill 的专属 API 工具。
   - 明确安全、鉴权、审计和 P0 验收边界。
+  - 新增 Flyway `V37__skill_declarative_api_runtime.sql`：`skill_definition.runtime_api_draft_json`、`skill_version.runtime_api_snapshot_json` 与 `skill_api_tool` 发布计划表。
+  - 后端 Skill 创建、更新、预览和发布接口已支持 `runtimeApis` 字段；预览会返回 `runtimeApiPreview`，发布阻断校验错误。
+  - `SkillApiToolService` 已实现 API 契约编译、function schema 生成、execution plan 保存、参数 schema 校验、URL/host 安全校验、模板渲染、HTTP 执行、响应路径提取、裁剪、脱敏和调用审计。
+  - `SkillResolverService` / `ToolOrchestratorService` / `ChatOrchestratorService` 已接入运行时注入：只在对应 Skill ambient 或当前 activeSkill 生效时暴露 `skillapi__{skillCode}__{apiCode}` 工具；非激活上下文显式拒绝执行。
+  - 回归覆盖 `runtimeApis` 预览、localhost/127.0.0.1 阻断、发布后 `skill_api_tool` 生成、手动激活 Skill 才注入工具、非激活上下文拒绝执行。
+  - 管理端 Skill 新建/编辑页已新增“内嵌 API”页签；API 动作仍与普通工具白名单分层，支持编辑 URL、Method、AuthRef、参数 schema、请求映射、返回映射和确认要求，并在保存/预览时提交结构化 `runtimeApis`。
+  - `SkillApiToolService` 已支持第一种服务端凭证引用：`authRef=integration:tavily.apiKey` 从现有 Tavily 集成配置读取并解密 API key，运行时注入 `Authorization: Bearer ...`，不把密钥暴露给模型或前端。
+  - 回归覆盖带 authRef 的 Skill API 发布、激活上下文执行、本地 HTTP endpoint 调用、Authorization header 注入和 `$..token` 响应脱敏。
+  - `SkillApiToolService` 已支持 CloudCC 用户态凭证引用：`integration:cloudcc.accessToken`、`cloudcc.accessToken`、`integration:cloudcc.userToken`、`cloudcc.userToken` 发布期只校验 CloudCC CRM 集成启用，运行期按当前用户通过 `CloudccAccessTokenService` 换取 session token，并注入 `accessToken` header。
+  - 回归新增本地 CloudCC mock smoke：mock domain 解析、token 换取与业务 API endpoint，验证 Skill API runtime 使用当前用户绑定凭证、业务 API 收到 `accessToken` header，响应中的 `$..accessToken` 被脱敏。
+  - 管理端 authRef 提示已同步 `integration:tavily.apiKey` 和 `integration:cloudcc.accessToken` 两类示例。
 - 未完成项：
-  - 数据库迁移。
-  - 后端编译器和执行器。
-  - SkillResolver / ToolOrchestrator 接入。
-  - 管理端 UI。
-  - 自动化测试和真实 API smoke。
+  - 真实外部 API smoke 尚未执行；当前 smoke 使用本地 HTTP endpoint。
+  - 其他集成应用和 header 形态需要继续扩展；真实 CloudCC smoke 仍依赖 TASK-023 先修复用户绑定凭证与本地模型 key。
 
 ## 交接说明
 

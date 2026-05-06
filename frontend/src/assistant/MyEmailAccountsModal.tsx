@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import AvatarView from "../components/AvatarView";
 import AvatarCropperDialog from "../components/AvatarCropperDialog";
 import { getDisplayInitial, readAvatarFileAsDataUrl } from "../shared/avatar";
+import CommunicationChannelBinding from "./CommunicationChannelBinding";
 import MyWorkflowStudio from "./MyWorkflowStudio";
 import UserMemoryPanel from "./UserMemoryPanel";
 
@@ -113,7 +114,7 @@ async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<Api
 }
 
 export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
-  const [tab, setTab] = useState<"profile" | "workflow" | "email" | "memory">("profile");
+  const [tab, setTab] = useState<"profile" | "workflow" | "channels" | "email" | "memory">("profile");
   const [meProfile, setMeProfile] = useState<MeProfile>({});
   const [avatarPreview, setAvatarPreview] = useState("");
   const [providers, setProviders] = useState<ProviderPreset[]>([]);
@@ -350,9 +351,15 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
 
   return (
     <div className="cici-modal-backdrop" onClick={onClose}>
-      <div className="cici-modal cici-modal--wide" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="cici-modal cici-modal--wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cici-settings-title"
+        onClick={(e) => e.stopPropagation()}
+      >
         <header className="cici-modal__header">
-          <h3>个人设置</h3>
+          <h3 id="cici-settings-title">个人设置</h3>
           <button type="button" className="cici-modal__close" onClick={onClose} aria-label="关闭">
             ×
           </button>
@@ -374,6 +381,13 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           </button>
           <button
             type="button"
+            className={`cici-settings-tabs__item${tab === "channels" ? " is-active" : ""}`}
+            onClick={() => setTab("channels")}
+          >
+            绑定沟通渠道
+          </button>
+          <button
+            type="button"
             className={`cici-settings-tabs__item${tab === "email" ? " is-active" : ""}`}
             onClick={() => setTab("email")}
           >
@@ -388,8 +402,9 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           </button>
         </div>
 
-        {tab === "profile" ? (
-          <>
+        <div className="cici-settings-content">
+          {tab === "profile" ? (
+            <>
             <p className="cici-modal__intro">头像会用于工作台、会话消息和个人入口展示，仅你本人可修改。</p>
             {notice ? <div className="cici-modal__notice">{notice}</div> : null}
             <section className="cici-modal__section">
@@ -436,13 +451,15 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
                 </div>
               </div>
             </section>
-          </>
-        ) : tab === "workflow" ? (
-          <MyWorkflowStudio token={token} active={tab === "workflow"} />
-        ) : tab === "memory" ? (
-          <UserMemoryPanel token={token} agentId="cici-system" />
-        ) : (
-          <>
+            </>
+          ) : tab === "workflow" ? (
+            <MyWorkflowStudio token={token} active={tab === "workflow"} />
+          ) : tab === "channels" ? (
+            <CommunicationChannelBinding token={token} active={tab === "channels"} />
+          ) : tab === "memory" ? (
+            <UserMemoryPanel token={token} agentId="cici-system" />
+          ) : (
+            <>
             <p className="cici-modal__intro">
               这里配置的邮箱账号将用于邮件工具（<code>email_*</code>）。智能体会在被授权使用邮件工具时以你本人的身份读取与发送邮件。仅保存 AES 加密后的密码。
             </p>
@@ -508,7 +525,8 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
                 ) : null}
               </header>
 
-              <div className="cici-form-grid">
+              <div className="cici-form-grid cici-form-grid--email">
+                <div className="cici-form-grid__divider">基础信息</div>
                 <label>
                   <span>邮箱类型</span>
                   <select value={form.providerCode} onChange={(e) => applyPreset(e.target.value)}>
@@ -561,6 +579,7 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
                   </select>
                 </label>
 
+                <div className="cici-form-grid__divider">收信 POP3</div>
                 <label>
                   <span>POP3 主机</span>
                   <input
@@ -586,6 +605,7 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
                   <span>POP3 使用 SSL</span>
                 </label>
 
+                <div className="cici-form-grid__divider">发信 SMTP</div>
                 <label>
                   <span>SMTP 主机</span>
                   <input
@@ -614,6 +634,7 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
                   </select>
                 </label>
 
+                <div className="cici-form-grid__divider">发送策略</div>
                 <label className="cici-form-grid__inline">
                   <input
                     type="checkbox"
@@ -641,8 +662,9 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
                 </button>
               </footer>
             </section>
-          </>
-        )}
+            </>
+          )}
+        </div>
 
         <AvatarCropperDialog
           open={Boolean(avatarCropSource)}

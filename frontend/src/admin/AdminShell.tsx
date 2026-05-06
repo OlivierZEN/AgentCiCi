@@ -7,6 +7,17 @@ type AuthPayload = { token: string; orgId: string; userId: string; roles: string
 type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string };
 type CurrentUserUpdatedDetail = { userId: string; mobile?: string; nickname?: string; avatarBase64?: string };
 
+const adminNavItems = [
+  { to: "/admin/kb", label: "知识库" },
+  { to: "/admin/models", label: "模型" },
+  { to: "/admin/tools", label: "工具" },
+  { to: "/admin/skills", label: "技能" },
+  { to: "/admin/agent-builder", label: "智能体构建" },
+  { to: "/admin/integrations", label: "集成应用" },
+  { to: "/admin/ops", label: "运维" },
+  { to: "/admin/users", label: "用户" },
+];
+
 function readAuth(): AuthPayload | null {
   const raw = localStorage.getItem(LS_ADMIN_TOKEN);
   if (!raw) return null;
@@ -68,47 +79,32 @@ export default function AdminShell() {
   return (
     <div className="admin-layout">
       <aside className="admin-nav">
-        <p className="brand admin-brand">
-          控制台 / 运维
-        </p>
-        <p className="subtle">组织：{auth.orgId}</p>
-        <div className="admin-current-user">
-          <span className="admin-current-user__avatar" aria-hidden>
-            {me.avatarBase64 ? <img src={me.avatarBase64} alt="avatar" /> : (me.nickname || me.mobile || "我").slice(0, 1)}
-          </span>
-          <span className="admin-current-user__name">{me.nickname || me.mobile || "当前用户"}</span>
-        </div>
-        <nav className="admin-nav-links">
-          <NavLink to="/admin/kb" className={({ isActive }) => (isActive ? "active" : "")}>
-            知识库
-          </NavLink>
-          <NavLink to="/admin/models" className={({ isActive }) => (isActive ? "active" : "")}>
-            模型
-          </NavLink>
-          <NavLink to="/admin/tools" className={({ isActive }) => (isActive ? "active" : "")}>
-            工具
-          </NavLink>
-          <NavLink to="/admin/skills" className={({ isActive }) => (isActive ? "active" : "")}>
-            技能
-          </NavLink>
-          <NavLink to="/admin/agent-builder" className={({ isActive }) => (isActive ? "active" : "")}>
-            智能体构建
-          </NavLink>
-          <NavLink to="/admin/integrations" className={({ isActive }) => (isActive ? "active" : "")}>
-            集成应用
-          </NavLink>
-          <NavLink to="/admin/ops" className={({ isActive }) => (isActive ? "active" : "")}>
-            运维
-          </NavLink>
-          <NavLink to="/admin/users" className={({ isActive }) => (isActive ? "active" : "")}>
-            用户
-          </NavLink>
-        </nav>
-        <div className="row admin-nav__logout-row">
-          <button type="button" className="secondary" onClick={logout}>
-            退出后台
+        <div className="admin-nav__head">
+          <p className="brand admin-brand">组织控制台</p>
+          <button type="button" className="admin-nav__logout-icon" onClick={logout} aria-label="退出后台" title="退出后台">
+            <svg viewBox="0 0 24 24" aria-hidden>
+              <path d="M10 6H6.8A1.8 1.8 0 0 0 5 7.8v8.4A1.8 1.8 0 0 0 6.8 18H10" />
+              <path d="M14 8l4 4-4 4" />
+              <path d="M9 12h9" />
+            </svg>
           </button>
         </div>
+        <div className="admin-nav__identity" aria-label="当前组织和管理员">
+          <span className="admin-current-user__avatar" aria-hidden>
+            {me.avatarBase64 ? <img src={me.avatarBase64} alt="" /> : (me.nickname || me.mobile || "我").slice(0, 1)}
+          </span>
+          <span className="admin-nav__identity-body">
+            <strong className="admin-nav__identity-name">{me.nickname || me.mobile || "当前用户"}</strong>
+            <span className="admin-nav__identity-org">{auth.orgId}</span>
+          </span>
+        </div>
+        <nav className="admin-nav-links" aria-label="组织管理菜单">
+          {adminNavItems.map((item) => (
+            <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "active" : "")}>
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
       </aside>
       <main className="admin-main">
         <Outlet context={ctx} />

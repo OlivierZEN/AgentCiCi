@@ -13,9 +13,13 @@ import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -41,104 +45,185 @@ public class RagService {
     }
 
     public List<String> retrieveContext(String orgId, List<String> knowledgeBaseIds, String query) {
+        return retrieveDetailed(orgId, knowledgeBaseIds, query).context();
+    }
+
+    public RetrievalResult retrieveDetailed(String orgId, List<String> knowledgeBaseIds, String query) {
+        long started = System.nanoTime();
+        Map<String, Long> timingsMs = new LinkedHashMap<>();
         if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty()) {
-            return Collections.emptyList();
+            timingsMs.put("total", elapsedMs(started));
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), timingsMs, false);
         }
+        long validationStarted = System.nanoTime();
         Map<String, Double> scoreThresholdByKb = new HashMap<>();
         int topK = 0;
-        List<String> allowedKnowledgeBaseIds = new ArrayList<>();
+        List<Long> requestedNumericIds = new ArrayList<>();
+        Set<Long> seenNumericIds = new LinkedHashSet<>();
         for (String kbId : knowledgeBaseIds) {
-            if (kbId == null || kbId.isBlank() || allowedKnowledgeBaseIds.contains(kbId)) {
+            if (kbId == null || kbId.isBlank()) {
                 continue;
             }
             Optional<Long> numericId = parseLong(kbId);
-            if (numericId.isEmpty()) {
+            if (numericId.isEmpty() || !seenNumericIds.add(numericId.get())) {
                 continue;
             }
-            Optional<KnowledgeBaseEntity> kb = knowledgeBaseRepository.findByIdAndOrgId(numericId.get(), orgId);
-            if (kb.isEmpty() || !"ACTIVE".equals(kb.get().getStatus())) {
-                continue;
-            }
-            allowedKnowledgeBaseIds.add(kbId);
-            scoreThresholdByKb.put(kbId, kb.get().getScoreThreshold());
-            topK = Math.max(topK, kb.get().getTopK());
+            requestedNumericIds.add(numericId.get());
         }
+        if (requestedNumericIds.isEmpty()) {
+            timingsMs.put("validation", elapsedMs(validationStarted));
+            timingsMs.put("total", elapsedMs(started));
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), timingsMs, false);
+        }
+        Map<Long, KnowledgeBaseEntity> kbById = knowledgeBaseRepository.findByOrgIdAndIdIn(orgId, requestedNumericIds).stream()
+                .collect(Collectors.toMap(KnowledgeBaseEntity::getId, item -> item));
+        List<String> allowedKnowledgeBaseIds = new ArrayList<>();
+        List<RetrievedKnowledgeBase> retrievedKnowledgeBases = new ArrayList<>();
+        for (Long id : requestedNumericIds) {
+            KnowledgeBaseEntity kb = kbById.get(id);
+            if (kb == null || !"ACTIVE".equals(kb.getStatus())) {
+                continue;
+            }
+            String kbId = String.valueOf(id);
+            allowedKnowledgeBaseIds.add(kbId);
+            retrievedKnowledgeBases.add(new RetrievedKnowledgeBase(kbId, kb.getName()));
+            scoreThresholdByKb.put(kbId, kb.getScoreThreshold());
+            topK = Math.max(topK, kb.getTopK());
+        }
+        timingsMs.put("validation", elapsedMs(validationStarted));
         if (allowedKnowledgeBaseIds.isEmpty()) {
-            return Collections.emptyList();
+            timingsMs.put("total", elapsedMs(started));
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), timingsMs, false);
         }
         int safeTopK = Math.max(1, Math.min(20, topK == 0 ? 5 : topK));
-        List<String> vectorRecall = filterVectorHits(orgId, vectorStoreClient.search(new VectorSearchQuery(
+        long embeddingStarted = System.nanoTime();
+        List<Float> embedding = embeddingService.embed(query);
+        timingsMs.put("embedding", elapsedMs(embeddingStarted));
+        long vectorStarted = System.nanoTime();
+        List<VectorSearchHit> hits = vectorStoreClient.search(new VectorSearchQuery(
                 orgId,
                 allowedKnowledgeBaseIds,
                 query,
-                embeddingService.embed(query),
-                safeTopK)), safeTopK, scoreThresholdByKb);
+                embedding,
+                safeTopK));
+        timingsMs.put("vectorSearch", elapsedMs(vectorStarted));
+        long filterStarted = System.nanoTime();
+        Set<String> activeKnowledgeBaseIds = new HashSet<>(allowedKnowledgeBaseIds);
+        List<String> vectorRecall = filterVectorHits(orgId, hits, safeTopK, scoreThresholdByKb, activeKnowledgeBaseIds);
+        timingsMs.put("filter", elapsedMs(filterStarted));
         if (!vectorRecall.isEmpty()) {
-            return vectorRecall;
+            timingsMs.put("total", elapsedMs(started));
+            return new RetrievalResult(vectorRecall, retrievedKnowledgeBases, timingsMs, false);
         }
-        return kbChunkRepository.findTop50ByOrgIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
+        long fallbackStarted = System.nanoTime();
+        List<KbChunkEntity> fallbackCandidates = kbChunkRepository.findTop50ByOrgIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
                         orgId,
                         allowedKnowledgeBaseIds,
-                        "ACTIVE").stream()
-                .filter(chunk -> isChunkSearchable(orgId, chunk))
+                        "ACTIVE");
+        List<String> fallback = filterSearchableChunks(orgId, fallbackCandidates, safeTopK, activeKnowledgeBaseIds).stream()
                 .limit(safeTopK)
                 .map(KbChunkEntity::getContent)
                 .collect(Collectors.toList());
+        timingsMs.put("fallback", elapsedMs(fallbackStarted));
+        timingsMs.put("total", elapsedMs(started));
+        return new RetrievalResult(fallback, retrievedKnowledgeBases, timingsMs, true);
     }
 
     private List<String> filterVectorHits(String orgId,
                                           List<VectorSearchHit> hits,
                                           int topK,
-                                          Map<String, Double> scoreThresholdByKb) {
-        ArrayList<String> out = new ArrayList<>();
+                                          Map<String, Double> scoreThresholdByKb,
+                                          Set<String> activeKnowledgeBaseIds) {
+        ArrayList<VectorSearchHit> candidates = new ArrayList<>();
+        LinkedHashSet<Long> chunkIds = new LinkedHashSet<>();
         for (VectorSearchHit hit : hits) {
             if (hit.chunkId() == null) {
+                continue;
+            }
+            if (!activeKnowledgeBaseIds.contains(hit.knowledgeBaseId())) {
                 continue;
             }
             double threshold = scoreThresholdByKb.getOrDefault(hit.knowledgeBaseId(), 0.0);
             if (hit.score() < threshold) {
                 continue;
             }
-            Optional<KbChunkEntity> chunk = kbChunkRepository.findByIdAndOrgId(hit.chunkId(), orgId);
-            if (chunk.isPresent() && isChunkSearchable(orgId, chunk.get())) {
-                out.add(chunk.get().getContent());
-            }
-            if (out.size() >= topK) {
-                break;
+            candidates.add(hit);
+            chunkIds.add(hit.chunkId());
+        }
+        if (candidates.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, KbChunkEntity> chunkById = kbChunkRepository.findByIdInAndOrgId(new ArrayList<>(chunkIds), orgId).stream()
+                .collect(Collectors.toMap(KbChunkEntity::getId, item -> item));
+        Map<Long, KbDocumentEntity> documentById = loadDocuments(orgId, chunkById.values().stream().toList());
+        ArrayList<String> out = new ArrayList<>();
+        for (VectorSearchHit hit : candidates) {
+            KbChunkEntity chunk = chunkById.get(hit.chunkId());
+            if (chunk != null && isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)) {
+                out.add(chunk.getContent());
+                if (out.size() >= topK) {
+                    break;
+                }
             }
         }
         return out;
     }
 
-    private boolean isChunkSearchable(String orgId, KbChunkEntity chunk) {
+    private List<KbChunkEntity> filterSearchableChunks(String orgId,
+                                                       List<KbChunkEntity> chunks,
+                                                       int topK,
+                                                       Set<String> activeKnowledgeBaseIds) {
+        Map<Long, KbDocumentEntity> documentById = loadDocuments(orgId, chunks);
+        ArrayList<KbChunkEntity> out = new ArrayList<>();
+        for (KbChunkEntity chunk : chunks) {
+            if (isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)) {
+                out.add(chunk);
+                if (out.size() >= topK) {
+                    break;
+                }
+            }
+        }
+        return out;
+    }
+
+    private Map<Long, KbDocumentEntity> loadDocuments(String orgId, List<KbChunkEntity> chunks) {
+        List<Long> documentIds = chunks.stream()
+                .map(KbChunkEntity::getDocumentId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        if (documentIds.isEmpty()) {
+            return Map.of();
+        }
+        return kbDocumentRepository.findByIdInAndOrgId(documentIds, orgId).stream()
+                .collect(Collectors.toMap(KbDocumentEntity::getId, item -> item));
+    }
+
+    private boolean isChunkSearchable(KbChunkEntity chunk,
+                                      Set<String> activeKnowledgeBaseIds,
+                                      Map<Long, KbDocumentEntity> documentById) {
         if (!chunk.isSearchable()) {
             return false;
         }
-        if (!isKnowledgeBaseSearchable(orgId, chunk.getKnowledgeBaseId())) {
+        if (!activeKnowledgeBaseIds.contains(chunk.getKnowledgeBaseId())) {
             return false;
         }
         Long documentId = chunk.getDocumentId();
         if (documentId == null) {
             return true;
         }
-        Optional<KbDocumentEntity> document = kbDocumentRepository.findByIdAndOrgId(documentId, orgId);
-        if (document.isEmpty()) {
+        KbDocumentEntity doc = documentById.get(documentId);
+        if (doc == null) {
             return false;
         }
-        KbDocumentEntity doc = document.get();
         return doc.isEnabled()
                 && !doc.isArchived()
                 && "PUBLISHED".equals(doc.getStatus())
                 && String.valueOf(doc.getKnowledgeBaseId()).equals(chunk.getKnowledgeBaseId());
     }
 
-    private boolean isKnowledgeBaseSearchable(String orgId, String knowledgeBaseId) {
-        Optional<Long> numericId = parseLong(knowledgeBaseId);
-        if (numericId.isEmpty()) {
-            return true;
-        }
-        Optional<KnowledgeBaseEntity> kb = knowledgeBaseRepository.findByIdAndOrgId(numericId.get(), orgId);
-        return kb.map(item -> "ACTIVE".equals(item.getStatus())).orElse(false);
+    private long elapsedMs(long startedNs) {
+        return Math.max(0L, (System.nanoTime() - startedNs) / 1_000_000L);
     }
 
     private Optional<Long> parseLong(String value) {
@@ -150,5 +235,14 @@ public class RagService {
         } catch (NumberFormatException ignored) {
             return Optional.empty();
         }
+    }
+
+    public record RetrievalResult(List<String> context,
+                                  List<RetrievedKnowledgeBase> knowledgeBases,
+                                  Map<String, Long> timingsMs,
+                                  boolean fallbackUsed) {
+    }
+
+    public record RetrievedKnowledgeBase(String id, String name) {
     }
 }

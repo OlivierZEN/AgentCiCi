@@ -242,6 +242,7 @@ public class SkillDefinitionService {
     private final ObjectMapper objectMapper;
     private final PlatformSkillTemplateRepository platformSkillTemplateRepository;
     private final AgentWorkflowSkillRefRepository agentWorkflowSkillRefRepository;
+    private final SkillApiToolService skillApiToolService;
 
     public SkillDefinitionService(SkillDefinitionRepository skillDefinitionRepository,
                                   AgentSkillBindingRepository agentSkillBindingRepository,
@@ -250,7 +251,8 @@ public class SkillDefinitionService {
                                   SpecCompilerService specCompilerService,
                                   ObjectMapper objectMapper,
                                   PlatformSkillTemplateRepository platformSkillTemplateRepository,
-                                  AgentWorkflowSkillRefRepository agentWorkflowSkillRefRepository) {
+                                  AgentWorkflowSkillRefRepository agentWorkflowSkillRefRepository,
+                                  SkillApiToolService skillApiToolService) {
         this.skillDefinitionRepository = skillDefinitionRepository;
         this.agentSkillBindingRepository = agentSkillBindingRepository;
         this.skillPromptAssembler = skillPromptAssembler;
@@ -259,6 +261,7 @@ public class SkillDefinitionService {
         this.objectMapper = objectMapper;
         this.platformSkillTemplateRepository = platformSkillTemplateRepository;
         this.agentWorkflowSkillRefRepository = agentWorkflowSkillRefRepository;
+        this.skillApiToolService = skillApiToolService;
     }
 
     @Transactional
@@ -330,6 +333,7 @@ public class SkillDefinitionService {
                 null,
                 null
         );
+        created.setRuntimeApiDraftJson(skillApiToolService.serializeDraftApis(command.runtimeApis()));
         SkillDefinitionEntity saved = skillDefinitionRepository.save(created);
         SkillVersionEntity draft = createDraftVersion(orgId, saved, command, "CREATE", null);
         saved.markDraft(draft.getId());
@@ -358,6 +362,7 @@ public class SkillDefinitionService {
         }
 
         entity.update(
+                requestedCode,
                 requireText(command.name(), "name"),
                 trimToNull(command.description()),
                 command.enabled() == null || command.enabled(),
@@ -367,6 +372,7 @@ public class SkillDefinitionService {
                 joinCsv(command.kbWhitelist()),
                 trimToNull(command.handoffRule()),
                 trimToNull(command.outputContract()),
+                skillApiToolService.serializeDraftApis(command.runtimeApis()),
                 normalizeRiskLevel(command.riskLevel())
         );
         SkillDefinitionEntity saved = skillDefinitionRepository.save(entity);
@@ -423,6 +429,7 @@ public class SkillDefinitionService {
                 splitCsv(entity.getKbWhitelist()),
                 entity.getHandoffRule(),
                 entity.getOutputContract(),
+                skillApiToolService.readDraftApis(entity.getRuntimeApiDraftJson()),
                 entity.getRiskLevel()
         ));
         if (preview.warnings().stream().anyMatch(item -> item.toLowerCase().contains("阻断"))) {
@@ -433,6 +440,7 @@ public class SkillDefinitionService {
         SkillVersionEntity published = createDraftVersion(orgId, entity, snapshot, "PUBLISH", null);
         published.markPublished();
         skillVersionRepository.save(published);
+        skillApiToolService.publishApisForVersion(orgId, entity, published, published.getRuntimeApiSnapshotJson());
         entity.markPublished(published.getId(), command == null ? "system" : fallback(trimToNull(command.actorUserId()), "system"));
         return skillDefinitionRepository.save(entity);
     }
@@ -449,6 +457,7 @@ public class SkillDefinitionService {
                 .filter(item -> Boolean.TRUE.equals(item.getRestoreVisible()))
                 .orElseThrow(() -> new IllegalArgumentException("Version not found"));
         entity.update(
+                entity.getSkillCode(),
                 entity.getName(),
                 entity.getDescription(),
                 entity.isEnabled(),
@@ -458,6 +467,7 @@ public class SkillDefinitionService {
                 source.getEffectiveKbWhitelist(),
                 entity.getHandoffRule(),
                 entity.getOutputContract(),
+                source.getRuntimeApiSnapshotJson(),
                 source.getRiskLevel()
         );
         SkillDefinitionEntity saved = skillDefinitionRepository.save(entity);
@@ -655,6 +665,7 @@ public class SkillDefinitionService {
                         null,
                         "always-on"
                 )),
+                List.of(),
                 SkillResolverService.ResolvedPolicyBundle.EMPTY
         );
         String promptPreview = skillPromptAssembler.assemble(
@@ -663,6 +674,12 @@ public class SkillDefinitionService {
         );
         List<String> compileSummary = new ArrayList<>(compiled.compileSummary());
         compileSummary.add("skillCode=" + normalizeSkillCode(command.skillCode()) + ", riskLevel=" + riskLevel);
+        String runtimeApiJson = skillApiToolService.serializeDraftApis(command.runtimeApis());
+        SkillApiToolService.RuntimeApiCompilePreview apiPreview =
+                skillApiToolService.previewCompileApis(orgId, normalizeSkillCode(command.skillCode()), runtimeApiJson);
+        warnings.addAll(apiPreview.warnings());
+        apiPreview.errors().forEach(error -> warnings.add("阻断: " + error));
+        compileSummary.add("runtimeApis=" + apiPreview.toolDefinitions().size());
         return new PreviewResult(
                 promptPreview,
                 tools,
@@ -670,7 +687,8 @@ public class SkillDefinitionService {
                 riskLevel,
                 warnings,
                 compileSummary,
-                toPolicyJson(compiled.specIr())
+                toPolicyJson(compiled.specIr()),
+                apiPreview
         );
     }
 
@@ -817,6 +835,7 @@ public class SkillDefinitionService {
                 String.join("\n", compiled.warnings()),
                 "DRAFT"
         ));
+        saved.setRuntimeApiSnapshotJson(skill.getRuntimeApiDraftJson());
         saved.applyGovernance(
                 fallback(trimToNull(command.changeLog()), defaultChangeLog(versionSource)),
                 String.join("\n", buildDiffSummary(skill, tools, kbIds, riskLevel, versionSource)),
@@ -970,6 +989,7 @@ public class SkillDefinitionService {
             List<String> kbWhitelist,
             String handoffRule,
             String outputContract,
+            List<Map<String, Object>> runtimeApis,
             String riskLevel,
             String sourceType,
             String specIrJson,
@@ -989,6 +1009,7 @@ public class SkillDefinitionService {
                     entity.getKbWhitelist() == null ? List.of() : java.util.Arrays.stream(entity.getKbWhitelist().split(",")).map(String::trim).filter(item -> !item.isBlank()).toList(),
                     entity.getHandoffRule(),
                     entity.getOutputContract(),
+                    List.of(),
                     entity.getRiskLevel(),
                     "manual",
                     null,
@@ -1018,6 +1039,7 @@ public class SkillDefinitionService {
             List<String> kbWhitelist,
             String handoffRule,
             String outputContract,
+            List<Map<String, Object>> runtimeApis,
             String riskLevel
     ) {
     }
@@ -1029,7 +1051,8 @@ public class SkillDefinitionService {
             String riskLevel,
             List<String> warnings,
             List<String> compileSummary,
-            String specIr
+            String specIr,
+            SkillApiToolService.RuntimeApiCompilePreview runtimeApiPreview
     ) {
     }
 

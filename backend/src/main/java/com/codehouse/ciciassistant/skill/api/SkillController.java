@@ -10,6 +10,7 @@ import com.codehouse.ciciassistant.skill.service.SkillAuthoringService;
 import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import com.codehouse.ciciassistant.skill.service.SkillPackageService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -39,15 +40,18 @@ public class SkillController {
     private final SkillAuthoringService skillAuthoringService;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillPackageService skillPackageService;
+    private final ObjectMapper objectMapper;
 
     public SkillController(SkillDefinitionService skillDefinitionService,
                            SkillAuthoringService skillAuthoringService,
                            SkillVersionRepository skillVersionRepository,
-                           SkillPackageService skillPackageService) {
+                           SkillPackageService skillPackageService,
+                           ObjectMapper objectMapper) {
         this.skillDefinitionService = skillDefinitionService;
         this.skillAuthoringService = skillAuthoringService;
         this.skillVersionRepository = skillVersionRepository;
         this.skillPackageService = skillPackageService;
+        this.objectMapper = objectMapper;
     }
 
     @RequireOrgAdmin
@@ -222,6 +226,7 @@ public class SkillController {
                 request.kbWhitelist(),
                 request.handoffRule(),
                 request.outputContract(),
+                request.runtimeApis(),
                 request.riskLevel()
         )));
     }
@@ -356,6 +361,7 @@ public class SkillController {
                 request.kbWhitelist(),
                 request.handoffRule(),
                 request.outputContract(),
+                request.runtimeApis(),
                 request.riskLevel(),
                 null,
                 null,
@@ -407,6 +413,7 @@ public class SkillController {
         payload.put("kbWhitelist", splitCsv(item.getKbWhitelist()));
         payload.put("handoffRule", item.getHandoffRule());
         payload.put("outputContract", item.getOutputContract());
+        payload.put("runtimeApis", parseRuntimeApis(item.getRuntimeApiDraftJson()));
         payload.put("createdAt", item.getCreatedAt().toString());
         payload.put("updatedAt", item.getUpdatedAt().toString());
         return payload;
@@ -440,7 +447,19 @@ public class SkillController {
         payload.put("createdAt", item.getCreatedAt().toString());
         payload.put("effectiveToolWhitelist", splitCsv(item.getEffectiveToolWhitelist()));
         payload.put("effectiveKbWhitelist", splitCsv(item.getEffectiveKbWhitelist()));
+        payload.put("runtimeApis", parseRuntimeApis(item.getRuntimeApiSnapshotJson()));
         return payload;
+    }
+
+    private List<Map<String, Object>> parseRuntimeApis(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>() {});
+        } catch (Exception ex) {
+            return List.of();
+        }
     }
 
     public record UpsertSkillRequest(
@@ -454,6 +473,7 @@ public class SkillController {
             List<String> kbWhitelist,
             String handoffRule,
             String outputContract,
+            List<Map<String, Object>> runtimeApis,
             String riskLevel,
             String changeLog
     ) {
@@ -481,6 +501,7 @@ public class SkillController {
             List<String> kbWhitelist,
             String handoffRule,
             String outputContract,
+            List<Map<String, Object>> runtimeApis,
             String riskLevel
     ) {
     }
@@ -501,6 +522,7 @@ public class SkillController {
             List<String> kbWhitelist,
             String handoffRule,
             String outputContract,
+            List<Map<String, Object>> runtimeApis,
             String riskLevel
     ) {
     }

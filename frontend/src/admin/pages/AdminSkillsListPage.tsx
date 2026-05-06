@@ -105,12 +105,9 @@ export default function AdminSkillsListPage() {
         flash("导入解析成功，但未返回有效预览");
         return;
       }
-      if (preview.resourceMapping?.hasUnmatchedResources) {
-        const msg = (preview.warnings ?? []).slice(0, 2).join("；");
-        flash(`存在未匹配资源，请先在新建页导入并编辑：${msg}`);
-        nav("/admin/skills/new");
-        return;
-      }
+      const unmatchedResourceMessage = preview.resourceMapping?.hasUnmatchedResources
+        ? (preview.warnings ?? []).slice(0, 2).join("；")
+        : "";
       const importId = preview.importId;
       const createRes = await fetch(`/skills/imports/${importId}/create`, {
         method: "POST",
@@ -123,7 +120,11 @@ export default function AdminSkillsListPage() {
         return;
       }
       const created = createJson.data as Skill;
-      flash("已导入为自定义技能草稿");
+      flash(
+        unmatchedResourceMessage
+          ? `已导入为自定义技能草稿，部分资源未匹配：${unmatchedResourceMessage}`
+          : "已导入为自定义技能草稿",
+      );
       await loadSkills();
       nav(`/admin/skills/${created.id}/edit`);
     } finally {

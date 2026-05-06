@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>智能体监控效果图</title>
+    <style>
+      :root {
+        --ink-900: #2b2217;
+        --ink-700: #5f523f;
+        --ink-500: #7c6d59;
+        --line-soft: #ded2bb;
+        --line-strong: #b99652;
+        --canvas: #f7f3eb;
+        --surface: #fffdf8;
+        --surface-muted: #faf4e8;
+        --surface-tint: #f3e8d3;
+        --accent: #a67c2f;
+        --accent-strong: #876223;
+        --success-soft: #f1f7ea;
+        --success-ink: #166534;
+        --danger-soft: #fff3ef;
+        --danger-ink: #b42318;
+        --warn-soft: #fff8df;
+        --warn-ink: #8a5c00;
+        color: var(--ink-900);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          linear-gradient(180deg, rgba(255, 253, 248, 0.88), rgba(247, 243, 235, 0.96)),
+          repeating-linear-gradient(90deg, rgba(185, 150, 82, 0.08) 0, rgba(185, 150, 82, 0.08) 1px, transparent 1px, transparent 72px);
+      }
+
+      .monitor {
+        width: 1440px;
+        min-height: 920px;
+        padding: 18px;
+        margin: 0 auto;
+        background: var(--canvas);
+      }
+
+      .topbar {
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) auto;
+        gap: 16px;
+        align-items: center;
+        padding: 16px 18px;
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
+        background: var(--surface);
+        box-shadow: 0 12px 32px rgba(43, 34, 23, 0.06);
+      }
+
+      .eyebrow {
+        margin: 0 0 4px;
+        color: var(--accent-strong);
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+      }
+
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+
+      h1 {
+        font-size: 24px;
+        line-height: 1.2;
+        font-weight: 650;
+        letter-spacing: 0;
+      }
+
+      .topbar__sub {
+        margin-top: 6px;
+        color: var(--ink-500);
+        font-size: 13px;
+      }
+
+      .metrics {
+        display: grid;
+        grid-template-columns: repeat(5, 112px);
+        gap: 8px;
+      }
+
+      .metric {
+        min-height: 62px;
+        padding: 9px 10px;
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        background: var(--surface-muted);
+      }
+
+      .metric span {
+        display: block;
+        color: var(--ink-500);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .metric strong {
+        display: block;
+        margin-top: 5px;
+        color: var(--ink-900);
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: auto auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+        margin-top: 12px;
+      }
+
+      .control,
+      .search,
+      .button {
+        height: 34px;
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        background: var(--surface);
+        color: var(--ink-700);
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .control {
+        min-width: 142px;
+        padding: 0 10px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .search {
+        min-width: 320px;
+        padding: 0 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--ink-500);
+      }
+
+      .button {
+        padding: 0 13px;
+      }
+
+      .button--primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--surface);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 278px minmax(0, 1fr) 392px;
+        gap: 12px;
+        margin-top: 12px;
+      }
+
+      .panel {
+        border: 1px solid var(--line-soft);
+        border-radius: 14px;
+        background: var(--surface);
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .panel__head {
+        min-height: 48px;
+        padding: 12px 14px 10px;
+        border-bottom: 1px solid var(--line-soft);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .panel__title {
+        font-size: 14px;
+        font-weight: 650;
+      }
+
+      .panel__meta {
+        color: var(--ink-500);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .agent-list {
+        padding: 8px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .agent-row {
+        display: grid;
+        grid-template-columns: 34px 1fr auto;
+        gap: 9px;
+        align-items: center;
+        padding: 9px;
+        border: 1px solid transparent;
+        border-radius: 10px;
+      }
+
+      .agent-row.is-active {
+        border-color: var(--line-strong);
+        background: #fffaf0;
+      }
+
+      .avatar {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        color: var(--surface);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .avatar--gold {
+        background: #b98a3c;
+      }
+
+      .avatar--rose {
+        background: #b46a5a;
+      }
+
+      .avatar--green {
+        background: #667f4c;
+      }
+
+      .agent-row h3 {
+        font-size: 13px;
+        line-height: 1.35;
+        font-weight: 650;
+      }
+
+      .agent-row p {
+        margin-top: 2px;
+        color: var(--ink-500);
+        font-size: 11px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status {
+        display: inline-flex;
+        align-items: center;
+        height: 22px;
+        padding: 0 7px;
+        border: 1px solid var(--line-soft);
+        border-radius: 999px;
+        background: var(--surface-muted);
+        color: var(--ink-700);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .status--running {
+        border-color: #c9b16f;
+        background: var(--warn-soft);
+        color: var(--warn-ink);
+      }
+
+      .status--failed {
+        border-color: #efc7bc;
+        background: var(--danger-soft);
+        color: var(--danger-ink);
+      }
+
+      .status--ok {
+        border-color: #c7dfb8;
+        background: var(--success-soft);
+        color: var(--success-ink);
+      }
+
+      .tabs {
+        display: flex;
+        gap: 18px;
+        padding: 0 14px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .tab {
+        position: relative;
+        padding: 11px 0 9px;
+        color: var(--ink-700);
+        font-size: 13px;
+        font-weight: 650;
+      }
+
+      .tab.is-active {
+        color: var(--accent-strong);
+      }
+
+      .tab.is-active::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: -1px;
+        height: 2px;
+        background: var(--line-strong);
+      }
+
+      .log-list {
+        display: grid;
+      }
+
+      .log-row {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.45fr) 110px 120px 150px 104px;
+        gap: 10px;
+        align-items: center;
+        padding: 11px 14px;
+        border-bottom: 1px solid rgba(222, 210, 187, 0.72);
+      }
+
+      .log-row.is-selected {
+        background: #fffaf0;
+      }
+
+      .log-row__title strong {
+        display: block;
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .log-row__title span,
+      .cell-muted {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink-500);
+        font-size: 11px;
+      }
+
+      .chain {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+      }
+
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        height: 21px;
+        padding: 0 6px;
+        border: 1px solid var(--line-soft);
+        border-radius: 7px;
+        background: var(--surface-muted);
+        color: var(--ink-700);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .detail {
+        display: grid;
+        grid-template-rows: auto auto 1fr;
+      }
+
+      .trace-summary {
+        padding: 12px 14px;
+        border-bottom: 1px solid var(--line-soft);
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .kv {
+        min-width: 0;
+      }
+
+      .kv span {
+        display: block;
+        color: var(--ink-500);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .kv strong {
+        display: block;
+        margin-top: 2px;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .timeline {
+        padding: 12px 14px;
+        display: grid;
+        gap: 9px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 20px 1fr auto;
+        gap: 8px;
+        align-items: start;
+      }
+
+      .dot {
+        width: 10px;
+        height: 10px;
+        margin: 4px auto 0;
+        border-radius: 999px;
+        border: 2px solid var(--line-strong);
+        background: var(--surface);
+      }
+
+      .step h3 {
+        font-size: 12px;
+        font-weight: 650;
+      }
+
+      .step p {
+        margin-top: 2px;
+        color: var(--ink-500);
+        font-size: 11px;
+        line-height: 1.45;
+      }
+
+      .step time {
+        color: var(--ink-500);
+        font-size: 11px;
+        font-weight: 650;
+      }
+
+      .detail-groups {
+        padding: 12px 14px 14px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .group {
+        border: 1px solid var(--line-soft);
+        border-radius: 10px;
+        background: var(--surface-muted);
+        padding: 10px;
+      }
+
+      .group h3 {
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .group p {
+        margin-top: 5px;
+        color: var(--ink-500);
+        font-size: 11px;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 900px) {
+        .monitor {
+          width: 100%;
+          min-height: 0;
+        }
+
+        .topbar,
+        .workspace,
+        .toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .metrics {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        .log-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="monitor">
+      <header class="topbar">
+        <section>
+          <p class="eyebrow">AGENT OBSERVABILITY</p>
+          <h1>智能体监控</h1>
+          <p class="topbar__sub">查看每个智能体当前运行状态，并追踪最近 7 天的会话、任务、模型、工具、技能与知识库链路。</p>
+        </section>
+        <section class="metrics" aria-label="监控指标">
+          <article class="metric"><span>在线智能体</span><strong>8</strong></article>
+          <article class="metric"><span>运行中</span><strong>3</strong></article>
+          <article class="metric"><span>异常/待确认</span><strong>2</strong></article>
+          <article class="metric"><span>7 天会话</span><strong>428</strong></article>
+          <article class="metric"><span>平均耗时</span><strong>1.8s</strong></article>
+        </section>
+      </header>
+
+      <section class="toolbar" aria-label="监控筛选">
+        <div class="control">近 7 天 <span>⌄</span></div>
+        <div class="control">全部智能体 <span>⌄</span></div>
+        <div class="search">搜索 trace id、会话、工具或知识库</div>
+        <button class="button button--primary" type="button">刷新状态</button>
+      </section>
+
+      <section class="workspace">
+        <aside class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">智能体状态</h2>
+            <span class="panel__meta">实时</span>
+          </div>
+          <div class="agent-list">
+            <article class="agent-row is-active">
+              <div class="avatar avatar--gold">思</div>
+              <div>
+                <h3>思思</h3>
+                <p>正在执行客户邮件归纳</p>
+              </div>
+              <span class="status status--running">运行中</span>
+            </article>
+            <article class="agent-row">
+              <div class="avatar avatar--rose">客</div>
+              <div>
+                <h3>客户成功</h3>
+                <p>等待用户确认回写 CRM</p>
+              </div>
+              <span class="status">待确认</span>
+            </article>
+            <article class="agent-row">
+              <div class="avatar avatar--green">搜</div>
+              <div>
+                <h3>行业搜索</h3>
+                <p>近 7 天 96 次调用</p>
+              </div>
+              <span class="status status--ok">正常</span>
+            </article>
+            <article class="agent-row">
+              <div class="avatar avatar--rose">审</div>
+              <div>
+                <h3>审批助手</h3>
+                <p>CloudCC 工具参数缺失</p>
+              </div>
+              <span class="status status--failed">异常</span>
+            </article>
+          </div>
+        </aside>
+
+        <section class="panel">
+          <div class="panel__head">
+            <h2 class="panel__title">最近 7 天运行日志</h2>
+            <span class="panel__meta">428 条记录</span>
+          </div>
+          <nav class="tabs" aria-label="日志范围">
+            <span class="tab is-active">全部</span>
+            <span class="tab">运行中</span>
+            <span class="tab">异常</span>
+            <span class="tab">待确认</span>
+            <span class="tab">工具调用</span>
+            <span class="tab">知识库检索</span>
+          </nav>
+          <div class="log-list">
+            <article class="log-row is-selected">
+              <div class="log-row__title">
+                <strong>检查收件箱并总结未读邮件</strong>
+                <span>trace ac91f2 · Web 会话 · 18:02:11</span>
+              </div>
+              <span class="status status--running">运行中</span>
+              <div><strong>思思</strong><span class="cell-muted">会话 34</span></div>
+              <div class="chain">
+                <span class="chip">GPT-4.1</span>
+                <span class="chip">邮箱工具</span>
+                <span class="chip">邮件总结技能</span>
+              </div>
+              <div><strong>1.42s</strong><span class="cell-muted">3 节点</span></div>
+            </article>
+            <article class="log-row">
+              <div class="log-row__title">
+                <strong>订阅台账字段查询</strong>
+                <span>trace b7810c · 飞书 · 17:48:33</span>
+              </div>
+              <span class="status status--failed">异常</span>
+              <div><strong>审批助手</strong><span class="cell-muted">会话 12</span></div>
+              <div class="chain">
+                <span class="chip">CloudCC MCP</span>
+                <span class="chip">字段发现</span>
+              </div>
+              <div><strong>3.86s</strong><span class="cell-muted">参数缺失</span></div>
+            </article>
+            <article class="log-row">
+              <div class="log-row__title">
+                <strong>白糖客户感知报告生成</strong>
+                <span>trace f04c21 · Web 会话 · 16:30:08</span>
+              </div>
+              <span class="status">待确认</span>
+              <div><strong>行业搜索</strong><span class="cell-muted">会话 8</span></div>
+              <div class="chain">
+                <span class="chip">Tavily</span>
+                <span class="chip">RAG</span>
+                <span class="chip">白糖技能</span>
+              </div>
+              <div><strong>8.64s</strong><span class="cell-muted">9 节点</span></div>
+            </article>
+            <article class="log-row">
+              <div class="log-row__title">
+                <strong>客户回访任务创建</strong>
+                <span>trace e76d91 · 定时任务 · 昨天 09:00</span>
+              </div>
+              <span class="status status--ok">已完成</span>
+              <div><strong>客户成功</strong><span class="cell-muted">自动任务</span></div>
+              <div class="chain">
+                <span class="chip">任务技能</span>
+                <span class="chip">CRM 写回</span>
+              </div>
+              <div><strong>2.12s</strong><span class="cell-muted">5 节点</span></div>
+            </article>
+          </div>
+        </section>
+
+        <aside class="panel detail">
+          <div class="panel__head">
+            <h2 class="panel__title">链路追踪</h2>
+            <span class="panel__meta">trace ac91f2</span>
+          </div>
+          <section class="trace-summary">
+            <div class="kv"><span>智能体</span><strong>思思</strong></div>
+            <div class="kv"><span>状态</span><strong>运行中</strong></div>
+            <div class="kv"><span>渠道</span><strong>Web 会话</strong></div>
+            <div class="kv"><span>总耗时</span><strong>1.42s</strong></div>
+          </section>
+          <section class="timeline">
+            <article class="step">
+              <span class="dot"></span>
+              <div><h3>用户输入</h3><p>检查一下我的收件箱，如果有未读新邮件，飞书通知我，并总结邮件。</p></div>
+              <time>0ms</time>
+            </article>
+            <article class="step">
+              <span class="dot"></span>
+              <div><h3>技能命中</h3><p>命中“邮件总结技能” v3，输出契约要求返回未读列表、摘要和通知结果。</p></div>
+              <time>82ms</time>
+            </article>
+            <article class="step">
+              <span class="dot"></span>
+              <div><h3>工具调用</h3><p>调用 email.listUnread，参数已脱敏，返回 3 封未读邮件。</p></div>
+              <time>641ms</time>
+            </article>
+            <article class="step">
+              <span class="dot"></span>
+              <div><h3>模型总结</h3><p>GPT-4.1 生成摘要，准备调用飞书通知工具。</p></div>
+              <time>1.42s</time>
+            </article>
+          </section>
+          <section class="detail-groups">
+            <article class="group">
+              <h3>大模型交互</h3>
+              <p>模型 GPT-4.1，输入 2.4k tokens，输出 318 tokens，温度 0.2。展示摘要，不展示内部推理。</p>
+            </article>
+            <article class="group">
+              <h3>工具与技能</h3>
+              <p>工具 email.listUnread、feishu.notify。技能 邮件总结技能 v3。所有 Authorization、accessToken 字段已脱敏。</p>
+            </article>
+            <article class="group">
+              <h3>知识库</h3>
+              <p>本次未触发知识库检索。若触发，将展示知识库名称、命中片段数、fallback 和检索耗时。</p>
+            </article>
+          </section>
+        </aside>
+      </section>
+    </main>
+  </body>
+</html>

@@ -158,6 +158,17 @@ The palette is restrained and operational: warm neutrals carry the surface, whil
 - **Body** (500, 13px, 1.5): Default copy, table content, form values.
 - **Label** (700, 11px, 0.08em tracking): Eyebrows, field labels, table headers, compact status markers.
 
+### Product UI Scale
+- **Default feature UI text:** New product controls, chooser rows, popovers, composer tools, table actions, toolbar buttons, menu items, and inline settings must default to Body scale (`13px`) unless they are true section titles or page headings.
+- **Secondary text:** Codes, descriptions, helper text, menu metadata, and compact badges should use `11px` to `12px`, with muted bronze or metadata color.
+- **Compact controls:** Small product tools and icon buttons should use a 32px to 34px height, 10px radius, 13px text, and 15px to 16px icons. Larger 38px+ controls are reserved for primary actions, dialog footers, or touch-heavy contexts.
+- **Picker and popover rows:** Skill lists, command menus, row menus, and lightweight pickers must use compact row density. Avoid card-like rows, per-item background blocks, row shadows, oversized icons, and 15px+ menu labels unless the picker is the main page surface.
+- **Lightweight floating menus:** Small menus attached to composer tools, icon buttons, or row actions should use 12px primary text, 10px to 11px metadata only when it is required for the task, 13px to 14px icons, 26px to 30px rows, 168px to 220px width, opaque warm ivory surfaces, gold-mist borders, and restrained shadows only when needed. Do not style these menus as stacked cards.
+- **Lightweight list labels:** Compact skill, command, and picker lists should display the human-facing name as the primary label. Do not show implementation codes, slugs, ids, or secondary metadata by default, and do not put a separate rounded background block, selected background, hover background, or shadow behind each row.
+- **No nested background frames:** Product pages must not put additional background boxes inside an already framed panel. Rows, tabs, search interiors, status labels, trace details, metric groups, and detail summaries should use text hierarchy plus the minimum necessary 1px divider lines. Do not use per-row background blocks, card-like inner containers, chip backgrounds, selected-row fills, hover fills, row shadows, or box-shadow focus frames inside a panel.
+- **Selection without lift:** Selected, active, hover, pressed, focus, and focus-visible states inside product panels must never add `box-shadow`, row shadow, glow, inset shadow, raised card treatment, or browser-like focus shadow. Prefer strong text color, font weight, or a tab underline. Do not add a new border for selection when text hierarchy or an existing divider can carry the state.
+- **New UI rule:** Any newly added product UI must first reuse the typography and control scale in this file. Do not introduce page-local large fonts, fat buttons, or oversized menu rows for isolated features.
+
 ### Named Rules
 **The No-Drama Scale Rule.** Product UI hierarchy comes from discipline, not giant jumps in size.
 
@@ -186,6 +197,7 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 - **Default behavior:** Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless the feature spec explicitly says it should be a popover, drawer, toast, or inline disclosure.
 - **Structure:** Modal windows use a blocking overlay, `role="dialog"`, `aria-modal="true"`, a labelled heading, an opaque surface, and a fixed footer when actions are present.
 - **Visual language:** Modal surfaces inherit `鎏金账房`: warm ivory background, thin gold-tinted borders, compact density, ink typography, and restrained shadows. Close controls are quiet icon buttons, not bordered button blocks.
+- **Close control rule:** The top-right close `×` must render as a bare icon/glyph with no visible border, no bordered square or circle, and no button chrome. Hover and focus may use a subtle tinted background, but the close control itself must remain borderless.
 - **Exception rule:** Non-modal popups require a task-specific reason and must be documented in the relevant spec or design note before implementation.
 
 ### Cards / Containers
@@ -194,17 +206,27 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 - **Shadow Strategy:** Minimal lift, mostly border-defined
 - **Border:** Thin gold-tinted line, slightly stronger on active states
 - **Internal Padding:** 14px to 20px, tighter in data-dense panels
+- **Strict no box-in-box rule:** Once a region is already framed as a panel, its children must not become separate background cards unless they are true modals or repeated standalone cards required by the feature. Inner content uses simple dividers, text color, underlines, or a single border rule; no rounded background wrappers, nested panels, row cards, chip blocks, or stacked detail boxes.
 
 ### Inputs / Fields
 - **Style:** White fill, crisp border, compact height, dark text
 - **Focus:** Strong warm-gold outline or ring plus subtle border shift
 - **Error / Disabled:** Error uses pale red background with strong text; disabled stays low-contrast but readable
+- **Inline search rule:** Search fields inside dense product workspaces should avoid inner input boxes. Use one simple outer control or one bottom rule, and ensure the native input itself has transparent background, no inner border, no box shadow, and no blue browser focus frame.
 
 ### Navigation
 - **Style:** Tinted neutral sidebar, compact vertical rhythm, active item shown with gold-tinted background and strong bronze label color. Mobile collapses to a top-first stack rather than preserving a tall fixed rail.**
 
+### Product Tabs
+- **Default form:** Product-page tabs use text tabs, not pills, chips, segmented controls, or bordered mini-cards.
+- **Container:** Place tabs on a single `#ded2bb` bottom rule when the following content needs separation. Do not add a rounded container around the tab row.
+- **Inactive state:** Use warm bronze text (`#5f523f`), compact bold weight, and no background fill.
+- **Active state:** Use strong bronze text (`#876223`) with a 2px pressed-gold underline (`#b99652`) aligned to the tab label; no rounded active background.
+- **Usage:** Detail panes such as user information, skill fields, and settings sections should reuse this style unless a feature spec explicitly calls for a different tab pattern.
+
 ### Tables and Workspace Rows
-- **Style:** Fixed header feel, compact row padding, muted header strip, selected rows use champagne tint instead of saturated fill**
+- **Style:** Fixed header feel, compact row padding, muted header strip, and simple row dividers.
+- **Selection:** Selected rows use strong text color, font weight, or an underline. Avoid adding a selected border; only reuse an existing divider when absolutely necessary. Do not use selected-row background fills, row cards, row shadows, glow, inset shadows, raised frames, or box-shadow focus frames.
 
 ### Admin CRUD Lists
 
@@ -229,7 +251,9 @@ Admin list pages must be stable before they are decorative. Lists, filters, sear
 
 **Row action rules:**
 - Do not show multiple row action buttons permanently in dense tables. Use a hover/focus "more" trigger for secondary row actions when the actions are not the main task of the page.
+- The unified row action structure is a three-dot trigger plus an opaque vertical menu. In code, prefer the shared `admin-row-menu` class family for new admin tables; legacy page-specific menus should match its sizing, trigger behavior, opacity, radius, and menu-item vocabulary.
 - Row action menus must be opaque, use the same menu-item styling for links and buttons, and avoid button chrome inside the menu. Dangerous actions may use danger text and hover background, but should still align with normal menu item sizing.
+- Keep the real `td` as a table cell. Put the three-dot trigger and menu inside a child wrapper, never by making the `td` itself flex/grid/block.
 - Do not expose actions that violate the page's responsibility. For example, if publishing must happen in an editor or governance flow, do not add publish buttons to a list page.
 - Standard or read-only rows should not show edit/view affordances if the product decision is that users cannot inspect or change them from that surface.
 

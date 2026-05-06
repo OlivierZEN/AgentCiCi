@@ -6,6 +6,7 @@ import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
+import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -39,6 +40,7 @@ public class ToolOrchestratorService {
     private final UserMemoryService userMemoryService;
     private final TavilyToolService tavilyToolService;
     private final PlatformGovernanceService platformGovernanceService;
+    private final SkillApiToolService skillApiToolService;
     private final ObjectMapper objectMapper;
 
     public ToolOrchestratorService(McpServerService mcpServerService,
@@ -47,6 +49,7 @@ public class ToolOrchestratorService {
                                    UserMemoryService userMemoryService,
                                    TavilyToolService tavilyToolService,
                                    PlatformGovernanceService platformGovernanceService,
+                                   SkillApiToolService skillApiToolService,
                                    ObjectMapper objectMapper) {
         this.mcpServerService = mcpServerService;
         this.cloudccOpenApiService = cloudccOpenApiService;
@@ -54,6 +57,7 @@ public class ToolOrchestratorService {
         this.userMemoryService = userMemoryService;
         this.tavilyToolService = tavilyToolService;
         this.platformGovernanceService = platformGovernanceService;
+        this.skillApiToolService = skillApiToolService;
         this.objectMapper = objectMapper;
     }
 
@@ -66,6 +70,12 @@ public class ToolOrchestratorService {
     }
 
     public List<Map<String, Object>> getToolDefinitions(String orgId, List<String> allowedToolNames) {
+        return getToolDefinitions(orgId, allowedToolNames, List.of());
+    }
+
+    public List<Map<String, Object>> getToolDefinitions(String orgId,
+                                                        List<String> allowedToolNames,
+                                                        List<SkillApiToolService.ResolvedSkillApiTool> skillApiTools) {
         List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
         List<Map<String, Object>> result = new ArrayList<>();
 
@@ -112,6 +122,18 @@ public class ToolOrchestratorService {
             }
             result.add(tavilyToolService.toolDefinition(toolName));
         }
+
+        // Skill-private declarative API tools are injected only from the resolved active skill context.
+        result.addAll(skillApiToolService.getRuntimeToolDefinitions(skillApiTools).stream()
+                .filter(tool -> {
+                    Object function = tool.get("function");
+                    if (!(function instanceof Map<?, ?> map)) {
+                        return false;
+                    }
+                    Object name = map.get("name");
+                    return name != null && isAllowed(normalizedAllowedToolNames, name.toString(), false);
+                })
+                .toList());
 
         // 2. MCP-discovered tools
         List<ResolvedTool> mcpTools = mcpServerService.getAllToolsForOrg(orgId);
@@ -192,6 +214,13 @@ public class ToolOrchestratorService {
         }
         if (!platformGovernanceService.isRuntimeToolEnabled(orgId, canonicalToolName)) {
             return "Tool is disabled by platform runtime control: " + canonicalToolName;
+        }
+
+        if (canonicalToolName != null && canonicalToolName.startsWith(SkillApiToolService.TOOL_PREFIX)) {
+            if (normalizedAllowedToolNames.isEmpty() || !normalizedAllowedToolNames.contains(canonicalToolName)) {
+                return "Skill API tool is not active for the current skill context: " + canonicalToolName;
+            }
+            return skillApiToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
         }
 
         // Native built-in tools

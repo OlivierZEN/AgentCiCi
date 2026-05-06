@@ -11,6 +11,8 @@ import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.spec.SpecCompilerService;
 import com.codehouse.ciciassistant.userworkflow.domain.UserAgentProfileEntity;
 import com.codehouse.ciciassistant.userworkflow.domain.UserAgentProfileRepository;
+import com.codehouse.ciciassistant.userworkflow.domain.UserQuickCommandEntity;
+import com.codehouse.ciciassistant.userworkflow.domain.UserQuickCommandRepository;
 import com.codehouse.ciciassistant.userworkflow.domain.UserWorkflowExecutionEntity;
 import com.codehouse.ciciassistant.userworkflow.domain.UserWorkflowExecutionRepository;
 import com.codehouse.ciciassistant.userworkflow.domain.UserWorkflowSpecEntity;
@@ -59,6 +61,7 @@ public class UserWorkflowService {
     private final UserWorkflowVersionRepository userWorkflowVersionRepository;
     private final UserWorkflowTriggerRepository userWorkflowTriggerRepository;
     private final UserWorkflowExecutionRepository userWorkflowExecutionRepository;
+    private final UserQuickCommandRepository userQuickCommandRepository;
     private final SpecCompilerService specCompilerService;
     private final ToolOrchestratorService toolOrchestratorService;
     private final FeishuBotConfigService feishuBotConfigService;
@@ -73,6 +76,7 @@ public class UserWorkflowService {
                                UserWorkflowVersionRepository userWorkflowVersionRepository,
                                UserWorkflowTriggerRepository userWorkflowTriggerRepository,
                                UserWorkflowExecutionRepository userWorkflowExecutionRepository,
+                               UserQuickCommandRepository userQuickCommandRepository,
                                SpecCompilerService specCompilerService,
                                ToolOrchestratorService toolOrchestratorService,
                                FeishuBotConfigService feishuBotConfigService,
@@ -86,6 +90,7 @@ public class UserWorkflowService {
         this.userWorkflowVersionRepository = userWorkflowVersionRepository;
         this.userWorkflowTriggerRepository = userWorkflowTriggerRepository;
         this.userWorkflowExecutionRepository = userWorkflowExecutionRepository;
+        this.userQuickCommandRepository = userQuickCommandRepository;
         this.specCompilerService = specCompilerService;
         this.toolOrchestratorService = toolOrchestratorService;
         this.feishuBotConfigService = feishuBotConfigService;
@@ -237,6 +242,42 @@ public class UserWorkflowService {
     public List<UserWorkflowVersionEntity> listVersions(String orgId, String userId, String requestedAgentId) {
         String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
         return userWorkflowVersionRepository.findByOrgIdAndUserIdAndAgentIdOrderByVersionNoDesc(orgId, userId, agentId);
+    }
+
+    public List<UserQuickCommandEntity> listQuickCommands(String orgId, String userId, String requestedAgentId) {
+        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
+        return userQuickCommandRepository.findByOrgIdAndUserIdAndAgentIdAndEnabledTrueOrderBySortOrderAscIdAsc(
+                orgId,
+                userId,
+                agentId
+        );
+    }
+
+    @Transactional
+    public UserQuickCommandEntity createQuickCommand(String orgId,
+                                                    String userId,
+                                                    String requestedAgentId,
+                                                    CreateQuickCommandCommand command) {
+        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
+        String promptText = limitText(safeText(command.promptText()).trim(), 2000);
+        if (promptText.isBlank()) {
+            throw new IllegalArgumentException("快捷指令内容不能为空");
+        }
+        String title = limitText(safeText(command.title()).trim(), 80);
+        if (title.isBlank()) {
+            title = deriveQuickCommandTitle(promptText);
+        }
+        int nextSortOrder = userQuickCommandRepository.maxSortOrder(orgId, userId, agentId) + 1;
+        UserQuickCommandEntity saved = userQuickCommandRepository.save(new UserQuickCommandEntity(
+                orgId,
+                userId,
+                agentId,
+                title,
+                promptText,
+                nextSortOrder
+        ));
+        auditService.log(orgId, userId, "user.quick_command.create", "agent=" + agentId + ",id=" + saved.getId());
+        return saved;
     }
 
     @Transactional
@@ -662,6 +703,22 @@ public class UserWorkflowService {
                 .orElseGet(() -> userWorkflowSpecRepository.save(new UserWorkflowSpecEntity(orgId, userId, agentId, "")));
     }
 
+    private String deriveQuickCommandTitle(String promptText) {
+        String firstLine = safeText(promptText).split("\\R", 2)[0].trim();
+        if (firstLine.length() <= 24) {
+            return firstLine;
+        }
+        return firstLine.substring(0, 24);
+    }
+
+    private String limitText(String value, int maxLength) {
+        String text = safeText(value);
+        if (text.length() <= maxLength) {
+            return text;
+        }
+        return text.substring(0, maxLength);
+    }
+
     private List<CompiledRoutine> parseRoutines(String sourceText, List<String> allowedTools, String timezone) {
         List<CompiledRoutine> routines = new ArrayList<>();
         String[] lines = safeText(sourceText).split("\\R");
@@ -940,6 +997,9 @@ public class UserWorkflowService {
     }
 
     public record CompileCommand(String sourceText) {
+    }
+
+    public record CreateQuickCommandCommand(String title, String promptText) {
     }
 
     public record UpdateTriggerCommand(Boolean enabled) {

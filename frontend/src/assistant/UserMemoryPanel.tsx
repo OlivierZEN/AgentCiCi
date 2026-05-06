@@ -45,10 +45,10 @@ const CATEGORY_META: Record<
   MemoryItem["category"],
   { label: string; icon: string; color: string }
 > = {
-  INSTRUCTION: { label: "行为指令", icon: "⚡", color: "#e8533a" },
-  FACT:        { label: "用户事实", icon: "👤", color: "#3b82f6" },
-  PREFERENCE:  { label: "个人偏好", icon: "⚙️",  color: "#8b5cf6" },
-  CONTEXT:     { label: "工作上下文", icon: "🏢", color: "#10b981" },
+  INSTRUCTION: { label: "行为指令", icon: "令", color: "#b42318" },
+  FACT:        { label: "用户事实", icon: "实", color: "#876223" },
+  PREFERENCE:  { label: "个人偏好", icon: "好", color: "#a67c2f" },
+  CONTEXT:     { label: "工作上下文", icon: "境", color: "#166534" },
 };
 
 const CATEGORY_ORDER: MemoryItem["category"][] = ["INSTRUCTION", "FACT", "PREFERENCE", "CONTEXT"];
@@ -238,7 +238,7 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
 
       {/* Hint */}
       <div className="memory-panel__hint">
-        💡 这些记忆将在每次与思思对话时自动注入上下文，帮助思思更好地理解你的身份和需求。你也可以在对话中直接告诉思思信息，她会自动记住。
+        这些记忆将在每次与思思对话时自动注入上下文，帮助思思更好地理解你的身份和需求。你也可以在对话中直接告诉思思信息，她会自动记住。
       </div>
 
       {/* Category filter */}
@@ -281,7 +281,7 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
       {/* Empty state */}
       {!loading && memories.length === 0 && (
         <div className="memory-panel__empty">
-          <div className="memory-panel__empty-icon">🧠</div>
+          <div className="memory-panel__empty-icon">专</div>
           <div className="memory-panel__empty-title">还没有任何专属记忆</div>
           <div className="memory-panel__empty-desc">
             你可以手动添加，或在对话中告诉思思你的身份信息，她会自动记住。
@@ -332,9 +332,12 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
         <div className="memory-panel__overlay" onClick={closeForm}>
           <div
             className="memory-panel__form-card"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="memory-panel-form-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="memory-panel__form-title">
+            <div className="memory-panel__form-title" id="memory-panel-form-title">
               {editingId !== null ? "编辑记忆" : "新增记忆"}
             </div>
 
@@ -437,9 +440,12 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
         <div className="memory-panel__overlay" onClick={() => setConfirmClearAll(false)}>
           <div
             className="memory-panel__form-card memory-panel__form-card--compact"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="memory-panel-clear-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="memory-panel__form-title">确认清空全部记忆？</div>
+            <div className="memory-panel__form-title" id="memory-panel-clear-title">确认清空全部记忆？</div>
             <p className="memory-panel__confirm-desc">
               此操作将删除所有 {memories.length} 条专属记忆，无法恢复。
             </p>
@@ -493,12 +499,12 @@ function MemoryCard({
         <div className="memory-card__body">
           <div className="memory-card__content">{item.content}</div>
           <div className="memory-card__meta">
-            {item.pinned && <span className="memory-card__badge memory-card__badge--pin">📌 置顶</span>}
+            {item.pinned && <span className="memory-card__badge memory-card__badge--pin">置顶</span>}
             <span className={`memory-card__badge memory-card__badge--source memory-card__badge--${item.source.toLowerCase()}`}>
-              {item.source === "EXTRACTED" ? "🤖" : "✍️"} {SOURCE_LABELS[item.source]}
+              {SOURCE_LABELS[item.source]}
             </span>
             {item.memoryKey && (
-              <span className="memory-card__badge memory-card__badge--key">🔑 {item.memoryKey}</span>
+              <span className="memory-card__badge memory-card__badge--key">{item.memoryKey}</span>
             )}
           </div>
         </div>

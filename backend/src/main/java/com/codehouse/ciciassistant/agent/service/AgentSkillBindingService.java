@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
+import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,14 +18,18 @@ public class AgentSkillBindingService {
 
     private final AgentSkillBindingRepository agentSkillBindingRepository;
     private final SkillDefinitionRepository skillDefinitionRepository;
+    private final SkillDefinitionService skillDefinitionService;
 
     public AgentSkillBindingService(AgentSkillBindingRepository agentSkillBindingRepository,
-                                    SkillDefinitionRepository skillDefinitionRepository) {
+                                    SkillDefinitionRepository skillDefinitionRepository,
+                                    SkillDefinitionService skillDefinitionService) {
         this.agentSkillBindingRepository = agentSkillBindingRepository;
         this.skillDefinitionRepository = skillDefinitionRepository;
+        this.skillDefinitionService = skillDefinitionService;
     }
 
     public List<AgentSkillBindingView> listBindings(String orgId, String agentId) {
+        skillDefinitionService.ensurePhaseOneDefaults(orgId);
         List<AgentSkillBindingEntity> bindings = agentSkillBindingRepository
                 .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizeAgentId(agentId));
         if (bindings.isEmpty()) {
@@ -59,6 +64,7 @@ public class AgentSkillBindingService {
 
     @Transactional
     public List<AgentSkillBindingView> replaceBindings(String orgId, String agentId, List<ReplaceBindingInput> inputs) {
+        skillDefinitionService.ensurePhaseOneDefaults(orgId);
         String normalizedAgentId = normalizeAgentId(agentId);
         List<AgentSkillBindingEntity> existing = agentSkillBindingRepository
                 .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId);

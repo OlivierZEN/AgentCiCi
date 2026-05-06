@@ -168,6 +168,7 @@ public class SkillPackageService {
                 draft.kbWhitelist(),
                 draft.handoffRule(),
                 draft.outputContract(),
+                List.of(),
                 draft.riskLevel(),
                 "import",
                 null,

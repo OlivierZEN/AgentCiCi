@@ -139,23 +139,26 @@ export default function AdminUsersPage() {
 
   return (
     <div className="admin-page">
-      <header className="chat-header">
-        <h1>用户管理</h1>
-        <p className="subtle">本组织用户与角色（ORG_ADMIN / ORG_USER）</p>
+      <header className="user-admin-header">
+        <div>
+          <h1>用户管理</h1>
+        </div>
         {notice && <p className="notice">{notice}</p>}
       </header>
 
       <div className="user-admin-layout">
         <aside className="user-list-panel">
-          <div className="row admin-row--tight">
+          <div className="user-search">
+            <svg className="user-search__icon" viewBox="0 0 24 24" aria-hidden>
+              <circle cx="11" cy="11" r="6.5" />
+              <path d="m16 16 4 4" />
+            </svg>
             <input
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               placeholder="搜索用户（手机号或昵称）"
+              aria-label="搜索用户"
             />
-            <button type="button" className="user-btn-soft" onClick={() => void load()}>
-              搜索
-            </button>
           </div>
           <div className="user-list-scroll">
             {filteredUsers.map((u) => (
@@ -165,8 +168,11 @@ export default function AdminUsersPage() {
                 className={`user-list-item ${selected?.id === u.id ? "active" : ""}`}
                 onClick={() => setSelectedUserId(u.id)}
               >
-                <div className="user-list-item__mobile">{u.mobile}</div>
-                <div className="user-list-item__meta">角色：{u.roleCode}</div>
+                <div className="user-list-item__mobile">{u.nickname || u.mobile}</div>
+                <div className="user-list-item__meta">
+                  <span>{u.nickname ? u.mobile : "未设置昵称"}</span>
+                  <span>{u.roleCode}</span>
+                </div>
               </button>
             ))}
             {filteredUsers.length === 0 && <p className="subtle">暂无匹配用户</p>}
@@ -190,7 +196,7 @@ export default function AdminUsersPage() {
                 </div>
                 <div>
                   <h3 className="user-detail-name">{selected.nickname || selected.mobile}</h3>
-                  <p className="subtle">用户详情</p>
+                  <p className="subtle">{selected.mobile}</p>
                 </div>
                 <div className="user-detail-topbox">
                   <div className="user-detail-topbox__item">

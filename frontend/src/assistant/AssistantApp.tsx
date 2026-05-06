@@ -1,4 +1,4 @@
-import { FormEvent, KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   streamAiChat,
@@ -17,6 +17,7 @@ import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
 import {
   appendAssistantDelta,
+  assistantResponseNeedsUserFollowup,
   markTrailingAssistantModel,
   preserveAssistantModelNames,
   replaceTrailingAssistant,
@@ -28,7 +29,8 @@ import {
   isWorkbenchSessionIdForAgent,
 } from "./workbenchSessions";
 
-const LS_LOGIN_MODE = "cici_login_mode";
+const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
+const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
 
 type AuthPayload = { token: string; orgId: string; userId: string; roles: string[] };
 type ChatBubble = { role: "user" | "assistant"; content: string; time?: string; modelName?: string };
@@ -36,7 +38,10 @@ type KnowledgeBase = { id: number; name: string; description: string; status: st
 type MeProfile = { nickname?: string; mobile?: string; avatarBase64?: string };
 type CurrentUserUpdatedDetail = { userId?: string; mobile?: string; nickname?: string; avatarBase64?: string };
 type LoginMode = "agent" | "human";
+type FrontLoginMode = "login_mode1" | "login_mode2";
+type LoginMode2CubePhase = "brand" | "loading";
 type WorkbenchStateStatus = "处理中" | "检索中" | "等待确认" | "已完成" | "待命中";
+type LoginMode2CubeFace = { className: string; image: string; label?: string; fit?: "cover" | "contain" };
 
 type AgentWorkspace = {
   id: string;
@@ -140,6 +145,83 @@ type WorkflowExecutionPayload = {
   outputSummary?: string;
 };
 
+type AgentRunLogPayload = {
+  traceId: string;
+  sessionId?: string;
+  agentId?: string;
+  agentName?: string;
+  title?: string;
+  channel?: string;
+  status?: string;
+  startedAt?: string;
+  endedAt?: string;
+  elapsedMs?: number;
+  modelCallCount?: number;
+  toolCallCount?: number;
+  ragContextCount?: number;
+  skillNames?: string[];
+  activatedSkillCodes?: string[];
+  boundSkillCodes?: string[];
+  knowledgeBaseNames?: string[];
+  summary?: string;
+  source?: string;
+};
+
+type AgentTraceNodePayload = {
+  id?: string;
+  type?: string;
+  title?: string;
+  status?: string;
+  startedAt?: string;
+  endedAt?: string;
+  elapsedMs?: number;
+  summary?: string;
+  metadata?: Record<string, unknown>;
+};
+
+type AgentTraceDetailPayload = {
+  traceId: string;
+  sessionId?: string;
+  agentId?: string;
+  agentName?: string;
+  channel?: string;
+  status?: string;
+  startedAt?: string;
+  endedAt?: string;
+  elapsedMs?: number;
+  summary?: string;
+  nodes?: AgentTraceNodePayload[];
+  model?: Record<string, unknown>;
+  rag?: Record<string, unknown>;
+  tools?: Array<Record<string, unknown>>;
+  skills?: Record<string, unknown>;
+  detail?: Record<string, unknown>;
+};
+
+type AgentSkillBindingView = {
+  skillId: number;
+  skillCode: string;
+  skillName: string;
+  riskLevel?: string;
+  activationMode?: string;
+  activationCondition?: string;
+  priority?: number;
+  enabled: boolean;
+  toolWhitelist?: string[];
+  kbWhitelist?: string[];
+  handoffRule?: string;
+};
+
+type UserQuickCommand = {
+  id: number;
+  title: string;
+  promptText: string;
+  sortOrder?: number;
+  enabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 const CHANNEL_LABELS: Record<ConversationThread["channel"], string> = {
   wechat: "企微",
   dingtalk: "钉钉",
@@ -156,6 +238,8 @@ const DOCK_AGENT_COLORS = [
   "linear-gradient(135deg, #e05c7a, #ff8fa0)",
   "linear-gradient(135deg, #3bb56e, #5edd8f)",
 ];
+
+const LOGIN_MODE2_ENTER_DELAY_MS = 3000;
 
 function toWorkbenchDockAgent(agent: PublishedAgentPayload, colorIndex: number): WorkbenchDockAgent {
   const preset = WORKBENCH_DOCK_AGENTS.find((a) => a.key === agent.agentId);
@@ -253,6 +337,109 @@ function formatConversationTime(updatedAt?: string) {
     month: "2-digit",
     day: "2-digit",
   }).format(date);
+}
+
+function formatMonitorDateTime(value?: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function formatMonitorElapsed(ms?: number) {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "—";
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(ms < 10_000 ? 1 : 0)}s`;
+}
+
+function monitorStatusLabel(status?: string) {
+  switch ((status ?? "").toUpperCase()) {
+    case "RUNNING":
+      return "运行中";
+    case "WAITING_CONFIRMATION":
+      return "待确认";
+    case "FAILED":
+      return "异常";
+    case "COMPLETED":
+      return "已完成";
+    default:
+      return status || "未知";
+  }
+}
+
+function monitorStatusSeverity(status?: string) {
+  switch ((status ?? "").toUpperCase()) {
+    case "RUNNING":
+      return "running";
+    case "WAITING_CONFIRMATION":
+      return "waiting";
+    case "FAILED":
+      return "failed";
+    default:
+      return "completed";
+  }
+}
+
+function monitorChannelLabel(channel?: string) {
+  switch ((channel ?? "").toLowerCase()) {
+    case "feishu":
+      return "飞书";
+    case "wecom":
+    case "wechat":
+      return "企微";
+    case "dingtalk":
+      return "钉钉";
+    case "scheduled":
+      return "定时任务";
+    default:
+      return "Web";
+  }
+}
+
+function compactUnknownValue(value: unknown, fallback = "—"): string {
+  if (value === null || value === undefined) return fallback;
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.map((item) => compactUnknownValue(item, "")).filter(Boolean).join("、") : fallback;
+  }
+  if (typeof value === "object") {
+    const maybeName = (value as Record<string, unknown>).name ?? (value as Record<string, unknown>).title;
+    if (maybeName) return String(maybeName);
+    return fallback;
+  }
+  const text = String(value).trim();
+  return text || fallback;
+}
+
+function monitorModelTraceSummary(trace?: AgentTraceDetailPayload | null) {
+  const calls = trace?.detail?.modelCalls;
+  if (Array.isArray(calls) && calls.length > 0) {
+    return calls
+      .map((call, index) => {
+        const item = call as Record<string, unknown>;
+        const phase = compactUnknownValue(item.phase, `调用 ${index + 1}`);
+        const elapsed = typeof item.elapsedMs === "number" ? formatMonitorElapsed(item.elapsedMs) : "—";
+        return `${phase} ${elapsed}`;
+      })
+      .join("；");
+  }
+  return compactUnknownValue(trace?.model?.modelName, "模型名未记录");
+}
+
+function monitorToolTraceSummary(trace?: AgentTraceDetailPayload | null) {
+  if (!trace?.tools?.length) return "未调用工具";
+  return trace.tools
+    .map((tool) => {
+      const name = compactUnknownValue(tool.name, "tool");
+      const elapsed = typeof tool.elapsedMs === "number" ? formatMonitorElapsed(tool.elapsedMs) : "—";
+      return `${name} ${elapsed}`;
+    })
+    .join("；");
 }
 
 function normalizeConversationThread(payload: ConversationThreadPayload): ConversationThread {
@@ -420,20 +607,20 @@ function deriveWorkbenchStateFromPrompt(question: string, agentKey: string): Wor
   const text = question.toLowerCase();
   if (text.includes("审批")) {
     return {
-      status: "检索中",
+      status: "处理中",
       previousTask: base.currentTask,
-      currentTask: "正在整理审批节点与材料",
-      nextTask: "输出审批建议或调用审批工具",
-      thoughts: ["正在识别审批标题、申请人与当前阶段", "会优先判断是否需要补件或催办"],
+      currentTask: "正在分析审批请求",
+      nextTask: "按需查询审批记录或流程规则",
+      thoughts: ["正在识别审批标题、申请人与当前阶段", "会先判断需要业务工具还是知识依据"],
     };
   }
   if (text.includes("客户") || text.includes("报价") || text.includes("线索")) {
     return {
-      status: "检索中",
+      status: "处理中",
       previousTask: base.currentTask,
-      currentTask: "正在梳理客户上下文与口径",
-      nextTask: "生成客户跟进建议",
-      thoughts: ["正在组织客户摘要、报价和话术线索", "会优先给出下一步推进动作"],
+      currentTask: "正在分析客户请求",
+      nextTask: "按需查询业务记录或知识口径",
+      thoughts: ["正在判断客户、报价或线索所需的数据来源", "会优先给出下一步推进动作"],
     };
   }
   if (text.includes("提醒") || text.includes("日程") || text.includes("安排")) {
@@ -454,8 +641,17 @@ function deriveWorkbenchStateFromPrompt(question: string, agentKey: string): Wor
   };
 }
 
-function finishWorkbenchState(agentKey: string, fallback?: string): WorkbenchStateMachine {
+function finishWorkbenchState(agentKey: string, fallback?: string, assistantContent?: string): WorkbenchStateMachine {
   const base = getWorkbenchDefaultState(agentKey);
+  if (assistantResponseNeedsUserFollowup(assistantContent ?? "")) {
+    return {
+      status: "等待确认",
+      previousTask: fallback || base.currentTask,
+      currentTask: "本轮结果需要确认或补充",
+      nextTask: "补充条件后继续处理",
+      thoughts: ["回复中包含参数、失败或继续查询信号", "请补充必要信息，或直接让智能体重试"],
+    };
+  }
   return {
     status: "已完成",
     previousTask: fallback || base.currentTask,
@@ -558,34 +754,77 @@ function WorkbenchStateCard({
   );
 }
 
-function LoginModeSwitch({
-  mode,
-  onChange,
-  theme,
+const LOGIN_MODE2_BRAND_CUBE_FACES: LoginMode2CubeFace[] = [
+  { className: "front", image: "/cici-login-default.png", fit: "cover" },
+  { className: "back", image: "/login-cube-cloudcc.webp", fit: "contain" },
+  { className: "right", image: "/login-cube-openai.webp", fit: "contain" },
+  { className: "left", image: "/login-cube-deepseek.webp", fit: "contain" },
+  { className: "top", image: "/login-cube-ai-chip.webp", fit: "cover" },
+  { className: "bottom", image: "/login-cube-cloudcc.webp", fit: "contain" },
+];
+
+function LoginMode2Cube({ phase }: { phase: LoginMode2CubePhase }) {
+  const cubeFaces = useMemo(() => {
+    return LOGIN_MODE2_BRAND_CUBE_FACES;
+  }, []);
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width - 0.5;
+    const y = (event.clientY - rect.top) / rect.height - 0.5;
+    event.currentTarget.style.setProperty("--mode2-tilt-y", `${x * 22}deg`);
+    event.currentTarget.style.setProperty("--mode2-tilt-x", `${y * -22}deg`);
+  };
+
+  const handlePointerLeave = (event: ReactPointerEvent<HTMLElement>) => {
+    event.currentTarget.style.setProperty("--mode2-tilt-y", "0deg");
+    event.currentTarget.style.setProperty("--mode2-tilt-x", "0deg");
+  };
+
+  return (
+    <section
+      className={`login-mode2__cube-zone login-mode2__cube-zone--${phase}`}
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+      aria-label="思思能力立方体"
+    >
+      <div className="login-mode2__cube-stage" aria-hidden>
+        <div className="login-mode2__cube">
+          {cubeFaces.map((face) => (
+            <div
+              key={face.className}
+              className={`login-mode2__cube-face login-mode2__cube-face--${face.className}${face.fit === "contain" ? " is-contain" : ""}`}
+            >
+              <img src={face.image} alt="" decoding="async" loading="eager" draggable={false} />
+              {face.label ? <span>{face.label}</span> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function AgentLoginMode2({
+  form,
+  cubePhase,
+  entering,
 }: {
-  mode: LoginMode;
-  onChange: (mode: LoginMode) => void;
-  theme: "dark" | "light";
+  form: ReactNode;
+  cubePhase: LoginMode2CubePhase;
+  entering: boolean;
 }) {
   return (
-    <div className={`login-mode-toggle login-mode-toggle--${theme}`} role="tablist" aria-label="登录模式切换">
-      <button
-        type="button"
-        className={`login-mode-toggle__item${mode === "agent" ? " is-active" : ""}`}
-        onClick={() => onChange("agent")}
-        aria-pressed={mode === "agent"}
-      >
-        智能体模式
-      </button>
-      <button
-        type="button"
-        className={`login-mode-toggle__item${mode === "human" ? " is-active" : ""}`}
-        onClick={() => onChange("human")}
-        aria-pressed={mode === "human"}
-      >
-        人机模式
-      </button>
-    </div>
+    <main className="login-mode2">
+      <section className="login-mode2__center">
+        <LoginMode2Cube phase={cubePhase} />
+        {!entering ? (
+          <section className="login-mode2__form-shell" aria-label="前台账号登录">
+            {form}
+          </section>
+        ) : null}
+      </section>
+    </main>
   );
 }
 
@@ -687,11 +926,10 @@ function HumanLoginCloudLogo() {
   );
 }
 
-function HumanModeStaticLogin({ onSwitchMode }: { onSwitchMode: (mode: LoginMode) => void }) {
+function HumanModeStaticLogin() {
   return (
     <main className="human-login">
       <div className="human-login__shell">
-        <LoginModeSwitch mode="human" onChange={onSwitchMode} theme="light" />
         <section className="human-login__card">
           <div className="human-login__showcase">
             <div className="human-login__art-wrap">
@@ -800,10 +1038,6 @@ export default function AssistantApp() {
   const [mobile, setMobile] = useState("18611892001");
   const [code, setCode] = useState("");
   const [notice, setNotice] = useState("");
-  const [loginMode, setLoginMode] = useState<LoginMode>(() => {
-    const raw = localStorage.getItem(LS_LOGIN_MODE);
-    return raw === "human" ? "human" : "agent";
-  });
   const [auth, setAuth] = useState<AuthPayload | null>(() => {
     const raw = localStorage.getItem(LS_ASSISTANT_TOKEN);
     if (!raw) {
@@ -818,8 +1052,17 @@ export default function AssistantApp() {
   const [me, setMe] = useState<MeProfile | null>(null);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [showPlusMenu, setShowPlusMenu] = useState(false);
-  const [plusMenuPos, setPlusMenuPos] = useState<{ bottom: number; left: number } | null>(null);
+  const [skillPickerOpen, setSkillPickerOpen] = useState(false);
+  const [quickCommandMenuOpen, setQuickCommandMenuOpen] = useState(false);
+  const [quickCommandDialogOpen, setQuickCommandDialogOpen] = useState(false);
+  const [agentSkillBindingsByAgent, setAgentSkillBindingsByAgent] = useState<Record<string, AgentSkillBindingView[]>>({});
+  const [agentSkillBindingsLoadingByAgent, setAgentSkillBindingsLoadingByAgent] = useState<Record<string, boolean>>({});
+  const [agentSkillBindingsFailedByAgent, setAgentSkillBindingsFailedByAgent] = useState<Record<string, boolean>>({});
+  const [activeSkillCodeByAgent, setActiveSkillCodeByAgent] = useState<Record<string, string>>({});
+  const [quickCommandsByAgent, setQuickCommandsByAgent] = useState<Record<string, UserQuickCommand[]>>({});
+  const [quickCommandsLoadingByAgent, setQuickCommandsLoadingByAgent] = useState<Record<string, boolean>>({});
+  const [quickCommandSaving, setQuickCommandSaving] = useState(false);
+  const [quickCommandDraft, setQuickCommandDraft] = useState({ title: "", promptText: "" });
   const [approvalPageHtml, setApprovalPageHtml] = useState<string | null>(null);
   const [approvalDrawerOpen, setApprovalDrawerOpen] = useState(false);
   const [speechNotice, setSpeechNotice] = useState("");
@@ -844,15 +1087,26 @@ export default function AssistantApp() {
   const [openWorkbenchSessionMenuId, setOpenWorkbenchSessionMenuId] = useState("");
   const [workbenchMetrics, setWorkbenchMetrics] = useState<WorkbenchMetric[]>(WORKBENCH_METRICS_DEFAULT);
   const [workbenchOverviewItems, setWorkbenchOverviewItems] = useState<WorkbenchOverviewItem[]>([]);
+  const [monitorRunLogs, setMonitorRunLogs] = useState<AgentRunLogPayload[]>([]);
+  const [monitorTraceDetail, setMonitorTraceDetail] = useState<AgentTraceDetailPayload | null>(null);
+  const [monitorLogsLoading, setMonitorLogsLoading] = useState(false);
+  const [monitorTraceLoadingId, setMonitorTraceLoadingId] = useState("");
   const [workbenchThoughtIndex, setWorkbenchThoughtIndex] = useState(0);
   const [profilePanelOpen, setProfilePanelOpen] = useState(false);
+  const [loginMode2CubePhase, setLoginMode2CubePhase] = useState<LoginMode2CubePhase>("brand");
+  const [loginMode2Entering, setLoginMode2Entering] = useState(false);
+  const [loginSubmitting, setLoginSubmitting] = useState(false);
   const chatStreamRef = useRef<HTMLDivElement | null>(null);
-  const plusMenuRef = useRef<HTMLDivElement | null>(null);
+  const skillPickerRef = useRef<HTMLDivElement | null>(null);
+  const quickCommandMenuRef = useRef<HTMLDivElement | null>(null);
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
   const workspaceTabRef = useRef<"chat" | "workbench" | "monitor" | "customers" | "crm">("workbench");
-  const [monitorPulseTick, setMonitorPulseTick] = useState(0);
+  const [activeMonitorAgentKey, setActiveMonitorAgentKey] = useState("");
+  const [activeMonitorLogId, setActiveMonitorLogId] = useState("");
+  const [monitorSearchText, setMonitorSearchText] = useState("");
 
   const persistAuth = (payload: AuthPayload | null) => {
     if (payload) {
@@ -895,6 +1149,119 @@ export default function AssistantApp() {
       setKbs((body?.data ?? []) as KnowledgeBase[]);
     } catch {
       setKbs([]);
+    }
+  };
+
+  const loadAgentSkillBindings = async (agentId: string, tokenOverride?: string, retryOnce = true) => {
+    const token = tokenOverride ?? auth?.token;
+    if (!token || !agentId) {
+      return;
+    }
+    setAgentSkillBindingsFailedByAgent((prev) => ({ ...prev, [agentId]: false }));
+    setAgentSkillBindingsLoadingByAgent((prev) => ({ ...prev, [agentId]: true }));
+    let keepLoadingForRetry = false;
+    try {
+      const response = await fetch(`/me/agents/${encodeURIComponent(agentId)}/skills`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<{ bindings?: AgentSkillBindingView[] }>(response);
+      if (!response.ok || !body?.success) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      const bindings = (body.data?.bindings ?? []).filter((item) => item.enabled);
+      setAgentSkillBindingsByAgent((prev) => ({ ...prev, [agentId]: bindings }));
+      setAgentSkillBindingsFailedByAgent((prev) => ({ ...prev, [agentId]: false }));
+      setActiveSkillCodeByAgent((prev) => {
+        const selectedCode = prev[agentId];
+        if (!selectedCode || bindings.some((item) => item.skillCode === selectedCode)) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[agentId];
+        return next;
+      });
+    } catch {
+      setAgentSkillBindingsByAgent((prev) => {
+        if (!(agentId in prev)) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next[agentId];
+        return next;
+      });
+      if (retryOnce) {
+        keepLoadingForRetry = true;
+        window.setTimeout(() => {
+          void loadAgentSkillBindings(agentId, token, false);
+        }, 600);
+      } else {
+        setAgentSkillBindingsFailedByAgent((prev) => ({ ...prev, [agentId]: true }));
+      }
+    } finally {
+      if (!keepLoadingForRetry) {
+        setAgentSkillBindingsLoadingByAgent((prev) => ({ ...prev, [agentId]: false }));
+      }
+    }
+  };
+
+  const loadQuickCommands = async (agentId: string, tokenOverride?: string) => {
+    const token = tokenOverride ?? auth?.token;
+    if (!token || !agentId) {
+      return;
+    }
+    setQuickCommandsLoadingByAgent((prev) => ({ ...prev, [agentId]: true }));
+    try {
+      const response = await fetch(`/me/agents/${encodeURIComponent(agentId)}/workflow/quick-commands`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<UserQuickCommand[]>(response);
+      if (!response.ok || !body?.success) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      setQuickCommandsByAgent((prev) => ({ ...prev, [agentId]: (body.data ?? []) as UserQuickCommand[] }));
+    } catch {
+      setQuickCommandsByAgent((prev) => ({ ...prev, [agentId]: [] }));
+    } finally {
+      setQuickCommandsLoadingByAgent((prev) => ({ ...prev, [agentId]: false }));
+    }
+  };
+
+  const saveQuickCommand = async () => {
+    if (!auth || quickCommandSaving) {
+      return;
+    }
+    const title = quickCommandDraft.title.trim();
+    const promptText = quickCommandDraft.promptText.trim();
+    if (!promptText) {
+      setSpeechNotice("请先填写快捷指令内容。");
+      return;
+    }
+    setQuickCommandSaving(true);
+    try {
+      const response = await fetch(`/me/agents/${encodeURIComponent(activeWorkbenchAgentId)}/workflow/quick-commands`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, promptText }),
+      });
+      const { body } = await safeFetchJson<UserQuickCommand>(response);
+      if (!response.ok || !body?.success || !body.data) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      const created = body.data as UserQuickCommand;
+      setQuickCommandsByAgent((prev) => ({
+        ...prev,
+        [activeWorkbenchAgentId]: [...(prev[activeWorkbenchAgentId] ?? []), created],
+      }));
+      setQuickCommandDraft({ title: "", promptText: "" });
+      setQuickCommandDialogOpen(false);
+      setSpeechNotice("快捷指令已添加。");
+    } catch (error) {
+      setSpeechNotice(`添加快捷指令失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setQuickCommandSaving(false);
     }
   };
 
@@ -1013,8 +1380,18 @@ export default function AssistantApp() {
         { label: "待跟进", value: "—" },
       ]);
 
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      const recentExecs = execs.filter((e) => {
+        const rawTime = e.finishedAt ?? e.scheduledAt ?? "";
+        if (!rawTime) {
+          return false;
+        }
+        const timestamp = new Date(rawTime).getTime();
+        return Number.isFinite(timestamp) && timestamp >= sevenDaysAgo;
+      });
+
       // Recent successful executions → overview cards
-      const recentSuccessful = execs
+      const recentSuccessful = recentExecs
         .filter((e) => e.status === "SUCCESS" && e.outputSummary)
         .slice(0, 3);
 
@@ -1036,6 +1413,54 @@ export default function AssistantApp() {
         setWorkbenchOverviewItems(overviewItems);
       }
     } catch {}
+  };
+
+  const loadMonitorRunLogs = async (tokenOverride?: string) => {
+    const token = tokenOverride ?? auth?.token;
+    if (!token) {
+      return;
+    }
+    setMonitorLogsLoading(true);
+    try {
+      const params = new URLSearchParams({ limit: "80" });
+      const response = await fetch(`/me/agents/run-logs?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<{ items?: AgentRunLogPayload[] } | AgentRunLogPayload[]>(response);
+      if (!response.ok || !body?.success) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      const data = body.data as { items?: AgentRunLogPayload[] } | AgentRunLogPayload[] | undefined;
+      const items = Array.isArray(data) ? data : (data?.items ?? []);
+      setMonitorRunLogs(items.filter((item) => item.traceId));
+    } catch {
+      setMonitorRunLogs([]);
+    } finally {
+      setMonitorLogsLoading(false);
+    }
+  };
+
+  const loadMonitorTraceDetail = async (traceId: string, tokenOverride?: string) => {
+    const token = tokenOverride ?? auth?.token;
+    if (!token || !traceId) {
+      setMonitorTraceDetail(null);
+      return;
+    }
+    setMonitorTraceLoadingId(traceId);
+    try {
+      const response = await fetch(`/me/agents/run-logs/${encodeURIComponent(traceId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<AgentTraceDetailPayload>(response);
+      if (!response.ok || !body?.success || !body.data) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      setMonitorTraceDetail(body.data as AgentTraceDetailPayload);
+    } catch {
+      setMonitorTraceDetail(null);
+    } finally {
+      setMonitorTraceLoadingId((current) => (current === traceId ? "" : current));
+    }
   };
 
   const loadConversationThreads = async (preferredConversationId?: string) => {
@@ -1180,11 +1605,14 @@ export default function AssistantApp() {
     }
   };
 
-  // Close plus menu on outside click
+  // Close the anchored skill picker when focus moves outside the composer menu.
   useEffect(() => {
     const handler = (event: MouseEvent) => {
-      if (plusMenuRef.current && !plusMenuRef.current.contains(event.target as Node)) {
-        setShowPlusMenu(false);
+      if (skillPickerRef.current && !skillPickerRef.current.contains(event.target as Node)) {
+        setSkillPickerOpen(false);
+      }
+      if (quickCommandMenuRef.current && !quickCommandMenuRef.current.contains(event.target as Node)) {
+        setQuickCommandMenuOpen(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -1198,14 +1626,29 @@ export default function AssistantApp() {
   }, [auth?.token]);
 
   useEffect(() => {
+    if (!auth && FRONT_LOGIN_USER_MODE_CONFIG === "agent" && FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
+      setLoginMode2CubePhase("brand");
+      setLoginMode2Entering(false);
+    }
+  }, [auth]);
+
+  useEffect(() => {
     if (auth) {
       void loadWorkbenchAgents(auth.token);
       void loadWorkbenchStats(auth.token);
+      void loadMonitorRunLogs(auth.token);
     } else {
       setAgentWorkspaces(AGENT_WORKSPACES);
       setWorkbenchDockAgents(WORKBENCH_DOCK_AGENTS);
       setWorkbenchMetrics(WORKBENCH_METRICS_DEFAULT);
       setWorkbenchOverviewItems([]);
+      setMonitorRunLogs([]);
+      setMonitorTraceDetail(null);
+      setMonitorTraceLoadingId("");
+      setAgentSkillBindingsByAgent({});
+      setAgentSkillBindingsLoadingByAgent({});
+      setAgentSkillBindingsFailedByAgent({});
+      setActiveSkillCodeByAgent({});
     }
   }, [auth?.token]);
 
@@ -1386,6 +1829,18 @@ export default function AssistantApp() {
     workbenchDockAgents.find((a) => a.key === activeWorkbenchKey) ??
     workbenchDockAgents[0] ??
     WORKBENCH_DOCK_AGENTS[0];
+  const activeWorkbenchAgentId = activeWorkbenchAgent.runtimeAgentId;
+  const activeWorkbenchSkillBindingsLoaded = Object.prototype.hasOwnProperty.call(
+    agentSkillBindingsByAgent,
+    activeWorkbenchAgentId,
+  );
+  const activeWorkbenchSkillBindings = agentSkillBindingsByAgent[activeWorkbenchAgentId] ?? [];
+  const activeWorkbenchSkillLoading = !!agentSkillBindingsLoadingByAgent[activeWorkbenchAgentId];
+  const activeWorkbenchSkillLoadFailed = !!agentSkillBindingsFailedByAgent[activeWorkbenchAgentId];
+  const activeWorkbenchSkillCode = activeSkillCodeByAgent[activeWorkbenchAgentId] ?? "";
+  const activeWorkbenchSkill = activeWorkbenchSkillBindings.find((item) => item.skillCode === activeWorkbenchSkillCode) ?? null;
+  const activeQuickCommands = quickCommandsByAgent[activeWorkbenchAgentId] ?? [];
+  const activeQuickCommandsLoading = !!quickCommandsLoadingByAgent[activeWorkbenchAgentId];
   const workbenchSessionThreads = useMemo(() => {
     return conversationThreads
       .filter((thread) => isWorkbenchSessionIdForAgent(thread.id, activeWorkbenchKey))
@@ -1404,6 +1859,26 @@ export default function AssistantApp() {
     (message) => message.role === "assistant" ? (chatLoading || message.content.trim()) : message.content.trim(),
   );
   const visibleMessages = workspaceTab === "workbench" ? workbenchMessages : messages;
+
+  useEffect(() => {
+    if (!auth?.token || workspaceTab !== "workbench") {
+      return;
+    }
+    if (activeWorkbenchSkillBindingsLoaded || activeWorkbenchSkillLoadFailed) {
+      return;
+    }
+    void loadAgentSkillBindings(activeWorkbenchAgentId, auth.token);
+  }, [activeWorkbenchAgentId, activeWorkbenchSkillBindingsLoaded, activeWorkbenchSkillLoadFailed, auth?.token, workspaceTab]);
+
+  useEffect(() => {
+    if (!auth?.token || workspaceTab !== "workbench" || !quickCommandMenuOpen) {
+      return;
+    }
+    if (quickCommandsByAgent[activeWorkbenchAgentId]) {
+      return;
+    }
+    void loadQuickCommands(activeWorkbenchAgentId, auth.token);
+  }, [activeWorkbenchAgentId, auth?.token, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
   const userInitial = getDisplayInitial(me?.nickname || me?.mobile || "我", "我");
   const agentUnread = (conversationsByAgent.get(activeAgent.id) ?? []).reduce((count, thread) => count + thread.unread, 0);
@@ -1413,10 +1888,6 @@ export default function AssistantApp() {
     const threads = conversationsByAgent.get(agent.runtimeAgentId ?? agent.key) ?? [];
     const unread = threads.reduce((sum, item) => sum + item.unread, 0);
     const severity = runtime.status === "待命中" ? "idle" : runtime.status === "已完成" ? "ok" : runtime.status === "等待确认" ? "warn" : "busy";
-    const baseline = unread + threads.length * 2 + index * 3 + monitorPulseTick;
-    const queueDepth = Math.max(1, (baseline % 7) + (severity === "busy" ? 3 : severity === "warn" ? 2 : 1));
-    const latencyMs = 160 + ((baseline * 57) % 340) + (severity === "busy" ? 120 : 0);
-    const flowProgress = Math.min(98, 42 + ((baseline * 9) % 54) + (severity === "ok" ? 8 : 0));
     return {
       key: agent.key,
       name: agent.name,
@@ -1431,22 +1902,96 @@ export default function AssistantApp() {
       unread,
       threadCount: threads.length,
       severity,
-      queueDepth,
-      latencyMs,
-      flowProgress,
     } as const;
   });
   const monitorBusyCount = monitorRows.filter((row) => row.severity === "busy" || row.severity === "warn").length;
-  const monitorTotalUnread = monitorRows.reduce((sum, row) => sum + row.unread, 0);
-  const monitorTimelineItems =
-    workbenchOverviewItems.length > 0
-      ? workbenchOverviewItems
-      : [
-          { id: "pulse-1", title: "线索清洗与意图归类", detail: "状态机从 Intake -> Intent Match，等待置信度确认。", status: "运行中", prompt: "" },
-          { id: "pulse-2", title: "工单优先级重排", detail: "根据 SLA 与渠道压力动态分流到不同队列。", status: "排队中", prompt: "" },
-          { id: "pulse-3", title: "知识检索增强回复", detail: "从 CRM 历史跟进记录补全上下文后生成回复。", status: "待确认", prompt: "" },
-          { id: "pulse-4", title: "回访任务自动派发", detail: "完成后写回 CRM 并创建下一步提醒。", status: "待执行", prompt: "" },
-        ];
+  const monitorActiveAgentKey = activeMonitorAgentKey || monitorRows[0]?.key || "";
+  const monitorStatusClass = (severity: string) =>
+    severity === "busy" ? "is-running" : severity === "warn" ? "is-waiting" : severity === "ok" ? "is-ok" : "is-idle";
+  const monitorLogRows = monitorRunLogs.map((item) => {
+    const matchedAgent = monitorRows.find((candidate) => candidate.key === item.agentId || candidate.key === item.agentId);
+    const severity = monitorStatusSeverity(item.status);
+    const traceShort = item.traceId.length > 12 ? item.traceId.slice(0, 8) : item.traceId;
+    const chainParts = [
+      item.modelCallCount ? `模型 ${item.modelCallCount}` : "",
+      item.toolCallCount ? `工具 ${item.toolCallCount}` : "",
+      item.ragContextCount ? `知识 ${item.ragContextCount}` : "",
+      item.skillNames?.length ? `技能 ${item.skillNames.length}` : "",
+    ].filter(Boolean);
+    return {
+      id: item.traceId,
+      traceId: item.traceId,
+      recordId: traceShort,
+      sessionId: item.sessionId ?? "",
+      agentKey: item.agentId ?? matchedAgent?.key ?? "",
+      agentName: item.agentName ?? matchedAgent?.name ?? item.agentId ?? "智能体",
+      title: item.title || item.summary || "未命名运行记录",
+      detail: `${monitorChannelLabel(item.channel)} · ${formatMonitorDateTime(item.startedAt)}`,
+      status: monitorStatusLabel(item.status),
+      rawStatus: item.status ?? "",
+      severity,
+      chain: chainParts.length ? chainParts.join(" · ") : "消息链路",
+      latency: formatMonitorElapsed(item.elapsedMs),
+      summary: item.summary ?? "",
+      source: item.source ?? "trace",
+    };
+  });
+  const monitorSearchQuery = monitorSearchText.trim().toLowerCase();
+  const monitorFilteredLogs = (activeMonitorAgentKey
+    ? monitorLogRows.filter((item) => item.agentKey === activeMonitorAgentKey)
+    : monitorLogRows
+  ).filter((item) => {
+    if (!monitorSearchQuery) {
+      return true;
+    }
+    return [
+      item.recordId,
+      item.title,
+      item.detail,
+      item.agentName,
+      item.summary,
+      item.sessionId,
+    ].some((value) => value.toLowerCase().includes(monitorSearchQuery));
+  });
+  const monitorSelectedLog =
+    monitorFilteredLogs.find((item) => item.id === activeMonitorLogId) ??
+    monitorFilteredLogs[0] ??
+    (activeMonitorAgentKey ? undefined : monitorLogRows[0]);
+  const monitorSelectedTrace =
+    monitorTraceDetail && monitorSelectedLog && monitorTraceDetail.traceId === monitorSelectedLog.traceId
+      ? monitorTraceDetail
+      : null;
+  const monitorVisibleThreadCount = monitorRows.reduce((sum, row) => sum + row.threadCount, 0);
+
+  useEffect(() => {
+    if (workspaceTab !== "monitor") {
+      return;
+    }
+    if (activeMonitorAgentKey && !monitorRows.some((row) => row.key === activeMonitorAgentKey)) {
+      setActiveMonitorAgentKey("");
+      return;
+    }
+    if (monitorSelectedLog && activeMonitorLogId !== monitorSelectedLog.id) {
+      setActiveMonitorLogId(monitorSelectedLog.id);
+    }
+  }, [activeMonitorAgentKey, activeMonitorLogId, monitorRows, monitorSelectedLog, workspaceTab]);
+
+  useEffect(() => {
+    if (workspaceTab !== "monitor" || !auth?.token) {
+      return;
+    }
+    void loadWorkbenchAgents(auth.token);
+    void loadWorkbenchStats(auth.token);
+    void loadMonitorRunLogs(auth.token);
+  }, [auth?.token, workspaceTab]);
+
+  useEffect(() => {
+    if (workspaceTab !== "monitor" || !auth?.token || !monitorSelectedLog?.traceId) {
+      setMonitorTraceDetail(null);
+      return;
+    }
+    void loadMonitorTraceDetail(monitorSelectedLog.traceId, auth.token);
+  }, [auth?.token, monitorSelectedLog?.traceId, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab !== "workbench") {
@@ -1469,16 +2014,6 @@ export default function AssistantApp() {
     }, 1800);
     return () => window.clearInterval(timer);
   }, [activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, workspaceTab]);
-
-  useEffect(() => {
-    if (workspaceTab !== "monitor") {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      setMonitorPulseTick((current) => current + 1);
-    }, 1500);
-    return () => window.clearInterval(timer);
-  }, [workspaceTab]);
 
   useEffect(() => {
     if (!openWorkbenchSessionMenuId) {
@@ -1514,6 +2049,10 @@ export default function AssistantApp() {
   };
 
   const login = async () => {
+    if (loginSubmitting) {
+      return;
+    }
+    setLoginSubmitting(true);
     try {
       setNotice("登录中...");
       const response = await fetch("/auth/sms/login", {
@@ -1526,11 +2065,22 @@ export default function AssistantApp() {
         setNotice(`登录失败：${body?.message ?? `HTTP ${response.status}`}`);
         return;
       }
+
+      if (FRONT_LOGIN_USER_MODE_CONFIG === "agent" && FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
+        setNotice("");
+        setLoginMode2Entering(true);
+        setLoginMode2CubePhase("loading");
+        await new Promise((resolve) => window.setTimeout(resolve, LOGIN_MODE2_ENTER_DELAY_MS));
+      }
+
       persistAuth(body.data);
       await loadMe(body.data.token);
       setNotice("登录成功。");
     } catch (error) {
       setNotice(`登录失败：${error instanceof Error ? error.message : String(error)}`);
+      setLoginMode2Entering(false);
+    } finally {
+      setLoginSubmitting(false);
     }
   };
 
@@ -1706,6 +2256,7 @@ export default function AssistantApp() {
     let renderedApproval = false;
     let suppress = false;
     let firstDeltaSeen = false;
+    let streamedAssistantText = "";
 
     try {
       const kbIds = selectedKbIds.map(String);
@@ -1716,11 +2267,13 @@ export default function AssistantApp() {
           question: cleanQuestion,
           knowledgeBaseIds: kbIds.length ? kbIds : [],
           agentId: isWorkbench ? activeWorkbenchAgent.runtimeAgentId : activeAgent.id,
+          activeSkillCode: isWorkbench && activeWorkbenchSkillCode ? activeWorkbenchSkillCode : undefined,
         },
         (delta) => {
           if (suppress) {
             return;
           }
+          streamedAssistantText += delta;
           if (isWorkbench && !firstDeltaSeen) {
             firstDeltaSeen = true;
             const agentKey = activeWorkbenchAgent.key;
@@ -1788,6 +2341,52 @@ export default function AssistantApp() {
           }));
         },
         (event: StreamPhaseEvent) => {
+          if (isWorkbench) {
+            const agentKey = activeWorkbenchAgent.key;
+            const kbNames = event.knowledgeBaseNames?.length
+              ? event.knowledgeBaseNames
+              : (event.knowledgeBaseIds ?? []).map((id) => kbs.find((kb) => String(kb.id) === String(id))?.name ?? `知识库 ${id}`);
+            const kbLabel = kbNames.length ? kbNames.join("、") : "已授权知识库";
+            if (event.phase === "retrieving") {
+              setWorkbenchRuntimeByAgent((prev) => ({
+                ...prev,
+                [agentKey]: {
+                  status: "检索中",
+                  previousTask: prev[agentKey]?.currentTask ?? "—",
+                  currentTask: `正在检索知识库：${kbLabel}`,
+                  nextTask: "命中知识片段后生成回复",
+                  thoughts: [`检索范围：${kbLabel}`, "正在完成向量召回与权限校验"],
+                },
+              }));
+            } else if (event.phase === "rag_done") {
+              const elapsed = typeof event.elapsedMs === "number" ? `（${event.elapsedMs}ms）` : "";
+              const count = typeof event.contextCount === "number" ? event.contextCount : 0;
+              setWorkbenchRuntimeByAgent((prev) => ({
+                ...prev,
+                [agentKey]: {
+                  status: "处理中",
+                  previousTask: `知识库检索完成${elapsed}`,
+                  currentTask: count > 0 ? `已命中 ${count} 条知识片段` : "未命中知识片段，转入模型判断",
+                  nextTask: "基于问题与上下文生成回复",
+                  thoughts: [
+                    kbNames.length ? `引用知识库：${kbLabel}` : "本轮没有可展示的知识库名称",
+                    event.fallbackUsed ? "向量召回为空，已使用最新可检索切片兜底" : "向量召回已完成",
+                  ],
+                },
+              }));
+            } else if (event.phase === "generating") {
+              setWorkbenchRuntimeByAgent((prev) => ({
+                ...prev,
+                [agentKey]: {
+                  status: "处理中",
+                  previousTask: prev[agentKey]?.currentTask ?? "知识上下文已准备",
+                  currentTask: "正在生成回复",
+                  nextTask: "输出完成后等待下一指令",
+                  thoughts: ["AI 正在组织知识库内容与回答结构"],
+                },
+              }));
+            }
+          }
           if (!event.modelName?.trim()) {
             return;
           }
@@ -1828,7 +2427,7 @@ export default function AssistantApp() {
         const agentKey = activeWorkbenchAgent.key;
         setWorkbenchRuntimeByAgent((prev) => ({
           ...prev,
-          [agentKey]: finishWorkbenchState(agentKey, prev[agentKey]?.currentTask),
+          [agentKey]: finishWorkbenchState(agentKey, prev[agentKey]?.currentTask, streamedAssistantText),
         }));
         await loadWorkbenchMessages(agentKey, sessionId, true);
       }
@@ -1877,6 +2476,9 @@ export default function AssistantApp() {
       }
     } finally {
       setChatLoading(false);
+      if (auth?.token) {
+        void loadMonitorRunLogs(auth.token);
+      }
     }
   };
 
@@ -1891,8 +2493,52 @@ export default function AssistantApp() {
     if (!input.trim()) {
       return;
     }
-    setShowPlusMenu(false);
+    setSkillPickerOpen(false);
+    setQuickCommandMenuOpen(false);
     await submitQuestion(input.trim());
+  };
+
+  const openQuickCommandMenu = () => {
+    setSkillPickerOpen(false);
+    if (!quickCommandsByAgent[activeWorkbenchAgentId] && !activeQuickCommandsLoading) {
+      void loadQuickCommands(activeWorkbenchAgentId);
+    }
+    setQuickCommandMenuOpen((open) => !open);
+    requestAnimationFrame(() => composerInputRef.current?.focus());
+  };
+
+  const openQuickCommandDialog = () => {
+    setQuickCommandMenuOpen(false);
+    setQuickCommandDialogOpen(true);
+  };
+
+  const closeQuickCommandDialog = () => {
+    if (quickCommandSaving) {
+      return;
+    }
+    setQuickCommandDialogOpen(false);
+  };
+
+  const handleComposerInputChange = (value: string) => {
+    setInput(value);
+    if (workspaceTab !== "workbench" || value.trim() !== "/") {
+      return;
+    }
+    if ((!activeWorkbenchSkillBindingsLoaded || activeWorkbenchSkillLoadFailed) && !activeWorkbenchSkillLoading) {
+      void loadAgentSkillBindings(activeWorkbenchAgentId);
+    }
+    setQuickCommandMenuOpen(false);
+    setSkillPickerOpen(true);
+  };
+
+  const handleComposerFileSelection = (files: FileList | null) => {
+    if (!files || files.length === 0) {
+      return;
+    }
+    const names = Array.from(files).map((file) => file.name).join("、");
+    setSpeechNotice(`已选择 ${names}，当前对话附件上传接口尚未接入发送流程。`);
+    setSkillPickerOpen(false);
+    setQuickCommandMenuOpen(false);
   };
 
   const ask = async (event: FormEvent) => {
@@ -1965,6 +2611,15 @@ export default function AssistantApp() {
     setConversationThreads([]);
     setConversationMessages({});
     setConversationListNotice("");
+    setQuickCommandMenuOpen(false);
+    setQuickCommandDialogOpen(false);
+    setQuickCommandsByAgent({});
+    setQuickCommandsLoadingByAgent({});
+    setQuickCommandDraft({ title: "", promptText: "" });
+    setAgentSkillBindingsByAgent({});
+    setAgentSkillBindingsLoadingByAgent({});
+    setAgentSkillBindingsFailedByAgent({});
+    setActiveSkillCodeByAgent({});
     setAgentWorkspaces(AGENT_WORKSPACES);
     setWorkbenchDockAgents(WORKBENCH_DOCK_AGENTS);
     setWorkbenchMessagesByAgent(createInitialWorkbenchMessages());
@@ -1985,16 +2640,78 @@ export default function AssistantApp() {
     }
   }, [activeConversationId, chatLoading, visibleMessages, workspaceTab]);
 
-  useEffect(() => {
-    localStorage.setItem(LS_LOGIN_MODE, loginMode);
-  }, [loginMode]);
-
   const systemAgents = agentWorkspaces.filter((item) => item.category === "system");
   const publishedAgents = agentWorkspaces.filter((item) => item.category === "published");
+  const agentLoginForm = (
+    <>
+      <div className="boot-login__form">
+        <div className="boot-login__field">
+          <label htmlFor="boot-org">组织 ID</label>
+          <input
+            id="boot-org"
+            className="boot-login__input"
+            value={orgId}
+            onChange={(event) => setOrgId(event.target.value)}
+            autoComplete="organization"
+          />
+        </div>
+        <div className="boot-login__field">
+          <label htmlFor="boot-mobile">手机号</label>
+          <input
+            id="boot-mobile"
+            className="boot-login__input"
+            value={mobile}
+            onChange={(event) => setMobile(event.target.value)}
+            inputMode="tel"
+            autoComplete="tel"
+          />
+        </div>
+        <div className="boot-login__field">
+          <label htmlFor="boot-code">短信验证码</label>
+          <input
+            id="boot-code"
+            className="boot-login__input"
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+          />
+        </div>
+      </div>
+      <div className="boot-login__actions">
+        <button type="button" className="boot-login__btn boot-login__btn--ghost" onClick={sendCode} disabled={code.length >= 4 || loginSubmitting}>
+          获取验证码
+        </button>
+        <button type="button" className="boot-login__btn boot-login__btn--primary" onClick={login} disabled={!code.trim() || loginSubmitting}>
+          <span className="boot-phone-icon" aria-hidden>
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+              <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+              <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span className="sr-only">开始对话</span>
+        </button>
+      </div>
+      {notice ? <p className="boot-login__notice">{notice}</p> : null}
+      <p className="boot-login__footer-link">
+        需要配置知识库或成员？ <Link to="/admin/login" className="boot-login__link">管理控制台</Link>
+      </p>
+    </>
+  );
 
   if (!auth) {
-    if (loginMode === "human") {
-      return <HumanModeStaticLogin onSwitchMode={setLoginMode} />;
+    if (FRONT_LOGIN_USER_MODE_CONFIG === "human") {
+      return <HumanModeStaticLogin />;
+    }
+
+    if (FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
+      return (
+        <AgentLoginMode2
+          form={agentLoginForm}
+          cubePhase={loginMode2CubePhase}
+          entering={loginMode2Entering}
+        />
+      );
     }
 
     return (
@@ -2005,7 +2722,6 @@ export default function AssistantApp() {
           <div className="boot-login__scanline boot-login__scanline--full" />
         </div>
         <div className="boot-login__shell">
-          <LoginModeSwitch mode={loginMode} onChange={setLoginMode} theme="dark" />
           <section className="boot-login__panel boot-login__glass">
             <header className="boot-login__glass-copy">
               <div className="boot-login__brand-tag">CloudCC</div>
@@ -2022,58 +2738,7 @@ export default function AssistantApp() {
                   <img className="boot-circle-graphic" src="/cici-circle-graphic.png" alt="" decoding="async" />
                 </div>
               </div>
-              <div className="boot-login__form">
-                <div className="boot-login__field">
-                  <label htmlFor="boot-org">组织 ID</label>
-                  <input
-                    id="boot-org"
-                    className="boot-login__input"
-                    value={orgId}
-                    onChange={(event) => setOrgId(event.target.value)}
-                    autoComplete="organization"
-                  />
-                </div>
-                <div className="boot-login__field">
-                  <label htmlFor="boot-mobile">手机号</label>
-                  <input
-                    id="boot-mobile"
-                    className="boot-login__input"
-                    value={mobile}
-                    onChange={(event) => setMobile(event.target.value)}
-                    inputMode="tel"
-                    autoComplete="tel"
-                  />
-                </div>
-                <div className="boot-login__field">
-                  <label htmlFor="boot-code">短信验证码</label>
-                  <input
-                    id="boot-code"
-                    className="boot-login__input"
-                    value={code}
-                    onChange={(event) => setCode(event.target.value)}
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                  />
-                </div>
-              </div>
-              <div className="boot-login__actions">
-                <button type="button" className="boot-login__btn boot-login__btn--ghost" onClick={sendCode} disabled={code.length >= 4}>
-                  获取验证码
-                </button>
-                <button type="button" className="boot-login__btn boot-login__btn--primary" onClick={login} disabled={!code.trim()}>
-                  <span className="boot-phone-icon" aria-hidden>
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-                      <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-                      <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                  </span>
-                  <span className="sr-only">开始对话</span>
-                </button>
-              </div>
-              {notice ? <p className="boot-login__notice">{notice}</p> : null}
-              <p className="boot-login__footer-link">
-                需要配置知识库或成员？ <Link to="/admin/login" className="boot-login__link">管理控制台</Link>
-              </p>
+              {agentLoginForm}
             </div>
           </section>
         </div>
@@ -2181,6 +2846,83 @@ export default function AssistantApp() {
           onClose={() => setProfilePanelOpen(false)}
         />
       ) : null}
+      {quickCommandDialogOpen ? (
+        <div
+          className="cici-quick-command-dialog-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              closeQuickCommandDialog();
+            }
+          }}
+        >
+          <section
+            className="cici-quick-command-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="quick-command-dialog-title"
+          >
+            <header className="cici-quick-command-dialog__header">
+              <div>
+                <h3 id="quick-command-dialog-title">添加快捷指令</h3>
+                <p>{activeWorkbenchAgent.name} · 仅当前用户可见</p>
+              </div>
+              <button
+                type="button"
+                className="cici-quick-command-dialog__close"
+                onClick={closeQuickCommandDialog}
+                aria-label="关闭"
+              >
+                ×
+              </button>
+            </header>
+            <form
+              className="cici-quick-command-dialog__body"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void saveQuickCommand();
+              }}
+            >
+              <label className="cici-quick-command-dialog__field">
+                <span>名称</span>
+                <input
+                  value={quickCommandDraft.title}
+                  onChange={(event) => setQuickCommandDraft((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder="名称，可留空"
+                  maxLength={80}
+                />
+              </label>
+              <label className="cici-quick-command-dialog__field">
+                <span>指令内容</span>
+                <textarea
+                  value={quickCommandDraft.promptText}
+                  onChange={(event) => setQuickCommandDraft((prev) => ({ ...prev, promptText: event.target.value }))}
+                  placeholder="输入自定义快捷指令"
+                  maxLength={2000}
+                  rows={6}
+                  autoFocus
+                />
+              </label>
+              <footer className="cici-quick-command-dialog__footer">
+                <button
+                  type="button"
+                  className="cici-quick-command-dialog__btn cici-quick-command-dialog__btn--secondary"
+                  onClick={closeQuickCommandDialog}
+                  disabled={quickCommandSaving}
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className="cici-quick-command-dialog__btn cici-quick-command-dialog__btn--primary"
+                  disabled={quickCommandSaving || !quickCommandDraft.promptText.trim()}
+                >
+                  {quickCommandSaving ? "保存中…" : "添加快捷指令"}
+                </button>
+              </footer>
+            </form>
+          </section>
+        </div>
+      ) : null}
 
       {workspaceTab === "workbench" ? (
         <main className="cici-workbench">
@@ -2239,81 +2981,189 @@ export default function AssistantApp() {
 
                   <form className="cici-workbench__composer" onSubmit={ask}>
                     <div className="cici-workbench__composer-shell">
-                      {/* + button (left side) */}
-                      <div className="cici-composer-plus" ref={plusMenuRef}>
-                        <button
-                          type="button"
-                          className="cici-composer-plus__btn"
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            const wasOpen = showPlusMenu;
-                            if (!wasOpen) {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setPlusMenuPos({
-                                bottom: window.innerHeight - rect.top + 8,
-                                left: rect.left,
-                              });
-                            } else {
-                              setPlusMenuPos(null);
-                            }
-                            setShowPlusMenu(!wasOpen);
-                          }}
-                          title="更多操作"
-                        >
-                          <svg viewBox="0 0 24 24">
-                            <line x1="12" y1="5" x2="12" y2="19" />
-                            <line x1="5" y1="12" x2="19" y2="12" />
-                          </svg>
-                        </button>
-                        {showPlusMenu && plusMenuPos && (
-                          <div className="cici-composer-plus__menu" style={{ bottom: `${plusMenuPos.bottom}px`, left: `${plusMenuPos.left}px` }}>
-                            <button type="button" className="cici-composer-plus__menu-item">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="17 8 12 3 7 8" />
-                                <line x1="12" y1="3" x2="12" y2="15" />
-                              </svg>
-                              上传文件
-                            </button>
-                            <button type="button" className="cici-composer-plus__menu-item">
-                              <svg viewBox="0 0 24 24">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                              </svg>
-                              添加快捷短语
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      {/* textarea (center, fills remaining space) */}
                       <textarea
                         ref={attachComposerTextareaRef}
                         value={input}
-                        onChange={(event) => setInput(event.target.value)}
+                        onChange={(event) => handleComposerInputChange(event.target.value)}
                         onKeyDown={handleComposerTextareaKeyDown}
-                        placeholder="输入任务，例如：先判断今天最优先的审批，再生成客户跟进摘要。"
+                        placeholder="发消息或输入“/”选择技能"
                         disabled={chatLoading}
                       />
-                      {/* actions (right side: mic + send) */}
-                      <div className="cici-workbench__composer-actions">
-                        {/* mic button */}
-                        <button
-                          type="button"
-                          className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
-                          onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
-                          disabled={!speechSupported}
-                          title={listening ? "结束语音并生成文字" : "开始语音输入"}
-                        >
-                          <svg viewBox="0 0 24 24">
-                            <rect x="9" y="3" width="6" height="12" rx="3" />
-                            <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
-                          </svg>
-                        </button>
-                        {/* send button */}
-                        <button type="submit" disabled={chatLoading} className="cici-workbench__send-btn">
-                          <svg viewBox="0 0 24 24">
-                            <line x1="12" y1="19" x2="12" y2="5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-                            <polyline points="5 12 12 5 19 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-                          </svg>
-                        </button>
+                      <div className="cici-workbench__composer-footer">
+                        <div className="cici-workbench__composer-tools">
+                          <input
+                            ref={uploadInputRef}
+                            className="cici-composer-upload-input"
+                            type="file"
+                            multiple
+                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md"
+                            onChange={(event) => handleComposerFileSelection(event.target.files)}
+                          />
+                          <button
+                            type="button"
+                            className="cici-composer-tool cici-composer-tool--icon"
+                            onClick={() => uploadInputRef.current?.click()}
+                            title="上传文件或图片"
+                            aria-label="上传文件或图片"
+                          >
+                            <svg viewBox="0 0 24 24">
+                              <path d="M21.4 11.6 12 21a6 6 0 0 1-8.5-8.5l9.8-9.8a4 4 0 0 1 5.7 5.7l-9.9 9.9a2 2 0 0 1-2.8-2.8l8.8-8.8" />
+                            </svg>
+                          </button>
+                          <div className="cici-composer-quick" ref={quickCommandMenuRef}>
+                            <button
+                              type="button"
+                              className={`cici-composer-tool${quickCommandMenuOpen ? " is-active" : ""}`}
+                              onClick={openQuickCommandMenu}
+                              aria-haspopup="menu"
+                              aria-expanded={quickCommandMenuOpen}
+                            >
+                              <svg viewBox="0 0 24 24">
+                                <path d="M12 3c2.8 0 5.1 4 5.1 9S14.8 21 12 21 6.9 17 6.9 12 9.2 3 12 3Z" />
+                                <path d="M3 12c0-2.8 4-5.1 9-5.1s9 2.3 9 5.1-4 5.1-9 5.1-9-2.3-9-5.1Z" />
+                              </svg>
+                              快捷指令
+                            </button>
+                            {quickCommandMenuOpen ? (
+                              <div className="cici-composer-quick__menu" role="menu" aria-label="快捷指令">
+                                {activeQuickCommandsLoading ? (
+                                  <div className="cici-composer-quick__empty">正在加载快捷指令…</div>
+                                ) : null}
+                                {!activeQuickCommandsLoading && activeQuickCommands.length > 0 ? (
+                                  <div className="cici-composer-quick__list">
+                                    {activeQuickCommands.map((command) => (
+                                      <button
+                                        type="button"
+                                        key={command.id}
+                                        className="cici-composer-quick__item"
+                                        role="menuitem"
+                                        onClick={() => {
+                                          setInput(command.promptText);
+                                          setQuickCommandMenuOpen(false);
+                                          requestAnimationFrame(() => composerInputRef.current?.focus());
+                                        }}
+                                      >
+                                        <span className="cici-composer-quick__item-icon" aria-hidden="true">
+                                          <svg viewBox="0 0 24 24">
+                                            <path d="M5 5h14M5 12h10M5 19h7" />
+                                          </svg>
+                                        </span>
+                                        <span className="cici-composer-quick__item-text">
+                                          <strong>{command.title}</strong>
+                                          <span>{command.promptText}</span>
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                {!activeQuickCommandsLoading && activeQuickCommands.length === 0 ? (
+                                  <div className="cici-composer-quick__empty">当前智能体还没有快捷指令。</div>
+                                ) : null}
+                                <button
+                                  type="button"
+                                  className="cici-composer-quick__add"
+                                  role="menuitem"
+                                  onClick={openQuickCommandDialog}
+                                >
+                                  添加快捷指令
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                          <div className="cici-composer-skill" ref={skillPickerRef}>
+                            <button
+                              type="button"
+                              className={`cici-composer-tool${skillPickerOpen ? " is-active" : ""}${activeWorkbenchSkill ? " has-selection" : ""}`}
+                              onClick={() => {
+                                setQuickCommandMenuOpen(false);
+                                if ((!activeWorkbenchSkillBindingsLoaded || activeWorkbenchSkillLoadFailed) && !activeWorkbenchSkillLoading) {
+                                  void loadAgentSkillBindings(activeWorkbenchAgentId);
+                                }
+                                setSkillPickerOpen((open) => !open);
+                              }}
+                              aria-haspopup="listbox"
+                              aria-expanded={skillPickerOpen}
+                            >
+                              <svg viewBox="0 0 24 24">
+                                <rect x="4" y="4" width="6" height="6" rx="1.5" />
+                                <rect x="4" y="14" width="6" height="6" rx="1.5" />
+                                <rect x="14" y="14" width="6" height="6" rx="1.5" />
+                                <path d="M17 3v6M14 6h6" />
+                              </svg>
+                              {activeWorkbenchSkill ? activeWorkbenchSkill.skillName : "技能"}
+                            </button>
+                            {skillPickerOpen ? (
+                              <div className="cici-composer-skill__menu" role="listbox" aria-label="选择技能">
+                                {activeWorkbenchSkillLoading ? (
+                                  <div className="cici-composer-skill__empty">正在加载技能…</div>
+                                ) : null}
+                                {!activeWorkbenchSkillLoading && activeWorkbenchSkillLoadFailed ? (
+                                  <div className="cici-composer-skill__empty">技能加载失败，请再次点击重试。</div>
+                                ) : null}
+                                {!activeWorkbenchSkillLoading && !activeWorkbenchSkillLoadFailed && activeWorkbenchSkillBindingsLoaded && activeWorkbenchSkillBindings.length === 0 ? (
+                                  <div className="cici-composer-skill__empty">当前智能体暂无绑定技能。</div>
+                                ) : null}
+                                {activeWorkbenchSkillBindings.map((binding) => {
+                                  const selected = binding.skillCode === activeWorkbenchSkillCode;
+                                  return (
+                                    <button
+                                      type="button"
+                                      key={binding.skillCode}
+                                      className={`cici-composer-skill__item${selected ? " is-selected" : ""}`}
+                                      role="option"
+                                      aria-selected={selected}
+                                      onClick={() => {
+                                        setActiveSkillCodeByAgent((prev) => {
+                                          const next = { ...prev };
+                                          if (selected) {
+                                            delete next[activeWorkbenchAgentId];
+                                          } else {
+                                            next[activeWorkbenchAgentId] = binding.skillCode;
+                                          }
+                                          return next;
+                                        });
+                                        if (input.trim() === "/") {
+                                          setInput("");
+                                        }
+                                        setSkillPickerOpen(false);
+                                      }}
+                                    >
+                                      <span className="cici-composer-skill__item-icon" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24">
+                                          <circle cx="12" cy="12" r="7" />
+                                          <circle cx="12" cy="12" r="2.5" />
+                                        </svg>
+                                      </span>
+                                      <span className="cici-composer-skill__item-text">
+                                        <strong>{binding.skillName}</strong>
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                        <div className="cici-workbench__composer-actions">
+                          <button
+                            type="button"
+                            className={`cici-composer__mic${listening ? " cici-composer__mic--on" : ""}`}
+                            onClick={() => (listening ? stopSpeechInput() : startSpeechInput())}
+                            disabled={!speechSupported}
+                            title={listening ? "结束语音并生成文字" : "开始语音输入"}
+                          >
+                            <svg viewBox="0 0 24 24">
+                              <rect x="9" y="3" width="6" height="12" rx="3" />
+                              <path d="M5 11a7 7 0 0 0 14 0M12 18v3M9 21h6" />
+                            </svg>
+                          </button>
+                          <button type="submit" disabled={chatLoading} className="cici-workbench__send-btn">
+                            <svg viewBox="0 0 24 24">
+                              <line x1="12" y1="19" x2="12" y2="5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                              <polyline points="5 12 12 5 19 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </form>
@@ -2422,90 +3272,243 @@ export default function AssistantApp() {
         </main>
       ) : workspaceTab === "monitor" ? (
         <main className="cici-monitor">
-          <header className="cici-monitor__hero">
-            <div>
-              <p className="cici-monitor__kicker">NEURAL OPS GRID</p>
-              <h1>智能体状态机监控控制台</h1>
-              <p>当前用户已接入智能体的运行状态、任务阶段与会话压力总览。</p>
-            </div>
-            <div className="cici-monitor__stats">
+          <header className="cici-monitor__topbar">
+            <section>
+              <p className="cici-monitor__kicker">AGENT OBSERVABILITY</p>
+              <h1>智能体监控</h1>
+              <p>查看每个智能体当前运行状态，并追踪最近 7 天的会话、任务、模型、工具、技能与知识库链路。</p>
+            </section>
+            <section className="cici-monitor__metrics" aria-label="监控指标">
               <article>
                 <span>在线智能体</span>
                 <strong>{monitorRows.length}</strong>
               </article>
               <article>
-                <span>活跃/待确认</span>
+                <span>运行中</span>
                 <strong>{monitorBusyCount}</strong>
               </article>
               <article>
-                <span>累计未读</span>
-                <strong>{monitorTotalUnread}</strong>
+                <span>异常/待确认</span>
+                <strong>{monitorRows.filter((row) => row.severity === "warn").length}</strong>
               </article>
-            </div>
+              <article>
+                <span>可见会话</span>
+                <strong>{monitorVisibleThreadCount || "—"}</strong>
+              </article>
+              <article>
+                <span>真实链路</span>
+                <strong>{monitorRunLogs.length || "—"}</strong>
+              </article>
+            </section>
           </header>
 
-          <section className="cici-monitor__grid">
-            {monitorRows.map((row) => (
-              <article key={row.key} className={`cici-monitor-card cici-monitor-card--${row.severity}`}>
-                <div className="cici-monitor-card__head">
-                  <AvatarView
-                    src={row.avatarBase64}
-                    fallback={row.short}
-                    className="cici-monitor-card__avatar"
-                    style={{ background: row.color }}
-                    alt={`${row.name} 监控头像`}
-                  />
-                  <div>
-                    <h3>{row.name}</h3>
-                    <p>
-                      {row.threadCount} 个会话 · {row.unread} 未读
-                    </p>
-                  </div>
-                  <span className="cici-monitor-card__state">{row.status}</span>
-                </div>
-                <div className="cici-monitor-card__lanes">
-                  <div>
-                    <span>PREV</span>
-                    <strong>{row.previousTask}</strong>
-                  </div>
-                  <div>
-                    <span>NOW</span>
-                    <strong>{row.currentTask}</strong>
-                  </div>
-                  <div>
-                    <span>NEXT</span>
-                    <strong>{row.nextTask}</strong>
-                  </div>
-                </div>
-                <div className="cici-monitor-card__thoughts">
-                  {(row.thoughts.length ? row.thoughts : ["等待新的业务上下文"]).slice(0, 2).map((t) => (
-                    <p key={t}>{t}</p>
-                  ))}
-                </div>
-                <div className="cici-monitor-card__flow">
-                  <span>FLOW {row.flowProgress}% · 队列 {row.queueDepth} · 延迟 {row.latencyMs}ms</span>
-                  <div className="cici-monitor-card__flow-track">
-                    <i style={{ width: `${row.flowProgress}%` }} />
-                  </div>
-                </div>
-              </article>
-            ))}
-            {monitorRows.length === 0 ? (
-              <div className="cici-monitor__empty">当前没有可监控的智能体运行数据。</div>
-            ) : null}
+          <section className="cici-monitor__toolbar" aria-label="监控筛选">
+            <button type="button" className="cici-monitor__select">近 7 天 <span aria-hidden>⌄</span></button>
+            <button
+              type="button"
+              className="cici-monitor__select"
+              onClick={() => {
+                setActiveMonitorAgentKey("");
+                setActiveMonitorLogId("");
+              }}
+            >
+              {activeMonitorAgentKey ? monitorRows.find((row) => row.key === activeMonitorAgentKey)?.name ?? "全部智能体" : "全部智能体"} <span aria-hidden>⌄</span>
+            </button>
+            <label className="cici-monitor__search">
+              <span className="cici-monitor__search-icon" aria-hidden />
+              <input
+                type="text"
+                value={monitorSearchText}
+                onChange={(event) => setMonitorSearchText(event.target.value)}
+                placeholder="搜索执行记录或摘要"
+                aria-label="搜索监控日志"
+              />
+            </label>
+            <button
+              type="button"
+              className="cici-monitor__refresh"
+              onClick={() => {
+                if (!auth?.token) {
+                  return;
+                }
+                void loadWorkbenchAgents(auth.token);
+                void loadWorkbenchStats(auth.token);
+                void loadMonitorRunLogs(auth.token);
+              }}
+            >
+              刷新状态
+            </button>
           </section>
 
-          <section className="cici-monitor__timeline">
-            <h2>任务脉冲 · Task Pulse</h2>
-            <div className="cici-monitor__timeline-list">
-              {monitorTimelineItems.map((item) => (
-                <article key={item.id} className="cici-monitor__timeline-item">
-                  <strong>{item.title}</strong>
-                  <p>{item.detail}</p>
-                  <span>{item.status}</span>
-                </article>
-              ))}
-            </div>
+          <section className="cici-monitor__workspace">
+            <aside className="cici-monitor-panel cici-monitor-panel--agents">
+              <header className="cici-monitor-panel__head">
+                <h2>智能体状态</h2>
+                <span>实时</span>
+              </header>
+              <div className="cici-monitor-agent-list">
+                {monitorRows.map((row, index) => (
+                  <button
+                    key={row.key}
+                    type="button"
+                    className={`cici-monitor-agent${monitorActiveAgentKey === row.key ? " is-active" : ""}`}
+                    onClick={() => {
+                      setActiveMonitorAgentKey(row.key);
+                      setActiveMonitorLogId("");
+                    }}
+                  >
+                    <AvatarView
+                      src={row.avatarBase64}
+                      fallback={row.short}
+                      className={`cici-monitor-agent__avatar cici-monitor-agent__avatar--${(index % 3) + 1}`}
+                      alt={`${row.name} 监控头像`}
+                    />
+                    <span className="cici-monitor-agent__body">
+                      <strong>{row.name}</strong>
+                      <span>{row.currentTask}</span>
+                    </span>
+                    <span className={`cici-monitor-status ${monitorStatusClass(row.severity)}`}>{row.status}</span>
+                  </button>
+                ))}
+                {monitorRows.length === 0 ? (
+                  <div className="cici-monitor__empty">当前没有可监控的智能体运行数据。</div>
+                ) : null}
+              </div>
+            </aside>
+
+            <section className="cici-monitor-panel cici-monitor-panel--logs">
+              <header className="cici-monitor-panel__head">
+                <h2>最近 7 天运行日志</h2>
+                <span>{monitorLogsLoading ? "加载中" : `${monitorFilteredLogs.length} 条记录`}</span>
+              </header>
+              <nav className="cici-monitor-tabs" aria-label="日志范围">
+                {["全部", "运行中", "异常", "待确认"].map((tab, index) => (
+                  <button key={tab} type="button" className={`cici-monitor-tab${index === 0 ? " is-active" : ""}`}>
+                    {tab}
+                  </button>
+                ))}
+              </nav>
+              <div className="cici-monitor-log-list">
+                {monitorFilteredLogs.map((log) => (
+                  <button
+                    key={log.id}
+                    type="button"
+                    className={`cici-monitor-log${monitorSelectedLog?.id === log.id ? " is-selected" : ""}`}
+                    onClick={() => setActiveMonitorLogId(log.id)}
+                  >
+                    <span className="cici-monitor-log__title">
+                      <strong>{log.title}</strong>
+                      <span>执行记录 {log.recordId} · {log.detail}</span>
+                    </span>
+                    <span className={`cici-monitor-status is-${log.severity}`}>{log.status}</span>
+                    <span className="cici-monitor-log__agent">
+                      <strong>{log.agentName}</strong>
+                      <span>{log.source === "chat_session" ? "历史会话回填" : "真实 trace"}</span>
+                    </span>
+                    <span className="cici-monitor-log__chain">
+                      <span>{log.chain}</span>
+                    </span>
+                    <span className="cici-monitor-log__latency">
+                      <strong>{log.latency}</strong>
+                      <span>{log.latency === "—" ? "历史记录" : "总耗时"}</span>
+                    </span>
+                  </button>
+                ))}
+                {monitorFilteredLogs.length === 0 ? (
+                  <div className="cici-monitor__empty">当前筛选条件下没有运行日志。</div>
+                ) : null}
+              </div>
+            </section>
+
+            <aside className="cici-monitor-panel cici-monitor-panel--trace">
+              <header className="cici-monitor-panel__head">
+                <h2>链路追踪</h2>
+                <span>{monitorSelectedLog ? `执行记录 ${monitorSelectedLog.recordId}` : "未选择"}</span>
+              </header>
+              {monitorSelectedLog ? (
+                <>
+                  <section className="cici-monitor-trace-summary">
+                    <div>
+                      <span>智能体</span>
+                      <strong>{monitorSelectedLog.agentName}</strong>
+                    </div>
+                    <div>
+                      <span>状态</span>
+                      <strong>{monitorSelectedLog.status}</strong>
+                    </div>
+                    <div>
+                      <span>渠道</span>
+                      <strong>{monitorSelectedTrace ? monitorChannelLabel(monitorSelectedTrace.channel) : "—"}</strong>
+                    </div>
+                    <div>
+                      <span>耗时</span>
+                      <strong>{monitorSelectedTrace ? formatMonitorElapsed(monitorSelectedTrace.elapsedMs) : "—"}</strong>
+                    </div>
+                  </section>
+                  <section className={`cici-monitor-trace-steps${monitorSelectedTrace?.nodes?.length ? "" : " cici-monitor-trace-steps--empty"}`}>
+                    {monitorSelectedTrace?.nodes?.length ? (
+                      monitorSelectedTrace.nodes.map((node, index) => (
+                        <article className="cici-monitor-trace-step" key={node.id ?? `${node.type}-${index}`}>
+                          <span className="cici-monitor-trace-step__dot" aria-hidden />
+                          <div>
+                            <h3>{node.title || node.type || "链路节点"}</h3>
+                            <p>{node.summary || "节点已记录。"}</p>
+                          </div>
+                          <time>{node.elapsedMs ? formatMonitorElapsed(node.elapsedMs) : formatMonitorDateTime(node.startedAt)}</time>
+                        </article>
+                      ))
+                    ) : (
+                      <article className="cici-monitor-trace-step">
+                        <span className="cici-monitor-trace-step__dot" aria-hidden />
+                        <div>
+                          <h3>{monitorTraceLoadingId ? "正在加载链路日志" : "暂无链路详情"}</h3>
+                          <p>{monitorTraceLoadingId ? "正在读取本次运行的模型、工具、技能和知识库明细。" : "该记录可能是历史会话回填，或后端尚未返回详情。"}</p>
+                        </div>
+                        <time>—</time>
+                      </article>
+                    )}
+                  </section>
+                  <section className="cici-monitor-detail-groups">
+                    <article>
+                      <h3>大模型交互</h3>
+                      <p>{monitorSelectedTrace ? monitorModelTraceSummary(monitorSelectedTrace) : "正在等待链路详情。"}</p>
+                    </article>
+                    <article>
+                      <h3>工具调用</h3>
+                      <p>{monitorSelectedTrace ? monitorToolTraceSummary(monitorSelectedTrace) : "正在等待链路详情。"}</p>
+                    </article>
+                    <article>
+                      <h3>技能与知识库</h3>
+                      <p>
+                        {monitorSelectedTrace
+                          ? [
+                              (() => {
+                                const activated = compactUnknownValue(
+                                  monitorSelectedTrace.skills?.activatedSkillCodes ?? monitorSelectedTrace.skills?.skillNames,
+                                  "",
+                                );
+                                const bound = compactUnknownValue(monitorSelectedTrace.skills?.boundSkillCodes, "");
+                                return activated
+                                  ? `本轮激活：${activated}`
+                                  : bound
+                                    ? `未激活业务技能 · 候选：${bound}`
+                                    : "";
+                              })(),
+                              compactUnknownValue((monitorSelectedTrace.rag?.knowledgeBases as unknown[] | undefined)?.map((kb) => compactUnknownValue(kb, "")), ""),
+                            ].filter(Boolean).join(" · ") || "本轮未命中技能或知识库"
+                          : "正在等待链路详情。"}
+                      </p>
+                    </article>
+                    <article>
+                      <h3>摘要</h3>
+                      <p>{monitorSelectedTrace?.summary || monitorSelectedLog.summary || monitorSelectedLog.title}</p>
+                    </article>
+                  </section>
+                </>
+              ) : (
+                <div className="cici-monitor__empty">请选择一条运行日志查看链路追踪。</div>
+              )}
+            </aside>
           </section>
         </main>
       ) : workspaceTab === "crm" ? (

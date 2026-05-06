@@ -8,6 +8,8 @@ public interface AgentDefinitionRepository extends JpaRepository<AgentDefinition
 
     List<AgentDefinitionEntity> findByOrgIdOrderByBuiltinDescUpdatedAtDesc(String orgId);
 
+    List<AgentDefinitionEntity> findTop24ByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String orgId);
+
     Optional<AgentDefinitionEntity> findByOrgIdAndAgentId(String orgId, String agentId);
 
     boolean existsByOrgIdAndAgentId(String orgId, String agentId);
