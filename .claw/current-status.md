@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-06T20:54:00+08:00
+updated_at: 2026-05-07T11:37:37+08:00
 updated_by: ai
 status: active
-phase: agent_monitoring_trace_timing_hardened
-active_task: "Agent observability monitoring frontend implementation"
-current_task: 已强化智能体运行 trace 语义和阶段耗时：绑定/候选技能与本轮激活技能分开展示，模型调用拆成工具规划/最终生成等独立节点，工具调用记录单工具耗时，监控页明细展示模型与工具分段耗时。
-next_action: 用真实工作台复测“最近 20 个潜在客户”类请求，确认 trace 中绑定技能不再误报为命中，且 86s 等总耗时能拆到具体模型、工具、RAG、工具定义加载或治理节点。
+phase: v1_5_release_packaged
+active_task: "Release V1.5"
+current_task: 正在将固定密码登录与 compose 部署脚本文档整理为 `V1.5` 版本提交和 tag。
+next_action: 推送 `main` 与 `V1.5` tag 到 `origin`；若 GitHub 连接继续 reset，保留本地提交和 tag 后重试远程推送。
 read_next:
   goals: false
   decisions: true
@@ -15,13 +15,34 @@ read_next:
   task_board: true
   test_report: true
   devops: false
-priority: P1
+priority: P0
 ---
 
 # Current Status
 
 ## Snapshot
 
+- V1.5 发布前校验通过：`git diff --check` 成功；前端 `npm run build` 成功（保留既有 Vite chunk-size warning）；后端认证集成测试在 Java 21 下 `AuthFlowIntegrationTest,SmsRateLimitIntegrationTest` 成功。第一次后端测试用默认 Java 17 运行已由 Java 21 编译的测试类失败，切换 `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home` 后通过。
+- 发布前安全检查通过：本地新增 `deploy/` 文件不包含真实 `deploy/acr.env`、证书或私钥；`.gitignore` 已忽略 `deploy/acr.env`。
+- 远程 `git fetch origin --tags` 两次因 GitHub HTTPS 连接 reset 失败，需在本地提交/tag 后继续重试 `git push`。
+- 已完成 `TASK-058 Fixed password login for three entries`：新增 `auth_password` 固定密码凭证表，迁移初始化 `szyd1234` 的 PBKDF2 哈希；后端新增 `POST /auth/password/login` 并复用原用户创建、bootstrap 管理员提升、平台角色解析和 JWT 签发逻辑。
+- 已完成 `TASK-059 ACR one-click docker compose deployment`：新增 `deploy/docker-compose.acr.yml`，六个服务全部使用 `op-registry.cloudcc.cn/cloudcc-ai-native/*:latest`；新增 `deploy/acr.env.example`、`deploy/nginx.cici.conf` 和 `scripts/deploy-acr.sh`。
+- ACR compose 默认 `CICI_PLATFORM=linux/amd64`，兼容当前 backend/frontend 只有 amd64 manifest 的情况；前端容器挂载完整 Nginx 配置，将 `/auth`、`/ai`、`/kb`、`/agents`、`/skills`、`/me`、`/api/platform` 等浏览器相对 API 代理到后端。
+- 已同步 compose 职责边界到 `docker-compose.yml` 顶部注释、`README.md`、`docs/deploy-runbook.md` 和 `.claw/devops.md`：根目录 compose 只用于本地 PostgreSQL/Redis/RabbitMQ/Qdrant 基础设施，不作为完整部署入口；完整部署统一走 `deploy/docker-compose.acr.yml` 和 `./scripts/deploy-acr.sh`。
+- 已新增镜像构建文件：`.dockerignore`、`deploy/Dockerfile.backend`、`deploy/Dockerfile.frontend`。
+- 已完成 ACR 镜像刷新：`cici-backend:latest` digest 为 `sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`；`cici-frontend:latest` digest 为 `sha256:a70521fa3f651bec5fe32e1eaf5c698e5587a2e5de84f1acfb9e4a00ac33b9be`。
+- 本轮镜像验证通过：后端 `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` 成功；前端 `npm run build` 成功（保留既有 chunk-size warning）；两个 `docker buildx build --platform linux/amd64 ... --push` 成功；`docker buildx imagetools inspect` 已确认新 digest；前端镜像 `nginx -t` 成功。
+- 已完成 `TASK-060 ECS SSL deployment for cici.cloudcc.cn`：部署目录 `/opt/cici`，compose 使用 `/opt/cici/deploy/docker-compose.acr.yml` + `/opt/cici/deploy/docker-compose.acr.ssl.yml`，证书放在 `/opt/cici/deploy/certs/cloudcc.cn.pem` 和 `.key`。
+- `cici-database`、`cici-redis`、`cici-rabbitmq`、`cici-qdrant` 原 ACR tag 均为 arm64 单架构，无法在 x86_64 ECS 上运行；本轮已用对应官方镜像重新构建并推送为 `linux/amd64` ACR tag。
+- 服务器端口策略：公网只开放容器映射的 `80`/`443`；后端、PostgreSQL、Redis、RabbitMQ、Qdrant 均绑定 `127.0.0.1`。
+- 远端 env 已设置 `APP_SECURITY_SECRET_KEY`，后端不再输出 `Using DEV fallback key`。
+- 本轮 ECS 验证通过：`docker compose ps` 六容器均 healthy；`http://cici.cloudcc.cn/` 返回 `301` 到 HTTPS；`https://cici.cloudcc.cn/` 返回 `200`；`POST /auth/password/login` 使用固定密码返回 `200`、token 和 `ORG_ADMIN`。
+- 本轮验证通过：`docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` 成功；`bash -n scripts/deploy-acr.sh` 成功；使用 `cici-frontend:latest` 执行 `nginx -t` 成功；`git diff --check -- .gitignore deploy/docker-compose.acr.yml deploy/acr.env.example deploy/nginx.cici.conf scripts/deploy-acr.sh docs/deploy-runbook.md` 成功。
+- 本轮追加验证通过：`git diff --check -- docker-compose.yml README.md docs/deploy-runbook.md .claw/devops.md` 成功。
+- `/auth/sms/send` 与 `/auth/sms/login` 保留路由但返回 `SMS verification login is disabled`，避免继续使用短信验证码登录。
+- 助手端 `/`、组织管理端 `/admin/login`、平台端 `/platform/login` 均改为组织 ID + 手机号 + 固定密码，不再显示验证码、获取验证码或 `devCode` 文案。
+- 后端测试 helper、本地 E2E 脚本、README、部署 runbook、安全清单和 `docs/specs/FEAT-020-fixed-password-login.md` 已同步固定密码登录语义。
+- 本轮验证通过：`/usr/bin/env JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SmsRateLimitIntegrationTest test` 成功；同 Java 21 环境下 `backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 成功；`frontend npm run build` 成功（保留既有 Vite chunk-size warning）；`git diff --check` 成功。
 - 已完成 `TASK-057` 下一步真实数据接入：新增 `agent_run_trace` 持久化表、`AgentRunTraceService`、`GET /me/agents/run-logs` 和 `GET /me/agents/run-logs/{traceId}`，聊天运行结束后会记录统一 trace。
 - 已按真实 trace 截图反馈修正链路语义与耗时：`AgentRunTraceService` 不再把所有绑定技能写成“命中技能”，新增 `boundSkillCodes` 与 `activatedSkillCodes`；`ChatOrchestratorService` 记录技能解析、用户消息、RAG、工具定义加载、模型工具规划、模型最终生成、逐工具调用、技能运行治理和消息落库的独立耗时。
 - 监控页链路详情已展示模型调用分段耗时和工具调用耗时；“技能与知识库”改为展示“本轮激活”或“未激活业务技能 · 候选”，避免误导用户认为无关技能被命中。

@@ -1004,7 +1004,7 @@ function HumanModeStaticLogin() {
                   |
                 </span>
                 <button type="button" className="human-login__text-btn">
-                  动态验证码登录
+                  统一密码登录
                 </button>
               </div>
 
@@ -1036,7 +1036,7 @@ function HumanModeStaticLogin() {
 export default function AssistantApp() {
   const [orgId, setOrgId] = useState("demo-org");
   const [mobile, setMobile] = useState("18611892001");
-  const [code, setCode] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [notice, setNotice] = useState("");
   const [auth, setAuth] = useState<AuthPayload | null>(() => {
     const raw = localStorage.getItem(LS_ASSISTANT_TOKEN);
@@ -2029,25 +2029,6 @@ export default function AssistantApp() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [openWorkbenchSessionMenuId]);
 
-  const sendCode = async () => {
-    try {
-      setNotice("验证码发送中...");
-      const response = await fetch("/auth/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile }),
-      });
-      const { body } = await safeFetchJson<{ devCode?: string }>(response);
-      if (!response.ok || !body?.success) {
-        setNotice(`发送失败：${body?.message ?? `HTTP ${response.status}`}`);
-        return;
-      }
-      setNotice(`验证码已发送，本地开发验证码：${body.data?.devCode ?? "（未返回）"}`);
-    } catch (error) {
-      setNotice(`发送失败：${error instanceof Error ? error.message : String(error)}`);
-    }
-  };
-
   const login = async () => {
     if (loginSubmitting) {
       return;
@@ -2055,10 +2036,10 @@ export default function AssistantApp() {
     setLoginSubmitting(true);
     try {
       setNotice("登录中...");
-      const response = await fetch("/auth/sms/login", {
+      const response = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile, code }),
+        body: JSON.stringify({ orgId, mobile, password: loginPassword }),
       });
       const { body } = await safeFetchJson<AuthPayload>(response);
       if (!response.ok || !body?.success || !body.data?.token) {
@@ -2630,6 +2611,7 @@ export default function AssistantApp() {
     setActiveWorkbenchKey(WORKBENCH_DOCK_AGENTS[0].key);
     setActiveConversationId("");
     setWorkspaceTab("workbench");
+    setLoginPassword("");
     setNotice("已退出。");
   };
 
@@ -2667,22 +2649,19 @@ export default function AssistantApp() {
           />
         </div>
         <div className="boot-login__field">
-          <label htmlFor="boot-code">短信验证码</label>
+          <label htmlFor="boot-password">固定密码</label>
           <input
-            id="boot-code"
+            id="boot-password"
             className="boot-login__input"
-            value={code}
-            onChange={(event) => setCode(event.target.value)}
-            inputMode="numeric"
-            autoComplete="one-time-code"
+            type="password"
+            value={loginPassword}
+            onChange={(event) => setLoginPassword(event.target.value)}
+            autoComplete="off"
           />
         </div>
       </div>
-      <div className="boot-login__actions">
-        <button type="button" className="boot-login__btn boot-login__btn--ghost" onClick={sendCode} disabled={code.length >= 4 || loginSubmitting}>
-          获取验证码
-        </button>
-        <button type="button" className="boot-login__btn boot-login__btn--primary" onClick={login} disabled={!code.trim() || loginSubmitting}>
+      <div className="boot-login__actions boot-login__actions--single">
+        <button type="button" className="boot-login__btn boot-login__btn--primary" onClick={login} disabled={!loginPassword.trim() || loginSubmitting}>
           <span className="boot-phone-icon" aria-hidden>
             <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
               <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />

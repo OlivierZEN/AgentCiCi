@@ -27,17 +27,10 @@ curl -sf "${BASE_URL}/actuator/health" >/dev/null || {
   exit 1
 }
 
-echo "==> SMS send (${ORG_ID} / ${MOBILE})"
-SEND_JSON="$(curl -sf -X POST "${BASE_URL}/auth/sms/send" \
-  -H 'Content-Type: application/json' \
-  -d "{\"orgId\":\"${ORG_ID}\",\"mobile\":\"${MOBILE}\"}")"
-CODE="$(echo "${SEND_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['devCode'])")"
-echo "    devCode=${CODE}"
-
 echo "==> Login"
-LOGIN_JSON="$(curl -sf -X POST "${BASE_URL}/auth/sms/login" \
+LOGIN_JSON="$(curl -sf -X POST "${BASE_URL}/auth/password/login" \
   -H 'Content-Type: application/json' \
-  -d "{\"orgId\":\"${ORG_ID}\",\"mobile\":\"${MOBILE}\",\"code\":\"${CODE}\"}")"
+  -d "{\"orgId\":\"${ORG_ID}\",\"mobile\":\"${MOBILE}\",\"password\":\"${E2E_PASSWORD:-szyd1234}\"}")"
 TOKEN="$(echo "${LOGIN_JSON}" | python3 -c "import json,sys; print(json.load(sys.stdin)['data']['token'])")"
 AUTH=( -H "Authorization: Bearer ${TOKEN}" )
 

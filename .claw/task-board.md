@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-06T20:54:00+08:00
+updated_at: 2026-05-07T11:23:00+08:00
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,71 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-060 ECS SSL deployment for cici.cloudcc.cn
+
+- status: completed
+- priority: P0
+- owner_role: devops-deployment
+- summary: 将当前项目部署到阿里云 ECS `47.97.119.160`，使用域名 `cici.cloudcc.cn` 和本地 SSL 证书提供 HTTPS 访问。
+- done:
+  - 已验证 SSH：`root@47.97.119.160` 可通过 `/Volumes/Addison/workspace/datafiles/cc-cici-ecs.pem` 登录，主机为 x86_64 Alibaba Cloud Linux。
+  - 已同步部署文件到 `/opt/cici`，证书同步到 `/opt/cici/deploy/certs/cloudcc.cn.pem` 与 `cloudcc.cn.key`。
+  - 新增 `deploy/docker-compose.acr.ssl.yml` 与 `deploy/nginx.cici.ssl.conf`，80 端口跳转 HTTPS，443 端口使用 `cici.cloudcc.cn` SSL 证书。
+  - 远端 `deploy/acr.env` 已生成专用数据库/RabbitMQ/JWT/加密密钥，并设置 `APP_SECURITY_SECRET_KEY`。
+  - 已发现并修复基础服务镜像架构问题：原 `cici-database`、`cici-redis`、`cici-rabbitmq`、`cici-qdrant` 为 arm64 单架构，本轮已用官方基础镜像重新推送为 linux/amd64 ACR tag。
+  - 已修复 Qdrant healthcheck：镜像内没有 `curl/wget`，改为 bash TCP 探测 6333。
+  - 已部署六容器并确认全部 healthy：backend、frontend、database、redis、rabbitmq、qdrant。
+  - 已完成公网验收：HTTP 301 到 HTTPS；HTTPS 首页 200；固定密码登录接口 200，返回 token 与 `ORG_ADMIN`。
+- next_action: 浏览器人工验收助手端 `/`、管理端 `/admin/login`、平台端 `/platform/login`，并轮换或收回本次临时 ACR 凭据。
+- handoff_notes:
+  - 远端真实配置在 `/opt/cici/deploy/acr.env`，权限 `600`，不要提交到仓库。
+  - 远端 Docker 已保存 ACR 登录态；生产继续使用前建议改为长期 RAM/ACR 专用凭据并做凭据轮换。
+
+### TASK-059 ACR one-click docker compose deployment
+
+- status: images_refreshed
+- priority: P1
+- owner_role: devops-deployment
+- summary: 为当前项目制作基于阿里云 ACR `cloudcc-ai-native` 命名空间六个已推送镜像的一键 Docker Compose 部署脚本。
+- done:
+  - 新增 `deploy/docker-compose.acr.yml`，对应 `cici-backend`、`cici-frontend`、`cici-database`、`cici-redis`、`cici-rabbitmq`、`cici-qdrant` 六个 ACR 镜像。
+  - 新增 `deploy/acr.env.example`，集中配置 ACR 地址、镜像 tag、平台架构、端口、数据库/RabbitMQ 密码、JWT secret、管理员手机号、Qdrant、模型 API key 等部署参数。
+  - 新增 `scripts/deploy-acr.sh`，支持首次创建 `deploy/acr.env`、可选 `docker login`、`docker compose pull`、`up -d` 和状态输出。
+  - 新增 `deploy/nginx.cici.conf` 并挂载到前端容器，补齐 `/auth`、`/ai`、`/kb`、`/ops`、`/models`、`/tools`、`/integrations`、`/mcp-servers`、`/admin/users`、`/agents`、`/skills`、`/feishu`、`/me`、`/api/platform` 的后端代理。
+  - `.gitignore` 已忽略真实 `deploy/acr.env`，避免提交 ACR 密码、生产密码、JWT secret 或模型 API key。
+  - `docs/deploy-runbook.md` 已补充 ACR 一键部署流程、镜像清单、默认端点和停止命令。
+  - 已补充 compose 职责边界文档：根目录 `docker-compose.yml` 顶部注释、`README.md`、`docs/deploy-runbook.md`、`.claw/devops.md` 均明确其只用于本地开发基础设施；完整部署使用 ACR compose 和 `scripts/deploy-acr.sh`。
+  - 已完成验证：compose config 成功；脚本 `bash -n` 成功；前端镜像挂载新 Nginx 配置后 `nginx -t` 成功；目标文件 `git diff --check` 成功。
+  - 追加验证：`git diff --check -- docker-compose.yml README.md docs/deploy-runbook.md .claw/devops.md` 成功。
+  - 新增 `.dockerignore`、`deploy/Dockerfile.backend`、`deploy/Dockerfile.frontend`，用于从当前工作区构建 backend/frontend 运行时镜像。
+  - 已推送 `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:latest`，新 digest：`sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`。
+  - 已推送 `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest`，新 digest：`sha256:a70521fa3f651bec5fe32e1eaf5c698e5587a2e5de84f1acfb9e4a00ac33b9be`。
+  - 镜像刷新验证：后端 package 成功；前端 build 成功；backend/frontend buildx push 成功；imagetools inspect 可见新 digest；前端镜像 `nginx -t` 成功。
+  - 已追加基础服务 Dockerfile：`deploy/Dockerfile.database`、`deploy/Dockerfile.redis`、`deploy/Dockerfile.rabbitmq`、`deploy/Dockerfile.qdrant`，用于在 x86_64 服务器部署时刷新 ACR 基础服务 tag。
+- next_action: 在真实目标机执行 `./scripts/deploy-acr.sh`，观察六个容器健康状态和前端登录/API 代理是否可用。
+- handoff_notes:
+  - 当前 backend/frontend manifest 只确认有 `linux/amd64`，compose 默认 `CICI_PLATFORM=linux/amd64`；arm64 主机依赖 Docker Desktop/宿主运行时的 amd64 模拟能力。
+  - `deploy/acr.env.example` 内默认密码和 JWT secret 仅用于内部/试运行，生产部署前必须修改。
+
+### TASK-058 Fixed password login for three entries
+
+- status: completed
+- priority: P0
+- owner_role: frontend-backend-auth
+- spec_path: `docs/specs/FEAT-020-fixed-password-login.md`
+- summary: 将助手端、组织管理端、平台端登录从短信验证码切换为数据库初始化的固定密码 `szyd1234`，保留手机号与角色白名单语义。
+- done:
+  - 新增 `auth_password` 表迁移，初始化 `default` 固定密码凭证，使用 PBKDF2 哈希保存。
+  - 新增 `/auth/password/login`，认证成功后复用原用户创建、bootstrap 管理员提升、平台角色解析和 JWT 签发逻辑。
+  - `/auth/sms/send` 与 `/auth/sms/login` 保留路由但返回禁用提示，避免继续使用验证码登录。
+  - 助手端、组织管理端和平台端登录页已改为手机号 + 固定密码，不再显示验证码、获取验证码或 `devCode`。
+  - 后端测试 helper、本地 E2E 脚本、README、部署 runbook 与安全清单已改为密码登录语义。
+  - 已完成验证：后端 Auth 集成测试成功；后端 compile 成功；前端 build 成功（保留既有 Vite chunk-size warning）；登录产品路径静态搜索无验证码残留。
+- next_action: 可在真实浏览器分别登录 `/`、`/admin/login`、`/platform/login`，确认固定密码登录、角色门禁和登录后跳转无回归。
+- handoff_notes:
+  - 固定密码是当前本地/内部阶段方案，不适合生产公网环境；生产前应升级为每用户密码、SSO 或其他企业身份源。
+  - 当前角色分配仍依赖 `app.auth.bootstrap-admin-mobiles` 与 `app.auth.platform-*-mobiles` 配置。
 
 ### TASK-057 Agent observability monitoring frontend implementation
 

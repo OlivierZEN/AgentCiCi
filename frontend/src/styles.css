@@ -5624,6 +5624,10 @@ button:hover:not(:disabled),
   margin-top: 2px !important;
 }
 
+.boot-login__actions--single {
+  grid-template-columns: 1fr;
+}
+
 .boot-login__btn {
   min-width: 96px;
   height: 44px;
@@ -6267,6 +6271,10 @@ button:hover:not(:disabled),
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   margin-top: 14px !important;
+}
+
+.login-mode2 .boot-login__actions--single {
+  grid-template-columns: 1fr;
 }
 
 .login-mode2 .boot-login__btn {

@@ -1,3 +1,11 @@
+# Local development infrastructure only.
+#
+# This compose file intentionally starts only PostgreSQL, Redis, RabbitMQ, and
+# Qdrant so developers can run the backend with Maven and the frontend with
+# Vite on the host machine. It is not a complete application deployment file.
+# For one-click deployment with backend/frontend and ACR images, use:
+#   ./scripts/deploy-acr.sh
+
 services:
   postgres:
     image: postgres:16

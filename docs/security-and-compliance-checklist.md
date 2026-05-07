@@ -2,10 +2,11 @@
 
 ## Auth And Access
 
-- [x] SMS code has TTL and request throttling.
+- [x] Password login uses the database-initialized fixed credential for the current local/internal phase.
 - [x] JWT carries `org_id` and `user_id`.
 - [x] Invalid token returns `401`.
-- [ ] Integrate real SMS provider and remove `devCode` from production responses.
+- [x] SMS verification login is disabled in the API and removed from the three login entries.
+- [ ] Replace the fixed local/internal password with per-user password reset or SSO before production.
 
 ## Multi-Organization Isolation
 

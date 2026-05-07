@@ -36,6 +36,11 @@ public class AuthController {
         return ApiResponse.ok(authService.loginBySms(request.orgId(), request.mobile(), request.code()), "Login success");
     }
 
+    @PostMapping("/password/login")
+    public ApiResponse<Map<String, Object>> loginByPassword(@Valid @RequestBody PasswordLoginRequest request) {
+        return ApiResponse.ok(authService.loginByPassword(request.orgId(), request.mobile(), request.password()), "Login success");
+    }
+
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> currentUser() {
         String orgId = TenantContext.requireOrgId();
@@ -64,6 +69,15 @@ public class AuthController {
             @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
             String mobile,
             @NotBlank String code
+    ) {
+    }
+
+    public record PasswordLoginRequest(
+            @NotBlank String orgId,
+            @NotBlank
+            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String mobile,
+            @NotBlank String password
     ) {
     }
 

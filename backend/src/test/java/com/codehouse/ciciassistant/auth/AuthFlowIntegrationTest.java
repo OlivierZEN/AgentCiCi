@@ -45,31 +45,16 @@ class AuthFlowIntegrationTest {
     private AgentDefinitionRepository agentDefinitionRepository;
 
     @Test
-    void shouldLoginBySmsAndReadCurrentUser() throws Exception {
-        MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138000"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        JsonNode sendJson = objectMapper.readTree(sendResult.getResponse().getContentAsString());
-        String code = sendJson.path("data").path("devCode").asText();
-        assertThat(code).hasSize(6);
-
-        MvcResult loginResult = mockMvc.perform(post("/auth/sms/login")
+    void shouldLoginByPasswordAndReadCurrentUser() throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "orgId": "demo-org",
                                   "mobile": "13800138000",
-                                  "code": "%s"
+                                  "password": "szyd1234"
                                 }
-                                """.formatted(code)))
+                                """))
                 .andExpect(status().isOk())
                 .andReturn();
 
@@ -83,32 +68,33 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldRejectWrongCode() throws Exception {
-        mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138001"
-                                }
-                                """))
-                .andExpect(status().isOk());
-
-        mockMvc.perform(post("/auth/sms/login")
+    void shouldRejectWrongPassword() throws Exception {
+        mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "orgId": "demo-org",
                                   "mobile": "13800138001",
-                                  "code": "000000"
+                                  "password": "bad-password"
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Invalid verification code"));
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid mobile or password"));
     }
 
     @Test
-    void shouldRejectLoginWithoutCodeIssued() throws Exception {
+    void shouldDisableSmsLoginEndpoints() throws Exception {
+        mockMvc.perform(post("/auth/sms/send")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orgId": "demo-org",
+                                  "mobile": "13800138002"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("SMS verification login is disabled"));
+
         mockMvc.perform(post("/auth/sms/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -119,7 +105,7 @@ class AuthFlowIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("Verification code expired or missing"));
+                .andExpect(jsonPath("$.message").value("SMS verification login is disabled"));
     }
 
     @Test
@@ -137,60 +123,30 @@ class AuthFlowIntegrationTest {
         userRepository.flush();
         userRepository.save(new UserEntity(org, "13800138188", RoleCodes.ORG_USER));
 
-        MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138188"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        JsonNode sendJson = objectMapper.readTree(sendResult.getResponse().getContentAsString());
-        String code = sendJson.path("data").path("devCode").asText();
-
-        mockMvc.perform(post("/auth/sms/login")
+        mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "orgId": "demo-org",
                                   "mobile": "13800138188",
-                                  "code": "%s"
+                                  "password": "szyd1234"
                                 }
-                                """.formatted(code)))
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[0]").value("ORG_ADMIN"));
     }
 
     @Test
     void shouldExposePlatformRoleAndAllowPlatformBootstrap() throws Exception {
-        MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138111"
-                                }
-                                """))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        String code = objectMapper.readTree(sendResult.getResponse().getContentAsString())
-                .path("data")
-                .path("devCode")
-                .asText();
-
-        MvcResult loginResult = mockMvc.perform(post("/auth/sms/login")
+        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "orgId": "demo-org",
                                   "mobile": "13800138111",
-                                  "code": "%s"
+                                  "password": "szyd1234"
                                 }
-                                """.formatted(code)))
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles").isArray())
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())

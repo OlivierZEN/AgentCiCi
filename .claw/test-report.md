@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-06T20:54:00+08:00
+updated_at: 2026-05-07T11:37:37+08:00
 updated_by: ai
 status: active
-last_run_at: 2026-05-06T20:54:00+08:00
+last_run_at: 2026-05-07T11:37:37+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,74 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`Agent observability trace timing and skill activation semantics`
-- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`; `frontend npm run build`; `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test`
+- 范围：`V1.5 release validation`
+- 命令：`git diff --check`; `frontend npm run build`; `backend JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SmsRateLimitIntegrationTest test`
 - 环境：`local workspace`
 
 ## Latest Verified Results
+
+- V1.5 release validation (2026-05-07):
+  - Commands:
+    - `git`: `git diff --check` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `backend`: `/usr/bin/env JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SmsRateLimitIntegrationTest test` -> **success**
+  - Notes:
+    - 第一次后端测试使用默认 Java 17 运行已由 Java 21 编译的测试类，因 class file version 65.0 不兼容失败；按项目 Java 21 环境重跑后通过。
+    - 发布前安全扫描未发现真实 `deploy/acr.env`、证书或私钥进入新增 `deploy/` 文件；`.gitignore` 已忽略真实部署 env。
+
+- ECS SSL deployment for cici.cloudcc.cn (2026-05-07):
+  - Commands:
+    - `remote`: `docker compose --env-file /opt/cici/deploy/acr.env -f /opt/cici/deploy/docker-compose.acr.yml -f /opt/cici/deploy/docker-compose.acr.ssl.yml ps` -> **success**, all six containers healthy.
+    - `public`: `curl -I http://cici.cloudcc.cn/` -> **success**, `301` to `https://cici.cloudcc.cn/`.
+    - `public`: `curl -I https://cici.cloudcc.cn/` -> **success**, `200`.
+    - `public`: `POST https://cici.cloudcc.cn/auth/password/login` with `demo-org` / `13900009999` / fixed password -> **success**, `200`, token present, roles include `ORG_ADMIN`.
+    - `git`: `git diff --check -- deploy/docker-compose.acr.yml deploy/docker-compose.acr.ssl.yml deploy/nginx.cici.ssl.conf deploy/acr.env.example scripts/deploy-acr.sh docs/deploy-runbook.md deploy/Dockerfile.database deploy/Dockerfile.redis deploy/Dockerfile.rabbitmq deploy/Dockerfile.qdrant` -> **success**
+  - Notes:
+    - Qdrant service itself returned `healthz check passed`; compose healthcheck was corrected to avoid missing `curl/wget` in the image.
+    - Backend warning for DEV fallback encryption key was resolved by passing `APP_SECURITY_SECRET_KEY`.
+    - ACR infra tags were refreshed to linux/amd64 after discovering the previous tags were arm64-only.
+
+- ACR backend/frontend image refresh (2026-05-07):
+  - Commands:
+    - `backend`: `/usr/bin/env JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `docker`: `docker buildx build --platform linux/amd64 -f deploy/Dockerfile.backend -t op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:latest --push .` -> **success**
+    - `docker`: `docker buildx build --platform linux/amd64 -f deploy/Dockerfile.frontend -t op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest --push .` -> **success**
+    - `docker`: `docker buildx imagetools inspect op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:latest` -> **success**, digest `sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`
+    - `docker`: `docker buildx imagetools inspect op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest` -> **success**, digest `sha256:a70521fa3f651bec5fe32e1eaf5c698e5587a2e5de84f1acfb9e4a00ac33b9be`
+    - `docker`: `docker run --rm --platform linux/amd64 --entrypoint nginx op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest -t` -> **success**
+  - Notes:
+    - backend/frontend 镜像均按 `linux/amd64` 推送，匹配 ACR compose 默认 `CICI_PLATFORM=linux/amd64`。
+    - 前端镜像内已包含 `deploy/nginx.cici.conf`，不再依赖旧镜像只代理 `/api`、`/auth`、`/ws` 的默认配置。
+
+- ACR one-click docker compose deployment (2026-05-07):
+  - Commands:
+    - `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` -> **success**
+    - `bash -n scripts/deploy-acr.sh` -> **success**
+    - `docker run --rm --platform linux/amd64 -v "$PWD/deploy/nginx.cici.conf:/etc/nginx/conf.d/default.conf:ro" --entrypoint nginx op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest -t` -> **success**
+    - `git diff --check -- .gitignore deploy/docker-compose.acr.yml deploy/acr.env.example deploy/nginx.cici.conf scripts/deploy-acr.sh docs/deploy-runbook.md` -> **success**
+  - Notes:
+    - `docker manifest inspect` 已确认 `cici-backend`、`cici-frontend`、`cici-database`、`cici-redis`、`cici-rabbitmq`、`cici-qdrant` 的 `latest` tag 当前凭据可访问。
+    - 普通 `docker pull op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest` 在当前 arm64 主机上失败，原因是 manifest list 无 `linux/arm64/v8`；compose 已默认设置 `CICI_PLATFORM=linux/amd64`。
+    - 前端镜像原始 Nginx 配置只代理 `/api`、`/auth`、`/ws`；本轮新增挂载配置补齐项目实际使用的 API 路径。
+
+- ACR compose documentation boundary (2026-05-07):
+  - Commands:
+    - `git diff --check -- docker-compose.yml README.md docs/deploy-runbook.md .claw/devops.md` -> **success**
+  - Notes:
+    - 根目录 `docker-compose.yml` 顶部注释、`README.md`、`docs/deploy-runbook.md` 和 `.claw/devops.md` 已明确本地开发与完整部署职责边界。
+
+- Fixed password login for three entries (2026-05-07):
+  - Commands:
+    - `backend`: `/usr/bin/env JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SmsRateLimitIntegrationTest test` -> **success**
+    - `backend`: `/usr/bin/env JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite 提示 chunk size 超过 500 kB，非本轮新增失败）
+    - `git`: `git diff --check -- ...` -> **success**
+  - Notes:
+    - `auth_password` 迁移已由 Flyway 验证，当前测试库共验证 40 个迁移。
+    - `/auth/password/login` 覆盖正确密码登录、错误密码失败、bootstrap 管理员提升和平台角色登录。
+    - `/auth/sms/send` 与 `/auth/sms/login` 已在测试中断言返回 `SMS verification login is disabled`。
+    - 静态搜索确认三端前端、脚本、README 与通用 docs 中不再存在验证码登录产品路径，仅 FEAT-020 规格保留历史说明。
 
 - Agent observability trace timing and skill activation semantics (2026-05-06):
   - Commands:

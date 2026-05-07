@@ -11,9 +11,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * Isolated context: SMS send-window enforcement must remain covered while default test profile disables rate limiting.
- */
 @SpringBootTest(properties = "app.auth.sms.rate-limit-enabled=true")
 @AutoConfigureMockMvc
 class SmsRateLimitIntegrationTest {
@@ -22,17 +19,7 @@ class SmsRateLimitIntegrationTest {
     private MockMvc mockMvc;
 
     @Test
-    void shouldRejectFrequentSmsRequests() throws Exception {
-        mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "13800138003"
-                                }
-                                """))
-                .andExpect(status().isOk());
-
+    void shouldRejectSmsCodeRequestsWhenPasswordLoginIsEnabled() throws Exception {
         mockMvc.perform(post("/auth/sms/send")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -42,6 +29,6 @@ class SmsRateLimitIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("SMS request too frequent, please retry later"));
+                .andExpect(jsonPath("$.message").value("SMS verification login is disabled"));
     }
 }

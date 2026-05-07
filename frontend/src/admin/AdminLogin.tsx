@@ -9,36 +9,16 @@ export default function AdminLogin() {
   const nav = useNavigate();
   const [orgId, setOrgId] = useState("demo-org");
   const [mobile, setMobile] = useState("13900009999");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("组织管理员专用入口");
-
-  const sendCode = async () => {
-    try {
-      setNotice("验证码发送中...");
-      const res = await fetch("/auth/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile }),
-      });
-      const { body } = await safeFetchJson<{ devCode?: string }>(res);
-      if (!res.ok || !body?.success) {
-        setNotice(`发送失败：${body?.message ?? `HTTP ${res.status}`}`);
-        return;
-      }
-      setNotice(`验证码已发送，本地开发验证码：${body.data?.devCode ?? "（未返回）"}`);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setNotice(`发送失败：${msg}`);
-    }
-  };
 
   const login = async () => {
     try {
       setNotice("登录中...");
-      const res = await fetch("/auth/sms/login", {
+      const res = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile, code }),
+        body: JSON.stringify({ orgId, mobile, password }),
       });
       const { body } = await safeFetchJson<AuthPayload>(res);
       if (!res.ok || !body?.success || !body.data?.token) {
@@ -49,7 +29,7 @@ export default function AdminLogin() {
       const roles = payload.roles ?? [];
       if (!roles.includes("ORG_ADMIN")) {
         setNotice(
-          "该账号不是组织管理员。若手机号已在 bootstrap-admin-mobiles 中，请重新获取验证码并登录一次（服务端会提升角色）；否则请由管理员在「用户」页授权，或换用管理员手机号。",
+          "该账号不是组织管理员。若手机号已在 bootstrap-admin-mobiles 中，使用固定密码登录后服务端会提升角色；否则请由管理员在「用户」页授权，或换用管理员手机号。",
         );
         return;
       }
@@ -72,13 +52,10 @@ export default function AdminLogin() {
         <input value={orgId} onChange={(e) => setOrgId(e.target.value)} />
         <label>手机号</label>
         <input value={mobile} onChange={(e) => setMobile(e.target.value)} />
-        <label>验证码</label>
-        <input value={code} onChange={(e) => setCode(e.target.value)} />
+        <label>固定密码</label>
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" />
         <div className="row">
-          <button type="button" onClick={sendCode}>
-            获取验证码
-          </button>
-          <button type="button" onClick={login}>
+          <button type="button" onClick={login} disabled={!password.trim()}>
             进入后台
           </button>
         </div>

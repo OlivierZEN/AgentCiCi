@@ -1351,30 +1351,15 @@ class OrchestratorIntegrationTest {
     }
 
     private String loginToken(String mobile) throws Exception {
-        MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "%s"
-                                }
-                                """.formatted(mobile)))
-                .andReturn();
-        if (sendResult.getResponse().getStatus() != 200) {
-            throw new IllegalStateException("send sms failed: " + sendResult.getResponse().getContentAsString());
-        }
-        JsonNode send = objectMapper.readTree(sendResult.getResponse().getContentAsString());
-        String code = send.path("data").path("devCode").asText();
-
-        MvcResult loginResult = mockMvc.perform(post("/auth/sms/login")
+        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "orgId": "demo-org",
                                   "mobile": "%s",
-                                  "code": "%s"
+                                  "password": "szyd1234"
                                 }
-                                """.formatted(mobile, code)))
+                                """.formatted(mobile)))
                 .andReturn();
         if (loginResult.getResponse().getStatus() != 200) {
             throw new IllegalStateException("login failed: " + loginResult.getResponse().getContentAsString());

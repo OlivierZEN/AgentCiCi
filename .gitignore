@@ -17,6 +17,7 @@ frontend/tsconfig.*.tsbuildinfo
 
 # Temp
 tmp-*.txt
+deploy/acr.env
 
 # OS
 .DS_Store

@@ -1,0 +1,150 @@
+name: cici-acr
+
+services:
+  database:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-database:${CICI_IMAGE_TAG:-latest}
+    platform: ${CICI_PLATFORM:-linux/amd64}
+    container_name: cici-database
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cici_assistant}
+      POSTGRES_USER: ${POSTGRES_USER:-cici}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cici123}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - cici_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-redis:${CICI_IMAGE_TAG:-latest}
+    platform: ${CICI_PLATFORM:-linux/amd64}
+    container_name: cici-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - cici_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  rabbitmq:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-rabbitmq:${CICI_IMAGE_TAG:-latest}
+    platform: ${CICI_PLATFORM:-linux/amd64}
+    container_name: cici-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-cici}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-cici123}
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - cici_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  qdrant:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-qdrant:${CICI_IMAGE_TAG:-latest}
+    platform: ${CICI_PLATFORM:-linux/amd64}
+    container_name: cici-qdrant
+    restart: unless-stopped
+    ports:
+      - "${QDRANT_PORT:-6333}:6333"
+    volumes:
+      - cici_qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/6333'"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-backend:${CICI_IMAGE_TAG:-latest}
+    platform: ${CICI_PLATFORM:-linux/amd64}
+    container_name: cici-backend
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-cici_assistant}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cici}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cici123}
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: ${RABBITMQ_DEFAULT_USER:-cici}
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_DEFAULT_PASS:-cici123}
+      APP_AUTH_JWT_SECRET: ${APP_AUTH_JWT_SECRET:-change-me-in-prod-change-me-in-prod-2026}
+      APP_AUTH_BOOTSTRAP_ADMIN_MOBILES: ${APP_AUTH_BOOTSTRAP_ADMIN_MOBILES:-13800138111,13900009999}
+      APP_AUTH_PLATFORM_ADMIN_MOBILES: ${APP_AUTH_PLATFORM_ADMIN_MOBILES:-13800138111}
+      APP_AUTH_PLATFORM_OPERATOR_MOBILES: ${APP_AUTH_PLATFORM_OPERATOR_MOBILES:-}
+      APP_AUTH_PLATFORM_SUPPORT_MOBILES: ${APP_AUTH_PLATFORM_SUPPORT_MOBILES:-}
+      APP_AUTH_PLATFORM_BILLING_MOBILES: ${APP_AUTH_PLATFORM_BILLING_MOBILES:-}
+      APP_AUTH_PLATFORM_AUDITOR_MOBILES: ${APP_AUTH_PLATFORM_AUDITOR_MOBILES:-}
+      APP_AUTH_SMS_STORE: redis
+      APP_SECRET_KEY: ${APP_SECRET_KEY:-}
+      APP_SECURITY_SECRET_KEY: ${APP_SECURITY_SECRET_KEY:-${APP_SECRET_KEY:-}}
+      APP_KB_INDEXING_MODE: mq
+      APP_KB_STORAGE_DIR: ${APP_KB_STORAGE_DIR:-/app/data/kb-files}
+      APP_KB_VECTOR_STORE: qdrant
+      APP_KB_QDRANT_BASE_URL: http://qdrant:6333
+      APP_KB_QDRANT_COLLECTION: ${APP_KB_QDRANT_COLLECTION:-cici_kb_chunk}
+      APP_MODEL_ALIYUN_BASE_URL: ${APP_MODEL_ALIYUN_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      APP_MODEL_ALIYUN_API_KEY: ${APP_MODEL_ALIYUN_API_KEY:-}
+      APP_MODEL_ALIYUN_DEFAULT_MODEL: ${APP_MODEL_ALIYUN_DEFAULT_MODEL:-qwen3.5-flash}
+      CICI_TOOL_TAVILY_API_BASE: ${CICI_TOOL_TAVILY_API_BASE:-https://api.tavily.com}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      - cici_kb_files:/app/data/kb-files
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health >/dev/null || wget -q -O - http://localhost:8080/actuator/health >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  frontend:
+    image: ${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}/cici-frontend:${CICI_IMAGE_TAG:-latest}
+    platform: ${CICI_PLATFORM:-linux/amd64}
+    container_name: cici-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    volumes:
+      - ./nginx.cici.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/ >/dev/null || wget -q -O - http://localhost/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  cici_pg_data:
+  cici_redis_data:
+  cici_rabbitmq_data:
+  cici_qdrant_data:
+  cici_kb_files:

@@ -1,19 +1,26 @@
 package com.codehouse.ciciassistant.auth.service;
 
 import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.domain.AuthPasswordEntity;
+import com.codehouse.ciciassistant.auth.domain.AuthPasswordRepository;
 import com.codehouse.ciciassistant.auth.domain.OrgEntity;
 import com.codehouse.ciciassistant.auth.domain.OrgRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
+import java.security.MessageDigest;
+import java.security.spec.KeySpec;
 import java.time.Instant;
 import java.util.LinkedHashSet;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +30,7 @@ public class AuthService {
 
     private final OrgRepository orgRepository;
     private final UserRepository userRepository;
-    private final SmsCodeStore smsCodeStore;
+    private final AuthPasswordRepository authPasswordRepository;
     private final JwtService jwtService;
     private final Set<String> bootstrapAdminMobiles;
     private final Set<String> platformAdminMobiles;
@@ -34,7 +41,7 @@ public class AuthService {
 
     public AuthService(OrgRepository orgRepository,
                        UserRepository userRepository,
-                       SmsCodeStore smsCodeStore,
+                       AuthPasswordRepository authPasswordRepository,
                        JwtService jwtService,
                        @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw,
                        @Value("${app.auth.platform-admin-mobiles:}") String platformAdminMobilesRaw,
@@ -44,7 +51,7 @@ public class AuthService {
                        @Value("${app.auth.platform-auditor-mobiles:}") String platformAuditorMobilesRaw) {
         this.orgRepository = orgRepository;
         this.userRepository = userRepository;
-        this.smsCodeStore = smsCodeStore;
+        this.authPasswordRepository = authPasswordRepository;
         this.jwtService = jwtService;
         this.bootstrapAdminMobiles = parseMobileSet(bootstrapAdminMobilesRaw);
         this.platformAdminMobiles = parseMobileSet(platformAdminMobilesRaw);
@@ -65,22 +72,22 @@ public class AuthService {
     }
 
     public Map<String, Object> sendSmsCode(String orgId, String mobile) {
-        OrgEntity org = requireOrg(orgId);
-        String code = smsCodeStore.createCode(org.getId(), mobile);
-        return Map.of(
-                "orgId", org.getId(),
-                "mobile", mobile,
-                "expiresInSeconds", 300,
-                "status", "sent",
-                "devCode", code
-        );
+        throw new IllegalArgumentException("SMS verification login is disabled");
     }
 
     @Transactional
     public Map<String, Object> loginBySms(String orgId, String mobile, String code) {
-        OrgEntity org = requireOrg(orgId);
-        smsCodeStore.verifyCode(org.getId(), mobile, code);
+        throw new IllegalArgumentException("SMS verification login is disabled");
+    }
 
+    @Transactional
+    public Map<String, Object> loginByPassword(String orgId, String mobile, String password) {
+        OrgEntity org = requireOrg(orgId);
+        verifyFixedPassword(password);
+        return issueLogin(org, mobile);
+    }
+
+    private Map<String, Object> issueLogin(OrgEntity org, String mobile) {
         String mobileNorm = mobile == null ? "" : mobile.trim();
         boolean bootstrapAdmin = bootstrapAdminMobiles.contains(mobileNorm);
         String initialRole = bootstrapAdmin ? RoleCodes.ORG_ADMIN : RoleCodes.ORG_USER;
@@ -100,6 +107,31 @@ public class AuthService {
                 "roles", roles,
                 "issuedAt", Instant.now().toString()
         );
+    }
+
+    private void verifyFixedPassword(String password) {
+        AuthPasswordEntity credential = authPasswordRepository.findById("default")
+                .orElseThrow(() -> new UnauthorizedException("Password login is not initialized"));
+        if (!"PBKDF2WithHmacSHA256".equals(credential.getAlgorithm())) {
+            throw new UnauthorizedException("Unsupported password credential");
+        }
+        try {
+            byte[] expected = Base64.getDecoder().decode(credential.getPasswordHash());
+            KeySpec spec = new PBEKeySpec(
+                    password == null ? new char[0] : password.toCharArray(),
+                    credential.getSalt().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                    credential.getIterations(),
+                    expected.length * 8
+            );
+            byte[] actual = SecretKeyFactory.getInstance(credential.getAlgorithm()).generateSecret(spec).getEncoded();
+            if (!MessageDigest.isEqual(expected, actual)) {
+                throw new UnauthorizedException("Invalid mobile or password");
+            }
+        } catch (UnauthorizedException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new UnauthorizedException("Password verification failed");
+        }
     }
 
     public Map<String, Object> currentUser(String orgId, String userId) {

@@ -13,35 +13,16 @@ export default function PlatformLogin() {
   const nav = useNavigate();
   const [orgId, setOrgId] = useState("demo-org");
   const [mobile, setMobile] = useState("13800138111");
-  const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("平台运营入口");
-
-  const sendCode = async () => {
-    try {
-      setNotice("验证码发送中...");
-      const res = await fetch("/auth/sms/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile }),
-      });
-      const { body } = await safeFetchJson<{ devCode?: string }>(res);
-      if (!res.ok || !body?.success) {
-        setNotice(`发送失败：${body?.message ?? `HTTP ${res.status}`}`);
-        return;
-      }
-      setNotice(`验证码已发送，本地开发验证码：${body.data?.devCode ?? "（未返回）"}`);
-    } catch (err) {
-      setNotice(`发送失败：${err instanceof Error ? err.message : String(err)}`);
-    }
-  };
 
   const login = async () => {
     try {
       setNotice("登录中...");
-      const res = await fetch("/auth/sms/login", {
+      const res = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile, code }),
+        body: JSON.stringify({ orgId, mobile, password }),
       });
       const { body } = await safeFetchJson<AuthPayload>(res);
       if (!res.ok || !body?.success || !body.data?.token) {
@@ -82,13 +63,10 @@ export default function PlatformLogin() {
             <input value={orgId} onChange={(e) => setOrgId(e.target.value)} />
             <label>手机号</label>
             <input value={mobile} onChange={(e) => setMobile(e.target.value)} />
-            <label>验证码</label>
-            <input value={code} onChange={(e) => setCode(e.target.value)} />
+            <label>固定密码</label>
+            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" />
             <div className="row platform-login__actions">
-              <button type="button" className="platform-button platform-button--secondary" onClick={sendCode}>
-                获取验证码
-              </button>
-              <button type="button" className="platform-button platform-button--primary" onClick={login}>
+              <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!password.trim()}>
                 进入平台后台
               </button>
             </div>

@@ -46,6 +46,8 @@ cd backend
 mvn spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
+根目录 `docker-compose.yml` 只用于**本地开发基础设施**，故意只启动 PostgreSQL、Redis、RabbitMQ 和 Qdrant。它不包含后端、前端、ACR 镜像、前端 Nginx 代理或生产环境变量，不作为完整部署入口。
+
 本地基础设施端口：
 
 - PostgreSQL: `5432`
@@ -95,8 +97,8 @@ npm run dev
 | 项 | 值 |
 |----|-----|
 | 组织 ID | `demo-org`（启动时自动创建） |
-| 手机号 | 助手端默认 `13800138111`；后台管理默认 `13900009999`（与 `application-local.yml` 中 bootstrap 管理员列表示例一致）。若提示发送过频，换一个号码或等待约 1 分钟（Redis 限流） |
-| 验证码 | 点击「发送验证码」后，接口与界面会展示 **`devCode`**，将其填入验证码即可登录 |
+| 手机号 | 助手端默认 `18611892001`；后台管理默认 `13900009999`；平台默认 `13800138111`（管理员与平台角色仍由 `application-local.yml` 中手机号白名单决定） |
+| 固定密码 | `szyd1234`（由数据库迁移初始化到 `auth_password` 表；三端登录统一使用该密码） |
 | 知识库聊天 | 上传并发布文档需在 **管理后台** 完成；助手端勾选知识库后再提问，以便带上正确的 `knowledgeBaseIds` |
 
 仅 API 验收（后端已运行在 8080；默认使用 `13900009999` 以保证新建用户为管理员，与本地 `bootstrap-admin-mobiles` 对齐）：
@@ -109,9 +111,31 @@ npm run dev
 
 请勿将生产用模型 Key、短信密钥等提交仓库；`application-local.yml` 中的密钥仅用于本机联调，提交前请替换为占位符或改用环境变量。
 
+## Deployment
+
+完整应用交付统一使用 ACR 一键部署脚本，而不是根目录 `docker-compose.yml`：
+
+```bash
+cp deploy/acr.env.example deploy/acr.env
+# 编辑 deploy/acr.env：ACR 凭据、生产密码、JWT secret、模型 API key 和端口
+./scripts/deploy-acr.sh
+```
+
+部署入口：
+
+- `deploy/docker-compose.acr.yml`：完整应用栈，使用 `op-registry.cloudcc.cn/cloudcc-ai-native/*:latest` 六个镜像。
+- `deploy/acr.env.example`：部署环境变量示例；真实 `deploy/acr.env` 已被 `.gitignore` 忽略。
+- `deploy/nginx.cici.conf`：前端容器挂载的 Nginx 代理配置，负责把浏览器相对 API 转发到后端。
+- `scripts/deploy-acr.sh`：一键登录、拉取、启动和查看状态。
+
+本地开发和部署职责边界：
+
+- 本地开发：`docker compose up -d` + 本机 Maven 后端 + 本机 Vite 前端。
+- 完整部署：`./scripts/deploy-acr.sh` + ACR 六镜像 + 前端 Nginx 代理 + 后端服务。
+
 ## Core APIs (MVP)
 
-- Auth: `/auth/sms/send`, `/auth/sms/login`, `/auth/me`（响应含 `roles`）
+- Auth: `/auth/password/login`, `/auth/me`（响应含 `roles`）
 - Orchestrator: `/ai/chat`（JSON 一次性返回）、`/ai/chat/stream`（**SSE** 流式，`event:delta` 携带 `{"text":"..."}`，结束 `event:done`）、`/ai/sessions`
 - Knowledge（读，任意登录用户）: `GET /kb`, `GET /kb/{kbId}/documents`
 - Knowledge（写，**ORG_ADMIN**）: `POST/PUT/DELETE /kb`, `POST /kb/documents/upload`, `POST /kb/documents/{id}/publish`, `DELETE /kb/documents/{id}`, `POST /kb/{kbId}/chunks`

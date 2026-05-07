@@ -911,28 +911,15 @@ class SkillGovernanceIntegrationTest {
     }
 
     private String loginToken(String mobile) throws Exception {
-        MvcResult sendResult = mockMvc.perform(post("/auth/sms/send")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("""
-                                {
-                                  "orgId": "demo-org",
-                                  "mobile": "%s"
-                                }
-                                """.formatted(mobile)))
-                .andExpect(status().isOk())
-                .andReturn();
-        JsonNode send = objectMapper.readTree(sendResult.getResponse().getContentAsString(StandardCharsets.UTF_8));
-        String code = send.path("data").path("devCode").asText();
-
-        MvcResult loginResult = mockMvc.perform(post("/auth/sms/login")
+        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "orgId": "demo-org",
                                   "mobile": "%s",
-                                  "code": "%s"
+                                  "password": "szyd1234"
                                 }
-                                """.formatted(mobile, code)))
+                                """.formatted(mobile)))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(loginResult.getResponse().getContentAsString(StandardCharsets.UTF_8)).path("data").path("token").asText();
