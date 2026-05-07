@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-07T11:23:00+08:00
+updated_at: 2026-05-07T11:53:10+08:00
 updated_by: ai
 status: active
 board_status: active
@@ -26,10 +26,14 @@ board_status: active
   - 已修复 Qdrant healthcheck：镜像内没有 `curl/wget`，改为 bash TCP 探测 6333。
   - 已部署六容器并确认全部 healthy：backend、frontend、database、redis、rabbitmq、qdrant。
   - 已完成公网验收：HTTP 301 到 HTTPS；HTTPS 首页 200；固定密码登录接口 200，返回 token 与 `ORG_ADMIN`。
+  - 2026-05-07 已将本地 PostgreSQL 业务数据同步到 ECS：远端同步前备份在 `/opt/cici/backups/20260507-114853-local-data-sync/remote-before-sync.dump`，同步后远端包含本地平台治理模板、平台工具、集成应用、策略包和少量聊天/运行日志数据。
+  - 已修复 HTTPS Nginx API 代理漏匹配无尾斜杠路径的问题：`/agents`、`/skills`、`/integrations`、`/models/providers` 等现在返回后端 JSON，不再被前端 `try_files` 回退成 HTML；`/api/platform/*` 已 rewrite 到后端 `/platform/*`。
+  - 数据同步和代理修复后验证通过：远端六容器 healthy，Nginx `nginx -t` 成功并已 reload，`https://cici.cloudcc.cn/` 与 `/actuator/health` 返回 `200`，组织管理员登录后 `/agents` 3 条、`/skills` 8 条、`/integrations` 3 条、`/models/providers` 5 条，默认平台管理员登录后 `/api/platform/skills` 11 条、`/api/platform/tools` 13 条。
 - next_action: 浏览器人工验收助手端 `/`、管理端 `/admin/login`、平台端 `/platform/login`，并轮换或收回本次临时 ACR 凭据。
 - handoff_notes:
   - 远端真实配置在 `/opt/cici/deploy/acr.env`，权限 `600`，不要提交到仓库。
   - 远端 Docker 已保存 ACR 登录态；生产继续使用前建议改为长期 RAM/ACR 专用凭据并做凭据轮换。
+  - 如果聊天工作台仍请求 `Session not found`，优先清理浏览器该站点 localStorage 或新建会话；这是旧浏览器状态中的 session id 与当前数据库不一致，不是 API 代理问题。
 
 ### TASK-059 ACR one-click docker compose deployment
 

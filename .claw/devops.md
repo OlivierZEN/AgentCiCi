@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-07T11:23:00+08:00
+updated_at: 2026-05-07T11:53:10+08:00
 updated_by: ai
 status: active
 ---
@@ -93,6 +93,14 @@ status: active
     - `http://cici.cloudcc.cn/` -> `301`
     - `https://cici.cloudcc.cn/` -> `200`
     - `POST /auth/password/login` fixed-password smoke -> `200`
+  - Data sync on 2026-05-07:
+    - Remote pre-sync PostgreSQL backup: `/opt/cici/backups/20260507-114853-local-data-sync/remote-before-sync.dump`
+    - Local PostgreSQL dump restored to remote `cici-database` with `pg_restore --clean --if-exists`.
+    - Synced row counts include `platform_skill_template=11`, `platform_tool_definition=13`, `integration_app=3`, `platform_policy_bundle=1`.
+  - Nginx API proxy repair on 2026-05-07:
+    - `deploy/nginx.cici.conf` and `deploy/nginx.cici.ssl.conf` must match API roots without requiring a trailing slash.
+    - `/api/platform` and `/api/platform/*` must rewrite to backend `/platform` and `/platform/*`.
+    - Verified remotely with `docker exec cici-frontend nginx -t`, `nginx -s reload`, `GET /agents`, `GET /skills`, `GET /integrations`, `GET /models/providers`, `GET /api/platform/skills`, and `GET /api/platform/tools`.
   - Operational note:
     - ACR infra tags were rebuilt as linux/amd64 because the ECS is x86_64 and previous infra tags were arm64-only.
 

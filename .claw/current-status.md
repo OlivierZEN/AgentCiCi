@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-07T11:37:37+08:00
+updated_at: 2026-05-07T11:53:10+08:00
 updated_by: ai
 status: active
-phase: v1_5_release_packaged
-active_task: "Release V1.5"
-current_task: 正在将固定密码登录与 compose 部署脚本文档整理为 `V1.5` 版本提交和 tag。
-next_action: 推送 `main` 与 `V1.5` tag 到 `origin`；若 GitHub 连接继续 reset，保留本地提交和 tag 后重试远程推送。
+phase: ecs_data_sync_and_proxy_fix
+active_task: "ECS data sync and API proxy repair"
+current_task: 已将本地 PostgreSQL 业务数据同步到 ECS，并修复 HTTPS Nginx API 代理无尾斜杠路径不转发的问题。
+next_action: 浏览器人工刷新验证助手端、组织管理端和平台端；若聊天页仍请求旧 session id，清理站点 localStorage 或新建会话后再测。
 read_next:
   goals: false
   decisions: true
@@ -22,6 +22,11 @@ priority: P0
 
 ## Snapshot
 
+- 2026-05-07 ECS 数据同步完成：远端原 PostgreSQL 已备份到 `/opt/cici/backups/20260507-114853-local-data-sync/remote-before-sync.dump`，本地 `cici-postgres` 的 `cici_assistant` 已通过 `pg_dump -Fc` / `pg_restore --clean --if-exists` 恢复到远端 `cici-database`。
+- 同步前确认远端并非迁移失败：Flyway 40 个迁移均完成；问题是远端 Docker volume 为首次部署新库，缺少本地后续写入的平台治理、集成应用、聊天和运行日志数据。同步后远端表数量已与本地对齐，含 `platform_skill_template=11`、`platform_tool_definition=13`、`integration_app=3`、`platform_policy_bundle=1`。
+- 2026-05-07 修复部署 Nginx API 代理：`deploy/nginx.cici.conf` 与 `deploy/nginx.cici.ssl.conf` 的通用 API location 从只匹配 `.../` 改为匹配无尾斜杠与子路径；新增 `/api/platform` 到后端 `/platform` 的 rewrite，避免 `/agents`、`/skills`、`/integrations`、`/models/providers` 返回前端 HTML 导致页面无数据。
+- 远端已同步新 Nginx 配置并执行 `docker exec cici-frontend nginx -t` 与 `nginx -s reload`，语法检查和热重载成功；`docker compose ps` 显示六容器均 healthy。
+- 本轮远端验证通过：`https://cici.cloudcc.cn/` 返回 `200`；`/actuator/health` 返回 `200`；固定密码登录 `13900009999` 返回 `ORG_ADMIN`；`/agents` 返回 3 条、`/skills` 返回 8 条、`/integrations` 返回 3 条、`/models/providers` 返回 5 条；默认平台管理员 `13800138111` 登录返回 `ORG_ADMIN` / `PLATFORM_ADMIN`，`/api/platform/skills` 返回 11 条、`/api/platform/tools` 返回 13 条、`/api/platform/policies/core` 返回 JSON 成功。
 - V1.5 发布前校验通过：`git diff --check` 成功；前端 `npm run build` 成功（保留既有 Vite chunk-size warning）；后端认证集成测试在 Java 21 下 `AuthFlowIntegrationTest,SmsRateLimitIntegrationTest` 成功。第一次后端测试用默认 Java 17 运行已由 Java 21 编译的测试类失败，切换 `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home` 后通过。
 - 发布前安全检查通过：本地新增 `deploy/` 文件不包含真实 `deploy/acr.env`、证书或私钥；`.gitignore` 已忽略 `deploy/acr.env`。
 - 远程 `git fetch origin --tags` 两次因 GitHub HTTPS 连接 reset 失败，需在本地提交/tag 后继续重试 `git push`。
