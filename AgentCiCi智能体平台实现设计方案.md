@@ -1,8 +1,8 @@
-# 系统内 AI 助手实现设计方案（Java 21 / Qdrant / PostgreSQL / RabbitMQ / React）
+# AgentCiCi 智能体平台实现设计方案（Java 21 / Qdrant / PostgreSQL / RabbitMQ / React）
 
 ## 1. 建设目标与边界
 
-本项目目标是建设一个企业内多组织 AI 助手平台，支持手机号登录、多模型接入、skills/MCP 工具编排以及 RAG 知识增强，并满足企业级安全与隔离需求。
+本项目目标是建设 AgentCiCi 企业级多组织智能体运行与治理平台，支持手机号登录、多模型接入、skills/MCP 工具编排、Agent Builder、RAG 知识增强、运行观测和外部系统集成，并满足企业级安全与隔离需求。AgentCiCi 是独立产品品牌，CloudCC、Salesforce、企业微信、飞书等均作为可接入的业务系统或渠道。
 
 核心目标：
 
@@ -98,25 +98,23 @@
 
 #### 4.1.1 手机号 + 短信验证码登录流程
 
-1. 用户在登录页输入手机号与组织标识（或自动识别/预置组织）
-2. 前端调用 `POST /auth/sms/send`，后端：
-   - 校验手机号格式与组织可用性
-   - 请求频率限制（如每分钟 1 次、每天 10 次）
-   - 调用阿里云短信服务发送验证码
-   - 将验证码与手机号、组织 ID 写入 Redis（带过期时间）
-3. 用户输入验证码后调用 `POST /auth/sms/login`：
-   - 后端校验 Redis 中验证码
-   - 若通过，查询或创建用户记录（与 `org_id` 绑定）
-   - 生成 JWT（包含 `org_id`、`user_id`、`roles` 等）
+1. 用户在登录页输入手机号、组织标识和当前开发阶段固定密码
+2. 前端调用 `POST /auth/password/login`，后端：
+   - 校验手机号格式、组织可用性与固定密码
+   - 按手机号创建或复用全局 `user_account` 与 `account_login_identifier`
+   - 按 `org_id + account_id` 创建或复用 `organization_member`
+   - 生成 JWT（包含 `org_id`、`account_id`、`member_id`、`roles` 等；`sub` 当前为 `organization_member.id`）
    - 返回给前端；当前 SPA 将登录态存 **`localStorage`**（助手端键名 `cici_assistant_token`，管理端键名 `cici_admin_token`，互不覆盖）。生产环境可演进为 `httpOnly` Cookie + CSRF 等更强方案。
-   - **Bootstrap 管理员手机号**：配置项 `app.auth.bootstrap-admin-mobiles`（逗号分隔）。**新建用户**时：命中则 `ORG_ADMIN`，否则 `ORG_USER`。**已存在用户**若当前为 `ORG_USER` 且手机号在名单内，**每次短信登录成功时会升为** `ORG_ADMIN`（便于先注册后补名单的场景）；名单内用户不会仅因登录被自动降级（降级需管理员在后台修改角色）。
+   - **Bootstrap 管理员手机号**：配置项 `app.auth.bootstrap-admin-mobiles`（逗号分隔）。**新建成员**时：命中则 `ORG_ADMIN`，否则 `ORG_USER`。**已存在成员**若当前为 `ORG_USER` 且手机号在名单内，**每次密码登录成功时会升为** `ORG_ADMIN`（便于先注册后补名单的场景）；名单内成员不会仅因登录被自动降级（降级需管理员在后台修改角色）。
 
 #### 4.1.2 相关核心表
 
 **当前 MVP 实现（Flyway `V1__init_auth_tables.sql` 等）**
 
 - `org`：`id`、`name`、`status`
-- `app_user`：`id`、`org_id`、`mobile`、**`role_code`**（`ORG_ADMIN` / `ORG_USER`）、`created_at`；**无**独立 `user_role` 关联表
+- `user_account`：全局自然人账号，当前以 `primary_mobile` 作为开发阶段主登录标识
+- `account_login_identifier`：手机号等登录标识，当前已落地 `MOBILE`
+- `organization_member`：`id`、`org_id`、`account_id`、**`role_code`**（`ORG_ADMIN` / `ORG_USER`）、`member_status`、组织内资料与 CloudCC 绑定字段；现有业务中的 `user_id` 值语义为 `organization_member.id`
 
 **远期扩展（设计示意，尚未落库）**
 
@@ -227,7 +225,7 @@
 | 入口 | 路由 | 受众 | 能力概要 |
 |------|------|------|----------|
 | 助手端 | `/` | `ORG_USER` / `ORG_ADMIN` 均可登录使用助手 | 手机号验证码登录；对话；**只读**知识库列表 + 多选参与 RAG |
-| 管理后台 | `/admin/login`，业务页 `/admin/kb`、`/admin/models`、`/admin/tools`、`/admin/ops`、`/admin/users` | 仅 **`ORG_ADMIN`** | 知识库与文档全生命周期管理；模型/工具配置；运维看板；**用户列表与角色变更** |
+| 管理后台 | `/admin/login`，业务页 `/admin/kb`、`/admin/models`、`/admin/tools`、`/admin/ops`、`/admin/users` | 仅 **`ORG_ADMIN`** | 知识库与文档全生命周期管理；模型/工具配置；观测运维（智能体运行、成本、审计）；**用户列表与角色变更** |
 
 **鉴权与体验约定**
 
@@ -270,6 +268,8 @@
 
 - `GET /ops/audit/logs`：审计日志（**需 `ORG_ADMIN`**）
 - `GET /ops/metrics/cost`：调用量与成本（**需 `ORG_ADMIN`**）
+- `GET /admin/agents/run-logs`：组织级智能体最近 7 天运行日志（**需 `ORG_ADMIN`**）
+- `GET /admin/agents/run-logs/{traceId}`：组织级单次运行链路详情（**需 `ORG_ADMIN`**）
 
 ### 5.6 组织用户管理（管理后台）
 

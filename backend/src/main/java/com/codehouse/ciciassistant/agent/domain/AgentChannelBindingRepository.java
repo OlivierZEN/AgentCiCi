@@ -7,5 +7,7 @@ public interface AgentChannelBindingRepository extends JpaRepository<AgentChanne
 
     List<AgentChannelBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByIdAsc(String orgId, String agentId);
 
+    boolean existsByOrgIdAndAgentIdAndChannelIdAndEnabledTrue(String orgId, String agentId, String channelId);
+
     void deleteByOrgIdAndAgentId(String orgId, String agentId);
 }

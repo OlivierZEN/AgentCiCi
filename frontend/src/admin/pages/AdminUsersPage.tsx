@@ -6,6 +6,7 @@ type UserRow = {
   id: string;
   mobile: string;
   roleCode: string;
+  memberStatus?: string;
   createdAt: string;
   nickname?: string;
   ccUsername?: string;
@@ -27,6 +28,7 @@ export default function AdminUsersPage() {
     ccUsername: "",
     ccSafetymark: "",
   });
+  const [inviteForm, setInviteForm] = useState({ mobile: "", nickname: "", roleCode: "ORG_USER" });
   const [avatarPreview, setAvatarPreview] = useState("");
 
   const load = async () => {
@@ -98,6 +100,55 @@ export default function AdminUsersPage() {
     await load();
   };
 
+  const inviteMember = async () => {
+    if (!inviteForm.mobile.trim()) {
+      setNotice("请输入成员手机号");
+      return;
+    }
+    const res = await fetch("/admin/users/invitations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(inviteForm),
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      setNotice(json.message ?? "添加成员失败");
+      return;
+    }
+    setNotice("成员已加入组织");
+    setInviteForm({ mobile: "", nickname: "", roleCode: "ORG_USER" });
+    setSelectedUserId(json.data?.id ?? "");
+    await load();
+  };
+
+  const setMemberStatus = async (userId: string, action: "suspend" | "restore") => {
+    const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/${action}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      setNotice(json.message ?? "成员状态更新失败");
+      return;
+    }
+    setNotice(action === "suspend" ? "成员已停用" : "成员已恢复");
+    await load();
+  };
+
+  const transferOwner = async (userId: string) => {
+    const res = await fetch(`/admin/users/${encodeURIComponent(userId)}/transfer-owner`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    const json = await res.json();
+    if (!res.ok || !json.success) {
+      setNotice(json.message ?? "Owner 转让失败");
+      return;
+    }
+    setNotice("Owner 已转让");
+    await load();
+  };
+
   useEffect(() => {
     void load();
   }, [token]);
@@ -148,6 +199,31 @@ export default function AdminUsersPage() {
 
       <div className="user-admin-layout">
         <aside className="user-list-panel">
+          <div className="user-invite-form">
+            <input
+              value={inviteForm.mobile}
+              onChange={(e) => setInviteForm((form) => ({ ...form, mobile: e.target.value }))}
+              placeholder="成员手机号"
+              aria-label="成员手机号"
+            />
+            <input
+              value={inviteForm.nickname}
+              onChange={(e) => setInviteForm((form) => ({ ...form, nickname: e.target.value }))}
+              placeholder="昵称"
+              aria-label="昵称"
+            />
+            <select
+              value={inviteForm.roleCode}
+              onChange={(e) => setInviteForm((form) => ({ ...form, roleCode: e.target.value }))}
+              aria-label="成员角色"
+            >
+              <option value="ORG_USER">ORG_USER</option>
+              <option value="ORG_ADMIN">ORG_ADMIN</option>
+            </select>
+            <button type="button" onClick={() => void inviteMember()} disabled={!inviteForm.mobile.trim()}>
+              添加成员
+            </button>
+          </div>
           <div className="user-search">
             <svg className="user-search__icon" viewBox="0 0 24 24" aria-hidden>
               <circle cx="11" cy="11" r="6.5" />
@@ -171,7 +247,7 @@ export default function AdminUsersPage() {
                 <div className="user-list-item__mobile">{u.nickname || u.mobile}</div>
                 <div className="user-list-item__meta">
                   <span>{u.nickname ? u.mobile : "未设置昵称"}</span>
-                  <span>{u.roleCode}</span>
+                  <span>{u.memberStatus === "SUSPENDED" ? "已停用" : u.roleCode}</span>
                 </div>
               </button>
             ))}
@@ -202,6 +278,10 @@ export default function AdminUsersPage() {
                   <div className="user-detail-topbox__item">
                     <span className="subtle">当前角色</span>
                     <strong>{pending[selected.id] ?? selected.roleCode}</strong>
+                  </div>
+                  <div className="user-detail-topbox__item">
+                    <span className="subtle">成员状态</span>
+                    <strong>{selected.memberStatus === "SUSPENDED" ? "已停用" : "有效"}</strong>
                   </div>
                   <div className="user-detail-topbox__item">
                     <span className="subtle">创建时间</span>
@@ -272,7 +352,9 @@ export default function AdminUsersPage() {
                         className="field-select"
                         value={pending[selected.id] ?? selected.roleCode}
                         onChange={(e) => setRoleLocal(selected.id, e.target.value)}
+                        disabled={selected.roleCode === "OWNER"}
                       >
+                        {selected.roleCode === "OWNER" ? <option value="OWNER">OWNER</option> : null}
                         <option value="ORG_ADMIN">ORG_ADMIN</option>
                         <option value="ORG_USER">ORG_USER</option>
                       </select>
@@ -294,6 +376,20 @@ export default function AdminUsersPage() {
                     >
                       保存基本信息
                     </button>
+                    {selected.memberStatus === "SUSPENDED" ? (
+                      <button type="button" className="user-text-action" onClick={() => void setMemberStatus(selected.id, "restore")}>
+                        恢复成员
+                      </button>
+                    ) : (
+                      <button type="button" className="user-text-action user-text-action--danger" onClick={() => void setMemberStatus(selected.id, "suspend")}>
+                        停用成员
+                      </button>
+                    )}
+                    {selected.roleCode !== "OWNER" && selected.memberStatus !== "SUSPENDED" && (
+                      <button type="button" className="user-text-action" onClick={() => void transferOwner(selected.id)}>
+                        转让 Owner
+                      </button>
+                    )}
                   </div>
                 </>
               )}

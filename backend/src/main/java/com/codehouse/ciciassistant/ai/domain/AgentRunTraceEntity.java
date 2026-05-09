@@ -74,6 +74,18 @@ public class AgentRunTraceEntity {
     @Column(name = "detail_json", nullable = false, columnDefinition = "TEXT")
     private String detailJson;
 
+    @Column(name = "source_type", length = 32)
+    private String sourceType;
+
+    @Column(name = "request_id", length = 64)
+    private String requestId;
+
+    @Column(name = "credential_id")
+    private Long credentialId;
+
+    @Column(name = "external_user_id", length = 128)
+    private String externalUserId;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -124,6 +136,7 @@ public class AgentRunTraceEntity {
         this.skillNamesJson = skillNamesJson;
         this.nodesJson = nodesJson;
         this.detailJson = detailJson;
+        this.sourceType = "internal";
         this.createdAt = createdAt;
     }
 
@@ -148,5 +161,23 @@ public class AgentRunTraceEntity {
     public String getSkillNamesJson() { return skillNamesJson; }
     public String getNodesJson() { return nodesJson; }
     public String getDetailJson() { return detailJson; }
+    public String getSourceType() { return sourceType; }
+    public String getRequestId() { return requestId; }
+    public Long getCredentialId() { return credentialId; }
+    public String getExternalUserId() { return externalUserId; }
     public Instant getCreatedAt() { return createdAt; }
+
+    public void markOpenApi(String requestId, Long credentialId, String externalUserId) {
+        this.sourceType = "open_api";
+        this.requestId = requestId;
+        this.credentialId = credentialId;
+        this.externalUserId = externalUserId;
+    }
+
+    public void markExternalSource(String sourceType, String requestId, String externalUserId) {
+        this.sourceType = sourceType;
+        this.requestId = requestId;
+        this.credentialId = null;
+        this.externalUserId = externalUserId;
+    }
 }

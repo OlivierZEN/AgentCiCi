@@ -1,26 +1,44 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-05-01T09:33:50Z",
-  "title": "Design System: CiCi Product Surfaces",
+  "title": "Design System: AgentCiCi Product Surfaces",
   "extensions": {
     "colorMeta": {
       "accent-primary": {
         "role": "primary",
         "displayName": "Champagne Gold",
         "canonical": "#a67c2f",
-        "tonalRamp": ["#fbf2dd", "#f4e7c7", "#d7bc84", "#a67c2f", "#876223"]
+        "tonalRamp": [
+          "#fbf2dd",
+          "#f4e7c7",
+          "#d7bc84",
+          "#a67c2f",
+          "#876223"
+        ]
       },
       "canvas": {
         "role": "neutral",
         "displayName": "Ivory Canvas",
         "canonical": "#f7f3eb",
-        "tonalRamp": ["#fffdf8", "#faf4e8", "#f7f3eb", "#f3e8d3", "#ded2bb"]
+        "tonalRamp": [
+          "#fffdf8",
+          "#faf4e8",
+          "#f7f3eb",
+          "#f3e8d3",
+          "#ded2bb"
+        ]
       },
       "ink-900": {
         "role": "neutral",
         "displayName": "Ledger Ink",
         "canonical": "#2b2217",
-        "tonalRamp": ["#7c6d59", "#5f523f", "#473b2d", "#2b2217", "#17110b"]
+        "tonalRamp": [
+          "#7c6d59",
+          "#5f523f",
+          "#473b2d",
+          "#2b2217",
+          "#17110b"
+        ]
       }
     },
     "typographyMeta": {
@@ -49,12 +67,61 @@
       "compact": "980px",
       "stacked": "720px"
     },
+    "pageImplementationWorkflow": {
+      "purpose": "Required implementation and visual QA loop for new or materially changed product pages.",
+      "principles": [
+        "Build a smallest runnable version first, covering core page structure, navigation path, state changes, and primary interaction logic before visual polish.",
+        "The first runnable pass must be understandable and navigable by non-technical users without relying on explanatory placeholder copy.",
+        "Run the relevant local app surface and verify the route in a real browser before judging the UI.",
+        "Capture full-page screenshots for both desktop and mobile breakpoints before final review.",
+        "Inspect screenshots with both product-design and QA judgment, checking hierarchy, spacing rhythm, contrast, text fit, responsive behavior, overflow, panel stability, and navigation clarity.",
+        "Verify hover, focus, active, selected, disabled, loading, empty, and error states for controls touched by the change.",
+        "Product-panel hover and selected states must continue to obey the no-shadow, no-background-box rules.",
+        "Fix every visual, responsive, copy, or interaction issue found in screenshot review, then capture desktop and mobile screenshots again.",
+        "Do not close a page task on the first screenshot pass when known issues remain.",
+        "For critical modules with meaningful alternatives, run focused A/B comparisons across task clarity, scan speed, accessibility, responsive stability, and consistency with The Gilded Ledger.",
+        "Keep the stronger A/B variant and remove unused experimental code.",
+        "Use generated bitmap assets, icons, empty-state visuals, or brand materials only when they serve product comprehension or navigation.",
+        "Generated assets must match the product register and The Gilded Ledger color, density, and tone; decorative clutter is not allowed.",
+        "Final acceptance requires reviewed desktop and mobile screenshots, stable responsive layout, readable text, clear user flow, and verified key interaction feedback.",
+        "If local run or screenshot capture is blocked, document the blocker and the unverified risk in the handoff."
+      ],
+      "requiredArtifacts": [
+        "localRouteVerified",
+        "desktopFullPageScreenshot",
+        "mobileFullPageScreenshot",
+        "visualQaNotes",
+        "iterationFixesWhenIssuesExist",
+        "finalResponsiveCheck"
+      ],
+      "abTestTriggers": [
+        "primary action placement",
+        "button hierarchy",
+        "toolbar layout",
+        "list density",
+        "navigation grouping",
+        "empty-state treatment"
+      ],
+      "visualQaChecklist": [
+        "visual hierarchy",
+        "spacing and rhythm",
+        "contrast and readability",
+        "text fit and wrapping",
+        "desktop responsive behavior",
+        "mobile responsive behavior",
+        "container overflow",
+        "hover and focus feedback",
+        "click or selected-state feedback",
+        "navigation clarity for non-technical users"
+      ]
+    },
     "componentRules": {
       "buttons": [
         "Product-page buttons must use the shared primary, secondary, and danger vocabulary instead of legacy blue, teal, black, gradient, or unscoped global button styles.",
         "Primary actions use champagne gold fill (#a67c2f) with warm white text; hover and focus use stronger bronze (#876223).",
         "Secondary and cancel actions use warm white or ivory surfaces, gold-tinted borders (#ded2bb), bronze or ink text, and restrained hover (#faf4e8 / #b99652).",
-        "Buttons that appear together, especially in toolbars or modal footers, must share height, radius, padding, weight, and focus behavior."
+        "Buttons that appear together, especially in toolbars or modal footers, must share height, radius, padding, weight, and focus behavior.",
+        "Inline actions inside lists, tables, tabs, and already-framed product panels are visually text commands, not button chrome: no rounded border, no pill background, no hover background fill, and no shadow."
       ],
       "modals": [
         "Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless a feature spec explicitly requires a popover, drawer, toast, or inline disclosure.",
@@ -65,33 +132,60 @@
       ],
       "tabs": [
         "Product-page tabs use text tabs, not pills, chips, segmented controls, or bordered mini-cards.",
+        "Tabs must never appear as rounded bordered background buttons; inactive, hover, focus, and active states stay backgroundless and shadowless.",
         "Tab rows may use a single Gold Mist Line bottom rule (#ded2bb) when separating tabs from following content; do not wrap the tab row in a rounded container.",
         "Inactive tabs use Warm Bronze Secondary text (#5f523f), compact bold weight, and no background fill.",
         "Active tabs use accent-primary-strong text (#876223) with a 2px line-strong underline (#b99652) aligned to the label; no rounded active background.",
-        "Detail panes such as user information, skill fields, and settings sections should reuse this tab style unless a feature spec explicitly requires another pattern."
+        "Detail panes such as user information, skill fields, and settings sections should reuse this tab style unless a feature spec explicitly requires another pattern.",
+        "Tabs implemented as native buttons must reset every state, including hover, focus, focus-visible, active, .active, .is-active, and aria-selected=true, to transparent background, 0 radius, no shadow, and no transform.",
+        "The active tab indicator is a straight 2px underline, never a rounded underline pill, white rectangular focus card, selected fill, glow, shadow, or raised transform."
       ],
       "noNestedBackgroundFrames": [
         "Do not add background boxes inside already framed product panels.",
         "Rows, tabs, search interiors, status labels, trace details, metric groups, and detail summaries should use text hierarchy and the minimum necessary 1px divider lines.",
         "No box-in-box, per-row background blocks, selected-row fills, hover fills, chip backgrounds, row shadows, or inner box-shadow focus frames inside product panels.",
+        "Product panel tabs, row actions, filter labels, status actions, and inline text commands must not use rounded bordered background button chrome.",
+        "Avoid pill-like or curved-border white backgrounds for panel-internal actions; use plain text, text color, font weight, underline, or a 1px divider/underline instead.",
         "Selected states inside panels should use strong text color, font weight, or tab underline instead of rounded background containers.",
         "Selected, active, hover, pressed, focus, and focus-visible states inside product panels must never add box-shadow, glow, row shadow, inset shadow, raised-card treatment, or browser-like focus shadow.",
-        "Do not add a new border for selection when text hierarchy or an existing divider can carry the state."
+        "Do not add a new border for selection when text hierarchy or an existing divider can carry the state.",
+        "Product tabs, scope filters, and filter labels must explicitly reset inherited global button chrome in all states: transparent background, 0 border radius, no box shadow, and no transform."
       ]
     },
     "productUiScale": {
       "purpose": "Default scale rules for newly added authenticated product UI, including assistant composer tools, popovers, pickers, menus, toolbar controls, and inline settings.",
       "defaultTextPx": 13,
-      "secondaryTextPx": [11, 12],
-      "compactControlHeightPx": [32, 34],
-      "compactIconPx": [15, 16],
+      "secondaryTextPx": [
+        11,
+        12
+      ],
+      "compactControlHeightPx": [
+        32,
+        34
+      ],
+      "compactIconPx": [
+        15,
+        16
+      ],
       "defaultRadiusPx": 10,
       "lightweightFloatingMenu": {
         "primaryTextPx": 12,
-        "metadataTextPx": [10, 11],
-        "iconPx": [13, 14],
-        "rowHeightPx": [26, 30],
-        "widthPx": [168, 220],
+        "metadataTextPx": [
+          10,
+          11
+        ],
+        "iconPx": [
+          13,
+          14
+        ],
+        "rowHeightPx": [
+          26,
+          30
+        ],
+        "widthPx": [
+          168,
+          220
+        ],
         "surface": "#fffdf8",
         "border": "#ded2bb",
         "selectedBackground": "transparent",
@@ -113,7 +207,8 @@
         "Compact skill, command, and picker lists should display the human-facing name as the primary label and should not show implementation codes, slugs, ids, or secondary metadata by default.",
         "Compact picker rows must not use hover backgrounds, selected backgrounds, per-row background blocks, row shadows, or card-like rounded row containers by default.",
         "Search fields inside dense product workspaces should use either one simple outer control or a bottom rule; the native input itself must stay transparent with no inner border, no box shadow, and no blue browser focus frame.",
-        "Any newly added product UI must reuse this typography and control scale before adding page-local large fonts, fat buttons, or oversized menu rows."
+        "Any newly added product UI must reuse this typography and control scale before adding page-local large fonts, fat buttons, or oversized menu rows.",
+        "Product tabs, scope filters, and filter labels implemented with native button elements must explicitly reset default, hover, active, selected, focus, and focus-visible states to transparent background, 0 radius, no shadow, and no transform."
       ]
     },
     "adminCrudLists": {

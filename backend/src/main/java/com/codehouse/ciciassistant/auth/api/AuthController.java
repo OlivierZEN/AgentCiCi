@@ -41,6 +41,30 @@ public class AuthController {
         return ApiResponse.ok(authService.loginByPassword(request.orgId(), request.mobile(), request.password()), "Login success");
     }
 
+    @PostMapping("/register")
+    public ApiResponse<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
+        return ApiResponse.ok(authService.register(request.mobile(), request.password(), request.organizationName()), "Register success");
+    }
+
+    @GetMapping("/organizations")
+    public ApiResponse<Map<String, Object>> organizations() {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.organizations(orgId, userId));
+    }
+
+    @PostMapping("/switch-organization")
+    public ApiResponse<Map<String, Object>> switchOrganization(@Valid @RequestBody SwitchOrganizationRequest request) {
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.switchOrganization(userId, request.orgId()), "Organization switched");
+    }
+
+    @PostMapping("/organizations")
+    public ApiResponse<Map<String, Object>> createOrganization(@Valid @RequestBody CreateOrganizationRequest request) {
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.createOrganization(userId, request.organizationName()), "Organization created");
+    }
+
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> currentUser() {
         String orgId = TenantContext.requireOrgId();
@@ -73,12 +97,27 @@ public class AuthController {
     }
 
     public record PasswordLoginRequest(
-            @NotBlank String orgId,
+            String orgId,
             @NotBlank
             @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
             String mobile,
             @NotBlank String password
     ) {
+    }
+
+    public record RegisterRequest(
+            @NotBlank
+            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String mobile,
+            @NotBlank String password,
+            @NotBlank String organizationName
+    ) {
+    }
+
+    public record SwitchOrganizationRequest(@NotBlank String orgId) {
+    }
+
+    public record CreateOrganizationRequest(@NotBlank String organizationName) {
     }
 
     public record UpdateMyAvatarRequest(String avatarBase64) {

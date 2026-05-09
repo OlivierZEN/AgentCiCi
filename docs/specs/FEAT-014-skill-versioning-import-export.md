@@ -889,7 +889,7 @@ skill-package.zip
 - 平台标准技能不能导出，接口和 UI 都必须拦截。
 - 派生技能第一版不能直接导出，且不展示新的派生/另存派生入口。
 - 自定义技能导出必须先经过大模型标准化整理，生成通用标准技能格式；模型不可用或 schema 校验失败时不得直接导出内部字段。
-- 自定义技能导出的 zip 包当前包含 `manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。`SKILL.md` 是外部智能体通用入口，`cici-skill.md` 是 Cici 导入规格正文。
+- 自定义技能导出的 zip 包当前包含 `manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。`SKILL.md` 是外部智能体通用入口，`cici-skill.md` 是 AgentCiCi 导入规格正文。
 - 外部 zip 可导入为租户自定义技能；导入过程经过模型映射、资源匹配、预览确认。
 - 已软删除的自定义技能不得继续占用原 `skillCode` 导致同 code 技能包无法再次导入；删除后重新导入同 code 应创建新的租户自定义草稿。
 - 模型无法匹配的工具/知识库不会被伪造进入白名单。

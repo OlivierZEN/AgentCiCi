@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,16 @@ public class AdminUserController {
         return ApiResponse.ok(adminUserService.listUsers(orgId));
     }
 
+    @PostMapping("/invitations")
+    public ApiResponse<Map<String, Object>> inviteMember(@Valid @RequestBody InviteMemberRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(adminUserService.inviteMember(
+                orgId,
+                request.mobile(),
+                request.nickname(),
+                request.roleCode()));
+    }
+
     @PutMapping("/{userId}/role")
     public ApiResponse<Map<String, Object>> updateRole(
             @PathVariable String userId,
@@ -39,6 +50,26 @@ public class AdminUserController {
         String orgId = TenantContext.requireOrgId();
         String actorId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         return ApiResponse.ok(adminUserService.updateRole(orgId, actorId, userId, request.roleCode()));
+    }
+
+    @PostMapping("/{userId}/suspend")
+    public ApiResponse<Map<String, Object>> suspendMember(@PathVariable String userId) {
+        String orgId = TenantContext.requireOrgId();
+        String actorId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(adminUserService.suspendMember(orgId, actorId, userId));
+    }
+
+    @PostMapping("/{userId}/restore")
+    public ApiResponse<Map<String, Object>> restoreMember(@PathVariable String userId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(adminUserService.restoreMember(orgId, userId));
+    }
+
+    @PostMapping("/{userId}/transfer-owner")
+    public ApiResponse<Map<String, Object>> transferOwner(@PathVariable String userId) {
+        String orgId = TenantContext.requireOrgId();
+        String actorId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(adminUserService.transferOwner(orgId, actorId, userId));
     }
 
     @PutMapping("/{userId}/profile")
@@ -54,6 +85,13 @@ public class AdminUserController {
                 request.ccUsername(),
                 request.ccSafetymark(),
                 request.avatarBase64()));
+    }
+
+    public record InviteMemberRequest(
+            @NotBlank String mobile,
+            String nickname,
+            @NotBlank String roleCode
+    ) {
     }
 
     public record UpdateUserRoleRequest(@NotBlank String roleCode) {

@@ -43,12 +43,12 @@ type Props = {
 
 const CATEGORY_META: Record<
   MemoryItem["category"],
-  { label: string; icon: string; color: string }
+  { label: string; color: string }
 > = {
-  INSTRUCTION: { label: "行为指令", icon: "令", color: "#b42318" },
-  FACT:        { label: "用户事实", icon: "实", color: "#876223" },
-  PREFERENCE:  { label: "个人偏好", icon: "好", color: "#a67c2f" },
-  CONTEXT:     { label: "工作上下文", icon: "境", color: "#166534" },
+  INSTRUCTION: { label: "行为指令", color: "#b42318" },
+  FACT:        { label: "用户事实", color: "#876223" },
+  PREFERENCE:  { label: "个人偏好", color: "#a67c2f" },
+  CONTEXT:     { label: "工作上下文", color: "#166534" },
 };
 
 const CATEGORY_ORDER: MemoryItem["category"][] = ["INSTRUCTION", "FACT", "PREFERENCE", "CONTEXT"];
@@ -261,7 +261,7 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
               className={`memory-panel__filter-btn${filterCategory === cat ? " is-active" : ""}`}
               onClick={() => setFilterCategory(cat)}
             >
-              {meta.icon} {meta.label} ({count})
+              {meta.label} ({count})
             </button>
           );
         })}
@@ -307,7 +307,6 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
                   className="memory-panel__group-label"
                   style={{ color: meta.color }}
                 >
-                  <span>{meta.icon}</span>
                   <span>{meta.label}</span>
                 </div>
                 <div className="memory-panel__group-items">
@@ -358,7 +357,7 @@ export default function UserMemoryPanel({ token, agentId = "cici-system" }: Prop
                       }
                       onClick={() => setForm((f) => ({ ...f, category: cat }))}
                     >
-                      {meta.icon} {meta.label}
+                      {meta.label}
                     </button>
                   );
                 })}

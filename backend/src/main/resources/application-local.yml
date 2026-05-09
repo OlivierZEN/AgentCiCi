@@ -23,6 +23,8 @@ app:
     sms:
       store: redis
     bootstrap-admin-mobiles: "13800138111,13900009999"
+  agent-open-api:
+    enabled: true
   kb:
     storage-dir: ./data/kb-files
     indexing:

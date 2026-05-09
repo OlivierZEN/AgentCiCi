@@ -32,7 +32,7 @@ updated_by: ai
 ### In Scope
 
 - 导出包新增行业通用入口 `SKILL.md`，用于让外部智能体直接理解并使用该业务技能包。
-- 原 Cici 内部规格正文从 `skill.md` 更名为 `cici-skill.md`，导入时映射到 `draftSpecText`。
+- 原 AgentCiCi 内部规格正文从 `skill.md` 更名为 `cici-skill.md`，导入时映射到 `draftSpecText`。
 - 导出包新增 `PACKAGE_SPEC.md` 文件，用于描述 `universal-skill-package@1.0` 的构建规范。
 - 后端导出/导入安全白名单允许 `SKILL.md`、`cici-skill.md`、`PACKAGE_SPEC.md`。
 - 导出包 `README.md` 增加简短说明：本包可交给具备技能/规则文件能力的外部智能体优化，并要求其遵守 `PACKAGE_SPEC.md` 与 `cici-skill-package-optimizer/SKILL.md`。
@@ -52,7 +52,7 @@ updated_by: ai
 ## 用户场景
 
 - 组织管理员导出一个“邮件营销活动”技能 zip，交给外部智能体优化提示片段和规格正文，再导入回本系统形成新草稿。
-- 技能运营人员希望外部 Agent 在不接触内部数据库和密钥的前提下，优化 `prompt.md` 的执行步骤、补充 `SKILL.md` 的外部使用指引、完善 `cici-skill.md` 的 Cici 规格正文和 `contract.json` 的输出约定。
+- 技能运营人员希望外部 Agent 在不接触内部数据库和密钥的前提下，优化 `prompt.md` 的执行步骤、补充 `SKILL.md` 的外部使用指引、完善 `cici-skill.md` 的 AgentCiCi 规格正文和 `contract.json` 的输出约定。
 - 外部顾问收到 zip 后，先阅读 `README.md` 和 `PACKAGE_SPEC.md`，知道哪些文件能改、哪些字段不能改，优化后重新打包交回。
 - 导入包中依赖的工具或知识库在当前组织不存在，系统仍按现有资源映射流程给出未匹配提示。
 
@@ -62,7 +62,7 @@ updated_by: ai
 
 - 当前导出包格式为 `universal-skill-package@1.0`。
 - 当前后端 zip 解析有文件白名单，未知文件会被拒绝。
-- 调整后导入逻辑从 `manifest.json` 读取包身份和名称，从 `prompt.md` 读取提示片段，从 `cici-skill.md` 读取 Cici 规格正文，从 `contract.json` 读取输出契约和风险等级，从 `resources.json` 映射工具/知识库。
+- 调整后导入逻辑从 `manifest.json` 读取包身份和名称，从 `prompt.md` 读取提示片段，从 `cici-skill.md` 读取 AgentCiCi 规格正文，从 `contract.json` 读取输出契约和风险等级，从 `resources.json` 映射工具/知识库。
 - 外部智能体工具可通过 `SKILL.md` 或同等规则文件理解任务规范；本方案统一以 `cici-skill-package-optimizer/SKILL.md` 作为优化规则载体。
 
 ### Key Constraints
@@ -91,7 +91,7 @@ updated_by: ai
 └── README.md
 ```
 
-其中 `SKILL.md` 是外部智能体通用入口，`cici-skill.md` 是 Cici 导入事实源。
+其中 `SKILL.md` 是外部智能体通用入口，`cici-skill.md` 是 AgentCiCi 导入事实源。
 
 文件职责：
 
@@ -99,7 +99,7 @@ updated_by: ai
 |---|---|---|
 | `manifest.json` | 包身份、格式版本、技能名称、描述、来源和版本元数据 | 仅允许改 `name`、`description` 等展示字段；禁止改 `format`、`formatVersion`、`packageId`，除非用户明确要求新建另一个技能 |
 | `SKILL.md` | 行业通用外部智能体入口，说明如何理解和使用该业务技能包 | 可优化 |
-| `cici-skill.md` | Cici 系统内部导入用技能规格正文，导入时映射为 `draftSpecText` | 可优化 |
+| `cici-skill.md` | AgentCiCi 系统内部导入用技能规格正文，导入时映射为 `draftSpecText` | 可优化 |
 | `prompt.md` | 运行时提示片段，优化重点 | 可优化 |
 | `contract.json` | 输出契约、风险等级、触发提示和用户意图示例 | 可优化，但必须保持合法 JSON |
 | `resources.json` | 工具和知识库依赖清单 | 仅允许补充资源名称、展示名、是否必需和匹配策略；禁止写密钥或内部配置 |
@@ -117,14 +117,14 @@ updated_by: ai
 
 ## Purpose
 
-This package is an exchange format for Cici Assistant tenant custom skills.
-It is intended for review, optimization, and re-import into Cici Assistant.
+This package is an exchange format for AgentCiCi tenant custom skills.
+It is intended for review, optimization, and re-import into AgentCiCi.
 
 ## Files
 
 - manifest.json: package identity and metadata.
 - SKILL.md: external-agent entrypoint for understanding and using this business skill package.
-- cici-skill.md: Cici Assistant skill specification imported as draftSpecText.
+- cici-skill.md: AgentCiCi skill specification imported as draftSpecText.
 - prompt.md: runtime prompt fragment.
 - contract.json: output contract, risk level, trigger hints, and examples.
 - resources.json: external resource dependencies by name only.
@@ -138,16 +138,16 @@ It is intended for review, optimization, and re-import into Cici Assistant.
 - Keep all JSON files valid UTF-8 JSON.
 - Optimize prompt.md for clarity, sequencing, tool-use discipline, and safety.
 - Optimize SKILL.md for external-agent readability and package navigation.
-- Optimize cici-skill.md for Cici capability boundaries and operator readability.
+- Optimize cici-skill.md for AgentCiCi capability boundaries and operator readability.
 - Optimize contract.json for clear output expectations and trigger examples.
 - Do not add secrets, tokens, passwords, API keys, connection strings, or private credentials.
 - Do not place tool runtime configuration in resources.json; only list resource names and matching hints.
 
 ## Re-import Contract
 
-After optimization, zip the files at package root and import the zip into Cici Assistant.
-Cici Assistant will map tools and knowledge bases by name in the importing organization.
-Missing resources must be resolved inside Cici Assistant after import.
+After optimization, zip the files at package root and import the zip into AgentCiCi.
+AgentCiCi will map tools and knowledge bases by name in the importing organization.
+Missing resources must be resolved inside AgentCiCi after import.
 ```
 
 中文说明可以保留在同一文件中，便于国内团队人工查看；但关键约束建议同时提供英文短句，便于外部 Agent 更稳定遵守。
@@ -161,7 +161,7 @@ Missing resources must be resolved inside Cici Assistant after import.
 - 技能名称、技能代码、导出时间。
 - 本包格式：`universal-skill-package@1.0`。
 - “如需使用外部智能体优化，请使用 `cici-skill-package-optimizer/SKILL.md`，并要求其遵守 `PACKAGE_SPEC.md`。”
-- “优化后保持文件位于 zip 根目录，再导入 Cici Assistant。”
+- “优化后保持文件位于 zip 根目录，再导入 AgentCiCi。”
 - 安全提醒：不要把密钥、token、密码写入任何文件。
 
 ### 4. 外部智能体侧 `cici-skill-package-optimizer`
@@ -173,7 +173,7 @@ skills/cici-skill-package-optimizer/
 └── SKILL.md
 ```
 
-该 skill 不是业务技能，而是优化器规则。它的职责是指导外部智能体如何处理 Cici Assistant 导出的技能包。只要目标工具支持加载类似 `SKILL.md` 的项目规则，就可以复用这套说明；目录位置由具体工具决定。
+该 skill 不是业务技能，而是优化器规则。它的职责是指导外部智能体如何处理 AgentCiCi 导出的技能包。只要目标工具支持加载类似 `SKILL.md` 的项目规则，就可以复用这套说明；目录位置由具体工具决定。
 
 `SKILL.md` 核心要求：
 
@@ -198,13 +198,13 @@ skills/cici-skill-package-optimizer/
 ```markdown
 ---
 name: cici-skill-package-optimizer
-description: Optimize Cici Assistant universal-skill-package@1.0 zip packages and repackage them for re-import.
+description: Optimize AgentCiCi universal-skill-package@1.0 zip packages and repackage them for re-import.
 ---
 ```
 
 正文应明确：
 
-- 当用户提供 Cici Assistant 技能 zip、要求优化 Cici 技能包、或提到 `universal-skill-package@1.0` 时使用。
+- 当用户提供 AgentCiCi 技能 zip、要求优化 AgentCiCi 技能包、或提到 `universal-skill-package@1.0` 时使用。
 - 优化时优先提升执行步骤清晰度、工具调用边界、输出格式稳定性、风险升级规则和资源依赖可移植性。
 - 如果缺少 `PACKAGE_SPEC.md`，补充一个符合当前 8 文件结构的 `PACKAGE_SPEC.md`。
 
@@ -212,13 +212,13 @@ description: Optimize Cici Assistant universal-skill-package@1.0 zip packages an
 
 ```mermaid
 flowchart LR
-  A["Cici Assistant 导出技能 zip"] --> B["zip 内包含 PACKAGE_SPEC.md"]
+  A["AgentCiCi 导出技能 zip"] --> B["zip 内包含 PACKAGE_SPEC.md"]
   B --> C["外部智能体加载 cici-skill-package-optimizer/SKILL.md"]
   C --> D["解压并读取 manifest / SKILL / cici-skill / PACKAGE_SPEC / prompt / contract / resources"]
   D --> E["优化 prompt.md、SKILL.md、cici-skill.md、contract.json 等文件"]
   E --> F["校验 JSON 与敏感信息"]
   F --> G["重新打包 universal-skill-package@1.0 zip"]
-  G --> H["Cici Assistant 导入 zip"]
+  G --> H["AgentCiCi 导入 zip"]
   H --> I["导入预览与资源映射"]
   I --> J["创建或保存为租户自定义技能草稿"]
 ```
@@ -292,7 +292,7 @@ flowchart LR
 
 - 新导出的技能 zip 包含 `manifest.json`、`SKILL.md`、`cici-skill.md`、`prompt.md`、`contract.json`、`resources.json`、`PACKAGE_SPEC.md`、`README.md`。
 - `PACKAGE_SPEC.md` 清楚说明文件职责、可编辑范围、安全限制和反向导入方式。
-- 导入时使用 `cici-skill.md` 作为 Cici 技能规格正文。
+- 导入时使用 `cici-skill.md` 作为 AgentCiCi 技能规格正文。
 - 未知文件仍会被拒绝，避免 zip 被塞入任意内容。
 - 外部智能体在加载 `cici-skill-package-optimizer/SKILL.md` 后，能根据 `PACKAGE_SPEC.md` 优化技能包，并输出仍可导入的 zip。
 - 优化后的 zip 导入本系统后，落为租户自定义技能草稿。

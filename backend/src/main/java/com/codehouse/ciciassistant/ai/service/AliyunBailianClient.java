@@ -126,7 +126,7 @@ public class AliyunBailianClient {
                                                List<Map<String, Object>> tools,
                                                boolean stripThinkingFromAssistantContent) {
         if (apiKey == null || apiKey.isBlank()) {
-            return new ChatCompletionResult("assistant", "Aliyun API key is not configured.", null, "stop");
+            return new ChatCompletionResult("assistant", "Aliyun API key is not configured.", null, "stop", 0, 0);
         }
         String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
         Map<String, Object> payload = new HashMap<>();
@@ -149,11 +149,11 @@ public class AliyunBailianClient {
                     .retrieve()
                     .body(Map.class);
 
-            if (response == null) return new ChatCompletionResult("assistant", "Empty response.", null, "stop");
+            if (response == null) return new ChatCompletionResult("assistant", "Empty response.", null, "stop", 0, 0);
             return parseCompletionResponse(response, stripThinkingFromAssistantContent);
         } catch (Exception e) {
             log.error("Aliyun chat completion failed: {}", e.getMessage());
-            return new ChatCompletionResult("assistant", "Model call failed: " + e.getMessage(), null, "stop");
+            return new ChatCompletionResult("assistant", "Model call failed: " + e.getMessage(), null, "stop", 0, 0);
         }
     }
 
@@ -161,18 +161,19 @@ public class AliyunBailianClient {
      * Streaming chat with full messages and optional tools.
      * Tool calls in stream deltas are NOT supported here — use non-streaming for tool resolution.
      */
-    public void chatStreamWithMessages(String modelName, List<Map<String, Object>> messages,
-                                       List<Map<String, Object>> tools,
-                                       boolean showThinking,
-                                       Consumer<String> onDelta) throws Exception {
+    public ChatStreamResult chatStreamWithMessages(String modelName, List<Map<String, Object>> messages,
+                                                   List<Map<String, Object>> tools,
+                                                   boolean showThinking,
+                                                   Consumer<String> onDelta) throws Exception {
         if (apiKey == null || apiKey.isBlank()) {
             onDelta.accept("Aliyun API key is not configured.");
-            return;
+            return new ChatStreamResult(0, 0);
         }
         String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
         Map<String, Object> payload = new HashMap<>();
         payload.put("model", targetModel);
         payload.put("stream", true);
+        payload.put("stream_options", Map.of("include_usage", true));
         payload.put("messages", messages);
         if (tools != null && !tools.isEmpty()) {
             payload.put("tools", tools);
@@ -196,9 +197,11 @@ public class AliyunBailianClient {
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             String err = new String(response.body().readAllBytes(), StandardCharsets.UTF_8);
             onDelta.accept("Model HTTP " + response.statusCode() + ": " + err);
-            return;
+            return new ChatStreamResult(0, 0);
         }
 
+        int promptTokens = 0;
+        int completionTokens = 0;
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(response.body(), StandardCharsets.UTF_8))) {
             String line;
             while ((line = reader.readLine()) != null) {
@@ -206,6 +209,11 @@ public class AliyunBailianClient {
                 String payloadLine = line.substring(5).trim();
                 if ("[DONE]".equals(payloadLine)) break;
                 JsonNode root = objectMapper.readTree(payloadLine);
+                JsonNode usage = root.path("usage");
+                if (usage.isObject()) {
+                    promptTokens = usage.path("prompt_tokens").asInt(promptTokens);
+                    completionTokens = usage.path("completion_tokens").asInt(completionTokens);
+                }
                 JsonNode choices = root.path("choices");
                 if (!choices.isArray() || choices.isEmpty()) continue;
                 JsonNode delta = choices.get(0).path("delta");
@@ -216,6 +224,7 @@ public class AliyunBailianClient {
                 }
             }
         }
+        return new ChatStreamResult(promptTokens, completionTokens);
     }
 
     // ── Response parsing ──
@@ -225,13 +234,13 @@ public class AliyunBailianClient {
                                                          boolean stripThinkingFromAssistantContent) {
         Object choicesObj = response.get("choices");
         if (!(choicesObj instanceof List<?> choices) || choices.isEmpty()) {
-            return new ChatCompletionResult("assistant", "No choices in response.", null, "stop");
+            return new ChatCompletionResult("assistant", "No choices in response.", null, "stop", 0, 0);
         }
         Map<String, Object> first = (Map<String, Object>) choices.get(0);
         String finishReason = String.valueOf(first.getOrDefault("finish_reason", "stop"));
         Map<String, Object> message = (Map<String, Object>) first.get("message");
         if (message == null) {
-            return new ChatCompletionResult("assistant", "", null, finishReason);
+            return new ChatCompletionResult("assistant", "", null, finishReason, 0, 0);
         }
 
         String content = message.get("content") != null ? String.valueOf(message.get("content")) : null;
@@ -257,7 +266,29 @@ public class AliyunBailianClient {
             }
         }
 
-        return new ChatCompletionResult("assistant", content, toolCalls, finishReason);
+        int promptTokens = 0;
+        int completionTokens = 0;
+        Object usageObj = response.get("usage");
+        if (usageObj instanceof Map<?, ?> usage) {
+            promptTokens = intValue(usage.get("prompt_tokens"));
+            completionTokens = intValue(usage.get("completion_tokens"));
+        }
+
+        return new ChatCompletionResult("assistant", content, toolCalls, finishReason, promptTokens, completionTokens);
+    }
+
+    private static int intValue(Object value) {
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        if (value == null) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException ex) {
+            return 0;
+        }
     }
 
     private static String textFromDelta(JsonNode delta, boolean includeReasoningFields) {
@@ -304,12 +335,16 @@ public class AliyunBailianClient {
             String role,
             String content,
             List<ToolCallInfo> toolCalls,
-            String finishReason
+            String finishReason,
+            int promptTokens,
+            int completionTokens
     ) {
         public boolean hasToolCalls() {
             return toolCalls != null && !toolCalls.isEmpty();
         }
     }
+
+    public record ChatStreamResult(int promptTokens, int completionTokens) {}
 
     public record ToolCallInfo(String id, String name, String arguments) {}
 }

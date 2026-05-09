@@ -5,6 +5,8 @@ import AvatarCropperDialog from "../components/AvatarCropperDialog";
 import { getDisplayInitial, readAvatarFileAsDataUrl } from "../shared/avatar";
 import { safeFetchJson } from "../utils/http";
 import { buildCompileNotice, isCompileRequired, keepRecentVersionHistory } from "./compile-history";
+import AgentOpenApiDocsDialog from "./AgentOpenApiDocsDialog";
+import AgentOpenApiKeysDialog from "./AgentOpenApiKeysDialog";
 
 type KnowledgeBase = {
   id: number;
@@ -13,7 +15,7 @@ type KnowledgeBase = {
   status: string;
 };
 
-type PublishChannelId = "wechat" | "dingtalk" | "feishu" | "web";
+type PublishChannelId = "wechat" | "dingtalk" | "feishu" | "web" | "api";
 
 type AgentDraft = {
   name: string;
@@ -360,6 +362,7 @@ const CHANNEL_OPTIONS: { id: PublishChannelId; label: string; tone: string }[] =
   { id: "dingtalk", label: "钉钉", tone: "内部流转" },
   { id: "feishu", label: "飞书", tone: "知识协同" },
   { id: "web", label: "Web 浮窗", tone: "门户嵌入" },
+  { id: "api", label: "开放 API", tone: "系统调用" },
 ];
 
 function channelTriggerSummaryLine(draft: AgentDraft): string {
@@ -1413,6 +1416,8 @@ export default function AgentBuilderShell({
   const [skillCatalog, setSkillCatalog] = useState<SkillCatalogItem[]>([]);
   const [pickerOpen, setPickerOpen] = useState<null | "skill" | "kb" | "tool">(null);
   const [pickerSelection, setPickerSelection] = useState<string[]>([]);
+  const [openApiDocsOpen, setOpenApiDocsOpen] = useState(false);
+  const [openApiKeysOpen, setOpenApiKeysOpen] = useState(false);
 
   const setNotice = (message: string) => {
     setNoticeText(message);
@@ -1639,6 +1644,7 @@ export default function AgentBuilderShell({
 
   const selectedAgent = library.find((item) => item.id === selectedAgentId) ?? null;
   const selectedModel = modelOptions.find((option) => option.value === draft.model);
+  const openApiBaseUrl = `${window.location.origin}/openapi/v1`;
   const readinessCount = [draft.name, draft.specText, draft.channels.length > 0, draft.knowledgeBaseIds.length > 0, draft.toolIds.length > 0].filter(Boolean).length;
 
   const filteredExecutionRecords = useMemo(() => {
@@ -2602,6 +2608,49 @@ export default function AgentBuilderShell({
       );
     }
 
+    if (activePublishChannel === "api") {
+      return (
+        <div className="cici-builder-publish-panel__body">
+          <div className="cici-builder-publish-panel__hero">
+            <div>
+              <h3>Agent Open API</h3>
+              <p>允许外部业务系统通过 API Key 调用已发布 Agent，并把调用写入统一 trace 与审计链路。</p>
+            </div>
+            <button
+              type="button"
+              className={`cici-choice-chip${activePublishEnabled ? " is-active" : ""}`}
+              onClick={() => toggleCollectionValue("channels", "api")}
+            >
+              {activePublishEnabled ? "已开放 API" : "开放 API"}
+            </button>
+          </div>
+
+          <div className="cici-builder-publish-panel__stats">
+            <article className="cici-builder-publish-stat">
+              <span>基础地址</span>
+              <strong>/openapi/v1</strong>
+              <small>公网部署需确认 Nginx 已代理 `/openapi`。</small>
+            </article>
+            <article className="cici-builder-publish-stat">
+              <span>调用身份</span>
+              <strong>API Key + run-as</strong>
+              <small>Key 绑定单个 Agent 与一个组织内用户。</small>
+            </article>
+            <article className="cici-builder-publish-stat">
+              <span>当前状态</span>
+              <strong>{publishedVersionNo != null ? (activePublishEnabled ? "可调用" : "未开放") : "未发布"}</strong>
+              <small>调用前必须有线上版本并启用 API channel。</small>
+            </article>
+          </div>
+
+          <div className="cici-builder-publish-note">
+            <strong>开放 API 文档</strong>
+            <p>页面头部的「开放API文档」会展示鉴权、健康检查、对话、流式对话、会话映射和错误码示例。API Key 管理接口已接入后端，前端管理入口后续会放到这里。</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="cici-builder-publish-panel__body">
         <div className="cici-builder-publish-panel__hero">
@@ -2965,6 +3014,15 @@ export default function AgentBuilderShell({
                   返回列表
                 </button>
               ) : null}
+              <button
+                type="button"
+                className="cici-builder__action cici-builder__action--ghost cici-builder__action--doc"
+                onClick={() => setOpenApiDocsOpen(true)}
+                disabled={!selectedAgentId}
+                title={!selectedAgentId ? "请先保存或选择一个 Agent。" : undefined}
+              >
+                开放API文档
+              </button>
               <button
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
@@ -3533,6 +3591,26 @@ export default function AgentBuilderShell({
           </section>
         </div>
       </section>
+
+      <AgentOpenApiDocsDialog
+        open={openApiDocsOpen}
+        agentId={selectedAgentId}
+        agentName={draft.name}
+        published={publishedVersionNo != null}
+        apiChannelEnabled={draft.channels.includes("api")}
+        baseUrl={openApiBaseUrl}
+        keyManagementAvailable={Boolean(selectedAgentId && token)}
+        onOpenKeyManagement={() => setOpenApiKeysOpen(true)}
+        onClose={() => setOpenApiDocsOpen(false)}
+      />
+
+      <AgentOpenApiKeysDialog
+        open={openApiKeysOpen}
+        agentId={selectedAgentId}
+        agentName={draft.name}
+        token={token}
+        onClose={() => setOpenApiKeysOpen(false)}
+      />
 
       {pickerOpen ? (
         <div

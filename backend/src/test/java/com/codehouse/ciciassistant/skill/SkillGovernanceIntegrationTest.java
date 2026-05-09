@@ -748,12 +748,17 @@ class SkillGovernanceIntegrationTest {
         }
 
         String cloudccUserId = jdbcTemplate.queryForObject(
-                "SELECT id FROM app_user WHERE org_id = ? AND mobile = ?",
+                """
+                        SELECT m.id
+                        FROM organization_member m
+                        JOIN user_account a ON a.id = m.account_id
+                        WHERE m.org_id = ? AND a.primary_mobile = ?
+                        """,
                 String.class,
                 "demo-org",
                 "13800138111");
         jdbcTemplate.update("""
-                UPDATE app_user
+                UPDATE organization_member
                 SET cc_username = ?, cc_safetymark = ?
                 WHERE id = ?
                 """, "cloudcc-user", "cloudcc-safety", cloudccUserId);

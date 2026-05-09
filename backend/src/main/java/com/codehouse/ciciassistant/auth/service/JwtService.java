@@ -34,6 +34,8 @@ public class JwtService {
         return Jwts.builder()
                 .subject(user.getId())
                 .claim("org_id", user.getOrg().getId())
+                .claim("member_id", user.getId())
+                .claim("account_id", user.getAccountId())
                 .claim("roles", roles == null ? List.of(user.getRoleCode()) : roles)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))

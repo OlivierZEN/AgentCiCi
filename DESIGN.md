@@ -1,5 +1,5 @@
 ---
-name: CiCi Product Surfaces
+name: AgentCiCi Product Surfaces
 description: Shared product-surface design baseline for assistant, admin, and platform workflows.
 colors:
   ink-900: "#2b2217"
@@ -84,7 +84,7 @@ components:
     padding: "10px 12px"
 ---
 
-# Design System: CiCi Product Surfaces
+# Design System: AgentCiCi Product Surfaces
 
 ## Overview
 
@@ -122,6 +122,19 @@ This file is the default design baseline for `/`, `/admin/*`, and `/platform/*`.
 
 - If a new brand or marketing surface appears, do not inherit this file by default. Run `impeccable shape`, get user confirmation, and record the exception in `docs/specs/` before implementation.
 - If code changes visual tokens, component vocabulary, or cross-page interaction patterns, update `DESIGN.md` and `DESIGN.json` in the same session.
+
+### Page Implementation Quality Workflow
+
+All new or materially changed product pages must follow this implementation and visual QA loop before they are considered complete.
+
+- **Build the smallest runnable version first:** implement the core page structure, navigation path, state changes, and primary interaction logic before visual polish. The first pass must be usable by a non-technical user without relying on explanatory placeholder copy.
+- **Run locally before judging:** start the relevant local app surface and verify the route in a real browser. Capture full-page screenshots for both desktop and mobile breakpoints before final review.
+- **Use visual inspection as a quality gate:** inspect screenshots like a product designer and QA reviewer. Check visual hierarchy, spacing rhythm, contrast, text fit, responsive behavior, container overflow, table or panel stability, and whether navigation flows are understandable without technical context.
+- **Check interaction feedback:** verify hover, focus, active, selected, disabled, loading, empty, and error states for the controls touched by the change. Product-panel hover and selected states must still obey the no-shadow, no-background-box rules in this file.
+- **Iterate and reshoot:** fix every visual, responsive, copy, or interaction issue found during screenshot review, then capture desktop and mobile screenshots again. Do not close the task on the first screenshot pass when issues remain.
+- **Run focused A/B comparisons for critical modules:** when a key module has meaningful alternatives, such as button hierarchy, toolbar layout, list density, or primary action placement, compare at least two variants against task clarity, scan speed, accessibility, and implementation consistency. Keep the stronger variant and remove unused experimental code.
+- **Use generated assets only when they serve the product:** when a page needs a bitmap illustration, icon set, brand visual, empty-state image, or other visual material, use image generation or a deliberate asset workflow and integrate the result with `鎏金账房` color, density, and tone. Do not add decorative assets that reduce task clarity.
+- **Final acceptance requires responsive visual proof:** a page implementation is not done until desktop and mobile screenshots have been reviewed, responsive layout is stable, text is readable, key interactions have feedback, and the user flow is clear for non-technical users. If local run or screenshots are blocked, document the blocker and the unverified risk in the handoff.
 
 ## Colors
 
@@ -167,6 +180,8 @@ The palette is restrained and operational: warm neutrals carry the surface, whil
 - **Lightweight list labels:** Compact skill, command, and picker lists should display the human-facing name as the primary label. Do not show implementation codes, slugs, ids, or secondary metadata by default, and do not put a separate rounded background block, selected background, hover background, or shadow behind each row.
 - **No nested background frames:** Product pages must not put additional background boxes inside an already framed panel. Rows, tabs, search interiors, status labels, trace details, metric groups, and detail summaries should use text hierarchy plus the minimum necessary 1px divider lines. Do not use per-row background blocks, card-like inner containers, chip backgrounds, selected-row fills, hover fills, row shadows, or box-shadow focus frames inside a panel.
 - **Selection without lift:** Selected, active, hover, pressed, focus, and focus-visible states inside product panels must never add `box-shadow`, row shadow, glow, inset shadow, raised card treatment, or browser-like focus shadow. Prefer strong text color, font weight, or a tab underline. Do not add a new border for selection when text hierarchy or an existing divider can carry the state.
+- **No framed pseudo-buttons in panels:** Product panel tabs, row actions, filter labels, status actions, and inline text commands must not use rounded bordered background button chrome. Avoid pill-like or curved-border white backgrounds, hover/active background fills, and shadowed mini-buttons for these controls. Use plain text, text color, font weight, underline, or a 1px divider/underline instead. Reserve real rounded buttons only for primary form actions, dialog footers, and explicit toolbar commands.
+- **Text-tab hard reset:** Tabs, scope filters, and filter labels implemented with native `button` elements must explicitly reset default, hover, active, selected, focus, and focus-visible states to `background: transparent`, `border-radius: 0`, `box-shadow: none`, and `transform: none`. Do not rely on later cascade accidents to undo global button styles.
 - **New UI rule:** Any newly added product UI must first reuse the typography and control scale in this file. Do not introduce page-local large fonts, fat buttons, or oversized menu rows for isolated features.
 
 ### Named Rules
@@ -191,6 +206,7 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 - **Hover / Focus:** Darker bronze on hover, visible warm-gold focus ring, no flashy gradient
 - **Secondary / Ghost:** White or tinted neutral background with line border and dark text
 - **Default discipline:** Buttons on product pages must use the shared primary / secondary / danger vocabulary. Do not let page-local buttons fall back to legacy blue, teal, black, gradient, or unscoped global button styles.
+- **Text action discipline:** Inline actions inside lists, tables, tabs, and already-framed product panels are not buttons visually. They must be borderless, backgroundless text commands with no rounded border, no pill background, and no shadow.
 - **Dialog actions:** Modal footers use secondary for cancel / close actions and primary gold for confirm / save actions. Both buttons must share height, radius, padding, weight, and hover / focus behavior.
 
 ### Modals
@@ -219,6 +235,8 @@ Depth is conveyed primarily through tonal separation and crisp borders. Shadows 
 
 ### Product Tabs
 - **Default form:** Product-page tabs use text tabs, not pills, chips, segmented controls, or bordered mini-cards.
+- **No button chrome:** Tabs must never appear as rounded bordered background buttons. Inactive, hover, focus, and active states stay backgroundless and shadowless.
+- **Native button reset:** When a tab is a `<button>`, every state (`:hover`, `:focus`, `:focus-visible`, `:active`, `.active`, `.is-active`, `[aria-selected="true"]`) must remain transparent, square-edged, shadowless, and non-raised. The only visible state change is text emphasis and/or the active underline.
 - **Container:** Place tabs on a single `#ded2bb` bottom rule when the following content needs separation. Do not add a rounded container around the tab row.
 - **Inactive state:** Use warm bronze text (`#5f523f`), compact bold weight, and no background fill.
 - **Active state:** Use strong bronze text (`#876223`) with a 2px pressed-gold underline (`#b99652`) aligned to the tab label; no rounded active background.

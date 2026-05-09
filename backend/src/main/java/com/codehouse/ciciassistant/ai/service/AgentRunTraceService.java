@@ -162,6 +162,47 @@ public class AgentRunTraceService {
         );
     }
 
+    public Map<String, Object> listOrgRunLogs(String orgId, RunLogQuery query) {
+        Instant to = query.to() == null ? Instant.now() : query.to();
+        Instant from = query.from() == null ? to.minus(Duration.ofDays(7)) : query.from();
+        if (from.isBefore(to.minus(Duration.ofDays(7)))) {
+            from = to.minus(Duration.ofDays(7));
+        }
+        int limit = Math.min(Math.max(query.limit(), 1), 100);
+        List<Map<String, Object>> rows = new ArrayList<>();
+        LinkedHashSet<String> sessionsWithTrace = new LinkedHashSet<>();
+        for (AgentRunTraceEntity item : traceRepository.findByOrgIdAndStartedAtBetweenOrderByStartedAtDesc(orgId, from, to)) {
+            sessionsWithTrace.add(item.getSessionId());
+            Map<String, Object> payload = toListPayload(orgId, item);
+            if (matches(payload, query)) {
+                rows.add(payload);
+            }
+            if (rows.size() >= limit) {
+                break;
+            }
+        }
+        if (rows.size() < limit) {
+            for (ChatSessionEntity session : orgLegacySessions(orgId, from, to)) {
+                if (sessionsWithTrace.contains(session.getId())) {
+                    continue;
+                }
+                Map<String, Object> payload = legacyListPayload(orgId, session);
+                if (matches(payload, query)) {
+                    rows.add(payload);
+                }
+                if (rows.size() >= limit) {
+                    break;
+                }
+            }
+        }
+        return Map.of(
+                "items", rows,
+                "from", from.toString(),
+                "to", to.toString(),
+                "nextCursor", ""
+        );
+    }
+
     public Map<String, Object> traceDetail(String orgId, String userId, String traceId) {
         if (traceId != null && traceId.startsWith("legacy-")) {
             return legacyDetail(orgId, userId, decodeLegacySessionId(traceId));
@@ -169,9 +210,23 @@ public class AgentRunTraceService {
         AgentRunTraceEntity entity = traceRepository.findByTraceIdAndOrgId(traceId, orgId)
                 .filter(item -> userId.equals(item.getUserId()) || isOrgScopedConversation(item.getSessionId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trace not found"));
+        return tracePayload(orgId, entity);
+    }
+
+    public Map<String, Object> orgTraceDetail(String orgId, String traceId) {
+        if (traceId != null && traceId.startsWith("legacy-")) {
+            return legacyOrgDetail(orgId, decodeLegacySessionId(traceId));
+        }
+        AgentRunTraceEntity entity = traceRepository.findByTraceIdAndOrgId(traceId, orgId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trace not found"));
+        return tracePayload(orgId, entity);
+    }
+
+    private Map<String, Object> tracePayload(String orgId, AgentRunTraceEntity entity) {
         Map<String, Object> detail = readMap(entity.getDetailJson());
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("traceId", entity.getTraceId());
+        payload.put("requestId", emptyToBlank(entity.getRequestId()));
         payload.put("sessionId", entity.getSessionId());
         payload.put("agentId", entity.getAgentId());
         payload.put("agentName", agentName(orgId, entity.getAgentId()));
@@ -181,6 +236,9 @@ public class AgentRunTraceService {
         payload.put("endedAt", entity.getEndedAt().toString());
         payload.put("elapsedMs", entity.getElapsedMs());
         payload.put("summary", entity.getSummary());
+        payload.put("source", emptyToDefault(entity.getSourceType(), "trace"));
+        payload.put("credentialId", entity.getCredentialId() == null ? "" : entity.getCredentialId().toString());
+        payload.put("externalUserId", emptyToBlank(entity.getExternalUserId()));
         payload.put("nodes", readList(entity.getNodesJson()));
         payload.put("detail", detail);
         payload.put("model", detail.getOrDefault("model", Map.of()));
@@ -300,6 +358,8 @@ public class AgentRunTraceService {
         String title = switch (emptyToBlank(modelCall.phase())) {
             case "tool_planning" -> "模型工具规划 #" + index;
             case "tool_planning_stop" -> "模型工具规划收口 #" + index;
+            case "tool_planning_stop_skipped" -> "模型工具规划收口跳过 #" + index;
+            case "tool_limit_summary" -> "工具上限后模型收口";
             case "final_stream" -> "模型最终生成";
             case "final_completion" -> "模型生成";
             default -> "模型调用 #" + index;
@@ -320,6 +380,8 @@ public class AgentRunTraceService {
         payload.put("elapsedMs", Math.max(0, modelCall.elapsedMs()));
         payload.put("toolCallCount", Math.max(0, modelCall.toolCallCount()));
         payload.put("outputChars", Math.max(0, modelCall.outputChars()));
+        payload.put("inputTokens", Math.max(0, modelCall.inputTokens()));
+        payload.put("outputTokens", Math.max(0, modelCall.outputTokens()));
         payload.put("summary", emptyToBlank(modelCall.summary()));
         return payload;
     }
@@ -484,6 +546,7 @@ public class AgentRunTraceService {
                 : Map.of();
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("traceId", item.getTraceId());
+        payload.put("requestId", emptyToBlank(item.getRequestId()));
         payload.put("sessionId", item.getSessionId());
         payload.put("agentId", item.getAgentId());
         payload.put("agentName", agentName(orgId, item.getAgentId()));
@@ -501,7 +564,9 @@ public class AgentRunTraceService {
         payload.put("boundSkillCodes", skills.getOrDefault("boundSkillCodes", List.of()));
         payload.put("knowledgeBaseNames", readList(item.getKnowledgeBaseNamesJson()));
         payload.put("summary", item.getSummary());
-        payload.put("source", "trace");
+        payload.put("source", emptyToDefault(item.getSourceType(), "trace"));
+        payload.put("credentialId", item.getCredentialId() == null ? "" : item.getCredentialId().toString());
+        payload.put("externalUserId", emptyToBlank(item.getExternalUserId()));
         return payload;
     }
 
@@ -532,6 +597,16 @@ public class AgentRunTraceService {
     private Map<String, Object> legacyDetail(String orgId, String userId, String sessionId) {
         ChatSessionEntity session = visibleSession(orgId, userId, sessionId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trace not found"));
+        return legacyPayload(orgId, session, sessionId);
+    }
+
+    private Map<String, Object> legacyOrgDetail(String orgId, String sessionId) {
+        ChatSessionEntity session = chatSessionRepository.findByIdAndOrgId(sessionId, orgId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Trace not found"));
+        return legacyPayload(orgId, session, sessionId);
+    }
+
+    private Map<String, Object> legacyPayload(String orgId, ChatSessionEntity session, String sessionId) {
         List<ChatMessageEntity> messages = chatMessageRepository.findByOrgIdAndSessionIdOrderByCreatedAtAsc(orgId, sessionId);
         List<Map<String, Object>> nodes = new ArrayList<>();
         for (ChatMessageEntity message : messages) {
@@ -566,6 +641,14 @@ public class AgentRunTraceService {
                 )).toList()
         ));
         return detail;
+    }
+
+    private List<ChatSessionEntity> orgLegacySessions(String orgId, Instant from, Instant to) {
+        return chatSessionRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+                .filter(item -> !item.getUpdatedAt().isBefore(from) && !item.getUpdatedAt().isAfter(to))
+                .filter(item -> !item.getId().startsWith("assistant-ui-"))
+                .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+                .toList();
     }
 
     private List<ChatSessionEntity> legacyVisibleSessions(String orgId, String userId, Instant from, Instant to) {
@@ -637,7 +720,9 @@ public class AgentRunTraceService {
         }
         if (sessionId.startsWith("feishu:")) return "feishu";
         if (sessionId.startsWith("wechat:")) return "wecom";
+        if (sessionId.startsWith("wecom-kf:")) return "wechat_kf";
         if (sessionId.startsWith("dingtalk:")) return "dingtalk";
+        if (sessionId.startsWith("api:")) return "api";
         if (sessionId.startsWith("web:") || sessionId.startsWith("webchat:")) return "web";
         return "web";
     }
@@ -646,7 +731,9 @@ public class AgentRunTraceService {
         return sessionId != null
                 && (sessionId.startsWith("feishu:")
                 || sessionId.startsWith("wechat:")
+                || sessionId.startsWith("wecom-kf:")
                 || sessionId.startsWith("dingtalk:")
+                || sessionId.startsWith("api:")
                 || sessionId.startsWith("web:")
                 || sessionId.startsWith("webchat:"));
     }
@@ -778,7 +865,20 @@ public class AgentRunTraceService {
             int elapsedMs,
             int toolCallCount,
             int outputChars,
+            int inputTokens,
+            int outputTokens,
             String summary) {
+        public ModelCallTraceInput(String phase,
+                                   String modelName,
+                                   String status,
+                                   Instant startedAt,
+                                   Instant endedAt,
+                                   int elapsedMs,
+                                   int toolCallCount,
+                                   int outputChars,
+                                   String summary) {
+            this(phase, modelName, status, startedAt, endedAt, elapsedMs, toolCallCount, outputChars, 0, 0, summary);
+        }
     }
 
     public record ToolCallTraceInput(

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-07T11:53:10+08:00
+updated_at: 2026-05-09T08:11:00Z
 updated_by: ai
 status: active
 ---
@@ -57,7 +57,35 @@ status: active
   - Verified on 2026-04-17T03:30:04Z
   - Smoke result:
     - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`
-  - Dev proxy (2026-04-19): `vite.config.ts` / `vite.config.js` forward `/agents`, `/skills`, `/feishu` to `VITE_BACKEND_TARGET` or `http://127.0.0.1:8080` so Agent Builder and related APIs are not answered by Vite as static 404.
+  - Dev proxy (updated 2026-05-08): `vite.config.ts` / `vite.config.js` forward `/agents`, `/skills`, `/feishu`, `/wecom` to `VITE_BACKEND_TARGET` or `http://127.0.0.1:8080` so Agent Builder, channel callbacks, and related APIs are not answered by Vite as static 404.
+- Local service restart from Codex desktop with PostgreSQL:
+  - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant`
+  - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/backend && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
+  - `screen -dmS cici-frontend /bin/zsh -lc 'cd /Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/frontend && exec npm run dev > /tmp/cici-frontend.log 2>&1'`
+  - Verified on 2026-05-07T12:19:29+08:00:
+    - backend log: active profile `local`, database `jdbc:postgresql://localhost:5432/cici_assistant (PostgreSQL 16.13)`, Flyway schema version `40`
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`
+  - Verified restart on 2026-05-09T08:53:35+08:00:
+    - `screen` sessions: `cici-backend`, `cici-frontend`
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`
+    - Local legacy PostgreSQL note: if the old database has `app_user` but not FEAT-024 account tables, first repair Flyway V8/V9 checksums, then backfill `user_account`, `account_login_identifier`, and `organization_member` from `app_user` while preserving `app_user.id` as the member ID so historical `user_id` references remain valid.
+  - Verified backend restart on 2026-05-09T14:23:43+08:00 for FEAT-024 v43:
+    - Stale Java process on port `8080` had to be killed after the detached screen wrapper exited; then `cici-backend` was restarted with the same screen command.
+    - Flyway validated 44 migrations and reported schema version `43`; `/actuator/health` returned `{"status":"UP"}`.
+    - Platform API smoke with platform token: `GET http://127.0.0.1:8080/platform/tenants` -> success with `demo-org`.
+    - Vite proxy smoke during browser verification: `/api/platform/tenants` and `/api/platform/tenants/demo-org/retention` -> `200`.
+  - Verified backend restart on 2026-05-09T16:04:16+08:00 for FEAT-024 v44:
+    - Stopped stale `cici-backend` screen, killed the remaining old `CiciAssistantApplication --spring.profiles.active=local` Java process on port `8080`, then restarted `cici-backend` with the same screen command.
+    - Flyway validated 45 migrations, migrated PostgreSQL schema from `43` to `44`, and `/actuator/health` returned `{"status":"UP"}`.
+    - Platform API smoke with platform token: `GET /platform/tenants/demo-org/retention` returned `exportJobs` and legal hold execution fields; dry-run `POST /platform/tenants/demo-org/purge-jobs` returned `manifestVersion=v2`, `unsupportedCount=2`, `totalRows=2302`.
+  - FEAT-024 purge worker productionization knobs added on 2026-05-09:
+    - Migration `V46__organization_purge_worker_lease.sql` adds worker lease and dead-letter columns to `organization_purge_job`.
+    - Optional config: `app.lifecycle.purge-worker-id` can pin a stable worker ID for an instance; if omitted, the app generates `{hostname}-{uuid}` at boot.
+    - Optional config: `app.lifecycle.purge-worker-lease-minutes` defaults to `60` and is clamped to at least `5`; stale `RUNNING` jobs whose `lock_expires_at` has passed are marked `DEAD_LETTER` for manual inspection rather than automatically re-executed.
+    - Existing scheduler knobs remain `app.lifecycle.purge-worker-delay-ms` and `app.lifecycle.purge-worker-initial-delay-ms`, both defaulting to `30000`.
+  - Codex desktop note: `./restart-services.sh` can pass health checks while running, but its background child processes may be reaped when the command session exits. Use detached `screen` sessions when the local service must stay running after the command returns.
 - Local infra status:
   - `docker compose ps`
   - Vector retrieval uses **Qdrant** on host `6333` only; legacy `cici-milvus` container removed (2026-04-19).
@@ -76,11 +104,12 @@ status: active
   - `cd frontend && npm run build`
   - `docker buildx build --platform linux/amd64 -f deploy/Dockerfile.backend -t op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:latest --push .`
   - `docker buildx build --platform linux/amd64 -f deploy/Dockerfile.frontend -t op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest --push .`
+  - Codex desktop note from V1.7: when using a temporary Docker config for ACR auth, symlink `/Users/owenspace/.docker/cli-plugins` into that temp config before running buildx, otherwise Docker cannot find the `buildx` plugin.
   - Last pushed on 2026-05-07:
     - backend digest `sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`
     - frontend digest `sha256:a70521fa3f651bec5fe32e1eaf5c698e5587a2e5de84f1acfb9e4a00ac33b9be`
 - ECS deployment `cici.cloudcc.cn`:
-  - Host: `root@47.97.119.160`, key `/Volumes/Addison/workspace/datafiles/cc-cici-ecs.pem`
+  - Host: `root@47.97.119.160`, key `/Volumes/workspace/datafiles/cc-cici-ecs.pem`
   - Remote root: `/opt/cici`
   - Compose:
     - `/opt/cici/deploy/docker-compose.acr.yml`
@@ -93,16 +122,42 @@ status: active
     - `http://cici.cloudcc.cn/` -> `301`
     - `https://cici.cloudcc.cn/` -> `200`
     - `POST /auth/password/login` fixed-password smoke -> `200`
-  - Data sync on 2026-05-07:
-    - Remote pre-sync PostgreSQL backup: `/opt/cici/backups/20260507-114853-local-data-sync/remote-before-sync.dump`
-    - Local PostgreSQL dump restored to remote `cici-database` with `pg_restore --clean --if-exists`.
-    - Synced row counts include `platform_skill_template=11`, `platform_tool_definition=13`, `integration_app=3`, `platform_policy_bundle=1`.
+  - Full local data sync on 2026-05-07:
+    - Remote pre-sync backup directory: `/opt/cici/backups/20260507-123416-full-local-sync/`.
+    - Backup contents include PostgreSQL dump, `acr.env.before-sync`, knowledge-base files tar, and Qdrant volume tar.
+    - Local PostgreSQL business data restored to remote `cici-database` with `pg_restore --data-only`; remote Flyway schema history was preserved.
+    - Post-restore SQL re-encrypted local Tavily and email secrets for the remote `APP_SECURITY_SECRET_KEY`, and rewrote `kb_document.storage_path` from the local workspace path to `/app/data/kb-files/...`.
+    - Synced knowledge-base files into `cici-acr_cici_kb_files`; removed macOS `._*` resource fork files after extraction.
+    - Rebuilt Qdrant `cici_kb_chunk` collection from local point export; remote `points_count=161`.
+    - Verified row counts match local for key tables: `app_user=13`, `agent_definition=4`, `skill_definition=23`, `integration_app=3`, `model_provider_config=5`, `email_account=1`, `mcp_server=1`, `knowledge_base=2`, `kb_document=6`, `kb_chunk=310`, `chat_session=61`, `chat_message=556`, `user_quick_command=3`.
+    - Public smoke after sync: `/agents=4`, `/skills=13`, `/integrations=3`, `/models/providers=5`, `/kb=2`, `/me/agents/run-logs=2`, Tavily stored-key test ok, `/api/platform/skills=11`, `/api/platform/tools=13`.
   - Nginx API proxy repair on 2026-05-07:
     - `deploy/nginx.cici.conf` and `deploy/nginx.cici.ssl.conf` must match API roots without requiring a trailing slash.
     - `/api/platform` and `/api/platform/*` must rewrite to backend `/platform` and `/platform/*`.
+    - Management APIs now include `/admin/users` and `/admin/agents`; `/admin/agents/run-logs` powers the organization-level Agent observability view under `/admin/ops`.
+    - FEAT-021 Agent Open API requires `/openapi/` to proxy to the backend with buffering disabled, long read timeout, and forwarded host/IP/proto headers for REST and future SSE calls.
+    - FEAT-023 WeCom customer service callback requires `/wecom` to proxy to the backend so `GET/POST /wecom/kf/callback` is reachable from Enterprise WeChat.
     - Verified remotely with `docker exec cici-frontend nginx -t`, `nginx -s reload`, `GET /agents`, `GET /skills`, `GET /integrations`, `GET /models/providers`, `GET /api/platform/skills`, and `GET /api/platform/tools`.
+  - Local admin observability restart on 2026-05-07T23:32:43Z:
+    - Symptom: local `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` returned JSON 404 while `http://127.0.0.1:5173/admin/ops` showed no run logs.
+    - Cause: the Java process listening on `8080` was started before the admin run-log controller was available in the running classes.
+    - Restart command:
+      - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/backend && export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home && export PATH="$JAVA_HOME/bin:$PATH" && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
+    - Verified:
+      - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`
+      - `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` with org-admin token -> JSON with 10 rows.
+      - `GET http://127.0.0.1:5173/admin/agents/run-logs?limit=10` through Vite proxy -> JSON with 10 rows.
+      - Browser `http://127.0.0.1:5173/admin/ops` after login shows 26 log records and 3 real traces.
   - Operational note:
     - ACR infra tags were rebuilt as linux/amd64 because the ECS is x86_64 and previous infra tags were arm64-only.
+  - V1.7 production release on 2026-05-08:
+    - Release tag: `V1.7`.
+    - Backup directory: `/opt/cici/backups/20260508-082523-before-v1.7`.
+    - Backend image digest: `sha256:f2c73badec939387bd53a83ab1bc944d0b7a4a182337943aa7c8bbc7282aca35`.
+    - Frontend image digest: `sha256:7adfa06e8d95046131d82d09c966e0a03035cac278c4af994df7e4e6a7093370`.
+    - `CICI_IMAGE_TAG=V1.7` applies to all six compose services; infra images `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` required `V1.7` manifest aliases from their existing `latest` tags before compose could pull the full stack.
+    - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `41|agent open api|t`, backend recent logs contained no `error|exception|failed|using dev fallback` matches.
+    - Verified publicly: `http://cici.cloudcc.cn/` -> `301`, `https://cici.cloudcc.cn/` -> `200`, org-admin fixed-password smoke returned core counts, platform-admin smoke returned platform skill/tool counts, and `/openapi/v1/agents/smoke/health` returned backend JSON `401 agent_api_key_missing`.
 
 ## Pending Verification
 

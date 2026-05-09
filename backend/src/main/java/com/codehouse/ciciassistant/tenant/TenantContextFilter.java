@@ -38,10 +38,16 @@ public class TenantContextFilter extends OncePerRequestFilter {
             String authorization = request.getHeader(AUTH_HEADER);
 
             if (authorization != null && authorization.startsWith("Bearer ")) {
+                String bearer = authorization.substring("Bearer ".length());
+                if (isAgentOpenApiKeyRequest(request, bearer)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 try {
-                    Claims claims = jwtService.parse(authorization.substring("Bearer ".length()));
+                    Claims claims = jwtService.parse(bearer);
                     orgId = claims.get("org_id", String.class);
-                    userId = claims.getSubject();
+                    String memberId = claims.get("member_id", String.class);
+                    userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
                     TenantContext.setRoles(extractRoles(claims));
                 } catch (Exception ex) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -62,6 +68,14 @@ public class TenantContextFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
+    }
+
+    private boolean isAgentOpenApiKeyRequest(HttpServletRequest request, String bearer) {
+        String path = request.getRequestURI();
+        return path != null
+                && path.startsWith("/openapi/v1/")
+                && bearer != null
+                && bearer.startsWith("cici_ak_");
     }
 
     @SuppressWarnings("unchecked")

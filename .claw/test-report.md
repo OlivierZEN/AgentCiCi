@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-07T11:37:37+08:00
+updated_at: 2026-05-09T10:40:09Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-07T11:37:37+08:00
+last_run_at: 2026-05-09T10:40:09Z
 last_run_status: success
 ---
 
@@ -13,11 +13,435 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`V1.5 release validation`
-- 命令：`git diff --check`; `frontend npm run build`; `backend JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,SmsRateLimitIntegrationTest test`
-- 环境：`local workspace`
+- 范围：`TASK-072 AutoService website registration/demo request platform menu migration`
+- 命令：`backend AutoServiceDemoRequestIntegrationTest`; `frontend npm run build`; target migration whitespace checks; Playwright CLI `/platform/website-leads` desktop/mobile visual checks
+- 环境：`local workspace, Java 21, H2 test database, frontend build, Vite dev server, Playwright CLI with mocked platform list data`
 
 ## Latest Verified Results
+
+- TASK-072 AutoService website registration/demo request platform menu migration (2026-05-09T10:40:09Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AutoServiceDemoRequestIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: target files whitespace check for menu/API migration -> **success**.
+    - `browser`: Playwright CLI `/platform/website-leads` desktop and 390px mobile checks with mocked platform list data -> **success**.
+    - `local-run`: restarted `cici-backend` screen; `GET http://127.0.0.1:8080/actuator/health` -> **success**.
+    - `api-smoke`: platform token `GET http://127.0.0.1:8080/platform/autoservice/demo-requests` -> **success** (HTTP 200).
+  - Notes:
+    - 组织控制台侧栏已移除“预约演示”入口，平台运营控制面侧栏新增“网站注册 / 预约演示用户”入口。
+    - 前端页面迁到 `/platform/website-leads`，使用 `LS_PLATFORM_TOKEN` 和 `/api/platform/autoservice/demo-requests`。
+    - 后端列表/状态更新接口迁到 `/platform/autoservice/demo-requests` 并要求 `@RequirePlatformRole`；集成测试覆盖公开提交后平台角色查询与更新。
+    - Browser 检查：页面标题“网站注册与预约演示”，平台导航包含“网站注册”，旧 `/admin/autoservice-demo-requests` 链接不存在，表格 2 行，桌面/移动 `scrollWidth=clientWidth`。
+    - 截图产物：`output/playwright/platform-website-leads-desktop.png`、`output/playwright/platform-website-leads-mobile.png`。
+
+- TASK-072 AutoService demo success state (2026-05-09T10:38:36Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: target frontend files whitespace checks -> **success**.
+    - `browser`: Playwright CLI `/autoservice/cn` fill and submit demo form, then desktop/mobile success-state checks -> **success**.
+  - Notes:
+    - 提交成功后 `.as-demo-form` 从弹窗 DOM 中卸载，`.as-demo-success` 显示成功态。
+    - 成功态文案精确为“感谢您的关注，我们会尽快与您取得联系”。
+    - 桌面 DOM 检查：`hasForm=false`、`hasSuccess=true`、close button 存在。
+    - 移动 390x844 检查：`scrollWidth=clientWidth=390`、`modalFits=true`。
+    - 截图产物：`output/playwright/autoservice-cn-demo-success-desktop.png`、`output/playwright/autoservice-cn-demo-success-mobile.png`。
+
+- TASK-069 FEAT-024 purge worker lease and dead-letter (2026-05-09T10:35:00Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: target files whitespace check for FEAT-024 worker lease backend/frontend/docs/state -> **success**. Note: platform lifecycle files are currently untracked, so untracked targets were checked with `git diff --check --no-index /dev/null <file>` semantics.
+  - Notes:
+    - Flyway test migration validated and applied through `V46__organization_purge_worker_lease.sql`.
+    - Successful real purge jobs now expose worker metadata: integration test asserts `attemptCount=1` and non-empty `workerId`.
+    - Expired `RUNNING` real purge jobs now move to `DEAD_LETTER`; test confirms the stale job keeps `workerId=stale-worker`, writes `deadLetterAt`, preserves the result summary, and does not delete tenant business rows.
+    - Platform tenants page maps `DEAD_LETTER` to the compact text status `死信`.
+
+- TASK-072 AutoService demo modal browser comment fixes (2026-05-09T10:25:31Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/autoservice/AutoServiceLanding.tsx frontend/src/autoservice/autoservice-site.css` -> **success**.
+    - `browser`: Playwright CLI `/autoservice/cn` desktop 1019x757 and mobile 390x844 modal checks -> **success**.
+  - Notes:
+    - 删除预约弹窗 header 中的 `预约演示` kicker 和说明段落；表单 footer 顶部横线已移除。
+    - 公司名称、联系人、联系电话、邮箱 input `required=true`；职位保持可选。
+    - 桌面弹窗打开后 `htmlOverflow=hidden`、`bodyOverflow=hidden`、`modalClientHeight=modalScrollHeight=628`、`modalFitsViewport=true`。
+    - 移动检查 `scrollWidth=clientWidth=390`，背景滚动锁定，弹窗内容可在 modal 内部滚动。
+    - 截图产物：`output/playwright/autoservice-cn-demo-modal-desktop.png`、`output/playwright/autoservice-cn-demo-modal-mobile.png`。
+
+- TASK-069 FEAT-024 orphan audit for local KB files and vector points (2026-05-09T10:16:47Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> **success**.
+    - `git`: targeted FEAT-024 backend whitespace checks -> **success**.
+    - `git`: new untracked `VectorStoreAuditResult.java` checked with `git diff --check --no-index /dev/null backend/src/main/java/com/codehouse/ciciassistant/kb/service/VectorStoreAuditResult.java` -> **success** (no whitespace output; command exits `1` because no-index found normal file differences).
+  - Notes:
+    - Dry-run manifest now includes `orphanAudit.fileStorage` and `orphanAudit.vectorStore`.
+    - Integration coverage seeds one registered KB file, one local orphan KB file, one registered vector point, and one org-scoped orphan vector point; dry-run reports `orphanFiles=1` and `orphanVectors=1`.
+    - Real purge now deletes registered KB files and then removes remaining local files under `data/kb-files/{orgId}`; the test confirms the local orphan file no longer exists after purge.
+
+- TASK-069 FEAT-024 purge job queue worker and cancel (2026-05-09T09:56:30Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: target files whitespace checks for FEAT-024 queue backend/frontend/docs/state -> **success**. Note: platform lifecycle files are currently untracked, so untracked targets were checked with `git diff --check --no-index /dev/null <file>`.
+    - `browser`: Codex in-app browser `/platform/tenants` DOM checks at desktop and 390px mobile viewport -> **success**.
+  - Notes:
+    - 后端新增覆盖：真实 purge 创建 `QUEUED` job 后由 `processQueuedPurgeJobs()` 执行并进入 `SUCCEEDED`；失败真实 purge 重试也先排队再由 worker 执行；`QUEUED` 真实 purge job 被取消后 worker 不会删除业务数据，组织保持 `PENDING_PURGE`。
+    - 前端构建覆盖：`QUEUED` 显示为“排队中”、`CANCELED` 显示为“已取消”；排队行显示透明文本“取消”动作；存在 `QUEUED/RUNNING` 真实任务时禁用新的真实销毁和重试入口。
+    - Browser 验证：桌面 DOM 包含租户生命周期与 Dry-run 历史；390px 移动视口 DOM 仍包含租户生命周期与 Dry-run 历史；console error=0。
+    - 截图限制：Browser CDP `Page.captureScreenshot` 在当前标签超时，因此本轮未产出新截图；接口行为由集成测试覆盖，页面加载与响应式存在性由 DOM 检查覆盖。
+
+- TASK-069 FEAT-024 purge job retry (2026-05-09T09:29:27Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: targeted `git diff --check` for FEAT-024 retry backend/frontend/state/doc files -> **success**.
+    - `browser`: Playwright CLI `/platform/tenants` retry modal desktop/mobile screenshots and computed checks -> **success**.
+  - Notes:
+    - 后端新增覆盖：`FAILED/PARTIAL_FAILED` 真实 purge job 可基于原 source dry-run 重试；重试创建新 job，成功后组织进入 `PURGED`，原失败 job 保留审计。
+    - 截图产物：`output/playwright/feat024-platform-tenants-retry-modal-desktop.png`、`output/playwright/feat024-platform-tenants-retry-modal-mobile.png`。
+    - 浏览器检查：移动端 `scrollWidth=clientWidth=390`，桌面 `scrollWidth=clientWidth=1280`；重试文本动作 `background=transparent`、`borderRadius=0px`、`boxShadow=none`；确认重试按钮使用 platform danger 背景与文字色。
+
+- TASK-072 AutoService browser diff comment fixes (2026-05-09T09:27:30Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/autoservice/AutoServiceLanding.tsx frontend/src/autoservice/autoservice-copy.ts frontend/src/autoservice/autoservice-site.css` -> **success**.
+    - `content`: static `rg` for removed comment targets and old titles in `frontend/src/autoservice` -> **success**; no matches.
+    - `browser`: Playwright + system Chrome `http://127.0.0.1:5173/autoservice/cn` at 1090x757 -> **success**.
+  - Notes:
+    - 截图产物：`output/playwright/autoservice-cn-comments-fixed-desktop.png`。
+    - 浏览器检查：页面正文 banned words=0；页头 actions 仅 `预约演示`；信任条文本为企业微信、钉钉、飞书、CloudCC CRM、Udesk、顺丰、自有 API；人工接管标题为“转给人工前，先把情况说清楚。”；资源区标题为“上线后看得见效果，也知道哪里要改。”；`scrollWidth=clientWidth=1090`；console error=0。
+
+- TASK-072 AutoService Chinese-site copy and no-grid visual cleanup (2026-05-09T09:11:03Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/autoservice/autoservice-copy.ts frontend/src/autoservice/autoservice-site.css` -> **success**.
+    - `content`: `/autoservice/cn` title/body banned-word check for `国内`、`中国站`、`面向国内` -> **success**.
+    - `browser`: Playwright + system Chrome `/autoservice/global` and `/autoservice/cn` desktop/mobile full-page screenshots -> **success**.
+  - Notes:
+    - 截图产物：`output/playwright/autoservice-global-nogrid-desktop.png`、`output/playwright/autoservice-global-nogrid-mobile.png`、`output/playwright/autoservice-cn-nogrid-desktop.png`、`output/playwright/autoservice-cn-nogrid-mobile.png`。
+    - 浏览器检查：两站桌面/移动 `scrollWidth=clientWidth`、`console errors=0`、`hasGridBackground=false`、final CTA `::before=none`、首屏视觉面板未出视口。
+    - 中文站保留企业微信、微信客服、钉钉、飞书、CloudCC CRM、销售易、纷享销客、Udesk、有赞、顺丰、菜鸟等具体生态，但不再使用“国内/中国站/面向国内”作为页面叙事。
+
+- TASK-072 AutoService domestic/international site split (2026-05-09T08:56:03Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/autoservice/AutoServiceLanding.tsx frontend/src/autoservice/autoservice-copy.ts frontend/src/autoservice/autoservice-site.css` -> **success**.
+    - `content`: static slice check for `frontend/src/autoservice/autoservice-copy.ts` -> **success**; 国际站未包含国内集成词，中国站未包含国际集成词。
+    - `browser`: Playwright + system Chrome `/autoservice/global` and `/autoservice/cn` desktop/mobile full-page screenshots -> **success**.
+  - Notes:
+    - 截图产物：`output/playwright/autoservice-global-desktop.png`、`output/playwright/autoservice-global-mobile.png`、`output/playwright/autoservice-cn-desktop.png`、`output/playwright/autoservice-cn-mobile.png`。
+    - 浏览器检查：两站桌面/移动 `scrollWidth=clientWidth`、`console errors=0`、首屏视觉面板 `heroPanelsOverlap=false`。
+    - 旧 `/autoservice/en` 与 `/autoservice/zh` 仅作为兼容重定向保留，正式入口为 `/autoservice/global` 与 `/autoservice/cn`。
+
+- TASK-069 Account tenant lifecycle and data retention implementation (2026-05-09T08:11:00Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/platform backend/src/main/resources/db/migration/V44__organization_lifecycle_execution.sql backend/src/test/java/com/codehouse/ciciassistant/platform/PlatformTenantLifecycleIntegrationTest.java frontend/src/platform/pages/PlatformTenantsPage.tsx frontend/src/styles.css` -> **success**.
+    - `local-run`: restarted `cici-backend` screen; Flyway PostgreSQL schema migrated from v43 to v44; `/actuator/health` -> **success**.
+    - `api-smoke`: platform token `GET /platform/tenants/demo-org/retention` and dry-run `POST /platform/tenants/demo-org/purge-jobs` -> **success**.
+    - `browser`: Playwright CLI `/platform/tenants` desktop/mobile screenshots and console check -> **success**.
+  - Notes:
+    - 后端集成覆盖组织导出、平台禁止下载业务归档、组织管理员下载脱敏 zip、legal hold 阻断、guarded real purge、DB/文件/向量清理、全局账号保留和组织状态进入 `PURGED`。
+    - API smoke 确认 retention 响应包含 `exportJobs` 与 legal hold 新字段，dry-run `manifestVersion=v2`、`unsupportedCount=2`、`totalRows=2302`。
+    - 浏览器检查：桌面 `scrollWidth=clientWidth=1280`，移动端 `scrollWidth=clientWidth=390`，无横向溢出，页面包含“组织导出”“真实销毁”和 v2 unsupported 文案，console error=0。
+    - 截图产物：`output/playwright/feat024-platform-tenants-v44-desktop.png`、`output/playwright/feat024-platform-tenants-v44-mobile.png`。
+
+- TASK-072 AutoService header logo replacement (2026-05-09T07:52:12Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/autoservice/AutoServiceLanding.tsx frontend/src/autoservice/autoservice-site.css frontend/public/autoservice-logo-mark.png frontend/public/autoservice-logo-word.png` -> **success**.
+    - `browser`: Codex in-app browser `/autoservice/en#integrations` desktop/mobile logo checks -> **success**.
+  - Notes:
+    - 新增资产：`frontend/public/autoservice-logo-mark.png`、`frontend/public/autoservice-logo-word.png`，均裁切自用户提供的新 AutoService logo 图片。
+    - 浏览器确认 `.as-logo__mark-img=1`、`.as-logo__word-img=1`。
+
+- TASK-072 AutoService website implementation design (2026-05-09T07:23:12Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `browser`: Codex in-app browser `/autoservice/en` desktop and mobile visual checks -> **success**.
+    - `browser`: console error log check -> **success**, `errors=0`.
+  - Notes:
+    - 本轮修正浏览器批注中指出的 workflows 与 integrations 两个低质感区块。
+    - 截图产物：`output/playwright/autoservice-redesign-en-desktop.png`、`output/playwright/autoservice-redesign-en-mobile.png`。
+    - 本轮未跑 Lighthouse；若从原型进入公开上线，需要补性能、SEO 和可访问性专项验收。
+
+- TASK-072 AutoService website implementation design (2026-05-09T06:59:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `browser`: Playwright CLI `/autoservice/en` desktop/mobile full-page screenshots -> **success**.
+    - `browser`: Playwright CLI `/autoservice/zh` desktop/mobile full-page screenshots -> **success**.
+    - `browser`: Playwright computed checks for `/autoservice/zh` mobile -> **success**.
+  - Notes:
+    - 截图产物：`output/playwright/autoservice-en-desktop.png`、`output/playwright/autoservice-en-mobile.png`、`output/playwright/autoservice-zh-desktop.png`、`output/playwright/autoservice-zh-mobile.png`。
+    - Computed check：`scrollWidth=390`、`noHorizontalOverflow=true`、包含 `CloudCC CRM`、包含扩展渠道（语音/邮件/WhatsApp/Instagram/API/自定义渠道），关键大面板背景为浅色渐变。
+    - 本轮未跑 Lighthouse；若从原型进入公开上线，需要补性能、SEO 和可访问性专项验收。
+
+- TASK-069 Account tenant lifecycle and data retention implementation (2026-05-09T06:31:20Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/platform/PlatformShell.tsx frontend/src/platform/pages/PlatformTenantsPage.tsx frontend/src/styles.css` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/platform/tenants`, platform login, generate Dry-run Manifest, desktop/mobile screenshots -> **success**.
+    - `browser-style`: computed row/table checks -> **success**.
+  - Notes:
+    - 后端集成覆盖平台权限、保留策略、冻结/恢复、拒绝 `dryRun=false`、dry-run manifest 只返回计数且不包含 `客户绝密消息` 或 `secret-memory-content`。
+    - 本地后端已重启到当前代码，Flyway schema 到 v43；Vite `/api/platform/tenants` 与 retention 请求均返回 200。
+    - 页面生成 dry-run 后显示 2300 行候选记录、2 个不支持域；截图产物：`output/playwright/feat024-platform-tenants-desktop.png`、`output/playwright/feat024-platform-tenants-mobile.png`。
+    - Computed check：租户行 `backgroundColor=rgba(0, 0, 0, 0)`、`boxShadow=none`、租户表 `minWidth=0px`、桌面 `scrollWidth=clientWidth=1440`。
+
+- TASK-072 AutoService website implementation design (2026-05-09T06:31:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/autoservice` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/autoservice` desktop/mobile full-page screenshots -> **success**.
+    - `browser`: Playwright computed check for mobile layout -> **success**.
+  - Notes:
+    - 截图产物：`output/playwright/autoservice-desktop.png`、`output/playwright/autoservice-mobile.png`。
+    - Computed check：mobile `scrollWidth=390`、`noHorizontalOverflow=true`、`.as-matrix__row--head display=none`、所有 `.as-button` `textDecorationLine=none`、title 为 `AutoService | AI Agents for Global After-Sales Support`。
+    - 本轮未跑 Lighthouse；若从原型进入公开上线，需要补性能、SEO 和可访问性专项验收。
+
+- TASK-071 Assistant org switch logo menu polish (2026-05-09T05:14:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx` -> **success**.
+    - `browser`: Playwright CLI hover `CB` logo, then mousemove to page body and wait -> **success**.
+  - Notes:
+    - Hover `CB` 后：`dialogs=1`、`expanded=true`。
+    - 鼠标移开 logo/菜单区域后：`dialogs=0`、`expanded=false`。
+
+- TASK-071 Assistant org switch logo menu polish (2026-05-09T05:12:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: Playwright CLI hover `CB` logo with mock assistant auth token -> **success**.
+  - Notes:
+    - Hover 后组织切换菜单直接展开。
+    - Logo 入口验证结果：`::after content=none`、`hasTooltipClass=false`、`aria-expanded=true`，不再显示“组织：xxx”悬浮提示语。
+
+- TASK-071 Assistant org switch logo menu polish (2026-05-09T05:08:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/` with mock assistant auth token, open org menu, inspect current row computed style -> **success**.
+  - Notes:
+    - Computed style: `backgroundColor=rgba(0, 0, 0, 0)`、`backgroundImage=none`、`boxShadow=none`、`borderRadius=0px`、`outlineStyle=none`、`transform=none`。
+    - 目标是确认组织菜单行 hover/current/focus/active 不再露出伪按钮背景、圆角和阴影。
+
+- TASK-071 Assistant org switch logo menu polish (2026-05-09T04:05:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/` with mock assistant auth token, click `CB` logo org switch menu, desktop/mobile screenshots -> **success**.
+  - Notes:
+    - 截图产物：`output/playwright/org-menu-logo-desktop.png`、`output/playwright/org-menu-logo-mobile.png`。
+    - mock token 下其他业务接口 401/404 console error 属预期；本轮视觉验收目标是左下角 logo 触发、菜单位置、隐藏创建组织入口和菜单不重复展示当前组织。
+
+- TASK-069 Account tenant lifecycle and data retention implementation (2026-05-09T00:36:00Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,AgentOpenApiIntegrationTest,McpServerIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/auth backend/src/test/java/com/codehouse/ciciassistant/auth/AuthFlowIntegrationTest.java frontend/src/admin/pages/AdminUsersPage.tsx frontend/src/styles.css` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/admin` with mocked admin auth and `/admin/users` data, desktop/mobile screenshots -> **success**.
+  - Notes:
+    - 覆盖按手机号添加成员、停用成员、停用成员登录拒绝、恢复成员、Owner 转让，以及当前登录成员/唯一 Owner 保护。
+    - 截图产物：`output/playwright/feat024-admin-users-desktop.png`、`output/playwright/feat024-admin-users-mobile.png`。移动端复测确认用户详情面板不再横向溢出。
+
+- TASK-069 Account tenant lifecycle and data retention implementation (2026-05-08T23:56:00Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,AgentOpenApiIntegrationTest,McpServerIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/auth backend/src/test/java/com/codehouse/ciciassistant/auth frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css frontend/src/styles.css frontend/src/admin/AdminGuard.tsx frontend/src/admin/AdminLogin.tsx frontend/src/admin/pages/AdminUsersPage.tsx` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/` desktop/mobile screenshots for login, register, multi-org choice, and logged-in org menu -> **success**.
+  - Notes:
+    - 覆盖新手机号注册、重复注册拒绝、无 `orgId` 单组织登录、多组织选择、组织切换越权拒绝、`OWNER` 访问组织管理接口、普通 `ORG_USER` 被组织管理接口拒绝、旧带 `orgId` 登录和平台角色路径。
+    - 登录后组织菜单截图使用 mock token 和 mock `/auth/me`、`/auth/organizations` 响应，因此其他业务接口 console error 属预期；本轮未重启本地 Java 后端到最新代码。
+
+- TASK-069 Account tenant lifecycle and data retention implementation (2026-05-08T16:04:39Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,AgentOpenApiIntegrationTest,McpServerIntegrationTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 test` -> **success**.
+    - `git`: targeted `git diff --check -- ...` for FEAT-024 touched backend/docs/state files -> **success**.
+  - Notes:
+    - 覆盖固定密码登录、`/auth/me`、平台角色、Agent Open API run-as 成员校验、MCP/CloudCC 用户查询路径。
+    - 已跑全量后端测试；本轮未启动本地 PostgreSQL 重建真实开发库。
+
+- TASK-068 Personal settings memory panel visual QA adjustment (2026-05-08T13:09:20Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: Playwright + system Chrome 登录 `http://127.0.0.1:5173/`，打开个人设置 > 专属记忆，使用稳定 mock 记忆数据截取 `/tmp/cici-memory-desktop.png` 和 `/tmp/cici-memory-mobile.png` -> **success**.
+    - `browser`: computed style check -> **success**；分组标签 `labelText=用户事实`、`labelWhiteSpace=nowrap`；记忆行 `background=transparent`、`borderRadius=0px`、`boxShadow=none`；关闭按钮 `border=0px none`、`boxShadow=none`。
+  - Notes:
+    - 视觉测试使用真实本地登录 token，但拦截 `GET /me/agents/cici-system/memories` 返回稳定两条记忆样例，避免污染本地数据库。
+    - 桌面与移动截图经过视觉复查；移动端一级设置 tabs 已调整为单行紧凑横排，未再出现“专属记忆”换行或截断。
+
+- TASK-066 WeCom customer service channel (2026-05-08T09:40:23Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=WecomKfCryptoServiceTest,WecomKfConversationEntityTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/wecom backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceEntity.java backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceRepository.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/main/resources/db/migration/V42__wecom_kf_channel.sql backend/src/test/java/com/codehouse/ciciassistant/wecom frontend/src/admin/pages/AdminAgentRunMonitor.tsx frontend/vite.config.ts frontend/vite.config.js deploy/nginx.cici.conf deploy/nginx.cici.ssl.conf` -> **success**.
+  - Notes:
+    - 本轮未执行真实企业微信账号回调 smoke；只验证加解密、签名、发送窗口实体逻辑、TypeScript 构建和空白检查。
+
+- TASK-065 Personal memory category label cleanup (2026-05-08T09:37:27Z):
+  - Commands:
+    - `frontend`: `rg -n "meta\\.icon|icon:" frontend/src/assistant/UserMemoryPanel.tsx` -> **success**；无匹配，分类单字前缀渲染已移除。
+    - `git`: `git diff --check -- frontend/src/assistant/UserMemoryPanel.tsx` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+  - Notes:
+    - 本轮未做浏览器截图验收；改动为单组件文案渲染收敛，构建已覆盖 TypeScript 类型检查。
+
+- TASK-064 Personal memory row action visibility (2026-05-08T08:01:30Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: headless Chrome 登录 `http://127.0.0.1:5173/`，打开个人设置 > 专属记忆 -> **success**；检测到 2 张记忆卡，编辑/删除按钮为 30x30，SVG 为 15x15、`display:block`、`stroke: currentColor`，背景透明且无阴影。
+    - `browser`: headless Chrome 复查专属记忆分类 tab -> **success**；三个 `.memory-panel__filter-btn` computed style 均为透明背景、0 边框、无阴影、0 圆角、无 transform。
+    - `design`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8'))"` -> **success**.
+    - `style-audit`: tab/filter/scope 静态扫描 `frontend/src/styles.css` 与 `frontend/src/assistant/cici-ui.css` -> **success**；非 `::after` 下划线规则中未发现背景、圆角、阴影或 transform 伪按钮声明。
+    - `git`: `git diff --check -- frontend/src/styles.css frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `browser`: headless Chrome 点击“用户事实”分类 -> **success**；active tab computed style 为 `background: rgba(0, 0, 0, 0)`、`border: 0px`、`boxShadow: none`、`borderRadius: 0px`、`transform: none`，`::after` 为 2px 直线下划线。
+  - Notes:
+    - 本轮只验证本地前台，不涉及远端 `https://cici.cloudcc.cn` 部署。
+
+- TASK-057 chat stream single-tool planning-stop optimization (2026-05-08T00:47:22Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java` -> **success**.
+  - Notes:
+    - 本轮未跑真实 DashScope smoke；需用单工具查询会话确认 trace 出现 `tool_planning_stop_skipped` 且最终生成输入 token 下降。
+
+- V1.7 production release to cici.cloudcc.cn (2026-05-08T00:30:06Z):
+  - Commands:
+    - `git`: `git diff --check` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 test` -> **success**; Flyway test migration reached v41.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `compose`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` -> **success**.
+    - `ACR`: pushed `cici-backend:V1.7` / `latest` -> digest `sha256:f2c73badec939387bd53a83ab1bc944d0b7a4a182337943aa7c8bbc7282aca35`.
+    - `ACR`: pushed `cici-frontend:V1.7` / `latest` -> digest `sha256:7adfa06e8d95046131d82d09c966e0a03035cac278c4af994df7e4e6a7093370`.
+    - `ACR`: created `V1.7` manifest aliases for `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` from existing `latest` tags because `CICI_IMAGE_TAG` applies to all six compose services.
+    - `remote backup`: created `/opt/cici/backups/20260508-082523-before-v1.7` with `acr.env.before-v1.7`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `remote deploy`: `docker compose --env-file acr.env -f docker-compose.acr.yml -f docker-compose.acr.ssl.yml pull && up -d` -> **success**.
+    - `remote health`: all six containers healthy; `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`; `docker exec cici-frontend nginx -t` -> **success**.
+    - `remote db`: `flyway_schema_history` latest rows show `41|agent open api|t`, `40|fixed password login|t`, `39|agent run trace|t`.
+    - `public`: `http://cici.cloudcc.cn/` -> `301`; `https://cici.cloudcc.cn/` -> `200`.
+    - `public org smoke`: fixed-password login as `13900009999` -> roles `ORG_ADMIN`; `/auth/me=ok`, `/agents=4`, `/skills=13`, `/integrations=3`, `/models/providers=5`, `/kb=2`, `/me/agents/run-logs=2`, `/admin/agents/run-logs=10`.
+    - `public platform smoke`: fixed-password login as `13800138111` -> roles `ORG_ADMIN,PLATFORM_ADMIN`; `/api/platform/skills=11`, `/api/platform/tools=13`.
+    - `public openapi smoke`: unauthenticated `GET /openapi/v1/agents/smoke/health` -> `401 application/json` with backend error code `agent_api_key_missing`, confirming Nginx proxies `/openapi` to backend.
+    - `remote logs`: `docker logs --tail=220 cici-backend | grep -Ei "error|exception|failed|using dev fallback"` -> no matches.
+  - Notes:
+    - The first remote deploy attempt failed before `up -d` because infra images lacked `V1.7`; resolved by creating `V1.7` aliases for the four infra images.
+    - Public smoke did not run a real Open API chat with a valid API Key; only route/proxy/auth-missing behavior was verified.
+
+- TASK-057 Trace step timing and model token display (2026-05-07T23:42:29Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `local`: restarted backend in detached `screen` with Java 21 and `spring-boot.run.profiles=local` -> **success**
+    - `local`: `GET http://127.0.0.1:8080/actuator/health` -> **success**, `{"status":"UP"}`
+    - `browser`: reloaded `http://127.0.0.1:5173/admin/ops`; DOM shows examples such as `用户输入 05/08 07:21` with `20ms`, `知识库检索未触发 05/08 07:21` with `0ms`, and model nodes with `输入 0 tokens · 输出 0 tokens` for old traces.
+  - Notes:
+    - Old trace rows did not persist model token usage, so their token display falls back to 0.
+    - New non-stream and stream model calls now include DashScope usage in model node metadata as `inputTokens` and `outputTokens`.
+
+- TASK-057 Local admin observability run-log recovery (2026-05-07T23:32:43Z):
+  - Commands:
+    - `local`: `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` before restart -> **verified 404**.
+    - `local`: restarted backend in detached `screen` with Java 21 and `spring-boot.run.profiles=local` -> **success**.
+    - `local`: `GET http://127.0.0.1:8080/actuator/health` -> **success**, `{"status":"UP"}`.
+    - `local`: `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` with org-admin token -> **success**, JSON with 10 rows.
+    - `local`: `GET http://127.0.0.1:5173/admin/agents/run-logs?limit=10` through Vite proxy -> **success**, JSON with 10 rows.
+    - `browser`: logged into `http://127.0.0.1:5173/admin/ops` as `13800138111`; page shows `26 条记录`, `7 天日志 26`, and `真实链路 3`.
+  - Notes:
+    - No local source change was required; the running local backend process was stale.
+    - The accidental remote compatibility bridge made during initial mis-triage was removed from the remote Nginx config and container config before ending this session.
+
+- TASK-057 Agent observability admin ops integration (2026-05-07):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test` -> **success**
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceRepository.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java backend/src/main/java/com/codehouse/ciciassistant/ai/api/AdminAgentRunTraceController.java backend/src/test/java/com/codehouse/ciciassistant/ai/AgentRunTraceIntegrationTest.java frontend/src/admin/pages/AdminAgentRunMonitor.tsx frontend/src/admin/pages/AdminOpsPage.tsx frontend/src/admin/AdminShell.tsx frontend/src/assistant/AssistantApp.tsx frontend/src/styles.css frontend/vite.config.ts deploy/nginx.cici.conf deploy/nginx.cici.ssl.conf docs/specs/FEAT-019-agent-observability-monitoring.md README.md AI助手实现设计方案.md` -> **success**
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/admin/ops` -> **success**, `200 OK`
+    - `curl`: `curl -sS -I http://127.0.0.1:8080/actuator/health` -> **success**, `200`
+  - Notes:
+    - 前台 rail 已移除“智能体监控”一级入口，管理端 `/admin/ops` 改为“智能体运行 / 成本用量 / 审计日志”结构。
+    - 新增 `/admin/agents/run-logs` 与 `/admin/agents/run-logs/{traceId}`，集成测试覆盖普通用户产生 trace 后由组织管理员查询同一条组织级日志与详情。
+    - 本轮未做真实登录态浏览器截图验收。
+
+- TASK-062 Agent Open API Key management redundant run-as label cleanup (2026-05-07):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+  - Notes:
+    - 已移除 API Key 管理弹窗表单下方“当前执行身份”文字，避免与上方 run-as 用户选择器重复。
+    - 保留 Key 列表中的执行用户列，用于识别已有 Key 的绑定用户。
+
+- TASK-062 Agent Open API Key management usability (2026-05-07):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `git`: `git diff --check -- frontend/src/assistant/AgentOpenApiKeysDialog.tsx frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - API Key 管理弹窗列表已显示每个 Key 绑定的 run-as 执行用户。
+    - 创建/重新生成后的完整 Key 改为可选中、可复制的一次性展示区；列表仅展示 Key 前缀，并明确不可用于调用。
+    - 行操作语义改为停用/启用、重新生成、删除；删除会永久作废 Key 并从可用列表隐藏，历史日志保留。
+    - 二次优化已移除表单区和说明区多余横向分隔线；执行用户列默认只显示名称，hover 显示手机号、角色和用户 ID；Key 列表单行展示并调整列宽；已移除前缀复制入口。
+    - 三次优化已移除 tab 和行操作的弧形边框背景按钮样式；`DESIGN.md`、`DESIGN.json`、`AGENTS.md`、`README.md` 已新增禁止产品面板内部使用带弧形边框背景伪按钮的规则。
+    - 追加验证：`node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8'))"` -> **success**；`frontend npm run build` -> **success**（Vite chunk-size warning 保留）；`git diff --check -- frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> **success**。
+
+- TASK-062 Agent Open API docs popup centered layout (2026-05-07):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - Agent API 文档弹窗正文列和右侧目录列已作为整体居中，正文 section 在文档列内居中，避免宽屏弹窗右侧出现大片空白。
+
+- TASK-062 Agent Open API docs popup action cleanup (2026-05-07):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `git`: `git diff --check -- frontend/src/assistant/AgentOpenApiDocsDialog.tsx frontend/src/assistant/AgentBuilderShell.tsx .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> **success**
+  - Notes:
+    - Agent API 文档弹窗已移除“在新页签打开”操作，顶部文档操作只保留 Markdown 下载。
+    - 弹窗关闭和 API Key 管理入口保持不变。
+
+- TASK-062 Agent Open API docs dialog visual cleanup (2026-05-07):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css` -> **success**
+  - Notes:
+    - Agent API 文档弹窗代码块已覆盖全局 `pre` 浅色背景和边框，改为深墨底高对比文字。
+    - 文档弹窗内部 topbar、基础 URL、section、inline code、table row 和移动端目录的横向分隔线已移除。
+    - 右侧目录按钮已覆盖全局按钮渐变、阴影和 hover lift，恢复为无背景框纯文本导航。
+
+- TASK-062 Agent Open API (2026-05-07):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest test` -> **success**
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）
+    - `git`: `git diff --check` -> **success**
+  - Notes:
+    - 覆盖 API Key 创建/列表/更新/轮换/撤销、Key hash 不存明文、`/openapi/v1/agents/{agentId}/health` 不走 JWT 解析、未开放 api channel 拒绝。
+    - 新增覆盖 non-stream `/openapi/v1/agents/{agentId}/chat`：验证 `X-Cici-Api-Key`、external session 映射、run-as 调用、call log、usage daily、trace `channel=api/sourceType=open_api/requestId/credentialId/externalUserId`。
+    - 新增覆盖 stream `/openapi/v1/agents/{agentId}/chat/stream`：验证 `meta`、透传 `delta`、增强 `done.requestId/traceId/elapsedMs/runtime`，并写入 call log、usage daily 和 trace metadata。
+    - 新增覆盖 `GET /agents/{agentId}/api-calls`：验证可按关键词查询当前 Agent 的 Open API 调用日志。
+    - 新增覆盖 Key 级每分钟限流，第二次同分钟调用返回 `rate_limit_exceeded`。
+    - 本轮未做真实模型链路 smoke、公网 `/openapi` 代理 smoke、知识库/Skill 越权专项测试；这些仍是 FEAT-021 后续项。
+
+- TASK-061 Feishu tool-limit readable fallback (2026-05-07):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java` -> **success**
+  - Notes:
+    - 回归覆盖飞书非流式工具轮次耗尽后的确定性摘要兜底，断言不再返回“系统保护上限/暂时无法继续处理”文案。
+    - 本轮未做公网飞书真实消息复测；需要部署后通过飞书机器人验证。
 
 - V1.5 release validation (2026-05-07):
   - Commands:

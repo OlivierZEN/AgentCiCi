@@ -5,6 +5,10 @@ import { safeFetchJson } from "../utils/http";
 
 type AuthPayload = { token: string; roles?: string[] };
 
+function hasOrgAdminRole(roles: string[]): boolean {
+  return roles.includes("OWNER") || roles.includes("ORG_ADMIN");
+}
+
 function readAdminAuth(): AuthPayload | null {
   const raw = localStorage.getItem(LS_ADMIN_TOKEN);
   if (!raw) return null;
@@ -34,7 +38,7 @@ export default function AdminGuard() {
         const { body } = await safeFetchJson<{ roles?: string[] }>(r);
         const roles = (body?.data?.roles ?? []) as string[];
         if (cancelled) return;
-        if (r.ok && roles.includes("ORG_ADMIN")) {
+        if (r.ok && hasOrgAdminRole(roles)) {
           setState("ok");
           return;
         }

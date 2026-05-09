@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
+import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -39,6 +41,9 @@ class AuthFlowIntegrationTest {
     private OrgRepository orgRepository;
 
     @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Autowired
@@ -65,6 +70,296 @@ class AuthFlowIntegrationTest {
         mockMvc.perform(get("/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRegisterAccountAndOwnerOrganization() throws Exception {
+        String mobile = "13902400101";
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "首个组织"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.accountId").isNotEmpty())
+                .andExpect(jsonPath("$.data.memberId").isNotEmpty())
+                .andExpect(jsonPath("$.data.orgId").isNotEmpty())
+                .andExpect(jsonPath("$.data.roles[0]").value("OWNER"))
+                .andReturn();
+
+        String token = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("token").asText();
+        mockMvc.perform(get("/admin/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldRejectDuplicateRegistrationForExistingMobile() throws Exception {
+        String mobile = "13902400102";
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "重复组织 A"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "重复组织 B"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("该手机号已注册，请登录后创建或切换组织"));
+    }
+
+    @Test
+    void shouldLoginWithoutOrgDirectlyForSingleOrganizationAccount() throws Exception {
+        String mobile = "13902400103";
+        mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "单组织"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.roles[0]").value("OWNER"))
+                .andExpect(jsonPath("$.data.requiresOrganizationSelection").doesNotExist());
+    }
+
+    @Test
+    void shouldReturnOrganizationChoicesAndSwitchOrganizationForMultiOrgAccount() throws Exception {
+        String mobile = "13902400104";
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "多组织 A"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String firstToken = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("token").asText();
+
+        MvcResult createOrgResult = mockMvc.perform(post("/auth/organizations")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + firstToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "organizationName": "多组织 B" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles[0]").value("OWNER"))
+                .andReturn();
+        String secondOrgId = objectMapper.readTree(createOrgResult.getResponse().getContentAsString()).path("data").path("orgId").asText();
+
+        MvcResult choicesResult = mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.requiresOrganizationSelection").value(true))
+                .andExpect(jsonPath("$.data.token").doesNotExist())
+                .andExpect(jsonPath("$.data.organizations.length()").value(2))
+                .andReturn();
+        assertThat(objectMapper.readTree(choicesResult.getResponse().getContentAsString()).path("data").path("organizations").toString())
+                .contains(secondOrgId);
+
+        mockMvc.perform(post("/auth/switch-organization")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + firstToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "orgId": "%s" }
+                                """.formatted(secondOrgId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.orgId").value(secondOrgId))
+                .andExpect(jsonPath("$.data.token").isNotEmpty());
+    }
+
+    @Test
+    void shouldRejectSwitchingToOrganizationOwnedByAnotherAccount() throws Exception {
+        MvcResult accountA = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "13902400105",
+                                  "password": "szyd1234",
+                                  "organizationName": "账号 A"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        MvcResult accountB = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "13902400106",
+                                  "password": "szyd1234",
+                                  "organizationName": "账号 B"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String tokenA = objectMapper.readTree(accountA.getResponse().getContentAsString()).path("data").path("token").asText();
+        String orgB = objectMapper.readTree(accountB.getResponse().getContentAsString()).path("data").path("orgId").asText();
+
+        mockMvc.perform(post("/auth/switch-organization")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "orgId": "%s" }
+                                """.formatted(orgB)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("当前账号不属于该组织"));
+    }
+
+    @Test
+    void shouldRejectOrgUserForOrgAdminEndpoints() throws Exception {
+        String mobile = "13902400107";
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orgId": "demo-org",
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String token = objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+
+        mockMvc.perform(get("/admin/users").header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldInviteSuspendRestoreAndTransferOwnerForOrganizationMembers() throws Exception {
+        String ownerMobile = "13902400120";
+        String memberMobile = "13902400121";
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "成员治理组织"
+                                }
+                                """.formatted(ownerMobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode registerData = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data");
+        String ownerToken = registerData.path("token").asText();
+        String ownerMemberId = registerData.path("memberId").asText();
+
+        MvcResult inviteResult = mockMvc.perform(post("/admin/users/invitations")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "nickname": "治理成员",
+                                  "roleCode": "ORG_ADMIN"
+                                }
+                                """.formatted(memberMobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roleCode").value("ORG_ADMIN"))
+                .andExpect(jsonPath("$.data.memberStatus").value("ACTIVE"))
+                .andReturn();
+        String memberId = objectMapper.readTree(inviteResult.getResponse().getContentAsString()).path("data").path("id").asText();
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(memberMobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles[0]").value("ORG_ADMIN"));
+
+        mockMvc.perform(post("/admin/users/%s/suspend".formatted(memberId))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.memberStatus").value("SUSPENDED"));
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(memberMobile)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("No active organization membership"));
+
+        mockMvc.perform(post("/admin/users/%s/restore".formatted(memberId))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.memberStatus").value("ACTIVE"));
+
+        mockMvc.perform(post("/admin/users/%s/suspend".formatted(ownerMemberId))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("不能停用当前登录成员"));
+
+        mockMvc.perform(post("/admin/users/%s/transfer-owner".formatted(memberId))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + ownerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roleCode").value("OWNER"));
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234"
+                                }
+                                """.formatted(memberMobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.roles[0]").value("OWNER"));
     }
 
     @Test
@@ -121,7 +416,9 @@ class AuthFlowIntegrationTest {
         var org = orgRepository.findById("demo-org").orElseThrow();
         userRepository.findByOrgIdAndMobile("demo-org", "13800138188").ifPresent(userRepository::delete);
         userRepository.flush();
-        userRepository.save(new UserEntity(org, "13800138188", RoleCodes.ORG_USER));
+        var account = userAccountRepository.findByPrimaryMobile("13800138188")
+                .orElseGet(() -> userAccountRepository.save(new UserAccountEntity("13800138188")));
+        userRepository.save(new UserEntity(org, account, RoleCodes.ORG_USER));
 
         mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)

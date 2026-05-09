@@ -91,6 +91,20 @@ public class MemoryVectorStoreClient implements VectorStoreClient {
         return deleteByVectorIds(orgId, ids);
     }
 
+    @Override
+    public VectorStoreAuditResult auditOrgVectors(String orgId, List<String> registeredVectorIds) {
+        List<String> registered = registeredVectorIds == null ? List.of() : registeredVectorIds;
+        List<String> orphanIds = store.values().stream()
+                .filter(entry -> orgId.equals(entry.orgId()))
+                .map(Entry::vectorId)
+                .filter(vectorId -> !registered.contains(vectorId))
+                .toList();
+        int scanned = (int) store.values().stream()
+                .filter(entry -> orgId.equals(entry.orgId()))
+                .count();
+        return VectorStoreAuditResult.success(scanned, registered.size(), orphanIds.size(), orphanIds.stream().limit(50).toList());
+    }
+
     private double cosine(List<Float> left, List<Float> right) {
         double dot = 0.0;
         double l = 0.0;

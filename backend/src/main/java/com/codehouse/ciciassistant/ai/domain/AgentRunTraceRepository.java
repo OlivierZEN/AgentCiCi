@@ -11,6 +11,16 @@ public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEnti
 
     Optional<AgentRunTraceEntity> findByTraceIdAndOrgId(String traceId, String orgId);
 
+    Optional<AgentRunTraceEntity> findFirstByOrgIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
+            String orgId,
+            String sessionId,
+            String agentId);
+
+    List<AgentRunTraceEntity> findByOrgIdAndStartedAtBetweenOrderByStartedAtDesc(
+            String orgId,
+            Instant from,
+            Instant to);
+
     @Query("""
             select t from AgentRunTraceEntity t
             where t.orgId = :orgId
@@ -19,7 +29,9 @@ public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEnti
                 t.userId = :userId
                 or t.sessionId like 'feishu:%'
                 or t.sessionId like 'wechat:%'
+                or t.sessionId like 'wecom-kf:%'
                 or t.sessionId like 'dingtalk:%'
+                or t.sessionId like 'api:%'
                 or t.sessionId like 'web:%'
                 or t.sessionId like 'webchat:%'
               )

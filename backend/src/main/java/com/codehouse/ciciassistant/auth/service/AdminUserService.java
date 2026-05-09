@@ -1,6 +1,11 @@
 package com.codehouse.ciciassistant.auth.service;
 
 import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierEntity;
+import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierRepository;
+import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
+import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
@@ -16,9 +21,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminUserService {
 
     private final UserRepository userRepository;
+    private final OrgRepository orgRepository;
+    private final UserAccountRepository userAccountRepository;
+    private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
 
-    public AdminUserService(UserRepository userRepository) {
+    public AdminUserService(UserRepository userRepository,
+                            OrgRepository orgRepository,
+                            UserAccountRepository userAccountRepository,
+                            AccountLoginIdentifierRepository accountLoginIdentifierRepository) {
         this.userRepository = userRepository;
+        this.orgRepository = orgRepository;
+        this.userAccountRepository = userAccountRepository;
+        this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
     }
 
     public List<Map<String, Object>> listUsers(String orgId) {
@@ -28,23 +42,96 @@ public class AdminUserService {
     }
 
     @Transactional
-    public Map<String, Object> updateRole(String orgId, String actorUserId, String targetUserId, String newRoleCode) {
-        if (!RoleCodes.isValidRole(newRoleCode)) {
-            throw new IllegalArgumentException("Invalid role code");
+    public Map<String, Object> inviteMember(
+            String orgId,
+            String mobile,
+            String nickname,
+            String roleCode) {
+        String mobileValue = normalizeMobile(mobile);
+        if (!mobileValue.matches("^1\\d{10}$")) {
+            throw new IllegalArgumentException("手机号格式不正确");
         }
+        String normalizedRole = normalizeMemberRole(roleCode);
+        UserAccountEntity account = findOrCreateMobileAccount(mobileValue);
+        UserEntity target = userRepository.findByOrg_IdAndAccount_Id(orgId, account.getId())
+                .orElseGet(() -> {
+                    var org = orgRepository.findById(orgId)
+                            .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                    return new UserEntity(org, account, normalizedRole);
+                });
+        if (!RoleCodes.OWNER.equals(target.getRoleCode())) {
+            target.setRoleCode(normalizedRole);
+        }
+        target.setMemberStatus(UserEntity.STATUS_ACTIVE);
+        target.setNickname(trimOrNull(nickname));
+        userRepository.save(target);
+        return toRow(target);
+    }
+
+    @Transactional
+    public Map<String, Object> updateRole(String orgId, String actorUserId, String targetUserId, String newRoleCode) {
+        String role = normalizeMemberRole(newRoleCode);
         UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (RoleCodes.OWNER.equals(target.getRoleCode())) {
+            throw new ForbiddenException("Owner 角色请通过所有权转让处理");
+        }
         if (targetUserId.equals(actorUserId)
-                && RoleCodes.ORG_USER.equals(newRoleCode)
+                && RoleCodes.ORG_USER.equals(role)
                 && RoleCodes.ORG_ADMIN.equals(target.getRoleCode())) {
             long adminCount = userRepository.findByOrg_IdOrderByCreatedAtDesc(orgId).stream()
                     .filter(u -> RoleCodes.ORG_ADMIN.equals(u.getRoleCode()))
+                    .filter(u -> UserEntity.STATUS_ACTIVE.equals(u.getMemberStatus()))
                     .count();
             if (adminCount <= 1) {
                 throw new ForbiddenException("不能移除唯一的管理员");
             }
         }
-        target.setRoleCode(newRoleCode);
+        target.setRoleCode(role);
+        userRepository.save(target);
+        return toRow(target);
+    }
+
+    @Transactional
+    public Map<String, Object> suspendMember(String orgId, String actorUserId, String targetUserId) {
+        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (target.getId().equals(actorUserId)) {
+            throw new ForbiddenException("不能停用当前登录成员");
+        }
+        assertNotLastActiveOwner(orgId, target);
+        target.setMemberStatus(UserEntity.STATUS_SUSPENDED);
+        userRepository.save(target);
+        return toRow(target);
+    }
+
+    @Transactional
+    public Map<String, Object> restoreMember(String orgId, String targetUserId) {
+        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        target.setMemberStatus(UserEntity.STATUS_ACTIVE);
+        userRepository.save(target);
+        return toRow(target);
+    }
+
+    @Transactional
+    public Map<String, Object> transferOwner(String orgId, String actorUserId, String targetUserId) {
+        UserEntity actor = userRepository.findByIdAndOrg_Id(actorUserId, orgId)
+                .orElseThrow(() -> new ForbiddenException("需要 Owner 权限"));
+        if (!RoleCodes.OWNER.equals(actor.getRoleCode()) || !UserEntity.STATUS_ACTIVE.equals(actor.getMemberStatus())) {
+            throw new ForbiddenException("需要 Owner 权限");
+        }
+        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (!UserEntity.STATUS_ACTIVE.equals(target.getMemberStatus())) {
+            throw new ForbiddenException("只能转让给有效成员");
+        }
+        if (actor.getId().equals(target.getId())) {
+            return toRow(actor);
+        }
+        target.setRoleCode(RoleCodes.OWNER);
+        actor.setRoleCode(RoleCodes.ORG_ADMIN);
+        userRepository.save(actor);
         userRepository.save(target);
         return toRow(target);
     }
@@ -65,11 +152,7 @@ public class AdminUserService {
             throw new IllegalArgumentException("手机号格式不正确");
         }
         if (mobileValue != null) {
-            UserEntity existing = userRepository.findByOrgIdAndMobile(orgId, mobileValue).orElse(null);
-            if (existing != null && !existing.getId().equals(target.getId())) {
-                throw new IllegalArgumentException("该手机号已被其他用户使用");
-            }
-            target.setMobile(mobileValue);
+            updateAccountMobile(target, mobileValue);
         }
         String ccUsernameValue = trimOrNull(ccUsername);
         if (ccUsernameValue != null) {
@@ -86,17 +169,98 @@ public class AdminUserService {
         return toRow(target);
     }
 
+    private void updateAccountMobile(UserEntity target, String mobileValue) {
+        userAccountRepository.findByPrimaryMobile(mobileValue)
+                .filter(account -> !account.getId().equals(target.getAccountId()))
+                .ifPresent(account -> {
+                    throw new IllegalArgumentException("该手机号已被其他账号使用");
+                });
+        accountLoginIdentifierRepository
+                .findByIdentifierTypeAndNormalizedValueAndStatus(
+                        AccountLoginIdentifierEntity.TYPE_MOBILE,
+                        mobileValue,
+                        AccountLoginIdentifierEntity.STATUS_ACTIVE)
+                .filter(identifier -> !identifier.getAccount().getId().equals(target.getAccountId()))
+                .ifPresent(identifier -> {
+                    throw new IllegalArgumentException("该手机号已被其他账号使用");
+                });
+        target.getAccount().setPrimaryMobile(mobileValue);
+        userAccountRepository.save(target.getAccount());
+        AccountLoginIdentifierEntity identifier = accountLoginIdentifierRepository
+                .findByAccount_IdAndIdentifierTypeAndStatus(
+                        target.getAccountId(),
+                        AccountLoginIdentifierEntity.TYPE_MOBILE,
+                        AccountLoginIdentifierEntity.STATUS_ACTIVE)
+                .orElseGet(() -> new AccountLoginIdentifierEntity(
+                        target.getAccount(),
+                        AccountLoginIdentifierEntity.TYPE_MOBILE,
+                        mobileValue,
+                        mobileValue));
+        identifier.updateMobileValue(mobileValue, mobileValue);
+        accountLoginIdentifierRepository.save(identifier);
+    }
+
     private Map<String, Object> toRow(UserEntity u) {
         Map<String, Object> row = new LinkedHashMap<>();
         row.put("id", u.getId());
+        row.put("memberId", u.getId());
+        row.put("accountId", u.getAccountId());
         row.put("mobile", u.getMobile());
         row.put("roleCode", u.getRoleCode());
+        row.put("memberStatus", u.getMemberStatus());
         row.put("nickname", u.getNickname() == null ? "" : u.getNickname());
         row.put("ccUsername", u.getCcUsername() == null ? "" : u.getCcUsername());
         row.put("ccSafetymark", u.getCcSafetymark() == null ? "" : u.getCcSafetymark());
         row.put("avatarBase64", u.getAvatarBase64() == null ? "" : u.getAvatarBase64());
         row.put("createdAt", u.getCreatedAt().toString());
         return row;
+    }
+
+    private UserAccountEntity findOrCreateMobileAccount(String mobileValue) {
+        UserAccountEntity account = accountLoginIdentifierRepository
+                .findByIdentifierTypeAndNormalizedValueAndStatus(
+                        AccountLoginIdentifierEntity.TYPE_MOBILE,
+                        mobileValue,
+                        AccountLoginIdentifierEntity.STATUS_ACTIVE)
+                .map(AccountLoginIdentifierEntity::getAccount)
+                .or(() -> userAccountRepository.findByPrimaryMobile(mobileValue))
+                .orElseGet(() -> userAccountRepository.save(new UserAccountEntity(mobileValue)));
+        accountLoginIdentifierRepository
+                .findByAccount_IdAndIdentifierTypeAndStatus(
+                        account.getId(),
+                        AccountLoginIdentifierEntity.TYPE_MOBILE,
+                        AccountLoginIdentifierEntity.STATUS_ACTIVE)
+                .orElseGet(() -> accountLoginIdentifierRepository.save(new AccountLoginIdentifierEntity(
+                        account,
+                        AccountLoginIdentifierEntity.TYPE_MOBILE,
+                        mobileValue,
+                        mobileValue)));
+        return account;
+    }
+
+    private void assertNotLastActiveOwner(String orgId, UserEntity target) {
+        if (!RoleCodes.OWNER.equals(target.getRoleCode()) || !UserEntity.STATUS_ACTIVE.equals(target.getMemberStatus())) {
+            return;
+        }
+        long ownerCount = userRepository.countByOrg_IdAndRoleCodeAndMemberStatus(
+                orgId,
+                RoleCodes.OWNER,
+                UserEntity.STATUS_ACTIVE);
+        if (ownerCount <= 1) {
+            throw new ForbiddenException("不能停用唯一的 Owner");
+        }
+    }
+
+    private String normalizeMemberRole(String roleCode) {
+        String role = roleCode == null ? "" : roleCode.trim();
+        if (!RoleCodes.ORG_ADMIN.equals(role) && !RoleCodes.ORG_USER.equals(role)) {
+            throw new IllegalArgumentException("Invalid role code");
+        }
+        return role;
+    }
+
+    private String normalizeMobile(String value) {
+        return value == null ? "" : value.trim();
     }
 
     private String trimOrNull(String value) {

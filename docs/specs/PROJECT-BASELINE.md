@@ -1,7 +1,7 @@
 ---
 kind: project-baseline
 version: 3
-updated_at: 2026-04-30T05:33:03Z
+updated_at: 2026-05-08T23:47:10Z
 updated_by: ai
 status: active
 baseline_type: brownfield
@@ -12,7 +12,8 @@ baseline_type: brownfield
 ## Scope
 
 - Repo: `cc-cici-assistant`
-- Product shape: 企业多组织 AI 助手平台，当前已同时覆盖助手端、管理端、平台治理控制面、Agent Builder、Skill、知识库、工具治理与部分个人工作流能力。
+- Product shape: AgentCiCi 企业级多组织智能体运行与治理平台，当前已同时覆盖助手端、管理端、平台治理控制面、Agent Builder、Skill、知识库、工具治理、外部系统/渠道集成与部分个人工作流能力。
+- Brand stance: AgentCiCi 是独立产品品牌，`agentcici.com` 为品牌域名；CloudCC、Salesforce、企业微信、飞书等是集成对象，不作为主品牌标识。
 - Baseline intent: 为后续 brownfield 变更提供共享事实底稿；这里只记录当前系统形态、活跃交付面、关键入口与需要继续验证的点，不回填全部历史。
 
 ## Verified Architecture

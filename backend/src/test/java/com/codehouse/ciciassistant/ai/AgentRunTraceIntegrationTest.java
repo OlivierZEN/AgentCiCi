@@ -80,6 +80,21 @@ class AgentRunTraceIntegrationTest {
         JsonNode detail = objectMapper.readTree(detailResult.getResponse().getContentAsString()).path("data");
         assertThat(detail.path("skills").path("boundSkillCodes").size()).isGreaterThanOrEqualTo(
                 detail.path("skills").path("activatedSkillCodes").size());
+
+        String adminToken = loginToken("13800138111");
+        mockMvc.perform(get("/admin/agents/run-logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .param("q", sessionId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].sessionId").value(sessionId))
+                .andExpect(jsonPath("$.data.items[0].traceId").value(traceId));
+
+        mockMvc.perform(get("/admin/agents/run-logs/{traceId}", traceId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.traceId").value(traceId))
+                .andExpect(jsonPath("$.data.sessionId").value(sessionId))
+                .andExpect(jsonPath("$.data.nodes").isArray());
     }
 
     private String loginToken(String mobile) throws Exception {

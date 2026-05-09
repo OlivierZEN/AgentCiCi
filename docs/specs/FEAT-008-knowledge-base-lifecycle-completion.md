@@ -28,7 +28,7 @@ updated_by: ai
 - 数据模型: `knowledge_base`, `kb_document`, `kb_chunk`, `agent_kb_binding`
 - 管理端 UI: `frontend/src/admin/pages/AdminKnowledgePage.tsx`
 - 助手端选知识库参与 RAG: `frontend/src/assistant/AssistantApp.tsx`
-- 现有文档: `AI助手实现设计方案.md`, `README.md`, `.claw/test-report.md`
+- 现有文档: `AgentCiCi智能体平台实现设计方案.md`, `README.md`, `.claw/test-report.md`
 - Dify 官方知识库文档:
   - `https://docs.dify.ai/en/use-dify/knowledge/readme`
   - `https://docs.dify.ai/en/use-dify/knowledge/create-knowledge/introduction`

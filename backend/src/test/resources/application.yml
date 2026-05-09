@@ -23,3 +23,6 @@ app:
     sms:
       # Integration tests call /auth/sms/send many times per JVM; disable send-window / daily caps in test.
       rate-limit-enabled: false
+  agent-open-api:
+    enabled: true
+    key-pepper: "test-agent-open-api-pepper-2026"

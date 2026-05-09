@@ -7,7 +7,7 @@ owner_role: frontend-backend-observability
 task_ids: TASK-057
 related_decisions: none
 related_issues: none
-updated_at: 2026-05-06T20:54:00+08:00
+updated_at: 2026-05-07T16:10:00+08:00
 updated_by: ai
 ---
 
@@ -15,9 +15,9 @@ updated_by: ai
 
 ## 背景与目标
 
-当前智能体监控页仍是偏深色概念大屏，展示重点停留在“状态机卡片”和“任务脉冲”，与项目产品页的 `鎏金账房` 设计基线不一致，也无法支撑真实排障。
+当前智能体监控能力已经从偏深色概念大屏收回为 `鎏金账房` 产品观测台，但入口仍放在前台一级菜单，容易把员工日常对话流和管理员排障流混在一起。
 
-本功能要把监控页改造成产品级可用的智能体运行观测台。用户可以看到每个智能体当前运行状态，并查看最近 7 天的运行日志。日志需要覆盖每次会话和任务执行的完整链路追踪，包括与大模型交互明细、工具调用、技能命中、知识库检索、耗时、错误和审计信息。
+本功能要把监控能力归入组织管理端运维体系，形成产品级可用的智能体运行观测台。管理员可以看到组织内智能体运行状态，并查看最近 7 天的运行日志。日志需要覆盖每次会话和任务执行的完整链路追踪，包括与大模型交互明细、工具调用、技能命中、知识库检索、耗时、错误和审计信息。
 
 目标不是做“监控大屏”，而是让管理员或运营人员在工作时间内快速判断：哪个智能体正在运行，哪次会话出了问题，问题发生在模型、工具、技能、知识库还是业务接口。
 
@@ -26,7 +26,9 @@ updated_by: ai
 ### In Scope
 
 - 将智能体监控页从深色赛博风改为 `鎏金账房` 产品工作台风格。
-- 展示当前组织或当前用户可见智能体的实时运行状态。
+- 从前台一级菜单移除“智能体监控”，避免普通员工工作台暴露组织级排障入口。
+- 将组织级智能体运行观测整合进管理端 `/admin/ops`，与成本用量、审计日志共同构成运维入口。
+- 展示当前组织智能体的运行状态。
 - 支持最近 7 天运行日志查询，默认按最近活动时间倒序。
 - 日志覆盖会话、任务、模型调用、工具调用、技能、知识库、错误和耗时。
 - 提供按智能体、状态、时间、日志类型和关键词筛选。
@@ -37,6 +39,7 @@ updated_by: ai
 
 - 本轮设计不实现告警规则、短信或飞书主动通知。
 - 本轮不做跨租户平台级全局监控大盘。
+- 本轮不把组织级监控放到平台端 `/platform/*`，平台端仍聚焦平台技能、内置工具、策略版本和平台审计。
 - 本轮不展示模型原始 chain-of-thought，只展示可审计的过程摘要、输入输出摘要和工具结果。
 - 本轮不做日志长期归档查询，超过 7 天的检索需要后续归档方案。
 
@@ -45,11 +48,11 @@ updated_by: ai
 - 组织管理员发现某个智能体回复变慢，需要确认最近是否频繁卡在知识库检索或外部工具调用。
 - 运营人员接到用户反馈“技能执行失败”，需要定位某次会话中模型选择了哪个技能，调用了哪些工具，错误发生在哪里。
 - 平台实施人员发布新技能后，需要观察最近 7 天是否有运行异常、参数缺失、知识库无命中或模型空响应。
-- 普通员工只需要看到自己可见智能体的运行状态和本人会话日志，不应看到他人敏感内容。
+- 普通员工不再在前台一级菜单看到“智能体监控”。如后续需要透明度，可在单条会话或回复旁提供“查看本次执行详情”，仅展示本人会话 trace。
 
 ## 现状与约束
 
-- 当前页面入口在 `frontend/src/assistant/AssistantApp.tsx` 的 `workspaceTab === "monitor"` 分支。
+- 旧页面入口在 `frontend/src/assistant/AssistantApp.tsx` 的 `workspaceTab === "monitor"` 分支，本轮迁移到管理端 `/admin/ops`。
 - 当前样式在 `frontend/src/styles.css` 的 `.cici-monitor*`，存在深色渐变、发光动画、紫蓝青色体系，与 `DESIGN.md` 规则冲突。
 - 已有工作台状态源包括 `workbenchRuntimeByAgent`、会话列表、工作台消息和后端 SSE phase。
 - 近 7 天链路日志需要后端提供统一查询接口或复用已有消息、工具审计、RAG 检索和技能运行记录后聚合。
@@ -59,14 +62,30 @@ updated_by: ai
 
 视觉场景：组织管理员在白天的办公显示器上排查智能体执行问题，需要长时间阅读表格、时间线和调用明细，界面应明亮、克制、结构清楚。
 
-- 产品寄存器：该页属于 `/` 认证后产品工作台，设计服务任务，不做营销页或概念大屏。
+- 产品寄存器：该页属于 `/admin/*` 认证后组织管理产品面，设计服务排障和运维任务，不做营销页或概念大屏。
 - 信息优先：首屏先展示状态、异常、最近运行，再进入单条 trace 详情。
 - 三层结构：左侧智能体列表，中间运行日志，右侧链路详情。
 - 稳定密度：使用 13px 默认正文、11 到 12px metadata、32 到 34px 紧凑控件。
 - 金线结构：香槟金用于边框、active tab、focus 和主操作，不做大面积装饰填充。
 - 可审计但不暴露内部推理：展示模型输入输出摘要、参数、工具结果和错误，不展示原始 chain-of-thought。
 
-## 页面信息架构
+## 入口归属与页面信息架构
+
+### 导航归属
+
+- 前台 `/`：保留员工日常工作入口，如会话工作台、客户会话、CRM 和个人设置；移除“智能体监控”一级菜单。
+- 前台会话上下文：未来可保留轻量“本次执行详情”，只看当前用户自己的 trace，不展示组织级日志列表。
+- 管理端 `/admin/ops`：承载组织级“观测与运维”，默认进入智能体运行观测，并通过文本 tab 切换成本用量与审计日志。
+- 智能体构建 `/admin/agent-builder/:id`：保留单个智能体的执行记录，用于发布验证和构建治理。
+- 平台端 `/platform/*`：只做平台能力治理，不混入普通组织智能体运行日志。
+
+### 管理端运维 tabs
+
+- `智能体运行`：组织级智能体状态、最近 7 天运行日志、链路追踪详情。
+- `成本用量`：组织级调用次数和成本估算。
+- `审计日志`：组织管理员可见的近期审计事件。
+
+## 智能体运行页结构
 
 ### 顶部状态栏
 
@@ -230,8 +249,12 @@ type AgentTraceDetail = {
   - 返回最近 7 天运行日志。
 - `GET /me/agents/run-logs/{traceId}`
   - 返回单次运行链路详情。
+- `GET /admin/agents/run-logs?from=&to=&agentId=&status=&type=&q=&limit=`
+  - 返回当前组织最近 7 天运行日志，需 `ORG_ADMIN`。
+- `GET /admin/agents/run-logs/{traceId}`
+  - 返回当前组织单次运行链路详情，需 `ORG_ADMIN`。
 
-管理员端如果后续需要查看全组织日志，可增加 `/admin/agents/run-logs`，并复用同一前端组件，但权限和脱敏粒度更高。
+管理端使用 `/admin/agents/run-logs` 作为组织级事实源；前台如果后续恢复“本次执行详情”，仍使用 `/me/agents/run-logs/{traceId}` 并保持用户级权限边界。
 
 ## 脱敏与安全
 
@@ -298,14 +321,17 @@ type AgentTraceDetail = {
   - 新增 `agent_run_trace` 表与 `AgentRunTraceService`，普通与流式聊天完成后写入统一 trace。
   - 新增 `GET /me/agents/run-logs` 与 `GET /me/agents/run-logs/{traceId}`，返回当前用户可见的最近 7 天运行日志与详情。
   - trace 节点覆盖用户输入、RAG、技能上下文、工具调用、模型生成、技能/工作流治理和消息落库。
+- 已优化流式工具链路的模型耗时：
+  - 单个只读查询工具成功返回、用户意图仍为查询/汇总且结果不要求继续工具时，后端会跳过第二次模型工具规划收口并记录 `tool_planning_stop_skipped`。
+  - 未跳过的收口判断使用短输出提示，只让模型判断是否继续工具；最终流式生成不再携带 tools schema，避免工具定义重复进入最终回答上下文。
 - 监控页已改读 `/me/agents/run-logs`；选中日志后读取 trace detail 展示模型、工具、技能、知识库和节点摘要。
 - 历史会话在没有细粒度 trace 时会通过 `chat_session` / `chat_message` 回填为 message-only 记录，不展示未验证的工具/RAG/耗时。
 - 已按用户最严格 UI 反馈移除内部背景框和框套框：搜索框内部、tab、日志行、选中态、状态文字、链路详情分组、空态均改为透明背景和最小必要线条。
 - 已同步项目 UI 规范到 `DESIGN.md` / `DESIGN.json` / `AGENTS.md` / `README.md`，明确产品面板内部不得再加背景框。
-- 本轮验证通过：`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 成功；`frontend npm run build` 成功，保留既有 Vite chunk-size warning；`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test` 成功；`git diff --check` 成功。
+- 本轮验证通过：`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 成功；`frontend npm run build` 成功，保留既有 Vite chunk-size warning；`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test` 成功；`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` 成功；`git diff --check` 成功。
 
 ## 交接说明
 
 - 下一位接手者先看本文件和 `docs/specs/mockups/agent-observability-monitoring.html`。
 - 前端页面已按效果图落地，并已接入真实后端运行日志聚合接口。
-- 目前工具调用没有逐工具耗时字段，trace 详情只展示工具名、参数摘要、结果摘要和成功/失败判断；若后续要精确耗时，需在工具执行层记录 started/ended。
+- 新 trace 已有逐工具耗时字段；本次性能优化尚未跑真实 DashScope 单工具查询 smoke，后续需确认 trace 出现 `模型工具规划收口跳过` 且最终生成输入 token 下降。

@@ -21,9 +21,13 @@ export default defineConfig(({ mode }) => {
         "/integrations": { target: backendTarget, changeOrigin: true },
         "/mcp-servers": { target: backendTarget, changeOrigin: true },
         "/admin/users": { target: backendTarget, changeOrigin: true },
+        "/admin/agents": { target: backendTarget, changeOrigin: true },
+        "/admin/organization": { target: backendTarget, changeOrigin: true },
+        "/api/autoservice": { target: backendTarget, changeOrigin: true },
         "/agents": { target: backendTarget, changeOrigin: true },
         "/skills": { target: backendTarget, changeOrigin: true },
         "/feishu": { target: backendTarget, changeOrigin: true },
+        "/wecom": { target: backendTarget, changeOrigin: true },
         "/me": { target: backendTarget, changeOrigin: true },
         "/api/platform": {
           target: backendTarget,

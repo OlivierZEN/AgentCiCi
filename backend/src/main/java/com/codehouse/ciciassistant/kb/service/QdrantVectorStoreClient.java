@@ -173,6 +173,51 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
         return deleteByFilter(orgId, Map.of("must", must), "knowledge base " + knowledgeBaseId);
     }
 
+    @Override
+    public VectorStoreAuditResult auditOrgVectors(String orgId, List<String> registeredVectorIds) {
+        List<String> registered = registeredVectorIds == null ? List.of() : registeredVectorIds;
+        try {
+            List<String> orphanIds = new ArrayList<>();
+            int scanned = 0;
+            int orphanCount = 0;
+            Object offset = null;
+            do {
+                Map<String, Object> body = new LinkedHashMap<>();
+                body.put("filter", Map.of("must", List.of(matchField("org_id", orgId))));
+                body.put("limit", 256);
+                body.put("with_payload", false);
+                body.put("with_vector", false);
+                if (offset != null) {
+                    body.put("offset", offset);
+                }
+                JsonNode root = postJson("/collections/" + collection + "/points/scroll", body);
+                JsonNode result = root.path("result");
+                JsonNode points = result.path("points");
+                if (!points.isArray()) {
+                    break;
+                }
+                for (JsonNode point : points) {
+                    scanned++;
+                    String vectorId = point.path("id").asText("");
+                    if (!vectorId.isBlank() && !registered.contains(vectorId)) {
+                        orphanCount++;
+                        if (orphanIds.size() < 50) {
+                            orphanIds.add(vectorId);
+                        }
+                    }
+                }
+                JsonNode nextOffset = result.path("next_page_offset");
+                offset = nextOffset.isMissingNode() || nextOffset.isNull()
+                        ? null
+                        : objectMapper.convertValue(nextOffset, Object.class);
+            } while (offset != null);
+            return VectorStoreAuditResult.success(scanned, registered.size(), orphanCount, orphanIds);
+        } catch (Exception ex) {
+            log.warn("Qdrant vector audit failed for org {}: {}", orgId, ex.getMessage());
+            return VectorStoreAuditResult.failure(registered.size(), ex.getMessage());
+        }
+    }
+
     private VectorDeleteResult deleteByFilter(String orgId, Map<String, Object> filter, String scope) {
         try {
             postJson("/collections/" + collection + "/points/delete?wait=true", Map.of("filter", filter));

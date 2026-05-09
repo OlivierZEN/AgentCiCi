@@ -1,7 +1,7 @@
 ---
 kind: decisions
 version: 3
-updated_at: 2026-05-01T09:33:50Z
+updated_at: 2026-05-09T09:56:30Z
 updated_by: ai
 status: active
 ---
@@ -92,7 +92,7 @@ status: active
 - Why this won:
   - Matches enterprise expectation that operators and end-users do not share one console.
   - Keeps JWT and backend as single source of truth (`GET /auth/me` re-check on admin routes).
-- Documentation: `AI助手实现设计方案.md`, `README.md`, `.claw/current-status.md`, and `scripts/e2e-local-business.sh` / `run-full-demo.sh` outputs stay aligned with this decision.
+- Documentation: `AgentCiCi智能体平台实现设计方案.md`, `README.md`, `.claw/current-status.md`, and `scripts/e2e-local-business.sh` / `run-full-demo.sh` outputs stay aligned with this decision.
 
 ## DEC-009 Assistant-Side Agent Builder Entry
 
@@ -293,3 +293,34 @@ status: active
 - Alternatives considered:
   - Keep design rules only in ad-hoc chat prompts: rejected because the guidance would not survive handoff or later sessions.
   - Treat each surface as fully independent with no shared baseline: rejected because it would quickly fragment component vocabulary, tone, and interaction patterns.
+
+## DEC-024 Account Identity Separates Global Person From Organization Membership
+
+- Status: accepted
+- Date: 2026-05-08T15:48:32Z
+- Decision: evolve AgentCiCi auth from org-scoped `app_user(org_id, mobile, role_code)` into a global account model: `user_account` represents the natural person; login identifiers, auth credentials, and external identities are child records; `organization_member` represents that person inside one organization with role, seat type, status, and organization-local profile.
+- Implementation note 2026-05-08T16:04:39Z: because the system is still in development and not live, the first implementation uses a direct migration path instead of a compatibility layer: initialization migration no longer creates `app_user`; `organization_member.id` is the org-scoped identity carried by JWT `sub`/`member_id`; `user_account.id` is carried separately as `account_id`.
+- Why this won:
+  - Matches enterprise collaboration products such as Feishu, WeCom, DingTalk, Slack, and Notion: one personal account can join or create multiple organizations.
+  - Prevents the same mobile number or email from producing duplicate global users while still allowing the user to create additional organizations after login.
+  - Keeps billing, permissions, data access, and subscription lifecycle organization-scoped rather than personal-account-scoped.
+  - Makes future login methods natural: mobile, email, username, password, OTP, Passkey, Google/Gmail, Microsoft, Feishu, DingTalk, WeCom, SAML, and OIDC can all bind to the same global person without widening `user_account`.
+  - Clarifies data retention: organization business data can be exported, frozen, and purged when a subscription ends, while the global account and other organizations remain intact.
+- Alternatives considered:
+  - Keep `mobile + org_id` as the user identity forever: rejected because it duplicates one natural person across organizations and makes multi-org switching, SSO, account merge, invitation, and offboarding brittle.
+  - Store all login methods directly as columns on `user_account`: rejected because OAuth/SSO provider identities, verification state, primary markers, account merge, and unlink flows require one-to-many child records.
+  - Tie global account lifetime to a single organization subscription: rejected because a user may belong to multiple organizations and should keep the global identity even if one organization expires or is purged.
+
+## DEC-025 Tenant Purge Uses Queued Jobs Before Physical Deletion
+
+- Status: accepted
+- Date: 2026-05-09T09:56:30Z
+- Decision: real tenant purge requests create a `QUEUED` `organization_purge_job` first, then a Spring scheduled worker runs the physical DB/file/vector cleanup. Operators can cancel only `QUEUED` real purge jobs; `RUNNING` jobs finish into `SUCCEEDED`, `FAILED`, or `PARTIAL_FAILED`.
+- Why this won:
+  - Keeps high-risk tenant deletion out of the platform API request thread.
+  - Gives operators a short cancellation window before physical deletion starts.
+  - Preserves the existing guarded purge controls: `PENDING_PURGE`, legal hold, fresh source dry-run, and `PURGE {orgId}` confirmation are still checked when the job is queued and again when the worker executes it.
+  - Fits the current modular monolith without introducing a broker or separate worker service before production traffic justifies that operational cost.
+- Alternatives considered:
+  - Continue synchronous purge in the HTTP request: rejected because large DB/file/vector cleanup can exceed request time and gives no cancellable queued state.
+  - Introduce RabbitMQ or an external worker now: deferred because the local monolith scheduler is enough for the first lifecycle control-plane implementation; production hardening can add distributed locks, dead-letter handling, and alerting.

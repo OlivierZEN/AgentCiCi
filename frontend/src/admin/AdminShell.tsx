@@ -14,7 +14,7 @@ const adminNavItems = [
   { to: "/admin/skills", label: "技能" },
   { to: "/admin/agent-builder", label: "智能体构建" },
   { to: "/admin/integrations", label: "集成应用" },
-  { to: "/admin/ops", label: "运维" },
+  { to: "/admin/ops", label: "观测运维" },
   { to: "/admin/users", label: "用户" },
 ];
 

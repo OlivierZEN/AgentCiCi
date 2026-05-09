@@ -33,6 +33,12 @@
 - `/`、`/admin/*`、`/platform/*` 的默认 register 一律是 `product`。除非先完成单独的 shape brief 并确认，否则不得把这些认证后的产品页面按营销页、品牌页或活动页来设计。
 - `PRODUCT.md`, `DESIGN.md`, and `DESIGN.json` are the project design source of truth. If a page change alters the visual language, tokens, or component vocabulary, update these files in the same session.
 - `PRODUCT.md`、`DESIGN.md`、`DESIGN.json` 是项目设计事实源。只要页面改动影响视觉语言、设计 token 或组件表达，就必须在同一会话同步更新这些文件。
+- Page implementation must follow `DESIGN.md` > `Page Implementation Quality Workflow`: build the smallest runnable version first, run the local app, capture desktop and mobile full-page screenshots, inspect them with designer/QA judgment, fix issues, reshoot, and only finish after responsive layout, visual hierarchy, text fit, and key interaction feedback are verified.
+- 页面实现必须遵循 `DESIGN.md` 的 `Page Implementation Quality Workflow`：先搭建可运行最小版本，再本地运行并截取桌面端与移动端完整页面截图，用设计师与 QA 视角检查，修复后复测截图；只有响应式布局、视觉层级、文本适配和关键交互反馈都确认后才能收尾。
+- For critical UI modules, run focused A/B comparisons when there are meaningful alternatives; choose the variant with clearer task flow, better readability, stronger accessibility, and closer alignment with `鎏金账房`, then remove unused experimental code.
+- 关键 UI 模块存在有效替代方案时，必须做聚焦 A/B 对比；选择任务流更清晰、可读性更好、可访问性更稳、且更符合 `鎏金账房` 的方案，并移除未采用的实验代码。
+- Use image generation or a deliberate asset workflow only when the page genuinely needs bitmap illustrations, icons, empty-state visuals, or brand materials; generated assets must match the product register and must not become decorative clutter.
+- 仅当页面确实需要位图插图、图标、空态视觉或品牌素材时，才使用 imagegen 或明确的素材流程；生成素材必须贴合 product register，不得变成装饰噪音。
 - The shared baseline across product pages is `鎏金账房`: warm ivory surfaces, compact density, ink-heavy typography, and champagne-gold structural linework. Gold is for borders, focus, active states, and premium actions, not decorative fill.
 - 项目产品页共享基线是 `鎏金账房`：暖象牙底、紧凑密度、墨色文字、香槟金结构线。金色只用于边框、焦点、激活态和高价值操作，不用于大面积装饰性铺色。
 - Newly added product UI must follow `DESIGN.md` > `Product UI Scale`: default control and menu text is 13px, secondary metadata is 11-12px, compact tools and icon buttons are 32-34px high with 15-16px icons. Do not introduce page-local oversized fonts, fat buttons, or card-like picker rows for isolated features.
@@ -41,14 +47,20 @@
 - 产品页最严格 UI 规范：已被外层面板框定的区域内部，不得再加背景框。行、tab、搜索框内部、状态文字、链路详情、指标组和摘要块只能使用文字层级与必要的 1px 分隔线；严禁框套框、逐行背景块、选中背景、hover 背景、chip 背景、行阴影和内层 box-shadow 焦点框。
 - Strict selected-state rule: selected, active, hover, pressed, focus, and focus-visible states inside product panels must never add `box-shadow`, glow, row shadow, inset shadow, raised-card treatment, or browser-like focus shadow. Prefer text color, font weight, or tab underline; do not add a new border for selection when text hierarchy or an existing divider is enough.
 - 产品页选中态硬规则：面板内部的 selected、active、hover、pressed、focus、focus-visible 状态绝对不要加 `box-shadow`、发光、行阴影、内阴影、浮起卡片感或浏览器式焦点阴影。优先用文字颜色、字重或 tab 下划线表达；文字层级或已有分隔线能表达时，不要为选中态新增边框。
+- Product-panel tabs, row actions, filter labels, status actions, and inline text commands must never use rounded bordered background button chrome. No curved-border white backgrounds, pill/card backgrounds, hover fills, or shadowed mini-buttons for these controls; use plain text, text color, font weight, underline, or a 1px divider/underline instead.
+- 产品面板内部的 tab、行操作、筛选标签、状态操作和内联文字命令禁止使用带弧形边框的背景按钮样式：不得出现圆角白底、胶囊/小卡背景、边框按钮壳、hover 背景填充或阴影；只能用纯文本、文字颜色、字重、下划线或 1px 分隔线表达。
+- Product tabs, scope filters, and filter labels implemented as native `button` elements must reset default, hover, active, selected, focus, and focus-visible states to transparent background, 0 radius, no shadow, and no transform. Never rely on global button styles being overridden only in one state.
+- 用原生 `button` 实现的产品 tab、范围筛选和筛选标签，必须在默认、hover、active、selected、focus、focus-visible 全状态显式重置为透明背景、0 圆角、无阴影、无 transform。不得只覆盖某一个状态后让全局按钮样式漏出来。
 - Lightweight floating menus attached to composer tools, icon buttons, or row actions should use 12px primary text, optional 10-11px metadata only when needed, 13-14px icons, 26-30px rows, 168-220px width, opaque warm ivory surfaces, gold-mist borders, and restrained shadows only when needed. Compact skill/command/picker rows must not use hover backgrounds, selected backgrounds, per-row background blocks, row shadows, or show implementation codes/slugs by default.
 - 挂在输入框工具、图标按钮或行操作上的轻量浮层菜单，应使用 12px 主文字、仅在必要时使用 10-11px 辅助信息、13-14px 图标、26-30px 行高、168-220px 宽度、不透明暖象牙表面、浅金边，并仅在必要时使用克制阴影。紧凑技能/指令/选择器行默认不得使用 hover 背景、选中背景、逐行背景块、行阴影，也不得显示实现代码或 slug。
 - All page work must follow `impeccable` shared design laws and product-register rules, including restrained color strategy, clear type hierarchy, purposeful motion, stable component vocabulary, and the explicit anti-slop bans from the skill.
 - 所有页面工作都必须遵循 `impeccable` 的共享设计法则与 product register 规则，包括克制的色彩策略、清晰的字阶层级、有意义的动效、稳定的组件词汇，以及技能中明确列出的反 AI 套板禁令。
 - Buttons on product pages must use the shared `鎏金账房` primary / secondary / danger vocabulary. Cancel and secondary actions use warm white surfaces with gold-tinted borders; confirm, save, publish, and other primary actions use champagne-gold fill. Do not let page-local buttons fall back to legacy blue, teal, black, gradient, or unscoped global button styles.
 - 产品页按钮必须统一遵守 `鎏金账房` 的 primary / secondary / danger 组件语汇。取消和次级操作使用暖白底、金色系边框；确认、保存、发布等主操作使用香槟金实心按钮。不得让页面局部按钮回退到旧蓝色、青绿色、黑色、渐变或未限定作用域的全局按钮样式。
-- Product-page tabs must follow `DESIGN.md` > `Product Tabs`: text tabs only, no pill/chip/segmented containers; inactive tabs use warm bronze text, active tabs use strong bronze text with a 2px pressed-gold underline.
-- 产品页页签必须遵循 `DESIGN.md` 的 `Product Tabs`：只使用文本 tab，不使用胶囊、chip、分段控件或带框小卡；未选中为暖棕文字，选中为深金文字 + 2px 金色下划线。
+- Product-page tabs must follow `DESIGN.md` > `Product Tabs`: text tabs only, no pill/chip/segmented containers and no rounded bordered background buttons; inactive tabs use warm bronze text, active tabs use strong bronze text with a 2px pressed-gold underline.
+- 产品页页签必须遵循 `DESIGN.md` 的 `Product Tabs`：只使用文本 tab，不使用胶囊、chip、分段控件、带框小卡或带弧形边框背景按钮；未选中为暖棕文字，选中为深金文字 + 2px 金色下划线。
+- Product tab active and focus styles must never use white rectangular backgrounds, selected-row fills, focus cards, shadows, glows, raised transforms, or rounded underline pills; the underline is a straight 2px rule.
+- 产品 tab 的激活和焦点态不得出现白色矩形背景、选中填充、焦点小卡、阴影、发光、浮起 transform 或圆角胶囊下划线；下划线就是一条 2px 直线。
 - Unless a feature spec explicitly says otherwise, every popup, picker, confirmation, editor, import preview, and publish dialog must be implemented as a modal window with blocking overlay, `role="dialog"`, `aria-modal="true"`, labelled heading, opaque surface, and unified footer actions.
 - 除非功能规格明确说明例外，所有弹出框、选择器、确认框、编辑框、导入预览和发布弹框都必须实现为模式窗口：带遮罩、`role="dialog"`、`aria-modal="true"`、可关联标题、不透明面板和统一页脚按钮。
 - Every popup/modal top-right close `×` must be a bare borderless icon/glyph. Do not wrap it in a visible bordered square, bordered circle, or button chrome; hover/focus may use only a subtle tinted background.

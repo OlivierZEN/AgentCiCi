@@ -68,7 +68,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             return;
         }
         String orgId = String.valueOf(claims.get("org_id"));
-        String userId = claims.getSubject();
+        String memberId = claims.get("member_id", String.class);
+        String userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
         SessionCtx ctx = new SessionCtx(session, orgId, userId);
         sessions.put(session.getId(), ctx);
         sendClientEvent(session, Map.of("type", "status", "message", "connected"));
@@ -307,4 +308,3 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         }
     }
 }
-

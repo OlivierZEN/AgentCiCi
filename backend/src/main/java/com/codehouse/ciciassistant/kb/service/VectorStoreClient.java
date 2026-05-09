@@ -13,4 +13,6 @@ public interface VectorStoreClient {
     VectorDeleteResult deleteByDocument(String orgId, String knowledgeBaseId, Long documentId);
 
     VectorDeleteResult deleteByKnowledgeBase(String orgId, String knowledgeBaseId);
+
+    VectorStoreAuditResult auditOrgVectors(String orgId, List<String> registeredVectorIds);
 }

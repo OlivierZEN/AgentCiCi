@@ -18,6 +18,10 @@ frontend/tsconfig.*.tsbuildinfo
 # Temp
 tmp-*.txt
 deploy/acr.env
+.playwright-cli/
+backend/data/kb-files/
+frontend/test-results/
+output/
 
 # OS
 .DS_Store

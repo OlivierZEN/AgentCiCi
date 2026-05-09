@@ -14,7 +14,7 @@ public class OrgAdminAuthorizationAspect {
     @Before("@annotation(com.codehouse.ciciassistant.auth.RequireOrgAdmin)"
             + " || @within(com.codehouse.ciciassistant.auth.RequireOrgAdmin)")
     public void requireAdmin() {
-        if (!TenantContext.getRoles().contains(RoleCodes.ORG_ADMIN)) {
+        if (TenantContext.getRoles().stream().noneMatch(RoleCodes::isOrgAdminRole)) {
             throw new ForbiddenException("需要组织管理员权限");
         }
     }

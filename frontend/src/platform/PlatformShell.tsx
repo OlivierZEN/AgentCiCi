@@ -47,6 +47,14 @@ export default function PlatformShell() {
             <span>内置工具</span>
             <small>风险与依赖治理</small>
           </NavLink>
+          <NavLink to="/platform/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
+            <span>租户生命周期</span>
+            <small>保留策略与销毁预览</small>
+          </NavLink>
+          <NavLink to="/platform/website-leads" className={({ isActive }) => (isActive ? "active" : "")}>
+            <span>网站注册</span>
+            <small>预约演示用户</small>
+          </NavLink>
           <NavLink to="/platform/audit" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>平台审计</span>
             <small>最近平台动作</small>

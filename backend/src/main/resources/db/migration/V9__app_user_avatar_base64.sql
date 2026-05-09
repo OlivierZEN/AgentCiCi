@@ -1,1 +1,1 @@
-ALTER TABLE app_user ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;
+ALTER TABLE organization_member ADD COLUMN IF NOT EXISTS avatar_base64 TEXT;

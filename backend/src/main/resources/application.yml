@@ -45,6 +45,14 @@ app:
       store: memory
       # When false, send-window and per-day SMS caps are skipped (useful for integration tests).
       rate-limit-enabled: true
+  agent-open-api:
+    enabled: false
+    key-pepper: ""
+    default-rate-limit-per-minute: 60
+    default-daily-quota: 1000
+    default-max-prompt-chars: 8000
+    default-max-response-chars: 12000
+    default-timeout-ms: 120000
   kb:
     indexing:
       mode: local

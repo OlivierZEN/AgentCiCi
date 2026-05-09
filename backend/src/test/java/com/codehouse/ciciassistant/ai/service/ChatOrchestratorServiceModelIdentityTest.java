@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.ai.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,74 @@ class ChatOrchestratorServiceModelIdentityTest {
                 .contains("不要承诺“稍后/继续/让我重新查询”")
                 .contains("缺少必需参数或参数问题")
                 .contains("不要让用户误以为系统仍会自动继续回复");
+    }
+
+    @Test
+    void shouldUseShortPromptForToolPlanningStopChecks() {
+        String promptBlock = ChatOrchestratorService.buildToolPlanningStopPrompt();
+
+        assertThat(promptBlock)
+                .contains("只判断是否必须继续调用工具")
+                .contains("READY_TO_FINALIZE")
+                .contains("不要为了润色、总结、排序或格式化而继续请求工具");
+    }
+
+    @Test
+    void shouldSkipPlanningStopForSingleSuccessfulReadonlyLookup() {
+        boolean skip = ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "看下今天的潜在客户数据并汇总",
+                List.of(new ToolCallInfo("call_1", "get_lead_data", "{\"limit\":20}")),
+                List.of(Map.of(
+                        "role", "tool",
+                        "tool_call_id", "call_1",
+                        "content", "潜在客户数据查询结果（返回 20 条，总计 133574 条）：{\"result\":true,\"data\":[]}"
+                )));
+
+        assertThat(skip).isTrue();
+    }
+
+    @Test
+    void shouldKeepPlanningStopForWritesFailuresOrMultipleTools() {
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "查到客户后发送邮件",
+                List.of(new ToolCallInfo("call_1", "get_lead_data", "{}")),
+                List.of(Map.of("role", "tool", "content", "{\"result\":true,\"data\":[]}"))))
+                .isFalse();
+
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "看下潜在客户",
+                List.of(new ToolCallInfo("call_1", "email_send", "{}")),
+                List.of(Map.of("role", "tool", "content", "✅ 已发送"))))
+                .isFalse();
+
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "看下潜在客户",
+                List.of(new ToolCallInfo("call_1", "get_lead_data", "{}")),
+                List.of(Map.of("role", "tool", "content", "❌ 缺少必需参数: objectApiName"))))
+                .isFalse();
+
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "看下潜在客户",
+                List.of(
+                        new ToolCallInfo("call_1", "get_lead_data", "{}"),
+                        new ToolCallInfo("call_2", "get_object_fields", "{}")),
+                List.of(Map.of("role", "tool", "content", "{\"result\":true}"))))
+                .isFalse();
+
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "查询潜在客户数据",
+                List.of(new ToolCallInfo("call_1", "get_object_fields", "{\"objprefix\":\"00Q\"}")),
+                List.of(Map.of("role", "tool", "content", "对象字段列表（标准字段 10 条，自定义字段 41 条）：{\"result\":true}"))))
+                .isFalse();
+    }
+
+    @Test
+    void shouldAllowMetadataLookupSkipOnlyWhenUserAskedForMetadata() {
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "列出线索对象字段",
+                List.of(new ToolCallInfo("call_1", "get_object_fields", "{\"objprefix\":\"00Q\"}")),
+                List.of(Map.of("role", "tool", "content", "对象字段列表（标准字段 10 条，自定义字段 41 条）：{\"result\":true}"))))
+                .isTrue();
     }
 
     @Test
@@ -152,5 +221,56 @@ class ChatOrchestratorServiceModelIdentityTest {
                 List.of(Map.of("role", "tool", "content", "{\"success\":true,\"results\":[{\"title\":\"结果\"}]}")));
 
         assertThat(guarded).doesNotContain("本轮不会在完成状态后自动追加回复");
+    }
+
+    @Test
+    void shouldBuildReadableFallbackWhenToolLimitIsReached() {
+        List<Map<String, Object>> messages = List.of(
+                Map.of(
+                        "role", "assistant",
+                        "content", "",
+                        "tool_calls", List.of(Map.of(
+                                "id", "call_1",
+                                "type", "function",
+                                "function", Map.of(
+                                        "name", "get_object_data",
+                                        "arguments", "{\"objapi\":\"monthkpi\",\"expressions\":\"khperson='龚俊杰'\"}"
+                                )
+                        ))
+                ),
+                Map.of(
+                        "role", "tool",
+                        "tool_call_id", "call_1",
+                        "content", "对象数据查询结果（返回 0 条，总计 0 条）：\n{\"result\":true,\"data\":[],\"totalCount\":0,\"returnCount\":0}"
+                ),
+                Map.of(
+                        "role", "assistant",
+                        "content", "",
+                        "tool_calls", List.of(Map.of(
+                                "id", "call_2",
+                                "type", "function",
+                                "function", Map.of(
+                                        "name", "get_object_fields",
+                                        "arguments", "{\"objprefix\":\"a49\"}"
+                                )
+                        ))
+                ),
+                Map.of(
+                        "role", "tool",
+                        "tool_call_id", "call_2",
+                        "content", "对象字段列表（标准字段 10 条，自定义字段 41 条）：\n{\"result\":true}"
+                )
+        );
+
+        String fallback = ChatOrchestratorService.buildToolLimitReachedFallbackMessage(messages, 4);
+
+        assertThat(fallback)
+                .contains("本轮已经完成 2 次工具查询")
+                .contains("get_object_data：查询完成，但没有返回匹配记录")
+                .contains("monthkpi")
+                .contains("get_object_fields：读取到对象字段结构：标准字段 10 条、自定义字段 41 条")
+                .contains("下一步可以确认对象名称、人员姓名、月份/季度字段或筛选条件")
+                .doesNotContain("系统保护上限")
+                .doesNotContain("暂时无法继续处理");
     }
 }

@@ -5,6 +5,10 @@ import { safeFetchJson } from "../utils/http";
 
 type AuthPayload = { token: string; orgId: string; userId: string; roles: string[] };
 
+function hasOrgAdminRole(roles: string[]): boolean {
+  return roles.includes("OWNER") || roles.includes("ORG_ADMIN");
+}
+
 export default function AdminLogin() {
   const nav = useNavigate();
   const [orgId, setOrgId] = useState("demo-org");
@@ -27,7 +31,7 @@ export default function AdminLogin() {
       }
       const payload = body.data;
       const roles = payload.roles ?? [];
-      if (!roles.includes("ORG_ADMIN")) {
+      if (!hasOrgAdminRole(roles)) {
         setNotice(
           "该账号不是组织管理员。若手机号已在 bootstrap-admin-mobiles 中，使用固定密码登录后服务端会提升角色；否则请由管理员在「用户」页授权，或换用管理员手机号。",
         );

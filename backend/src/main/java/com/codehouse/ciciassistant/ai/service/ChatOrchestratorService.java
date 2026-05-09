@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.ai.domain.ChatSessionRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionStateEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionStateRepository;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatCompletionResult;
+import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ChatStreamResult;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
 import com.codehouse.ciciassistant.ai.service.RuntimeContextPromptService.RuntimeContext;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
@@ -34,6 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +60,9 @@ public class ChatOrchestratorService {
                     + "|(让我|我来|我会|我再|将).{0,12}(继续|重新|再)?.{0,12}(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
                     + "|(继续|重新|再).{0,8}(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern TOOL_DATA_COUNT_PATTERN = Pattern.compile("返回\\s*(\\d+)\\s*条[，,]\\s*总计\\s*(\\d+)\\s*条");
+    private static final Pattern TOOL_FIELD_COUNT_PATTERN = Pattern.compile("对象字段列表（标准字段\\s*(\\d+)\\s*条[，,]\\s*自定义字段\\s*(\\d+)\\s*条）");
+    private static final Pattern TOOL_OBJECT_COUNT_PATTERN = Pattern.compile("所有对象列表（标准对象:\\s*(\\d+)\\s*条[，,]\\s*自定义对象:\\s*(\\d+)\\s*条[，,]\\s*总计:\\s*(\\d+)\\s*条）");
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -350,15 +355,16 @@ public class ChatOrchestratorService {
                 safeSendPhase(emitter, "generating", modelName);
                 StringBuilder acc = new StringBuilder();
                 log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
-                        sessionId, modelName, messages.size(), tools.size());
+                        sessionId, modelName, messages.size(), 0);
                 long streamStart = System.currentTimeMillis();
                 Instant finalModelStartedAt = Instant.now();
                 String finalModelStatus = "SUCCESS";
+                ChatStreamResult streamResult = new ChatStreamResult(0, 0);
                 try {
-                    aliyunBailianClient.chatStreamWithMessages(
+                    streamResult = aliyunBailianClient.chatStreamWithMessages(
                             modelName,
                             messages,
-                            tools.isEmpty() ? null : tools,
+                            null,
                             showThinking,
                             piece -> {
                                 acc.append(piece);
@@ -384,6 +390,8 @@ public class ChatOrchestratorService {
                             elapsedMs(finalModelStartedAt, finalModelEndedAt),
                             0,
                             acc.length(),
+                            streamResult.promptTokens(),
+                            streamResult.completionTokens(),
                             "最终流式回复生成。"));
                 }
 
@@ -500,6 +508,8 @@ public class ChatOrchestratorService {
                     elapsedMs(modelStartedAt, modelEndedAt),
                     resultToolCalls.size(),
                     result.content() == null ? 0 : result.content().length(),
+                    result.promptTokens(),
+                    result.completionTokens(),
                     result.hasToolCalls() ? "模型规划了 " + resultToolCalls.size() + " 个工具调用。" : "模型返回最终文本。"));
 
             if (!result.hasToolCalls()) {
@@ -515,7 +525,71 @@ public class ChatOrchestratorService {
 
             appendToolCallsAndResults(messages, result, orgId, userId, sessionId, skillContext, null, toolCallTraces);
         }
-        return "这次工具调用次数已达到系统保护上限，暂时无法继续处理。请换一种更具体的说法再试，或回到系统工作台查看执行详情。";
+        return completeFromToolResultsAfterLimit(modelName, messages, showThinking, maxToolRounds, modelCallTraces);
+    }
+
+    private String completeFromToolResultsAfterLimit(String modelName,
+                                                     List<Map<String, Object>> messages,
+                                                     boolean showThinking,
+                                                     int maxToolRounds,
+                                                     List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces) {
+        String deterministicFallback = buildToolLimitReachedFallbackMessage(messages, maxToolRounds);
+        if (!hasToolMessages(messages)) {
+            return deterministicFallback;
+        }
+
+        List<Map<String, Object>> finalMessages = new ArrayList<>(messages);
+        finalMessages.add(Map.of(
+                "role", "system",
+                "content", buildToolLimitFinalAnswerPrompt(maxToolRounds)
+        ));
+        Instant modelStartedAt = Instant.now();
+        ChatCompletionResult result;
+        try {
+            result = aliyunBailianClient.chatCompletion(modelName, finalMessages, null, !showThinking);
+        } catch (RuntimeException ex) {
+            Instant modelEndedAt = Instant.now();
+            if (modelCallTraces != null) {
+                modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
+                        "tool_limit_summary",
+                        modelName,
+                        "FAILED",
+                        modelStartedAt,
+                        modelEndedAt,
+                        elapsedMs(modelStartedAt, modelEndedAt),
+                        0,
+                        0,
+                        "工具轮次耗尽后的模型收口失败：" + ex.getMessage()));
+            }
+            return deterministicFallback;
+        }
+        Instant modelEndedAt = Instant.now();
+        String content = result == null || result.content() == null ? "" : result.content().trim();
+        if (modelCallTraces != null) {
+            modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
+                    "tool_limit_summary",
+                    modelName,
+                    isUsableToolLimitAnswer(content) ? "SUCCESS" : "FAILED",
+                    modelStartedAt,
+                    modelEndedAt,
+                    elapsedMs(modelStartedAt, modelEndedAt),
+                    safeToolCalls(result).size(),
+                    content.length(),
+                    result == null ? 0 : result.promptTokens(),
+                    result == null ? 0 : result.completionTokens(),
+                    isUsableToolLimitAnswer(content)
+                            ? "工具轮次耗尽后，模型基于已有工具结果完成收口。"
+                            : "工具轮次耗尽后，模型未能生成可用收口，已使用确定性摘要兜底。"));
+        }
+        if (!isUsableToolLimitAnswer(content)) {
+            return deterministicFallback;
+        }
+        if (finalAnswerDefersToolResult(content)) {
+            return content
+                    + "\n\n---\n本轮不会继续发起工具调用。以下是已经返回的工具结果摘要：\n\n"
+                    + deterministicFallback;
+        }
+        return content;
     }
 
     /**
@@ -538,8 +612,11 @@ public class ChatOrchestratorService {
             Instant modelStartedAt = Instant.now();
             ChatCompletionResult result;
             try {
+                List<Map<String, Object>> planningMessages = hasToolMessages(messages)
+                        ? withToolPlanningStopPrompt(messages)
+                        : messages;
                 result = aliyunBailianClient.chatCompletion(
-                        modelName, messages, tools, !showThinking);
+                        modelName, planningMessages, tools, !showThinking);
             } catch (RuntimeException ex) {
                 Instant modelEndedAt = Instant.now();
                 modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
@@ -565,6 +642,8 @@ public class ChatOrchestratorService {
                     elapsedMs(modelStartedAt, modelEndedAt),
                     resultToolCalls.size(),
                     result.content() == null ? 0 : result.content().length(),
+                    result.promptTokens(),
+                    result.completionTokens(),
                     result.hasToolCalls() ? "模型规划了 " + resultToolCalls.size() + " 个工具调用。" : "模型未继续请求工具。"));
 
             if (!result.hasToolCalls()) {
@@ -573,6 +652,21 @@ public class ChatOrchestratorService {
             pendingApprovalsUsed = appendToolCallsAndResults(
                     messages, result, orgId, userId, sessionId, skillContext, emitter, toolCallTraces)
                     || pendingApprovalsUsed;
+            if (shouldSkipToolPlanningStop(questionFromMessages(messages), resultToolCalls, messages)) {
+                modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
+                        "tool_planning_stop_skipped",
+                        modelName,
+                        "SKIPPED",
+                        Instant.now(),
+                        Instant.now(),
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        "单个只读查询工具已成功返回结果，直接进入最终生成。"));
+                break;
+            }
         }
         return pendingApprovalsUsed;
     }
@@ -1093,6 +1187,19 @@ public class ChatOrchestratorService {
                     ""
             );
         }
+        if (sessionId.startsWith("wecom-kf:")) {
+            String participantName = "微信客服 " + abbreviateId(sessionId);
+            return new SessionDescriptor(
+                    agentId,
+                    "微信客服 / " + participantName,
+                    participantName,
+                    "external",
+                    "wechat_kf",
+                    "CiCi",
+                    "来自企业微信「微信客服」的客户会话。",
+                    ""
+            );
+        }
         if (sessionId.startsWith("dingtalk:")) {
             String participantName = "钉钉会话 " + abbreviateId(sessionId);
             return new SessionDescriptor(
@@ -1119,6 +1226,19 @@ public class ChatOrchestratorService {
                     ""
             );
         }
+        if (sessionId.startsWith("api:")) {
+            String participantName = "API 会话 " + abbreviateId(sessionId);
+            return new SessionDescriptor(
+                    agentId,
+                    "Open API / " + participantName,
+                    participantName,
+                    "external",
+                    "api",
+                    "CiCi",
+                    "来自 Agent Open API 的外部系统会话。",
+                    ""
+            );
+        }
         String participantName = "会话 " + abbreviateId(sessionId);
         return new SessionDescriptor(
                 agentId,
@@ -1139,7 +1259,9 @@ public class ChatOrchestratorService {
     private boolean isOrgScopedConversation(String sessionId) {
         return sessionId.startsWith("feishu:")
                 || sessionId.startsWith("wechat:")
+                || sessionId.startsWith("wecom-kf:")
                 || sessionId.startsWith("dingtalk:")
+                || sessionId.startsWith("api:")
                 || sessionId.startsWith("web:")
                 || sessionId.startsWith("webchat:");
     }
@@ -1263,6 +1385,166 @@ public class ChatOrchestratorService {
         return "get_pending_approvals".equalsIgnoreCase(toolName);
     }
 
+    static List<Map<String, Object>> withToolPlanningStopPrompt(List<Map<String, Object>> messages) {
+        List<Map<String, Object>> out = new ArrayList<>(messages == null ? List.of() : messages);
+        out.add(Map.of(
+                "role", "system",
+                "content", buildToolPlanningStopPrompt()
+        ));
+        return out;
+    }
+
+    static String buildToolPlanningStopPrompt() {
+        return """
+                [工具规划收口判断]
+                - 你现在只判断是否必须继续调用工具，不生成给用户看的最终回答。
+                - 如果已有 tool messages 足以进入最终回答，不要输出解释，只回复 READY_TO_FINALIZE。
+                - 只有确实缺少必要事实、字段结构、下一页游标或必须执行的后续动作时，才继续发起一个最小必要工具调用。
+                - 不要为了润色、总结、排序或格式化而继续请求工具。
+                """.trim();
+    }
+
+    static boolean shouldSkipToolPlanningStop(String question,
+                                              List<ToolCallInfo> plannedToolCalls,
+                                              List<Map<String, Object>> messages) {
+        if (plannedToolCalls == null || plannedToolCalls.size() != 1) {
+            return false;
+        }
+        String toolName = ToolNameNormalizer.canonicalize(plannedToolCalls.get(0).name());
+        if (!isReadOnlyLookupTool(toolName) || !isLookupOnlyUserIntent(question)) {
+            return false;
+        }
+        if (isMetadataLookupTool(toolName) && !isMetadataLookupIntent(question)) {
+            return false;
+        }
+        List<String> toolResults = toolResultContents(messages);
+        if (toolResults.size() != 1) {
+            return false;
+        }
+        String result = toolResults.get(0);
+        return !looksFailedToolResult(result) && !toolResultRequiresMoreToolWork(result);
+    }
+
+    private static boolean isReadOnlyLookupTool(String toolName) {
+        if (toolName == null || toolName.isBlank()) {
+            return false;
+        }
+        String normalized = toolName.trim();
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if (containsAny(lower, List.of(
+                "send", "reply", "create", "update", "delete", "remove", "upsert", "save", "write",
+                "approve", "reject", "submit", "publish", "revoke", "rotate", "remember", "forget"))) {
+            return false;
+        }
+        return lower.startsWith("get_")
+                || lower.startsWith("list_")
+                || lower.startsWith("search_")
+                || lower.startsWith("query_")
+                || lower.startsWith("fetch_")
+                || lower.startsWith("retrieve_")
+                || lower.startsWith("find_")
+                || lower.startsWith("lookup_")
+                || lower.startsWith("cloudcc_get")
+                || "cloudcc_pagequery".equals(lower)
+                || lower.startsWith("tavily_")
+                || "email_list_inbox".equals(lower)
+                || "email_search".equals(lower)
+                || "email_get_message".equals(lower);
+    }
+
+    private static boolean isMetadataLookupTool(String toolName) {
+        if (toolName == null || toolName.isBlank()) {
+            return false;
+        }
+        String lower = toolName.trim().toLowerCase(Locale.ROOT);
+        return lower.contains("objectfields")
+                || lower.contains("object_fields")
+                || lower.contains("standardobjects")
+                || lower.contains("standard_objects")
+                || lower.contains("customobjects")
+                || lower.contains("custom_objects")
+                || "get_objects".equals(lower)
+                || "list_objects".equals(lower);
+    }
+
+    private static boolean isMetadataLookupIntent(String question) {
+        String text = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        return containsAny(text, List.of(
+                "字段", "字段列表", "对象字段", "对象列表", "标准对象", "自定义对象", "对象 api", "对象api",
+                "schema", "fields", "object list", "objects"));
+    }
+
+    private static boolean isLookupOnlyUserIntent(String question) {
+        String text = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        if (text.isBlank()) {
+            return false;
+        }
+        if (containsAny(text, List.of(
+                "发送", "发给", "回复", "新建", "创建", "新增", "更新", "修改", "删除", "移除",
+                "审批", "同意", "拒绝", "提交", "发布", "撤销", "绑定", "解绑",
+                "send", "reply", "create", "update", "delete", "approve", "reject", "submit", "publish"))) {
+            return false;
+        }
+        return containsAny(text, List.of(
+                "查询", "查一下", "查下", "看下", "看一下", "获取", "拉取", "列出", "列表",
+                "找", "搜索", "检索", "统计", "汇总", "总结", "分析", "明细", "台账",
+                "客户", "线索", "商机", "联系人", "订单", "邮件", "日程", "待办",
+                "search", "query", "lookup", "find", "list", "summarize", "analyze"));
+    }
+
+    private static boolean toolResultRequiresMoreToolWork(String result) {
+        String text = result == null ? "" : result.trim().toLowerCase(Locale.ROOT);
+        if (text.isBlank()) {
+            return true;
+        }
+        return containsAny(text, List.of(
+                "\"hasmore\":true",
+                "\"has_more\":true",
+                "\"needmoreparams\":true",
+                "\"need_more_params\":true",
+                "\"requiresfollowup\":true",
+                "\"requires_followup\":true",
+                "\"nextpagetoken\"",
+                "\"next_page_token\"",
+                "缺少必需参数",
+                "需要补充参数",
+                "参数问题",
+                "请先调用",
+                "必须先调用"));
+    }
+
+    private static List<String> toolResultContents(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return List.of();
+        }
+        List<String> results = new ArrayList<>();
+        for (Map<String, Object> msg : messages) {
+            if (!"tool".equals(String.valueOf(msg.get("role")))) {
+                continue;
+            }
+            Object content = msg.get("content");
+            if (content instanceof String text && !text.isBlank()) {
+                results.add(text);
+            }
+        }
+        return results;
+    }
+
+    private static String questionFromMessages(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return "";
+        }
+        for (int i = messages.size() - 1; i >= 0; i--) {
+            Map<String, Object> msg = messages.get(i);
+            if (!"user".equals(String.valueOf(msg.get("role")))) {
+                continue;
+            }
+            Object content = msg.get("content");
+            return content == null ? "" : String.valueOf(content);
+        }
+        return "";
+    }
+
     static String appendToolResultFallbackIfDeferred(String finalText, List<Map<String, Object>> messages) {
         if (!hasToolMessages(messages) || !finalAnswerDefersToolResult(finalText)) {
             return finalText;
@@ -1288,6 +1570,56 @@ public class ChatOrchestratorService {
         }
         String normalized = content.replaceAll("\\s+", "");
         return DEFERRED_TOOL_FINAL_PATTERN.matcher(normalized).find();
+    }
+
+    static String buildToolLimitFinalAnswerPrompt(int maxToolRounds) {
+        return """
+                [工具轮次收口]
+                - 本轮已经完成 %d 轮工具调用，不允许再请求任何工具。
+                - 你现在只能基于上方已有 tool messages 给用户一段最终可读回复。
+                - 如果工具结果没有查到匹配数据，要明确说明已尝试的查询条件和未命中的事实，不要继续承诺“稍后再查”。
+                - 如果工具结果只支持部分回答，要分成“已确认”和“仍需确认”。
+                - 回复保持简洁，适合外部聊天工具直接发送。
+                """.formatted(Math.max(1, maxToolRounds)).trim();
+    }
+
+    static String buildToolLimitReachedFallbackMessage(List<Map<String, Object>> messages, int maxToolRounds) {
+        List<ToolResultSummary> summaries = collectToolResultSummaries(messages);
+        if (summaries.isEmpty()) {
+            return "本轮已经达到 " + Math.max(1, maxToolRounds)
+                    + " 次工具查询上限，但没有拿到可展示的工具结果。请确认查询对象、人员名称或时间范围后再试。";
+        }
+        StringBuilder text = new StringBuilder();
+        text.append("本轮已经完成 ").append(summaries.size())
+                .append(" 次工具查询，但还没有形成可靠的最终结论。为了避免继续无效调用，我先把已返回结果整理如下：");
+        int limit = Math.min(6, summaries.size());
+        for (int i = 0; i < limit; i++) {
+            ToolResultSummary item = summaries.get(i);
+            text.append("\n").append(i + 1).append(". ")
+                    .append(item.toolName()).append("：")
+                    .append(item.summary());
+            if (!item.arguments().isBlank()) {
+                text.append("\n   查询参数：").append(clipStatic(item.arguments(), 220));
+            }
+        }
+        if (summaries.size() > limit) {
+            text.append("\n其余 ").append(summaries.size() - limit).append(" 次工具结果已省略。");
+        }
+        text.append("\n\n下一步可以确认对象名称、人员姓名、月份/季度字段或筛选条件后重新查询。");
+        return text.toString();
+    }
+
+    private static boolean isUsableToolLimitAnswer(String content) {
+        if (content == null || content.isBlank()) {
+            return false;
+        }
+        String normalized = content.trim();
+        return !normalized.startsWith("Model call failed:")
+                && !normalized.startsWith("Aliyun API key is not configured")
+                && !normalized.startsWith("Empty response.")
+                && !normalized.startsWith("No choices in response.")
+                && !normalized.contains("系统保护上限")
+                && !normalized.contains("暂时无法继续处理");
     }
 
     static String buildToolResultFallbackMessage(List<Map<String, Object>> messages) {
@@ -1316,9 +1648,89 @@ public class ChatOrchestratorService {
         return "本次工具调用已完成，但模型本轮未能生成可展示的数据摘要。请调整筛选条件后重试。";
     }
 
+    private static List<ToolResultSummary> collectToolResultSummaries(List<Map<String, Object>> messages) {
+        if (messages == null || messages.isEmpty()) {
+            return List.of();
+        }
+        Map<String, ToolCallSummary> toolCallsById = new LinkedHashMap<>();
+        for (Map<String, Object> msg : messages) {
+            Object rawToolCalls = msg.get("tool_calls");
+            if (!(rawToolCalls instanceof List<?> toolCalls)) {
+                continue;
+            }
+            for (Object rawCall : toolCalls) {
+                if (!(rawCall instanceof Map<?, ?> call)) {
+                    continue;
+                }
+                Object rawId = call.get("id");
+                String id = rawId == null ? "" : String.valueOf(rawId);
+                Object functionObj = call.get("function");
+                if (id.isBlank() || !(functionObj instanceof Map<?, ?> function)) {
+                    continue;
+                }
+                Object rawName = function.get("name");
+                Object rawArguments = function.get("arguments");
+                String name = rawName == null ? "工具" : String.valueOf(rawName);
+                String arguments = rawArguments == null ? "" : String.valueOf(rawArguments);
+                toolCallsById.put(id, new ToolCallSummary(name, arguments));
+            }
+        }
+        List<ToolResultSummary> summaries = new ArrayList<>();
+        for (Map<String, Object> msg : messages) {
+            if (!"tool".equals(String.valueOf(msg.get("role")))) {
+                continue;
+            }
+            Object raw = msg.get("content");
+            if (!(raw instanceof String content) || content.isBlank()) {
+                continue;
+            }
+            String toolCallId = String.valueOf(msg.getOrDefault("tool_call_id", ""));
+            ToolCallSummary call = toolCallsById.get(toolCallId);
+            summaries.add(new ToolResultSummary(
+                    call == null || call.name().isBlank() ? "工具" : call.name(),
+                    call == null ? "" : call.arguments(),
+                    summarizeToolContentForLimit(content)));
+        }
+        return summaries;
+    }
+
+    private static String summarizeToolContentForLimit(String toolContent) {
+        String normalized = toolContent == null ? "" : toolContent.trim();
+        if (normalized.isBlank()) {
+            return "工具没有返回可展示内容。";
+        }
+        Matcher dataCount = TOOL_DATA_COUNT_PATTERN.matcher(normalized);
+        if (dataCount.find()) {
+            int returned = parsePositiveInt(dataCount.group(1));
+            int total = parsePositiveInt(dataCount.group(2));
+            if (returned == 0) {
+                return "查询完成，但没有返回匹配记录（返回 0 条，总计 " + total + " 条）。";
+            }
+            return "查询返回 " + returned + " 条记录，总计 " + total + " 条。";
+        }
+        Matcher fieldCount = TOOL_FIELD_COUNT_PATTERN.matcher(normalized);
+        if (fieldCount.find()) {
+            return "读取到对象字段结构：标准字段 " + fieldCount.group(1)
+                    + " 条、自定义字段 " + fieldCount.group(2) + " 条。";
+        }
+        Matcher objectCount = TOOL_OBJECT_COUNT_PATTERN.matcher(normalized);
+        if (objectCount.find()) {
+            return "读取到对象列表：标准对象 " + objectCount.group(1)
+                    + " 条、自定义对象 " + objectCount.group(2)
+                    + " 条，总计 " + objectCount.group(3) + " 条。";
+        }
+        String structured = buildStructuredToolResultFallbackMessage(normalized)
+                .replaceAll("\\s+", " ")
+                .trim();
+        if (!structured.isBlank()) {
+            return clipStatic(structured, 360);
+        }
+        return clipStatic(firstLine(normalized), 360);
+    }
+
     private static String buildStructuredToolResultFallbackMessage(String toolContent) {
         try {
-            JsonNode root = TOOL_RESULT_OBJECT_MAPPER.readTree(toolContent);
+            JsonNode root = parseToolContentObject(toolContent);
             if (!root.isObject()) {
                 return "";
             }
@@ -1327,7 +1739,9 @@ public class ChatOrchestratorService {
                 return "工具已返回 answer，但模型本轮未能生成最终自然语言总结。先展示可读结果：\n\n"
                         + clipStatic(answer, 1200);
             }
-            boolean failed = booleanFieldIsFalse(root, "success") || booleanFieldIsFalse(root, "ok");
+            boolean failed = booleanFieldIsFalse(root, "success")
+                    || booleanFieldIsFalse(root, "ok")
+                    || booleanFieldIsFalse(root, "result");
             if (failed) {
                 String message = firstNonBlank(
                         nodeText(root, "message"),
@@ -1340,6 +1754,10 @@ public class ChatOrchestratorService {
             if (results.isArray()) {
                 return summarizeResultArray(results);
             }
+            JsonNode data = root.path("data");
+            if (data.isArray()) {
+                return summarizeBusinessDataArray(data);
+            }
             String message = firstNonBlank(nodeText(root, "message"), nodeText(root, "summary"));
             if (!message.isBlank()) {
                 return "工具已返回结果，但模型本轮未能生成最终自然语言总结。先展示工具摘要：\n\n"
@@ -1348,6 +1766,19 @@ public class ChatOrchestratorService {
             return "";
         } catch (Exception ignored) {
             return "";
+        }
+    }
+
+    private static JsonNode parseToolContentObject(String toolContent) throws IOException {
+        try {
+            return TOOL_RESULT_OBJECT_MAPPER.readTree(toolContent);
+        } catch (Exception ignored) {
+            int start = toolContent == null ? -1 : toolContent.indexOf('{');
+            int end = toolContent == null ? -1 : toolContent.lastIndexOf('}');
+            if (start >= 0 && end > start) {
+                return TOOL_RESULT_OBJECT_MAPPER.readTree(toolContent.substring(start, end + 1));
+            }
+            throw new IOException(ignored);
         }
     }
 
@@ -1379,6 +1810,35 @@ public class ChatOrchestratorService {
         return summary.toString();
     }
 
+    private static String summarizeBusinessDataArray(JsonNode data) {
+        int count = data.size();
+        if (count == 0) {
+            return "工具查询已完成，但没有返回匹配业务记录。你可以确认姓名、月份、对象或筛选字段后再试。";
+        }
+        StringBuilder summary = new StringBuilder();
+        summary.append("工具已返回 ").append(count).append(" 条业务记录。先展示前几条可读摘要：");
+        int limit = Math.min(5, count);
+        for (int i = 0; i < limit; i++) {
+            JsonNode item = data.get(i);
+            String title = firstNonBlank(nodeText(item, "name"), nodeText(item, "id"), "记录 " + (i + 1));
+            summary.append("\n").append(i + 1).append(". ").append(clipStatic(title, 160));
+            String person = firstNonBlank(nodeText(item, "bkhrccname"), nodeText(item, "khperson"));
+            String period = firstNonBlank(nodeText(item, "khy"), nodeText(item, "kaoheyuefen"), nodeText(item, "khyquarter"));
+            String score = firstNonBlank(nodeText(item, "kpitotal"), nodeText(item, "mbzs"));
+            List<String> meta = new ArrayList<>();
+            if (!person.isBlank()) meta.add("人员：" + person);
+            if (!period.isBlank()) meta.add("期间：" + period);
+            if (!score.isBlank()) meta.add("分值：" + score);
+            if (!meta.isEmpty()) {
+                summary.append("\n   ").append(String.join("；", meta));
+            }
+        }
+        if (count > limit) {
+            summary.append("\n其余 ").append(count - limit).append(" 条记录已省略。");
+        }
+        return summary.toString();
+    }
+
     private static boolean booleanFieldIsFalse(JsonNode root, String field) {
         JsonNode node = root.path(field);
         return node.isBoolean() && !node.asBoolean();
@@ -1400,6 +1860,28 @@ public class ChatOrchestratorService {
             }
         }
         return "";
+    }
+
+    private static String firstLine(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        int newline = value.indexOf('\n');
+        return newline < 0 ? value.trim() : value.substring(0, newline).trim();
+    }
+
+    private static int parsePositiveInt(String value) {
+        try {
+            return Math.max(0, Integer.parseInt(value));
+        } catch (Exception ignored) {
+            return 0;
+        }
+    }
+
+    private record ToolCallSummary(String name, String arguments) {
+    }
+
+    private record ToolResultSummary(String toolName, String arguments, String summary) {
     }
 
     private static String clipStatic(String value, int max) {

@@ -32,10 +32,12 @@ import {
 const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
 
-type AuthPayload = { token: string; orgId: string; userId: string; roles: string[] };
+type OrganizationOption = { orgId: string; orgName: string; memberId: string; roleCode: string; current?: boolean };
+type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; memberId?: string; accountId?: string; roles: string[] };
+type LoginPayload = AuthPayload & { requiresOrganizationSelection?: boolean; organizations?: OrganizationOption[] };
 type ChatBubble = { role: "user" | "assistant"; content: string; time?: string; modelName?: string };
 type KnowledgeBase = { id: number; name: string; description: string; status: string };
-type MeProfile = { nickname?: string; mobile?: string; avatarBase64?: string };
+type MeProfile = { orgId?: string; orgName?: string; nickname?: string; mobile?: string; avatarBase64?: string };
 type CurrentUserUpdatedDetail = { userId?: string; mobile?: string; nickname?: string; avatarBase64?: string };
 type LoginMode = "agent" | "human";
 type FrontLoginMode = "login_mode1" | "login_mode2";
@@ -440,6 +442,31 @@ function monitorToolTraceSummary(trace?: AgentTraceDetailPayload | null) {
       return `${name} ${elapsed}`;
     })
     .join("；");
+}
+
+function formatTraceStepElapsed(ms?: number) {
+  if (typeof ms !== "number" || !Number.isFinite(ms) || ms <= 0) return "0ms";
+  return formatMonitorElapsed(ms);
+}
+
+function numberFromMetadata(metadata: Record<string, unknown> | undefined, keys: string[]) {
+  if (!metadata) return 0;
+  for (const key of keys) {
+    const value = metadata[key];
+    if (typeof value === "number" && Number.isFinite(value)) return Math.max(0, Math.round(value));
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number.parseInt(value, 10);
+      if (Number.isFinite(parsed)) return Math.max(0, parsed);
+    }
+  }
+  return 0;
+}
+
+function traceStepTokenSummary(node: AgentTraceNodePayload) {
+  if ((node.type ?? "").toUpperCase() !== "MODEL") return "";
+  const inputTokens = numberFromMetadata(node.metadata, ["inputTokens", "promptTokens", "prompt_tokens", "input_tokens"]);
+  const outputTokens = numberFromMetadata(node.metadata, ["outputTokens", "completionTokens", "completion_tokens", "output_tokens"]);
+  return `输入 ${inputTokens} tokens · 输出 ${outputTokens} tokens`;
 }
 
 function normalizeConversationThread(payload: ConversationThreadPayload): ConversationThread {
@@ -1034,9 +1061,13 @@ function HumanModeStaticLogin() {
 }
 
 export default function AssistantApp() {
-  const [orgId, setOrgId] = useState("demo-org");
   const [mobile, setMobile] = useState("18611892001");
   const [loginPassword, setLoginPassword] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
+  const [registerMode, setRegisterMode] = useState(false);
+  const [pendingOrganizations, setPendingOrganizations] = useState<OrganizationOption[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
+  const [organizationMenuOpen, setOrganizationMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [auth, setAuth] = useState<AuthPayload | null>(() => {
     const raw = localStorage.getItem(LS_ASSISTANT_TOKEN);
@@ -1099,6 +1130,8 @@ export default function AssistantApp() {
   const chatStreamRef = useRef<HTMLDivElement | null>(null);
   const skillPickerRef = useRef<HTMLDivElement | null>(null);
   const quickCommandMenuRef = useRef<HTMLDivElement | null>(null);
+  const organizationMenuRef = useRef<HTMLDivElement | null>(null);
+  const organizationMenuCloseTimerRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
@@ -1125,6 +1158,26 @@ export default function AssistantApp() {
     composerInputRef.current = element;
   };
 
+  const cancelOrganizationMenuClose = () => {
+    if (organizationMenuCloseTimerRef.current !== null) {
+      window.clearTimeout(organizationMenuCloseTimerRef.current);
+      organizationMenuCloseTimerRef.current = null;
+    }
+  };
+
+  const openOrganizationMenu = () => {
+    cancelOrganizationMenuClose();
+    setOrganizationMenuOpen(true);
+  };
+
+  const scheduleOrganizationMenuClose = () => {
+    cancelOrganizationMenuClose();
+    organizationMenuCloseTimerRef.current = window.setTimeout(() => {
+      setOrganizationMenuOpen(false);
+      organizationMenuCloseTimerRef.current = null;
+    }, 120);
+  };
+
   const loadMe = async (tokenOverride?: string) => {
     const token = tokenOverride ?? auth?.token;
     if (!token) {
@@ -1137,6 +1190,23 @@ export default function AssistantApp() {
         setMe(body.data as MeProfile | null);
       }
     } catch {}
+  };
+
+  const loadOrganizations = async (tokenOverride?: string) => {
+    const token = tokenOverride ?? auth?.token;
+    if (!token) {
+      setOrganizations([]);
+      return;
+    }
+    try {
+      const response = await fetch("/auth/organizations", { headers: { Authorization: `Bearer ${token}` } });
+      const { body } = await safeFetchJson<{ organizations?: OrganizationOption[] }>(response);
+      if (response.ok && body?.success) {
+        setOrganizations(body.data?.organizations ?? []);
+      }
+    } catch {
+      setOrganizations([]);
+    }
   };
 
   const loadKbs = async () => {
@@ -1614,9 +1684,16 @@ export default function AssistantApp() {
       if (quickCommandMenuRef.current && !quickCommandMenuRef.current.contains(event.target as Node)) {
         setQuickCommandMenuOpen(false);
       }
+      if (organizationMenuRef.current && !organizationMenuRef.current.contains(event.target as Node)) {
+        setOrganizationMenuOpen(false);
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    return () => cancelOrganizationMenuClose();
   }, []);
 
   useEffect(() => {
@@ -1636,7 +1713,6 @@ export default function AssistantApp() {
     if (auth) {
       void loadWorkbenchAgents(auth.token);
       void loadWorkbenchStats(auth.token);
-      void loadMonitorRunLogs(auth.token);
     } else {
       setAgentWorkspaces(AGENT_WORKSPACES);
       setWorkbenchDockAgents(WORKBENCH_DOCK_AGENTS);
@@ -1655,6 +1731,10 @@ export default function AssistantApp() {
   useEffect(() => {
     if (auth) {
       void loadMe();
+      void loadOrganizations();
+    } else {
+      setOrganizations([]);
+      setOrganizationMenuOpen(false);
     }
   }, [auth?.token]);
 
@@ -1881,6 +1961,12 @@ export default function AssistantApp() {
   }, [activeWorkbenchAgentId, auth?.token, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
   const userInitial = getDisplayInitial(me?.nickname || me?.mobile || "我", "我");
+  const currentOrgName = me?.orgName || auth?.orgName || auth?.orgId || "当前组织";
+  const organizationOptions = auth
+    ? organizations.length
+      ? organizations
+      : [{ orgId: auth.orgId, orgName: currentOrgName, memberId: auth.memberId ?? auth.userId, roleCode: auth.roles[0] ?? "", current: true }]
+    : [];
   const agentUnread = (conversationsByAgent.get(activeAgent.id) ?? []).reduce((count, thread) => count + thread.unread, 0);
   const activeWorkbenchBusy = activeWorkbenchState.status !== "待命中" && activeWorkbenchState.status !== "已完成";
   const monitorRows = workbenchDockAgents.map((agent, index) => {
@@ -2029,6 +2115,16 @@ export default function AssistantApp() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [openWorkbenchSessionMenuId]);
 
+  const completeLogin = async (payload: AuthPayload, message = "登录成功。") => {
+    setPendingOrganizations([]);
+    setRegisterMode(false);
+    setOrganizationMenuOpen(false);
+    persistAuth(payload);
+    await loadMe(payload.token);
+    await loadOrganizations(payload.token);
+    setNotice(message);
+  };
+
   const login = async () => {
     if (loginSubmitting) {
       return;
@@ -2039,11 +2135,20 @@ export default function AssistantApp() {
       const response = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile, password: loginPassword }),
+        body: JSON.stringify({ mobile, password: loginPassword }),
       });
-      const { body } = await safeFetchJson<AuthPayload>(response);
-      if (!response.ok || !body?.success || !body.data?.token) {
+      const { body } = await safeFetchJson<LoginPayload>(response);
+      if (!response.ok || !body?.success) {
         setNotice(`登录失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      if (body.data?.requiresOrganizationSelection) {
+        setPendingOrganizations(body.data.organizations ?? []);
+        setNotice("请选择要进入的组织。");
+        return;
+      }
+      if (!body.data?.token) {
+        setNotice("登录失败：服务端未返回 token");
         return;
       }
 
@@ -2054,14 +2159,85 @@ export default function AssistantApp() {
         await new Promise((resolve) => window.setTimeout(resolve, LOGIN_MODE2_ENTER_DELAY_MS));
       }
 
-      persistAuth(body.data);
-      await loadMe(body.data.token);
-      setNotice("登录成功。");
+      await completeLogin(body.data);
     } catch (error) {
       setNotice(`登录失败：${error instanceof Error ? error.message : String(error)}`);
       setLoginMode2Entering(false);
     } finally {
       setLoginSubmitting(false);
+    }
+  };
+
+  const loginToOrganization = async (targetOrgId: string) => {
+    if (loginSubmitting) {
+      return;
+    }
+    setLoginSubmitting(true);
+    try {
+      setNotice("正在进入组织...");
+      const response = await fetch("/auth/password/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orgId: targetOrgId, mobile, password: loginPassword }),
+      });
+      const { body } = await safeFetchJson<AuthPayload>(response);
+      if (!response.ok || !body?.success || !body.data?.token) {
+        setNotice(`进入失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      await completeLogin(body.data);
+    } catch (error) {
+      setNotice(`进入失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLoginSubmitting(false);
+    }
+  };
+
+  const register = async () => {
+    if (loginSubmitting) {
+      return;
+    }
+    setLoginSubmitting(true);
+    try {
+      setNotice("正在创建组织...");
+      const response = await fetch("/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mobile, password: loginPassword, organizationName }),
+      });
+      const { body } = await safeFetchJson<AuthPayload>(response);
+      if (!response.ok || !body?.success || !body.data?.token) {
+        setNotice(`创建失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      await completeLogin(body.data, "组织已创建。");
+    } catch (error) {
+      setNotice(`创建失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setLoginSubmitting(false);
+    }
+  };
+
+  const switchOrganization = async (targetOrgId: string) => {
+    if (!auth?.token || targetOrgId === auth.orgId) {
+      setOrganizationMenuOpen(false);
+      return;
+    }
+    try {
+      setNotice("正在切换组织...");
+      const response = await fetch("/auth/switch-organization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` },
+        body: JSON.stringify({ orgId: targetOrgId }),
+      });
+      const { body } = await safeFetchJson<AuthPayload>(response);
+      if (!response.ok || !body?.success || !body.data?.token) {
+        setNotice(`切换失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      await completeLogin(body.data, "组织已切换。");
+    } catch (error) {
+      setNotice(`切换失败：${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -2612,6 +2788,11 @@ export default function AssistantApp() {
     setActiveConversationId("");
     setWorkspaceTab("workbench");
     setLoginPassword("");
+    setOrganizationName("");
+    setPendingOrganizations([]);
+    setOrganizations([]);
+    setOrganizationMenuOpen(false);
+    setRegisterMode(false);
     setNotice("已退出。");
   };
 
@@ -2628,16 +2809,6 @@ export default function AssistantApp() {
     <>
       <div className="boot-login__form">
         <div className="boot-login__field">
-          <label htmlFor="boot-org">组织 ID</label>
-          <input
-            id="boot-org"
-            className="boot-login__input"
-            value={orgId}
-            onChange={(event) => setOrgId(event.target.value)}
-            autoComplete="organization"
-          />
-        </div>
-        <div className="boot-login__field">
           <label htmlFor="boot-mobile">手机号</label>
           <input
             id="boot-mobile"
@@ -2649,7 +2820,7 @@ export default function AssistantApp() {
           />
         </div>
         <div className="boot-login__field">
-          <label htmlFor="boot-password">固定密码</label>
+          <label htmlFor="boot-password">密码</label>
           <input
             id="boot-password"
             className="boot-login__input"
@@ -2659,21 +2830,58 @@ export default function AssistantApp() {
             autoComplete="off"
           />
         </div>
+        {registerMode ? (
+          <div className="boot-login__field">
+            <label htmlFor="boot-organization-name">组织名称</label>
+            <input
+              id="boot-organization-name"
+              className="boot-login__input"
+              value={organizationName}
+              onChange={(event) => setOrganizationName(event.target.value)}
+              autoComplete="organization"
+              placeholder="如 销售运营团队"
+            />
+          </div>
+        ) : null}
       </div>
-      <div className="boot-login__actions boot-login__actions--single">
-        <button type="button" className="boot-login__btn boot-login__btn--primary" onClick={login} disabled={!loginPassword.trim() || loginSubmitting}>
-          <span className="boot-phone-icon" aria-hidden>
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-              <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
-              <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          </span>
-          <span className="sr-only">开始对话</span>
-        </button>
-      </div>
+      {!registerMode && pendingOrganizations.length > 0 ? (
+        <div className="boot-login__org-choice" role="group" aria-label="选择组织">
+          <p>选择要进入的组织</p>
+          {pendingOrganizations.map((item) => (
+            <button
+              key={item.orgId}
+              type="button"
+              className="boot-login__org-option"
+              onClick={() => loginToOrganization(item.orgId)}
+              disabled={loginSubmitting}
+            >
+              <span>{item.orgName}</span>
+              <small>{item.roleCode}</small>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      {pendingOrganizations.length === 0 ? (
+        <div className="boot-login__actions boot-login__actions--single">
+          <button
+            type="button"
+            className="boot-login__btn boot-login__btn--primary"
+            onClick={registerMode ? register : login}
+            disabled={!loginPassword.trim() || loginSubmitting || (registerMode && !organizationName.trim())}
+          >
+            <span className="boot-phone-icon" aria-hidden>
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
+                <path d="M4 12h12" stroke="white" strokeWidth="2.4" strokeLinecap="round" />
+                <path d="M12 5l8 7-8 7" stroke="white" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </span>
+            <span className="sr-only">开始对话</span>
+          </button>
+        </div>
+      ) : null}
       {notice ? <p className="boot-login__notice">{notice}</p> : null}
       <p className="boot-login__footer-link">
-        需要配置知识库或成员？ <Link to="/admin/login" className="boot-login__link">管理控制台</Link>
+        还没有账户？<Link to="/autoservice/cn" className="boot-login__link">立即预约</Link>
       </p>
     </>
   );
@@ -2756,19 +2964,6 @@ export default function AssistantApp() {
             </svg>
           </button>
           <button
-            className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "monitor" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("monitor")}
-            data-menu-label="智能体监控"
-            aria-label="智能体监控"
-          >
-            <svg viewBox="0 0 24 24">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="7" height="7" rx="1" />
-            </svg>
-          </button>
-          <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "customers" ? " is-active" : ""}`}
             onClick={() => setWorkspaceTab("customers")}
             data-menu-label="客户会话"
@@ -2813,11 +3008,54 @@ export default function AssistantApp() {
               <line x1="21" y1="12" x2="9" y2="12" />
             </svg>
           </button>
-          <div className="cici-rail__logo">
+          <button
+            type="button"
+            className={`cici-rail__logo${organizationMenuOpen ? " is-active" : ""}`}
+            onMouseEnter={openOrganizationMenu}
+            onMouseLeave={scheduleOrganizationMenuClose}
+            onFocus={openOrganizationMenu}
+            onClick={() => {
+              cancelOrganizationMenuClose();
+              setOrganizationMenuOpen((open) => !open);
+            }}
+            aria-label={`切换组织，当前组织：${currentOrgName}`}
+            aria-expanded={organizationMenuOpen}
+          >
             <div className="cici-rail__logo-icon">CB</div>
-          </div>
+          </button>
         </div>
       </nav>
+      {organizationMenuOpen && auth?.token ? (
+        <div
+          className="cici-org-menu"
+          ref={organizationMenuRef}
+          role="dialog"
+          aria-label="组织切换"
+          onMouseEnter={openOrganizationMenu}
+          onMouseLeave={scheduleOrganizationMenuClose}
+        >
+          <div className="cici-org-menu__head">
+            <span>切换组织</span>
+          </div>
+          <div className="cici-org-menu__list">
+            {organizationOptions.map((item) => {
+              const isCurrent = item.orgId === auth.orgId || item.current;
+              return (
+                <button
+                  key={item.orgId}
+                  type="button"
+                  className={`cici-org-menu__item${isCurrent ? " is-current" : ""}`}
+                  onClick={() => switchOrganization(item.orgId)}
+                  aria-current={isCurrent ? "true" : undefined}
+                >
+                  <span>{item.orgName}</span>
+                  {isCurrent ? <small>当前</small> : null}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
       {auth?.token ? (
         <MyEmailAccountsModal
           open={profilePanelOpen}
@@ -3430,20 +3668,33 @@ export default function AssistantApp() {
                         <article className="cici-monitor-trace-step" key={node.id ?? `${node.type}-${index}`}>
                           <span className="cici-monitor-trace-step__dot" aria-hidden />
                           <div>
-                            <h3>{node.title || node.type || "链路节点"}</h3>
+                            <h3>
+                              <span>{node.title || node.type || "链路节点"}</span>
+                              <time className="cici-monitor-trace-step__started-at">{formatMonitorDateTime(node.startedAt)}</time>
+                            </h3>
                             <p>{node.summary || "节点已记录。"}</p>
                           </div>
-                          <time>{node.elapsedMs ? formatMonitorElapsed(node.elapsedMs) : formatMonitorDateTime(node.startedAt)}</time>
+                          <div className="cici-monitor-trace-step__meta">
+                            <time>{formatTraceStepElapsed(node.elapsedMs)}</time>
+                            {traceStepTokenSummary(node) ? (
+                              <span className="cici-monitor-trace-step__tokens">{traceStepTokenSummary(node)}</span>
+                            ) : null}
+                          </div>
                         </article>
                       ))
                     ) : (
                       <article className="cici-monitor-trace-step">
                         <span className="cici-monitor-trace-step__dot" aria-hidden />
                         <div>
-                          <h3>{monitorTraceLoadingId ? "正在加载链路日志" : "暂无链路详情"}</h3>
+                          <h3>
+                            <span>{monitorTraceLoadingId ? "正在加载链路日志" : "暂无链路详情"}</span>
+                            <time className="cici-monitor-trace-step__started-at">—</time>
+                          </h3>
                           <p>{monitorTraceLoadingId ? "正在读取本次运行的模型、工具、技能和知识库明细。" : "该记录可能是历史会话回填，或后端尚未返回详情。"}</p>
                         </div>
-                        <time>—</time>
+                        <div className="cici-monitor-trace-step__meta">
+                          <time>0ms</time>
+                        </div>
                       </article>
                     )}
                   </section>
