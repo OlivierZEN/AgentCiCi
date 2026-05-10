@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-10T13:40:12Z
+updated_at: 2026-05-10T15:13:18Z
 updated_by: ai
 status: active
 board_status: active
@@ -13,7 +13,7 @@ board_status: active
 
 ### TASK-078 AI customer operations suite website design
 
-- status: deployed_uat
+- status: published
 - priority: P0
 - owner_role: brand-website-design
 - spec_path: `docs/specs/FEAT-027-ai-customer-ops-suite-website-design.md`
@@ -37,6 +37,7 @@ board_status: active
   - 已将 `agentcici.com` 与 `www.agentcici.com` 根路径切换为 FEAT-027 中文综合站；`autoservice.agentcici.com` 保持产品登录入口。
   - 前台产品登录页“立即预约”已从旧 AutoService `?demo=1` 深链改为 `https://agentcici.com/#demo`，落到综合站闭环演示区。
   - 已发布 V1.8 到 ACR 与阿里云 ECS UAT，版本备注为“综合官网”。
+  - 用户反馈 V1.8 未发布成功后复核发现 GitHub 远端仍停在 V1.7；已补推 `origin/main` 和 `V1.8` tag，远端 `main` 与 `V1.8^{}` 均指向 `1b2ea27c55660d094174a1544199157f8ba8321d`。
 - verification:
   - `content`: design spec created and linked from task board.
   - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
@@ -60,6 +61,9 @@ board_status: active
   - `ACR`: pushed `cici-backend:V1.8/latest` digest `sha256:ad86b98c3f01fed15f5716da3c33a9344e7780488f8367c8f6dca704f5e12754`; pushed `cici-frontend:V1.8/latest` digest `sha256:7a08acd0ff945f13a66a780db1a5776fc9feac35013493258ed049b729c75f6f`; infra `V1.8` aliases created.
   - `remote`: ECS backup `/opt/cici/backups/20260510-213605-before-v1.8-suite-site`; six containers healthy; backend health `UP`; frontend `nginx -t` success; Flyway latest `47|account profile and password|true`。
   - `browser`: Playwright public verification `https://agentcici.com/` and `https://www.agentcici.com/` -> FEAT-027 中文综合站, title `AI 治理平台 | 企业 AI 客户运营套件`; `https://autoservice.agentcici.com/` -> AgentCiCi 产品登录页，预约链接为 `https://agentcici.com/#demo`。
+  - `git`: `git push origin HEAD:main` and `git push origin V1.8` -> success；`git ls-remote` confirms remote `main` and `V1.8^{}` at `1b2ea27c55660d094174a1544199157f8ba8321d`。
+  - `remote`: post-fix ECS verification still shows `CICI_IMAGE_TAG=V1.8`, six running healthy containers, backend health `UP`, and frontend `nginx -t` success。
+  - `browser`: post-fix in-app Browser render check confirms `agentcici.com` and `www.agentcici.com` render SalesMost AI Suite with title `AI 治理平台 | 企业 AI 客户运营套件`; `autoservice.agentcici.com` remains the AgentCiCi login surface with demo link `https://agentcici.com/#demo`。
 - next_action: 后续优先把 suite 演示表单接入真实线索模型，并补 SEO/OG/sitemap、UTM/来源归因、通知分派和正式品牌名确认。
 - handoff_notes:
   - 主站必须表达完整客户生命周期闭环，不能落成三个普通产品卡片加 CTA。

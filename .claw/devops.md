@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-10T13:40:12Z
+updated_at: 2026-05-10T15:13:18Z
 updated_by: ai
 status: active
 ---
@@ -172,6 +172,7 @@ status: active
   - V1.8 suite website release on 2026-05-10:
     - Release tag: `V1.8`.
     - Release note: `综合官网`.
+    - Source release completion fix on 2026-05-10T15:13:18Z: `git push origin HEAD:main` and `git push origin V1.8` completed after the initial ECS/ACR publish; remote `main` and `V1.8^{}` now both point to `1b2ea27c55660d094174a1544199157f8ba8321d`.
     - Backup directory: `/opt/cici/backups/20260510-213605-before-v1.8-suite-site`.
     - Backend image digest: `sha256:ad86b98c3f01fed15f5716da3c33a9344e7780488f8367c8f6dca704f5e12754`.
     - Frontend image digest: `sha256:7a08acd0ff945f13a66a780db1a5776fc9feac35013493258ed049b729c75f6f`.

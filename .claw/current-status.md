@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-10T13:40:12Z
+updated_at: 2026-05-10T15:13:18Z
 updated_by: ai
 status: active
-phase: release_v1_8_suite_site_deployed
+phase: release_v1_8_suite_site_published
 active_task: "TASK-078 AI customer operations suite website design"
-current_task: V1.8“综合官网”已发布到 ACR 与阿里云 ECS UAT，`agentcici.com` / `www.agentcici.com` 根路径已切换为 FEAT-027 中文综合站，`autoservice.agentcici.com` 保持产品登录入口。
-next_action: 提交并推送 V1.8 源码与 tag；后续优先把 suite 演示表单接入真实线索模型，并补 SEO/OG/sitemap 与预约线索归因。
+current_task: V1.8“综合官网”已发布到 ACR、阿里云 ECS UAT 和 GitHub，`agentcici.com` / `www.agentcici.com` 根路径已切换为 FEAT-027 中文综合站，`autoservice.agentcici.com` 保持产品登录入口。
+next_action: 后续优先把 suite 演示表单接入真实线索模型，并补 SEO/OG/sitemap 与预约线索归因。
 read_next:
   goals: false
   decisions: true
@@ -21,6 +21,8 @@ priority: P0
 # Current Status
 
 ## Snapshot
+
+- 2026-05-10T15:13:18Z 修复 V1.8 源码发布遗漏：用户反馈“V1.8 没有发布成功”后复核发现 ECS 已运行 `CICI_IMAGE_TAG=V1.8` 且公网渲染正确，但 GitHub `origin/main` 和远端 tag 仍停在 `V1.7`。已执行 `git push origin HEAD:main` 与 `git push origin V1.8`；远端 `main` 与 `V1.8^{}` 均指向 `1b2ea27c55660d094174a1544199157f8ba8321d`。ECS 复核：六容器 healthy，后端 health `UP`，Nginx `-t` 通过。Browser 渲染复核：`https://agentcici.com/` 与 `https://www.agentcici.com/` 标题为 `AI 治理平台 | 企业 AI 客户运营套件` 并渲染 SalesMost AI Suite 中文站，`https://autoservice.agentcici.com/` 仍渲染 AgentCiCi 产品登录页且预约链接为 `https://agentcici.com/#demo`。
 
 - 2026-05-10T13:40:12Z 已完成 V1.8“综合官网”发布：`frontend/src/App.tsx` 将 `agentcici.com` / `www.agentcici.com` 根路径从 AutoService 中文站切到 FEAT-027 `SuiteLanding siteOverride="china"`，`frontend/src/assistant/AssistantApp.tsx` 将登录页“立即预约”改为 `https://agentcici.com/#demo`。已推送 ACR `cici-backend:V1.8/latest` digest `sha256:ad86b98c3f01fed15f5716da3c33a9344e7780488f8367c8f6dca704f5e12754`、`cici-frontend:V1.8/latest` digest `sha256:7a08acd0ff945f13a66a780db1a5776fc9feac35013493258ed049b729c75f6f`，并为 database/redis/rabbitmq/qdrant 补 `V1.8` manifest alias。阿里云 ECS 备份目录为 `/opt/cici/backups/20260510-213605-before-v1.8-suite-site`；远端六容器 healthy，后端 health `UP`，Nginx `-t` 通过，Flyway 最新 `47|account profile and password|true`。Playwright 公开站验证：`https://agentcici.com/` 与 `https://www.agentcici.com/` 标题为 `AI 治理平台 | 企业 AI 客户运营套件` 并渲染 SalesMost AI Suite 中文站，`https://autoservice.agentcici.com/` 仍渲染 AgentCiCi 产品登录页。
 

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-10T13:40:12Z
+updated_at: 2026-05-10T15:13:18Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-10T13:40:12Z
+last_run_at: 2026-05-10T15:13:18Z
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`TASK-078 AI customer operations suite website design` V1.8 综合官网发布
-- 命令：frontend build; backend targeted tests; backend package; target `git diff --check`; ACR build/push; ECS deploy; public Playwright verification
-- 环境：`local workspace, Java 21, frontend build, ACR, Aliyun ECS UAT, Playwright CLI`
+- 范围：`TASK-078 AI customer operations suite website design` V1.8 综合官网发布补齐
+- 命令：GitHub push/ls-remote verification; ECS compose/health/nginx verification; in-app Browser public render verification
+- 环境：`local workspace, GitHub origin, Aliyun ECS UAT, in-app Browser`
 
 ## Latest Verified Results
+
+- V1.8 GitHub release completion fix (2026-05-10T15:13:18Z):
+  - Symptom:
+    - 用户反馈 `V1.8` 没有发布成功。
+    - Verification found ECS and ACR were already on `V1.8`, but GitHub remote `origin/main` and remote tags were still at `V1.7`.
+  - Commands:
+    - `git push origin HEAD:main` -> **success**, remote `main` advanced from `bd4b8c9` to `1b2ea27`.
+    - `git push origin V1.8` -> **success**, remote tag `V1.8` created.
+    - `git ls-remote --heads origin main` -> `1b2ea27c55660d094174a1544199157f8ba8321d`.
+    - `git ls-remote --tags origin 'V1.8*'` -> `V1.8^{}` resolves to `1b2ea27c55660d094174a1544199157f8ba8321d`.
+    - `ssh root@47.97.119.160` remote check -> `CICI_IMAGE_TAG=V1.8`, six containers running healthy, backend `/actuator/health` returns `{"status":"UP"}`, frontend `nginx -t` succeeds.
+    - in-app Browser render check `https://agentcici.com/` and `https://www.agentcici.com/` -> title `AI 治理平台 | 企业 AI 客户运营套件`, SalesMost AI Suite visible.
+    - in-app Browser render check `https://autoservice.agentcici.com/` -> title `AgentCiCi`, login surface visible, demo link `https://agentcici.com/#demo`.
+  - Notes:
+    - macOS `curl` still resets on the public TLS handshake, so rendered public-page verification used the Browser runtime rather than raw HTML fetch.
 
 - V1.8 综合官网发布 (2026-05-10T13:40:12Z):
   - Commands:

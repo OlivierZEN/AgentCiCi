@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-05-03T13:35:06Z
+updated_at: 2026-05-10T15:13:18Z
 updated_by: ai
 status: active
 ---
@@ -34,6 +34,19 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-05-10-v1-8-github-release-not-pushed:
+  - Symptom: 用户反馈 `V1.8` 没有发布成功。
+  - Verified root cause: ECS/ACR 发布已完成，但 GitHub 远端 `origin/main` 仍停在 `V1.7` commit `bd4b8c9`，远端 tag 列表也没有 `V1.8`；本地仓库处于 detached HEAD，`V1.8` commit/tag 只存在本地。
+  - Resolution (2026-05-10):
+    - 执行 `git push origin HEAD:main`，将远端 `main` 推进到 `1b2ea27c55660d094174a1544199157f8ba8321d`。
+    - 执行 `git push origin V1.8`，创建远端 `V1.8` tag。
+  - Verification (2026-05-10):
+    - `git ls-remote --heads origin main` 返回 `1b2ea27c55660d094174a1544199157f8ba8321d`。
+    - `git ls-remote --tags origin 'V1.8*'` 中 `V1.8^{}` 返回 `1b2ea27c55660d094174a1544199157f8ba8321d`。
+    - ECS 仍为 `CICI_IMAGE_TAG=V1.8`，六容器 healthy，后端 health `UP`，frontend `nginx -t` 成功。
+    - Browser 渲染验证主域为 SalesMost AI Suite 综合站，autoservice 子域为 AgentCiCi 登录页。
+  - Status: resolved.
 
 - ISSUE-2026-04-17-jdk25-mockito-inline:
   - Symptom: targeted backend test execution (`mvn -q -Dtest=ChatRealtimeIntegrationTest test`) previously failed before entering the test body with Mockito inline Byte Buddy self-attach initialization errors on JDK 25.
