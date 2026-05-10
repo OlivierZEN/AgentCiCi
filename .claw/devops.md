@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-09T08:11:00Z
+updated_at: 2026-05-10T13:40:12Z
 updated_by: ai
 status: active
 ---
@@ -108,7 +108,7 @@ status: active
   - Last pushed on 2026-05-07:
     - backend digest `sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`
     - frontend digest `sha256:a70521fa3f651bec5fe32e1eaf5c698e5587a2e5de84f1acfb9e4a00ac33b9be`
-- ECS deployment `cici.cloudcc.cn`:
+- ECS deployment `agentcici.com` / `www.agentcici.com` / `autoservice.agentcici.com`:
   - Host: `root@47.97.119.160`, key `/Volumes/workspace/datafiles/cc-cici-ecs.pem`
   - Remote root: `/opt/cici`
   - Compose:
@@ -116,11 +116,12 @@ status: active
     - `/opt/cici/deploy/docker-compose.acr.ssl.yml`
   - Env: `/opt/cici/deploy/acr.env` (`600`, not in repo)
   - Certs:
-    - `/opt/cici/deploy/certs/cloudcc.cn.pem`
-    - `/opt/cici/deploy/certs/cloudcc.cn.key`
+    - `/opt/cici/deploy/certs/agentcici.com.pem`
+    - `/opt/cici/deploy/certs/agentcici.com.key`
   - Public verification:
-    - `http://cici.cloudcc.cn/` -> `301`
-    - `https://cici.cloudcc.cn/` -> `200`
+    - `https://agentcici.com/` -> `200`, FEAT-027 Chinese suite website
+    - `https://www.agentcici.com/` -> `200`, FEAT-027 Chinese suite website
+    - `https://autoservice.agentcici.com/` -> `200`, product login surface
     - `POST /auth/password/login` fixed-password smoke -> `200`
   - Full local data sync on 2026-05-07:
     - Remote pre-sync backup directory: `/opt/cici/backups/20260507-123416-full-local-sync/`.
@@ -137,6 +138,7 @@ status: active
     - Management APIs now include `/admin/users` and `/admin/agents`; `/admin/agents/run-logs` powers the organization-level Agent observability view under `/admin/ops`.
     - FEAT-021 Agent Open API requires `/openapi/` to proxy to the backend with buffering disabled, long read timeout, and forwarded host/IP/proto headers for REST and future SSE calls.
     - FEAT-023 WeCom customer service callback requires `/wecom` to proxy to the backend so `GET/POST /wecom/kf/callback` is reachable from Enterprise WeChat.
+    - FEAT-023 WeCom customer service account configuration API requires `/admin/wecom` to proxy to the backend; `/admin/wecom/kf-accounts` stores CorpID, Token, encrypted Secret, encrypted EncodingAESKey, `open_kfid`, `agent_id`, and `run_as_user_id`.
     - Verified remotely with `docker exec cici-frontend nginx -t`, `nginx -s reload`, `GET /agents`, `GET /skills`, `GET /integrations`, `GET /models/providers`, `GET /api/platform/skills`, and `GET /api/platform/tools`.
   - Local admin observability restart on 2026-05-07T23:32:43Z:
     - Symptom: local `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` returned JSON 404 while `http://127.0.0.1:5173/admin/ops` showed no run logs.
@@ -158,6 +160,26 @@ status: active
     - `CICI_IMAGE_TAG=V1.7` applies to all six compose services; infra images `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` required `V1.7` manifest aliases from their existing `latest` tags before compose could pull the full stack.
     - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `41|agent open api|t`, backend recent logs contained no `error|exception|failed|using dev fallback` matches.
     - Verified publicly: `http://cici.cloudcc.cn/` -> `301`, `https://cici.cloudcc.cn/` -> `200`, org-admin fixed-password smoke returned core counts, platform-admin smoke returned platform skill/tool counts, and `/openapi/v1/agents/smoke/health` returned backend JSON `401 agent_api_key_missing`.
+  - V1.7 AgentCiCi domain cutover on 2026-05-09:
+    - Backup directory: `/opt/cici/backups/20260509-210523-before-agentcici-v1.7-domain-account`.
+    - Backend image digest: `sha256:2336525817b5f8e43adc2f737510d5679a0d99607fc848c5a5e23ae4c8a6c2d4`.
+    - Frontend image digest: `sha256:879dbd9c589c6387143ac1a04a9bf041b500cf90cbb8fe288659442a59b5cd49`.
+    - Nginx SSL server names now declare only `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com`; old `cici.cloudcc.cn` is no longer declared as an application host.
+    - Production Flyway repair was required because the live database had historical V1/V8/V9 checksums from the pre-account-table schema. The repair updated checksums to the V1.7-resolved values, then V42-V46 migrated successfully.
+    - Production account backfill created `user_account`, `account_login_identifier`, and `organization_member` from legacy `app_user`, preserving `app_user.id` as `organization_member.id` so historical member/user references remain stable.
+    - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `46|organization purge worker lease|t`, account table counts `13/13/13`.
+    - Verified publicly: `https://agentcici.com/` and `https://www.agentcici.com/` serve the Chinese AutoService website; `https://autoservice.agentcici.com/` serves the product login surface; fixed-password org-admin login smoke returned `demo-org`, member id, account id, and `ORG_ADMIN` / `PLATFORM_ADMIN` roles.
+  - V1.8 suite website release on 2026-05-10:
+    - Release tag: `V1.8`.
+    - Release note: `综合官网`.
+    - Backup directory: `/opt/cici/backups/20260510-213605-before-v1.8-suite-site`.
+    - Backend image digest: `sha256:ad86b98c3f01fed15f5716da3c33a9344e7780488f8367c8f6dca704f5e12754`.
+    - Frontend image digest: `sha256:7a08acd0ff945f13a66a780db1a5776fc9feac35013493258ed049b729c75f6f`.
+    - Because `CICI_IMAGE_TAG` applies to all six compose services, `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` received `V1.8` manifest aliases from their existing `latest` tags before remote pull.
+    - Route change: `agentcici.com` and `www.agentcici.com` root now render FEAT-027 `SuiteLanding siteOverride="china"`; `autoservice.agentcici.com` remains the product login surface; `/autoservice/cn` remains available as the AutoService product site.
+    - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `47|account profile and password|true`.
+    - Verified publicly with Playwright: `https://agentcici.com/` and `https://www.agentcici.com/` render the FEAT-027 Chinese suite website with title `AI 治理平台 | 企业 AI 客户运营套件`; `https://autoservice.agentcici.com/` renders the AgentCiCi product login surface and its reservation link points to `https://agentcici.com/#demo`.
+    - Note: macOS `curl` with LibreSSL reset during external TLS handshake, but OpenSSL HTTP checks and Playwright browser navigation succeeded for the same public host.
 
 ## Pending Verification
 

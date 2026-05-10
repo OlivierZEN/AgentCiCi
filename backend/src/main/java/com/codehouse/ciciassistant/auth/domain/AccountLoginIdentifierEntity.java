@@ -14,6 +14,7 @@ import java.util.UUID;
 public class AccountLoginIdentifierEntity {
 
     public static final String TYPE_MOBILE = "MOBILE";
+    public static final String TYPE_EMAIL = "EMAIL";
     public static final String STATUS_ACTIVE = "ACTIVE";
 
     @Id
@@ -94,6 +95,10 @@ public class AccountLoginIdentifierEntity {
     }
 
     public void updateMobileValue(String normalizedValue, String displayValue) {
+        updateValue(normalizedValue, displayValue);
+    }
+
+    public void updateValue(String normalizedValue, String displayValue) {
         this.normalizedValue = normalizedValue;
         this.displayValue = displayValue;
         this.primary = true;

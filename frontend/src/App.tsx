@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AssistantApp from "./assistant/AssistantApp";
 import AutoServiceLanding from "./autoservice/AutoServiceLanding";
+import SuiteLanding from "./suite/SuiteLanding";
 import AdminGuard from "./admin/AdminGuard";
 import AdminLogin from "./admin/AdminLogin";
 import AdminShell from "./admin/AdminShell";
@@ -10,6 +11,7 @@ import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
 import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
+import AdminWecomKfAccountsPage from "./admin/pages/AdminWecomKfAccountsPage";
 import AdminAgentBuilderPage from "./admin/pages/AdminAgentBuilderPage";
 import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
@@ -25,10 +27,16 @@ import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 
 export default function App() {
+  const isSuiteWebsiteHost =
+    typeof window !== "undefined" && (window.location.hostname === "agentcici.com" || window.location.hostname === "www.agentcici.com");
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<AssistantApp />} />
+        <Route path="/" element={isSuiteWebsiteHost ? <SuiteLanding siteOverride="china" /> : <AssistantApp />} />
+        <Route path="/suite" element={<Navigate to="/suite/cn" replace />} />
+        <Route path="/suite/cn" element={<SuiteLanding siteOverride="china" />} />
+        <Route path="/suite/global" element={<SuiteLanding siteOverride="global" />} />
         <Route path="/autoservice" element={<Navigate to="/autoservice/global" replace />} />
         <Route path="/autoservice/global" element={<AutoServiceLanding />} />
         <Route path="/autoservice/cn" element={<AutoServiceLanding />} />
@@ -48,6 +56,7 @@ export default function App() {
             <Route path="agent-builder/:agentId/openapi-docs" element={<AdminAgentOpenApiDocsPage />} />
             <Route path="agent-builder/:agentId" element={<AdminAgentBuilderPage />} />
             <Route path="integrations" element={<AdminIntegrationsPage />} />
+            <Route path="channels/wechat-kf" element={<AdminWecomKfAccountsPage />} />
             <Route path="ops" element={<AdminOpsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
           </Route>

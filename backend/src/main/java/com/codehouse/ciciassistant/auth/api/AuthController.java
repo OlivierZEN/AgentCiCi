@@ -38,7 +38,7 @@ public class AuthController {
 
     @PostMapping("/password/login")
     public ApiResponse<Map<String, Object>> loginByPassword(@Valid @RequestBody PasswordLoginRequest request) {
-        return ApiResponse.ok(authService.loginByPassword(request.orgId(), request.mobile(), request.password()), "Login success");
+        return ApiResponse.ok(authService.loginByPassword(request.orgId(), request.identifierValue(), request.password()), "Login success");
     }
 
     @PostMapping("/register")
@@ -79,6 +79,31 @@ public class AuthController {
         return ApiResponse.ok(authService.updateCurrentUserAvatar(orgId, userId, request.avatarBase64()), "Avatar updated");
     }
 
+    @PutMapping("/me/profile")
+    public ApiResponse<Map<String, Object>> updateMyProfile(@Valid @RequestBody UpdateMyProfileRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.updateCurrentUserProfile(
+                orgId,
+                userId,
+                request.firstName(),
+                request.lastName(),
+                request.displayName(),
+                request.mobile(),
+                request.email()), "Profile updated");
+    }
+
+    @PutMapping("/me/password")
+    public ApiResponse<Map<String, Object>> changeMyPassword(@Valid @RequestBody ChangeMyPasswordRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.changeCurrentUserPassword(
+                orgId,
+                userId,
+                request.currentPassword(),
+                request.newPassword()), "Password updated");
+    }
+
     public record SendSmsCodeRequest(
             @NotBlank String orgId,
             @NotBlank
@@ -98,11 +123,13 @@ public class AuthController {
 
     public record PasswordLoginRequest(
             String orgId,
-            @NotBlank
-            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String identifier,
             String mobile,
             @NotBlank String password
     ) {
+        public String identifierValue() {
+            return identifier == null || identifier.isBlank() ? mobile : identifier;
+        }
     }
 
     public record RegisterRequest(
@@ -121,5 +148,22 @@ public class AuthController {
     }
 
     public record UpdateMyAvatarRequest(String avatarBase64) {
+    }
+
+    public record UpdateMyProfileRequest(
+            String firstName,
+            String lastName,
+            String displayName,
+            @NotBlank
+            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String mobile,
+            String email
+    ) {
+    }
+
+    public record ChangeMyPasswordRequest(
+            @NotBlank String currentPassword,
+            @NotBlank String newPassword
+    ) {
     }
 }

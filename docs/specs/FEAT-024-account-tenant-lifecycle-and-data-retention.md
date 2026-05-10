@@ -2,14 +2,14 @@
 kind: feature-spec
 feature_id: FEAT-024
 title: Account, tenant lifecycle, and data retention
-status: purge_worker_lease_implemented
+status: email_login_implemented
 owner_role: product-architecture-auth
 task_ids: TASK-069
 related_decisions:
   - DEC-024
   - DEC-025
 related_issues: none
-updated_at: 2026-05-09T10:35:00Z
+updated_at: 2026-05-10T01:27:23Z
 updated_by: ai
 ---
 
@@ -64,7 +64,7 @@ AgentCiCi 当前账号体系仍以组织内用户为主，`app_user` 同时承�
 ## 现状与约束
 
 - 当前 `app_user` 是组织内用户表，字段包含 `org_id`、`mobile`、`role_code`，角色与组织强绑定。
-- 当前登录阶段使用 FEAT-020 的固定密码方案，不适合公网生产。
+- 当前登录阶段已支持账号级密码凭证最小闭环；未设置个人密码的历史账号仍兼容 FEAT-020 固定密码方案，不适合作为长期公网生产方案。
 - README 与 `.claw/goals.md` 仍描述 `JWT with org_id and roles`、`org-scoped users in app_user.role_code`。
 - 现有大量业务表以 `org_id + user_id` 作为数据边界，包括会话、消息、用户记忆、邮箱、个人工作流、Open API run-as 用户等。
 - 所有租户敏感数据路径必须继续携带 `org_id`。账号域升级不能削弱组织隔离。
@@ -160,6 +160,8 @@ unique(identifier_type, normalized_value) where status = ACTIVE
 - 手机号需要国家码和纯数字规范化，避免 `138...` 与 `+86 138...` 被当成两个人。
 - 邮箱需要小写、去空格，并保留原始展示值。
 - 用户名应限制字符集、长度和保留字，不允许与手机号、邮箱格式混淆。
+- 本阶段邮箱登录标识来源于个人简档中的邮箱字段：用户在 `PUT /auth/me/profile` 保存有效邮箱后，系统同步维护 `account_login_identifier(EMAIL, normalized_email)`，后续登录页同一个账号输入框自动识别手机号或邮箱，不拆分两个输入框。
+- 清空或更换个人简档邮箱时，应同步删除或更新该账号的 ACTIVE EMAIL 标识；同一邮箱不能被另一个 ACTIVE 全局账号占用。
 
 ### 4. 认证凭证
 
@@ -183,7 +185,7 @@ account_auth_credential
 
 - 登录标识回答“我是谁”，认证凭证回答“我如何证明我是我”。
 - 同一个账号可同时拥有密码、短信验证码、邮箱验证码、Passkey 和 MFA。
-- FEAT-020 的全局固定密码只能作为内部阶段方案，生产化时必须迁移为 per-account password 或企业 SSO。
+- FEAT-020 的全局固定密码只能作为内部阶段兼容方案；新个人密码已进入 `account_auth_credential`，生产化时仍需补强密码策略、重置流程、MFA 或企业 SSO。
 
 ### 5. 外部身份绑定
 
@@ -612,7 +614,7 @@ POST /platform/tenants/{orgId}/purge-jobs/{jobId}/retry
 
 - FEAT-003: 继续确认账单主体是组织，本规格补充组织账号和生命周期。
 - FEAT-010: 平台运营控制面应承载租户状态、订阅、暂停、恢复和销毁任务。
-- FEAT-020: 固定密码登录是内部阶段方案，后续由 `account_auth_credential` 替代。
+- FEAT-020: 固定密码登录是内部阶段兼容方案，当前已由 `account_auth_credential` 承接用户修改后的个人密码。
 - FEAT-021: Agent Open API 的 run-as user 应迁移为 run-as member。
 - FEAT-022: 席位和 credits 归属于组织，席位应统计 `organization_member`。
 - FEAT-023: 企业微信客户是外部身份和会话主体，不创建 AgentCiCi 内部全局账号。
@@ -620,7 +622,8 @@ POST /platform/tenants/{orgId}/purge-jobs/{jobId}/retry
 ## 任务拆分
 
 - `TASK-069A`: 账号域 schema 设计与迁移计划。（已开始：开发期一次性下线 `app_user`）
-- `TASK-069B`: 全局账号、多登录标识、密码凭证后端最小闭环。（已开始：固定密码登录创建/复用 mobile account）
+- `TASK-069B`: 全局账号、多登录标识、密码凭证后端最小闭环。（已实现：固定密码登录创建/复用 mobile account，用户修改后使用 `account_auth_credential` 账号级密码）
+- `TASK-069B-1`: 邮箱登录标识闭环。（已实现：个人简档邮箱同步 EMAIL 标识，登录账号输入框自动识别手机号或邮箱）
 - `TASK-069C`: 组织成员关系与 org-scoped token 改造。（已开始：JWT 增加 `account_id/member_id`）
 - `TASK-069D`: 注册、登录、组织选择、创建组织、切换组织前端流程。
 - `TASK-069E`: 组织 Owner、邀请、成员停用、组织转让。（已实现首批管理端闭环）
@@ -652,7 +655,7 @@ POST /platform/tenants/{orgId}/purge-jobs/{jobId}/retry
 
 回滚方式：
 
-- 如本地开发库需要回滚，重建开发数据库并回退迁移脚本即可；当前不提供线上兼容回滚路径。
+- 当前公网环境仍属于 UAT 公测阶段，尚未正式生产上线；如 UAT 环境需要回滚或重置，允许全新部署并重建数据库、文件存储和向量库，不要求保留历史业务数据迁移路径。
 - 新 token 已携带 `account_id/member_id`；旧接口继续使用 `userId` 参数名时，其值必须解释为 `organization_member.id`。
 - purge job 首期支持 dry run、manifest 预览、guarded real purge、排队 worker、worker lease 抢占、死信标记、取消排队任务和失败重试；生产化仍需补独立 worker 进程、更完整的外部存储巡检和运营告警。
 
@@ -660,6 +663,8 @@ POST /platform/tenants/{orgId}/purge-jobs/{jobId}/retry
 
 - 当前状态：账号多组织最小闭环、成员治理首批闭环、平台侧组织生命周期 dry-run manifest、组织导出 job、legal hold 审批元数据和 guarded real purge 首版已实现。
 - 已完成项：产品架构、数据模型、登录流程、多组织流程、订阅生命周期、组织数据销毁策略；后端 `V1__init_auth_tables.sql` 已下线 `app_user` 并创建 `user_account`、`account_login_identifier`、`organization_member`；`UserEntity`/`UserRepository` 已映射到 `organization_member`；固定密码登录已创建/复用全局账号和组织成员；JWT 已新增 `account_id` 与 `member_id`；`/auth/me` 与登录响应已返回 `accountId/memberId`。
+- 本批次个人账号完成项：新增 `V47__account_profile_and_password.sql`，`user_account` 支持 `first_name`、`last_name`、`email`；新增 `account_auth_credential` 账号级密码凭证；`PUT /auth/me/profile` 支持当前用户维护姓、名、显示名称、手机号和邮箱，`PUT /auth/me/password` 支持将账号切换到个人密码登录；无个人密码的账号继续兼容固定密码。
+- 本批次邮箱登录完成项：`PUT /auth/me/profile` 保存邮箱时同步维护 `account_login_identifier` 的 ACTIVE EMAIL 标识；清空邮箱会删除该 EMAIL 标识；`POST /auth/password/login` 兼容旧 `mobile` 字段并新增 `identifier` 字段，服务端按单个账号输入值自动识别手机号或邮箱；邮箱按小写规范化匹配，登录页保持单个“电子邮件地址或手机号码”输入框，不拆分两个框。
 - 本批次新增完成项：`POST /auth/register` 支持新手机号创建首个组织和 `OWNER` 成员；`POST /auth/password/login` 支持无 `orgId` 登录，单组织直接进入、多组织返回组织选择；`GET /auth/organizations`、`POST /auth/switch-organization`、`POST /auth/organizations` 支持登录态组织列表、切换组织和创建组织；助手端登录页已移除组织 ID 输入，支持注册创建组织、多组织选择和登录后轻量组织菜单；`OWNER` 具备组织管理权限。
 - 本批次追加完成项：`POST /admin/users/invitations` 支持按手机号添加组织成员并复用/创建全局账号；`POST /admin/users/{id}/suspend`、`/restore` 支持成员停用与恢复；`POST /admin/users/{id}/transfer-owner` 支持 Owner 转让，且停用唯一 Owner、停用当前登录成员和普通角色编辑 Owner 会被拒绝；登录、`/auth/me` 和组织切换只接受 `ACTIVE` 成员；管理端用户页已接入新增成员、停用/恢复和转让 Owner，移动端用户页改为上下结构避免详情面板横向溢出。
 - 本批次生命周期完成项：新增 `organization_retention_policy` 与 `organization_purge_job`；新增平台 API `GET /platform/tenants`、`GET/PATCH /platform/tenants/{orgId}/retention`、`POST /platform/tenants/{orgId}/suspend`、`POST /platform/tenants/{orgId}/resume`、`POST /platform/tenants/{orgId}/purge-jobs` 和 `GET /platform/tenants/{orgId}/purge-jobs/{jobId}`；首版 dry-run manifest 只返回每个 org-scoped 数据域的表级计数与不支持域说明，不包含消息正文、记忆正文、工具参数或密钥；平台 `/platform/tenants` 页面已接入租户列表、保留策略、冻结/恢复、dry-run 生成、历史和 manifest 覆盖。
@@ -669,12 +674,13 @@ POST /platform/tenants/{orgId}/purge-jobs/{jobId}/retry
 - 本批次排队执行完成项：真实 purge 和失败重试不再在请求线程内同步删除，而是创建 `QUEUED` 真实 purge job；`PlatformTenantLifecycleService.processQueuedPurgeJobs()` 作为 Spring scheduled worker 消费队列，运行前再次校验 `PENDING_PURGE`、legal hold、确认文本和 source dry-run 新鲜度，执行时进入 `RUNNING`，成功后进入 `SUCCEEDED` 并把组织置为 `PURGED`，校验或执行失败进入 `FAILED/PARTIAL_FAILED`。新增 `POST /platform/tenants/{orgId}/purge-jobs/{jobId}/cancel`，仅允许取消 `QUEUED` 真实 purge job；平台页为排队行显示透明文本“取消”，并在存在 `QUEUED/RUNNING` 真实任务时禁用新的真实销毁/重试入口。
 - 本批次 orphan audit 完成项：dry-run manifest 新增 `orphanAudit.fileStorage` 与 `orphanAudit.vectorStore`；文件巡检扫描 KB 本地存储组织目录并识别未登记在 `kb_document.storage_path` 的孤儿文件，向量巡检通过 `VectorStoreClient.auditOrgVectors` 对比 org-scoped 点位和 DB 登记 `kb_chunk.vector_id`，只返回计数和最多 50 个样本，不返回业务正文。真实 purge 删除已登记 KB 文件后，会继续清理 `data/kb-files/{orgId}` 下的本地残留孤儿文件。
 - 本批次 worker 生产化完成项：新增 `V46__organization_purge_worker_lease.sql`，真实 purge job 记录 `worker_id`、`locked_at`、`lock_expires_at`、`attempt_count` 和 `dead_letter_at`；scheduled worker 先用条件更新抢占 `QUEUED` job 为 `RUNNING` 并提交 lease，再在独立事务执行清理和完成态写入，避免多实例重复执行同一个 job；过期 `RUNNING` lease 会转入 `DEAD_LETTER`，保留 worker/lease/result 摘要，避免自动重复清理。
-- 未完成项：完整生产级数据库迁移、多登录标识/密码凭证生产化、订阅状态联动、外部对象存储适配器巡检、生产 Qdrant/外部向量库巡检 smoke、Owner 侧关闭申请、运营告警和独立 worker 进程。
-  - 说明：这里的“数据库迁移”指完整生产级迁移、多登录标识和数据生命周期迁移；开发期初始化 schema 与账号多组织最小闭环已完成。
+- 未完成项：密码重置/MFA/SSO、订阅状态联动、外部对象存储适配器巡检、生产 Qdrant/外部向量库巡检 smoke、Owner 侧关闭申请、运营告警和独立 worker 进程。
+  - 说明：当前系统尚未正式生产上线，公网环境属于 UAT 公测阶段，可随时全新部署；因此不再把旧 `app_user` 到新账号模型的完整历史数据迁移作为 FEAT-024 必须交付项。开发期初始化 schema、账号多组织最小闭环和 UAT 环境重建部署口径已满足当前阶段。
 
 ## 交接说明
 
 - 已确认并落地：当前开发阶段不保留 `app_user` 兼容层，`organization_member.id` 接管组织内身份；短期对外字段名 `userId` 保持，但语义为 member id。
+- 已确认部署阶段口径：公网环境仍是 UAT 公测，不是正式生产；如账号模型或生命周期 schema 需要调整，优先采用全新部署/重建环境，不为历史测试数据设计完整生产级迁移。
 - 新增 `OWNER` 后，组织管理权限检查接受 `OWNER/ORG_ADMIN`；普通角色编辑仍只允许 `ORG_ADMIN/ORG_USER`，Owner 变更走专用转让接口。
 - 所有新业务域应停止把全局自然人 ID 当作组织内权限 ID 使用。
 - 组织销毁已具备首版 guarded real purge、排队 worker、worker lease 抢占、死信标记、取消排队任务、失败重试和只读 orphan audit；后续生产化优先补外部对象存储适配器巡检、生产 Qdrant/外部向量库 smoke、订阅状态自动驱动、Owner 侧关闭申请流程、运营告警和独立 worker 进程。

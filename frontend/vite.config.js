@@ -22,6 +22,7 @@ export default defineConfig(function (_a) {
                 "/admin/users": { target: backendTarget, changeOrigin: true },
                 "/admin/agents": { target: backendTarget, changeOrigin: true },
                 "/admin/organization": { target: backendTarget, changeOrigin: true },
+                "/admin/wecom": { target: backendTarget, changeOrigin: true },
                 "/api/autoservice": { target: backendTarget, changeOrigin: true },
                 "/agents": { target: backendTarget, changeOrigin: true },
                 "/skills": { target: backendTarget, changeOrigin: true },

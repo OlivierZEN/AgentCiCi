@@ -151,7 +151,7 @@ public class ChatOrchestratorService {
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
         boolean useKnowledgeRetrieval = shouldUseKnowledgeRetrieval(
-                question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds);
+                question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
                 ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question)
@@ -164,7 +164,9 @@ public class ChatOrchestratorService {
                 ragDetailMetadata(ragResult)));
         List<String> ragContext = ragResult.context();
         Instant toolSchemaStartedAt = Instant.now();
-        List<Map<String, Object>> tools = toolOrchestratorService.getToolDefinitions(
+        List<Map<String, Object>> tools = isWecomKfSession(sessionId)
+                ? List.of()
+                : toolOrchestratorService.getToolDefinitions(
                 orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
         stageTraces.add(stageTrace("TOOL_SCHEMA", "工具定义加载", "SUCCESS", toolSchemaStartedAt, Instant.now(),
                 "已加载本轮可用工具定义 " + tools.size() + " 个。",
@@ -294,7 +296,7 @@ public class ChatOrchestratorService {
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
                 boolean useKnowledgeRetrieval = shouldUseKnowledgeRetrieval(
-                        question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds);
+                        question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
                 safeSendPhase(emitter, "model", modelName);
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "retrieving", modelName, Map.of(
@@ -323,7 +325,9 @@ public class ChatOrchestratorService {
                             ragResult.fallbackUsed());
                 }
                 Instant toolSchemaStartedAt = Instant.now();
-                List<Map<String, Object>> tools = toolOrchestratorService.getToolDefinitions(
+                List<Map<String, Object>> tools = isWecomKfSession(sessionId)
+                        ? List.of()
+                        : toolOrchestratorService.getToolDefinitions(
                         orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
                 stageTraces.add(stageTrace("TOOL_SCHEMA", "工具定义加载", "SUCCESS", toolSchemaStartedAt, Instant.now(),
                         "已加载本轮可用工具定义 " + tools.size() + " 个。",
@@ -1918,9 +1922,14 @@ public class ChatOrchestratorService {
 
     static String buildToolUseBoundaryPromptBlock(String sessionId) {
         boolean externalFeishu = sessionId != null && sessionId.startsWith("feishu:");
+        boolean wecomKf = isWecomKfSession(sessionId);
         String channelRule = externalFeishu
                 ? "\n- 当前会话来自飞书渠道，默认按日常对话处理；除非用户明确提出业务数据查询或操作，不要触发工具。"
                 : "";
+        if (wecomKf) {
+            channelRule = "\n- 当前会话来自企业微信「微信客服」，客户是外部客户；当前阶段只做知识库售后问答，不查询或操作 CRM、订单、客户档案、工单、物流等业务系统。"
+                    + "\n- 如果客户问题需要实时订单、物流、保修状态或客户档案，只能基于知识库说明处理原则，并建议转人工核实，不得声称已查询实时业务数据。";
+        }
         return """
                 [工具调用边界 - 运行时优先策略]
                 - 对寒暄、闲聊、祝福、角色扮演、才艺表演、轻量创作、常识性解释等不需要企业实时数据或外部动作的问题，必须直接用文本回答，不要调用任何工具。
@@ -1968,6 +1977,13 @@ public class ChatOrchestratorService {
     static boolean shouldUseKnowledgeRetrieval(String question,
                                                List<String> effectiveKnowledgeBaseIds,
                                                List<String> requestedKnowledgeBaseIds) {
+        return shouldUseKnowledgeRetrieval(question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, null);
+    }
+
+    static boolean shouldUseKnowledgeRetrieval(String question,
+                                               List<String> effectiveKnowledgeBaseIds,
+                                               List<String> requestedKnowledgeBaseIds,
+                                               String sessionId) {
         if (effectiveKnowledgeBaseIds == null || effectiveKnowledgeBaseIds.isEmpty()) {
             return false;
         }
@@ -1992,9 +2008,16 @@ public class ChatOrchestratorService {
         if (containsAny(text, List.of(
                 "查询", "查一下", "看下", "看一下", "拉取", "获取", "列出", "列表", "明细", "台账",
                 "客户", "线索", "商机", "报价", "订单", "审批", "待办", "日程", "邮件", "发送", "创建", "更新"))) {
+            if (isWecomKfSession(sessionId)) {
+                return true;
+            }
             return false;
         }
-        return false;
+        return isWecomKfSession(sessionId);
+    }
+
+    private static boolean isWecomKfSession(String sessionId) {
+        return sessionId != null && sessionId.startsWith("wecom-kf:");
     }
 
     private static List<String> normalizeKnowledgeBaseIds(List<String> ids) {

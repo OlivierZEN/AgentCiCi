@@ -23,6 +23,15 @@ public class UserAccountEntity {
     @Column(name = "display_name", length = 128)
     private String displayName;
 
+    @Column(name = "first_name", length = 64)
+    private String firstName;
+
+    @Column(name = "last_name", length = 64)
+    private String lastName;
+
+    @Column(name = "email", length = 128)
+    private String email;
+
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
@@ -63,6 +72,33 @@ public class UserAccountEntity {
 
     public void setDisplayName(String displayName) {
         this.displayName = displayName;
+        touch();
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+        touch();
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
+        touch();
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
         touch();
     }
 

@@ -21,10 +21,18 @@ const emptyDemoForm: DemoFormState = {
   scenario: "",
 };
 
-export default function AutoServiceLanding() {
+type AutoServiceLandingProps = {
+  siteOverride?: AutoServiceSite;
+};
+
+export default function AutoServiceLanding({ siteOverride }: AutoServiceLandingProps) {
   const location = useLocation();
-  const site: AutoServiceSite = location.pathname.endsWith("/cn") || location.pathname.endsWith("/zh") ? "china" : "global";
+  const site: AutoServiceSite = siteOverride ?? (location.pathname.endsWith("/cn") || location.pathname.endsWith("/zh") ? "china" : "global");
   const copy = AUTOSERVICE_COPY[site];
+  const isAgentCiciMarketingHost =
+    typeof window !== "undefined" && (window.location.hostname === "agentcici.com" || window.location.hostname === "www.agentcici.com");
+  const logoHref = site === "china" && isAgentCiciMarketingHost ? "/" : copy.siteHref;
+  const loginHref = site === "china" ? "https://autoservice.agentcici.com" : "/";
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeFlow, setActiveFlow] = useState(0);
   const [activeIntegration, setActiveIntegration] = useState(0);
@@ -52,6 +60,16 @@ export default function AutoServiceLanding() {
     setDemoSubmitted(false);
     setDemoNotice("");
   }, [site]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const shouldOpenDemo = params.get("demo") === "1" || params.get("demo") === "true";
+    if (!shouldOpenDemo) return;
+    setMenuOpen(false);
+    setDemoSubmitted(false);
+    setDemoNotice("");
+    setDemoOpen(true);
+  }, [location.search]);
 
   useEffect(() => {
     if (!demoOpen) return undefined;
@@ -92,7 +110,7 @@ export default function AutoServiceLanding() {
           ...demoForm,
           site,
           locale: copy.htmlLang,
-          sourcePath: `${location.pathname}${location.hash}`,
+          sourcePath: `${location.pathname}${location.search}${location.hash}`,
         }),
       });
       const json = await response.json().catch(() => null);
@@ -111,7 +129,7 @@ export default function AutoServiceLanding() {
   return (
     <main className="autoservice-site" lang={copy.htmlLang} data-site={site}>
       <header className="as-header" aria-label="AutoService">
-        <a className="as-logo" href={copy.siteHref} aria-label="AutoService home">
+        <a className="as-logo" href={logoHref} aria-label="AutoService home">
           <img className="as-logo__mark-img" src="/autoservice-logo-mark.png?v=20260509-1532" alt="" aria-hidden="true" />
           <img className="as-logo__word-img" src="/autoservice-logo-word.png?v=20260509-1532" alt="" aria-hidden="true" />
         </a>
@@ -123,7 +141,7 @@ export default function AutoServiceLanding() {
           ))}
         </nav>
         <div className="as-header__actions">
-          <a className="as-login-link" href="/">
+          <a className="as-login-link" href={loginHref}>
             {copy.hero.loginCta}
           </a>
           <button className="as-button as-button--primary as-header__cta" type="button" onClick={openDemoForm}>
@@ -148,7 +166,7 @@ export default function AutoServiceLanding() {
             {item.label}
           </a>
         ))}
-        <a className="as-login-link" href="/" onClick={() => setMenuOpen(false)}>
+        <a className="as-login-link" href={loginHref} onClick={() => setMenuOpen(false)}>
           {copy.hero.loginCta}
         </a>
         <button className="as-button as-button--primary" type="button" onClick={openDemoForm}>

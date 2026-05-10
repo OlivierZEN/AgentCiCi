@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-09T10:40:09Z
+updated_at: 2026-05-10T13:40:12Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-09T10:40:09Z
+last_run_at: 2026-05-10T13:40:12Z
 last_run_status: success
 ---
 
@@ -13,11 +13,189 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`TASK-072 AutoService website registration/demo request platform menu migration`
-- 命令：`backend AutoServiceDemoRequestIntegrationTest`; `frontend npm run build`; target migration whitespace checks; Playwright CLI `/platform/website-leads` desktop/mobile visual checks
-- 环境：`local workspace, Java 21, H2 test database, frontend build, Vite dev server, Playwright CLI with mocked platform list data`
+- 范围：`TASK-078 AI customer operations suite website design` V1.8 综合官网发布
+- 命令：frontend build; backend targeted tests; backend package; target `git diff --check`; ACR build/push; ECS deploy; public Playwright verification
+- 环境：`local workspace, Java 21, frontend build, ACR, Aliyun ECS UAT, Playwright CLI`
 
 ## Latest Verified Results
+
+- V1.8 综合官网发布 (2026-05-10T13:40:12Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest,ChatOrchestratorServiceModelIdentityTest,WecomKfConfigServiceTest test` -> **success**.
+    - `git`: `git diff --check` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**.
+    - `ACR`: backend/frontend `docker buildx build --platform linux/amd64 ... --push` -> **success**.
+    - `ACR`: `docker buildx imagetools inspect` -> backend digest `sha256:ad86b98c3f01fed15f5716da3c33a9344e7780488f8367c8f6dca704f5e12754`, frontend digest `sha256:7a08acd0ff945f13a66a780db1a5776fc9feac35013493258ed049b729c75f6f`.
+    - `ACR`: `cici-database`, `cici-redis`, `cici-rabbitmq`, `cici-qdrant` `V1.8` manifest aliases created from `latest` -> **success**.
+    - `remote backup`: `/opt/cici/backups/20260510-213605-before-v1.8-suite-site` created with `acr.env.before-v1.8` and PostgreSQL dump.
+    - `remote deploy`: copied compose/Nginx configs, set `CICI_IMAGE_TAG=V1.8`, pulled images, and restarted compose -> **success**.
+    - `remote health`: six containers healthy; `docker exec cici-frontend nginx -t` -> **success**; backend `/actuator/health` -> `{"status":"UP"}`; Flyway latest `47|account profile and password|true`.
+    - `browser`: Playwright `https://agentcici.com/` -> **success**, page title `AI 治理平台 | 企业 AI 客户运营套件`, rendered SalesMost AI Suite / FEAT-027 中文站.
+    - `browser`: Playwright `https://www.agentcici.com/` -> **success**, same FEAT-027 中文站.
+    - `browser`: Playwright `https://autoservice.agentcici.com/` -> **success**, AgentCiCi product login surface still loads and “立即预约” points to `https://agentcici.com/#demo`.
+  - Notes:
+    - macOS `curl` with LibreSSL still reset on external TLS handshake, matching the previously observed quirk. OpenSSL HTTP checks and Playwright browser navigation succeeded against the same public host.
+    - `agentcici.com` / `www.agentcici.com` are now FEAT-027 Chinese suite site roots; `/autoservice/cn` remains available as the AutoService product site route.
+
+- TASK-078 suite copy cleanup (2026-05-10T13:24:52Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/suite/SuiteLanding.tsx docs/specs/FEAT-027-ai-customer-ops-suite-website-design.md .claw/current-status.md .claw/task-board.md` -> **success**.
+    - `content`: `rg` check in `frontend/src/suite/SuiteLanding.tsx` for region/language-emphasis terms -> **success**, no matches.
+    - `browser`: Playwright snapshot for `http://127.0.0.1:5173/suite/cn` -> **success**; hero visual title is `全链路客户运营闭环`.
+  - Notes:
+    - The suite page keeps concrete business capabilities such as 企业微信、微信客服、飞书、钉钉、CloudCC CRM、私有化 and governance, but the visible page no longer frames the edition by language or region.
+    - Dev server console only showed the existing `/favicon.ico` 404 during the Playwright snapshot.
+
+- TASK-078 suite header browser comments (2026-05-10T13:16:42Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/suite/SuiteLanding.tsx` -> **success**.
+    - `content`: `rg` check in `frontend/src/suite/SuiteLanding.tsx` -> **success**, nav label is `AI 治理平台`, header brand is `SalesMost AI`.
+  - Notes:
+    - Browser comment 1: header nav `平台底座` changed to `AI 治理平台`.
+    - Browser comment 2: header brand strong text changed from `AI 治理平台` to `SalesMost AI`.
+
+- TASK-066 WeCom customer service admin config UI (2026-05-10T12:57:34Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/admin/AdminShell.tsx frontend/src/admin/pages/AdminWecomKfAccountsPage.tsx frontend/src/styles.css` -> **success**.
+    - `browser`: Playwright CLI desktop and 390px mobile full-page screenshots for `http://127.0.0.1:5173/admin/channels/wechat-kf` with mocked `/admin/wecom/kf-accounts` data -> **success**.
+    - `browser`: mobile DOM/computed style check -> **success**; `scrollWidth=clientWidth=390`, `.wecom-kf-row` and `.wecom-kf-text-action` have transparent background, `box-shadow=none`, `border-radius=0px`.
+  - Notes:
+    - UI route is `/admin/channels/wechat-kf`; backend API stays `/admin/wecom/kf-accounts` to avoid Vite/Nginx proxy route collision.
+    - Existing-account edit allows Token/Secret/EncodingAESKey to stay blank, matching backend "keep existing secret" behavior.
+    - Screenshot artifacts: `output/playwright/wecom-kf-admin-desktop.png`, `output/playwright/wecom-kf-admin-mobile.png`.
+
+- TASK-078 suite portal getSwan-inspired visual redesign (2026-05-10T12:54:14Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/suite/SuiteLanding.tsx frontend/src/suite/suite-site.css` -> **success**.
+    - `browser`: system Chrome screenshots for `/suite/cn` desktop and 390px mobile plus `/suite/global` 390px mobile -> **success**.
+  - Notes:
+    - Suite visual direction now avoids grid backgrounds and gold/gilded tokens.
+    - Hero uses a prompt-to-workflow AI employee showcase instead of the previous lifecycle map panel.
+    - Screenshot artifacts: `output/playwright/suite-cn-redesign-desktop-v2.png`, `output/playwright/suite-cn-redesign-mobile-v8.png`, `output/playwright/suite-global-redesign-mobile-v4.png`.
+
+- TASK-078 AI customer operations suite portal prototype (2026-05-10T12:19:24Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/suite/SuiteLanding.tsx frontend/src/suite/suite-site.css` -> **success**.
+    - `browser`: Playwright wrapper DOM check `/suite/cn` -> **success**.
+    - `browser`: Playwright wrapper DOM check `/suite/global` -> **success**.
+    - `browser`: system Chrome full-page screenshots for `/suite/cn` and `/suite/global` desktop/390px mobile -> **success**.
+  - Notes:
+    - `/suite` redirects to `/suite/cn`; `/suite/cn` and `/suite/global` are independent site editions, not a simple language toggle.
+    - `/suite/cn` contains 企业微信、私有化、CloudCC CRM and governance content；`/suite/global` contains WhatsApp、Salesforce and Global go-to-market content.
+    - DOM checks confirm `.suite-site` exists and AutoService demo/modal selectors are absent.
+    - Screenshot artifacts: `output/playwright/suite-cn-desktop.png`, `output/playwright/suite-cn-mobile.png`, `output/playwright/suite-global-desktop.png`, `output/playwright/suite-global-mobile.png`.
+
+- TASK-069 email login identifier (2026-05-10T01:27:23Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: target `git diff --check` -> **success**.
+    - `browser`: Playwright CLI desktop 1280x800 and mobile 390x844 checks on `http://127.0.0.1:5173/` -> **success**.
+  - Notes:
+    - 个人简档邮箱保存后同步为 ACTIVE EMAIL 登录标识，重复邮箱被拒绝。
+    - `POST /auth/password/login` 支持 `identifier` 自动识别手机号或邮箱，并兼容旧 `mobile` 字段。
+    - 登录页保持单个账号输入框，labels 为 `电子邮件地址或手机号码 / 密码`，移动端 `scrollWidth=clientWidth=390`。
+    - 截图产物：`output/playwright/email-login-single-field-desktop.png`、`output/playwright/email-login-single-field-mobile.png`。
+
+- TASK-077 rail settings label (2026-05-09T16:30:31Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx` -> **success**.
+    - `browser`: in-app Browser label check on `http://127.0.0.1:5173/` -> **success**.
+  - Notes:
+    - 齿轮入口 `data-menu-label` 与 `aria-label` 已改为“设置”。
+    - 浏览器检查 `设置` button count=1，`组织设置` button count=0。
+
+- TASK-077 profile email grid (2026-05-09T16:28:27Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/MyEmailAccountsModal.tsx` -> **success**.
+    - `browser`: in-app Browser screenshot check on `http://127.0.0.1:5173/` -> **success**.
+  - Notes:
+    - 邮箱输入框不再使用 `cici-profile-form__wide`。
+    - 桌面端邮箱字段跟随两列 profile form grid，显示为半宽列。
+
+- TASK-077 profile title removal (2026-05-09T16:26:12Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/MyEmailAccountsModal.tsx` -> **success**.
+    - `browser`: in-app Browser check on `http://127.0.0.1:5173/` -> **success**.
+  - Notes:
+    - 个人简档页内部不再渲染“我的头像”小标题。
+    - 表单区不再渲染第二个“个人信息”小标题。
+    - 顶部“个人信息 / 修改密码”tabs 仍存在，`个人信息` tab count=1，`修改密码` tab count=1。
+
+- TASK-077 profile tab polish (2026-05-09T16:20:42Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/MyEmailAccountsModal.tsx frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: in-app Browser desktop and 390px mobile interaction/screenshot checks on `http://127.0.0.1:5173/` -> **success**.
+  - Notes:
+    - 个人简档页现在显示“个人信息 / 修改密码”两个 text tabs。
+    - “修改密码”表单只在密码 tab 中出现，不再堆叠在个人信息下方。
+    - 个人简档页头下方、头像区下方、个人信息区下方的旧横线已移除，保留 active tab 的短金色下划线。
+
+- TASK-077 Assistant profile and organization settings split (2026-05-09T16:00:45Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> **success**.
+    - `browser`: in-app Browser desktop and 390px mobile interaction checks on `http://127.0.0.1:5173/` -> **success**.
+  - Notes:
+    - 左上头像入口现在是 `个人简档` button，点击后右侧显示“个人简档”，页面包含“显示名称”和“修改密码”。
+    - 齿轮入口现在是“组织设置”，点击后右侧标题显示当前组织名 `Demo Organization`。
+    - 设置页 tabs 只保留“我的工作流 / 绑定沟通渠道 / 我的邮箱 / 专属记忆”，不再包含“个人资料”。
+    - `AuthFlowIntegrationTest` 覆盖当前用户资料保存、手机号更新、账号级密码修改、旧固定密码失效和新密码登录成功。
+
+- TASK-076 Assistant settings rail entry (2026-05-09T15:38:49Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/MyEmailAccountsModal.tsx frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: in-app Browser interaction check on `http://127.0.0.1:5173/` -> **success**.
+    - `browser`: in-app Browser desktop 1280x800 and mobile 390x844 screenshots -> **success**.
+  - Notes:
+    - 从工作台点击左上头像后仍停留 `.cici-workbench`，没有 `.cici-modal-backdrop`，也没有 `[role="dialog"]`。
+    - 点击下方设置图标后右侧主区域切换为 `.cici-settings-page`，设置图标进入 active 状态，个人设置 tabs 共 5 个。
+    - 页面模式下个人设置不渲染 modal backdrop、`role="dialog"` 或右上关闭按钮。
+
+- TASK-075 Front login reservation deep link (2026-05-09T15:24:12Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/autoservice/AutoServiceLanding.tsx` -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/autoservice/cn?demo=1` DOM check -> **success**.
+    - `browser`: Playwright CLI `http://127.0.0.1:5173/` login footer href check -> **success**.
+  - Notes:
+    - `?demo=1` 会直接打开 `.as-demo-modal`，标题为“预约 AutoService 演示”，并锁定 `html/body` 背景滚动。
+    - 前台登录页 footer 文案为“还没有账户？立即预约”，链接 href 为 `https://agentcici.com/?demo=1`。
+    - 本轮只改跳转和深链触发，不改登录页或官网视觉样式。
+
+- V1.7 AgentCiCi production domain cutover and account-table backfill (2026-05-09T13:15:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**.
+    - `compose`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml config` -> **success**.
+    - `nginx`: local `nginx:alpine -t` with `deploy/nginx.cici.ssl.conf` and `agentcici.com` certs -> **success**.
+    - `ACR`: pushed `cici-backend:V1.7/latest` -> digest `sha256:2336525817b5f8e43adc2f737510d5679a0d99607fc848c5a5e23ae4c8a6c2d4`.
+    - `ACR`: pushed `cici-frontend:V1.7/latest` -> digest `sha256:879dbd9c589c6387143ac1a04a9bf041b500cf90cbb8fe288659442a59b5cd49`.
+    - `remote backup`: created `/opt/cici/backups/20260509-210523-before-agentcici-v1.7-domain-account` with `acr.env`, compose/Nginx config copies, cert archive, PostgreSQL dump, KB files tar, and Qdrant tar.
+    - `remote deploy`: copied `agentcici.com.pem/key`, updated Nginx SSL config, pulled backend/frontend, and restarted compose -> **success** after Flyway/account repair.
+    - `remote health`: `docker compose ps` -> all six containers healthy; backend `/actuator/health` -> `{"status":"UP"}`; frontend `nginx -t` -> **success**.
+    - `remote flyway`: latest migration `46|organization purge worker lease|t`; V42-V46 present and successful.
+    - `remote account smoke`: legacy `app_user` backfilled into `user_account=13`, `account_login_identifier=13`, `organization_member=13`; fixed-password login for `13800138111` returned `demo-org`, member id, account id, and `ORG_ADMIN` / `PLATFORM_ADMIN` roles.
+    - `public smoke`: OpenSSL HTTP checks returned `200 OK` for `https://agentcici.com/`, `https://www.agentcici.com/`, and `https://autoservice.agentcici.com/`.
+    - `browser`: in-app browser verified `https://agentcici.com/` renders Chinese AutoService website, contains “售后服务 AI Agent” and “预约演示”, and has two login links pointing to `https://autoservice.agentcici.com`; `https://autoservice.agentcici.com/` renders the product password login surface.
+  - Notes:
+    - Production initially failed Flyway validation because V1/V8/V9 historical checksums predated the account-table rewrite. The release used an explicit Flyway repair equivalent on the already-backed-up database, then V42-V46 migrated successfully.
+    - Because V1 is historical and does not replay on existing databases, production required an idempotent account-table backfill from legacy `app_user`. The backfill preserves `app_user.id` as `organization_member.id` to avoid breaking historical member/user references.
+    - `deploy/nginx.cici.ssl.conf` now declares only `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com` as SSL application hosts. The HTTP default server returns `204` so the container health check remains healthy.
+    - macOS `curl` with LibreSSL reset during external TLS handshake, but OpenSSL client checks and in-app browser HTTPS navigation succeeded for the new domains.
 
 - TASK-072 AutoService website registration/demo request platform menu migration (2026-05-09T10:40:09Z):
   - Commands:
@@ -279,6 +457,17 @@ last_run_status: success
   - Notes:
     - 视觉测试使用真实本地登录 token，但拦截 `GET /me/agents/cici-system/memories` 返回稳定两条记忆样例，避免污染本地数据库。
     - 桌面与移动截图经过视觉复查；移动端一级设置 tabs 已调整为单行紧凑横排，未再出现“专属记忆”换行或截断。
+
+- TASK-066 WeCom customer service channel knowledge-only runtime (2026-05-10T11:32:31Z):
+  - Commands:
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest,WecomKfConfigServiceTest,WecomKfCryptoServiceTest,WecomKfConversationEntityTest test` -> **success**.
+    - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/wecom backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentDefinitionService.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/wecom backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java frontend/vite.config.ts frontend/vite.config.js deploy/nginx.cici.conf deploy/nginx.cici.ssl.conf` -> **success**.
+  - Notes:
+    - 已验证企业微信 `wecom-kf:*` 会话提示词为知识库售后问答且禁 CRM/订单/客户档案/工单/物流工具；默认知识库存在时，客户售后问题包含“订单”等业务词也触发 RAG。
+    - 已验证 WeCom 配置服务会加密保存 Secret，默认绑定 `after-sales-agent` 与当前 run-as 用户，响应 payload 不回显 Secret / EncodingAESKey。
+    - 本轮仍未执行真实企业微信账号回调 smoke；需真实账号完成 POST callback -> `sync_msg` -> Agent RAG -> `send_msg`。
 
 - TASK-066 WeCom customer service channel (2026-05-08T09:40:23Z):
   - Commands:

@@ -7,7 +7,7 @@ owner_role: product-agent-runtime
 task_ids: TASK-063, TASK-066
 related_decisions: FEAT-015, FEAT-018, FEAT-019, FEAT-021, FEAT-022
 related_issues: none
-updated_at: 2026-05-08T09:40:23Z
+updated_at: 2026-05-10T12:57:34Z
 updated_by: ai
 ---
 
@@ -579,10 +579,12 @@ wecom-kf:{corpId12}:{openKfId12}:{hash20(externalUserId)}
   - 已定义首版范围、售后 Agent 模板、Skill/API 分层、外部上下文契约、人工接管规则、观测指标、验收标准和风险边界。
   - 已按最新方向补充企业微信「微信客服」首版接入方案，明确回调、`sync_msg`、`send_msg`、`external_userid` 映射、会话窗口和消息日志模型。
   - 已完成 `TASK-066` 企业微信「微信客服」渠道基础实现：`V42__wecom_kf_channel.sql`、`/wecom/kf/callback` GET/POST、SHA1 签名校验、AES-CBC 解密、`sync_msg` / `send_msg` 客户端、`wecom-kf:*` 会话映射、消息日志、48 小时 / 5 条窗口检查和 `wechat_kf` trace 标记。
+  - 已新增内置 `after-sales-agent` 售后服务 Agent 种子，用于企业微信微信客服外部客户会话；当前阶段只基于绑定知识库和客户文字描述沟通，不查询/操作 CRM、订单、客户档案、工单或物流系统。
+  - 已实现企业微信 `wecom-kf:*` 会话知识库优先运行策略：有默认知识库时默认触发 RAG，且不加载 CRM/CloudCC/邮件/外部搜索等业务工具定义，避免微信客服客户消息触发业务系统操作。
+  - 已新增组织管理 API `/admin/wecom/kf-accounts`，支持写入企业微信微信客服 CorpID、Secret、Token、EncodingAESKey、`open_kfid`、`agent_id`、`run_as_user_id`，其中 Secret 与 EncodingAESKey 加密落库，响应不回显密钥。
+  - 已新增企业微信「微信客服」可视化管理端配置页面 `/admin/channels/wechat-kf`：组织管理员可查看账号列表、创建/更新客服配置、启停账号、选择售后 Agent 与 run-as 服务用户，并复制企业微信后台需要填写的回调 URL。页面路由避开 `/admin/wecom` API 代理前缀。
 - 未完成项：
-  - 尚未创建售后 Agent 模板或种子数据。
   - 尚未封装售后只读 Skill API。
-  - 尚未新增企业微信「微信客服」管理端配置入口或配置初始化脚本。
   - 尚未做真实 CloudCC/CRM 售后对象映射。
   - 尚未执行企业微信真实回调 smoke 或 Open API 售后调用 smoke。
 
@@ -593,6 +595,6 @@ wecom-kf:{corpId12}:{openKfId12}:{hash20(externalUserId)}
   - 售后数据主系统是 CloudCC、独立工单系统，还是其他 CRM/ERP/OMS。
   - 客户、订单、物流、工单、产品、设备、保修这些对象的真实 API 和字段。
   - 企业微信接入使用「微信客服」的哪个客服账号 `open_kfid`，是否需要多个客服账号绑定不同 Agent。
-  - 企业微信渠道的 run-as 服务用户是谁，是否已有 CloudCC/CRM 查询权限。
+  - 企业微信渠道的 run-as 服务用户是谁，以及 `after-sales-agent` 应绑定哪些售后知识库。
   - 客户门户、官网组件、CRM 页面、飞书是否仍作为首版并行入口，还是排到企业微信之后。
   - 是否允许 Phase 2 新增 AgentCiCi 自有 `support_ticket` 表，或必须完全使用外部工单系统。

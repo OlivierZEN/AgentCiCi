@@ -122,7 +122,26 @@ public class AgentDefinitionService {
                                     "如遇跨部门审批或高风险异常，调用 MCP 工作流创建协同提醒。",
                                     "输出需包含当前状态、风险判断、催办对象和建议动作。")),
                     List.of("rag-search", ToolNameNormalizer.GET_PENDING_APPROVALS, ToolNameNormalizer.MCP_WORKFLOW_WILDCARD),
-                    List.of("dingtalk", "feishu")));
+                    List.of("dingtalk", "feishu")),
+            new BuiltinAgentSeed(
+                    "after-sales-agent",
+                    "售后服务 Agent",
+                    "面向企业微信微信客服客户会话，基于已授权知识库回答售后咨询并在不确定时引导人工接管。",
+                    "您好，我是售后服务 Agent。请描述您遇到的问题，我会先根据服务知识库给出处理建议。",
+                    "gpt-4.1",
+                    "你是面向外部客户的售后服务 Agent。只能基于已授权知识库和客户本轮文字描述沟通，不查询 CRM、订单、客户档案或其他业务系统；如果知识库没有依据，必须说明需要人工客服进一步核实。",
+                    true,
+                    "copilot",
+                    String.join(
+                            "\n",
+                            List.of(
+                                    "你是售后服务 Agent，主要服务企业微信「微信客服」里的外部客户。",
+                                    "优先检索售后知识库、FAQ、产品手册、质保政策、物流说明、退换修流程和服务话术。",
+                                    "当前阶段不接 CRM、OMS、ERP、工单或订单系统，不得声称已经查询客户、订单、物流或工单实时数据。",
+                                    "客户提供订单号、手机号、序列号时，只能作为人工核实时的上下文记录；若问题需要实时业务数据，明确建议转人工处理。",
+                                    "回答要短、清楚、适合微信对话，并给出下一步需要客户补充的信息。")),
+                    List.of("rag-search"),
+                    List.of("wechat_kf", "wecom", "web")));
 
     private static final Map<String, Object> DEFAULT_PUBLISH_CONFIGS = Map.of(
             "feishu",

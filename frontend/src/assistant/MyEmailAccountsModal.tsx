@@ -9,14 +9,38 @@ import UserMemoryPanel from "./UserMemoryPanel";
 type Props = {
   open: boolean;
   token: string;
-  onClose: () => void;
+  onClose?: () => void;
+  variant?: "modal" | "page";
+  surface?: "settings" | "profile";
+  title?: string;
 };
 
 type MeProfile = {
   userId?: string;
   nickname?: string;
   mobile?: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  email?: string;
   avatarBase64?: string;
+};
+
+type SettingsTab = "workflow" | "channels" | "email" | "memory";
+type ProfileTab = "info" | "password";
+
+type ProfileForm = {
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  mobile: string;
+  email: string;
+};
+
+type PasswordForm = {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
 };
 
 type ProviderPreset = {
@@ -113,9 +137,23 @@ async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<Api
   }
 }
 
-export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
-  const [tab, setTab] = useState<"profile" | "workflow" | "channels" | "email" | "memory">("profile");
+export default function MyEmailAccountsModal({ open, token, onClose, variant = "modal", surface = "settings", title }: Props) {
+  const isProfileSurface = surface === "profile";
+  const [tab, setTab] = useState<SettingsTab>("workflow");
+  const [profileTab, setProfileTab] = useState<ProfileTab>("info");
   const [meProfile, setMeProfile] = useState<MeProfile>({});
+  const [profileForm, setProfileForm] = useState<ProfileForm>({
+    firstName: "",
+    lastName: "",
+    displayName: "",
+    mobile: "",
+    email: "",
+  });
+  const [passwordForm, setPasswordForm] = useState<PasswordForm>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [avatarPreview, setAvatarPreview] = useState("");
   const [providers, setProviders] = useState<ProviderPreset[]>([]);
   const [accounts, setAccounts] = useState<AccountPayload[]>([]);
@@ -134,15 +172,25 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
     if (!token) return;
     setBusy(true);
     try {
-      const [meRes, providersRes, listRes] = await Promise.all([
-        fetchJson<MeProfile>("/auth/me", { headers: { Authorization: `Bearer ${token}` } }),
-        fetchJson<ProviderPreset[]>("/me/email-accounts/providers", { headers }),
-        fetchJson<AccountPayload[]>("/me/email-accounts", { headers }),
-      ]);
+      const meRes = await fetchJson<MeProfile>("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
       if (meRes.success && meRes.data) {
         setMeProfile(meRes.data);
         setAvatarPreview(meRes.data.avatarBase64 ?? "");
+        setProfileForm({
+          firstName: meRes.data.firstName ?? "",
+          lastName: meRes.data.lastName ?? "",
+          displayName: meRes.data.displayName ?? meRes.data.nickname ?? "",
+          mobile: meRes.data.mobile ?? "",
+          email: meRes.data.email ?? "",
+        });
       }
+      if (isProfileSurface) {
+        return;
+      }
+      const [providersRes, listRes] = await Promise.all([
+        fetchJson<ProviderPreset[]>("/me/email-accounts/providers", { headers }),
+        fetchJson<AccountPayload[]>("/me/email-accounts", { headers }),
+      ]);
       if (providersRes.success && providersRes.data) {
         setProviders(providersRes.data);
       }
@@ -156,7 +204,7 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
     } finally {
       setBusy(false);
     }
-  }, [token, headers]);
+  }, [token, headers, isProfileSurface]);
 
   useEffect(() => {
     if (open) {
@@ -327,11 +375,79 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           detail: {
             userId: res.data.userId,
             mobile: res.data.mobile,
-            nickname: res.data.nickname,
+            nickname: res.data.displayName ?? res.data.nickname,
+            displayName: res.data.displayName,
             avatarBase64: res.data.avatarBase64,
           },
         }),
       );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!token) return;
+    setBusy(true);
+    setNotice("");
+    try {
+      const res = await fetchJson<MeProfile>("/auth/me/profile", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify(profileForm),
+      });
+      if (!res.success || !res.data) {
+        setNotice(res.message ?? "个人信息保存失败");
+        return;
+      }
+      setMeProfile(res.data);
+      setProfileForm({
+        firstName: res.data.firstName ?? "",
+        lastName: res.data.lastName ?? "",
+        displayName: res.data.displayName ?? res.data.nickname ?? "",
+        mobile: res.data.mobile ?? "",
+        email: res.data.email ?? "",
+      });
+      setNotice("个人信息已更新");
+      window.dispatchEvent(
+        new CustomEvent("assistant-current-user-updated", {
+          detail: {
+            userId: res.data.userId,
+            mobile: res.data.mobile,
+            nickname: res.data.displayName ?? res.data.nickname,
+            displayName: res.data.displayName,
+            avatarBase64: res.data.avatarBase64,
+          },
+        }),
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const changePassword = async () => {
+    if (!token) return;
+    setNotice("");
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setNotice("两次输入的新密码不一致");
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetchJson<{ updated: boolean }>("/auth/me/password", {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+      if (!res.success) {
+        setNotice(res.message ?? "密码修改失败");
+        return;
+      }
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setNotice("密码已更新，下次登录请使用新密码");
     } finally {
       setBusy(false);
     }
@@ -349,29 +465,163 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
 
   if (!open) return null;
 
-  return (
-    <div className="cici-modal-backdrop" onClick={onClose}>
-      <div
-        className="cici-modal cici-modal--wide"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cici-settings-title"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <header className="cici-modal__header">
-          <h3 id="cici-settings-title">个人设置</h3>
-          <button type="button" className="cici-modal__close" onClick={onClose} aria-label="关闭">
-            ×
+  const profileInfoContent = (
+    <>
+      <p className="cici-modal__intro">头像和个人信息会用于工作台、会话消息和个人入口展示，仅你本人可修改。</p>
+      {notice ? <div className="cici-modal__notice">{notice}</div> : null}
+      <section className="cici-modal__section" aria-label="头像设置">
+        <div className="cici-profile-avatar-block">
+          <AvatarView
+            src={avatarPreview}
+            fallback={getDisplayInitial(profileForm.displayName || meProfile.nickname || meProfile.mobile || "我", "我")}
+            className="cici-profile-avatar"
+            alt="当前用户头像"
+          />
+          <div className="cici-profile-avatar-actions">
+            <label className="cici-btn cici-btn--ghost cici-profile-avatar-upload">
+              上传图片
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.currentTarget.value = "";
+                  if (!file) return;
+                  void beginAvatarCrop(file);
+                }}
+              />
+            </label>
+            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setAvatarPreview("")} disabled={busy}>
+              清除头像
+            </button>
+            <button type="button" className="cici-btn cici-btn--primary" onClick={() => void saveMyAvatar()} disabled={busy}>
+              保存头像
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section className="cici-modal__section" aria-label="个人信息表单">
+        <div className="cici-form-grid cici-profile-form">
+          <label>
+            <span>姓</span>
+            <input value={profileForm.lastName} onChange={(e) => setProfileForm((c) => ({ ...c, lastName: e.target.value }))} />
+          </label>
+          <label>
+            <span>名</span>
+            <input value={profileForm.firstName} onChange={(e) => setProfileForm((c) => ({ ...c, firstName: e.target.value }))} />
+          </label>
+          <label>
+            <span>显示名称</span>
+            <input value={profileForm.displayName} onChange={(e) => setProfileForm((c) => ({ ...c, displayName: e.target.value }))} />
+          </label>
+          <label>
+            <span>手机号</span>
+            <input value={profileForm.mobile} onChange={(e) => setProfileForm((c) => ({ ...c, mobile: e.target.value }))} />
+          </label>
+          <label>
+            <span>邮箱</span>
+            <input type="email" value={profileForm.email} onChange={(e) => setProfileForm((c) => ({ ...c, email: e.target.value }))} />
+          </label>
+        </div>
+        <footer className="cici-modal__footer">
+          <button type="button" className="cici-btn cici-btn--primary" onClick={() => void saveProfile()} disabled={busy || !profileForm.mobile.trim()}>
+            保存个人信息
           </button>
+        </footer>
+      </section>
+    </>
+  );
+
+  const profilePasswordContent = (
+    <>
+      {notice ? <div className="cici-modal__notice">{notice}</div> : null}
+      <section className="cici-modal__section">
+        <header className="cici-modal__section-head">
+          <h4>修改密码</h4>
         </header>
-        <div className="cici-settings-tabs">
+        <div className="cici-form-grid cici-profile-form">
+          <label>
+            <span>当前密码</span>
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={passwordForm.currentPassword}
+              onChange={(e) => setPasswordForm((c) => ({ ...c, currentPassword: e.target.value }))}
+            />
+          </label>
+          <label>
+            <span>新密码</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={passwordForm.newPassword}
+              onChange={(e) => setPasswordForm((c) => ({ ...c, newPassword: e.target.value }))}
+            />
+          </label>
+          <label>
+            <span>确认新密码</span>
+            <input
+              type="password"
+              autoComplete="new-password"
+              value={passwordForm.confirmPassword}
+              onChange={(e) => setPasswordForm((c) => ({ ...c, confirmPassword: e.target.value }))}
+            />
+          </label>
+        </div>
+        <footer className="cici-modal__footer">
           <button
             type="button"
-            className={`cici-settings-tabs__item${tab === "profile" ? " is-active" : ""}`}
-            onClick={() => setTab("profile")}
+            className="cici-btn cici-btn--primary"
+            onClick={() => void changePassword()}
+            disabled={busy || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
           >
-            个人资料
+            更新密码
           </button>
+        </footer>
+      </section>
+    </>
+  );
+
+  const content = (
+      <div
+        className={`cici-modal cici-modal--wide${variant === "page" ? " cici-settings-page__panel" : ""}${isProfileSurface ? " cici-settings-page__panel--profile" : ""}`}
+        role={variant === "modal" ? "dialog" : undefined}
+        aria-modal={variant === "modal" ? "true" : undefined}
+        aria-labelledby="cici-settings-title"
+        onClick={variant === "modal" ? (e) => e.stopPropagation() : undefined}
+      >
+        <header className="cici-modal__header">
+          <h3 id="cici-settings-title">{title ?? (isProfileSurface ? "个人简档" : "个人设置")}</h3>
+          {variant === "modal" && onClose ? (
+            <button type="button" className="cici-modal__close" onClick={onClose} aria-label="关闭">
+              ×
+            </button>
+          ) : null}
+        </header>
+        {isProfileSurface ? (
+          <div className="cici-settings-tabs cici-profile-tabs" role="tablist" aria-label="个人简档设置">
+            <button
+              type="button"
+              className={`cici-settings-tabs__item${profileTab === "info" ? " is-active" : ""}`}
+              onClick={() => setProfileTab("info")}
+              role="tab"
+              aria-selected={profileTab === "info"}
+            >
+              个人信息
+            </button>
+            <button
+              type="button"
+              className={`cici-settings-tabs__item${profileTab === "password" ? " is-active" : ""}`}
+              onClick={() => setProfileTab("password")}
+              role="tab"
+              aria-selected={profileTab === "password"}
+            >
+              修改密码
+            </button>
+          </div>
+        ) : (
+          <div className="cici-settings-tabs">
           <button
             type="button"
             className={`cici-settings-tabs__item${tab === "workflow" ? " is-active" : ""}`}
@@ -400,58 +650,12 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           >
             专属记忆
           </button>
-        </div>
+          </div>
+        )}
 
-        <div className="cici-settings-content">
-          {tab === "profile" ? (
-            <>
-            <p className="cici-modal__intro">头像会用于工作台、会话消息和个人入口展示，仅你本人可修改。</p>
-            {notice ? <div className="cici-modal__notice">{notice}</div> : null}
-            <section className="cici-modal__section">
-              <header className="cici-modal__section-head">
-                <h4>我的头像</h4>
-              </header>
-              <div className="cici-profile-avatar-block">
-                <AvatarView
-                  src={avatarPreview}
-                  fallback={getDisplayInitial(meProfile.nickname || meProfile.mobile || "我", "我")}
-                  className="cici-profile-avatar"
-                  alt="当前用户头像"
-                />
-                <div className="cici-profile-avatar-actions">
-                  <label className="cici-btn cici-btn--ghost cici-profile-avatar-upload">
-                    上传图片
-                    <input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0];
-                        event.currentTarget.value = "";
-                        if (!file) return;
-                        void beginAvatarCrop(file);
-                      }}
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    className="cici-btn cici-btn--ghost"
-                    onClick={() => setAvatarPreview("")}
-                    disabled={busy}
-                  >
-                    清除头像
-                  </button>
-                  <button
-                    type="button"
-                    className="cici-btn cici-btn--primary"
-                    onClick={() => void saveMyAvatar()}
-                    disabled={busy}
-                  >
-                    保存头像
-                  </button>
-                </div>
-              </div>
-            </section>
-            </>
+        <div className={`cici-settings-content${isProfileSurface ? " cici-settings-content--profile" : ""}`}>
+          {isProfileSurface ? (
+            profileTab === "info" ? profileInfoContent : profilePasswordContent
           ) : tab === "workflow" ? (
             <MyWorkflowStudio token={token} active={tab === "workflow"} />
           ) : tab === "channels" ? (
@@ -678,6 +882,15 @@ export default function MyEmailAccountsModal({ open, token, onClose }: Props) {
           }}
         />
       </div>
+  );
+
+  if (variant === "page") {
+    return <main className="cici-settings-page">{content}</main>;
+  }
+
+  return (
+    <div className="cici-modal-backdrop" onClick={onClose}>
+      {content}
     </div>
   );
 }

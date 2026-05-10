@@ -22,7 +22,7 @@ export default function PlatformLogin() {
       const res = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, mobile, password }),
+        body: JSON.stringify({ orgId, identifier: mobile, password }),
       });
       const { body } = await safeFetchJson<AuthPayload>(res);
       if (!res.ok || !body?.success || !body.data?.token) {
@@ -30,7 +30,7 @@ export default function PlatformLogin() {
         return;
       }
       if (!hasPlatformRole(body.data.roles ?? [])) {
-        setNotice("该手机号当前没有平台角色，请先加入 platform-*-mobiles 配置。");
+        setNotice("该账号当前没有平台角色，请先确认账号手机号已加入 platform-*-mobiles 配置。");
         return;
       }
       localStorage.setItem(LS_PLATFORM_TOKEN, JSON.stringify(body.data));
@@ -61,9 +61,9 @@ export default function PlatformLogin() {
           <div className="platform-login__panel">
             <label>组织 ID</label>
             <input value={orgId} onChange={(e) => setOrgId(e.target.value)} />
-            <label>手机号</label>
-            <input value={mobile} onChange={(e) => setMobile(e.target.value)} />
-            <label>固定密码</label>
+            <label>电子邮件地址或手机号码</label>
+            <input value={mobile} onChange={(e) => setMobile(e.target.value)} inputMode="email" autoComplete="username" />
+            <label>密码</label>
             <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" />
             <div className="row platform-login__actions">
               <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!password.trim()}>

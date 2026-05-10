@@ -54,6 +54,16 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldTreatWecomKfConversationAsKnowledgeOnlyCustomerService() {
+        String promptBlock = ChatOrchestratorService.buildToolUseBoundaryPromptBlock("wecom-kf:abc123");
+
+        assertThat(promptBlock)
+                .contains("当前会话来自企业微信「微信客服」")
+                .contains("只做知识库售后问答")
+                .contains("不查询或操作 CRM、订单、客户档案、工单、物流");
+    }
+
+    @Test
     void shouldTellModelNotToPromiseFutureToolRetriesInFinalAnswer() {
         String promptBlock = ChatOrchestratorService.buildToolFinalAnswerGuardPrompt();
 
@@ -161,6 +171,23 @@ class ChatOrchestratorServiceModelIdentityTest {
                 "看下今天的潜在客户和订阅台账明细",
                 List.of("12"),
                 List.of()))
+                .isFalse();
+    }
+
+    @Test
+    void shouldForceKnowledgeRetrievalForWecomCustomerServiceWhenDefaultKbExists() {
+        assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
+                "我的订单 SO-001 怎么还没有发货",
+                List.of("12"),
+                List.of(),
+                "wecom-kf:customer-session"))
+                .isTrue();
+
+        assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
+                "你好",
+                List.of("12"),
+                List.of(),
+                "wecom-kf:customer-session"))
                 .isFalse();
     }
 

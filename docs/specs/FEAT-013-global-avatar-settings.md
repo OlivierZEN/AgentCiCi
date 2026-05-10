@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-013
 title: Global avatar settings for agents and current user
-status: draft
+status: implemented
 owner_role: fullstack-product-avatar
-task_ids: TASK-028
+task_ids: TASK-028, TASK-077
 related_decisions: none
 related_issues: none
-updated_at: 2026-04-30T12:25:04Z
+updated_at: 2026-05-09T16:28:27Z
 updated_by: ai
 ---
 
@@ -26,6 +26,7 @@ updated_by: ai
 
 - 在智能体定义中增加头像配置能力，仅组织管理员可在管理端 Agent Builder 中设置。
 - 在前台个人设置入口中增加“我的头像”设置，仅当前登录用户本人可修改自己的头像。
+- 在前台左上头像入口中提供独立“个人简档”页，可修改头像、姓、名、显示名称、手机号、邮箱和个人密码。
 - 第一版头像来源采用本地图片上传、前端方形裁剪、压缩为较小 data URL，再提交后端保存。
 - 统一前端头像展示组件或头像解析函数，覆盖系统中所有智能体头像、当前登录用户头像、外部会话参与人头像展示点。
 - 明确头像展示映射：智能体身份展示使用 `agent.avatarBase64`；当前登录用户身份展示使用 `/auth/me.avatarBase64`；外部渠道参与人展示继续优先使用会话 payload 的 `avatarUrl`。
@@ -74,7 +75,7 @@ updated_by: ai
 ### 5. Layout Strategy
 
 - 管理端 Agent Builder：在“定义/基础信息”区域靠近智能体名称放置头像设置，采用“小头像预览 + 上传按钮 + 清除按钮 + 说明文字”的紧凑横向结构。它应是身份字段的一部分，不单独做大卡片。
-- 前台个人设置：在当前个人设置入口顶部增加个人资料段，头像作为第一视觉锚点，下方保留现有邮箱等个人配置能力。用户点击 rail 头像后进入同一设置面板，不新增全屏页面。
+- 前台个人简档：用户点击 rail 顶部头像后，在右侧主区域进入独立“个人简档”页面，头像和个人资料归入“个人信息”tab，“修改密码”作为平级 text tab。齿轮设置页不再包含个人资料 tab。
 - 全局展示：所有头像都通过统一组件渲染，图片头像优先，字母兜底次之。头像外框使用 1px 金线或暖色边界，active/focus 状态用香槟金 ring，不使用大面积金色填充。
 - 展示一致性：同一身份在不同尺寸下只改变尺寸和边界密度，不改变来源。例如 `思思` 在智能体切换条、消息气泡、状态卡和档案卡中都使用同一张智能体头像。
 
@@ -147,7 +148,7 @@ updated_by: ai
 - 新增或抽取 `processAvatarFile(file)`：复用现有管理端用户页的 256x256 WebP 压缩逻辑。
 - Agent Builder 的 `AgentDraft` / `AgentRecord` / `AgentApiRecord` 增加 `avatarBase64`，保存时带上或调用 avatar API。
 - Assistant Workbench 的 `PublishedAgentPayload` / `WorkbenchDockAgent` 增加 `avatarBase64`，智能体切换条、消息气泡、状态卡、智能体档案全部统一读取。
-- 前台个人设置入口在现有 rail avatar 打开的设置面板中加入当前用户头像设置，保存成功后刷新 `me` 并更新 rail 与消息气泡。
+- 前台 rail 顶部头像打开独立“个人简档”页，保存成功后刷新 `me` 并更新 rail 与消息气泡。齿轮设置页负责组织/个人工作流、渠道、邮箱和专属记忆等配置，不再承载个人资料 tab。
 
 ### 展示覆盖矩阵
 
@@ -228,15 +229,22 @@ updated_by: ai
 
 ## 实现进展
 
-- 当前状态：draft design
+- 当前状态：implemented
 - 已完成项：
   - 已确认权限边界：智能体头像仅管理员设置，用户头像仅本人设置。
   - 已确认第一版头像来源：上传图片、前端裁剪压缩、字母兜底。
   - 已确认展示要求：系统中所有需要显示头像的位置都必须显示对应身份头像。
   - 已完成现状检查：用户头像字段已存在，智能体头像字段待新增。
+  - 已实现前台 rail 顶部头像进入独立“个人简档”页；齿轮设置页标题显示当前组织名，并移除“个人资料”tab。
+  - 已将个人简档内部调整为“个人信息 / 修改密码”两个平级 text tabs，并移除 profile surface 内部横向分隔线。
+  - 已按产品页紧凑度移除个人简档内部“我的头像”和表单区“个人信息”小标题，避免 tab 标题与 section 标题重复。
+  - 已将个人简档邮箱字段收回两列网格，避免单个字段在桌面端过长。
+  - 已新增 `/auth/me/profile` 与 `/auth/me/password`，支持当前用户修改姓、名、显示名称、手机号、邮箱和个人密码。
+  - 已新增 `account_auth_credential` 最小账号级密码凭证，保留无个人密码老账号的固定密码兼容路径。
 - 未完成项：
-  - 尚未实现数据库迁移、API、前端表单和统一展示组件。
-  - 尚未运行任何实现级测试。
+  - 邮箱目前作为账号资料字段保存，尚未做邮箱登录标识验证或邮箱 OTP。
+  - 密码强度策略仍为最小 8 位，后续可补复杂度、泄露密码检查和修改后强制重新登录策略。
+  - 尚未完成头像展示覆盖矩阵的全量逐点复查。
 
 ## 交接说明
 

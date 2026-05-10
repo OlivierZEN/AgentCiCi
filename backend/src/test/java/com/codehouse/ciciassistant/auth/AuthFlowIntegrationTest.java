@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
@@ -375,6 +376,141 @@ class AuthFlowIntegrationTest {
                                 """))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Invalid mobile or password"));
+    }
+
+    @Test
+    void shouldUpdateCurrentProfileAndChangeAccountPassword() throws Exception {
+        String mobile = "13902400130";
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "个人简档组织"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String token = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("token").asText();
+
+        mockMvc.perform(put("/auth/me/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "firstName": "Yan",
+                                  "lastName": "Zheng",
+                                  "displayName": "郑言",
+                                  "mobile": "13902400131",
+                                  "email": "zhengyan@example.com"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.firstName").value("Yan"))
+                .andExpect(jsonPath("$.data.lastName").value("Zheng"))
+                .andExpect(jsonPath("$.data.displayName").value("郑言"))
+                .andExpect(jsonPath("$.data.nickname").value("郑言"))
+                .andExpect(jsonPath("$.data.mobile").value("13902400131"))
+                .andExpect(jsonPath("$.data.email").value("zhengyan@example.com"));
+
+        mockMvc.perform(put("/auth/me/password")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "currentPassword": "szyd1234",
+                                  "newPassword": "newpass123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.updated").value(true));
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "13902400131",
+                                  "password": "szyd1234"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Invalid mobile or password"));
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "13902400131",
+                                  "password": "newpass123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").isNotEmpty());
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "ZHENGYAN@EXAMPLE.COM",
+                                  "password": "newpass123"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.token").isNotEmpty());
+    }
+
+    @Test
+    void shouldRejectDuplicateProfileEmailIdentifier() throws Exception {
+        MvcResult firstRegister = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "13902400132",
+                                  "password": "szyd1234",
+                                  "organizationName": "邮箱组织 A"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String firstToken = objectMapper.readTree(firstRegister.getResponse().getContentAsString()).path("data").path("token").asText();
+        mockMvc.perform(put("/auth/me/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + firstToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "displayName": "邮箱账号 A",
+                                  "mobile": "13902400132",
+                                  "email": "shared-login@example.com"
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult secondRegister = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "13902400133",
+                                  "password": "szyd1234",
+                                  "organizationName": "邮箱组织 B"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        String secondToken = objectMapper.readTree(secondRegister.getResponse().getContentAsString()).path("data").path("token").asText();
+
+        mockMvc.perform(put("/auth/me/profile")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + secondToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "displayName": "邮箱账号 B",
+                                  "mobile": "13902400133",
+                                  "email": "SHARED-LOGIN@EXAMPLE.COM"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("该邮箱已被其他账号使用"));
     }
 
     @Test

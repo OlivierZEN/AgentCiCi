@@ -128,4 +128,45 @@ public class WecomKfAccountEntity {
         this.accessTokenExpiresAt = expiresAt;
         this.updatedAt = Instant.now();
     }
+
+    public void updateProfile(String corpId,
+                              String openKfId,
+                              String name,
+                              String token,
+                              String agentId,
+                              String runAsUserId,
+                              boolean enabled) {
+        this.corpId = corpId;
+        this.openKfId = openKfId;
+        this.name = name;
+        this.token = token;
+        this.agentId = agentId;
+        this.runAsUserId = runAsUserId;
+        this.enabled = enabled;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateSecret(String cipher, String iv) {
+        this.secretCipher = cipher;
+        this.secretIv = iv;
+        clearAccessToken();
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateEncodingAesKey(String cipher, String iv) {
+        this.encodingAesKeyCipher = cipher;
+        this.encodingAesKeyIv = iv;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateEnabled(boolean enabled) {
+        this.enabled = enabled;
+        this.updatedAt = Instant.now();
+    }
+
+    private void clearAccessToken() {
+        this.accessTokenCipher = null;
+        this.accessTokenIv = null;
+        this.accessTokenExpiresAt = null;
+    }
 }

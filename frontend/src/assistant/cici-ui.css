@@ -5577,6 +5577,11 @@
   box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.35);
 }
 
+.cici-rail__avatar--button.is-active {
+  outline: 2px solid rgba(185, 150, 82, 0.82);
+  outline-offset: 3px;
+}
+
 .cici-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -7523,6 +7528,34 @@
   transform: none;
 }
 
+.cici-settings-page {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100vh;
+  padding: 16px;
+  overflow: hidden;
+  display: flex;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.92), rgba(247, 243, 235, 0.94));
+}
+
+.cici-settings-page__panel {
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  height: 100%;
+  border-radius: 18px;
+  box-shadow: 0 12px 32px rgba(43, 34, 23, 0.08);
+}
+
+.cici-settings-page__panel .cici-modal__header {
+  min-height: 58px;
+}
+
+.cici-settings-page__panel--profile .cici-modal__header {
+  border-bottom: 0;
+}
+
 .cici-settings-tabs {
   flex: 0 0 auto;
   gap: 22px;
@@ -7569,11 +7602,23 @@
   background: #b99652;
 }
 
+.cici-profile-tabs {
+  border-bottom: 0;
+}
+
+.cici-profile-tabs .cici-settings-tabs__item.is-active::after {
+  bottom: 0;
+}
+
 .cici-settings-content {
   flex: 1 1 auto;
   overflow: auto;
   padding: 18px 22px 24px;
   background: #fffdf8;
+}
+
+.cici-settings-content--profile {
+  padding-top: 12px;
 }
 
 .cici-modal__intro {
@@ -7607,6 +7652,16 @@
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid rgba(222, 210, 187, 0.76);
+}
+
+.cici-settings-content--profile .cici-modal__section {
+  margin-top: 18px;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.cici-settings-content--profile .cici-modal__section + .cici-modal__section {
+  margin-top: 28px;
 }
 
 .cici-settings-content > .cici-modal__section:first-child,
@@ -7708,10 +7763,10 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
-  padding: 14px;
-  border: 1px solid rgba(222, 210, 187, 0.72);
-  border-radius: 12px;
-  background: #faf4e8;
+  padding: 4px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .cici-profile-avatar {
@@ -7759,6 +7814,10 @@
 
 .cici-form-grid label span {
   line-height: 1.4;
+}
+
+.cici-profile-form__wide {
+  grid-column: 1 / -1;
 }
 
 .cici-form-grid input,
@@ -8451,6 +8510,14 @@
 }
 
 @media (max-width: 760px) {
+  .cici-settings-page {
+    padding: 8px;
+  }
+
+  .cici-settings-page__panel {
+    border-radius: 14px;
+  }
+
   .cici-modal-backdrop {
     align-items: stretch;
     padding: 12px;

@@ -1,5 +1,4 @@
 import { FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   streamAiChat,
   streamSessionUpdates,
@@ -37,8 +36,25 @@ type AuthPayload = { token: string; orgId: string; orgName?: string; userId: str
 type LoginPayload = AuthPayload & { requiresOrganizationSelection?: boolean; organizations?: OrganizationOption[] };
 type ChatBubble = { role: "user" | "assistant"; content: string; time?: string; modelName?: string };
 type KnowledgeBase = { id: number; name: string; description: string; status: string };
-type MeProfile = { orgId?: string; orgName?: string; nickname?: string; mobile?: string; avatarBase64?: string };
-type CurrentUserUpdatedDetail = { userId?: string; mobile?: string; nickname?: string; avatarBase64?: string };
+type MeProfile = {
+  orgId?: string;
+  orgName?: string;
+  nickname?: string;
+  mobile?: string;
+  firstName?: string;
+  lastName?: string;
+  displayName?: string;
+  email?: string;
+  avatarBase64?: string;
+};
+type CurrentUserUpdatedDetail = {
+  userId?: string;
+  mobile?: string;
+  nickname?: string;
+  displayName?: string;
+  avatarBase64?: string;
+};
+type WorkspaceTab = "chat" | "workbench" | "monitor" | "customers" | "crm" | "settings" | "profile";
 type LoginMode = "agent" | "human";
 type FrontLoginMode = "login_mode1" | "login_mode2";
 type LoginMode2CubePhase = "brand" | "loading";
@@ -1106,7 +1122,7 @@ export default function AssistantApp() {
   const [activeConversationId, setActiveConversationId] = useState("");
   const [searchText, setSearchText] = useState("");
   const [activeChannel, setActiveChannel] = useState<"all" | ConversationThread["channel"]>("all");
-  const [workspaceTab, setWorkspaceTab] = useState<"chat" | "workbench" | "monitor" | "customers" | "crm">("workbench");
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("workbench");
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
   const [conversationListNotice, setConversationListNotice] = useState("");
@@ -1123,7 +1139,6 @@ export default function AssistantApp() {
   const [monitorLogsLoading, setMonitorLogsLoading] = useState(false);
   const [monitorTraceLoadingId, setMonitorTraceLoadingId] = useState("");
   const [workbenchThoughtIndex, setWorkbenchThoughtIndex] = useState(0);
-  const [profilePanelOpen, setProfilePanelOpen] = useState(false);
   const [loginMode2CubePhase, setLoginMode2CubePhase] = useState<LoginMode2CubePhase>("brand");
   const [loginMode2Entering, setLoginMode2Entering] = useState(false);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
@@ -1136,7 +1151,7 @@ export default function AssistantApp() {
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
-  const workspaceTabRef = useRef<"chat" | "workbench" | "monitor" | "customers" | "crm">("workbench");
+  const workspaceTabRef = useRef<WorkspaceTab>("workbench");
   const [activeMonitorAgentKey, setActiveMonitorAgentKey] = useState("");
   const [activeMonitorLogId, setActiveMonitorLogId] = useState("");
   const [monitorSearchText, setMonitorSearchText] = useState("");
@@ -1746,7 +1761,8 @@ export default function AssistantApp() {
       setMe((prev) => ({
         ...(prev ?? {}),
         mobile: detail.mobile ?? prev?.mobile,
-        nickname: detail.nickname ?? prev?.nickname,
+        nickname: detail.displayName ?? detail.nickname ?? prev?.nickname,
+        displayName: detail.displayName ?? prev?.displayName,
         avatarBase64: detail.avatarBase64 ?? prev?.avatarBase64,
       }));
     };
@@ -1773,7 +1789,12 @@ export default function AssistantApp() {
     workspaceTabRef.current = workspaceTab;
   }, [workspaceTab]);
 
-  const sessionStreamActive = workspaceTab !== "workbench" && workspaceTab !== "monitor" && workspaceTab !== "crm";
+  const sessionStreamActive =
+    workspaceTab !== "workbench" &&
+    workspaceTab !== "monitor" &&
+    workspaceTab !== "crm" &&
+    workspaceTab !== "settings" &&
+    workspaceTab !== "profile";
 
   useEffect(() => {
     if (!auth || !sessionStreamActive) {
@@ -1799,7 +1820,9 @@ export default function AssistantApp() {
               if (
                 workspaceTabRef.current === "workbench" ||
                 workspaceTabRef.current === "monitor" ||
-                workspaceTabRef.current === "crm"
+                workspaceTabRef.current === "crm" ||
+                workspaceTabRef.current === "settings" ||
+                workspaceTabRef.current === "profile"
               ) {
                 return;
               }
@@ -1831,6 +1854,8 @@ export default function AssistantApp() {
         if (
           workspaceTabRef.current !== "workbench" &&
           workspaceTabRef.current !== "monitor" &&
+          workspaceTabRef.current !== "settings" &&
+          workspaceTabRef.current !== "profile" &&
           activeConversationIdRef.current
         ) {
           await loadConversationMessages(activeConversationIdRef.current, true);
@@ -1881,14 +1906,22 @@ export default function AssistantApp() {
   }, [activeAgentId, activeChannel, conversationsByAgent, searchText]);
 
   useEffect(() => {
-    if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm" || !auth || !activeConversationId) {
+    if (
+      workspaceTab === "workbench" ||
+      workspaceTab === "monitor" ||
+      workspaceTab === "crm" ||
+      workspaceTab === "settings" ||
+      workspaceTab === "profile" ||
+      !auth ||
+      !activeConversationId
+    ) {
       return;
     }
     void loadConversationMessages(activeConversationId, true);
   }, [activeConversationId, auth?.token, workspaceTab]);
 
   useEffect(() => {
-    if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm") {
+    if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm" || workspaceTab === "settings" || workspaceTab === "profile") {
       return;
     }
     if (availableThreads.some((thread) => thread.id === activeConversationId)) {
@@ -1960,7 +1993,7 @@ export default function AssistantApp() {
     void loadQuickCommands(activeWorkbenchAgentId, auth.token);
   }, [activeWorkbenchAgentId, auth?.token, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
-  const userInitial = getDisplayInitial(me?.nickname || me?.mobile || "我", "我");
+  const userInitial = getDisplayInitial(me?.displayName || me?.nickname || me?.mobile || "我", "我");
   const currentOrgName = me?.orgName || auth?.orgName || auth?.orgId || "当前组织";
   const organizationOptions = auth
     ? organizations.length
@@ -2135,7 +2168,7 @@ export default function AssistantApp() {
       const response = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mobile, password: loginPassword }),
+        body: JSON.stringify({ identifier: mobile, password: loginPassword }),
       });
       const { body } = await safeFetchJson<LoginPayload>(response);
       if (!response.ok || !body?.success) {
@@ -2178,7 +2211,7 @@ export default function AssistantApp() {
       const response = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId: targetOrgId, mobile, password: loginPassword }),
+        body: JSON.stringify({ orgId: targetOrgId, identifier: mobile, password: loginPassword }),
       });
       const { body } = await safeFetchJson<AuthPayload>(response);
       if (!response.ok || !body?.success || !body.data?.token) {
@@ -2809,14 +2842,15 @@ export default function AssistantApp() {
     <>
       <div className="boot-login__form">
         <div className="boot-login__field">
-          <label htmlFor="boot-mobile">手机号</label>
+          <label htmlFor="boot-mobile">电子邮件地址或手机号码</label>
           <input
             id="boot-mobile"
             className="boot-login__input"
             value={mobile}
             onChange={(event) => setMobile(event.target.value)}
-            inputMode="tel"
-            autoComplete="tel"
+            inputMode="email"
+            autoComplete="username"
+            placeholder="电子邮件地址或手机号码"
           />
         </div>
         <div className="boot-login__field">
@@ -2867,7 +2901,7 @@ export default function AssistantApp() {
             type="button"
             className="boot-login__btn boot-login__btn--primary"
             onClick={registerMode ? register : login}
-            disabled={!loginPassword.trim() || loginSubmitting || (registerMode && !organizationName.trim())}
+            disabled={!mobile.trim() || !loginPassword.trim() || loginSubmitting || (registerMode && !organizationName.trim())}
           >
             <span className="boot-phone-icon" aria-hidden>
               <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
@@ -2881,7 +2915,7 @@ export default function AssistantApp() {
       ) : null}
       {notice ? <p className="boot-login__notice">{notice}</p> : null}
       <p className="boot-login__footer-link">
-        还没有账户？<Link to="/autoservice/cn" className="boot-login__link">立即预约</Link>
+        还没有账户？<a href="https://agentcici.com/#demo" className="boot-login__link">立即预约</a>
       </p>
     </>
   );
@@ -2939,10 +2973,9 @@ export default function AssistantApp() {
         <div className="cici-rail__top">
           <button
             type="button"
-            className="cici-rail__avatar cici-rail__avatar--button"
-            onClick={() => setProfilePanelOpen(true)}
-            data-menu-label="个人设置"
-            aria-label="个人设置"
+            className={`cici-rail__avatar cici-rail__avatar--button${workspaceTab === "profile" ? " is-active" : ""}`}
+            onClick={() => setWorkspaceTab("profile")}
+            aria-label="个人简档"
           >
             <AvatarView
               src={me?.avatarBase64}
@@ -2990,7 +3023,13 @@ export default function AssistantApp() {
           </button>
         </div>
         <div className="cici-rail__bottom">
-          <button className="cici-rail__nav-item cici-rail__menu-btn" data-menu-label="系统设置" aria-label="系统设置">
+          <button
+            type="button"
+            className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "settings" ? " is-active" : ""}`}
+            onClick={() => setWorkspaceTab("settings")}
+            data-menu-label="设置"
+            aria-label="设置"
+          >
             <svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="3" />
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
@@ -3055,13 +3094,6 @@ export default function AssistantApp() {
             })}
           </div>
         </div>
-      ) : null}
-      {auth?.token ? (
-        <MyEmailAccountsModal
-          open={profilePanelOpen}
-          token={auth.token}
-          onClose={() => setProfilePanelOpen(false)}
-        />
       ) : null}
       {quickCommandDialogOpen ? (
         <div
@@ -3487,6 +3519,10 @@ export default function AssistantApp() {
             </div>
           </div>
         </main>
+      ) : workspaceTab === "settings" ? (
+        <MyEmailAccountsModal open={Boolean(auth?.token)} token={auth?.token ?? ""} variant="page" surface="settings" title={currentOrgName} />
+      ) : workspaceTab === "profile" ? (
+        <MyEmailAccountsModal open={Boolean(auth?.token)} token={auth?.token ?? ""} variant="page" surface="profile" title="个人简档" />
       ) : workspaceTab === "monitor" ? (
         <main className="cici-monitor">
           <header className="cici-monitor__topbar">

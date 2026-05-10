@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-09T10:54:14Z
+updated_at: 2026-05-10T13:40:12Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,159 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-078 AI customer operations suite website design
+
+- status: deployed_uat
+- priority: P0
+- owner_role: brand-website-design
+- spec_path: `docs/specs/FEAT-027-ai-customer-ops-suite-website-design.md`
+- summary: 为 AutoReachAI、FollowUpAI、AutoService 三款产品设计一个独立综合主站规格，表达“平台 + 应用矩阵 + CRM 闭环”结构，并明确 CiCi 作为智能体运行治理底座、CloudCC CRM 作为客户数据与业务流程底座。
+- done:
+  - 已新增 `docs/specs/FEAT-027-ai-customer-ops-suite-website-design.md`。
+  - 已将主站定位为独立 brand / marketing website，不复用 AutoService 官网结构、样式、预约弹窗或线索命名。
+  - 已沉淀工作品牌名 `SalesMost AI Suite`，并将最终品牌名与域名列为待确认项。
+  - 已明确产品族结构：AutoReachAI 负责获客触达，FollowUpAI 负责销售跟进，AutoService 负责售后服务，CiCi 负责 Agent runtime and governance，CloudCC CRM 负责客户与业务数据闭环。
+  - 已定义首屏文案、生命周期闭环主图、产品矩阵、CiCi 平台层、CloudCC CRM loop、部署路径、子站链接和技术隔离规则。
+  - 已提出后续实现建议：新增 `/suite` route、`frontend/src/suite/` 独立目录、`suite-` 样式前缀，以及后续 `suite_demo_request` 或通用 website leads 扩展。
+  - 已实现 `/suite` -> `/suite/cn`、`/suite/cn` 中文站、`/suite/global` 国际站。
+  - 已新增 `frontend/src/suite/SuiteLanding.tsx` 和 `frontend/src/suite/suite-site.css`，样式使用 `suite-` 前缀并与 AutoService 的 `as-` 组件/弹窗/样式隔离。
+  - 中文站内容强调企业微信、微信客服、飞书、钉钉、CloudCC CRM、私有化/混合部署和可审计治理，不再使用地域化标签作为叙事关键词；国际站内容强调 global outbound、WhatsApp/email follow-up、Salesforce/HubSpot/Zendesk/Intercom/ServiceNow/custom API、跨境增长和 CRM-centered operations。
+  - 两站均包含 Hero、生命周期闭环、产品矩阵、CiCi 平台层、CloudCC CRM loop、市场差异区、落地路径和内联演示需求表单；表单目前为前端静态成功态，未接后端线索模型。
+  - 已按用户反馈完成站点视觉重构：参考 getSwan 明亮品牌站表达，移除全页网格背景、金色/鎏金色 token 和旧暖象牙金边风格，改为白底、强黑标题、饱和蓝 CTA、prompt-to-workflow AI 员工演示面板、角色化产品 avatar 和 sky/lime/coral/violet 分区。
+  - 已在 `docs/specs/FEAT-027-ai-customer-ops-suite-website-design.md` 记录 no-grid/no-gold 约束和新版视觉 token。
+  - 已按浏览器批注将中文站导航 `平台底座` 改为 `AI 治理平台`，并将左上品牌强标题统一为 `SalesMost AI`。
+  - 已按用户反馈移除 suite 中文站页面叙事中的地域化强调，改为“全链路客户运营”“企业客户”“落地治理”等业务表述，同时保留具体渠道、CRM、私有化和治理能力。
+  - 已按浏览器截图反馈将 hero 可视化标题从语言维度表述改为业务维度的“全链路客户运营闭环”。
+  - 已将 `agentcici.com` 与 `www.agentcici.com` 根路径切换为 FEAT-027 中文综合站；`autoservice.agentcici.com` 保持产品登录入口。
+  - 前台产品登录页“立即预约”已从旧 AutoService `?demo=1` 深链改为 `https://agentcici.com/#demo`，落到综合站闭环演示区。
+  - 已发布 V1.8 到 ACR 与阿里云 ECS UAT，版本备注为“综合官网”。
+- verification:
+  - `content`: design spec created and linked from task board.
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/suite/SuiteLanding.tsx frontend/src/suite/suite-site.css` -> success。
+  - `browser`: Playwright wrapper DOM check `/suite/cn` -> title 正确、`hasSuiteRoot=true`、`hasAsDemo=false`、未包含国际站核心关键词。
+  - `browser`: Playwright wrapper DOM check `/suite/global` -> title 正确、`hasSuiteRoot=true`、`hasAsDemo=false`、包含 WhatsApp/Salesforce/Global go-to-market 内容。
+  - `browser`: system Chrome full-page screenshots for `/suite/cn` and `/suite/global` desktop/390px mobile -> success。
+  - screenshots: `output/playwright/suite-cn-desktop.png`, `output/playwright/suite-cn-mobile.png`, `output/playwright/suite-global-desktop.png`, `output/playwright/suite-global-mobile.png`。
+  - `frontend`: latest `npm run build` after redesign -> success（保留 Vite chunk-size warning）。
+  - `git`: latest `git diff --check -- frontend/src/suite/SuiteLanding.tsx frontend/src/suite/suite-site.css` -> success。
+  - `browser`: system Chrome screenshots after redesign for desktop and 390px mobile -> success；截图产物 `output/playwright/suite-cn-redesign-desktop-v2.png`, `output/playwright/suite-cn-redesign-mobile-v8.png`, `output/playwright/suite-global-redesign-mobile-v4.png`。
+  - `frontend`: latest `npm run build` after browser text comments -> success（保留 Vite chunk-size warning）。
+  - `git`: latest `git diff --check -- frontend/src/suite/SuiteLanding.tsx` -> success。
+  - `frontend`: latest `npm run build` after suite copy cleanup -> success（保留 Vite chunk-size warning）。
+  - `git`: latest `git diff --check -- frontend/src/suite/SuiteLanding.tsx docs/specs/FEAT-027-ai-customer-ops-suite-website-design.md .claw/current-status.md .claw/task-board.md` -> success。
+  - `content`: `frontend/src/suite/SuiteLanding.tsx` region/language-emphasis static check -> success，无命中。
+  - `browser`: Playwright snapshot `/suite/cn` -> success，hero visual title 为 `全链路客户运营闭环`。
+  - `frontend`: V1.8 release `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `backend`: `AuthFlowIntegrationTest,ChatOrchestratorServiceModelIdentityTest,WecomKfConfigServiceTest` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> success。
+  - `ACR`: pushed `cici-backend:V1.8/latest` digest `sha256:ad86b98c3f01fed15f5716da3c33a9344e7780488f8367c8f6dca704f5e12754`; pushed `cici-frontend:V1.8/latest` digest `sha256:7a08acd0ff945f13a66a780db1a5776fc9feac35013493258ed049b729c75f6f`; infra `V1.8` aliases created.
+  - `remote`: ECS backup `/opt/cici/backups/20260510-213605-before-v1.8-suite-site`; six containers healthy; backend health `UP`; frontend `nginx -t` success; Flyway latest `47|account profile and password|true`。
+  - `browser`: Playwright public verification `https://agentcici.com/` and `https://www.agentcici.com/` -> FEAT-027 中文综合站, title `AI 治理平台 | 企业 AI 客户运营套件`; `https://autoservice.agentcici.com/` -> AgentCiCi 产品登录页，预约链接为 `https://agentcici.com/#demo`。
+- next_action: 后续优先把 suite 演示表单接入真实线索模型，并补 SEO/OG/sitemap、UTM/来源归因、通知分派和正式品牌名确认。
+- handoff_notes:
+  - 主站必须表达完整客户生命周期闭环，不能落成三个普通产品卡片加 CTA。
+  - 子站点入口应清晰，但主站必须有独立转化目标：预约闭环演示。
+  - 实现时不得复用 AutoService 的 `as-` 样式前缀、组件、预约弹窗或 demo request 命名。
+  - 当前表单只是静态成功态，不能作为真实线索闭环交付。
+
+### TASK-077 Assistant profile and organization settings split
+
+- status: completed
+- priority: P1
+- owner_role: fullstack-product-assistant
+- spec_path: `docs/specs/FEAT-013-global-avatar-settings.md`
+- summary: 按浏览器批注将左上头像入口拆成独立“个人简档”页，并把齿轮设置页改为组织设置页，标题显示当前组织名称。
+- done:
+  - `frontend/src/assistant/AssistantApp.tsx` 已新增 `profile` 工作区 tab；左上头像点击后在右侧主区域展示“个人简档”，齿轮入口改为“组织设置”。
+  - 齿轮入口 hover/无障碍提示语已从“组织设置”收短为“设置”。
+  - `frontend/src/assistant/MyEmailAccountsModal.tsx` 已新增 `surface="profile|settings"`；profile surface 单独展示头像、姓、名、显示名称、手机号、邮箱和修改密码；settings surface 不再渲染“个人资料”tab。
+  - profile surface 已将“修改密码”调整为与“个人信息”平级的文本 tab，并移除个人简档页头及 profile 内部 section 横线。
+  - profile surface 已移除内部“我的头像”和表单区“个人信息”小标题，仅保留顶部 tabs 作为页面分组。
+  - profile 表单邮箱字段已取消整行宽度，桌面端跟随两列网格显示。
+  - `frontend/src/assistant/cici-ui.css` 已补头像 active 状态和个人简档表单跨列布局，沿用 `鎏金账房` 紧凑表单与按钮词汇。
+  - 后端新增 `V47__account_profile_and_password.sql`、`AccountAuthCredentialEntity` / repository、`PUT /auth/me/profile`、`PUT /auth/me/password`；无个人密码的既有账号继续使用固定密码，修改后优先使用账号级密码。
+  - `/auth/me` 现在返回 `firstName`、`lastName`、`displayName`、`email`，用于前台个人简档预填与头像兜底。
+- verification:
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
+  - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> success。
+  - `browser`: in-app Browser desktop and 390px mobile checks on `http://127.0.0.1:5173/` -> profile entry shows “个人简档/显示名称/修改密码”; settings entry title is `Demo Organization`; settings tabs no longer include “个人资料”。
+  - `browser`: in-app Browser desktop and 390px mobile screenshot checks after latest comments -> “个人信息 / 修改密码” tabs switch correctly, password fields only appear in the password tab, and profile section dividers are gone.
+  - `browser`: in-app Browser heading check after title-removal comments -> `我的头像` heading count=0, `个人信息` heading count=0, top profile tabs still present.
+  - `browser`: in-app Browser screenshot after email-width comment -> 邮箱输入框为半宽列，不再横跨整个表单。
+  - `browser`: in-app Browser rail label check after settings-label comment -> `设置` button count=1, `组织设置` button count=0.
+- next_action: 若继续扩展个人简档，优先补密码强度策略、密码重置/MFA/SSO 和保存成功后的重新登录提示设计。
+
+### TASK-076 Assistant settings rail entry
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-assistant
+- summary: 按浏览器批注将前台助手个人设置入口从左上头像移至左下设置图标，并让设置图标切换右侧主页面。
+- done:
+  - `frontend/src/assistant/AssistantApp.tsx` 已新增 `settings` 工作区 tab；下方设置图标点击后切换到个人设置页面并显示 active 状态。
+  - 左上用户头像已改为静态身份展示，不再是 button，不再触发个人设置弹层。
+  - `frontend/src/assistant/MyEmailAccountsModal.tsx` 已支持 `variant="page"`，页面模式复用个人资料、工作流、渠道、邮箱和专属记忆内容，但不渲染 modal backdrop、`role="dialog"` 或关闭按钮。
+  - `frontend/src/assistant/cici-ui.css` 已新增设置页主区域样式，并移除头像设置行的内层背景框，保持 `鎏金账房` 产品页的紧凑边线层级。
+- verification:
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
+  - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/MyEmailAccountsModal.tsx frontend/src/assistant/cici-ui.css` -> success。
+  - `browser`: in-app Browser 从工作台点击头像 -> 仍停留 `.cici-workbench`，`.cici-settings-page=0`，`dialog=0`，`backdrop=0`。
+  - `browser`: in-app Browser 点击下方设置图标 -> `.cici-settings-page=1`，设置图标 active，个人设置 tabs 为 5 个，`dialog=0`，`backdrop=0`。
+  - `browser`: in-app Browser 桌面 1280x800 与移动 390x844 截图复查通过。
+- next_action: 若继续调整设置入口，优先确认是否要拆分个人设置页面 URL、默认 tab 和返回工作台行为。
+
+### TASK-075 Front login reservation deep link
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-login
+- summary: 按用户截图将前台登录页“立即预约”改为跳转主域官网并自动打开预约演示弹窗。
+- done:
+  - `frontend/src/assistant/AssistantApp.tsx` 已将“还没有账户？立即预约”从 React Router 站内链接改为外部 `https://agentcici.com/?demo=1`。
+  - `frontend/src/autoservice/AutoServiceLanding.tsx` 已识别 `demo=1` 或 `demo=true`，进入官网后直接打开既有预约演示 modal。
+  - 预约提交的 `sourcePath` 已包含 `location.search`，便于平台侧线索追踪来源深链。
+  - V1.8 主域切换为 FEAT-027 综合官网后，前台登录页“立即预约”已改为 `https://agentcici.com/#demo`。
+- verification:
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
+  - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/autoservice/AutoServiceLanding.tsx` -> success。
+  - `browser`: Playwright CLI `/autoservice/cn?demo=1` DOM 检查 -> `.as-demo-modal` 存在，标题为“预约 AutoService 演示”，`html/body` overflow 均为 `hidden`。
+  - `browser`: Playwright CLI `/` 登录页 DOM 检查 -> footer 文案为“还没有账户？立即预约”，链接 href 为 `https://agentcici.com/?demo=1`。
+  - `browser`: V1.8 public Playwright check `https://autoservice.agentcici.com/` -> 产品登录页仍正常，footer link href 为 `https://agentcici.com/#demo`。
+- next_action: 若线上部署后继续反馈，优先检查新主站 `#demo` 锚点、suite 静态表单和后续真实线索模型接入。
+
+### TASK-074 Default browser title rename
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-app
+- summary: 按用户截图将默认浏览器页签标题从旧 `CiCi · 数字员工助手` 改为产品品牌 `AgentCiCi`。
+- done:
+  - `frontend/index.html` 默认 `<title>` 已改为 `AgentCiCi`。
+  - 保留 AutoService 路由内通过 `document.title` 设置的独立公开站点 SEO title，不扩大本次改动范围。
+- verification:
+  - `content`: `rg -n "CiCi · 数字员工助手|<title>AgentCiCi</title>" frontend/index.html` -> success，仅匹配新的 `<title>AgentCiCi</title>`。
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
+- next_action: 若后续要统一所有路由的页签标题，再单独梳理 `document.title` 动态设置和 SEO 策略。
+
+### TASK-073 Admin login visual standardization
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-admin
+- summary: 按用户截图将管理端 `/admin/login` 从旧 generic login 视觉收回到 `鎏金账房` 产品后台统一规范。
+- done:
+  - `frontend/src/admin/AdminLogin.tsx` 已增加 `.admin-login` 专用结构，登录页采用主表单 + 权限说明的紧凑两列布局，移动端降级为单列。
+  - 管理端登录文案已将“固定密码”改为“密码”，非管理员提示也同步去掉“固定密码”旧称。
+  - `frontend/src/styles.css` 已为 `.admin-login` 接入 admin token：暖象牙背景、墨色标题、香槟金边框、金色主按钮、紧凑输入和 gold-family notice/link；同时覆盖旧全局 `.notice` 蓝色级联。
+- verification:
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
+  - `git`: `git diff --check -- frontend/src/admin/AdminLogin.tsx frontend/src/styles.css` -> success。
+  - `browser`: Playwright + system Chrome 桌面/移动截图通过；产物 `output/playwright/admin-login-unified-desktop.png` 与 `output/playwright/admin-login-unified-mobile.png`。
+  - `browser-style`: 390px 移动端 `scrollWidth=clientWidth=390`；字段标签为“组织 ID / 手机号 / 密码”；按钮背景、输入边框、notice 和卡片边框均为 gold-family；页面正文不再包含“固定密码”。
+- next_action: 若继续收到登录入口反馈，优先对比 `/admin/login` 与 `/platform/login` 的入口结构和 token 作用域，避免旧 generic login 级联再次漏出。
 
 ### TASK-072 AutoService website implementation design
 
@@ -142,7 +295,7 @@ board_status: active
 
 ### TASK-069 Account tenant lifecycle and data retention implementation
 
-- status: purge_worker_lease_implemented
+- status: email_login_implemented
 - priority: P1
 - owner_role: backend-auth-tenant
 - spec_path: `docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md`
@@ -187,6 +340,7 @@ board_status: active
   - 已新增 `V46__organization_purge_worker_lease.sql`，真实 purge job 记录 `worker_id`、`locked_at`、`lock_expires_at`、`attempt_count` 和 `dead_letter_at`。
   - `PlatformTenantLifecycleService.processQueuedPurgeJobs()` 已改为先用条件更新抢占 `QUEUED` job 为 `RUNNING` 并提交 worker lease，再执行清理；这避免多个应用实例同时执行同一个真实 purge job。
   - 过期 `RUNNING` lease 会被标记为 `DEAD_LETTER`，result 摘要保留 stale worker 和 lease 时间，业务数据不会被自动重复清理；平台页新增 `DEAD_LETTER` 文案“死信”。
+  - 已实现邮箱登录标识闭环：个人简档邮箱保存后同步为 ACTIVE EMAIL 登录标识，登录页保持单个账号输入框并自动识别手机号或邮箱。
 - verification:
   - `git`: `git diff --check -- docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md .claw/task-board.md .claw/current-status.md .claw/decisions.md` -> success
   - `state`: `rg -n "TASK-069|DEC-024|FEAT-024" docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md .claw/task-board.md .claw/current-status.md .claw/decisions.md` -> success
@@ -231,9 +385,15 @@ board_status: active
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformTenantLifecycleIntegrationTest test` -> success（新增覆盖成功真实 purge job 写入 worker/attempt 元数据，过期 `RUNNING` job 转入 `DEAD_LETTER` 且不删除业务数据）。
   - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
   - `git`: target files whitespace check for FEAT-024 worker lease backend/frontend/docs/state -> success；相关平台 lifecycle 文件当前为未跟踪新增文件，使用 `git diff --check --no-index /dev/null <file>` 检查空白。
-- next_action: FEAT-024 后续优先做外部对象存储适配器巡检、生产 Qdrant/外部向量库巡检 smoke、订阅状态自动驱动、Owner 侧关闭申请、真实邀请接受和席位类型。
+  - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AuthFlowIntegrationTest test` -> success（覆盖个人简档邮箱同步后可用邮箱大小写无关登录、重复邮箱被拒绝）。
+  - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）。
+  - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/auth backend/src/test/java/com/codehouse/ciciassistant/auth/AuthFlowIntegrationTest.java frontend/src/assistant/AssistantApp.tsx frontend/src/admin/AdminLogin.tsx frontend/src/platform/PlatformLogin.tsx docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md .claw/task-board.md` -> success。
+  - `browser`: Playwright CLI `http://127.0.0.1:5173/` desktop 1280x800 and mobile 390x844 -> success；登录页 labels 为 `电子邮件地址或手机号码 / 密码`，账号字段 count=1，移动端 `scrollWidth=clientWidth=390`；截图产物 `output/playwright/email-login-single-field-desktop.png` 与 `output/playwright/email-login-single-field-mobile.png`。
+- next_action: FEAT-024 后续优先做密码重置/MFA/SSO、外部对象存储适配器巡检、生产 Qdrant/外部向量库巡检 smoke、订阅状态自动驱动、Owner 侧关闭申请、真实邀请接受和席位类型。
 - handoff_notes:
   - 新 token 当前已包含 `account_id`、`member_id`、`org_id`、`roles`；`seat_type` 尚未实现。
+  - 用户已确认当前公网环境属于 UAT 公测阶段，尚未正式生产上线；账号模型和生命周期 schema 如需调整，可采用全新部署/重建数据库、文件存储和向量库，不再把旧 `app_user` 历史数据完整迁移作为 FEAT-024 必须交付项。
   - 组织内个人数据按 `org_id + member_id` 隔离；现有 `user_id` DB 字段短期保留字段名，但写入值必须是 `organization_member.id`，不要按全局 `account_id` 共享业务记忆、凭证或会话。
   - purge job 首期已支持 dry run manifest、guarded real purge、排队 worker、worker lease 抢占、死信标记、取消排队任务、失败重试和只读 orphan audit；真实销毁必须继续保持“先 DB 闸门计数/过滤，再清理对象存储和向量物理点位”的顺序。
   - 当前已覆盖本地 KB 组织目录孤儿文件巡检与清理、VectorStoreClient org-scoped 孤儿点位巡检、多实例 worker 重复执行防护和 stale running 死信标记；外部对象存储适配器、生产 Qdrant smoke 和跨系统向量库巡检仍需后续生产化覆盖。
@@ -275,7 +435,7 @@ board_status: active
 
 ### TASK-066 WeCom customer service channel
 
-- status: callback_foundation_implemented
+- status: admin_config_ui_implemented
 - priority: P1
 - owner_role: backend-channel-runtime
 - spec_path: `docs/specs/FEAT-023-ai-native-after-sales-agent.md`
@@ -287,16 +447,28 @@ board_status: active
   - 已实现消息去重、入站/出站消息日志、`lastCustomerMessageAt`、`replyCountInWindow`、48 小时 / 5 条窗口检查；超窗或发送失败会记录出站 `send_status`。
   - `agent_run_trace` 已能标记 `sourceType=wechat_kf`、`requestId=企业微信 msgid`、`externalUserId=external_userid`；管理端渠道标签兼容 `wechat_kf`。
   - 本地 Vite 与部署 Nginx 已新增 `/wecom` 代理，避免企业微信回调被前端 SPA 路由吞掉。
+  - 已新增内置 `after-sales-agent` 售后服务 Agent：默认用于企业微信微信客服外部客户会话，提示词明确当前阶段只基于已授权知识库和客户文字描述沟通，不查询/操作 CRM、订单、客户档案、工单或物流系统。
+  - `ChatOrchestratorService` 对 `wecom-kf:*` 会话启用知识库优先策略：只要 Agent 有默认知识库，客户售后问题即触发 RAG；即使问题包含“订单/客户/查询”等业务词，也不走 CRM/业务工具分支。
+  - `wecom-kf:*` 会话运行时不加载任何工具定义，避免微信客服客户消息误触 CRM、CloudCC、邮件、外部搜索或写操作；若问题需要实时订单/物流/工单状态，Agent 只能基于知识库说明原则并建议转人工核实。
+  - 已新增组织管理 API `/admin/wecom/kf-accounts`：支持列表、创建/更新、启用、停用微信客服账号配置；Secret 与 EncodingAESKey 使用 `SecretCipherService` 加密落库，默认绑定 `after-sales-agent` 与当前 run-as 用户；响应仅返回脱敏配置和回调路径。
+  - 本地 Vite 与部署 Nginx 已新增 `/admin/wecom` 代理，避免配置 API 被前端 SPA 路由吞掉。
+  - 已新增管理端可视化配置页 `/admin/channels/wechat-kf`：组织管理员可查看微信客服账号、创建/更新配置、启停账号、选择售后 Agent、选择 run-as 服务用户、复制企业微信回调 URL；编辑已有账号时 Token/Secret/EncodingAESKey 留空保持原值。
+  - 页面路由避开 `/admin/wecom` API 代理前缀，避免 Vite/Nginx 将前端页面请求转发给后端配置 API。
 - verification:
+  - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest,WecomKfConfigServiceTest,WecomKfCryptoServiceTest,WecomKfConversationEntityTest test` -> success
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=WecomKfCryptoServiceTest,WecomKfConversationEntityTest test` -> success
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success
   - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）
-  - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/wecom backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceEntity.java backend/src/main/java/com/codehouse/ciciassistant/ai/domain/AgentRunTraceRepository.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/main/resources/db/migration/V42__wecom_kf_channel.sql backend/src/test/java/com/codehouse/ciciassistant/wecom frontend/src/admin/pages/AdminAgentRunMonitor.tsx frontend/vite.config.ts frontend/vite.config.js deploy/nginx.cici.conf deploy/nginx.cici.ssl.conf` -> success
-- next_action: 补企业微信客服账号配置管理入口或初始化脚本，并用 mock/真实企业微信账号执行 POST 回调、`sync_msg`、`send_msg` 端到端 smoke。
+  - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/wecom backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentDefinitionService.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/wecom backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java frontend/vite.config.ts frontend/vite.config.js deploy/nginx.cici.conf deploy/nginx.cici.ssl.conf` -> success
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）
+  - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/admin/AdminShell.tsx frontend/src/admin/pages/AdminWecomKfAccountsPage.tsx frontend/src/styles.css` -> success
+  - `browser`: Playwright CLI 登录本地 `http://127.0.0.1:5173/admin/channels/wechat-kf`，用 mock `/admin/wecom/kf-accounts` 数据截取桌面与 390px 移动 full-page 截图 -> success；移动端 `scrollWidth=clientWidth=390`，账号行与文本动作 computed style 为透明背景、0 圆角、无阴影。
+- next_action: 用真实企业微信微信客服账号配置 `open_kfid`、Secret、Token、EncodingAESKey、服务用户和售后 Agent 绑定知识库后，执行 POST callback -> `sync_msg` -> Agent RAG -> `send_msg` 端到端 smoke。
 - handoff_notes:
-  - 当前没有新增管理端配置 UI；`wecom_kf_account` 需要通过后续配置接口、种子脚本或直接数据初始化写入 CorpID、secret、Token、EncodingAESKey、`open_kfid`、`agent_id`、`run_as_user_id`。
+  - 管理端可视化配置页位于 `/admin/channels/wechat-kf`，后端 REST API 仍位于 `/admin/wecom/kf-accounts`。
+  - 微信客服账号配置需要 CorpID、Secret、Token、EncodingAESKey、`open_kfid`、`agent_id`、`run_as_user_id`；默认 `agent_id=after-sales-agent`，但仍需给该 Agent 绑定知识库。
   - 当前只处理文本消息；图片、语音、文件等会回复“当前版本先支持文字描述”。
-  - 真实企业微信 smoke 前必须确认客服账号 `open_kfid`、Secret、Token、EncodingAESKey、服务用户权限和售后 Agent 是否已发布。
+  - 真实企业微信 smoke 前必须确认客服账号 `open_kfid`、Secret、Token、EncodingAESKey、服务用户权限、售后 Agent 是否已绑定知识库，以及企业微信后台回调 URL 是否带 `orgId` / `openKfId` 查询参数。
 
 ### TASK-065 Personal memory category label cleanup
 
