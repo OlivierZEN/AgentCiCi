@@ -16,9 +16,12 @@ import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
 import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService;
+import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
+import com.codehouse.ciciassistant.skill.service.BuiltinSkillRuntimeConfigService;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService.ResolvedSkillContext;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -67,6 +70,7 @@ public class ChatOrchestratorService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final ModelRouterService modelRouterService;
+    private final ModelProviderService modelProviderService;
     private final ToolOrchestratorService toolOrchestratorService;
     private final RagService ragService;
     private final ChatThinkingConfigService chatThinkingConfigService;
@@ -76,6 +80,8 @@ public class ChatOrchestratorService {
     private final FeishuBotBindingRepository feishuBotBindingRepository;
     private final SkillResolverService skillResolverService;
     private final SkillPromptAssembler skillPromptAssembler;
+    private final BuiltinSkillDocumentService builtinSkillDocumentService;
+    private final BuiltinSkillRuntimeConfigService builtinSkillRuntimeConfigService;
     private final UserMemoryService userMemoryService;
     private final ChatSessionStateService chatSessionStateService;
     private final ChatSessionStateRepository chatSessionStateRepository;
@@ -88,6 +94,7 @@ public class ChatOrchestratorService {
     public ChatOrchestratorService(ChatSessionRepository chatSessionRepository,
                                    ChatMessageRepository chatMessageRepository,
                                    ModelRouterService modelRouterService,
+                                   ModelProviderService modelProviderService,
                                    ToolOrchestratorService toolOrchestratorService,
                                    RagService ragService,
                                    ChatThinkingConfigService chatThinkingConfigService,
@@ -97,6 +104,8 @@ public class ChatOrchestratorService {
                                    FeishuBotBindingRepository feishuBotBindingRepository,
                                    SkillResolverService skillResolverService,
                                    SkillPromptAssembler skillPromptAssembler,
+                                   BuiltinSkillDocumentService builtinSkillDocumentService,
+                                   BuiltinSkillRuntimeConfigService builtinSkillRuntimeConfigService,
                                    UserMemoryService userMemoryService,
                                    ChatSessionStateService chatSessionStateService,
                                    ChatSessionStateRepository chatSessionStateRepository,
@@ -108,6 +117,7 @@ public class ChatOrchestratorService {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.modelRouterService = modelRouterService;
+        this.modelProviderService = modelProviderService;
         this.toolOrchestratorService = toolOrchestratorService;
         this.ragService = ragService;
         this.chatThinkingConfigService = chatThinkingConfigService;
@@ -117,6 +127,8 @@ public class ChatOrchestratorService {
         this.feishuBotBindingRepository = feishuBotBindingRepository;
         this.skillResolverService = skillResolverService;
         this.skillPromptAssembler = skillPromptAssembler;
+        this.builtinSkillDocumentService = builtinSkillDocumentService;
+        this.builtinSkillRuntimeConfigService = builtinSkillRuntimeConfigService;
         this.userMemoryService = userMemoryService;
         this.chatSessionStateService = chatSessionStateService;
         this.chatSessionStateRepository = chatSessionStateRepository;
@@ -137,9 +149,11 @@ public class ChatOrchestratorService {
         Instant skillStartedAt = Instant.now();
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+        BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
+                builtinSkillDocumentService.resolveDocs(skillContext, question);
         stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                 "已解析当前智能体绑定技能、工具边界与会话激活技能。",
-                skillTraceMetadata(skillContext, List.of())));
+                skillTraceMetadata(skillContext, List.of(), builtinDocs)));
         Instant userPersistStartedAt = Instant.now();
         persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
@@ -147,6 +161,7 @@ public class ChatOrchestratorService {
 
         Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("modelName"));
+        ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
         boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
@@ -176,10 +191,10 @@ public class ChatOrchestratorService {
         chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
         List<Map<String, Object>> messages = buildInitialMessages(
                 sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
-                runtimeContext, routedModel.get("provider"), modelName);
+                runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
-                showThinking, skillContext, maxToolRounds, modelCallTraces, toolCallTraces);
+                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces);
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -238,6 +253,7 @@ public class ChatOrchestratorService {
         payload.put("effectiveKnowledgeBaseIds", effectiveKnowledgeBaseIds);
         payload.put("resolvedSkills", skillContext.skillCodes());
         payload.put("resolvedSkillVersions", skillContext.resolvedSkillRefs());
+        payload.put("fileBackedSkillRefs", builtinDocs.refs());
         payload.put("effectiveToolNames", skillContext.allowedToolNames());
         payload.put("agentDirectToolNames", skillContext.agentDirectToolNames());
         payload.put("skillDeclaredToolNames", skillContext.skillDeclaredToolNames());
@@ -282,9 +298,11 @@ public class ChatOrchestratorService {
                 Instant skillStartedAt = Instant.now();
                 ResolvedSkillContext skillContext = skillResolverService.resolve(
                         orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+                BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
+                        builtinSkillDocumentService.resolveDocs(skillContext, question);
                 stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                         "已解析当前智能体绑定技能、工具边界与会话激活技能。",
-                        skillTraceMetadata(skillContext, List.of())));
+                        skillTraceMetadata(skillContext, List.of(), builtinDocs)));
                 Instant userPersistStartedAt = Instant.now();
                 persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
@@ -292,6 +310,7 @@ public class ChatOrchestratorService {
 
                 Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("modelName"));
+                ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
                 boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
@@ -336,11 +355,11 @@ public class ChatOrchestratorService {
                 chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
                 List<Map<String, Object>> messages = buildInitialMessages(
                         sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
-                        runtimeContext, routedModel.get("provider"), modelName);
+                        runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
-                        showThinking, skillContext, emitter, maxToolRounds, modelCallTraces, toolCallTraces);
+                        showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces);
                 if (pendingApprovalsUsed) {
                     // Keep chat concise when a dedicated approvals page is rendered on frontend.
                     messages.add(Map.of(
@@ -365,15 +384,29 @@ public class ChatOrchestratorService {
                 String finalModelStatus = "SUCCESS";
                 ChatStreamResult streamResult = new ChatStreamResult(0, 0);
                 try {
-                    streamResult = aliyunBailianClient.chatStreamWithMessages(
-                            modelName,
-                            messages,
-                            null,
-                            showThinking,
-                            piece -> {
-                                acc.append(piece);
-                                safeSendDelta(emitter, piece);
-                            });
+                    if (modelCredentials.hasProviderCredentials()) {
+                        streamResult = aliyunBailianClient.chatStreamWithCredentials(
+                                modelName,
+                                messages,
+                                null,
+                                showThinking,
+                                piece -> {
+                                    acc.append(piece);
+                                    safeSendDelta(emitter, piece);
+                                },
+                                modelCredentials.apiBaseUrl(),
+                                modelCredentials.apiKey());
+                    } else {
+                        streamResult = aliyunBailianClient.chatStreamWithMessages(
+                                modelName,
+                                messages,
+                                null,
+                                showThinking,
+                                piece -> {
+                                    acc.append(piece);
+                                    safeSendDelta(emitter, piece);
+                                });
+                    }
                     log.info("chatStream LLM stream done: session={} chars={} elapsedMs={}",
                             sessionId, acc.length(), System.currentTimeMillis() - streamStart);
                 } catch (Exception ex) {
@@ -479,14 +512,15 @@ public class ChatOrchestratorService {
     private String runToolLoop(String modelName, List<Map<String, Object>> messages,
                                List<Map<String, Object>> tools, String orgId, String userId, String sessionId,
                                boolean showThinking, ResolvedSkillContext skillContext, int maxToolRounds,
+                               ModelCallCredentials modelCredentials,
                                List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces,
                                List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
         for (int round = 0; round < maxToolRounds; round++) {
             Instant modelStartedAt = Instant.now();
             ChatCompletionResult result;
             try {
-                result = aliyunBailianClient.chatCompletion(
-                        modelName, messages, tools.isEmpty() ? null : tools, !showThinking);
+                result = chatCompletionWithResolvedCredentials(
+                        modelName, messages, tools.isEmpty() ? null : tools, !showThinking, modelCredentials);
             } catch (RuntimeException ex) {
                 Instant modelEndedAt = Instant.now();
                 modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
@@ -529,13 +563,14 @@ public class ChatOrchestratorService {
 
             appendToolCallsAndResults(messages, result, orgId, userId, sessionId, skillContext, null, toolCallTraces);
         }
-        return completeFromToolResultsAfterLimit(modelName, messages, showThinking, maxToolRounds, modelCallTraces);
+        return completeFromToolResultsAfterLimit(modelName, messages, showThinking, maxToolRounds, modelCredentials, modelCallTraces);
     }
 
     private String completeFromToolResultsAfterLimit(String modelName,
                                                      List<Map<String, Object>> messages,
                                                      boolean showThinking,
                                                      int maxToolRounds,
+                                                     ModelCallCredentials modelCredentials,
                                                      List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces) {
         String deterministicFallback = buildToolLimitReachedFallbackMessage(messages, maxToolRounds);
         if (!hasToolMessages(messages)) {
@@ -550,7 +585,7 @@ public class ChatOrchestratorService {
         Instant modelStartedAt = Instant.now();
         ChatCompletionResult result;
         try {
-            result = aliyunBailianClient.chatCompletion(modelName, finalMessages, null, !showThinking);
+            result = chatCompletionWithResolvedCredentials(modelName, finalMessages, null, !showThinking, modelCredentials);
         } catch (RuntimeException ex) {
             Instant modelEndedAt = Instant.now();
             if (modelCallTraces != null) {
@@ -607,6 +642,7 @@ public class ChatOrchestratorService {
                                   ResolvedSkillContext skillContext,
                                   SseEmitter emitter,
                                   int maxToolRounds,
+                                  ModelCallCredentials modelCredentials,
                                   List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces,
                                   List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
         if (tools.isEmpty()) return false;
@@ -619,8 +655,8 @@ public class ChatOrchestratorService {
                 List<Map<String, Object>> planningMessages = hasToolMessages(messages)
                         ? withToolPlanningStopPrompt(messages)
                         : messages;
-                result = aliyunBailianClient.chatCompletion(
-                        modelName, planningMessages, tools, !showThinking);
+                result = chatCompletionWithResolvedCredentials(
+                        modelName, planningMessages, tools, !showThinking, modelCredentials);
             } catch (RuntimeException ex) {
                 Instant modelEndedAt = Instant.now();
                 modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
@@ -878,13 +914,16 @@ public class ChatOrchestratorService {
         return safe.substring(0, Math.max(0, max - 1)) + "…";
     }
 
-    private static Map<String, Object> skillTraceMetadata(ResolvedSkillContext skillContext, List<String> activatedSkillCodes) {
+    private static Map<String, Object> skillTraceMetadata(ResolvedSkillContext skillContext,
+                                                          List<String> activatedSkillCodes,
+                                                          BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs) {
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("boundSkillCodes", skillContext.skillCodes());
         metadata.put("activatedSkillCodes", activatedSkillCodes == null ? List.of() : activatedSkillCodes);
         metadata.put("activeSkillCode", skillContext.activeSkillCode() == null ? "" : skillContext.activeSkillCode());
         metadata.put("allowedToolNames", skillContext.allowedToolNames());
         metadata.put("skillScopedToolNames", skillContext.skillScopedToolNames());
+        metadata.put("fileBackedSkillRefs", builtinDocs == null ? List.of() : builtinDocs.refs());
         return metadata;
     }
 
@@ -946,6 +985,42 @@ public class ChatOrchestratorService {
         return List.copyOf(activated);
     }
 
+    private ChatCompletionResult chatCompletionWithResolvedCredentials(String modelName,
+                                                                       List<Map<String, Object>> messages,
+                                                                       List<Map<String, Object>> tools,
+                                                                       boolean stripThinkingFromAssistantContent,
+                                                                       ModelCallCredentials credentials) {
+        if (credentials != null && credentials.hasProviderCredentials()) {
+            return aliyunBailianClient.chatCompletionWithCredentials(
+                    modelName,
+                    messages,
+                    tools,
+                    stripThinkingFromAssistantContent,
+                    credentials.apiBaseUrl(),
+                    credentials.apiKey());
+        }
+        return aliyunBailianClient.chatCompletion(modelName, messages, tools, stripThinkingFromAssistantContent);
+    }
+
+    private ModelCallCredentials resolveModelCallCredentials(String orgId, String providerCode) {
+        if (providerCode == null || providerCode.isBlank() || "mock".equalsIgnoreCase(providerCode.trim())) {
+            return ModelCallCredentials.empty(providerCode);
+        }
+        try {
+            Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, providerCode.trim());
+            if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
+                throw new IllegalArgumentException("当前模型厂商已停用，请先在管理后台启用模型配置。");
+            }
+            return new ModelCallCredentials(
+                    providerCode.trim(),
+                    credentials.get("apiBaseUrl"),
+                    credentials.get("apiKey"));
+        } catch (IllegalArgumentException ex) {
+            log.warn("model provider credentials unavailable: org={} provider={} err={}", orgId, providerCode, ex.getMessage());
+            return ModelCallCredentials.empty(providerCode);
+        }
+    }
+
     // ── Helpers ──
 
     private List<Map<String, Object>> buildInitialMessages(String sessionId, String question, List<String> ragContext,
@@ -954,10 +1029,13 @@ public class ChatOrchestratorService {
                                                            String orgId, String userId,
                                                            RuntimeContext runtimeContext,
                                                            String routedProvider,
-                                                           String modelName) {
+                                                           String modelName,
+                                                           BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs) {
         List<Map<String, Object>> messages = new ArrayList<>();
         String baseSystem = showThinking ? AliyunBailianClient.SYSTEM_PROMPT_WITH_THINKING : AliyunBailianClient.SYSTEM_PROMPT;
-        String system = skillPromptAssembler.assemble(baseSystem, skillContext);
+        BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig =
+                builtinSkillRuntimeConfigService.resolve(skillContext, builtinDocs, orgId, userId);
+        String system = skillPromptAssembler.assemble(baseSystem, skillContext, builtinDocs, runtimeConfig);
         system = buildModelIdentityPromptBlock(routedProvider, modelName)
                 + "\n---\n\n" + system
                 + "\n---\n\n" + buildToolUseBoundaryPromptBlock(sessionId);
@@ -2042,5 +2120,15 @@ public class ChatOrchestratorService {
 
     private static RagService.RetrievalResult emptyRagRetrievalResult() {
         return new RagService.RetrievalResult(List.of(), List.of(), Map.of("total", 0L), false);
+    }
+
+    private record ModelCallCredentials(String providerCode, String apiBaseUrl, String apiKey) {
+        static ModelCallCredentials empty(String providerCode) {
+            return new ModelCallCredentials(providerCode == null ? "" : providerCode, "", "");
+        }
+
+        boolean hasProviderCredentials() {
+            return apiBaseUrl != null && !apiBaseUrl.isBlank() && apiKey != null && !apiKey.isBlank();
+        }
     }
 }

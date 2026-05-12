@@ -64,6 +64,18 @@ public class PlatformSkillTemplateVersionEntity {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    @Column(name = "resource_uri", length = 512)
+    private String resourceUri;
+
+    @Column(name = "bundle_checksum", length = 128)
+    private String bundleChecksum;
+
+    @Column(name = "entrypoint_checksum", length = 128)
+    private String entrypointChecksum;
+
+    @Column(name = "module_manifest_json", columnDefinition = "TEXT")
+    private String moduleManifestJson;
+
     protected PlatformSkillTemplateVersionEntity() {
     }
 
@@ -166,6 +178,32 @@ public class PlatformSkillTemplateVersionEntity {
 
     public Instant getPublishedAt() {
         return publishedAt;
+    }
+
+    public String getResourceUri() {
+        return resourceUri;
+    }
+
+    public String getBundleChecksum() {
+        return bundleChecksum;
+    }
+
+    public String getEntrypointChecksum() {
+        return entrypointChecksum;
+    }
+
+    public String getModuleManifestJson() {
+        return moduleManifestJson;
+    }
+
+    public void attachFileBackedResource(String resourceUri,
+                                         String bundleChecksum,
+                                         String entrypointChecksum,
+                                         String moduleManifestJson) {
+        this.resourceUri = resourceUri;
+        this.bundleChecksum = bundleChecksum;
+        this.entrypointChecksum = entrypointChecksum;
+        this.moduleManifestJson = moduleManifestJson;
     }
 
     public void markPublished() {

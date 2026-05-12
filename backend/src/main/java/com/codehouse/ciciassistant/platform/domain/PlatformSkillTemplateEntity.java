@@ -37,6 +37,15 @@ public class PlatformSkillTemplateEntity {
     @Column(name = "current_version_no", nullable = false)
     private Integer currentVersionNo;
 
+    @Column(name = "resource_type", nullable = false, length = 32)
+    private String resourceType;
+
+    @Column(name = "resource_uri", length = 512)
+    private String resourceUri;
+
+    @Column(name = "bundle_checksum", length = 128)
+    private String bundleChecksum;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -60,6 +69,7 @@ public class PlatformSkillTemplateEntity {
         this.description = description;
         this.status = status;
         this.currentVersionNo = currentVersionNo;
+        this.resourceType = "INLINE";
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -96,6 +106,18 @@ public class PlatformSkillTemplateEntity {
         return currentVersionNo;
     }
 
+    public String getResourceType() {
+        return resourceType == null || resourceType.isBlank() ? "INLINE" : resourceType;
+    }
+
+    public String getResourceUri() {
+        return resourceUri;
+    }
+
+    public String getBundleChecksum() {
+        return bundleChecksum;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
     }
@@ -109,6 +131,13 @@ public class PlatformSkillTemplateEntity {
         this.category = category;
         this.description = description;
         this.status = status;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateResource(String resourceType, String resourceUri, String bundleChecksum) {
+        this.resourceType = resourceType == null || resourceType.isBlank() ? "INLINE" : resourceType;
+        this.resourceUri = resourceUri;
+        this.bundleChecksum = bundleChecksum;
         this.updatedAt = Instant.now();
     }
 

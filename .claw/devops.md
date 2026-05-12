@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-10T15:13:18Z
+updated_at: 2026-05-11T23:30:23Z
 updated_by: ai
 status: active
 ---
@@ -71,6 +71,36 @@ status: active
     - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`
     - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`
     - Local legacy PostgreSQL note: if the old database has `app_user` but not FEAT-024 account tables, first repair Flyway V8/V9 checksums, then backfill `user_account`, `account_login_identifier`, and `organization_member` from `app_user` while preserving `app_user.id` as the member ID so historical `user_id` references remain valid.
+  - Verified restart on 2026-05-11T15:24:14+08:00:
+    - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` kept all local infrastructure containers running.
+    - Old listeners on ports `8080` and `5173` were stopped before restart.
+    - Detached `screen` sessions: `3261.cici-frontend`, `3258.cici-backend`.
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`.
+  - Verified restart on 2026-05-11T20:45:16+08:00:
+    - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` kept all local infrastructure containers running.
+    - Old `cici-backend` / `cici-frontend` screen sessions and listeners on ports `8080` and `5173` were stopped before restart.
+    - Detached `screen` sessions: `72258.cici-backend`, `72261.cici-frontend`.
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`.
+  - Verified restart on 2026-05-11T23:50:10+08:00:
+    - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` kept all local infrastructure containers running.
+    - Old `cici-backend` / `cici-frontend` screen sessions and listeners on ports `8080` and `5173` were stopped before restart.
+    - Detached `screen` sessions: `35525.cici-backend`, `35528.cici-frontend`.
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`.
+  - Verified restart on 2026-05-12T00:29:27+08:00:
+    - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` kept all local infrastructure containers running.
+    - Old `35525.cici-backend` / `35528.cici-frontend` screen sessions were stopped; stale Java listener on `8080` was killed after the screen wrapper exited.
+    - Detached `screen` sessions: `59117.cici-backend`, `59119.cici-frontend`.
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`.
+  - Verified restart on 2026-05-12T07:30:23+08:00:
+    - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` kept all local infrastructure containers running.
+    - Old `59117.cici-backend` / `59119.cici-frontend` screen sessions and listeners on ports `8080` / `5173` were stopped before restart.
+    - Detached `screen` sessions: `67822.cici-backend`, `67824.cici-frontend`.
+    - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`.
   - Verified backend restart on 2026-05-09T14:23:43+08:00 for FEAT-024 v43:
     - Stale Java process on port `8080` had to be killed after the detached screen wrapper exited; then `cici-backend` was restarted with the same screen command.
     - Flyway validated 44 migrations and reported schema version `43`; `/actuator/health` returned `{"status":"UP"}`.

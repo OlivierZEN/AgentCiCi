@@ -6847,16 +6847,16 @@ button:hover:not(:disabled),
 
 /* ---- Front login mode2 ---- */
 .login-mode2 {
-  --mode2-ink: #2b2217;
-  --mode2-bronze: #5f523f;
-  --mode2-muted: #7c6d59;
-  --mode2-line: #ded2bb;
-  --mode2-line-strong: #b99652;
-  --mode2-gold: #a67c2f;
-  --mode2-gold-strong: #876223;
-  --mode2-canvas: #f7f3eb;
-  --mode2-surface: #fffdf8;
-  --mode2-shelf: #f3e8d3;
+  --mode2-ink: #eaf4ff;
+  --mode2-bronze: #d9e9ff;
+  --mode2-muted: #a9bbd4;
+  --mode2-line: rgba(135, 164, 210, 0.52);
+  --mode2-line-strong: rgba(151, 182, 232, 0.82);
+  --mode2-gold: #5f75a3;
+  --mode2-gold-strong: #8298c8;
+  --mode2-canvas: #071225;
+  --mode2-surface: #101d33;
+  --mode2-shelf: #15243d;
   box-sizing: border-box;
   position: fixed;
   inset: 0;
@@ -6866,7 +6866,45 @@ button:hover:not(:disabled),
   display: grid;
   place-items: center;
   padding: 34px 24px;
-  background: linear-gradient(180deg, #fbf7ef 0%, var(--mode2-canvas) 58%, #efe5d3 100%);
+  background:
+    radial-gradient(circle at 18% 22%, rgba(219, 232, 255, 0.72) 0 0.8px, transparent 1.4px),
+    radial-gradient(circle at 68% 64%, rgba(154, 190, 255, 0.5) 0 0.7px, transparent 1.3px),
+    radial-gradient(circle at 42% 78%, rgba(214, 228, 255, 0.55) 0 0.6px, transparent 1.2px),
+    radial-gradient(circle at 12% 16%, rgba(179, 204, 255, 0.9) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 82% 14%, rgba(210, 226, 255, 0.88) 0 1.4px, transparent 2.4px),
+    radial-gradient(circle at 72% 47%, rgba(138, 177, 255, 0.72) 0 1px, transparent 2px),
+    radial-gradient(circle at 18% 78%, rgba(198, 220, 255, 0.82) 0 1.5px, transparent 2.6px),
+    radial-gradient(circle at 96% 58%, rgba(188, 211, 255, 0.7) 0 1px, transparent 2px),
+    radial-gradient(circle at 50% 46%, rgba(82, 132, 212, 0.18) 0%, transparent 26%),
+    radial-gradient(circle at 50% 36%, rgba(28, 78, 146, 0.26) 0%, transparent 34%),
+    radial-gradient(circle at 50% 58%, rgba(17, 62, 123, 0.28) 0%, transparent 42%),
+    linear-gradient(180deg, #030a17 0%, #071225 46%, #09182d 100%);
+  background-size:
+    122px 122px,
+    178px 178px,
+    242px 242px,
+    360px 360px,
+    520px 520px,
+    430px 430px,
+    620px 620px,
+    480px 480px,
+    100% 100%,
+    100% 100%,
+    100% 100%,
+    100% 100%;
+  background-position:
+    0 0,
+    38px 24px,
+    18px 58px,
+    0 0,
+    30px 0,
+    24px 60px,
+    0 30px,
+    16px 8px,
+    0 0,
+    0 0,
+    0 0,
+    0 0;
   color: var(--mode2-ink);
   font-family: var(--font-ui);
 }
@@ -7002,10 +7040,12 @@ button:hover:not(:disabled),
   box-sizing: border-box;
   width: min(420px, 100%);
   padding: 18px;
-  border: 1px solid var(--mode2-line-strong);
+  border: 1px solid rgba(137, 166, 215, 0.72);
   border-radius: 18px;
-  background: rgba(255, 253, 248, 0.96);
-  box-shadow: 0 16px 44px rgba(58, 43, 20, 0.12);
+  background: linear-gradient(180deg, rgba(14, 27, 49, 0.96) 0%, rgba(8, 18, 34, 0.98) 100%);
+  box-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(217, 233, 255, 0.06) inset;
 }
 
 .login-mode2 .boot-login__form {
@@ -7018,7 +7058,7 @@ button:hover:not(:disabled),
 }
 
 .login-mode2 .boot-login__field label {
-  color: var(--mode2-bronze);
+  color: #f0f6ff;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -7027,27 +7067,27 @@ button:hover:not(:disabled),
 .login-mode2 .boot-login__input {
   box-sizing: border-box;
   height: 40px;
-  border: 1px solid var(--mode2-line);
+  border: 1px solid rgba(128, 156, 202, 0.58);
   border-radius: 10px;
-  background: var(--mode2-surface);
+  background: rgba(15, 29, 52, 0.88);
   box-shadow: none;
-  color: var(--mode2-ink);
+  color: #edf5ff;
   text-shadow: none;
 }
 
 .login-mode2 .boot-login__input:not(:placeholder-shown) {
-  color: var(--mode2-ink);
+  color: #edf5ff;
 }
 
 .login-mode2 .boot-login__input:hover {
-  border-color: var(--mode2-line-strong);
+  border-color: rgba(169, 193, 232, 0.78);
   box-shadow: none;
 }
 
 .login-mode2 .boot-login__input:focus {
-  border-color: var(--mode2-gold);
-  background: var(--mode2-surface);
-  box-shadow: 0 0 0 3px rgba(166, 124, 47, 0.16);
+  border-color: rgba(196, 215, 247, 0.92);
+  background: rgba(20, 37, 65, 0.94);
+  box-shadow: 0 0 0 3px rgba(114, 149, 210, 0.2);
   transform: none;
 }
 
@@ -7063,14 +7103,14 @@ button:hover:not(:disabled),
 
 .login-mode2 .boot-login__org-choice {
   margin-top: 12px;
-  border-top: 1px solid var(--mode2-line);
-  border-bottom: 1px solid var(--mode2-line);
+  border-top: 1px solid rgba(128, 156, 202, 0.4);
+  border-bottom: 1px solid rgba(128, 156, 202, 0.4);
   padding: 8px 0;
 }
 
 .login-mode2 .boot-login__org-choice p {
   margin: 0 0 4px;
-  color: var(--mode2-bronze);
+  color: #dbeaff;
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -7088,7 +7128,7 @@ button:hover:not(:disabled),
   padding: 5px 0;
   background: transparent;
   box-shadow: none;
-  color: var(--mode2-ink);
+  color: #edf5ff;
   text-align: left;
   transform: none;
 }
@@ -7097,7 +7137,7 @@ button:hover:not(:disabled),
 .login-mode2 .boot-login__org-option:focus-visible {
   background: transparent;
   box-shadow: none;
-  color: var(--mode2-gold-strong);
+  color: #c9dcff;
   transform: none;
 }
 
@@ -7111,7 +7151,7 @@ button:hover:not(:disabled),
 }
 
 .login-mode2 .boot-login__org-option small {
-  color: var(--mode2-muted);
+  color: #a9bbd4;
   font-size: 11px;
 }
 
@@ -7130,36 +7170,36 @@ button:hover:not(:disabled),
 }
 
 .login-mode2 .boot-login__btn--ghost {
-  border: 1px solid var(--mode2-line);
-  background: var(--mode2-surface);
-  color: var(--mode2-bronze);
+  border: 1px solid rgba(128, 156, 202, 0.58);
+  background: rgba(15, 29, 52, 0.66);
+  color: #d9e9ff;
   box-shadow: none;
 }
 
 .login-mode2 .boot-login__btn--ghost:hover:not(:disabled) {
   transform: none;
-  border-color: var(--mode2-line-strong);
-  background: #faf4e8;
-  color: var(--mode2-gold-strong);
+  border-color: rgba(169, 193, 232, 0.78);
+  background: rgba(24, 43, 73, 0.74);
+  color: #f0f6ff;
   box-shadow: none;
 }
 
 .login-mode2 .boot-login__btn--primary {
-  border-color: var(--mode2-gold);
-  background: var(--mode2-gold);
-  color: var(--mode2-surface);
-  box-shadow: 0 10px 22px rgba(135, 98, 35, 0.22);
+  border-color: rgba(118, 146, 196, 0.82);
+  background: linear-gradient(180deg, #455b86 0%, #34496f 100%);
+  color: #f7fbff;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
 }
 
 .login-mode2 .boot-login__btn--primary:hover:not(:disabled) {
   transform: none;
-  border-color: var(--mode2-gold-strong);
-  background: var(--mode2-gold-strong);
-  box-shadow: 0 12px 26px rgba(135, 98, 35, 0.26);
+  border-color: rgba(171, 194, 232, 0.88);
+  background: linear-gradient(180deg, #536b9a 0%, #40577f 100%);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, 0.3);
 }
 
 .login-mode2 .boot-login__notice {
-  color: var(--mode2-gold-strong);
+  color: #bcd0f1;
 }
 
 .login-mode2 .boot-login__mode-link {
@@ -7170,7 +7210,7 @@ button:hover:not(:disabled),
   padding: 0;
   background: transparent;
   box-shadow: none;
-  color: var(--mode2-bronze);
+  color: #bcd0f1;
   font-size: 12px;
   font-weight: 700;
   text-align: center;
@@ -7183,14 +7223,19 @@ button:hover:not(:disabled),
 .login-mode2 .boot-login__mode-link:focus-visible {
   background: transparent;
   box-shadow: none;
-  color: var(--mode2-gold-strong);
+  color: #e5efff;
   transform: none;
 }
 
 .login-mode2 .boot-login__footer-link,
 .login-mode2 .boot-login__footer-link a,
 .login-mode2 .boot-login__footer-link .boot-login__link {
-  color: var(--mode2-bronze);
+  color: #bcd0f1;
+}
+
+.login-mode2 .boot-login__footer-link a,
+.login-mode2 .boot-login__footer-link .boot-login__link {
+  color: #dceaff;
 }
 
 @keyframes login-mode2-spin {

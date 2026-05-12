@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-10T15:13:18Z
+updated_at: 2026-05-12T02:51:18Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,176 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-083 Chat model provider credentials
+
+- status: completed
+- priority: P1
+- owner_role: backend-agent-runtime
+- summary: 修复普通智能体对话和流式回复没有读取组织模型厂商配置，导致前台聊天气泡显示 `Aliyun API key is not configured.` 的问题。
+- done:
+  - `ChatOrchestratorService` 已注入 `ModelProviderService`，在组织 `chat` 场景模型路由后解析模型厂商 baseUrl/apiKey。
+  - 非流式工具规划/最终回复和流式最终回复均已在有组织模型厂商凭证时使用动态凭证调用模型。
+  - `AliyunBailianClient` 已新增 `chatStreamWithCredentials`，与会议纪要使用的 `chatCompletionWithCredentials` 保持一致。
+- verification:
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `runtime`: backend restart -> new screen `53578.cici-backend`; `/actuator/health` -> `{"status":"UP"}`。
+  - `api`: `demo-org` smoke `POST /ai/chat` with `hi` -> success，返回正常 CiCi 问候，model metadata 为 `qwen3.6-plus`。
+  - `api`: `demo-org` smoke `POST /ai/chat/stream` with `hi` -> success，SSE 返回 delta chunks 且不含 `Aliyun API key is not configured`。
+- next_action: 用户在前台智能体对话框发送新消息确认；历史错误气泡不会自动改写。
+
+### TASK-082 Front login starry background
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-login
+- spec_path: `docs/specs/FEAT-030-front-login-starry-background.md`
+- summary: 按用户确认的效果图调整前台登录页未登录态视觉，只改变 `login_mode2` 背景和表单色彩，不改变页面结构、旋转立方体、字段、按钮、链接或交互。
+- done:
+  - `frontend/src/styles.css` 已将 `login-mode2` 页面背景从暖象牙改为深蓝星空层，使用多层径向星点和蓝黑背景。
+  - 登录表单区域已改为不透明深蓝面板，输入框、标签、链接、提示和主按钮统一为冷蓝灰体系。
+  - `frontend/src/assistant/AssistantApp.tsx` 未改动，登录页结构和旋转立方体组件保持原实现。
+  - 已新增 `docs/specs/FEAT-030-front-login-starry-background.md` 记录该登录页视觉例外和验收标准。
+- verification:
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: `git diff --check -- frontend/src/styles.css` -> success。
+  - `browser`: Playwright 临时上下文 `http://127.0.0.1:5173/` 桌面截图 -> success，登录页显示星空背景、立方体居中、表单可读。
+  - `browser`: Playwright 390x844 移动截图 -> success，无横向溢出，立方体和表单仍居中。
+  - screenshots: `output/playwright/front-login-starry-desktop-v2.png`, `output/playwright/front-login-starry-mobile.png`。
+- next_action: 等用户确认当前视觉后，可进入发布或继续微调星点密度、表单明度与按钮色阶。
+
+### TASK-081 Meeting minutes live transcription
+
+- status: implemented
+- priority: P1
+- owner_role: fullstack-product-assistant
+- spec_path: `docs/specs/FEAT-029-meeting-minutes-live-transcription.md`
+- summary: 实现助手工作台“开始会议纪要”触发的实时听记侧滑面板，自动录音并通过讯飞实时转写开启说话人分离，会议结束后生成结构化纪要。
+- done:
+  - 已新增 FEAT-029 规格，明确触发语、听记面板、讯飞实时转写、角色分离和纪要生成第一版边界。
+  - `frontend/src/assistant/AssistantApp.tsx` 已识别“开始会议纪要/开始会议记录/开始会议听记”等触发语，打开右侧实时会议纪要面板，不进入普通聊天模型。
+  - 已修复口语触发漏识别：新增 `meetingMinutesCommand` helper，支持“开始进行会议纪要”“开始做会议记录”“帮我开始做会议记录吧”“开启实时会议听记”等表达，并避免解释型问题误触发。
+  - `frontend/src/shared/useAsrVoiceInput.ts` 已支持 `provider`、`speakerDiarization` 和 transcript event 回调，普通语音输入仍默认走原阿里云 provider。
+  - 听记面板已按 `鎏金账房` 产品 register 实现：暖象牙表面、金色结构线、13px 文本、无内部行卡片背景；桌面与 390px 移动视口可打开。
+  - 听记面板已按用户要求加宽并改为桌面左右结构：左侧实时转写、右侧 AI 会议纪要，中间使用 1px 分隔线；窄屏保留上下单列结构。
+  - `backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java` 已新增讯飞实时转写 provider，支持签名 URL、PCM 音频转发、`role_type=2` 说话人分离参数、结束帧和转写结果解析。
+  - 已修复实时转写 speaker 与段落聚合：后端按讯飞词级 `cw.rl` 提取角色切换，`rl=0` 继承上一说话人，`rl=1/2/3...` 才切换 speaker；前端将连续同一发言人的 final 片段合并为一个完整段落，speaker 变化时新开段落。
+  - 已按用户截图新增会议转写面板交互：发言人名称支持鼠标双击内联编辑，保存后同步同一 speaker 的历史段落、识别中 partial 和后续转写；转写区在内容超过可视区域时自动滚到最新内容。
+  - 已新增 `POST /ai/meeting-minutes/summary`，根据实时转写段落调用模型生成结构化 Markdown 会议纪要。
+  - 已新增平台标准技能 `ai-meeting-notetaker`（AI 听记）并默认挂到 `cici-system`；会议结束生成纪要时，后端通过 `SkillPromptAssembler` 显式装配该技能上下文后再调用模型。
+  - `POST /ai/meeting-minutes/summary` 响应已回传 `skillCode/skillName`；前端会议面板生成中与完成提示同步展示 AI 听记技能调用语义。
+  - 已修复 AI 听记技能化纪要生成仍返回 `Aliyun API key is not configured.`：纪要生成现在使用组织 `chat` 场景模型路由和模型厂商配置中的 baseUrl/apiKey，而不是只读环境变量 key。
+  - `backend/src/main/resources/application.yml` 已补 `app.voice.iflytek.*` 配置占位，默认 disabled，避免无凭证环境误连。
+  - `backend/src/main/java/com/codehouse/ciciassistant/integration/service/IntegrationAppService.java` 已新增内置集成 `iflytek_asr`（讯飞实时转写），支持 App ID、Access Key ID、Access Key Secret、Realtime URL、语言和领域配置，其中 Secret 加密存储并遮罩回显。
+  - `backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java` 已改为优先读取当前组织 `integration_app(app_code="iflytek_asr")`，未保存组织配置时再回落到 yml，管理员停用集成时明确停用。
+  - `frontend/src/admin/pages/AdminIntegrationsPage.tsx` 已在“集成应用”中展示“讯飞实时转写”配置入口；员工侧会议听记缺配置错误会指向该入口。
+- verification:
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=TavilyToolServiceTest test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: target `git diff --check` -> success。
+  - `browser`: Playwright `/admin/integrations` 桌面检查 -> “讯飞实时转写”卡片可见，编辑弹窗展示 App ID / Access Key ID / Access Key Secret / Realtime URL / 语言 / 领域字段。
+  - `browser`: Playwright `/admin/integrations` 390x844 移动检查 -> 编辑弹窗可读，字段无明显文字溢出；截图已保存到 `output/playwright/`。
+  - `browser`: in-app Browser 桌面触发 `开始会议纪要` -> drawer 打开，因未授权麦克风显示 `Permission denied` 错误态。
+  - `browser`: in-app Browser 390x844 移动触发 `开始会议纪要` -> drawer 打开且无横向溢出，检查后已 reset viewport。
+  - `api`: 2026-05-11 真实配置 smoke -> 管理员登录成功，`GET /integrations` 显示 `iflytek_asr` 已启用且 App ID / Access Key ID 存在，Secret 脱敏为 `iflytek-****`；数据库中 Secret 为加密 object。
+  - `ws`: 2026-05-11 `/ws/asr?provider=iflytek&speakerDiarization=true` start -> 后端返回泛化 `invalid ws text message`；原始 WebSocket Upgrade 探测显示当前保存的 Spark Chat URL 返回 `401 Unauthorized`，FEAT-029 默认 AST URL 返回 `35010 AccessKeyId Not Exists`。
+  - `ws`: 2026-05-11 URL 修正后复测 -> `realtimeUrl` 已为 `wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1`；后端 `/ws/asr` start 仍返回 `invalid ws text message`；原始 WebSocket Upgrade 对官方最小参数与带 `role_type=2/pd=com` 参数均返回 `35010 AccessKeyId Not Exists`。
+  - `ws`: 2026-05-11 用户确认额度开通后复测 -> 配置与 URL 未变化且正确，后端 `/ws/asr` start 仍返回 `invalid ws text message`；原始 WebSocket Upgrade 对官方最小参数与带 `role_type=2/pd=com` 参数仍返回 `35010 AccessKeyId Not Exists`。
+  - `ws`: 2026-05-11 用户提供 AppID/APIKey/APISecret 后复测 -> 通过 `/integrations/iflytek_asr` 写入并加密 Secret；原始讯飞握手返回 `101 Switching Protocols`；修复后端等待真实 `started`、`data.cn.st.rt[]` 文本提取、Java WebSocket `request(1)` 和 binary 串行发送后，`/ws/asr` 发送 16k PCM 测试音频成功收到 `partial/final` 转写与 `speakerId/speakerName`。
+  - `frontend`: 2026-05-11 `npm run test -- meetingMinutesCommand.test.ts` -> success，覆盖“开始进行会议纪要”等口语触发和解释型问题不误触发。
+  - `frontend`: 2026-05-11 `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-11 target `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/meetingMinutesCommand.ts frontend/src/assistant/meetingMinutesCommand.test.ts` -> success。
+  - `frontend`: 2026-05-11 drawer layout `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-11 drawer layout target `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> success。
+  - `browser`: 2026-05-11 local Chrome `http://127.0.0.1:5173/` 触发“开始会议纪要” -> drawer 打开为加宽左右结构，实时转写在左、AI 会议纪要在右，录音状态和“收起”动作可用。
+  - `frontend`: 2026-05-11 speaker grouping `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> success，覆盖同一 speaker 连续 final 合并、speaker 变化新开段落、零基 speaker 展示和触发语回归。
+  - `backend`: 2026-05-11 speaker grouping `mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test` -> success，覆盖讯飞 `rt[]` 子段按各自 `rl` 提取 speaker/text 和 textual `data` payload。
+  - `frontend`: 2026-05-11 speaker grouping `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `backend`: 2026-05-11 speaker grouping `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `git`: 2026-05-11 speaker grouping target `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/meetingTranscript.ts frontend/src/assistant/meetingTranscript.test.ts backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java backend/src/main/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParser.java backend/src/test/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParserTest.java` -> success。
+  - `backend`: 2026-05-11 word-level speaker marker fix `mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test` -> success，覆盖 `cw.rl=1/2` 切换 speaker、`cw.rl=0` 继承上一 speaker、textual `data` payload。
+  - `frontend`: 2026-05-11 word-level speaker marker fix `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> success，`5` tests passed。
+  - `frontend`: 2026-05-11 word-level speaker marker fix `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `backend`: 2026-05-11 word-level speaker marker fix `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `git`: 2026-05-11 word-level speaker marker fix target `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParser.java backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java backend/src/test/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParserTest.java frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/meetingTranscript.ts frontend/src/assistant/meetingTranscript.test.ts` -> success。
+  - `runtime`: 2026-05-11 local restart -> new screen sessions `67822.cici-backend` and `67824.cici-frontend`; backend `/actuator/health` -> `{"status":"UP"}`; frontend `HEAD /` -> `HTTP/1.1 200 OK`。
+  - `frontend`: 2026-05-11 speaker edit/autoscroll `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> success，`5` tests passed。
+  - `frontend`: 2026-05-11 speaker edit/autoscroll `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-11 speaker edit/autoscroll target `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> success。
+  - `browser`: 2026-05-11 in-app Browser desktop 1280x800 and mobile 390x844 trigger `开始会议纪要` -> drawer opens with desktop two-column and mobile stacked layout; microphone permission returned `Permission denied`, so this run did not verify live transcript content from real audio.
+  - `frontend`: 2026-05-12 speaker edit focus fix `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> success，`5` tests passed。
+  - `frontend`: 2026-05-12 speaker edit focus fix `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-12 speaker edit focus fix target `git diff --check -- frontend/src/assistant/AssistantApp.tsx` -> success。
+  - `backend`: 2026-05-12 AI 听记 skill invocation `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> success，验证纪要生成模型 system prompt 显式包含 `ai-meeting-notetaker`、当前技能执行上下文、AI 听记 prompt fragment 和 output contract。
+  - `backend`: 2026-05-12 AI 听记 skill invocation `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `backend`: 2026-05-12 AI 听记 skill invocation `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldHidePlatformCoreSkillsAndBlockStandardSkillEditing test` -> success。
+  - `frontend`: 2026-05-12 AI 听记 skill invocation `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> success，`5` tests passed。
+  - `frontend`: 2026-05-12 AI 听记 skill invocation `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-12 AI 听记 skill invocation targeted `git diff --check` -> success。
+  - `backend`: 2026-05-12 org model credentials fix `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> success。
+  - `backend`: 2026-05-12 org model credentials fix `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `runtime`: 2026-05-12 backend restart -> new screen `40363.cici-backend`; backend `/actuator/health` -> `{"status":"UP"}`。
+  - `api`: 2026-05-12 `demo-org` smoke `POST /ai/meeting-minutes/summary` -> success，返回 `## Meeting Summary`，并包含 `skillCode=ai-meeting-notetaker`、`skillName=AI 听记`。
+- next_action: 请在真实会议纪要面板中再次点击“结束并生成纪要”，确认右侧 AI 会议纪要不再出现 `Aliyun API key is not configured.`；再用真实浏览器麦克风做多人说话端到端检查。
+
+### TASK-080 CloudCC customization skill runtime configuration
+
+- status: completed
+- priority: P1
+- owner_role: backend-agent-runtime
+- spec_path: `docs/specs/FEAT-028-file-backed-builtin-skills.md`
+- summary: 为 `cloudcc-customization-expert-common` 增加运行配置解析：从 CloudCC CRM 集成应用解析组织 API 网关，转换出 `setupSvc`，并使用当前用户 CloudCC 绑定换取的 accessToken 驱动服务端 CloudCC 工具调用。
+- done:
+  - 已在 FEAT-028 规格中补充 CloudCC 二次开发运行配置约定。
+  - `CloudccAccessTokenService.CloudccSessionContext` 已新增 `setupSvc`，从 CloudCC 组织 API 网关统一派生 Setup API 服务根地址。
+  - `setupSvc` 转换规则已覆盖 `lightningapi` path 替换为 `setup`，以及无 `lightningapi` path 时追加 `/setup`。
+  - `CloudccOpenApiService` 的 Setup API 调用已改为使用 `ctx.setupSvc()`，并继续通过服务端 CloudCC 账号绑定注入 `accessToken` 请求头。
+  - 新增 `BuiltinSkillRuntimeConfigService`，仅在 CloudCC 专家技能激活、命中文档或 always-on 时解析运行配置。
+  - `SkillPromptAssembler` 已在文件型参考文档前注入运行配置区，包含 `setupSvc` 和 accessToken 服务端可用状态；明文 token 不进入 prompt。
+- verification:
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldCompilePublishAndInvokeDeclarativeRuntimeApis test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/integration/service/CloudccAccessTokenService.java backend/src/main/java/com/codehouse/ciciassistant/cloudcc/CloudccOpenApiService.java backend/src/main/java/com/codehouse/ciciassistant/skill/service/BuiltinSkillRuntimeConfigService.java backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillPromptAssembler.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/skill/FileBackedBuiltinSkillIntegrationTest.java docs/specs/FEAT-028-file-backed-builtin-skills.md .claw/task-board.md` -> success。
+- next_action: 后续如需覆盖对象/字段以外的写入型二次开发动作，优先在 CloudCC Setup 工具层补模块化工具和高风险确认策略。
+
+### TASK-079 File-backed builtin skills
+
+- status: completed
+- priority: P1
+- owner_role: backend-agent-runtime
+- spec_path: `docs/specs/FEAT-028-file-backed-builtin-skills.md`
+- summary: 设计 Cici 系统内置标准技能的新机制：大文档技能包以文件目录随应用代码发布，多组织共享；数据库只存模板索引、版本/checksum、组织启用状态和 Agent 绑定关系，不保存 CloudCC 官方模块文档正文。
+- done:
+  - 已新增 `docs/specs/FEAT-028-file-backed-builtin-skills.md`。
+  - 已明确文件型内置技能目录建议为 `backend/src/main/resources/builtin-skills/<skillCode>/`，首个目标包为 `cloudcc-customization-expert-common`。
+  - 已定义 `manifest.json`、`SKILL.md`、模块 `introduction.md` / `devguide.md` / `api.md` 的职责边界。
+  - 已明确数据库仅保存轻量治理索引、版本号、checksum、resource URI、组织启用状态和 Agent 绑定关系，不保存大文档正文。
+  - 已设计 `FileBackedBuiltinSkillCatalog`、`FileBackedBuiltinSkillSyncService`、`BuiltinSkillDocumentService` 三个后端服务职责。
+  - 已明确运行时按模块意图加载文档：先 `introduction.md`，需要实现/联调时再加载 `devguide.md` 和 `api.md`，每轮限制模块数以避免 prompt 过长。
+  - 已记录文件型内置技能与租户知识库、Qdrant、FEAT-015 声明式 API 运行时的边界。
+  - 已复制 `cloudcc-customization-expert-common` 到 `backend/src/main/resources/builtin-skills/cloudcc-customization-expert-common/`，并补齐 `manifest.json`。
+  - 已新增 `V48__file_backed_builtin_skills.sql`，平台模板和模板版本记录 `resource_type=FILE_BACKED`、resource URI、bundle checksum、entrypoint checksum 和模块 manifest JSON。
+  - 已实现 `FileBackedBuiltinSkillCatalog` classpath 扫描、manifest 校验、checksum 计算和安全文档读取。
+  - 已实现 `FileBackedBuiltinSkillSyncService`，组织默认初始化时懒同步平台模板、模板版本、组织级 `skill_definition` 和发布版本索引。
+  - 已实现 `BuiltinSkillDocumentService`，运行时按 manifest trigger hints 和用户意图加载最多 3 个相关模块文档。
+  - 已接入 `SkillPromptAssembler` 和 `ChatOrchestratorService`，system prompt 增加 `Reference documents for active builtin skill` 区块，trace stage metadata 记录 `fileBackedSkillRefs`。
+  - 已扩展 `GET /skills` resource 元数据和 `GET /skills/{id}/builtin-docs` 只读模块/checksum 摘要。
+- verification:
+  - `content`: feature spec created and linked from task board.
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> success。
+  - `artifact`: `jar tf target/cc-cici-assistant-backend-0.0.1-SNAPSHOT.jar | rg 'builtin-skills/cloudcc-customization-expert-common/(manifest.json|SKILL.md|object/api.md)'` -> success。
+  - `git`: `git diff --check -- backend/src/main/java backend/src/main/resources backend/src/test/java docs/specs/FEAT-028-file-backed-builtin-skills.md .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> success。
+- next_action: 可选后续增强管理端详情页模块摘要展示；第一版后端能力和最小只读 API 已完成。
+- handoff_notes:
+  - 文件型内置技能是 Cici 应用内能力，不是 Codex 本地 skill 自动安装机制。
+  - CloudCC 官方文档正文不要写入 PostgreSQL，也不要导入租户知识库或 Qdrant。
+  - 第一版应保持平台标准技能只读，租户只做启用/停用和 Agent 绑定。
 
 ### TASK-078 AI customer operations suite website design
 
@@ -458,6 +628,7 @@ board_status: active
   - 本地 Vite 与部署 Nginx 已新增 `/admin/wecom` 代理，避免配置 API 被前端 SPA 路由吞掉。
   - 已新增管理端可视化配置页 `/admin/channels/wechat-kf`：组织管理员可查看微信客服账号、创建/更新配置、启停账号、选择售后 Agent、选择 run-as 服务用户、复制企业微信回调 URL；编辑已有账号时 Token/Secret/EncodingAESKey 留空保持原值。
   - 页面路由避开 `/admin/wecom` API 代理前缀，避免 Vite/Nginx 将前端页面请求转发给后端配置 API。
+  - 已协助企业微信可信域名归属校验：新增 `frontend/public/WW_verify_fWLFCmXQ3JU36hfZ.txt`，临时同步到线上 `cici-frontend:/usr/share/nginx/html/`，并为 Nginx 80 端口添加该精确文件路径直出例外，用于 `autoservice.agentcici.com` 根路径 HTTP 访问验证。
 - verification:
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest,WecomKfConfigServiceTest,WecomKfCryptoServiceTest,WecomKfConversationEntityTest test` -> success
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=WecomKfCryptoServiceTest,WecomKfConversationEntityTest test` -> success
@@ -467,7 +638,12 @@ board_status: active
   - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）
   - `git`: `git diff --check -- frontend/src/App.tsx frontend/src/admin/AdminShell.tsx frontend/src/admin/pages/AdminWecomKfAccountsPage.tsx frontend/src/styles.css` -> success
   - `browser`: Playwright CLI 登录本地 `http://127.0.0.1:5173/admin/channels/wechat-kf`，用 mock `/admin/wecom/kf-accounts` 数据截取桌面与 390px 移动 full-page 截图 -> success；移动端 `scrollWidth=clientWidth=390`，账号行与文本动作 computed style 为透明背景、0 圆角、无阴影。
-- next_action: 用真实企业微信微信客服账号配置 `open_kfid`、Secret、Token、EncodingAESKey、服务用户和售后 Agent 绑定知识库后，执行 POST callback -> `sync_msg` -> Agent RAG -> `send_msg` 端到端 smoke。
+  - `frontend`: `npm run build` -> success（保留既有 Vite chunk-size warning）；`frontend/dist/WW_verify_fWLFCmXQ3JU36hfZ.txt` 内容为 `fWLFCmXQ3JU36hfZ`。
+  - `remote`: `docker cp` 校验文件到线上 `cici-frontend` 后，ECS 本机以 `Host: autoservice.agentcici.com` 访问 `http://127.0.0.1/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> `HTTP/1.1 200 OK`，访问 `https://127.0.0.1/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> `HTTP/2 200`，内容均为 `fWLFCmXQ3JU36hfZ`。
+  - `public`: `curl -i http://autoservice.agentcici.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> `HTTP/1.1 403 Forbidden`，`Server: Beaver`，页面标题 `Non-compliance ICP Filing`，说明公网 HTTP 在阿里云备案检查层被拦截，尚未到达应用。
+  - 已将 `agentcici.salesforchina.com` 加入线上 Nginx 80/443 `server_name`；该域名指向 `47.97.119.160` 时，`http://agentcici.salesforchina.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` 返回 `HTTP/1.1 200 OK` 和 `fWLFCmXQ3JU36hfZ`。
+  - 已为 HTTP `/wecom/` 增加后端代理例外，微信客服回调 URL 可使用 `http://agentcici.salesforchina.com/wecom/kf/callback?orgId=demo-org&openKfId=kfc1ad304d992d53068`，避免跳到 HTTPS 证书不匹配域名。
+- next_action: 等 `agentcici.salesforchina.com` DNS 缓存完全刷新后，在企业微信验证可信域名；随后用真实企业微信微信客服账号配置 `open_kfid`、Secret、Token、EncodingAESKey、服务用户和售后 Agent 绑定知识库，执行 POST callback -> `sync_msg` -> Agent RAG -> `send_msg` 端到端 smoke。
 - handoff_notes:
   - 管理端可视化配置页位于 `/admin/channels/wechat-kf`，后端 REST API 仍位于 `/admin/wecom/kf-accounts`。
   - 微信客服账号配置需要 CorpID、Secret、Token、EncodingAESKey、`open_kfid`、`agent_id`、`run_as_user_id`；默认 `agent_id=after-sales-agent`，但仍需给该 Agent 绑定知识库。

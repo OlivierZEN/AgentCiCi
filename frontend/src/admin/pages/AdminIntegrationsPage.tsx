@@ -16,6 +16,7 @@ const SECRET_FIELDS: Record<string, string[]> = {
   tavily: ["apiKey"],
   cloudcc_crm: ["secretKey"],
   feishu_bot: ["appSecret"],
+  iflytek_asr: ["accessKeySecret"],
 };
 
 type FieldMeta = {
@@ -74,6 +75,41 @@ const FIELD_META: Record<string, Record<string, FieldMeta>> = {
     clientId: { label: "Client ID", required: true, placeholder: "xxxxxxxxxxx", hint: "CloudCC OAuth 客户端 ID。" },
     secretKey: { label: "Secret Key", required: true, placeholder: "xxxxxxxxxxxxxxxxxxxx", hint: "CloudCC OAuth 密钥，保存后不会明文展示。" },
     loginDomain: { label: "登录域名", placeholder: "https://login.cloudcc.com", hint: "CloudCC 登录接口域名，留空使用默认值。" },
+  },
+  iflytek_asr: {
+    appId: {
+      label: "App ID",
+      required: true,
+      placeholder: "xxxxxxxx",
+      hint: "讯飞开放平台实时语音转写应用的 App ID。",
+    },
+    accessKeyId: {
+      label: "Access Key ID",
+      required: true,
+      placeholder: "xxxxxxxxxxxxxxxx",
+      hint: "实时转写服务使用的 Access Key ID。",
+    },
+    accessKeySecret: {
+      label: "Access Key Secret",
+      required: true,
+      placeholder: "xxxxxxxxxxxxxxxx",
+      hint: "保存后不会明文展示，留空则保持现有 Secret 不变。",
+    },
+    realtimeUrl: {
+      label: "Realtime URL",
+      placeholder: "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1",
+      hint: "讯飞实时转写 WebSocket 地址，留空使用默认地址。",
+    },
+    lang: {
+      label: "语言",
+      placeholder: "autodialect",
+      hint: "默认 autodialect，表示自动识别普通话和方言。",
+    },
+    domain: {
+      label: "领域",
+      placeholder: "com",
+      hint: "默认 com，按讯飞实时转写服务的领域参数传递。",
+    },
   },
 };
 
@@ -232,8 +268,14 @@ export default function AdminIntegrationsPage() {
 
       {editing && (
         <div className="dify-modal-overlay" onClick={() => setEditing(null)}>
-          <div className="dify-modal dify-modal--wide" onClick={(e) => e.stopPropagation()}>
-            <h2 className="dify-modal__title">编辑：{editing.appName}</h2>
+          <div
+            className="dify-modal dify-modal--wide"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-integration-edit-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="dify-modal__title" id="admin-integration-edit-title">编辑：{editing.appName}</h2>
             {testResult && (
               <div className={`admin-integrations__test-result ${testResult.startsWith("测试成功") ? "is-success" : "is-error"}`}>
                 {testResult}

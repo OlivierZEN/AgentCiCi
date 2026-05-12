@@ -3171,7 +3171,7 @@ export default function AgentBuilderShell({
                         <option value="">暂无可用模型（请先在管理端配置模型厂商）</option>
                       ) : null}
                       {modelOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label} · {option.note}</option>
+                        <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </label>

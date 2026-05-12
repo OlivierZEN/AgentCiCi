@@ -6,6 +6,7 @@ import com.codehouse.ciciassistant.integration.domain.IntegrationAppEntity;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,38 +22,14 @@ public class IntegrationAppService {
     public static final String APP_CODE_CLOUDCC_CRM = "cloudcc_crm";
     public static final String APP_CODE_FEISHU_BOT = "feishu_bot";
     public static final String APP_CODE_TAVILY = "tavily";
+    public static final String APP_CODE_IFLYTEK_ASR = "iflytek_asr";
 
     /** Displayed to the frontend when an encrypted apiKey exists. The frontend never receives the ciphertext. */
     public static final String API_KEY_MASK = "tvly-****";
+    public static final String IFLYTEK_SECRET_MASK = "iflytek-****";
 
-    private static final Map<String, BuiltinAppDef> BUILTIN_APPS = Map.of(
-            APP_CODE_CLOUDCC_CRM,
-            new BuiltinAppDef(
-                    APP_CODE_CLOUDCC_CRM,
-                    "CloudCC CRM",
-                    "接入 CloudCC CRM 系统，获取并处理业务数据与业务功能",
-                    List.of("orgId", "orgapi_switch_address", "clientId", "secretKey")),
-            APP_CODE_FEISHU_BOT,
-            new BuiltinAppDef(
-                    APP_CODE_FEISHU_BOT,
-                    "飞书机器人",
-                    "通过飞书官方长连接方式接收机器人单聊消息，并桥接到系统智能体。",
-                    List.of("appId", "appSecret", "defaultAgentCode", "pairingCommandHint")),
-            APP_CODE_TAVILY,
-            new BuiltinAppDef(
-                    APP_CODE_TAVILY,
-                    "Tavily 搜索",
-                    "接入 Tavily Web 搜索与正文抽取能力，为内置 web-search 技能与 tavily_search / tavily_extract 工具供能。",
-                    List.of(
-                            "apiKey",
-                            "defaultSearchDepth",
-                            "defaultMaxResults",
-                            "defaultTopic",
-                            "defaultIncludeAnswer",
-                            "defaultExtractFormat",
-                            "timeoutMs"
-                    ))
-    );
+    private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
+    private static final Map<String, BuiltinAppDef> BUILTIN_APPS = builtinApps();
 
     private final IntegrationAppRepository repository;
     private final ObjectMapper objectMapper;
@@ -95,7 +72,7 @@ public class IntegrationAppService {
                         def.appCode(),
                         def.appName(),
                         def.description(),
-                        true,
+                        def.defaultEnabled(),
                         "{}"
                 )));
 
@@ -125,17 +102,30 @@ public class IntegrationAppService {
                 .map(e -> readJsonToMap(e.getConfigJson()));
     }
 
+    public Optional<Boolean> isEnabled(String orgId, String appCode) {
+        return repository.findByOrgIdAndAppCode(orgId, appCode)
+                .map(IntegrationAppEntity::isEnabled);
+    }
+
     /**
      * Decrypt the Tavily apiKey from a raw config map. Returns empty when the key is missing,
      * blank, or equal to the frontend mask sentinel.
      */
     public Optional<String> decryptTavilyApiKey(Map<String, Object> rawConfig) {
+        return decryptSecret(rawConfig, "apiKey", API_KEY_MASK);
+    }
+
+    public Optional<String> decryptIflytekAccessKeySecret(Map<String, Object> rawConfig) {
+        return decryptSecret(rawConfig, "accessKeySecret", IFLYTEK_SECRET_MASK);
+    }
+
+    private Optional<String> decryptSecret(Map<String, Object> rawConfig, String key, String mask) {
         if (rawConfig == null) return Optional.empty();
-        Object value = rawConfig.get("apiKey");
+        Object value = rawConfig.get(key);
         if (value == null) return Optional.empty();
         if (value instanceof String s) {
             String trimmed = s.trim();
-            if (trimmed.isEmpty() || API_KEY_MASK.equals(trimmed)) {
+            if (trimmed.isEmpty() || mask.equals(trimmed)) {
                 return Optional.empty();
             }
             return Optional.of(trimmed);
@@ -166,7 +156,7 @@ public class IntegrationAppService {
                         def.appCode(),
                         def.appName(),
                         def.description(),
-                        true,
+                        def.defaultEnabled(),
                         "{}"
                 ));
             }
@@ -179,6 +169,8 @@ public class IntegrationAppService {
         Map<String, Object> config = new LinkedHashMap<>(readJsonToMap(e.getConfigJson()));
         if (APP_CODE_TAVILY.equals(e.getAppCode())) {
             maskSecrets(config, "apiKey", API_KEY_MASK);
+        } else if (APP_CODE_IFLYTEK_ASR.equals(e.getAppCode())) {
+            maskSecrets(config, "accessKeySecret", IFLYTEK_SECRET_MASK);
         }
         return Map.of(
                 "id", e.getId(),
@@ -231,26 +223,26 @@ public class IntegrationAppService {
                     && "pairingCommandHint".equals(key)) {
                 v = "配对";
             }
+            if (APP_CODE_IFLYTEK_ASR.equals(def.appCode())) {
+                if ((v == null || String.valueOf(v).isBlank()) && "realtimeUrl".equals(key)) {
+                    v = DEFAULT_IFLYTEK_REALTIME_URL;
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "lang".equals(key)) {
+                    v = "autodialect";
+                }
+                if ((v == null || String.valueOf(v).isBlank()) && "domain".equals(key)) {
+                    v = "com";
+                }
+            }
 
             // Tavily apiKey: encrypt new plaintext; preserve existing encrypted envelope when
             // the incoming value is blank or the frontend mask sentinel.
             if (APP_CODE_TAVILY.equals(def.appCode()) && "apiKey".equals(key)) {
-                Object existingValue = existing.get("apiKey");
-                String incoming = v == null ? "" : String.valueOf(v).trim();
-                if (incoming.isEmpty() || API_KEY_MASK.equals(incoming)) {
-                    // No change: keep whatever is already there (may be an encrypted envelope).
-                    if (existingValue == null) {
-                        out.put(key, "");
-                    } else {
-                        out.put(key, existingValue);
-                    }
-                    continue;
-                }
-                SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(incoming);
-                Map<String, Object> envelope = new LinkedHashMap<>();
-                envelope.put("cipher", encrypted.cipherBase64());
-                envelope.put("iv", encrypted.ivBase64());
-                out.put(key, envelope);
+                out.put(key, encryptOrPreserveSecret(existing.get(key), v, API_KEY_MASK));
+                continue;
+            }
+            if (APP_CODE_IFLYTEK_ASR.equals(def.appCode()) && "accessKeySecret".equals(key)) {
+                out.put(key, encryptOrPreserveSecret(existing.get(key), v, IFLYTEK_SECRET_MASK));
                 continue;
             }
 
@@ -276,6 +268,59 @@ public class IntegrationAppService {
         }
     }
 
-    private record BuiltinAppDef(String appCode, String appName, String description, List<String> configKeys) {
+    private Object encryptOrPreserveSecret(Object existingValue, Object incomingValue, String mask) {
+        String incoming = incomingValue == null ? "" : String.valueOf(incomingValue).trim();
+        if (incoming.isEmpty() || mask.equals(incoming)) {
+            return existingValue == null ? "" : existingValue;
+        }
+        SecretCipherService.EncryptedSecret encrypted = secretCipherService.encryptUtf8(incoming);
+        Map<String, Object> envelope = new LinkedHashMap<>();
+        envelope.put("cipher", encrypted.cipherBase64());
+        envelope.put("iv", encrypted.ivBase64());
+        return envelope;
+    }
+
+    private static Map<String, BuiltinAppDef> builtinApps() {
+        Map<String, BuiltinAppDef> apps = new LinkedHashMap<>();
+        apps.put(APP_CODE_CLOUDCC_CRM, new BuiltinAppDef(
+                APP_CODE_CLOUDCC_CRM,
+                "CloudCC CRM",
+                "接入 CloudCC CRM 系统，获取并处理业务数据与业务功能",
+                List.of("orgId", "orgapi_switch_address", "clientId", "secretKey"),
+                true));
+        apps.put(APP_CODE_FEISHU_BOT, new BuiltinAppDef(
+                APP_CODE_FEISHU_BOT,
+                "飞书机器人",
+                "通过飞书官方长连接方式接收机器人单聊消息，并桥接到系统智能体。",
+                List.of("appId", "appSecret", "defaultAgentCode", "pairingCommandHint"),
+                true));
+        apps.put(APP_CODE_TAVILY, new BuiltinAppDef(
+                APP_CODE_TAVILY,
+                "Tavily 搜索",
+                "接入 Tavily Web 搜索与正文抽取能力，为内置 web-search 技能与 tavily_search / tavily_extract 工具供能。",
+                List.of(
+                        "apiKey",
+                        "defaultSearchDepth",
+                        "defaultMaxResults",
+                        "defaultTopic",
+                        "defaultIncludeAnswer",
+                        "defaultExtractFormat",
+                        "timeoutMs"
+                ),
+                true));
+        apps.put(APP_CODE_IFLYTEK_ASR, new BuiltinAppDef(
+                APP_CODE_IFLYTEK_ASR,
+                "讯飞实时转写",
+                "接入讯飞实时语音转写能力，为会议纪要听记提供 16k PCM 实时识别和说话人分离。",
+                List.of("appId", "accessKeyId", "accessKeySecret", "realtimeUrl", "lang", "domain"),
+                true));
+        return Collections.unmodifiableMap(apps);
+    }
+
+    private record BuiltinAppDef(String appCode,
+                                 String appName,
+                                 String description,
+                                 List<String> configKeys,
+                                 boolean defaultEnabled) {
     }
 }

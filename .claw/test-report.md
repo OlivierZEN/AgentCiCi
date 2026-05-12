@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-10T15:13:18Z
+updated_at: 2026-05-12T02:51:18Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-10T15:13:18Z
+last_run_at: 2026-05-12T02:51:18Z
 last_run_status: success
 ---
 
@@ -13,11 +13,262 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：`TASK-078 AI customer operations suite website design` V1.8 综合官网发布补齐
-- 命令：GitHub push/ls-remote verification; ECS compose/health/nginx verification; in-app Browser public render verification
-- 环境：`local workspace, GitHub origin, Aliyun ECS UAT, in-app Browser`
+- 范围：chat model provider credentials fix
+- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test`; `backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`; backend restart; API smoke `/ai/chat` and `/ai/chat/stream`; target `git diff --check`
+- 环境：`local workspace, running local backend/frontend`
 
 ## Latest Verified Results
+
+- Chat model provider credentials fix (2026-05-12T02:51:18Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `runtime`: restarted backend screen as `53578.cici-backend`; backend health -> **UP**.
+    - `api`: login `demo-org / 13800138111` then `POST /ai/chat` with `hi` -> **success**; answer is a normal CiCi greeting, model metadata shows `qwen3.6-plus`.
+    - `api`: `POST /ai/chat/stream` with `hi` -> **success**; SSE stream contains delta chunks and does not contain `Aliyun API key is not configured`.
+    - `git`: targeted `git diff --check` -> **success**.
+  - Notes:
+    - `ChatOrchestratorService` now resolves organization model provider credentials for both non-streaming and streaming model calls.
+    - `AliyunBailianClient` now supports `chatStreamWithCredentials` alongside the non-streaming dynamic credentials method.
+
+- FEAT-029 meeting minutes org model credentials fix (2026-05-12T02:22:42Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `runtime`: restarted backend screen as `40363.cici-backend`; backend health -> **UP**.
+    - `api`: login `demo-org / 13800138111` then `POST /ai/meeting-minutes/summary` with two transcript segments -> **success**; response contains `skillCode=ai-meeting-notetaker`, `skillName=AI 听记`, and a generated `## Meeting Summary`.
+    - `git`: targeted `git diff --check` -> **success**.
+  - Notes:
+    - Fixed the regression where meeting summary generation used only the environment-level Aliyun client key and ignored organization model provider credentials.
+    - Summary generation now routes through `org_model_config(scene_code="chat")` and `model_provider_config` credentials before calling the model.
+
+- FEAT-030 front login starry background (2026-05-12T02:21:42Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/styles.css` -> **success**.
+    - `browser`: Playwright temporary browser context `http://127.0.0.1:5173/` desktop screenshot -> **success**.
+    - `browser`: Playwright 390x844 mobile screenshot -> **success**.
+  - Artifacts:
+    - `output/playwright/front-login-starry-desktop-v2.png`
+    - `output/playwright/front-login-starry-mobile.png`
+  - Notes:
+    - Verified unauthenticated front login DOM still contains the cube region and `前台账号登录` form region.
+    - No `AssistantApp.tsx` structure changes were made; this run only changes `login-mode2` styles in `frontend/src/styles.css`.
+    - Browser console still shows existing local `favicon.ico` 404 and React DevTools info messages; no new page-breaking console error was introduced by this CSS-only change.
+
+- FEAT-029 meeting minutes AI 听记 skill invocation (2026-05-12T01:38:54Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldHidePlatformCoreSkillsAndBlockStandardSkillEditing test` -> **success**.
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: targeted `git diff --check` -> **success**.
+  - Notes:
+    - `MeetingMinutesServiceTest` verifies the summary model system prompt contains `Active skill codes: ai-meeting-notetaker`, the explicit current skill execution context, the AI 听记 prompt fragment, and the output contract.
+    - Summary API response now includes `skillCode` / `skillName`, and the frontend meeting drawer says it is calling AI 听记 during generation.
+
+- FEAT-029 meeting minutes speaker edit focus fix (2026-05-12T01:18:36Z):
+  - Commands:
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx` -> **success**.
+  - Notes:
+    - Fixed the inline speaker editor selecting the input value after every keystroke.
+    - The focus/select effect now depends only on the edit target (`speakerId` + `lineId`), so entering edit mode still selects the old name, but typing multiple characters no longer gets overwritten.
+
+- FEAT-029 meeting minutes speaker edit and transcript autoscroll (2026-05-11T23:48:39Z):
+  - Commands:
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: in-app Browser desktop 1280x800 trigger `开始会议纪要` -> **success**, drawer opens in two-column layout.
+    - `browser`: in-app Browser mobile 390x844 trigger `开始会议纪要` -> **success**, drawer opens in stacked layout without horizontal overflow; viewport reset after check.
+  - Notes:
+    - Added inline speaker-name editing via double click plus keyboard Enter/F2, with Enter/blur save and Escape cancel.
+    - Edited speaker names are kept in a session map so later partial/final transcript events for the same `speakerId` reuse the custom name.
+    - Transcript container now scrolls to the latest line after final or partial transcript updates.
+    - Browser verification reached the drawer and responsive states, but local microphone permission returned `Permission denied`; live transcript rows from real audio remain to be checked with an authorized microphone session.
+
+- FEAT-029 meeting minutes word-level speaker marker parsing (2026-05-11T23:30:23Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test` -> **success**.
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParser.java backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java backend/src/test/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParserTest.java frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/meetingTranscript.ts frontend/src/assistant/meetingTranscript.test.ts` -> **success**.
+    - `runtime`: local restart -> **success**, screen sessions `67822.cici-backend` / `67824.cici-frontend`; backend health `UP`; frontend `HEAD /` -> `200 OK`.
+  - Notes:
+    - Corrected Iflytek speaker parsing to use official word-level `data.cn.st.rt.ws.cw.rl` semantics.
+    - Verified `rl=1/2` switches speakers and `rl=0` continues the previous speaker across payloads.
+    - This supersedes the earlier `rt[]`-level speaker assumption from the 2026-05-11T16:23:27Z run.
+
+- FEAT-029 meeting minutes speaker grouping and paragraph merge (2026-05-11T16:23:27Z):
+  - Commands:
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/meetingTranscript.ts frontend/src/assistant/meetingTranscript.test.ts backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java backend/src/main/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParser.java backend/src/test/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParserTest.java` -> **success**.
+  - Notes:
+    - Verified frontend merges continuous final transcript chunks for the same `speakerId`, opens a new line only when speaker changes, and maps zero-based speaker ids to user-facing `发言人 1/2`.
+    - Verified backend parser preserves speaker identity from each Iflytek `rt[]` item instead of collapsing the whole result payload to the outer speaker role.
+    - Real multi-speaker microphone/browser verification remains a follow-up because this run uses parser and UI-state unit coverage rather than live room audio.
+
+- FEAT-029 meeting minutes drawer layout (2026-05-11T16:12:15Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> **success**.
+    - `browser`: local Chrome `http://127.0.0.1:5173/`, trigger `开始会议纪要` -> **success**, drawer opens wider with `实时转写` on the left and `AI 会议纪要` on the right; recording status and `收起` action remain usable.
+  - Notes:
+    - Desktop visual check confirmed a single 1px divider between the two work areas and no per-section background boxes.
+    - Narrow-screen behavior is covered by CSS media rules in this run; a separate device-emulation screenshot was not captured because Chrome AppleScript JavaScript execution is disabled in the local profile.
+
+- FEAT-029 meeting minutes spoken trigger fix (2026-05-11T15:58:32Z):
+  - Commands:
+    - `frontend`: `npm run test -- meetingMinutesCommand.test.ts` -> **success**, `2` tests passed.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/meetingMinutesCommand.ts frontend/src/assistant/meetingMinutesCommand.test.ts` -> **success**.
+  - Notes:
+    - Verified `开始进行会议纪要`, `帮我开始做会议记录吧`, and `开启实时会议听记。` are recognized as meeting-minutes start commands.
+    - Verified explanatory inputs such as `如何开始会议纪要` and `会议纪要怎么生成` do not trigger the drawer path.
+    - This run verifies the frontend command gate; it does not retest real browser microphone permission.
+
+- FEAT-029 Iflytek realtime ASR cloud transcription smoke (2026-05-11T15:45:53Z):
+  - Commands:
+    - `PUT /integrations/iflytek_asr` with user-provided AppID/APIKey/APISecret and AST URL -> **success**, API response masks Secret as `iflytek-****`.
+    - Sanitized DB/config comparison -> **success**, stored AppID/APIKey/Secret match provided values by equality/digest checks; Secret remains encrypted object.
+    - Raw TLS/WebSocket probes to `wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1` -> **success**, returned `101 Switching Protocols` for the configured DB credentials.
+    - Standalone Java `HttpClient` probe -> **success**, received Iflytek `started` action and raw ASR result events from generated 16k PCM audio.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - Local backend restart -> **success**, `/actuator/health` returned `{"status":"UP"}`.
+    - Backend `/ws/asr?provider=iflytek&speakerDiarization=true` with generated 16k PCM audio -> **success**, received `status started`, final text `Helods`, partial text including `Ireal time trans`, final text `, a real time transcription test four.`, and speaker metadata `speakerId/speakerName`.
+  - Notes:
+    - Fixed backend Iflytek provider readiness so client audio starts only after upstream `data.action=started`.
+    - Fixed Iflytek result parsing for `data.cn.st.rt[].ws[].cw[]`.
+    - Added explicit Java WebSocket `request(1)` and serialized outbound binary sends for provider audio forwarding.
+    - Added frontend ASR readiness gating so the recorder waits for server `started` before sending PCM.
+
+- FEAT-029 Iflytek realtime ASR smoke after user confirmed quota enabled (2026-05-11T15:18:28Z):
+  - Commands:
+    - `curl http://127.0.0.1:8080/actuator/health` -> **success**, backend returned `{"status":"UP"}`.
+    - Sanitized PostgreSQL inspection of `integration_app` -> **success**, `iflytek_asr.enabled=true`, `realtimeUrl=wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1`, `accessKeySecret` is a JSON object, App ID length is `8`, Access Key ID length is `32`.
+    - `POST /auth/password/login` with local org admin `demo-org / 13900009999` -> **success**, roles include `ORG_ADMIN`.
+    - `GET /integrations` with admin token -> **success**, `iflytek_asr` is enabled; App ID and Access Key ID are present; Access Key Secret is masked as `iflytek-****`; configured `realtimeUrl` is the FEAT-029 AST endpoint.
+    - Backend `/ws/asr?provider=iflytek&speakerDiarization=true` start -> **blocked**, client received `{"type":"error","message":"invalid ws text message"}` after the initial `connected` status.
+    - Sanitized raw TLS WebSocket Upgrade probe to configured AST endpoint with `role_type=2` and `pd=com` -> **blocked**, Iflytek returned `35010 AccessKeyId Not Exists`.
+    - Sanitized raw TLS WebSocket Upgrade probe to configured AST endpoint with only official minimal doc parameters -> **blocked**, Iflytek returned `35010 AccessKeyId Not Exists`.
+  - Notes:
+    - User reported the realtime transcription quota has been enabled, but Iflytek still rejects the saved APIKey/AccessKeyId at handshake time.
+    - Real Iflytek transcription is **not** verified. Next verification should happen after confirming the management-console Access Key ID/APIKey and APISecret exactly match the service page for the quota-enabled App, or after Iflytek confirms service binding propagation.
+
+- FEAT-029 Iflytek realtime ASR smoke after AST URL correction (2026-05-11T15:11:24Z):
+  - Commands:
+    - `curl http://127.0.0.1:8080/actuator/health` -> **success**, backend returned `{"status":"UP"}`.
+    - Sanitized PostgreSQL inspection of `integration_app` -> **success**, `iflytek_asr.enabled=true`, `realtimeUrl=wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1`, `accessKeySecret` is a JSON object, App ID length is `8`, Access Key ID length is `32`.
+    - `POST /auth/password/login` with local org admin `demo-org / 13900009999` -> **success**, roles include `ORG_ADMIN`.
+    - `GET /integrations` with admin token -> **success**, `iflytek_asr` is enabled; App ID and Access Key ID are present; Access Key Secret is masked as `iflytek-****`; configured `realtimeUrl` is the FEAT-029 AST endpoint.
+    - Backend `/ws/asr?provider=iflytek&speakerDiarization=true` start -> **blocked**, client received `{"type":"error","message":"invalid ws text message"}` after the initial `connected` status.
+    - Sanitized raw TLS WebSocket Upgrade probe to configured AST endpoint with `role_type=2` and `pd=com` -> **blocked**, Iflytek returned `35010 AccessKeyId Not Exists`.
+    - Sanitized raw TLS WebSocket Upgrade probe to configured AST endpoint with only official minimal doc parameters -> **blocked**, Iflytek returned `35010 AccessKeyId Not Exists`.
+  - Notes:
+    - The realtime URL is now correct for FEAT-029.
+    - Real Iflytek transcription is **not** verified because the configured APIKey/AccessKeyId is not accepted by the AST realtime transcription service, or the App has not been enabled for that service.
+    - Backend still collapses provider startup exceptions into `invalid ws text message`, so upstream rejection details require raw handshake diagnostics until error handling is improved.
+
+- FEAT-029 Iflytek realtime ASR configured-credential smoke (2026-05-11T13:57:15Z):
+  - Commands:
+    - `curl http://127.0.0.1:8080/actuator/health` -> **success**, backend returned `{"status":"UP"}`.
+    - `POST /auth/password/login` with local org admin `demo-org / 13900009999` -> **success**, roles include `ORG_ADMIN`.
+    - `GET /integrations` with admin token -> **success**, `iflytek_asr` is enabled; App ID and Access Key ID are present; Access Key Secret is masked as `iflytek-****`; configured `realtimeUrl` is `wss://spark-api.xf-yun.com/v4.0/chat`.
+    - Sanitized PostgreSQL inspection of `integration_app` -> **success**, `accessKeySecret` is present as a JSON object, App ID length is `8`, Access Key ID length is `32`, and no plaintext secret was printed.
+    - Backend `/ws/asr?provider=iflytek&speakerDiarization=true` start -> **blocked**, client received `{"type":"error","message":"invalid ws text message"}` after the initial `connected` status.
+    - Sanitized raw TLS WebSocket Upgrade probe to configured endpoint `wss://spark-api.xf-yun.com/v4.0/chat` -> **blocked**, Iflytek returned `HTTP/1.1 401 Unauthorized`.
+    - Sanitized raw TLS WebSocket Upgrade probe to FEAT-029 default AST endpoint `wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1` -> **blocked**, Iflytek returned `35010 AccessKeyId Not Exists`.
+  - Notes:
+    - Verified local code can read the organization integration row and attempt a signed Iflytek WebSocket handshake without exposing stored secrets.
+    - Real Iflytek transcription is **not** verified. Current saved URL points to Spark Chat rather than FEAT-029 AST realtime transcription, and the saved Access Key ID is not accepted by the AST realtime transcription endpoint.
+    - Backend currently collapses provider startup exceptions into `invalid ws text message`, which makes UI diagnostics less specific than the upstream rejection.
+
+- FEAT-029 meeting minutes live transcription configuration entry (2026-05-11T13:42:26Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=TavilyToolServiceTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/integration/service/IntegrationAppService.java backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java backend/src/test/java/com/codehouse/ciciassistant/tool/tavily/TavilyToolServiceTest.java frontend/src/admin/pages/AdminIntegrationsPage.tsx frontend/src/assistant/AssistantApp.tsx docs/specs/FEAT-029-meeting-minutes-live-transcription.md .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> **success**.
+    - `browser`: Playwright `/admin/integrations` desktop -> **success**, “讯飞实时转写” card visible and edit dialog exposes App ID / Access Key ID / Access Key Secret / Realtime URL / 语言 / 领域 fields.
+    - `browser`: Playwright `/admin/integrations` 390x844 mobile -> **success**, edit dialog remains readable and fields fit without obvious text overflow.
+  - Notes:
+    - Verified `iflytek_asr` Access Key Secret is encrypted at rest, masked in integration list responses, decryptable for runtime use, and preserved when the frontend submits the mask sentinel.
+    - Verified frontend TypeScript/Vite build after adding the “讯飞实时转写” configuration fields.
+    - Screenshots captured at `output/playwright/feat-029-iflytek-integration-desktop.png` and `output/playwright/feat-029-iflytek-integration-mobile.png`.
+
+- FEAT-029 meeting minutes live transcription (2026-05-11T13:25:57Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/MeetingMinutesService.java backend/src/main/java/com/codehouse/ciciassistant/ai/api/MeetingMinutesController.java backend/src/main/resources/application.yml frontend/src/shared/useAsrVoiceInput.ts frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css docs/specs/FEAT-029-meeting-minutes-live-transcription.md .claw/task-board.md` -> **success**.
+    - `browser`: in-app Browser desktop check `http://127.0.0.1:5173/`, input `开始会议纪要`, press Enter -> meeting drawer opened; chat shows trigger/assistant confirmation; drawer shows permission-denied error state because browser automation did not grant microphone permission.
+    - `browser`: in-app Browser 390x844 mobile check, same trigger -> meeting drawer opened without horizontal overflow; viewport reset after check.
+  - Notes:
+    - This verifies local trigger, UI state, responsive layout, and graceful microphone permission error.
+    - Real Iflytek cloud transcription was not verified because credentials and browser microphone permission were not available in this automated run.
+
+- CloudCC customization skill runtime configuration (2026-05-11T09:55:53Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldCompilePublishAndInvokeDeclarativeRuntimeApis test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/integration/service/CloudccAccessTokenService.java backend/src/main/java/com/codehouse/ciciassistant/cloudcc/CloudccOpenApiService.java backend/src/main/java/com/codehouse/ciciassistant/skill/service/BuiltinSkillRuntimeConfigService.java backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillPromptAssembler.java backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/skill/FileBackedBuiltinSkillIntegrationTest.java docs/specs/FEAT-028-file-backed-builtin-skills.md .claw/task-board.md` -> **success**.
+  - Notes:
+    - Verified `setupSvc` conversion for `lightningapi` path replacement and no-path `/setup` append.
+    - Verified CloudCC runtime config prompt injection includes `setupSvc`, marks accessToken as server-side available, and does not include the raw token.
+    - Verified CloudCC Setup tool execution calls `/setup/api/customObject/standardObjList` and sends the current user's server-side `accessToken` header.
+    - Verified existing declarative runtime API authRef flow still passes with `integration:cloudcc.accessToken`.
+
+- Agent builder base model option cleanup (2026-05-11T07:56:20Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ModelProviderServiceIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/model/service/ModelProviderService.java frontend/src/assistant/AgentBuilderShell.tsx backend/src/test/java/com/codehouse/ciciassistant/model/ModelProviderServiceIntegrationTest.java` -> **success**.
+  - Notes:
+    - Verified `/models/agent/base-models` no longer exposes builtin provider preset models when the org has no selected/configured models.
+    - Verified adding selected Aliyun models returns only those configured model names and excludes preset Qwen/DeepSeek/OpenAI/Ollama examples.
+
+- FEAT-028 file-backed builtin skills (2026-05-11T07:09:18Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**.
+    - `artifact`: `jar tf target/cc-cici-assistant-backend-0.0.1-SNAPSHOT.jar | rg 'builtin-skills/cloudcc-customization-expert-common/(manifest.json|SKILL.md|object/api.md)'` -> **success**; jar contains manifest, entrypoint, and module doc resources under `BOOT-INF/classes/builtin-skills/...`.
+    - `git`: `git diff --check -- backend/src/main/java backend/src/main/resources backend/src/test/java docs/specs/FEAT-028-file-backed-builtin-skills.md .claw/current-status.md .claw/task-board.md .claw/test-report.md` -> **success**.
+  - Notes:
+    - `FileBackedBuiltinSkillIntegrationTest` verifies classpath bundle scanning, checksum length, safe module document reads, `GET /skills` FILE_BACKED metadata, `GET /skills/{id}/builtin-docs` module/checksum summary, no large module docs in `module_manifest_json`, and runtime prompt injection for only the matching `object` module docs.
+    - `SkillGovernanceIntegrationTest` verifies existing platform standard skill governance, tenant custom publish/export/import/delete, runtime declarative API, and binding paths still pass after adding file-backed metadata.
+
+- WeCom trusted domain verification file (2026-05-10T16:18:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `local`: `ls -l frontend/dist/WW_verify_fWLFCmXQ3JU36hfZ.txt && sed -n '1p' ...` -> **success**, content `fWLFCmXQ3JU36hfZ`.
+    - `remote`: `scp /Users/owenspace/Downloads/WW_verify_fWLFCmXQ3JU36hfZ.txt root@47.97.119.160:/tmp/...` -> **success**.
+    - `remote`: `docker cp /tmp/WW_verify_fWLFCmXQ3JU36hfZ.txt cici-frontend:/usr/share/nginx/html/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **success**.
+    - `remote`: `docker exec cici-frontend cat /usr/share/nginx/html/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> `fWLFCmXQ3JU36hfZ`.
+    - `remote`: updated `/opt/cici/deploy/nginx.cici.ssl.conf` and reloaded `cici-frontend` so `location = /WW_verify_fWLFCmXQ3JU36hfZ.txt` is served directly on port 80 instead of redirecting.
+    - `remote`: `curl -i -H 'Host: autoservice.agentcici.com' http://127.0.0.1/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **success**, `HTTP/1.1 200 OK`, content `fWLFCmXQ3JU36hfZ`.
+    - `remote`: `curl -k -i https://127.0.0.1/WW_verify_fWLFCmXQ3JU36hfZ.txt --resolve autoservice.agentcici.com:443:127.0.0.1 -H 'Host: autoservice.agentcici.com'` -> **success**, `HTTP/2 200`, content `fWLFCmXQ3JU36hfZ`.
+    - `public`: `curl -i http://autoservice.agentcici.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **blocked before app**, `HTTP/1.1 403 Forbidden`, `Server: Beaver`, HTML title `Non-compliance ICP Filing`.
+    - `remote`: added `agentcici.salesforchina.com` to Nginx HTTP/HTTPS `server_name` and reloaded frontend Nginx.
+    - `remote`: `curl -i -H 'Host: agentcici.salesforchina.com' http://127.0.0.1/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **success**, `HTTP/1.1 200 OK`, content `fWLFCmXQ3JU36hfZ`.
+    - `local`: `curl -i --resolve agentcici.salesforchina.com:80:47.97.119.160 http://agentcici.salesforchina.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **success**, `HTTP/1.1 200 OK`, content `fWLFCmXQ3JU36hfZ`.
+    - `remote`: added an HTTP `/wecom/` proxy exception for the `agentcici.salesforchina.com` callback path; `curl --resolve ... http://agentcici.salesforchina.com/wecom/kf/callback?...` now reaches backend and returns a backend error for missing WeCom signature params rather than Nginx 301.
+    - `git`: `git diff --check -- frontend/public/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **success**.
+  - Notes:
+    - The application/Nginx layer now serves the verification file over HTTP and HTTPS when the request reaches ECS.
+    - Public HTTP is currently intercepted by Alibaba Cloud ICP filing enforcement before it reaches Nginx. Domain filing/access备案 for `autoservice.agentcici.com` must be completed before the exact public HTTP URL can pass WeCom validation.
+    - macOS `curl` still resets on the public `https://autoservice.agentcici.com/...` TLS handshake, matching the earlier public TLS quirk; ECS-local Nginx/SNI verification succeeded.
+    - The file is also committed into `frontend/public/` so the next frontend image build preserves it beyond the temporary container copy.
 
 - V1.8 GitHub release completion fix (2026-05-10T15:13:18Z):
   - Symptom:

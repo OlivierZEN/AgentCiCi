@@ -27,6 +27,8 @@ import {
   createWorkbenchSessionId,
   isWorkbenchSessionIdForAgent,
 } from "./workbenchSessions";
+import { isMeetingMinutesStartCommand } from "./meetingMinutesCommand";
+import { appendMeetingTranscriptSegment, speakerDisplayName } from "./meetingTranscript";
 
 const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
@@ -60,6 +62,17 @@ type FrontLoginMode = "login_mode1" | "login_mode2";
 type LoginMode2CubePhase = "brand" | "loading";
 type WorkbenchStateStatus = "处理中" | "检索中" | "等待确认" | "已完成" | "待命中";
 type LoginMode2CubeFace = { className: string; image: string; label?: string; fit?: "cover" | "contain" };
+type MeetingStatus = "idle" | "recording" | "stopping" | "summarizing" | "done" | "error";
+type MeetingTranscriptSegment = {
+  id: string;
+  speakerId: string;
+  speakerName: string;
+  text: string;
+  time: string;
+  startMs?: number;
+  endMs?: number;
+};
+type MeetingSpeakerEdit = { speakerId: string; lineId: string; value: string };
 
 type AgentWorkspace = {
   id: string;
@@ -1138,11 +1151,24 @@ export default function AssistantApp() {
   const [monitorTraceDetail, setMonitorTraceDetail] = useState<AgentTraceDetailPayload | null>(null);
   const [monitorLogsLoading, setMonitorLogsLoading] = useState(false);
   const [monitorTraceLoadingId, setMonitorTraceLoadingId] = useState("");
+  const [meetingDrawerOpen, setMeetingDrawerOpen] = useState(false);
+  const [meetingStatus, setMeetingStatus] = useState<MeetingStatus>("idle");
+  const [meetingNotice, setMeetingNotice] = useState("");
+  const [meetingTranscript, setMeetingTranscript] = useState<MeetingTranscriptSegment[]>([]);
+  const [meetingPartial, setMeetingPartial] = useState<MeetingTranscriptSegment | null>(null);
+  const [meetingSummary, setMeetingSummary] = useState("");
+  const [meetingSpeakerNames, setMeetingSpeakerNames] = useState<Record<string, string>>({});
+  const [meetingSpeakerEdit, setMeetingSpeakerEdit] = useState<MeetingSpeakerEdit | null>(null);
+  const meetingTranscriptRef = useRef<MeetingTranscriptSegment[]>([]);
+  const meetingSpeakerNamesRef = useRef<Record<string, string>>({});
+  const meetingShouldSummarizeRef = useRef(false);
   const [workbenchThoughtIndex, setWorkbenchThoughtIndex] = useState(0);
   const [loginMode2CubePhase, setLoginMode2CubePhase] = useState<LoginMode2CubePhase>("brand");
   const [loginMode2Entering, setLoginMode2Entering] = useState(false);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
   const chatStreamRef = useRef<HTMLDivElement | null>(null);
+  const meetingTranscriptScrollRef = useRef<HTMLDivElement | null>(null);
+  const meetingSpeakerEditInputRef = useRef<HTMLInputElement | null>(null);
   const skillPickerRef = useRef<HTMLDivElement | null>(null);
   const quickCommandMenuRef = useRef<HTMLDivElement | null>(null);
   const organizationMenuRef = useRef<HTMLDivElement | null>(null);
@@ -2394,6 +2420,250 @@ export default function AssistantApp() {
     }
   };
 
+  const updateMeetingTranscript = (updater: (prev: MeetingTranscriptSegment[]) => MeetingTranscriptSegment[]) => {
+    setMeetingTranscript((prev) => {
+      const next = updater(prev);
+      meetingTranscriptRef.current = next;
+      return next;
+    });
+  };
+
+  const buildMeetingSegment = (text: string, speakerId?: string, speakerName?: string): MeetingTranscriptSegment => {
+    const safeSpeakerId = speakerId?.trim() || "1";
+    const safeSpeakerName = meetingSpeakerNamesRef.current[safeSpeakerId]?.trim() || speakerName?.trim() || speakerDisplayName(safeSpeakerId);
+    return {
+      id: `meeting-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      speakerId: safeSpeakerId,
+      speakerName: safeSpeakerName,
+      text: text.trim(),
+      time: formatWorkbenchTime(),
+    };
+  };
+
+  const summarizeMeetingTranscript = async (fallbackText = "") => {
+    if (!auth?.token) {
+      return;
+    }
+    let segments = meetingTranscriptRef.current.filter((segment) => segment.text.trim());
+    if (segments.length === 0 && fallbackText.trim()) {
+      segments = [buildMeetingSegment(fallbackText)];
+      meetingTranscriptRef.current = segments;
+      setMeetingTranscript(segments);
+    }
+    if (segments.length === 0) {
+      setMeetingStatus("error");
+      setMeetingNotice("没有可生成纪要的转写内容。");
+      return;
+    }
+    setMeetingStatus("summarizing");
+    setMeetingNotice("正在调用 AI 听记技能生成会议纪要...");
+    try {
+      const response = await fetch("/ai/meeting-minutes/summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${auth.token}`,
+        },
+        body: JSON.stringify({
+          title: "会议纪要",
+          transcript: segments.map((segment) => ({
+            speakerId: segment.speakerId,
+            speakerName: segment.speakerName,
+            text: segment.text,
+            startMs: segment.startMs,
+            endMs: segment.endMs,
+          })),
+        }),
+      });
+      const body = await response.json().catch(() => null) as { data?: { summary?: string; skillName?: string }; message?: string } | null;
+      if (!response.ok || !body?.data?.summary) {
+        throw new Error(body?.message || `HTTP ${response.status}`);
+      }
+      setMeetingSummary(body.data.summary);
+      setMeetingStatus("done");
+      setMeetingNotice(`${body.data.skillName || "AI 听记"}技能已生成会议纪要。`);
+    } catch (error) {
+      setMeetingStatus("error");
+      setMeetingNotice(`会议纪要生成失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const startMeetingMinutes = async (triggerText: string) => {
+    if (!auth) {
+      setSpeechNotice("请先登录后再开始会议纪要。");
+      return;
+    }
+    if (workspaceTab !== "workbench") {
+      return;
+    }
+    if (listening) {
+      setSpeechNotice("当前已有语音识别在进行，请先结束后再开始会议纪要。");
+      return;
+    }
+    if (!speechSupported) {
+      setSpeechNotice("当前浏览器不支持录音。");
+      return;
+    }
+
+    const timestamp = formatWorkbenchTime();
+    const agentKey = activeWorkbenchAgent.key;
+    const sessionId = activeWorkbenchSessionId;
+    const cleanTrigger = triggerText.trim();
+    setInput("");
+    setSkillPickerOpen(false);
+    setQuickCommandMenuOpen(false);
+    setMeetingDrawerOpen(true);
+    setMeetingStatus("recording");
+    setMeetingNotice("正在请求麦克风权限...");
+    setMeetingSummary("");
+    setMeetingPartial(null);
+    setMeetingSpeakerNames({});
+    setMeetingSpeakerEdit(null);
+    meetingShouldSummarizeRef.current = true;
+    meetingTranscriptRef.current = [];
+    meetingSpeakerNamesRef.current = {};
+    setMeetingTranscript([]);
+
+    const userBubble: ChatBubble = { role: "user", content: cleanTrigger, time: timestamp };
+    const assistantBubble: ChatBubble = {
+      role: "assistant",
+      content: "已打开实时会议纪要。录音开始后，我会按发言人整理转写，结束时生成会议纪要。",
+      time: timestamp,
+    };
+    setConversationThreads((prev) =>
+      prev.map((thread) =>
+        thread.id === sessionId
+          ? {
+              ...thread,
+              title: thread.title === "新工作台对话" ? "会议纪要" : thread.title,
+              lastMessage: cleanTrigger,
+              time: timestamp,
+              updatedAt: new Date().toISOString(),
+            }
+          : thread,
+      ),
+    );
+    setWorkbenchMessagesByAgent((prev) => ({
+      ...prev,
+      [agentKey]: [...(prev[agentKey] ?? []), userBubble, assistantBubble],
+    }));
+    setConversationMessages((prev) => ({
+      ...prev,
+      [sessionId]: [...(prev[sessionId] ?? workbenchMessages), userBubble, assistantBubble],
+    }));
+    setWorkbenchRuntimeByAgent((prev) => ({
+      ...prev,
+      [agentKey]: {
+        status: "处理中",
+        previousTask: prev[agentKey]?.currentTask ?? "—",
+        currentTask: "实时会议听记中",
+        nextTask: "结束会议后生成纪要",
+        thoughts: ["正在监听麦克风音频", "转写结果会按发言人实时显示"],
+      },
+    }));
+
+    await startAsrSession({
+      token: auth.token,
+      provider: "iflytek",
+      speakerDiarization: true,
+      getPrefix: () => "",
+      onLiveText: () => {},
+      onNotice: (message) => {
+        const setupMessage =
+          message.includes("Iflytek realtime ASR credentials are missing") ||
+          message.includes("Iflytek realtime ASR is disabled")
+            ? "讯飞实时转写未配置或未启用，请联系管理员在「管理后台 → 集成应用 → 讯飞实时转写」完成配置。"
+            : message;
+        setMeetingNotice(setupMessage);
+        if (setupMessage.includes("失败") || message.includes("missing") || message.includes("disabled")) {
+          setMeetingStatus("error");
+        }
+      },
+      onTranscriptEvent: (event) => {
+        if (!event.text.trim()) {
+          return;
+        }
+        const segment = buildMeetingSegment(event.text, event.speakerId, event.speakerName);
+        if (event.type === "partial") {
+          setMeetingPartial(segment);
+          return;
+        }
+        setMeetingPartial(null);
+        updateMeetingTranscript((prev) => appendMeetingTranscriptSegment(prev, segment));
+      },
+      onFinished: async ({ asrText }) => {
+        if (!meetingShouldSummarizeRef.current) {
+          return;
+        }
+        meetingShouldSummarizeRef.current = false;
+        await summarizeMeetingTranscript(asrText);
+      },
+    });
+  };
+
+  const stopMeetingAndSummarize = () => {
+    if (meetingStatus === "recording") {
+      setMeetingStatus("stopping");
+      setMeetingNotice("正在结束录音...");
+      stopAsrSession();
+      return;
+    }
+    if (meetingStatus === "error" && meetingTranscriptRef.current.length > 0) {
+      meetingShouldSummarizeRef.current = false;
+      void summarizeMeetingTranscript();
+    }
+  };
+
+  const closeMeetingDrawer = () => {
+    if (meetingStatus === "recording" || meetingStatus === "stopping") {
+      meetingShouldSummarizeRef.current = false;
+      stopAsrSession();
+    }
+    setMeetingDrawerOpen(false);
+    setMeetingSpeakerEdit(null);
+  };
+
+  const startMeetingSpeakerEdit = (lineId: string, speakerId: string, speakerName: string) => {
+    setMeetingSpeakerEdit({
+      lineId,
+      speakerId,
+      value: meetingSpeakerNames[speakerId] || speakerName || speakerDisplayName(speakerId),
+    });
+  };
+
+  const commitMeetingSpeakerEdit = () => {
+    if (!meetingSpeakerEdit) {
+      return;
+    }
+    const nextName = meetingSpeakerEdit.value.trim() || speakerDisplayName(meetingSpeakerEdit.speakerId);
+    meetingSpeakerNamesRef.current = { ...meetingSpeakerNamesRef.current, [meetingSpeakerEdit.speakerId]: nextName };
+    setMeetingSpeakerNames((prev) => ({ ...prev, [meetingSpeakerEdit.speakerId]: nextName }));
+    updateMeetingTranscript((prev) =>
+      prev.map((segment) =>
+        segment.speakerId === meetingSpeakerEdit.speakerId ? { ...segment, speakerName: nextName } : segment,
+      ),
+    );
+    setMeetingPartial((prev) =>
+      prev?.speakerId === meetingSpeakerEdit.speakerId ? { ...prev, speakerName: nextName } : prev,
+    );
+    setMeetingSpeakerEdit(null);
+  };
+
+  const cancelMeetingSpeakerEdit = () => {
+    setMeetingSpeakerEdit(null);
+  };
+
+  const handleMeetingSpeakerEditKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      commitMeetingSpeakerEdit();
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      cancelMeetingSpeakerEdit();
+    }
+  };
+
   const submitQuestion = async (question: string) => {
     if (!auth || !question.trim() || chatLoading) {
       return;
@@ -2680,12 +2950,17 @@ export default function AssistantApp() {
   };
 
   const submitCurrentInput = async () => {
-    if (!input.trim()) {
+    const currentInput = input.trim();
+    if (!currentInput) {
+      return;
+    }
+    if (workspaceTab === "workbench" && isMeetingMinutesStartCommand(currentInput)) {
+      await startMeetingMinutes(currentInput);
       return;
     }
     setSkillPickerOpen(false);
     setQuickCommandMenuOpen(false);
-    await submitQuestion(input.trim());
+    await submitQuestion(currentInput);
   };
 
   const openQuickCommandMenu = () => {
@@ -2798,6 +3073,17 @@ export default function AssistantApp() {
     setApprovalDrawerOpen(false);
     setApprovalPageHtml(null);
     setSpeechNotice("");
+    setMeetingDrawerOpen(false);
+    setMeetingStatus("idle");
+    setMeetingNotice("");
+    setMeetingTranscript([]);
+    setMeetingPartial(null);
+    setMeetingSummary("");
+    setMeetingSpeakerNames({});
+    setMeetingSpeakerEdit(null);
+    meetingTranscriptRef.current = [];
+    meetingSpeakerNamesRef.current = {};
+    meetingShouldSummarizeRef.current = false;
     setConversationThreads([]);
     setConversationMessages({});
     setConversationListNotice("");
@@ -2835,6 +3121,30 @@ export default function AssistantApp() {
       element.scrollTop = element.scrollHeight;
     }
   }, [activeConversationId, chatLoading, visibleMessages, workspaceTab]);
+
+  useEffect(() => {
+    const element = meetingTranscriptScrollRef.current;
+    if (!meetingDrawerOpen || !element) {
+      return;
+    }
+    const frame = window.requestAnimationFrame(() => {
+      element.scrollTop = element.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [meetingDrawerOpen, meetingPartial?.text, meetingStatus, meetingTranscript]);
+
+  useEffect(() => {
+    if (!meetingSpeakerEdit) {
+      return;
+    }
+    const input = meetingSpeakerEditInputRef.current;
+    input?.focus();
+    input?.select();
+  }, [meetingSpeakerEdit?.speakerId, meetingSpeakerEdit?.lineId]);
+
+  useEffect(() => {
+    meetingSpeakerNamesRef.current = meetingSpeakerNames;
+  }, [meetingSpeakerNames]);
 
   const systemAgents = agentWorkspaces.filter((item) => item.category === "system");
   const publishedAgents = agentWorkspaces.filter((item) => item.category === "published");
@@ -3517,6 +3827,147 @@ export default function AssistantApp() {
                 </section>
               </aside>
             </div>
+            <aside
+              className={`cici-meeting-drawer${meetingDrawerOpen ? " is-open" : ""}`}
+              aria-label="实时会议纪要"
+            >
+              <header className="cici-meeting-drawer__header">
+                <div>
+                  <p>MEETING NOTES</p>
+                  <h2>实时会议纪要</h2>
+                </div>
+                <button type="button" className="cici-meeting-drawer__close" onClick={closeMeetingDrawer} aria-label="关闭会议纪要">
+                  ×
+                </button>
+              </header>
+              <div className="cici-meeting-drawer__status">
+                <span className={`cici-meeting-drawer__dot is-${meetingStatus}`} aria-hidden />
+                <strong>
+                  {meetingStatus === "recording"
+                    ? "录音中"
+                    : meetingStatus === "stopping"
+                      ? "正在结束"
+                      : meetingStatus === "summarizing"
+                        ? "生成纪要"
+                        : meetingStatus === "done"
+                          ? "已完成"
+                          : meetingStatus === "error"
+                            ? "需要处理"
+                            : "待开始"}
+                </strong>
+                <span>{meetingNotice || "输入“开始会议纪要”后自动开始。"}</span>
+              </div>
+              <div className="cici-meeting-drawer__body">
+                <section className="cici-meeting-drawer__section">
+                  <div className="cici-meeting-drawer__section-head">
+                    <h3>实时转写</h3>
+                    <span>{meetingTranscript.length} 段</span>
+                  </div>
+                  <div className="cici-meeting-drawer__transcript" ref={meetingTranscriptScrollRef}>
+                    {meetingTranscript.map((segment) => (
+                      <div key={segment.id} className="cici-meeting-drawer__line">
+                        <div className="cici-meeting-drawer__speaker">
+                          {meetingSpeakerEdit?.speakerId === segment.speakerId && meetingSpeakerEdit.lineId === segment.id ? (
+                            <input
+                              ref={meetingSpeakerEditInputRef}
+                              className="cici-meeting-drawer__speaker-input"
+                              value={meetingSpeakerEdit.value}
+                              onChange={(event) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value: event.target.value } : prev))}
+                              onBlur={commitMeetingSpeakerEdit}
+                              onKeyDown={handleMeetingSpeakerEditKeyDown}
+                              aria-label="编辑发言人名称"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="cici-meeting-drawer__speaker-name"
+                              onDoubleClick={() => startMeetingSpeakerEdit(segment.id, segment.speakerId, segment.speakerName)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === "F2") {
+                                  event.preventDefault();
+                                  startMeetingSpeakerEdit(segment.id, segment.speakerId, segment.speakerName);
+                                }
+                              }}
+                              aria-label={`双击编辑${segment.speakerName}`}
+                            >
+                              {segment.speakerName}
+                            </button>
+                          )}
+                          <span>{segment.time}</span>
+                        </div>
+                        <p>{segment.text}</p>
+                      </div>
+                    ))}
+                    {meetingPartial ? (
+                      <div className="cici-meeting-drawer__line is-partial">
+                        <div className="cici-meeting-drawer__speaker">
+                          {meetingSpeakerEdit?.speakerId === meetingPartial.speakerId && meetingSpeakerEdit.lineId === "partial" ? (
+                            <input
+                              ref={meetingSpeakerEditInputRef}
+                              className="cici-meeting-drawer__speaker-input"
+                              value={meetingSpeakerEdit.value}
+                              onChange={(event) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value: event.target.value } : prev))}
+                              onBlur={commitMeetingSpeakerEdit}
+                              onKeyDown={handleMeetingSpeakerEditKeyDown}
+                              aria-label="编辑发言人名称"
+                            />
+                          ) : (
+                            <button
+                              type="button"
+                              className="cici-meeting-drawer__speaker-name"
+                              onDoubleClick={() => startMeetingSpeakerEdit("partial", meetingPartial.speakerId, meetingPartial.speakerName)}
+                              onKeyDown={(event) => {
+                                if (event.key === "Enter" || event.key === "F2") {
+                                  event.preventDefault();
+                                  startMeetingSpeakerEdit("partial", meetingPartial.speakerId, meetingPartial.speakerName);
+                                }
+                              }}
+                              aria-label={`双击编辑${meetingPartial.speakerName}`}
+                            >
+                              {meetingPartial.speakerName}
+                            </button>
+                          )}
+                          <span>识别中</span>
+                        </div>
+                        <p>{meetingPartial.text}</p>
+                      </div>
+                    ) : null}
+                    {meetingTranscript.length === 0 && !meetingPartial ? (
+                      <div className="cici-meeting-drawer__empty">等待发言内容进入转写。</div>
+                    ) : null}
+                  </div>
+                </section>
+                <section className="cici-meeting-drawer__section cici-meeting-drawer__section--summary">
+                  <div className="cici-meeting-drawer__section-head">
+                    <h3>AI 会议纪要</h3>
+                  </div>
+                  <div className="cici-meeting-drawer__summary">
+                    {meetingSummary ? (
+                      <ChatMarkdown content={meetingSummary} />
+                    ) : (
+                      <div className="cici-meeting-drawer__empty">结束会议后在这里生成结构化纪要。</div>
+                    )}
+                  </div>
+                </section>
+              </div>
+              <footer className="cici-meeting-drawer__footer">
+                <button
+                  type="button"
+                  className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary"
+                  onClick={closeMeetingDrawer}
+                >
+                  收起
+                </button>
+                <button
+                  type="button"
+                  className="cici-meeting-drawer__btn cici-meeting-drawer__btn--primary"
+                  onClick={stopMeetingAndSummarize}
+                  disabled={meetingStatus === "idle" || meetingStatus === "stopping" || meetingStatus === "summarizing" || meetingStatus === "done"}
+                >
+                  {meetingStatus === "recording" ? "结束并生成纪要" : "生成纪要"}
+                </button>
+              </footer>
+            </aside>
           </div>
         </main>
       ) : workspaceTab === "settings" ? (

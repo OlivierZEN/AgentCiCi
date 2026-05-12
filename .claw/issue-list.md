@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-05-10T15:13:18Z
+updated_at: 2026-05-11T15:58:32Z
 updated_by: ai
 status: active
 ---
@@ -34,6 +34,38 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-05-11-meeting-minutes-spoken-trigger-missed:
+  - Symptom: 用户在与智能体对话中说“开始进行会议纪要”后，没有滑出实时会议纪要面板。
+  - Verified root cause: FEAT-029 前端触发判断只匹配精确短语“开始会议纪要/开始会议记录/开始会议听记/开启会议纪要/开启会议记录/开启会议听记”，未覆盖口语中常见的“开始进行会议纪要”。
+  - Resolution (2026-05-11):
+    - 新增 `frontend/src/assistant/meetingMinutesCommand.ts`，用独立 helper 识别自然口语触发。
+    - `AssistantApp.tsx` 改为复用该 helper。
+    - 新增 `meetingMinutesCommand.test.ts` 覆盖“开始进行会议纪要”等触发和解释型问题不误触发。
+  - Verification (2026-05-11):
+    - `frontend npm run test -- meetingMinutesCommand.test.ts` -> success。
+    - `frontend npm run build` -> success（Vite chunk-size warning 保留）。
+    - target `git diff --check` -> success。
+  - Status: resolved.
+
+- ISSUE-2026-05-11-iflytek-asr-config-rejected:
+  - Symptom: 用户填写“讯飞实时转写”配置后，FEAT-029 真实转写 smoke 未跑通；后端 `/ws/asr?provider=iflytek&speakerDiarization=true` 在 start 后返回泛化 `invalid ws text message`。
+  - Verified root cause: `iflytek_asr` 组织配置已启用且 Secret 加密存储；`realtimeUrl` 已从 Spark Chat 地址修正为 FEAT-029 要求的 AST 实时语音转写地址，但讯飞 AST WebSocket Upgrade 仍返回 `35010 AccessKeyId Not Exists`。这说明当前 Access Key ID/APIKey 未被实时语音转写大模型 AST 服务接受，或该 App 尚未开通对应服务/额度。
+  - Evidence:
+    - `GET /integrations` 返回 `iflytek_asr.enabled=true`，App ID / Access Key ID present，Secret masked as `iflytek-****`。
+    - Sanitized DB check after URL correction: `accessKeySecret` is JSON object, App ID length `8`, Access Key ID length `32`, configured URL `wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1`。
+    - Backend `/ws/asr` smoke returned `{"type":"error","message":"invalid ws text message"}` after `connected`。
+    - Raw WebSocket Upgrade to `wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1` returned `35010 AccessKeyId Not Exists` both with official minimal parameters and with `role_type=2/pd=com`。
+    - 2026-05-11T15:18:28Z retest after user confirmed quota enabled still returned the same `35010 AccessKeyId Not Exists` response from Iflytek.
+  - Resolution (2026-05-11):
+    - 用户提供正确 AppID/APIKey/APISecret 后，已重新写入 `iflytek_asr` 并加密存储 Secret。
+    - 修复后端讯飞 provider：等待上游 `data.action=started` 后再通知客户端发音频；适配 `data.cn.st.rt[].ws[].cw[]` 文本结构；为 Java WebSocket 补 `request(1)`；串行化 binary audio sends。
+    - 修复前端 ASR hook：等待服务端 `status started` 后再发送 PCM。
+  - Verification (2026-05-11):
+    - Raw Iflytek handshake -> `101 Switching Protocols`。
+    - Standalone Java probe -> received raw ASR result events。
+    - Backend `/ws/asr` with generated 16k PCM -> received `partial/final` transcript and speaker metadata。
+  - Status: resolved.
 
 - ISSUE-2026-05-10-v1-8-github-release-not-pushed:
   - Symptom: 用户反馈 `V1.8` 没有发布成功。

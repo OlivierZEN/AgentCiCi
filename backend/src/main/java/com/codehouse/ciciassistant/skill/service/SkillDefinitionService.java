@@ -177,6 +177,20 @@ public class SkillDefinitionService {
                     "MEDIUM"
             ),
             new BuiltinSkillSpec(
+                    "ai-meeting-notetaker",
+                    "AI 听记",
+                    "面向会议实时转写后的结构化纪要生成能力。",
+                    "You are the AI meeting notetaker skill. When invoked with meeting transcript segments, "
+                            + "produce concise, faithful, and action-oriented meeting minutes. Preserve speaker intent, "
+                            + "separate facts from unresolved questions, never invent attendees, owners, deadlines, "
+                            + "decisions, or timestamps, and mark missing information as 未明确.",
+                    null,
+                    null,
+                    "会议内容缺少关键事实、负责人或截止日期时，不要补造；在开放问题中标明待确认项。",
+                    "输出必须是中文 Markdown，固定包含 Meeting Summary、Date & Time、Participants、Topic、Summary、Action Items、Decisions Made、Open Questions；行动项必须用表格。",
+                    "LOW"
+            ),
+            new BuiltinSkillSpec(
                     "web-search",
                     "Web 搜索",
                     "面向公开互联网的搜索与正文抽取能力，返回带 URL 的结构化来源。",
@@ -207,6 +221,7 @@ public class SkillDefinitionService {
                     DefaultBinding.alwaysOn("knowledge-first"),
                     DefaultBinding.alwaysOn("safe-handoff"),
                     DefaultBinding.alwaysOn("general-assistant"),
+                    DefaultBinding.intentRoute("ai-meeting-notetaker"),
                     DefaultBinding.intentRoute("web-search")
             ),
             "sales-agent", List.of(
@@ -243,6 +258,7 @@ public class SkillDefinitionService {
     private final PlatformSkillTemplateRepository platformSkillTemplateRepository;
     private final AgentWorkflowSkillRefRepository agentWorkflowSkillRefRepository;
     private final SkillApiToolService skillApiToolService;
+    private final FileBackedBuiltinSkillSyncService fileBackedBuiltinSkillSyncService;
 
     public SkillDefinitionService(SkillDefinitionRepository skillDefinitionRepository,
                                   AgentSkillBindingRepository agentSkillBindingRepository,
@@ -252,7 +268,8 @@ public class SkillDefinitionService {
                                   ObjectMapper objectMapper,
                                   PlatformSkillTemplateRepository platformSkillTemplateRepository,
                                   AgentWorkflowSkillRefRepository agentWorkflowSkillRefRepository,
-                                  SkillApiToolService skillApiToolService) {
+                                  SkillApiToolService skillApiToolService,
+                                  FileBackedBuiltinSkillSyncService fileBackedBuiltinSkillSyncService) {
         this.skillDefinitionRepository = skillDefinitionRepository;
         this.agentSkillBindingRepository = agentSkillBindingRepository;
         this.skillPromptAssembler = skillPromptAssembler;
@@ -262,11 +279,13 @@ public class SkillDefinitionService {
         this.platformSkillTemplateRepository = platformSkillTemplateRepository;
         this.agentWorkflowSkillRefRepository = agentWorkflowSkillRefRepository;
         this.skillApiToolService = skillApiToolService;
+        this.fileBackedBuiltinSkillSyncService = fileBackedBuiltinSkillSyncService;
     }
 
     @Transactional
     public void ensurePhaseOneDefaults(String orgId) {
         ensureBuiltinSkills(orgId);
+        fileBackedBuiltinSkillSyncService.syncOrg(orgId);
         ensureDefaultBindings(orgId);
     }
 

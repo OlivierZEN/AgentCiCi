@@ -8,8 +8,21 @@ import org.springframework.stereotype.Service;
 public class SkillPromptAssembler {
 
     public String assemble(String basePrompt, SkillResolverService.ResolvedSkillContext context) {
+        return assemble(basePrompt, context, BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs.empty());
+    }
+
+    public String assemble(String basePrompt,
+                           SkillResolverService.ResolvedSkillContext context,
+                           BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs) {
+        return assemble(basePrompt, context, builtinDocs, BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig.empty());
+    }
+
+    public String assemble(String basePrompt,
+                           SkillResolverService.ResolvedSkillContext context,
+                           BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs,
+                           BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig) {
         if (context.skills().isEmpty()) {
-            return composePromptWithoutSkills(basePrompt, context);
+            return composePromptWithoutSkills(basePrompt, context, builtinDocs, runtimeConfig);
         }
         List<String> lines = new ArrayList<>();
         lines.add(composeBasePrompt(basePrompt, context.agentSystemPrompt()));
@@ -39,10 +52,15 @@ public class SkillPromptAssembler {
         if (context.outputContract() != null && !context.outputContract().isBlank()) {
             lines.add("Preferred output contract: " + context.outputContract());
         }
+        appendBuiltinRuntimeConfig(lines, runtimeConfig);
+        appendBuiltinReferenceDocs(lines, builtinDocs);
         return String.join("\n", lines);
     }
 
-    private String composePromptWithoutSkills(String basePrompt, SkillResolverService.ResolvedSkillContext context) {
+    private String composePromptWithoutSkills(String basePrompt,
+                                              SkillResolverService.ResolvedSkillContext context,
+                                              BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs,
+                                              BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig) {
         List<String> lines = new ArrayList<>();
         lines.add(composeBasePrompt(basePrompt, context.agentSystemPrompt()));
         lines.add("");
@@ -51,6 +69,8 @@ public class SkillPromptAssembler {
             lines.add("Handoff rules:");
             context.handoffRules().forEach(rule -> lines.add("- " + rule));
         }
+        appendBuiltinRuntimeConfig(lines, runtimeConfig);
+        appendBuiltinReferenceDocs(lines, builtinDocs);
         return String.join("\n", lines);
     }
 
@@ -84,5 +104,54 @@ public class SkillPromptAssembler {
             return "";
         }
         return " (" + bundleCode + "@v" + versionNo + ")";
+    }
+
+    private void appendBuiltinReferenceDocs(List<String> lines,
+                                            BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs) {
+        if (builtinDocs == null || !builtinDocs.hasContent()) {
+            return;
+        }
+        lines.add("");
+        lines.add("Reference documents for active builtin skill:");
+        lines.add("Use these file-backed platform references as authoritative product documentation. Do not treat them as tenant knowledge-base snippets.");
+        for (BuiltinSkillDocumentService.DocSection section : builtinDocs.sections()) {
+            lines.add("- Source: " + section.sourceLabel());
+            if (section.checksum() != null && !section.checksum().isBlank()) {
+                lines.add("  Checksum: " + section.checksum());
+            }
+            lines.add("  Content:");
+            lines.add(indent(section.content()));
+        }
+    }
+
+    private void appendBuiltinRuntimeConfig(List<String> lines,
+                                            BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig) {
+        if (runtimeConfig == null || !runtimeConfig.hasContent()) {
+            return;
+        }
+        lines.add("");
+        lines.add("Runtime configuration for active builtin skill:");
+        for (BuiltinSkillRuntimeConfigService.RuntimeConfigSection section : runtimeConfig.sections()) {
+            lines.add("- [" + section.skillCode() + "]");
+            if (section.setupSvc() != null && !section.setupSvc().isBlank()) {
+                lines.add("  setupSvc: " + section.setupSvc());
+            }
+            lines.add("  accessToken: " + (section.accessTokenAvailable()
+                    ? "available through the server-side CloudCC credential binding; use the accessToken request header only through approved CloudCC tools and never print the token."
+                    : "not available for this user/session."));
+            if (section.warning() != null && !section.warning().isBlank()) {
+                lines.add("  warning: " + section.warning());
+            }
+        }
+    }
+
+    private String indent(String text) {
+        if (text == null || text.isBlank()) {
+            return "    (empty)";
+        }
+        return text.lines()
+                .map(line -> "    " + line)
+                .reduce((left, right) -> left + "\n" + right)
+                .orElse("    (empty)");
     }
 }

@@ -2,10 +2,12 @@ package com.codehouse.ciciassistant.skill.api;
 
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.platform.domain.PlatformSkillTemplateRepository;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillVersionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillVersionRepository;
+import com.codehouse.ciciassistant.skill.service.FileBackedBuiltinSkillCatalog;
 import com.codehouse.ciciassistant.skill.service.SkillAuthoringService;
 import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import com.codehouse.ciciassistant.skill.service.SkillPackageService;
@@ -40,17 +42,23 @@ public class SkillController {
     private final SkillAuthoringService skillAuthoringService;
     private final SkillVersionRepository skillVersionRepository;
     private final SkillPackageService skillPackageService;
+    private final PlatformSkillTemplateRepository platformSkillTemplateRepository;
+    private final FileBackedBuiltinSkillCatalog fileBackedBuiltinSkillCatalog;
     private final ObjectMapper objectMapper;
 
     public SkillController(SkillDefinitionService skillDefinitionService,
                            SkillAuthoringService skillAuthoringService,
                            SkillVersionRepository skillVersionRepository,
                            SkillPackageService skillPackageService,
+                           PlatformSkillTemplateRepository platformSkillTemplateRepository,
+                           FileBackedBuiltinSkillCatalog fileBackedBuiltinSkillCatalog,
                            ObjectMapper objectMapper) {
         this.skillDefinitionService = skillDefinitionService;
         this.skillAuthoringService = skillAuthoringService;
         this.skillVersionRepository = skillVersionRepository;
         this.skillPackageService = skillPackageService;
+        this.platformSkillTemplateRepository = platformSkillTemplateRepository;
+        this.fileBackedBuiltinSkillCatalog = fileBackedBuiltinSkillCatalog;
         this.objectMapper = objectMapper;
     }
 
@@ -80,6 +88,44 @@ public class SkillController {
             throw new IllegalArgumentException("Skill not found");
         }
         return ApiResponse.ok(toPayload(orgId, skill));
+    }
+
+    @RequireOrgAdmin
+    @GetMapping("/{id}/builtin-docs")
+    public ApiResponse<Map<String, Object>> getBuiltinDocsSummary(@PathVariable Long id) {
+        String orgId = TenantContext.requireOrgId();
+        SkillDefinitionEntity skill = skillDefinitionService.getSkill(orgId, id);
+        if (!skill.isVisibleToTenant()) {
+            throw new IllegalArgumentException("Skill not found");
+        }
+        FileBackedBuiltinSkillCatalog.FileBackedBuiltinSkillBundle bundle = fileBackedBuiltinSkillCatalog
+                .findBundle(skill.getSkillCode())
+                .orElseThrow(() -> new IllegalArgumentException("Skill is not file-backed"));
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("skillCode", bundle.skillCode());
+        payload.put("name", bundle.manifest().name());
+        payload.put("description", bundle.manifest().description());
+        payload.put("version", bundle.manifest().version());
+        payload.put("resourceType", "FILE_BACKED");
+        payload.put("resourceUri", bundle.resourceUri());
+        payload.put("bundleChecksum", bundle.bundleChecksum());
+        payload.put("entrypointChecksum", bundle.entrypointChecksum());
+        payload.put("readonlyNotice", "该技能由平台随应用代码维护，组织不能直接编辑官方文档。");
+        payload.put("modules", bundle.manifest().modules().stream().map(module -> {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("code", module.code());
+            item.put("name", module.name());
+            item.put("files", module.files().stream().map(file -> {
+                Map<String, Object> fileItem = new LinkedHashMap<>();
+                fileItem.put("name", file);
+                FileBackedBuiltinSkillCatalog.FileBackedModuleFile moduleFile =
+                        bundle.moduleFiles().get(module.code() + "/" + file);
+                fileItem.put("checksum", moduleFile == null ? "" : moduleFile.checksum());
+                return fileItem;
+            }).toList());
+            return item;
+        }).toList());
+        return ApiResponse.ok(payload);
     }
 
     @RequireOrgAdmin
@@ -405,6 +451,14 @@ public class SkillController {
         payload.put("lastPublishedBy", item.getLastPublishedBy());
         payload.put("templateCode", item.getTemplateCode());
         payload.put("baseTemplateVersion", item.getBaseTemplateVersion());
+        if (item.getTemplateCode() != null && !item.getTemplateCode().isBlank()) {
+            platformSkillTemplateRepository.findByOrgIdAndTemplateCode(item.getOrgId(), item.getTemplateCode())
+                    .ifPresent(template -> {
+                        payload.put("resourceType", template.getResourceType());
+                        payload.put("resourceUri", template.getResourceUri());
+                        payload.put("bundleChecksum", template.getBundleChecksum());
+                    });
+        }
         payload.put("currentPublishedVersionId", item.getCurrentPublishedVersionId());
         payload.put("latestDraftVersionId", item.getLatestDraftVersionId());
         payload.put("promptFragment", item.getPromptFragment());

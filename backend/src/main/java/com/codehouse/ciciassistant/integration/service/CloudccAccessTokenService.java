@@ -67,7 +67,7 @@ public class CloudccAccessTokenService {
         String cacheKey = orgId + "::" + userId;
         CachedToken cached = tokenCache.get(cacheKey);
         if (cached != null && cached.expiresAt().isAfter(Instant.now().plusSeconds(30))) {
-            return Optional.of(new CloudccSessionContext(cached.token(), cached.baseUrl()));
+            return Optional.of(new CloudccSessionContext(cached.token(), cached.baseUrl(), cached.setupSvc()));
         }
         try {
             Optional<CloudccSessionContext> fresh = fetchAndCacheToken(orgId, userId, cacheKey);
@@ -107,10 +107,11 @@ public class CloudccAccessTokenService {
         }
 
         String gateway = resolveGateway(cloudccOrgId, orgapiSwitchAddress);
+        String setupSvc = deriveSetupSvc(gateway);
         String token = requestToken(gateway, cloudccOrgId, username, safetyMark, clientId, secretKey);
         Instant exp = parseJwtExp(token).orElse(Instant.now().plus(DEFAULT_TOKEN_TTL));
-        tokenCache.put(cacheKey, new CachedToken(token, gateway, exp));
-        return Optional.of(new CloudccSessionContext(token, gateway));
+        tokenCache.put(cacheKey, new CachedToken(token, gateway, setupSvc, exp));
+        return Optional.of(new CloudccSessionContext(token, gateway, setupSvc));
     }
 
     /**
@@ -120,6 +121,9 @@ public class CloudccAccessTokenService {
      * 响应中的 orgapi_address 将作为实际网关（baseUrl）返回，例如 https://szyd.apis.cloudcc.cn/lightningapi。
      */
     private String resolveGateway(String cloudccOrgId, String orgapiSwitchAddress) throws Exception {
+        if (looksLikeDirectApiGateway(orgapiSwitchAddress)) {
+            return normalizeDirectApiGateway(orgapiSwitchAddress);
+        }
         String url = !orgapiSwitchAddress.isBlank()
                 ? orgapiSwitchAddress
                 : "https://developer.apis.cloudcc.cn/oauth/apidomain?scope=cloudccCRM&orgId="
@@ -140,6 +144,41 @@ public class CloudccAccessTokenService {
             }
         }
         throw new IllegalArgumentException("无法获取 CloudCC 组织网关地址");
+    }
+
+    public static String deriveSetupSvc(String rawGateway) {
+        String gateway = ensureHttpUrl(trimTrailingSlashStatic(rawGateway));
+        if (gateway.isBlank()) {
+            return "";
+        }
+        URI uri = URI.create(gateway);
+        String path = uri.getPath() == null ? "" : trimTrailingSlashStatic(uri.getPath());
+        String setupPath;
+        if (path.isBlank()) {
+            setupPath = "/setup";
+        } else {
+            String[] parts = path.split("/");
+            StringBuilder next = new StringBuilder();
+            boolean replaced = false;
+            for (String part : parts) {
+                if (part == null || part.isBlank()) {
+                    continue;
+                }
+                next.append("/");
+                if ("lightningapi".equalsIgnoreCase(part)) {
+                    next.append("setup");
+                    replaced = true;
+                } else {
+                    next.append(part);
+                }
+            }
+            setupPath = replaced ? next.toString() : path + "/setup";
+        }
+        try {
+            return new URI(uri.getScheme(), uri.getAuthority(), setupPath, null, null).toString();
+        } catch (Exception ex) {
+            return trimTrailingSlashStatic(gateway) + (path.endsWith("/setup") ? "" : "/setup");
+        }
     }
 
     private String requestToken(
@@ -220,6 +259,10 @@ public class CloudccAccessTokenService {
     }
 
     private String trimTrailingSlash(String value) {
+        return trimTrailingSlashStatic(value);
+    }
+
+    private static String trimTrailingSlashStatic(String value) {
         if (value == null) return "";
         String v = value.trim();
         while (v.endsWith("/")) {
@@ -228,8 +271,55 @@ public class CloudccAccessTokenService {
         return v;
     }
 
-    /** {@code baseUrl} is the CloudCC org API gateway (with or without scheme); callers normalize to {@code base_url} for MCP. */
-    public record CloudccSessionContext(String accessToken, String baseUrl) {}
+    private boolean looksLikeDirectApiGateway(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        String normalized = ensureHttpUrl(value).toLowerCase();
+        if (normalized.contains("/lightningapi") || normalized.contains("/setup")) {
+            return true;
+        }
+        try {
+            URI uri = URI.create(normalized);
+            String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase();
+            String path = uri.getPath() == null ? "" : trimTrailingSlashStatic(uri.getPath());
+            return path.isBlank() && host.endsWith(".apis.cloudcc.cn") && !"developer.apis.cloudcc.cn".equals(host);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
 
-    private record CachedToken(String token, String baseUrl, Instant expiresAt) {}
+    private String normalizeDirectApiGateway(String value) {
+        String normalized = ensureHttpUrl(trimTrailingSlash(value));
+        try {
+            URI uri = URI.create(normalized);
+            String path = uri.getPath() == null ? "" : trimTrailingSlashStatic(uri.getPath());
+            if (path.isBlank()) {
+                return trimTrailingSlash(normalized) + "/lightningapi";
+            }
+        } catch (Exception ignored) {
+            // Fall through to the conservative setup-to-lightningapi replacement below.
+        }
+        return normalized.replaceFirst("(?i)/setup$", "/lightningapi");
+    }
+
+    private static String ensureHttpUrl(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        String value = raw.trim();
+        if (!value.startsWith("http://") && !value.startsWith("https://")) {
+            value = "https://" + value.replaceFirst("^/+", "");
+        }
+        return trimTrailingSlashStatic(value);
+    }
+
+    /** {@code baseUrl} is the CloudCC org API gateway (with or without scheme); {@code setupSvc} is the setup API service root. */
+    public record CloudccSessionContext(String accessToken, String baseUrl, String setupSvc) {
+        public CloudccSessionContext(String accessToken, String baseUrl) {
+            this(accessToken, baseUrl, deriveSetupSvc(baseUrl));
+        }
+    }
+
+    private record CachedToken(String token, String baseUrl, String setupSvc, Instant expiresAt) {}
 }

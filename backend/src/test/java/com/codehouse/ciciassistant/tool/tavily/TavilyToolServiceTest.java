@@ -183,6 +183,61 @@ class TavilyToolServiceTest {
         assertThat(service.resolveApiKey("org-1")).isEqualTo("tvly-real-key");
     }
 
+    @Test
+    void iflytekAsrSecretIsEncryptedMaskedAndDecryptable() {
+        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_IFLYTEK_ASR,
+                true, "iflytek", Map.of(
+                        "appId", "iflytek-app",
+                        "accessKeyId", "iflytek-access-key",
+                        "accessKeySecret", "iflytek-secret"
+                ));
+
+        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("org-1",
+                IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow();
+        assertThat(row.getConfigJson()).doesNotContain("iflytek-secret");
+        assertThat(row.getConfigJson()).contains("cipher").contains("iv");
+
+        Map<String, Object> raw = integrationAppService.findRawConfig("org-1",
+                IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow();
+        assertThat(integrationAppService.decryptIflytekAccessKeySecret(raw)).contains("iflytek-secret");
+
+        Map<String, Object> view = integrationAppService.list("org-1").stream()
+                .filter(v -> IntegrationAppService.APP_CODE_IFLYTEK_ASR.equals(v.get("appCode")))
+                .findFirst().orElseThrow();
+        @SuppressWarnings("unchecked")
+        Map<String, Object> config = (Map<String, Object>) view.get("config");
+        assertThat(config.get("accessKeySecret")).isEqualTo(IntegrationAppService.IFLYTEK_SECRET_MASK);
+        assertThat(config.get("realtimeUrl")).isEqualTo("wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1");
+        assertThat(config.get("lang")).isEqualTo("autodialect");
+        assertThat(config.get("domain")).isEqualTo("com");
+    }
+
+    @Test
+    void iflytekAsrMaskPreservesStoredCiphertext() {
+        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_IFLYTEK_ASR,
+                true, "iflytek", Map.of(
+                        "appId", "iflytek-app",
+                        "accessKeyId", "iflytek-access-key",
+                        "accessKeySecret", "iflytek-secret"
+                ));
+        String firstConfig = fakeRepo.findByOrgIdAndAppCode("org-1",
+                IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow().getConfigJson();
+
+        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_IFLYTEK_ASR,
+                true, "iflytek", Map.of(
+                        "appId", "iflytek-app",
+                        "accessKeyId", "iflytek-access-key",
+                        "accessKeySecret", IntegrationAppService.IFLYTEK_SECRET_MASK
+                ));
+        String secondConfig = fakeRepo.findByOrgIdAndAppCode("org-1",
+                IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow().getConfigJson();
+
+        assertThat(secondConfig).isEqualTo(firstConfig);
+        Map<String, Object> raw = integrationAppService.findRawConfig("org-1",
+                IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow();
+        assertThat(integrationAppService.decryptIflytekAccessKeySecret(raw)).contains("iflytek-secret");
+    }
+
     // ---------------------------------------------------------------------------------------------
 
     private String nameOf(Map<String, Object> toolDef) {

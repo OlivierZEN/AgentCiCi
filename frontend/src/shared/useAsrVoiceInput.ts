@@ -10,7 +10,14 @@ export function mergePrefixAsr(prefix: string, asr: string): string {
   return `${p}${join}${a}`;
 }
 
-type AsrWsMessage = { type?: string; text?: string; message?: string };
+type AsrWsMessage = { type?: string; text?: string; message?: string; speakerId?: string; speakerName?: string };
+
+export type AsrTranscriptEvent = {
+  type: "partial" | "final";
+  text: string;
+  speakerId?: string;
+  speakerName?: string;
+};
 
 export type AsrVoiceStartOptions = {
   token: string;
@@ -19,10 +26,13 @@ export type AsrVoiceStartOptions = {
   /** Live full text = merge(prefix, partial+final ASR). */
   onLiveText: (fullText: string) => void;
   onNotice: (msg: string) => void;
+  onTranscriptEvent?: (event: AsrTranscriptEvent) => void;
   /** Invoked when the ASR WebSocket has closed. */
   onFinished?: (p: { asrText: string; fullText: string }) => void | Promise<void>;
   /** Stop automatically after this many milliseconds without audible input. */
   autoStopAfterNoSpeechMs?: number;
+  provider?: "aliyun" | "iflytek";
+  speakerDiarization?: boolean;
 };
 
 /**
@@ -44,7 +54,9 @@ export function useAsrVoiceInput() {
   const silenceTimeoutMsRef = useRef<number | null>(null);
   const liveHandlerRef = useRef<(text: string) => void>(() => {});
   const noticeHandlerRef = useRef<(msg: string) => void>(() => {});
+  const transcriptHandlerRef = useRef<(event: AsrTranscriptEvent) => void>(() => {});
   const finishHandlerRef = useRef<(p: { asrText: string; fullText: string }) => void | Promise<void>>(async () => {});
+  const asrReadyRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -153,6 +165,7 @@ export function useAsrVoiceInput() {
       }
       liveHandlerRef.current = options.onLiveText;
       noticeHandlerRef.current = options.onNotice;
+      transcriptHandlerRef.current = options.onTranscriptEvent ?? (() => {});
       finishHandlerRef.current = options.onFinished ?? (async () => {});
       prefixSnapshotRef.current = options.getPrefix();
       silenceTimeoutMsRef.current =
@@ -161,10 +174,11 @@ export function useAsrVoiceInput() {
           : null;
       finalAsrTextRef.current = "";
       partialAsrTextRef.current = "";
+      asrReadyRef.current = false;
 
       try {
         const websocket = new WebSocket(
-          `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/asr?token=${encodeURIComponent(options.token)}`,
+          `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/asr?token=${encodeURIComponent(options.token)}&provider=${encodeURIComponent(options.provider ?? "aliyun")}&speakerDiarization=${options.speakerDiarization ? "true" : "false"}`,
         );
         websocket.binaryType = "arraybuffer";
         asrWsRef.current = websocket;
@@ -176,6 +190,12 @@ export function useAsrVoiceInput() {
               partialAsrTextRef.current = message.text ?? "";
               if (partialAsrTextRef.current.trim()) {
                 armSilenceTimer();
+                transcriptHandlerRef.current({
+                  type: "partial",
+                  text: partialAsrTextRef.current,
+                  speakerId: message.speakerId,
+                  speakerName: message.speakerName,
+                });
               }
               pushLive();
             } else if (message.type === "final") {
@@ -183,10 +203,18 @@ export function useAsrVoiceInput() {
               partialAsrTextRef.current = "";
               if ((message.text ?? "").trim()) {
                 armSilenceTimer();
+                transcriptHandlerRef.current({
+                  type: "final",
+                  text: message.text ?? "",
+                  speakerId: message.speakerId,
+                  speakerName: message.speakerName,
+                });
               }
               pushLive();
             } else if (message.type === "error") {
-              noticeHandlerRef.current(`阿里云实时识别失败：${message.message ?? "unknown"}`);
+              noticeHandlerRef.current(`实时识别失败：${message.message ?? "unknown"}`);
+            } else if (message.type === "status" && message.message === "started") {
+              asrReadyRef.current = true;
             }
           } catch {
             /* ignore malformed */
@@ -214,7 +242,12 @@ export function useAsrVoiceInput() {
           websocket.addEventListener("open", () => window.clearTimeout(timeout), { once: true });
         });
 
-        websocket.send(JSON.stringify({ type: "start", sampleRate: 16000 }));
+        websocket.send(JSON.stringify({
+          type: "start",
+          sampleRate: 16000,
+          provider: options.provider ?? "aliyun",
+          speakerDiarization: Boolean(options.speakerDiarization),
+        }));
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         mediaStreamRef.current = stream;
 
@@ -234,7 +267,7 @@ export function useAsrVoiceInput() {
         processorNodeRef.current = processor;
         processor.onaudioprocess = (ev) => {
           const currentSocket = asrWsRef.current;
-          if (!currentSocket || currentSocket.readyState !== 1) {
+          if (!currentSocket || currentSocket.readyState !== 1 || !asrReadyRef.current) {
             return;
           }
           const channelData = ev.inputBuffer.getChannelData(0);

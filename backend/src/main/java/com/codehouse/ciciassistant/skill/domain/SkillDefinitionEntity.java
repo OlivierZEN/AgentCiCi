@@ -319,6 +319,36 @@ public class SkillDefinitionEntity {
         this.updatedAt = Instant.now();
     }
 
+    public void applyPlatformManagedSnapshot(String name,
+                                             String description,
+                                             String promptFragment,
+                                             String draftSpecText,
+                                             String toolWhitelist,
+                                             String kbWhitelist,
+                                             String handoffRule,
+                                             String outputContract,
+                                             String riskLevel,
+                                             String templateCode,
+                                             Integer baseTemplateVersion) {
+        this.name = name;
+        this.description = description;
+        this.promptFragment = promptFragment;
+        this.draftSpecText = draftSpecText;
+        this.toolWhitelist = toolWhitelist;
+        this.kbWhitelist = kbWhitelist;
+        this.handoffRule = handoffRule;
+        this.outputContract = outputContract;
+        this.riskLevel = riskLevel;
+        this.templateCode = templateCode;
+        this.baseTemplateVersion = baseTemplateVersion;
+        this.sourceType = SkillSourceType.PLATFORM_STANDARD;
+        this.visibility = SkillVisibility.VISIBLE;
+        this.editPolicy = SkillEditPolicy.CONFIGURABLE;
+        this.bindingPolicy = SkillBindingPolicy.OPTIONAL;
+        this.updatePolicy = SkillUpdatePolicy.AUTO;
+        this.updatedAt = Instant.now();
+    }
+
     public void setRuntimeApiDraftJson(String runtimeApiDraftJson) {
         this.runtimeApiDraftJson = runtimeApiDraftJson;
         this.updatedAt = Instant.now();

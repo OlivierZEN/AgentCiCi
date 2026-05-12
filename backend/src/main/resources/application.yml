@@ -63,6 +63,15 @@ app:
       base-url: http://localhost:6333
       collection: cici_kb_chunk
       api-key: ""
+  voice:
+    iflytek:
+      enabled: false
+      app-id: ""
+      access-key-id: ""
+      access-key-secret: ""
+      realtime-url: "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1"
+      lang: "autodialect"
+      domain: "com"
 
 cici:
   tool:

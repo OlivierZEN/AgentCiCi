@@ -148,7 +148,7 @@ public class ModelProviderService {
                 ))
                 .toList();
 
-        List<String> selected = selectedModelsForProvider(entity, orgId, def);
+        List<String> selected = configuredModelsForProvider(entity, orgId);
 
         return Map.of(
                 "providerCode", providerCode,
@@ -170,7 +170,7 @@ public class ModelProviderService {
                 continue;
             }
             ProviderDef def = requireDef(entity.getProviderCode());
-            List<String> selected = selectedModelsForProvider(entity, orgId, def);
+            List<String> selected = configuredModelsForProvider(entity, orgId);
             for (String modelName : selected) {
                 if (modelName == null || modelName.isBlank()) {
                     continue;
@@ -454,7 +454,7 @@ public class ModelProviderService {
         return text.length() <= 180 ? text : text.substring(0, 180) + "...";
     }
 
-    private List<String> selectedModelsForProvider(ModelProviderConfigEntity entity, String orgId, ProviderDef def) {
+    private List<String> configuredModelsForProvider(ModelProviderConfigEntity entity, String orgId) {
         Map<String, Object> config = readJsonToMap(entity.getConfigJson());
         Object raw = config.get("selectedModels");
         List<String> fromConfig = new ArrayList<>();
@@ -480,7 +480,7 @@ public class ModelProviderService {
         if (!configured.isEmpty()) {
             return configured;
         }
-        return def.defaultModels();
+        return List.of();
     }
 
     private String writeJson(Map<String, Object> map) {

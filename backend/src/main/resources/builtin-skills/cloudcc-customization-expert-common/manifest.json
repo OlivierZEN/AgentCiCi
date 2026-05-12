@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "skillCode": "cloudcc-customization-expert-common",
+  "name": "CloudCC 二次开发专家",
+  "description": "CloudCC CRM 二次开发设计与实施。适用于对象、字段、权限、触发器、类、脚本、菜单、应用、视图、自定义设置、定时作业与定时类等模块。",
+  "category": "cloudcc-development",
+  "sourceType": "PLATFORM_STANDARD",
+  "visibility": "VISIBLE",
+  "editPolicy": "CONFIGURABLE",
+  "bindingPolicy": "OPTIONAL",
+  "updatePolicy": "AUTO",
+  "riskLevel": "MEDIUM",
+  "version": 1,
+  "documentRoot": ".",
+  "entrypoint": "SKILL.md",
+  "defaultActivationMode": "intent-route",
+  "modules": [
+    {
+      "code": "application",
+      "name": "应用",
+      "files": ["introduction.md", "devguide.md", "api.md"],
+      "triggerHints": ["应用", "application", "app"]
+    },
+    {
+      "code": "brief",
+      "name": "通用接口简表",
+      "files": ["api.md"],
+      "triggerHints": ["简表", "接口总览", "brief"]
+    },
+    {
+      "code": "button",
+      "name": "按钮",
+      "files": ["introduction.md", "devguide.md", "api.md"],
+      "triggerHints": ["按钮", "button"]
+    },
+    {
+      "code": "classes",
+      "name": "类",
+      "files": ["introduction.md", "devguide.md", "api.md"],
+      "triggerHints": ["类", "class", "classes", "apex"]
+    },
+    {
+      "code": "customPage",
+      "name": "自定义页面",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["自定义页面", "页面", "customPage"]
+    },
+    {
+      "code": "customSetting",
+      "name": "自定义设置",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["自定义设置", "customSetting"]
+    },
+    {
+      "code": "fields",
+      "name": "字段",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["字段", "自定义字段", "field", "fields"]
+    },
+    {
+      "code": "menu",
+      "name": "菜单",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["菜单", "menu"]
+    },
+    {
+      "code": "object",
+      "name": "对象",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["对象", "自定义对象", "object"]
+    },
+    {
+      "code": "pagelayout",
+      "name": "页面布局",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["页面布局", "布局", "pagelayout", "layout"]
+    },
+    {
+      "code": "permission",
+      "name": "权限",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["权限", "permission"]
+    },
+    {
+      "code": "profile",
+      "name": "简档",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["简档", "profile"]
+    },
+    {
+      "code": "recordType",
+      "name": "记录类型",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["记录类型", "recordType"]
+    },
+    {
+      "code": "role",
+      "name": "角色",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["角色", "role"]
+    },
+    {
+      "code": "scheduleJob",
+      "name": "定时作业",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["定时作业", "scheduleJob", "schedule"]
+    },
+    {
+      "code": "script",
+      "name": "脚本",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["脚本", "script"]
+    },
+    {
+      "code": "timer",
+      "name": "定时类",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["定时类", "timer"]
+    },
+    {
+      "code": "triggers",
+      "name": "触发器",
+      "files": ["introduction.md", "devguide.md", "api.md"],
+      "triggerHints": ["触发器", "trigger", "triggers"]
+    },
+    {
+      "code": "user",
+      "name": "用户",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["用户", "user"]
+    },
+    {
+      "code": "validationRule",
+      "name": "验证规则",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["验证规则", "校验规则", "validationRule"]
+    },
+    {
+      "code": "view",
+      "name": "视图",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["视图", "view"]
+    }
+  ]
+}

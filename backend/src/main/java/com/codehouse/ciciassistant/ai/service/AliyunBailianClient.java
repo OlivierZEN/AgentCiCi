@@ -125,6 +125,21 @@ public class AliyunBailianClient {
     public ChatCompletionResult chatCompletion(String modelName, List<Map<String, Object>> messages,
                                                List<Map<String, Object>> tools,
                                                boolean stripThinkingFromAssistantContent) {
+        return chatCompletionWithCredentials(
+                modelName,
+                messages,
+                tools,
+                stripThinkingFromAssistantContent,
+                baseUrl,
+                apiKey);
+    }
+
+    public ChatCompletionResult chatCompletionWithCredentials(String modelName,
+                                                              List<Map<String, Object>> messages,
+                                                              List<Map<String, Object>> tools,
+                                                              boolean stripThinkingFromAssistantContent,
+                                                              String apiBaseUrl,
+                                                              String apiKey) {
         if (apiKey == null || apiKey.isBlank()) {
             return new ChatCompletionResult("assistant", "Aliyun API key is not configured.", null, "stop", 0, 0);
         }
@@ -141,7 +156,13 @@ public class AliyunBailianClient {
 
         try {
             @SuppressWarnings("unchecked")
-            Map<String, Object> response = restClient.post()
+            Map<String, Object> response = RestClient.builder()
+                    .baseUrl(normalizeBaseUrl(apiBaseUrl))
+                    .requestFactory(ClientHttpRequestFactories.get(ClientHttpRequestFactorySettings.DEFAULTS
+                            .withConnectTimeout(Duration.ofSeconds(30))
+                            .withReadTimeout(NON_STREAM_TIMEOUT)))
+                    .build()
+                    .post()
                     .uri("/chat/completions")
                     .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -157,6 +178,11 @@ public class AliyunBailianClient {
         }
     }
 
+    private String normalizeBaseUrl(String value) {
+        String safe = value == null || value.isBlank() ? baseUrl : value.trim();
+        return safe.endsWith("/") ? safe.substring(0, safe.length() - 1) : safe;
+    }
+
     /**
      * Streaming chat with full messages and optional tools.
      * Tool calls in stream deltas are NOT supported here — use non-streaming for tool resolution.
@@ -165,6 +191,16 @@ public class AliyunBailianClient {
                                                    List<Map<String, Object>> tools,
                                                    boolean showThinking,
                                                    Consumer<String> onDelta) throws Exception {
+        return chatStreamWithCredentials(modelName, messages, tools, showThinking, onDelta, baseUrl, apiKey);
+    }
+
+    public ChatStreamResult chatStreamWithCredentials(String modelName,
+                                                      List<Map<String, Object>> messages,
+                                                      List<Map<String, Object>> tools,
+                                                      boolean showThinking,
+                                                      Consumer<String> onDelta,
+                                                      String apiBaseUrl,
+                                                      String apiKey) throws Exception {
         if (apiKey == null || apiKey.isBlank()) {
             onDelta.accept("Aliyun API key is not configured.");
             return new ChatStreamResult(0, 0);
@@ -184,7 +220,7 @@ public class AliyunBailianClient {
 
         String jsonBody = objectMapper.writeValueAsString(payload);
         HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(baseUrl + "/chat/completions"))
+                .uri(URI.create(normalizeBaseUrl(apiBaseUrl) + "/chat/completions"))
                 .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .header(HttpHeaders.ACCEPT, "text/event-stream")

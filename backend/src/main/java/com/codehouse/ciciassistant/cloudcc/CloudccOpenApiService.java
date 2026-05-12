@@ -390,18 +390,8 @@ public class CloudccOpenApiService {
             return error("无法获取 CloudCC 访问令牌，请确认已在「集成应用」中绑定 CloudCC 账号。");
         }
 
-        String baseUrl = ensureBaseUrl(ctx.get().baseUrl());
+        String setupUrl = ensureBaseUrl(ctx.get().setupSvc());
         String accessToken = ctx.get().accessToken();
-
-        // Setup API 网关路径：把 lightningapi 替换为 setup
-        String setupUrl = baseUrl.replaceFirst("lightningapi$", "setup");
-        // 兼容不以 lightningapi 结尾的情况
-        if (!setupUrl.contains("/setup")) {
-            int lastSlash = baseUrl.lastIndexOf("/");
-            if (lastSlash > 0) {
-                setupUrl = baseUrl.substring(0, lastSlash) + "/setup";
-            }
-        }
 
         String fullUrl = setupUrl + apiPath;
         log.info("CloudCC Setup API: url={}, params={}", fullUrl, bodyParams);
@@ -430,7 +420,7 @@ public class CloudccOpenApiService {
                     return error("CloudCC 令牌刷新失败。");
                 }
                 request = HttpRequest.newBuilder()
-                        .uri(URI.create(fullUrl))
+                        .uri(URI.create(ensureBaseUrl(fresh.get().setupSvc()) + apiPath))
                         .header("Content-Type", "application/json")
                         .header("accessToken", fresh.get().accessToken())
                         .timeout(Duration.ofSeconds(30))
