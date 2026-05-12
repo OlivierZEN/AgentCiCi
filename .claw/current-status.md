@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-12T02:51:18Z
+updated_at: 2026-05-12T03:14:00Z
 updated_by: ai
 status: active
-phase: chat_model_provider_credentials
+phase: v1.9_release
 active_task: "TASK-081 Meeting minutes live transcription"
-current_task: 已修复普通智能体对话同样显示 `Aliyun API key is not configured.` 的问题，普通 `/ai/chat` 与 `/ai/chat/stream` 现在也读取组织模型厂商凭证。
-next_action: 请在前台智能体对话框重新发送一条新消息，确认新回复不再出现 `Aliyun API key is not configured.`。
+current_task: V1.9 `内置AI听记` 已提交、打 tag、推送远端，并发布到线上；线上非知识库业务数据已用本地数据覆盖，知识库表、KB 文件卷和 Qdrant 内容保持线上原值。
+next_action: 使用真实浏览器麦克风在生产环境跑一次多人会议听记端到端检查。
 read_next:
   goals: false
   decisions: true
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-12T03:14:00Z 已完成 V1.9 `内置AI听记` 发布。Git commit `8f1f26b9dee3ce4d5249070348110ad591fce8e6` 已推送 `origin/main`，annotated tag `V1.9` 备注为“内置AI听记”并已推送；ACR 已推送 `cici-backend:V1.9` digest `sha256:8b09586cb68c1314d85f341ebf27a3ccfe257ce6eb988c9357ffdee7b8d559e7`、`cici-frontend:V1.9` digest `sha256:fab76d0ab47d0dfee855dbdb7ff46b60653dbb7144cf5d2f72787049f6265a63`，并为 database/redis/rabbitmq/qdrant 补齐 `V1.9` manifest alias。线上备份目录为 `/opt/cici/backups/20260512-110444-before-v1.9-ai-meeting-notes`；ECS 六容器均 healthy，Flyway 最新 `48|file backed builtin skills|true`，Playwright 公网验证 `https://agentcici.com/` 标题为 `AI 治理平台 | 企业 AI 客户运营套件`，`https://autoservice.agentcici.com/` 标题为 `AgentCiCi`。按用户要求执行本地数据覆盖线上时排除知识库内容：保留 `knowledge_base=2`、`kb_document=6`、`kb_chunk=310`、`agent_kb_binding=2`，未同步 KB 文件卷和 Qdrant；非知识库数据覆盖后已用线上 `APP_SECURITY_SECRET_KEY` 重加密 4 处加密字段。
 
 - 2026-05-12T02:51:18Z 已按用户截图继续修复普通智能体对话同样无法调用模型的问题。根因与会议纪要一致：`ChatOrchestratorService` 的非流式工具规划/最终回复和流式最终回复都直接使用 `AliyunBailianClient` 的环境变量 key，没有读取组织后台模型厂商配置。现已为 `ChatOrchestratorService` 注入 `ModelProviderService`，每轮对话在 `ModelRouterService.route(orgId, "chat")` 后解析 provider baseUrl/apiKey；非流式 `chatCompletion` 和流式 `chatStreamWithMessages` 均改为有组织凭证时调用动态凭证方法，保留 `mock`/未配置场景的旧兜底。`AliyunBailianClient` 已新增 `chatStreamWithCredentials`。验证通过：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test`、`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、重启后端 `53578.cici-backend` 健康 `UP`、本地 `demo-org` API smoke `/ai/chat` 返回正常问候且 model `qwen3.6-plus`、`/ai/chat/stream` 返回流式 delta 且不含 `Aliyun API key is not configured`。
 

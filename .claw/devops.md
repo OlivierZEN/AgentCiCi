@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-11T23:30:23Z
+updated_at: 2026-05-12T03:14:00Z
 updated_by: ai
 status: active
 ---
@@ -211,6 +211,21 @@ status: active
     - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `47|account profile and password|true`.
     - Verified publicly with Playwright: `https://agentcici.com/` and `https://www.agentcici.com/` render the FEAT-027 Chinese suite website with title `AI 治理平台 | 企业 AI 客户运营套件`; `https://autoservice.agentcici.com/` renders the AgentCiCi product login surface and its reservation link points to `https://agentcici.com/#demo`.
     - Note: macOS `curl` with LibreSSL reset during external TLS handshake, but OpenSSL HTTP checks and Playwright browser navigation succeeded for the same public host.
+  - V1.9 built-in AI meeting notes release on 2026-05-12:
+    - Release tag: `V1.9`.
+    - Release note: `内置AI听记`.
+    - Git commit: `8f1f26b9dee3ce4d5249070348110ad591fce8e6`; annotated tag `V1.9` points to this commit and was pushed to GitHub.
+    - Backup directory: `/opt/cici/backups/20260512-110444-before-v1.9-ai-meeting-notes`.
+    - Backend image digest: `sha256:8b09586cb68c1314d85f341ebf27a3ccfe257ce6eb988c9357ffdee7b8d559e7`.
+    - Frontend image digest: `sha256:fab76d0ab47d0dfee855dbdb7ff46b60653dbb7144cf5d2f72787049f6265a63`.
+    - Because `CICI_IMAGE_TAG` applies to all six compose services, `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` received `V1.9` manifest aliases from their existing `latest` tags before remote pull.
+    - Data sync: local non-KB PostgreSQL data restored over production after stopping backend/frontend; excluded `flyway_schema_history`, `knowledge_base`, `kb_document`, `kb_chunk`, `kb_document_metadata`, `kb_metadata_field`, `kb_retrieval_log`, and `agent_kb_binding`. KB files volume and Qdrant volume were backed up but intentionally not overwritten.
+    - Post-restore secret handling: 4 imported encrypted fields were re-encrypted with the production `APP_SECURITY_SECRET_KEY`.
+    - Restore note: local-only table entries `chat_attachment` and `user_quick_phrase` were present in the local dump but absent from production schema; `pg_restore` ignored those table entries while restoring existing tables.
+    - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `48|file backed builtin skills|true`.
+    - Verified data boundary: `knowledge_base=2`, `kb_document=6`, `kb_chunk=310`, and `agent_kb_binding=2` were unchanged after sync.
+    - Verified API smoke: fixed-password org-admin login succeeded; `/agents=5`, `/skills=15`, `/integrations=4`, `/models/providers=5`, `/me/agents/run-logs=1`; platform-admin smoke returned `/platform/skills=13` and `/platform/tools=13`.
+    - Verified publicly with Playwright: `https://agentcici.com/` title `AI 治理平台 | 企业 AI 客户运营套件`; `https://autoservice.agentcici.com/` title `AgentCiCi`.
 
 ## Pending Verification
 

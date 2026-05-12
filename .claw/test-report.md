@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-12T02:51:18Z
+updated_at: 2026-05-12T03:14:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-12T02:51:18Z
+last_run_at: 2026-05-12T03:14:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,30 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：chat model provider credentials fix
-- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test`; `backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`; backend restart; API smoke `/ai/chat` and `/ai/chat/stream`; target `git diff --check`
-- 环境：`local workspace, running local backend/frontend`
+- 范围：V1.9 release and production deploy
+- 命令：`git diff --check`; backend focused tests; backend compile/package; frontend focused tests/build; compose config; ACR image inspect; ECS deploy smoke; production non-KB data sync verification; Playwright public smoke
+- 环境：`local workspace + ACR + ECS production`
 
 ## Latest Verified Results
+
+- V1.9 `内置AI听记` release and production deployment (2026-05-12T03:14:00Z):
+  - Commands:
+    - `git`: `git diff --check` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest,IflytekAsrResultParserTest,FileBackedBuiltinSkillIntegrationTest,ModelProviderServiceIntegrationTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**.
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `frontend`: `npm run build` -> **success**（Vite chunk-size warning 保留）.
+    - `compose`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` -> **success**.
+    - `ACR`: `cici-backend:V1.9` and `cici-frontend:V1.9` build/push/inspect -> **success**.
+    - `remote`: ECS backup, V1.9 pull/up, health checks, Flyway V48, and frontend `nginx -t` -> **success**.
+    - `data`: non-KB PostgreSQL data restore -> **success**; KB tables and `agent_kb_binding` counts remained unchanged.
+    - `api`: production fixed-password org-admin and platform-admin smoke -> **success**.
+    - `browser`: Playwright public smoke for `https://agentcici.com/` and `https://autoservice.agentcici.com/` -> **success**.
+  - Notes:
+    - Production backup directory: `/opt/cici/backups/20260512-110444-before-v1.9-ai-meeting-notes`.
+    - Knowledge-base content was intentionally excluded from the data overwrite; KB files and Qdrant were backed up but not overwritten.
+    - macOS `curl` still resets on public TLS for this host; Playwright browser verification succeeded.
 
 - Chat model provider credentials fix (2026-05-12T02:51:18Z):
   - Commands:
