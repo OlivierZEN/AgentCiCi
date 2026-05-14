@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-14T04:56:11Z
+updated_at: 2026-05-14T11:56:09Z
 updated_by: ai
 status: active
 ---
@@ -14,6 +14,21 @@ status: active
 - Idle/low-load `docker stats` at observation time: `cici-backend` about 763MiB RSS-equivalent container memory and 0.09% CPU, `cici-frontend` about 9MiB, PostgreSQL about 40MiB, Qdrant about 42MiB, RabbitMQ about 118MiB, Redis about 3MiB; host memory used about 2.2GiB with 28GiB available.
 - PostgreSQL observation at the same time: `max_connections=100`, `shared_buffers=128MB`, database size about 16MB; key live table estimates included `chat_message=581`, `chat_session=69`, `kb_chunk=310`, `agent_run_trace=14`, `audit_log=607`.
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
+
+## Latest Release
+
+- 2.0.B1 online test release on 2026-05-14:
+  - Git commit: `44550bd` on `origin/main`.
+  - Annotated tag: `2.0.B1`, message `嵌入式智能应用`.
+  - ACR backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.0.B1`, digest `sha256:cbcd877d4372481c832dda3fe9f73448cc46d9d9a9e57327386fb7c86497429f`.
+  - ACR frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.0.B1`, digest `sha256:596d56a4d4226cfa9c75618cacde717a28e85bb94d63e66bcf698d95303aef62`.
+  - ACR infra image aliases: `cici-database:2.0.B1`, `cici-redis:2.0.B1`, `cici-rabbitmq:2.0.B1`, and `cici-qdrant:2.0.B1` point to the previously verified `V1.9` linux/amd64 manifests.
+  - ECS backup directory: `/opt/cici/backups/20260514-195316-before-2.0.B1`, including PostgreSQL dump, `acr.env`, and compose/nginx deploy config.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.0.B1`.
+  - Deploy command used on ECS: `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml pull && docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d`.
+  - Flyway operational note: first backend boot failed because production `flyway_schema_history` had old V18 checksum `-603872790` while current code resolves V18 as `1633949654`. After the release backup, `flyway_schema_history.version=18` was updated to `1633949654`; backend then started and applied V49/V50. This mirrors the local production-dump repair needed earlier on 2026-05-14.
+  - Verified after deploy: six compose services healthy, backend `/actuator/health` returned `UP`, latest Flyway row `50|embed app backend|true`, frontend Nginx config test passed, and server-local HTTPS vhost smoke returned HTTP 200 for `autoservice.agentcici.com`, `/sdk/meeting-minutes.js`, `/embed/meeting-minutes`, `agentcici.com`, and `www.agentcici.com`.
+  - Workstation direct public curl still returned connection reset for `https://agentcici.com/` and `https://autoservice.agentcici.com/`; server-local Host-header checks passed and should remain the trusted deployment smoke for this known network path until the external reset is separately diagnosed.
 
 ## Verified Local Environment
 

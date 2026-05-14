@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-14T10:48:18Z
+updated_at: 2026-05-14T11:56:09Z
 updated_by: ai
 status: active
-phase: implementation
-active_task: "FEAT-032 End-to-end CRM embed verification"
-current_task: 已按用户要求将线上 PostgreSQL `cici_assistant` 全库覆盖到本地，保留覆盖前本地 dump 与线上 dump；本地库已通过 Flyway repair 后迁移到当前代码 v50，后端/前端均在线。
-next_action: 进入 `TASK-096 End-to-end CRM embed verification`，用 admin 调试台、本地模拟父页面和 CloudCC Vue 示例页验证 SDK、iframe、麦克风、summary、writeback smoke 与桌面/移动截图。
+phase: release
+active_task: "2.0.B1 embedded intelligent apps release"
+current_task: 已按用户要求提交并推送本地变更到 `origin/main`，打 annotated tag `2.0.B1`（备注“嵌入式智能应用”），构建并推送 ACR 六服务同名镜像 tag，线上测试环境已切到 `CICI_IMAGE_TAG=2.0.B1` 并验证六容器 healthy、后端 health UP、Flyway 最新 V50。
+next_action: 继续 `TASK-096 End-to-end CRM embed verification`，用线上/本地 admin 调试台、本地模拟父页面和 CloudCC Vue 示例页验证 SDK、iframe、麦克风、summary、writeback smoke 与桌面/移动截图。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-14T11:56:09Z 已完成 `2.0.B1` 发布到线上测试环境。Git：提交 `44550bd` 已推送 `origin/main`，annotated tag `2.0.B1` 备注为“嵌入式智能应用”并已推送。ACR：`cici-backend:2.0.B1` digest `sha256:cbcd877d4372481c832dda3fe9f73448cc46d9d9a9e57327386fb7c86497429f`，`cici-frontend:2.0.B1` digest `sha256:596d56a4d4226cfa9c75618cacde717a28e85bb94d63e66bcf698d95303aef62`；`cici-database`、`cici-redis`、`cici-rabbitmq`、`cici-qdrant` 已从 `V1.9` manifest alias 为 `2.0.B1`。线上备份目录 `/opt/cici/backups/20260514-195316-before-2.0.B1`。部署时线上 Flyway V18 checksum 与当前迁移文件不一致，已在备份后将 `flyway_schema_history.version=18` checksum 修正为当前代码解析值 `1633949654`，随后后端启动并自动应用 V49/V50。验证通过：远程 `CICI_IMAGE_TAG=2.0.B1`，六容器 healthy，`GET http://127.0.0.1:8080/actuator/health` -> `UP`，Flyway 最新 `50|embed app backend|true`，Nginx 配置 OK；ECS 本机 Host smoke：`autoservice.agentcici.com /`、`/sdk/meeting-minutes.js`、`/embed/meeting-minutes`、`agentcici.com /`、`www.agentcici.com /` 均 HTTP 200，`autoservice.agentcici.com /auth/password/login` with `13900009999/szyd1234` 返回 HTTP 200。工作站直连公网域名仍出现 `curl: (35) Recv failure: Connection reset by peer`，与 2026-05-13 记录的外部链路现象一致；服务器本机 vhost 验证通过。
 
 - 2026-05-14T10:48:18Z 已按用户要求将线上 PostgreSQL `cici_assistant` 全库覆盖到本地。流程：停止本地后端；备份本地库到 `output/db-sync-20260514-184504/local-before-prod-sync.dump`；通过 SSH 从 ECS `cici-database` 导出线上全库到 `output/db-sync-20260514-184504/prod-cici-assistant.dump`；drop/recreate 本地 `cici_assistant` 并 restore 线上 dump。由于线上 Flyway V18 checksum 与当前本地迁移文件不一致，已仅在本地执行 Flyway repair，然后补跑 V49/V50，当前本地最新迁移为 `50|embed app backend|true`。验证通过：本地后端 `GET /actuator/health` -> `UP`；前端 `HEAD /` -> `200`；本地表数 67，`user_account=16`、`organization_member=16`、`knowledge_base=2`、`kb_document=6`、`kb_chunk=310`；`13900009999/szyd1234` 登录返回 `ORG_ADMIN`，`13800138111/szyd1234` 返回 `ORG_ADMIN, PLATFORM_ADMIN`。
 

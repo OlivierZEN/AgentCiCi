@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-14T10:48:18Z
+updated_at: 2026-05-14T11:56:09Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-14T10:48:18Z
+last_run_at: 2026-05-14T11:56:09Z
 last_run_status: success
 ---
 
@@ -13,11 +13,31 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：Production PostgreSQL to local overwrite
-- 命令：local dump; production dump; local restore; Flyway repair/migrate; backend/frontend smoke; password-login API smoke
-- 环境：`local workspace`
+- 范围：2.0.B1 release build and online test deployment
+- 命令：backend package; frontend build; ACR image push; ECS backup/deploy; Flyway checksum repair; health/public smoke
+- 环境：`local workspace` + ECS `/opt/cici`
 
 ## Latest Verified Results
+
+- 2.0.B1 release and online test deployment (2026-05-14T11:56:09Z):
+  - Commands:
+    - `git`: committed local changes as `44550bd`; pushed `origin/main` -> **success**。
+    - `git`: created annotated tag `2.0.B1` with message `嵌入式智能应用`; pushed tag -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `docker`: pushed `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.0.B1` -> **success**, digest `sha256:cbcd877d4372481c832dda3fe9f73448cc46d9d9a9e57327386fb7c86497429f`。
+    - `docker`: pushed `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.0.B1` -> **success**, digest `sha256:596d56a4d4226cfa9c75618cacde717a28e85bb94d63e66bcf698d95303aef62`。
+    - `docker`: created `2.0.B1` manifest aliases for `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` from `V1.9` -> **success**。
+    - `ecs backup`: saved PostgreSQL dump and deploy config to `/opt/cici/backups/20260514-195316-before-2.0.B1` -> **success**。
+    - `ecs deploy`: synced local compose/nginx deploy files, set `CICI_IMAGE_TAG=2.0.B1`, `docker compose pull`, `docker compose up -d` -> **success**。
+    - `flyway`: first backend boot failed on V18 checksum mismatch; after backup, updated `flyway_schema_history.version=18` checksum from `-603872790` to `1633949654` to match current code, then restarted backend -> **success**。
+    - `runtime`: ECS compose six services all `healthy`; backend `GET http://127.0.0.1:8080/actuator/health` -> **`{"status":"UP"}`**。
+    - `db`: latest Flyway rows include `50|embed app backend|true` and `49|ai meeting notetaker cloudcc prompt|true`。
+    - `nginx`: `docker exec cici-frontend nginx -t` -> **success**。
+    - `server-local vhost smoke`: `autoservice.agentcici.com /`, `/sdk/meeting-minutes.js`, `/embed/meeting-minutes`, `agentcici.com /`, and `www.agentcici.com /` -> **HTTP 200**。
+    - `server-local auth smoke`: `POST /auth/password/login` with `13900009999/szyd1234` under `autoservice.agentcici.com` -> **HTTP 200**, `success=true`。
+  - Notes:
+    - Workstation direct curls to `https://autoservice.agentcici.com/` and `https://agentcici.com/` returned `curl: (35) Recv failure: Connection reset by peer`; server-local HTTPS vhost smoke passed, matching the previously observed external-link reset behavior.
 
 - Production PostgreSQL to local overwrite (2026-05-14T10:48:18Z):
   - Commands:
