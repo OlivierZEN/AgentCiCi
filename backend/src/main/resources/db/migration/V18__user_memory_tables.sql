@@ -1,8 +1,7 @@
 -- 用户专属记忆表
 -- 每条记忆归属于 (org_id, user_id, agent_id) 三元组，跨会话持久存储。
 --
--- 本迁移在 PostgreSQL 与 H2（MODE=PostgreSQL，用于集成测试）下均需可执行，
--- 因此刻意避开 TIMESTAMPTZ、DEFAULT NOW()、partial index 这类仅 PostgreSQL 支持的语法。
+-- 后端集成测试统一使用 PostgreSQL；本迁移保留标准 PostgreSQL 可执行语法。
 CREATE TABLE user_memory (
     id          BIGSERIAL    PRIMARY KEY,
     org_id      VARCHAR(64)  NOT NULL,
@@ -24,7 +23,7 @@ CREATE INDEX idx_user_memory_lookup
     ON user_memory(org_id, user_id, agent_id, enabled);
 
 -- 语义键唯一索引：memory_key 可为 NULL，无 key 的记忆允许同一 (org, user, agent) 下多条并存
--- （标准 SQL 下 UNIQUE 索引将 NULL 视为彼此不相等，PostgreSQL 与 H2 默认行为一致）；
+-- PostgreSQL UNIQUE 索引会将 NULL 视为彼此不相等；
 -- 带 key 的记忆则按 (org_id, user_id, agent_id, memory_key) 唯一，支撑按 key upsert。
 CREATE UNIQUE INDEX idx_user_memory_key
     ON user_memory(org_id, user_id, agent_id, memory_key);

@@ -81,6 +81,40 @@ class IflytekAsrResultParserTest {
     }
 
     @Test
+    void reassignsLeadingZeroMarkerWordsWhenFirstExplicitMarkerSwitchesSpeaker() throws Exception {
+        var root = objectMapper.readTree("""
+                {
+                  "action": "result",
+                  "data": {
+                    "cn": {
+                      "st": {
+                        "type": "0",
+                        "rt": [
+                          {
+                            "ws": [
+                              {"cw": [{"w": "除了", "rl": "0"}]},
+                              {"cw": [{"w": "刚才说的那些", "rl": "0"}]},
+                              {"cw": [{"w": "，", "rl": "2"}]},
+                              {"cw": [{"w": "我们还在改进", "rl": "0"}]}
+                            ]
+                          }
+                        ]
+                      }
+                    }
+                  }
+                }
+                """);
+
+        var payload = IflytekAsrResultParser.parsePayload(objectMapper, root);
+        var result = IflytekAsrResultParser.extractPieces(payload, "1");
+
+        assertThat(result.pieces()).hasSize(1);
+        assertThat(result.pieces().get(0).speakerId()).isEqualTo("2");
+        assertThat(result.pieces().get(0).text()).isEqualTo("除了刚才说的那些，我们还在改进");
+        assertThat(result.activeSpeakerId()).isEqualTo("2");
+    }
+
+    @Test
     void parsesTextualDataPayload() throws Exception {
         var root = objectMapper.readTree("""
                 {

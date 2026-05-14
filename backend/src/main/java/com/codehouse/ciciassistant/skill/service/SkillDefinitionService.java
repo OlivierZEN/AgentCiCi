@@ -35,6 +35,31 @@ public class SkillDefinitionService {
             "safe-handoff"
     );
 
+    private static final String AI_MEETING_NOTETAKER_PROMPT_FRAGMENT = """
+            首先确认用户是使用实时语音转写还是上传录音文件。如果系统未集成专用语音转写工具，则引导用户提供转写好的文本或等待未来集成。拿到文本后，按固定模板生成会议纪要，包含：本次沟通重点、客户核心诉求、双方承诺、遗留问题等。接着根据纪要自动提取行动项，生成待办任务候选列表，请用户逐项确认、填写截止时间和被分配人。用户确认后，如系统已集成待办系统则直接创建；否则输出结构化待办信息供用户手动录入。同时分析会议内容，识别新的销售线索、客户商机、联系人等CRM记录，列出建议创建的条目，并询问用户是否立即创建。每次关键操作前必须征得用户确认，事实不足时转人工。
+            """.trim();
+
+    private static final String AI_MEETING_NOTETAKER_DRAFT_SPEC_TEXT = """
+            技能名称：客户拜访会议纪要及后续行动管理
+            目标：将客户拜访的语音对话自动转写为文字，生成标准化会议纪要，并根据对话内容生成待办任务和CRM记录建议，辅助业务人员高效跟进。
+            触发场景：
+            - 业务人员要求转写客户拜访录音
+            - 用户请求生成会议纪要
+            - 需要从会议内容创建待办任务
+            - 希望识别会议中的销售线索或商机
+            处理步骤：
+            1. 获取语音输入（实时流或录音文件）
+            2. 进行说话人分离和语音转文本
+            3. 基于转写文本套用固定模板生成结构化会议纪要
+            4. 提取行动项生成待办建议，由用户确认是否创建、设定截止时间和被分配人
+            5. 将确认的待办事项写回业务系统
+            6. 分析对话内容，识别新销售线索、商机、联系人等，给出创建建议并待用户确认后写入CRM
+            工具边界：当前工具列表未提供语音转写、AI会议摘要、待办创建或CRM记录写入工具；需集成外部服务或自定义开发。
+            知识边界：无需特定知识库，可选CloudCC知识库辅助CRM字段映射。
+            转人工规则：当用户无法提供录音或需创建记录但系统未集成时，提供手动作业指引；每次批量创建待办或CRM记录前必须人工确认。
+            输出要求：输出包含转写文本、会议纪要、待办事项清单、CRM记录建议及下一步操作指引。
+            """.trim();
+
     private static final List<BuiltinSkillSpec> BUILTIN_SKILLS = List.of(
             new BuiltinSkillSpec(
                     "conversation-core",
@@ -180,10 +205,8 @@ public class SkillDefinitionService {
                     "ai-meeting-notetaker",
                     "AI 听记",
                     "面向会议实时转写后的结构化纪要生成能力。",
-                    "You are the AI meeting notetaker skill. When invoked with meeting transcript segments, "
-                            + "produce concise, faithful, and action-oriented meeting minutes. Preserve speaker intent, "
-                            + "separate facts from unresolved questions, never invent attendees, owners, deadlines, "
-                            + "decisions, or timestamps, and mark missing information as 未明确.",
+                    AI_MEETING_NOTETAKER_PROMPT_FRAGMENT,
+                    AI_MEETING_NOTETAKER_DRAFT_SPEC_TEXT,
                     null,
                     null,
                     "会议内容缺少关键事实、负责人或截止日期时，不要补造；在开放问题中标明待确认项。",
@@ -927,7 +950,7 @@ public class SkillDefinitionService {
                     true,
                     true,
                     spec.promptFragment(),
-                    spec.promptFragment(),
+                    spec.draftSpecText(),
                     spec.toolWhitelist(),
                     spec.kbWhitelist(),
                     spec.handoffRule(),
@@ -1106,11 +1129,24 @@ public class SkillDefinitionService {
             String name,
             String description,
             String promptFragment,
+            String draftSpecText,
             String toolWhitelist,
             String kbWhitelist,
             String handoffRule,
             String outputContract,
             String riskLevel
     ) {
+        private BuiltinSkillSpec(String skillCode,
+                                 String name,
+                                 String description,
+                                 String promptFragment,
+                                 String toolWhitelist,
+                                 String kbWhitelist,
+                                 String handoffRule,
+                                 String outputContract,
+                                 String riskLevel) {
+            this(skillCode, name, description, promptFragment, promptFragment, toolWhitelist, kbWhitelist,
+                    handoffRule, outputContract, riskLevel);
+        }
     }
 }

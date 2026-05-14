@@ -5495,6 +5495,23 @@
   pointer-events: auto;
 }
 
+.cici-embed-page {
+  min-height: 100vh;
+  padding: 0;
+  background: #f7f3eb;
+  color: #2b2217;
+}
+
+.cici-meeting-drawer--embed {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 .cici-meeting-drawer__header,
 .cici-meeting-drawer__section-head,
 .cici-meeting-drawer__status,
@@ -5529,6 +5546,16 @@
   font-size: 18px;
   line-height: 1.25;
   font-weight: 650;
+}
+
+.cici-meeting-drawer__context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-top: 5px;
+  color: #7c6d59;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .cici-meeting-drawer__section-head h3 {
@@ -5728,9 +5755,84 @@
   line-height: 1.55;
 }
 
+.cici-meeting-drawer__writeback {
+  margin-top: 12px;
+  border-top: 1px solid #ded2bb;
+  padding-top: 10px;
+}
+
+.cici-meeting-drawer__writeback h4 {
+  margin: 0 0 4px;
+  color: #2b2217;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cici-meeting-drawer__writeback-item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 9px 0;
+  border-bottom: 1px solid #ded2bb;
+}
+
+.cici-meeting-drawer__writeback-item input {
+  margin: 3px 0 0;
+  accent-color: #a67c2f;
+}
+
+.cici-meeting-drawer__writeback-item span,
+.cici-meeting-drawer__writeback-item strong,
+.cici-meeting-drawer__writeback-item small,
+.cici-meeting-drawer__writeback-item em {
+  display: block;
+  min-width: 0;
+}
+
+.cici-meeting-drawer__writeback-item strong {
+  color: #876223;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.cici-meeting-drawer__writeback-item small {
+  margin-top: 2px;
+  color: #7c6d59;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.cici-meeting-drawer__writeback-item em {
+  margin-top: 4px;
+  color: #5f523f;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cici-meeting-drawer__result {
+  margin: 10px 0 0;
+  border-top: 1px solid #ded2bb;
+  padding-top: 8px;
+  color: #5f523f;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .cici-meeting-drawer__footer {
   padding-top: 12px;
   border-top: 1px solid #ded2bb;
+}
+
+.cici-meeting-drawer__footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .cici-meeting-drawer__btn {
@@ -5786,6 +5888,11 @@
     width: min(82vw, 940px);
     min-width: 680px;
   }
+
+  .cici-meeting-drawer--embed {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 900px) {
@@ -5802,6 +5909,10 @@
   .cici-meeting-drawer {
     width: calc(100% - 20px);
     min-width: 0;
+  }
+
+  .cici-meeting-drawer--embed {
+    width: 100%;
   }
 
   .cici-meeting-drawer__body {

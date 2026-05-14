@@ -1,9 +1,9 @@
-# Merge with main application.yml: keep jwt + test-only admin mobiles for integration tests.
+# Merge with main application.yml: integration tests use PostgreSQL, not H2.
 spring:
   datasource:
-    url: jdbc:h2:mem:cici_test;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
-    username: sa
-    password:
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/cici_assistant_test}
+    username: ${TEST_DATABASE_USERNAME:cici}
+    password: ${TEST_DATABASE_PASSWORD:cici123}
   jpa:
     hibernate:
       ddl-auto: validate

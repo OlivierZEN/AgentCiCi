@@ -1,15 +1,15 @@
 #!/bin/bash
-# cc-cici-assistant 前后端服务重启脚本
+# cc-agentcici 前后端服务重启脚本
 # 用法: ./restart-services.sh
 
 set -e
 
-BACKEND_DIR="/Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/backend"
-FRONTEND_DIR="/Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/frontend"
+BACKEND_DIR="/Volumes/AISpace/codehouse/cc-agentcici/backend"
+FRONTEND_DIR="/Volumes/AISpace/codehouse/cc-agentcici/frontend"
 BACKEND_PORT=8080
 FRONTEND_PORT=5173
 
-echo "=== cc-cici-assistant 服务重启 ==="
+echo "=== cc-agentcici 服务重启 ==="
 
 # 1. 停止旧进程
 echo "[1/4] 停止旧进程..."

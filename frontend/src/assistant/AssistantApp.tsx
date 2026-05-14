@@ -10,6 +10,7 @@ import { BootLoginConversationDemo, BootLoginDataStream } from "../components/Bo
 import AvatarView from "../components/AvatarView";
 import ChatMarkdown from "../components/ChatMarkdown";
 import { LS_ASSISTANT_TOKEN } from "../constants";
+import { MeetingMinutesPanel } from "../meeting/MeetingMinutesPanel";
 import { getDisplayInitial } from "../shared/avatar";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
@@ -1090,7 +1091,7 @@ function HumanModeStaticLogin() {
 }
 
 export default function AssistantApp() {
-  const [mobile, setMobile] = useState("18611892001");
+  const [mobile, setMobile] = useState("13900009999");
   const [loginPassword, setLoginPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [registerMode, setRegisterMode] = useState(false);
@@ -3831,142 +3832,25 @@ export default function AssistantApp() {
               className={`cici-meeting-drawer${meetingDrawerOpen ? " is-open" : ""}`}
               aria-label="实时会议纪要"
             >
-              <header className="cici-meeting-drawer__header">
-                <div>
-                  <p>MEETING NOTES</p>
-                  <h2>实时会议纪要</h2>
-                </div>
-                <button type="button" className="cici-meeting-drawer__close" onClick={closeMeetingDrawer} aria-label="关闭会议纪要">
-                  ×
-                </button>
-              </header>
-              <div className="cici-meeting-drawer__status">
-                <span className={`cici-meeting-drawer__dot is-${meetingStatus}`} aria-hidden />
-                <strong>
-                  {meetingStatus === "recording"
-                    ? "录音中"
-                    : meetingStatus === "stopping"
-                      ? "正在结束"
-                      : meetingStatus === "summarizing"
-                        ? "生成纪要"
-                        : meetingStatus === "done"
-                          ? "已完成"
-                          : meetingStatus === "error"
-                            ? "需要处理"
-                            : "待开始"}
-                </strong>
-                <span>{meetingNotice || "输入“开始会议纪要”后自动开始。"}</span>
-              </div>
-              <div className="cici-meeting-drawer__body">
-                <section className="cici-meeting-drawer__section">
-                  <div className="cici-meeting-drawer__section-head">
-                    <h3>实时转写</h3>
-                    <span>{meetingTranscript.length} 段</span>
-                  </div>
-                  <div className="cici-meeting-drawer__transcript" ref={meetingTranscriptScrollRef}>
-                    {meetingTranscript.map((segment) => (
-                      <div key={segment.id} className="cici-meeting-drawer__line">
-                        <div className="cici-meeting-drawer__speaker">
-                          {meetingSpeakerEdit?.speakerId === segment.speakerId && meetingSpeakerEdit.lineId === segment.id ? (
-                            <input
-                              ref={meetingSpeakerEditInputRef}
-                              className="cici-meeting-drawer__speaker-input"
-                              value={meetingSpeakerEdit.value}
-                              onChange={(event) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value: event.target.value } : prev))}
-                              onBlur={commitMeetingSpeakerEdit}
-                              onKeyDown={handleMeetingSpeakerEditKeyDown}
-                              aria-label="编辑发言人名称"
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="cici-meeting-drawer__speaker-name"
-                              onDoubleClick={() => startMeetingSpeakerEdit(segment.id, segment.speakerId, segment.speakerName)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === "F2") {
-                                  event.preventDefault();
-                                  startMeetingSpeakerEdit(segment.id, segment.speakerId, segment.speakerName);
-                                }
-                              }}
-                              aria-label={`双击编辑${segment.speakerName}`}
-                            >
-                              {segment.speakerName}
-                            </button>
-                          )}
-                          <span>{segment.time}</span>
-                        </div>
-                        <p>{segment.text}</p>
-                      </div>
-                    ))}
-                    {meetingPartial ? (
-                      <div className="cici-meeting-drawer__line is-partial">
-                        <div className="cici-meeting-drawer__speaker">
-                          {meetingSpeakerEdit?.speakerId === meetingPartial.speakerId && meetingSpeakerEdit.lineId === "partial" ? (
-                            <input
-                              ref={meetingSpeakerEditInputRef}
-                              className="cici-meeting-drawer__speaker-input"
-                              value={meetingSpeakerEdit.value}
-                              onChange={(event) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value: event.target.value } : prev))}
-                              onBlur={commitMeetingSpeakerEdit}
-                              onKeyDown={handleMeetingSpeakerEditKeyDown}
-                              aria-label="编辑发言人名称"
-                            />
-                          ) : (
-                            <button
-                              type="button"
-                              className="cici-meeting-drawer__speaker-name"
-                              onDoubleClick={() => startMeetingSpeakerEdit("partial", meetingPartial.speakerId, meetingPartial.speakerName)}
-                              onKeyDown={(event) => {
-                                if (event.key === "Enter" || event.key === "F2") {
-                                  event.preventDefault();
-                                  startMeetingSpeakerEdit("partial", meetingPartial.speakerId, meetingPartial.speakerName);
-                                }
-                              }}
-                              aria-label={`双击编辑${meetingPartial.speakerName}`}
-                            >
-                              {meetingPartial.speakerName}
-                            </button>
-                          )}
-                          <span>识别中</span>
-                        </div>
-                        <p>{meetingPartial.text}</p>
-                      </div>
-                    ) : null}
-                    {meetingTranscript.length === 0 && !meetingPartial ? (
-                      <div className="cici-meeting-drawer__empty">等待发言内容进入转写。</div>
-                    ) : null}
-                  </div>
-                </section>
-                <section className="cici-meeting-drawer__section cici-meeting-drawer__section--summary">
-                  <div className="cici-meeting-drawer__section-head">
-                    <h3>AI 会议纪要</h3>
-                  </div>
-                  <div className="cici-meeting-drawer__summary">
-                    {meetingSummary ? (
-                      <ChatMarkdown content={meetingSummary} />
-                    ) : (
-                      <div className="cici-meeting-drawer__empty">结束会议后在这里生成结构化纪要。</div>
-                    )}
-                  </div>
-                </section>
-              </div>
-              <footer className="cici-meeting-drawer__footer">
-                <button
-                  type="button"
-                  className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary"
-                  onClick={closeMeetingDrawer}
-                >
-                  收起
-                </button>
-                <button
-                  type="button"
-                  className="cici-meeting-drawer__btn cici-meeting-drawer__btn--primary"
-                  onClick={stopMeetingAndSummarize}
-                  disabled={meetingStatus === "idle" || meetingStatus === "stopping" || meetingStatus === "summarizing" || meetingStatus === "done"}
-                >
-                  {meetingStatus === "recording" ? "结束并生成纪要" : "生成纪要"}
-                </button>
-              </footer>
+              <MeetingMinutesPanel
+                status={meetingStatus}
+                notice={meetingNotice || "输入“开始会议纪要”后自动开始。"}
+                transcript={meetingTranscript}
+                partial={meetingPartial}
+                summary={meetingSummary}
+                speakerEdit={meetingSpeakerEdit}
+                transcriptScrollRef={meetingTranscriptScrollRef}
+                speakerEditInputRef={meetingSpeakerEditInputRef}
+                onClose={closeMeetingDrawer}
+                onSecondaryAction={closeMeetingDrawer}
+                onPrimaryAction={stopMeetingAndSummarize}
+                primaryActionLabel={meetingStatus === "recording" ? "结束并生成纪要" : "生成纪要"}
+                primaryActionDisabled={meetingStatus === "idle" || meetingStatus === "stopping" || meetingStatus === "summarizing" || meetingStatus === "done"}
+                onSpeakerEditStart={startMeetingSpeakerEdit}
+                onSpeakerEditValueChange={(value) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value } : prev))}
+                onSpeakerEditCommit={commitMeetingSpeakerEdit}
+                onSpeakerEditKeyDown={handleMeetingSpeakerEditKeyDown}
+              />
             </aside>
           </div>
         </main>

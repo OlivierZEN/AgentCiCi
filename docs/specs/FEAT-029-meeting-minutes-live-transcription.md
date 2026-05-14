@@ -1,7 +1,7 @@
 ---
 kind: feature-spec
 version: 1
-updated_at: 2026-05-12T02:22:42Z
+updated_at: 2026-05-12T05:50:58Z
 updated_by: ai
 status: implemented
 owner_role: fullstack-product-assistant
@@ -25,6 +25,7 @@ owner_role: fullstack-product-assistant
   - 讯飞 provider 支持 `role_type=2` 角色分离参数，凭证优先来自组织级集成应用配置。
   - 新增会议纪要生成 API，基于转写文本输出固定结构的纪要。
   - 会议结束生成纪要时必须显式激活平台标准技能 `ai-meeting-notetaker`（AI 听记），模型 prompt 由技能体系装配后再生成纪要。
+  - `ai-meeting-notetaker` 标准技能的提示片段和规格正文复用系统内当前 `CloudCCAI听记` 自定义技能的客户拜访纪要、待办、CRM 记录建议语义。
 - 管理后台 `/admin/integrations`：
   - 新增内置“讯飞实时转写”集成应用。
   - 组织管理员可配置 App ID、Access Key ID、Access Key Secret、Realtime URL、语言和领域参数。
@@ -138,6 +139,7 @@ If credentials are missing, the UI must show a clear setup error and keep the pa
 - 讯飞结果包含角色时，前端按发言人分组展示；无角色时回退为“发言人 1”。
 - 点击结束后调用后端纪要生成 API，并在面板中展示 Markdown 纪要。
 - 会议纪要生成 API 必须返回本轮显式调用的 AI 听记技能标识，且模型 system prompt 必须包含该技能的 prompt fragment 与 output contract。
+- AI 听记标准技能在新组织初始化和既有组织迁移后，提示片段包含 `本次沟通重点`、`CRM记录` 等客户拜访听记语义，规格正文包含 `客户拜访会议纪要及后续行动管理`。
 - 普通语音输入按钮不受会议听记改动影响。
 - 前端构建通过；后端编译通过。
 
@@ -164,3 +166,5 @@ If credentials are missing, the UI must show a clear setup error and keep the pa
 - 2026-05-12T01:18:36Z 修复发言人内联编辑只能输入一个字符：编辑框自动 focus/select effect 从依赖整个 `meetingSpeakerEdit` 对象改为只依赖编辑目标 `speakerId` + `lineId`，避免输入过程中每次 `value` 变化都重新全选并覆盖前一个字符。已完成前端定向测试、前端构建和 target diff check。
 - 2026-05-12T01:38:54Z 按用户要求将会议结束后的 AI 纪要生成改为显式调用 `ai-meeting-notetaker`（AI 听记）平台标准技能：后端新增该内置技能并默认挂到 `cici-system`，`MeetingMinutesService` 通过 `SkillPromptAssembler` 装配技能上下文后再调用模型，接口响应回传 `skillCode/skillName`；前端生成中与完成提示同步展示 AI 听记技能调用语义。
 - 2026-05-12T02:22:42Z 修复 AI 听记技能化纪要生成仍返回 `Aliyun API key is not configured.` 的问题：根因是 `MeetingMinutesService` 虽已装配 AI 听记技能，但模型调用仍使用 `AliyunBailianClient` 构造器环境变量 key，未读取当前组织的模型厂商配置。现已改为先用 `ModelRouterService.route(orgId, "chat")` 取得组织聊天模型，再用 `ModelProviderService.credentialsForProvider` 取得 provider baseUrl/apiKey 后调用模型；本地 `demo-org` 真实 `/ai/meeting-minutes/summary` smoke 已返回 `Meeting Summary`，并包含 `skillCode=ai-meeting-notetaker`、`skillName=AI 听记`。
+- 2026-05-12T03:40:19Z 修复多人听记中第二个发言人首句前半段被追加到发言人 1 的问题：真实讯飞实时角色分离在说话人切换开头可能先返回 `rl=0/空`，随后才给出明确的新 speaker marker；旧 parser 会把这段开头按 active speaker 继承给上一发言人，前端再按同一 `speakerId` 合并 final 段落。现已在 `IflytekAsrResultParser` 中处理同一结果片段内的首个明确 marker 纠偏：开头缓冲文本若只来自 `rl=0/空`，且随后首次明确 marker 切到新 speaker，则整段缓冲文本归到新 speaker。已补回归测试并通过后端 parser 测试、前端会议 helper 测试、后端编译与 target diff check。
+- 2026-05-12T05:50:58Z 按用户要求将 `ai-meeting-notetaker`（AI 听记）平台标准技能的提示片段和规格正文同步为当前启用的 `CloudCCAI听记` 自定义技能语义：新组织默认内置定义使用客户拜访会议纪要、待办任务候选、CRM 线索/商机/联系人建议和人工确认规则；新增 `V49__ai_meeting_notetaker_cloudcc_prompt.sql` 更新既有平台标准技能行。已通过会议纪要服务单测、标准技能治理定向集成测试、后端编译、本地 Flyway V49 和数据库字段检查。

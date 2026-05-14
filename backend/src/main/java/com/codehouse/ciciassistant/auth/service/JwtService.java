@@ -8,6 +8,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import javax.crypto.SecretKey;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,18 @@ public class JwtService {
                 .claim("member_id", user.getId())
                 .claim("account_id", user.getAccountId())
                 .claim("roles", roles == null ? List.of(user.getRoleCode()) : roles)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(exp))
+                .signWith(signingKey)
+                .compact();
+    }
+
+    public String issueToken(String subject, Map<String, Object> claims, long ttlSeconds) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(ttlSeconds);
+        return Jwts.builder()
+                .subject(subject)
+                .claims(claims == null ? Map.of() : claims)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(signingKey)

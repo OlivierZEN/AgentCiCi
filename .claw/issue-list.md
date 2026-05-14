@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-05-11T15:58:32Z
+updated_at: 2026-05-14T10:19:08Z
 updated_by: ai
 status: active
 ---
@@ -34,6 +34,46 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-05-14-local-assistant-login-default-account:
+  - Symptom: 本地前台助手登录页使用默认手机号和固定密码时显示 `登录失败：Invalid mobile or password`。
+  - Verified root cause: FEAT-024 之后前台登录不再提交 `orgId`；未知手机号在无组织登录流程下不能自动创建组织成员。当前本地库只有 `13800138111` 与 `13900009999` 两个账号，旧助手端默认 `18611892001` 不存在，因此即使用固定密码 `szyd1234` 也会返回 401。
+  - Resolution (2026-05-14):
+    - `frontend/src/assistant/AssistantApp.tsx` 默认手机号改为本地种子账号 `13900009999`。
+    - `README.md` 手动测试账号说明同步更新。
+  - Verification (2026-05-14):
+    - `POST /auth/password/login` with `13900009999/szyd1234` -> HTTP 200, `success=true`。
+    - `POST /auth/password/login` with old default `18611892001/szyd1234` -> HTTP 401, `Invalid mobile or password`。
+    - `frontend npm run build` -> success。
+    - `git diff --check -- frontend/src/assistant/AssistantApp.tsx README.md` -> success。
+  - Status: resolved.
+
+- ISSUE-2026-05-14-local-embed-screenshot-tooling:
+  - Symptom: FEAT-032 `TASK-093` 嵌入页实现后，自动化截图 QA 未能产出可信桌面/移动截图。
+  - Verified facts: `frontend npm run build` 通过；真实 Chrome 桌面可见态能渲染 `/embed/meeting-minutes` 并显示“会议 session 已就绪，可开始听记”；debug token 调用 `/embed/v1/apps/meeting-minutes/sessions` 返回 `CREATED` session。
+  - Verified blocker: 2026-05-14T06:54Z 时 headless Playwright 在当前机器访问 Vite dev/preview 页面停在模块加载前，保存出的截图为空白；macOS `screencapture` 返回 `could not create image from display`。
+  - Resolution (2026-05-14):
+    - 使用 Playwright CLI 会话重新打开运行中的 Vite 页面并完成可信截图。
+    - 发现并修复 `.cici-meeting-drawer--embed` 在 1360px 以下被普通 drawer 宽度 media rule 覆盖的问题。
+  - Verification (2026-05-14):
+    - `/embed/meeting-minutes` desktop/mobile screenshots -> success。
+    - `/admin/embed-apps/meeting-minutes` debug tab iframe preview desktop/mobile screenshots -> success。
+    - `frontend npm run build` -> success。
+    - targeted `git diff --check` -> success。
+  - Status: resolved.
+
+- ISSUE-2026-05-13-prod-backend-container-missing:
+  - Symptom: 线上 ECS `47.97.119.160` 可以 SSH 登录，frontend/database/redis/rabbitmq/qdrant 五个容器 healthy，但 `cici-backend` 容器未创建/未运行；用户在 `https://autoservice.agentcici.com/` 登录时报 `HTTP 502`。
+  - Verified root cause: compose 配置中存在 `backend` 服务，且本机已有 `cici-backend:V1.9` 镜像，但 `docker ps -a` 与 `docker compose ps -a backend` 均不显示 backend 容器；前端容器内 `nginx -t` 失败，报 `host not found in upstream "backend"`。Nginx 日志中用户登录请求 `POST /auth/password/login` 命中旧 upstream `172.18.0.6:8080` 并返回 502。
+  - Resolution (2026-05-13):
+    - 在 `/opt/cici` 执行 `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d backend` 恢复 `cici-backend`。
+    - 后端启动完成后执行 `docker exec cici-frontend nginx -t` 和 `docker exec cici-frontend nginx -s reload`，刷新 Nginx upstream。
+  - Verification (2026-05-13):
+    - `docker compose ... ps` -> 六容器均 healthy。
+    - `GET http://127.0.0.1:8080/actuator/health` on ECS -> `{"status":"UP"}`。
+    - `curl --http1.1 -k -H "Host: autoservice.agentcici.com" https://127.0.0.1/` on ECS -> `HTTP 200`, title `AgentCiCi`。
+    - `POST /auth/password/login` through ECS local Nginx with `Host: autoservice.agentcici.com` -> `HTTP 200`, `success:true`。
+  - Status: resolved.
 
 - ISSUE-2026-05-11-meeting-minutes-spoken-trigger-missed:
   - Symptom: 用户在与智能体对话中说“开始进行会议纪要”后，没有滑出实时会议纪要面板。

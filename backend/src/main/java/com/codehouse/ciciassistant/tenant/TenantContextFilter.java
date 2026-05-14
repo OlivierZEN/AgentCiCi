@@ -39,12 +39,23 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
             if (authorization != null && authorization.startsWith("Bearer ")) {
                 String bearer = authorization.substring("Bearer ".length());
-                if (isAgentOpenApiKeyRequest(request, bearer)) {
+                if (isExternalApiKeyRequest(request, bearer)) {
                     filterChain.doFilter(request, response);
                     return;
                 }
                 try {
                     Claims claims = jwtService.parse(bearer);
+                    String tokenType = claims.get("typ", String.class);
+                    if ("embed_app".equals(tokenType)) {
+                        if (isEmbedRuntimeRequest(request)) {
+                            filterChain.doFilter(request, response);
+                            return;
+                        }
+                        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                        response.setContentType("application/json");
+                        response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Embed token is not valid for this endpoint")));
+                        return;
+                    }
                     orgId = claims.get("org_id", String.class);
                     String memberId = claims.get("member_id", String.class);
                     userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
@@ -70,12 +81,23 @@ public class TenantContextFilter extends OncePerRequestFilter {
         }
     }
 
-    private boolean isAgentOpenApiKeyRequest(HttpServletRequest request, String bearer) {
+    private boolean isExternalApiKeyRequest(HttpServletRequest request, String bearer) {
         String path = request.getRequestURI();
         return path != null
-                && path.startsWith("/openapi/v1/")
+                && (path.startsWith("/openapi/v1/") || isEmbedTokenIssueRequest(path))
                 && bearer != null
                 && bearer.startsWith("cici_ak_");
+    }
+
+    private boolean isEmbedTokenIssueRequest(String path) {
+        return path != null
+                && path.startsWith("/embed/v1/apps/")
+                && path.endsWith("/tokens");
+    }
+
+    private boolean isEmbedRuntimeRequest(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path != null && path.startsWith("/embed/v1/apps/");
     }
 
     @SuppressWarnings("unchecked")

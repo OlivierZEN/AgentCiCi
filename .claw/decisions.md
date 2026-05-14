@@ -1,7 +1,7 @@
 ---
 kind: decisions
 version: 3
-updated_at: 2026-05-09T09:56:30Z
+updated_at: 2026-05-14T04:25:00Z
 updated_by: ai
 status: active
 ---
@@ -33,7 +33,7 @@ status: active
 
 ## DEC-003 Auth MVP Persistence Strategy
 
-- Status: accepted
+- Status: superseded
 - Date: 2026-04-01T13:24:34Z
 - Decision: implement auth MVP with Spring Data JPA and an H2 in-memory datastore for rapid local verification.
 - Why this won:
@@ -42,6 +42,21 @@ status: active
   - Reduces setup friction for iterative AI-driven development loops.
 - Revisit trigger:
   - Switch to PostgreSQL-backed profiles before integration and staging environments.
+- Superseded by:
+  - DEC-027 PostgreSQL-only backend integration tests.
+
+## DEC-027 PostgreSQL-only backend integration tests
+
+- Status: accepted
+- Date: 2026-05-14T04:25:00Z
+- Decision: backend integration tests must use PostgreSQL, not H2 or H2 PostgreSQL compatibility mode.
+- Why this won:
+  - Production and local runtime already use PostgreSQL, so tests should validate the real SQL dialect, Flyway behavior, indexes, and schema validation path.
+  - PostgreSQL-specific migrations are allowed; agents should not rewrite migrations only to satisfy H2.
+  - Test configuration now points to `jdbc:postgresql://localhost:5432/cici_assistant_test` by default and may be overridden with `TEST_DATABASE_URL`, `TEST_DATABASE_USERNAME`, and `TEST_DATABASE_PASSWORD`.
+- Implications:
+  - H2 is removed from backend Maven dependencies.
+  - Future verification notes must say PostgreSQL when PostgreSQL was actually used; H2 runs should not be used as acceptance evidence.
 
 ## DEC-004 Local Infra Validation Path
 
@@ -60,7 +75,7 @@ status: active
 - Decision: manage auth schema with Flyway migrations and switch JPA DDL mode to `validate`.
 - Why this won:
   - Prevents accidental schema drift between environments.
-  - Makes PostgreSQL and H2 behavior more predictable in CI/local runs.
+  - Makes PostgreSQL behavior predictable in CI/local runs.
   - Creates a stable path for future additive migrations (RAG, tools, audit tables).
 - Notes:
   - Local profile enables `baseline-on-migrate` to absorb previously initialized local schemas.

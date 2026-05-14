@@ -1,14 +1,37 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-12T03:14:00Z
+updated_at: 2026-05-14T04:56:11Z
 updated_by: ai
 status: active
 ---
 
 # DevOps
 
+## Production Capacity Snapshot
+
+- Observed read-only on 2026-05-12T10:08:10Z for `agentcici.com` ECS `47.97.119.160`: single Docker Compose host, 8 vCPU, 30GiB RAM, 40GiB root disk with 31GiB available; no backend container CPU or memory limit configured.
+- Idle/low-load `docker stats` at observation time: `cici-backend` about 763MiB RSS-equivalent container memory and 0.09% CPU, `cici-frontend` about 9MiB, PostgreSQL about 40MiB, Qdrant about 42MiB, RabbitMQ about 118MiB, Redis about 3MiB; host memory used about 2.2GiB with 28GiB available.
+- PostgreSQL observation at the same time: `max_connections=100`, `shared_buffers=128MB`, database size about 16MB; key live table estimates included `chat_message=581`, `chat_session=69`, `kb_chunk=310`, `agent_run_trace=14`, `audit_log=607`.
+- Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
+
 ## Verified Local Environment
+
+- Verified on 2026-05-13T12:01:23Z:
+  - Docker CLI: 29.4.3 installed with Homebrew.
+  - Docker Compose CLI plugin: 5.1.3 installed with Homebrew and enabled through `~/.docker/config.json`.
+  - Lima: 2.1.1 installed with Homebrew.
+  - Local Docker daemon: Lima Alpine VM `cici-docker`, created from `template:alpine` with 4 CPUs, 8GiB memory, 60GiB disk, and writable `/Volumes/AISpace` mount.
+  - VM Docker packages: Docker Engine 29.1.3 and Compose v2.40.3 installed inside `cici-docker`.
+  - Java: OpenJDK 21.0.11 installed with Homebrew at `/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home`.
+  - Maven: 3.9.15 installed with Homebrew.
+  - Node.js: v22.22.2 available from Hermes.
+  - npm: 10.9.7 available from Hermes.
+  - Note: Docker Desktop and Colima were attempted first, but large VM/DMG downloads were repeatedly reset by the current network. The verified local path for this machine is Lima `cici-docker`.
+
+- Workspace path update on 2026-05-13T07:57:15Z:
+  - Current local project root: `/Volumes/AISpace/codehouse/cc-agentcici`.
+  - Updated hardcoded local restart paths in `restart-services.sh` and the detached `screen` commands below.
 
 - Verified on 2026-04-01T13:14:19Z:
   - Java: OpenJDK 21.0.10 available
@@ -57,11 +80,19 @@ status: active
   - Verified on 2026-04-17T03:30:04Z
   - Smoke result:
     - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`
-  - Dev proxy (updated 2026-05-08): `vite.config.ts` / `vite.config.js` forward `/agents`, `/skills`, `/feishu`, `/wecom` to `VITE_BACKEND_TARGET` or `http://127.0.0.1:8080` so Agent Builder, channel callbacks, and related APIs are not answered by Vite as static 404.
+  - Dev proxy (updated 2026-05-14): `vite.config.ts` / `vite.config.js` forward `/agents`, `/skills`, `/feishu`, `/wecom`, and `/embed/v1` to `VITE_BACKEND_TARGET` or `http://127.0.0.1:8080` so Agent Builder, channel callbacks, embedded app admin/runtime APIs, and related APIs are not answered by Vite as static 404.
 - Local service restart from Codex desktop with PostgreSQL:
   - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant`
-  - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/backend && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
-  - `screen -dmS cici-frontend /bin/zsh -lc 'cd /Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/frontend && exec npm run dev > /tmp/cici-frontend.log 2>&1'`
+  - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici/backend && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
+  - `screen -dmS cici-frontend /bin/zsh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici/frontend && exec npm run dev > /tmp/cici-frontend.log 2>&1'`
+  - Verified production-to-local PostgreSQL overwrite on 2026-05-14T10:48:18Z:
+    - Stopped local backend screen before restoring to avoid active PostgreSQL connections.
+    - Backup directory: `output/db-sync-20260514-184504/`.
+    - Local pre-overwrite backup: `output/db-sync-20260514-184504/local-before-prod-sync.dump`.
+    - Production dump copied from ECS `cici-database`: `output/db-sync-20260514-184504/prod-cici-assistant.dump`.
+    - Restore path: drop/recreate local `cici_assistant`, `pg_restore` production dump, run local Flyway repair for V18 checksum drift, then migrate current code to V50.
+    - Verification: local backend `/actuator/health` -> `UP`; frontend `HEAD /` -> `200`; latest Flyway `50|embed app backend|true`; local counts `user_account=16`, `organization_member=16`, `knowledge_base=2`, `kb_document=6`, `kb_chunk=310`; password login works for `13900009999/szyd1234` and `13800138111/szyd1234`.
+    - Scope note: PostgreSQL only. KB files volume and Qdrant vectors were not overwritten.
   - Verified on 2026-05-07T12:19:29+08:00:
     - backend log: active profile `local`, database `jdbc:postgresql://localhost:5432/cici_assistant (PostgreSQL 16.13)`, Flyway schema version `40`
     - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`
@@ -116,8 +147,34 @@ status: active
     - Optional config: `app.lifecycle.purge-worker-lease-minutes` defaults to `60` and is clamped to at least `5`; stale `RUNNING` jobs whose `lock_expires_at` has passed are marked `DEAD_LETTER` for manual inspection rather than automatically re-executed.
     - Existing scheduler knobs remain `app.lifecycle.purge-worker-delay-ms` and `app.lifecycle.purge-worker-initial-delay-ms`, both defaulting to `30000`.
   - Codex desktop note: `./restart-services.sh` can pass health checks while running, but its background child processes may be reaped when the command session exits. Use detached `screen` sessions when the local service must stay running after the command returns.
+- Local service bootstrap with Lima Docker VM on 2026-05-13T12:01:23Z:
+  - One-time host tooling:
+    - `brew install docker docker-compose colima openjdk@21 maven`
+    - `mkdir -p ~/.docker` and configure `~/.docker/config.json` with `cliPluginsExtraDirs: ["/opt/homebrew/lib/docker/cli-plugins"]`.
+  - One-time Lima VM setup:
+    - `limactl start --tty=false --name=cici-docker template:alpine --set '.cpus=4' --set '.memory="8GiB"' --set '.disk="60GiB"' --set '.mounts += [{"location":"/Volumes/AISpace","mountPoint":"/Volumes/AISpace","writable":true}]'`
+    - `limactl shell cici-docker sudo sh -lc 'apk update && apk add docker docker-cli-compose curl bash shadow'`
+    - `limactl shell cici-docker sudo sh -lc 'rc-update add docker default >/dev/null 2>&1 || true; service docker start; addgroup owenmacbook docker >/dev/null 2>&1 || true'`
+    - If `limactl shell cici-docker docker ps` still says permission denied after adding the group, close the cached SSH control master once: `ssh -F ~/.lima/cici-docker/ssh.config -O exit lima-cici-docker`.
+  - Local infrastructure start:
+    - `limactl shell cici-docker sh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici && docker compose pull postgres redis rabbitmq qdrant'`
+    - `limactl shell cici-docker sh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici && docker compose up -d --remove-orphans postgres redis rabbitmq qdrant'`
+    - Verified images: `postgres:16`, `redis:7`, `rabbitmq:3-management`, `qdrant/qdrant:v1.12.6`.
+    - Verified host ports: `5432`, `6379`, `5672`, `15672`, and `6333` reachable on `127.0.0.1`.
+  - Backend start:
+    - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici/backend && export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home && export PATH="$JAVA_HOME/bin:/opt/homebrew/bin:$PATH" && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
+    - Verified backend screen: `39939.cici-backend`.
+    - Verified backend health: `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - Verified fresh PostgreSQL Flyway bootstrap applied 49 migrations, latest `V49__ai_meeting_notetaker_cloudcc_prompt.sql`.
+  - Frontend start:
+    - `cd frontend && npm install` was run once to repair native optional dependencies after macOS rejected stale Rollup/fsevents `.node` modules.
+    - `xattr -dr com.apple.quarantine frontend/node_modules` was run to clear Gatekeeper quarantine on native npm modules.
+    - `screen -dmS cici-frontend /bin/zsh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici/frontend && exec npm run dev > /tmp/cici-frontend.log 2>&1'`
+    - Verified frontend screen: `41592.cici-frontend`.
+    - Verified frontend smoke: `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`.
 - Local infra status:
   - `docker compose ps`
+  - With Lima `cici-docker`, use `limactl shell cici-docker sh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici && docker compose ps'`.
   - Vector retrieval uses **Qdrant** on host `6333` only; legacy `cici-milvus` container removed (2026-04-19).
 - ACR one-click deployment:
   - `cp deploy/acr.env.example deploy/acr.env`
@@ -153,6 +210,20 @@ status: active
     - `https://www.agentcici.com/` -> `200`, FEAT-027 Chinese suite website
     - `https://autoservice.agentcici.com/` -> `200`, product login surface
     - `POST /auth/password/login` fixed-password smoke -> `200`
+  - Read-only connectivity check on 2026-05-13T12:09:23Z:
+    - SSH with `/Volumes/AISpace/datafiles/cc-cici-ecs.pem` as `root@47.97.119.160` succeeded.
+    - Docker is available and compose config under `/opt/cici` declares six services: `rabbitmq`, `redis`, `database`, `qdrant`, `backend`, and `frontend`.
+    - Actual running/all container list showed only five services: `cici-frontend`, `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant`; `cici-backend` was absent.
+    - `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml ps -a backend` returned no backend row.
+    - `docker exec cici-frontend nginx -t` failed because upstream host `backend` could not be resolved.
+    - Server-local `curl --http1.1 -k -H "Host: agentcici.com" https://127.0.0.1/` returned the `AgentCiCi` static page, but public `https://agentcici.com/` from the workstation returned connection reset during this check.
+  - Autoservice login 502 recovery on 2026-05-13T12:13:50Z:
+    - Recovery command: `cd /opt/cici && docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d backend`.
+    - `cici-backend` started from `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:V1.9`; startup logs showed Flyway schema version `48` up to date and Tomcat on `8080`.
+    - Backend health: `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`.
+    - Frontend Nginx: `docker exec cici-frontend nginx -t` -> success; then `docker exec cici-frontend nginx -s reload`.
+    - Compose status: six services healthy (`cici-backend`, `cici-frontend`, `cici-database`, `cici-redis`, `cici-rabbitmq`, `cici-qdrant`).
+    - Server-local Nginx smoke with `Host: autoservice.agentcici.com`: `/` -> `HTTP 200` title `AgentCiCi`; `POST /auth/password/login` -> `HTTP 200` with `success:true`.
   - Full local data sync on 2026-05-07:
     - Remote pre-sync backup directory: `/opt/cici/backups/20260507-123416-full-local-sync/`.
     - Backup contents include PostgreSQL dump, `acr.env.before-sync`, knowledge-base files tar, and Qdrant volume tar.
@@ -167,6 +238,7 @@ status: active
     - `/api/platform` and `/api/platform/*` must rewrite to backend `/platform` and `/platform/*`.
     - Management APIs now include `/admin/users` and `/admin/agents`; `/admin/agents/run-logs` powers the organization-level Agent observability view under `/admin/ops`.
     - FEAT-021 Agent Open API requires `/openapi/` to proxy to the backend with buffering disabled, long read timeout, and forwarded host/IP/proto headers for REST and future SSE calls.
+    - FEAT-032 Embedded Apps requires `/embed/v1/` to proxy to the backend with buffering disabled and long read timeout; `/embed/*` without `/v1/` remains a frontend SPA route for the iframe page.
     - FEAT-023 WeCom customer service callback requires `/wecom` to proxy to the backend so `GET/POST /wecom/kf/callback` is reachable from Enterprise WeChat.
     - FEAT-023 WeCom customer service account configuration API requires `/admin/wecom` to proxy to the backend; `/admin/wecom/kf-accounts` stores CorpID, Token, encrypted Secret, encrypted EncodingAESKey, `open_kfid`, `agent_id`, and `run_as_user_id`.
     - Verified remotely with `docker exec cici-frontend nginx -t`, `nginx -s reload`, `GET /agents`, `GET /skills`, `GET /integrations`, `GET /models/providers`, `GET /api/platform/skills`, and `GET /api/platform/tools`.
@@ -174,7 +246,7 @@ status: active
     - Symptom: local `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` returned JSON 404 while `http://127.0.0.1:5173/admin/ops` showed no run logs.
     - Cause: the Java process listening on `8080` was started before the admin run-log controller was available in the running classes.
     - Restart command:
-      - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/backend && export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home && export PATH="$JAVA_HOME/bin:$PATH" && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
+      - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici/backend && export JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home && export PATH="$JAVA_HOME/bin:$PATH" && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`
     - Verified:
       - `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`
       - `GET http://127.0.0.1:8080/admin/agents/run-logs?limit=10` with org-admin token -> JSON with 10 rows.

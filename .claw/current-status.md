@@ -1,26 +1,64 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-12T03:14:00Z
+updated_at: 2026-05-14T10:48:18Z
 updated_by: ai
 status: active
-phase: v1.9_release
-active_task: "TASK-081 Meeting minutes live transcription"
-current_task: V1.9 `内置AI听记` 已提交、打 tag、推送远端，并发布到线上；线上非知识库业务数据已用本地数据覆盖，知识库表、KB 文件卷和 Qdrant 内容保持线上原值。
-next_action: 使用真实浏览器麦克风在生产环境跑一次多人会议听记端到端检查。
+phase: implementation
+active_task: "FEAT-032 End-to-end CRM embed verification"
+current_task: 已按用户要求将线上 PostgreSQL `cici_assistant` 全库覆盖到本地，保留覆盖前本地 dump 与线上 dump；本地库已通过 Flyway repair 后迁移到当前代码 v50，后端/前端均在线。
+next_action: 进入 `TASK-096 End-to-end CRM embed verification`，用 admin 调试台、本地模拟父页面和 CloudCC Vue 示例页验证 SDK、iframe、麦克风、summary、writeback smoke 与桌面/移动截图。
 read_next:
   goals: false
-  decisions: true
-  issue_list: true
+  decisions: false
+  issue_list: false
   task_board: true
   test_report: true
-  devops: true
+  devops: false
 priority: P1
 ---
 
 # Current Status
 
 ## Snapshot
+
+- 2026-05-14T10:48:18Z 已按用户要求将线上 PostgreSQL `cici_assistant` 全库覆盖到本地。流程：停止本地后端；备份本地库到 `output/db-sync-20260514-184504/local-before-prod-sync.dump`；通过 SSH 从 ECS `cici-database` 导出线上全库到 `output/db-sync-20260514-184504/prod-cici-assistant.dump`；drop/recreate 本地 `cici_assistant` 并 restore 线上 dump。由于线上 Flyway V18 checksum 与当前本地迁移文件不一致，已仅在本地执行 Flyway repair，然后补跑 V49/V50，当前本地最新迁移为 `50|embed app backend|true`。验证通过：本地后端 `GET /actuator/health` -> `UP`；前端 `HEAD /` -> `200`；本地表数 67，`user_account=16`、`organization_member=16`、`knowledge_base=2`、`kb_document=6`、`kb_chunk=310`；`13900009999/szyd1234` 登录返回 `ORG_ADMIN`，`13800138111/szyd1234` 返回 `ORG_ADMIN, PLATFORM_ADMIN`。
+
+- 2026-05-14T10:19:08Z 已修复本地前台登录默认账号导致的 `登录失败：Invalid mobile or password`。当前 Docker Desktop PostgreSQL 本地库只有 `13800138111` 与 `13900009999` 两个账号，且都无个人密码凭证，会使用固定密码 `szyd1234` 回退；旧助手端默认 `18611892001` 不存在，在无 `orgId` 登录流程下无法自动创建组织成员，因此后端返回 401。已将 `frontend/src/assistant/AssistantApp.tsx` 默认手机号改为 `13900009999`，并同步 `README.md` 本地测试账号。验证通过：`POST /auth/password/login` with `13900009999/szyd1234` -> HTTP 200；旧 `18611892001/szyd1234` -> HTTP 401 复现根因；`frontend npm run build` 成功（保留 chunk-size warning）；targeted `git diff --check` 成功。FEAT-032 主线下一步仍是 `TASK-096 End-to-end CRM embed verification`。
+
+- 2026-05-14T09:42:30Z 已完成 FEAT-032 `TASK-095 CloudCC writeback connector`。新增 `backend/src/main/java/com/codehouse/ciciassistant/embed/service/CloudccMeetingWritebackConnector.java`，复用 `CloudccAccessTokenService` 获取 run-as CloudCC session，并按 CloudCC One OpenAPI `/openApi/common` 的 `insert` / `update` / `delete` 服务名执行写回。`MeetingEmbedRuntimeService` 的 `writeback-preview` 现在由服务端生成 `summary-note`、从纪要行动项提取的 task，以及 signed CRM context 中的 field suggestion；`writeback` 确认接口校验 `selectedItemIds` 必须来自已持久化 preview，禁止浏览器提交任意 CloudCC payload。成功后 session 进入 `WRITTEN_BACK`；失败时保留 `READY_TO_WRITEBACK`，写入 `FAILED` result，并对本轮已成功插入的 note/task 调用 `delete` 回滚。嵌入页前端已将 `writeback.status=FAILED` 显示为错误态。验证通过：PostgreSQL `EmbedAppIntegrationTest` 覆盖 CloudCC mock 成功写回、未知候选拒绝、失败回滚；后端 compile；前端 build（保留 chunk warning）；targeted `git diff --check`。下一步进入 `TASK-096 End-to-end CRM embed verification`。
+
+- 2026-05-14T07:22:59Z 已完成 FEAT-032 `TASK-094 Framework agnostic browser SDK`。新增 `frontend/public/sdk/meeting-minutes.js` 与版本化副本 `frontend/public/sdk/meeting-minutes@1.0.0.js`，作为框架无关浏览器全局脚本 `window.AgentCiCiMeeting`；支持 `open({ token, mode: "drawer" | "inline", container, width, locale, theme, context, callbacks })`，返回实例方法 `close()`、`destroy()`、`updateContext(nextContext)`、`postMessage(type, payload)`。SDK 使用命名空间 DOM/CSS 创建 drawer 或 inline iframe，iframe `allow="microphone"`，消息只接受 AgentCiCi embed origin，并将 `embed:ready`、`embed:summary-generated`、`embed:writeback-success`、`embed:error`、`embed:close` 等分发到 callbacks。验证通过：两份 SDK `node --check`、Vite 静态 URL `HEAD /sdk/meeting-minutes*.js` 返回 200、Playwright inline/drawer mode 均加载 iframe ready 状态、drawer mobile 截图、`updateContext()` + `close()` 触发 iframe `embed:close` 并销毁 shell、`frontend npm run build`（保留 chunk warning）。截图为 `output/playwright/embed-sdk-inline-desktop.png`、`output/playwright/embed-sdk-drawer-desktop.png`、`output/playwright/embed-sdk-drawer-mobile.png`。下一步进入 `TASK-095 CloudCC writeback connector`。
+
+- 2026-05-14T07:14:45Z 已完成 FEAT-032 `TASK-093 Embed page and shared meeting UI` 的剩余视觉 QA。修复 `frontend/src/assistant/cici-ui.css` 中 `@media (max-width: 1360px)` 对 `.cici-meeting-drawer--embed` 的宽度覆盖，确保 `/embed/meeting-minutes` iframe 内核在桌面直接路由和 admin iframe 内都填满容器；移动端仍保持上下堆叠。验证通过：`frontend npm run build`（保留 chunk warning）、目标 `git diff --check`、Playwright `/embed/meeting-minutes` 桌面/移动截图、Playwright `/admin/embed-apps/meeting-minutes` 调试 tab 生成 token 并加载 iframe 预览的桌面/移动截图。截图为 `output/playwright/embed-meeting-desktop.png`、`output/playwright/embed-meeting-mobile.png`、`output/playwright/embed-apps-admin-debug-iframe-desktop.png`、`output/playwright/embed-apps-admin-debug-iframe-mobile.png`。下一步进入 `TASK-094 Framework agnostic browser SDK`。
+
+- 2026-05-14T06:54:12Z 继续 FEAT-032 `TASK-093 Embed page and shared meeting UI`。新增 `frontend/src/meeting/MeetingMinutesPanel.tsx` 作为工作台与嵌入页共享会议面板，`AssistantApp` 原会议抽屉改为复用该组件；新增 `frontend/src/embed/EmbedMeetingMinutesPage.tsx` 与 `/embed/meeting-minutes` 路由，支持短期 embed token 解码、runtime session 创建、实时 ASR、结束生成纪要、写回候选预览/确认、`host:update-context` / `host:request-close` / `host:focus` 与 `embed:*` postMessage 事件；admin 调试 tab 已在生成调试 token 后直接渲染带 `allow="microphone"` 的 iframe 预览。验证通过：`frontend npm run build`（保留 chunk warning）、真实后端 debug token + `/embed/v1/apps/meeting-minutes/sessions` smoke 返回 `CREATED` session、目标 `git diff --check`、本机 Chrome 桌面可见态显示“会议 session 已就绪，可开始听记”。验证限制：headless Playwright 在当前机器对 Vite/preview 页面停在模块加载前，系统 `screencapture` 无法创建显示截图，因此本轮未产出可信桌面/移动截图；`TASK-093` 仍保留为 in_progress，待补齐截图 QA 后收口。
+
+- 2026-05-14T04:56:11Z 已完成 FEAT-032 `TASK-092 Admin embedded apps management UI`。新增 `frontend/src/admin/pages/AdminEmbedAppsPage.tsx`、`/admin/embed-apps` 与 `/admin/embed-apps/:appCode` 路由，并在组织控制台菜单加入“嵌入式智能应用”。页面接入 `/embed/v1/admin/apps` 列表、详情和配置保存 API，提供应用目录、概览、接入配置、SDK/iframe 说明、调试 token、最近 session 调用日志 5 个 product 文本 tab。后端补 `POST /embed/v1/admin/apps/{appCode}/debug-token` 与 `GET /embed/v1/admin/apps/{appCode}/sessions`，`MeetingSessionRepository` 支持最近 session 查询。Vite dev proxy 和部署 Nginx 均补 `/embed/v1/` 代理。验证通过：`frontend npm run build`（保留 chunk warning）、`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test`（PostgreSQL 测试库）、`git diff --check`、Playwright 桌面/移动截图与 debug token smoke；截图为 `output/playwright/embed-apps-admin-desktop.png`、`output/playwright/embed-apps-admin-mobile.png`。下一步进入 `TASK-093 Embed page and shared meeting UI`。
+
+- 2026-05-14T04:22:00Z 已完成 FEAT-032 `TASK-091 Embed token and session backend`。新增 `V50__embed_app_backend.sql`，包含 `embed_app_definition`、`org_embed_app_config`、`meeting_session` 和 agent trace embed metadata columns，并注册首个标准嵌入式智能应用 `meeting-minutes`。新增 `backend/src/main/java/com/codehouse/ciciassistant/embed/` 后端模块：`/embed/v1/admin/apps` 组织管理员配置 API、`/embed/v1/apps/{appCode}/tokens` token 签发 API、`/embed/v1/apps/{appCode}/sessions/**` runtime API。`JwtService` 支持自定义 claims 短期 token；`TenantContextFilter` 现在会放行 Open API Key token 签发请求、允许 embed token 仅访问 `/embed/v1/apps/**`，并拒绝 embed token 调用普通业务 API。用户要求后续测试库统一使用 PostgreSQL，不再使用 H2；`backend/src/test/resources/application.yml` 已切到 `jdbc:postgresql://localhost:5432/cici_assistant_test`（可用 `TEST_DATABASE_URL` 覆盖），并移除 H2 Maven 依赖。
+
+- 2026-05-14T04:07:12Z 用户确认正式命名为“嵌入式智能应用”。FEAT-032、`.claw/task-board.md` 和本状态文件已统一该产品命名；管理端路由使用 `/admin/embed-apps`，技术对象继续使用 `embed_app_definition` / `org_embed_app_config`。
+
+- 2026-05-14T03:55:50Z 已补充 FEAT-032：未来类似需要嵌入其他系统的能力应先注册为“嵌入式智能应用”，admin 管理端新增 `/admin/embed-apps` 统一菜单。会议纪要是首个嵌入式智能应用；列表展示 appCode、状态、适用系统、接入方式、权限 scope、最近调用和版本；详情页包含概览、接入配置、SDK/iframe 说明、Token 签发与权限、调试面板和调用日志。后续任务拆分新增 `TASK-092 Admin embedded apps management UI`，并将端到端验证顺延为 `TASK-096`。
+
+- 2026-05-14T02:58:09Z 已按用户要求完成“框架无关 JS SDK + iframe 内核”会议纪要嵌入方案设计。新增 `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`，面向 CloudCC Vue/CRM 记录页嵌入场景，定义 `/sdk/meeting-minutes.js`、`/embed/meeting-minutes`、短期 `embedToken`、origin 校验、CRM context、postMessage 协议、SDK `open/close/destroy/updateContext` API、CloudCC Vue 示例、嵌入态 `鎏金账房` UI、写回候选和安全回滚策略；`.claw/task-board.md` 新增 `TASK-090` 并拆分 `TASK-091` 至 `TASK-095` 后续实现路径。
+
+- 2026-05-13T12:13:50Z 已修复线上 `https://autoservice.agentcici.com/` 登录 `HTTP 502`。执行 `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d backend` 恢复 `cici-backend` 后，后端启动日志显示 Tomcat 8080 启动、Flyway schema up to date、应用启动完成；`GET http://127.0.0.1:8080/actuator/health` 返回 `{"status":"UP"}`。随后 `docker exec cici-frontend nginx -t` 成功并执行 `nginx -s reload`。验证：compose 六容器均 healthy；服务器本机经 Nginx `Host: autoservice.agentcici.com` 访问 `/` 返回 `AgentCiCi` 静态页，`POST /auth/password/login` 返回 `HTTP 200` 且 `success:true`。`ISSUE-2026-05-13-prod-backend-container-missing` 已标记 resolved。
+
+- 2026-05-13T12:09:23Z 只读验证 ECS 连通性：SSH `root@47.97.119.160` 使用 `/Volumes/AISpace/datafiles/cc-cici-ecs.pem` 登录成功，主机 `iZbp16tufidtxn62ug1mzhZ` 已运行 6 天多，Docker 可用；当前 compose 配置声明 `rabbitmq/redis/database/qdrant/backend/frontend`，但实际 `docker ps -a` 和 `docker compose ps -a backend` 只显示 frontend 与四个基础设施容器，未见 `cici-backend`。`docker exec cici-frontend nginx -t` 失败，原因为 `host not found in upstream "backend"`；带 Host 头从服务器本机访问 `https://127.0.0.1/` 可返回 `AgentCiCi` 静态页，但公网 `https://agentcici.com/` 从本机 curl 返回连接重置。已记录为 `ISSUE-2026-05-13-prod-backend-container-missing`。
+
+- 2026-05-13T12:01:23Z 已按用户要求把项目在本地跑起来。当前环境使用 Lima Alpine VM `cici-docker` 提供 Docker daemon；基础镜像 `postgres:16`、`redis:7`、`rabbitmq:3-management`、`qdrant/qdrant:v1.12.6` 已拉取，根目录 `docker-compose.yml` 中四个基础设施服务已启动，其中 PostgreSQL/Redis/RabbitMQ healthy，Qdrant `6333` 可访问。后端 screen `39939.cici-backend` 以 Java 21/Maven/local profile 启动，Flyway 在新 PostgreSQL 上成功应用 49 个迁移，`GET http://127.0.0.1:8080/actuator/health` 返回 `{"status":"UP"}`；前端 screen `41592.cici-frontend` 运行 Vite，`HEAD http://127.0.0.1:5173/` 返回 `200 OK`。为处理 macOS Gatekeeper 拦截 `fsevents.node` / Rollup native module，本轮执行了 `npm install` 修复依赖并清理 `frontend/node_modules` 的 quarantine 属性。
+
+- 2026-05-13T07:57:15Z 本地项目路径确认为 `/Volumes/AISpace/codehouse/cc-agentcici`。已更新 `restart-services.sh`、`.claw/devops.md` 中的 detached `screen` 启动命令，以及历史设计文档中的本地文件链接；全仓库已检查无旧绝对路径残留。
+
+- 2026-05-12T12:20:31Z 已完成 FEAT-031 发布前评测 / 回归系统设计文档。新增 `docs/specs/FEAT-031-agent-evaluation-regression-system.md`，定义 Agent 评测集、评测用例、评测运行、用例结果、发布门禁、evaluation mode、确定性 AssertionEngine、可选 LLM judge、从真实 trace 创建回归用例、Agent Builder 评测入口和售后 Agent 内置评测模板；`.claw/task-board.md` 新增 `TASK-084` 并拆出后续 `TASK-085` 至 `TASK-089` 实现任务。当前为设计完成，尚未改动应用代码。
+
+- 2026-05-12T10:08:10Z 已完成一次只读高并发/容量评估上下文采集：代码层面确认当前为 Spring Boot 模块化单体 + React/Vite + PostgreSQL/Redis/RabbitMQ/Qdrant 的单机 Docker Compose 部署，聊天/Open API 流式路径使用 `SseEmitter + CompletableFuture.runAsync`，实时听记使用 WebSocket，知识库索引使用 RabbitMQ 单队列；线上 ECS 只读快照为 8 vCPU、30GiB RAM、40GiB 根盘，六容器健康且低负载。详细资源快照与容量推断记录在 `.claw/devops.md` 的 `Production Capacity Snapshot`。
+
+- 2026-05-12T05:50:58Z 已按用户要求将 FEAT-029 会议结束生成纪要显式调用的 `ai-meeting-notetaker`（AI 听记）平台标准技能，复制当前系统中启用的 `CloudCCAI听记` 自定义技能核心内容：`SkillDefinitionService` 的新组织内置定义现在使用客户拜访会议纪要、待办任务候选、CRM 线索/商机/联系人建议和人工确认规则；新增 `V49__ai_meeting_notetaker_cloudcc_prompt.sql` 更新既有标准技能的 `prompt_fragment` 与 `draft_spec_text`。验证通过：`MeetingMinutesServiceTest`、`SkillGovernanceIntegrationTest#shouldHidePlatformCoreSkillsAndBlockStandardSkillEditing`、后端编译；已重启本地后端 screen `84883.cici-backend`，Flyway 最新 `49|ai meeting notetaker cloudcc prompt|true`，本地 `ai-meeting-notetaker` 字段检查 `prompt_synced/spec_synced=true`。
+
+- 2026-05-12T03:40:19Z 已修复用户截图反馈的 FEAT-029 实时会议纪要 speaker 边界滞后问题。根因是讯飞实时角色分离在发言人切换开头可能先返回 `rl=0` 或空 speaker marker，后端 `IflytekAsrResultParser` 会按 active speaker 继承为上一位发言人；前端 `appendMeetingTranscriptSegment` 只按后端 `speakerId` 合并 final 段落，因此第二个发言人首句前半段一旦以 `speakerId=1` 到达，就会永久合并进发言人 1。现已在后端 parser 中增加首个明确 marker 纠偏：同一结果片段开头仅有 `rl=0/空`，随后首次明确出现新 speaker marker 时，把已缓冲的开头文本一起归到新 speaker。验证通过：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test`、`frontend npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts`、`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、target `git diff --check`。
 
 - 2026-05-12T03:14:00Z 已完成 V1.9 `内置AI听记` 发布。Git commit `8f1f26b9dee3ce4d5249070348110ad591fce8e6` 已推送 `origin/main`，annotated tag `V1.9` 备注为“内置AI听记”并已推送；ACR 已推送 `cici-backend:V1.9` digest `sha256:8b09586cb68c1314d85f341ebf27a3ccfe257ce6eb988c9357ffdee7b8d559e7`、`cici-frontend:V1.9` digest `sha256:fab76d0ab47d0dfee855dbdb7ff46b60653dbb7144cf5d2f72787049f6265a63`，并为 database/redis/rabbitmq/qdrant 补齐 `V1.9` manifest alias。线上备份目录为 `/opt/cici/backups/20260512-110444-before-v1.9-ai-meeting-notes`；ECS 六容器均 healthy，Flyway 最新 `48|file backed builtin skills|true`，Playwright 公网验证 `https://agentcici.com/` 标题为 `AI 治理平台 | 企业 AI 客户运营套件`，`https://autoservice.agentcici.com/` 标题为 `AgentCiCi`。按用户要求执行本地数据覆盖线上时排除知识库内容：保留 `knowledge_base=2`、`kb_document=6`、`kb_chunk=310`、`agent_kb_binding=2`，未同步 KB 文件卷和 Qdrant；非知识库数据覆盖后已用线上 `APP_SECURITY_SECRET_KEY` 重加密 4 处加密字段。
 

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-12T03:14:00Z
+updated_at: 2026-05-14T10:48:18Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-12T03:14:00Z
+last_run_at: 2026-05-14T10:48:18Z
 last_run_status: success
 ---
 
@@ -13,11 +13,160 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：V1.9 release and production deploy
-- 命令：`git diff --check`; backend focused tests; backend compile/package; frontend focused tests/build; compose config; ACR image inspect; ECS deploy smoke; production non-KB data sync verification; Playwright public smoke
-- 环境：`local workspace + ACR + ECS production`
+- 范围：Production PostgreSQL to local overwrite
+- 命令：local dump; production dump; local restore; Flyway repair/migrate; backend/frontend smoke; password-login API smoke
+- 环境：`local workspace`
 
 ## Latest Verified Results
+
+- Production PostgreSQL to local overwrite (2026-05-14T10:48:18Z):
+  - Commands:
+    - `local backup`: `docker compose exec -T postgres pg_dump -U cici -d cici_assistant -Fc --no-owner --no-privileges` -> **success**, saved to `output/db-sync-20260514-184504/local-before-prod-sync.dump`。
+    - `production dump`: SSH to ECS then `docker exec cici-database pg_dump -U cici -d cici_assistant -Fc --no-owner --no-privileges` -> **success**, saved to `output/db-sync-20260514-184504/prod-cici-assistant.dump`。
+    - `local restore`: terminated local DB connections, dropped/recreated `cici_assistant`, restored production dump via `pg_restore` -> **success**。
+    - `flyway`: one-off local Flyway repair for V18 checksum drift, then migrate -> **success**, applied V49 and V50; latest `50|embed app backend|true`。
+    - `runtime`: local backend restart -> **success**, `GET /actuator/health` returned `{"status":"UP"}`。
+    - `runtime`: local frontend `HEAD http://127.0.0.1:5173/` -> **200**。
+    - `api`: `POST /auth/password/login` with `13900009999/szyd1234` -> **HTTP 200**, role `ORG_ADMIN`。
+    - `api`: `POST /auth/password/login` with `13800138111/szyd1234` -> **HTTP 200**, roles `ORG_ADMIN, PLATFORM_ADMIN`。
+  - Data checks:
+    - Local PostgreSQL after restore and migration: public tables `67`, `user_account=16`, `organization_member=16`, `knowledge_base=2`, `kb_document=6`, `kb_chunk=310`。
+  - Notes:
+    - This copied PostgreSQL only. KB file volume and Qdrant vector collection were not overwritten in this operation.
+    - Production remained read-only for this workflow; Flyway repair was executed only against the local restored database.
+
+- Local assistant login default account fix (2026-05-14T10:19:08Z):
+  - Commands:
+    - `api`: `POST http://127.0.0.1:8080/auth/password/login` with `identifier=13900009999`, `password=szyd1234` -> **HTTP 200**, `success=true`, role `ORG_ADMIN`。
+    - `api`: same endpoint with old default `identifier=18611892001`, `password=szyd1234` -> **HTTP 401**, `message=Invalid mobile or password`，复现旧默认账号不存在导致的本地登录失败。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx README.md` -> **success**。
+  - Notes:
+    - 当前本地 PostgreSQL 账号只有 `13800138111` 和 `13900009999`，均无 active `account_auth_credential`，因此会回退固定密码 `szyd1234`。
+    - 前台助手登录页默认值已从不存在的 `18611892001` 改为 `13900009999`，README 手动测试账号同步更新。
+
+- FEAT-032 TASK-095 CloudCC writeback connector (2026-05-14T09:42:30Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test` -> **success**，使用 PostgreSQL `cici_assistant_test`；覆盖 CloudCC mock 成功写回、未知候选拒绝和 task 插入失败后删除已插入 note 的回滚路径。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: targeted `git diff --check` for TASK-095 backend/frontend files -> **success**。
+  - Notes:
+    - `writeback-preview` 现在生成 `summary-note`、从 AI 纪要行动项提取的 `task-*`，以及 signed CRM context 中的 `field-*` suggestion。
+    - `writeback` 只接受 `selectedItemIds`，所有 CloudCC `serviceName/objectApiName/data` 来自服务端持久化 preview。
+    - CloudCC mock 断言实际调用顺序为 `insert Note`、`insert Task`、`update Opportunity`；失败路径断言 `insert Note` 成功、`insert Task` 失败、随后 `delete Note` 回滚。
+
+- FEAT-032 TASK-094 framework agnostic browser SDK (2026-05-14T07:22:59Z):
+  - Commands:
+    - `sdk`: `node --check frontend/public/sdk/meeting-minutes.js && node --check frontend/public/sdk/meeting-minutes@1.0.0.js` -> **success**。
+    - `static`: `HEAD http://localhost:5173/sdk/meeting-minutes.js` and `HEAD http://localhost:5173/sdk/meeting-minutes@1.0.0.js` -> **200**。
+    - `browser`: Playwright same-origin SDK smoke inline mode -> **success**，`window.AgentCiCiMeeting.version === "1.0.0"`，iframe 加载 session ready 状态并触发 `embed:ready` callback。
+    - `browser`: Playwright same-origin SDK smoke drawer mode desktop/mobile -> **success**，drawer 加载 session ready 状态并无重复外层标题/关闭 chrome。
+    - `browser`: Playwright `updateContext()` + `close()` lifecycle smoke -> **success**，iframe 响应 `host:request-close` 后发出 `embed:close`，SDK shell 销毁。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: targeted `git diff --check` -> **success**。
+  - Screenshots:
+    - `output/playwright/embed-sdk-inline-desktop.png`
+    - `output/playwright/embed-sdk-drawer-desktop.png`
+    - `output/playwright/embed-sdk-drawer-mobile.png`
+  - Notes:
+    - SDK files are plain browser IIFEs served from `frontend/public/sdk/`; no React/Vue dependency is introduced.
+    - Drawer shell intentionally avoids a duplicate outer header so close confirmation and meeting state remain owned by the iframe.
+
+- FEAT-032 TASK-093 visual QA closeout (2026-05-14T07:14:45Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css frontend/src/admin/pages/AdminEmbedAppsPage.tsx frontend/src/embed/EmbedMeetingMinutesPage.tsx frontend/src/meeting/MeetingMinutesPanel.tsx frontend/src/App.tsx frontend/src/styles.css` -> **success**。
+    - `browser`: Playwright `/embed/meeting-minutes` desktop 1280x720 full-page screenshot -> **success**，嵌入页填满 iframe 容器，无右侧空白带。
+    - `browser`: Playwright `/embed/meeting-minutes` mobile 390x844 full-page screenshot -> **success**，上下堆叠布局无横向溢出或文字遮挡。
+    - `browser`: Playwright `/admin/embed-apps/meeting-minutes` debug tab on `http://localhost:5173` -> **success**，生成一次性调试 token，iframe 预览加载“会议 session 已就绪，可开始听记。”。
+    - `browser`: Playwright admin debug iframe mobile 390x844 full-page screenshot -> **success**，调试表单、token 区和 iframe 预览均可读。
+  - Screenshots:
+    - `output/playwright/embed-meeting-desktop.png`
+    - `output/playwright/embed-meeting-mobile.png`
+    - `output/playwright/embed-apps-admin-debug-iframe-desktop.png`
+    - `output/playwright/embed-apps-admin-debug-iframe-mobile.png`
+  - Notes:
+    - 修复 `frontend/src/assistant/cici-ui.css` 中共享 drawer 的 1360px media rule 覆盖 `.cici-meeting-drawer--embed` 宽度，导致桌面嵌入页只占 940px 的问题。
+    - Admin debug iframe 预览使用 `http://localhost:5173` 与 debug token `parentOrigin` 对齐；仅剩 Vite 开发环境既有 favicon 404 / React DevTools 信息，不影响验收。
+
+- FEAT-032 TASK-093 embed page and shared meeting UI (2026-05-14T06:54:12Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `api`: admin debug token + `POST /embed/v1/apps/meeting-minutes/sessions` -> **success**，返回 `CREATED` session `meet_7038902dbda74d6397003bbb`，`objectId=debug-003`。
+    - `git`: targeted `git diff --check -- frontend/src/App.tsx frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css frontend/src/admin/pages/AdminEmbedAppsPage.tsx frontend/src/styles.css frontend/src/embed/EmbedMeetingMinutesPage.tsx frontend/src/meeting/MeetingMinutesPanel.tsx` -> **success**。
+    - `browser`: 本机 Chrome 可见态 `/embed/meeting-minutes` -> **partial success**，页面显示“会议 session 已就绪，可开始听记”，共享面板、实时转写区、AI 会议纪要区和 footer actions 正常可见。
+  - Verification limits:
+    - Headless Playwright 在当前机器对 Vite dev/preview 页面停在模块加载前，得到空白截图；该结果未作为视觉验收证据。
+    - macOS `screencapture` 返回 `could not create image from display`，未能保存可信桌面/移动截图。
+    - 因截图 QA 未完成，本轮不把 TASK-093 标记为 completed；后续需补跑桌面/移动截图和 admin iframe 预览截图。
+
+- FEAT-032 TASK-092 admin embedded apps management UI (2026-05-14T04:56:11Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test` -> **success**，使用 PostgreSQL `cici_assistant_test`。首次运行时数据库不存在，已在 healthy `cici-postgres` 容器内创建后重跑通过。
+    - `git`: `git diff --check` -> **success**。
+    - `browser`: Playwright `/admin/embed-apps` desktop 1440x1000 full-page screenshot -> **success**，应用目录和详情概览正常渲染。
+    - `browser`: Playwright debug tab -> **success**，admin 一次性调试 token 生成成功，console error count 为 0。
+    - `browser`: Playwright `/admin/embed-apps` mobile 390x844 full-page screenshot -> **success**，无横向溢出或文字遮挡。
+  - Screenshots:
+    - `output/playwright/embed-apps-admin-desktop.png`
+    - `output/playwright/embed-apps-admin-mobile.png`
+  - Notes:
+    - 首次浏览器 smoke 发现 Vite 未代理 `/embed/v1`，页面收到 SPA HTML 导致 JSON parse error；已补 `frontend/vite.config.ts`、`frontend/vite.config.js` 和部署 Nginx `/embed/v1/` location 后复测通过。
+    - 后端健康检查当前返回 `503 DOWN`，但认证、embed admin API 和前端页面 smoke 正常；该 health 状态未作为本轮 FEAT-032 页面验收阻塞项。
+
+- FEAT-032 TASK-091 embedded app backend (2026-05-14T04:22:00Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test` -> **success**（历史 H2 运行，用户已要求后续不再使用 H2）。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest#shouldValidateOpenApiHealthWithoutTreatingApiKeyAsJwt test` -> **success**（历史 H2 运行，用户已要求后续不再使用 H2）。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**。
+    - `git`: targeted `git diff --check` for FEAT-032 backend files -> **success**。
+  - Notes:
+    - `EmbedAppIntegrationTest` covers admin allowed-origin config, Open API Key token issuance, forbidden origin rejection, short-lived embed token creation, idempotent meeting session creation, summary runtime call, and `meeting_session` persistence.
+    - 2026-05-14 用户明确要求后续全部使用 PostgreSQL 测试库，不再使用 H2；`backend/src/test/resources/application.yml` 已切到 `jdbc:postgresql://localhost:5432/cici_assistant_test`，H2 Maven 依赖已移除。上述 H2 历史结果只作为本轮切换前记录，后续验证必须重新跑 PostgreSQL。
+
+- Local development environment bootstrap (2026-05-13T12:01:23Z):
+  - Commands:
+    - `brew install docker docker-compose colima openjdk@21 maven` -> **success**.
+    - `limactl start --tty=false --name=cici-docker template:alpine ...` -> **success**, Alpine VM ready.
+    - `limactl shell cici-docker sudo sh -lc 'apk update && apk add docker docker-cli-compose curl bash shadow'` -> **success**.
+    - `limactl shell cici-docker sh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici && docker compose pull postgres redis rabbitmq qdrant'` -> **success**.
+    - `limactl shell cici-docker sh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici && docker compose up -d --remove-orphans postgres redis rabbitmq qdrant'` -> **success**.
+    - `runtime`: backend screen `39939.cici-backend`; `GET http://127.0.0.1:8080/actuator/health` -> **UP**.
+    - `runtime`: frontend screen `41592.cici-frontend`; `HEAD http://127.0.0.1:5173/` -> **200 OK**.
+    - `runtime`: `GET http://127.0.0.1:6333/` -> Qdrant `1.12.6`.
+    - `runtime`: RabbitMQ management API `http://127.0.0.1:15672/api/overview` with `cici/cici123` -> **success**.
+  - Notes:
+    - Docker Desktop DMG and Colima Ubuntu image downloads were repeatedly reset by the current network. The working local Docker daemon for this machine is the Lima Alpine VM `cici-docker`.
+    - PostgreSQL, Redis, and RabbitMQ report `healthy`; Qdrant has no compose healthcheck but responds on `6333`.
+    - Backend log confirms a fresh PostgreSQL database migrated from empty schema through 49 Flyway migrations.
+    - `npm install` repaired frontend native optional dependencies; `xattr -dr com.apple.quarantine frontend/node_modules` cleared macOS Gatekeeper quarantine for Rollup/fsevents native `.node` modules.
+
+- FEAT-029 AI 听记 CloudCC prompt/spec sync (2026-05-12T05:50:58Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldHidePlatformCoreSkillsAndBlockStandardSkillEditing test` -> **success**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `runtime`: restarted backend screen as `84883.cici-backend`; backend health -> **UP**.
+    - `db`: local Flyway latest -> `49|ai meeting notetaker cloudcc prompt|true`; `ai-meeting-notetaker` `prompt_synced=true`, `spec_synced=true`.
+  - Notes:
+    - `SkillDefinitionService` now seeds new organizations with the `CloudCCAI听记` custom skill prompt/spec semantics for `ai-meeting-notetaker`.
+    - `V49__ai_meeting_notetaker_cloudcc_prompt.sql` updates existing platform-standard skill rows.
+    - Focused integration coverage verifies the standard skill list exposes prompt text containing `本次沟通重点` / `CRM记录` and spec text containing `客户拜访会议纪要及后续行动管理`.
+
+- FEAT-029 meeting minutes late speaker marker fix (2026-05-12T03:40:19Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test` -> **success**.
+    - `frontend`: `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> **success**, `5` tests passed.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**.
+    - `git`: `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParser.java backend/src/test/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParserTest.java` -> **success**.
+  - Notes:
+    - Root cause: Iflytek role separation may emit `rl=0` or an empty marker at the beginning of a new speaker turn before the first explicit new speaker marker arrives. The backend inherited those leading words to the previous active speaker, and the frontend then merged the final segment into the previous speaker paragraph.
+    - Fix: when a single result chunk starts with only `rl=0/empty` words and the first explicit non-zero marker switches to a new speaker, `IflytekAsrResultParser` now assigns the buffered leading text to the new speaker.
+    - Remaining validation: real browser microphone multi-speaker E2E after backend restart/deploy.
 
 - V1.9 `内置AI听记` release and production deployment (2026-05-12T03:14:00Z):
   - Commands:

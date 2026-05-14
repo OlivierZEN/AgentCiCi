@@ -79,6 +79,7 @@ final class IflytekAsrResultParser {
         String active = activeSpeakerId;
         String currentSpeaker = active;
         StringBuilder currentText = new StringBuilder();
+        boolean sawExplicitMarker = false;
         for (JsonNode item : ws) {
             JsonNode cw = item.path("cw");
             if (!cw.isArray()) {
@@ -93,9 +94,16 @@ final class IflytekAsrResultParser {
                     marker = extractDirectSpeakerId(fallbackSpeakerNode);
                 }
                 if (!marker.isBlank() && !"0".equals(marker) && !marker.equals(currentSpeaker)) {
-                    flushPiece(currentText, currentSpeaker, pieces);
+                    if (sawExplicitMarker || currentText.isEmpty() || !currentSpeaker.equals(active)) {
+                        flushPiece(currentText, currentSpeaker, pieces);
+                    }
                     active = marker;
                     currentSpeaker = marker;
+                    sawExplicitMarker = true;
+                } else if (!marker.isBlank() && !"0".equals(marker)) {
+                    active = marker;
+                    currentSpeaker = marker;
+                    sawExplicitMarker = true;
                 } else if (currentSpeaker.isBlank() && !active.isBlank()) {
                     currentSpeaker = active;
                 }

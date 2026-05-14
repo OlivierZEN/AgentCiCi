@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-12T02:51:18Z
+updated_at: 2026-05-14T09:42:30Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,167 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-090 Meeting minutes embed SDK design
+
+- status: completed
+- priority: P1
+- owner_role: product-architecture
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 为 CloudCC/Vue 等 CRM 页面中的实时会议纪要嵌入场景完成设计文档，确定最佳实现为框架无关浏览器 JS SDK + iframe 内核，并将 admin 管理端统一入口正式命名为“嵌入式智能应用”，用于管理所有可嵌入外部系统标准能力的配置说明、调试和调用日志。
+- done:
+  - 已新增 `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`。
+  - 已明确 SDK 不绑定 React/Vue，CloudCC Vue 页面通过 `<script>` 和 `window.AgentCiCiMeeting.open(...)` 调用。
+  - 已定义 `/embed/meeting-minutes` iframe 内核、`/sdk/meeting-minutes.js`、短期 token claims、origin 校验、CRM 上下文和写回候选模型。
+  - 已补充 `/admin/embed-apps` 嵌入式智能应用管理中心设计，会议纪要作为首个可嵌入标准能力；详情页提供概览、接入配置、SDK/iframe 说明、Token 签发、调试和调用日志。
+  - 用户已确认正式命名为“嵌入式智能应用”；技术对象继续使用 `embed_app` / `org_embed_app_config`。
+  - 已拆分后续 `TASK-091` 至 `TASK-096`，覆盖后端嵌入式智能应用/token/session、管理端嵌入式智能应用 UI、嵌入页、SDK、CloudCC 写回和端到端验证。
+- verification:
+  - `git`: `git diff --check -- docs/specs/FEAT-032-meeting-minutes-embed-sdk.md .claw/task-board.md .claw/current-status.md` -> success。
+- next_action: 继续 `TASK-092 Admin embedded apps management UI`，把后端配置 API 接入 `/admin/embed-apps` 产品界面。
+
+### TASK-091 Embed token and session backend
+
+- status: completed
+- priority: P1
+- owner_role: backend-crm-embed
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 实现嵌入式智能应用后端地基：标准应用定义、组织级配置、短期 embed token、meeting session 持久化、会议纪要 embed runtime API 和 token/API Key 过滤边界。
+- done:
+  - 新增 `V50__embed_app_backend.sql`，创建 `embed_app_definition`、`org_embed_app_config`、`meeting_session`，并注册 `meeting-minutes` 标准嵌入式智能应用。
+  - 新增 `backend/src/main/java/com/codehouse/ciciassistant/embed/` domain/service/api 模块，提供 `/embed/v1/admin/apps` 配置 API、`/embed/v1/apps/{appCode}/tokens` token 签发 API 和 `/embed/v1/apps/{appCode}/sessions/**` runtime API。
+  - `JwtService` 支持自定义 claims 短期 token；embed token 绑定 appCode、orgId、run-as user、source、objectType、objectId、parentOrigin、permissions 和 nonce。
+  - `TenantContextFilter` 已区分 Open API Key、普通 JWT 与 embed token；embed token 仅允许访问 `/embed/v1/apps/**`，避免被当作普通登录 JWT。
+  - session 创建按 token nonce 幂等返回同一 `meeting_session`；summary runtime 复用 `MeetingMinutesService` 和 `ai-meeting-notetaker`。
+  - 写回预览已生成受 session/token 约束的 `summary-note` 候选；真正 CloudCC connector 写回仍保留给 `TASK-095`。
+  - 用户要求后续测试库统一使用 PostgreSQL，不再使用 H2；`backend/src/test/resources/application.yml` 已切到 PostgreSQL 测试库，H2 Maven 依赖已移除。
+- verification:
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test` -> success（此结果来自切换 PostgreSQL 前的 H2 运行，按用户最新要求后续不再作为测试基准）。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest#shouldValidateOpenApiHealthWithoutTreatingApiKeyAsJwt test` -> success（此结果来自切换 PostgreSQL 前的 H2 运行，按用户最新要求后续不再作为测试基准）。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `git`: targeted `git diff --check` for FEAT-032 backend files -> success。
+- next_action: `TASK-092 Admin embedded apps management UI`。
+
+### TASK-092 Admin embedded apps management UI
+
+- status: completed
+- priority: P1
+- owner_role: frontend-admin-product
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 实现 `/admin/embed-apps` 嵌入式智能应用管理入口，覆盖应用目录、详情文本 tab、接入配置保存、SDK/iframe 说明、调试 token 和最近调用日志入口。
+- done:
+  - 新增管理端菜单“嵌入式智能应用”，路由 `/admin/embed-apps` 与 `/admin/embed-apps/:appCode`。
+  - 新增 `frontend/src/admin/pages/AdminEmbedAppsPage.tsx`，接入 `/embed/v1/admin/apps` 列表、详情和配置保存 API。
+  - 详情页包含概览、接入配置、SDK/iframe 说明、调试和调用日志 5 个文本 tab，遵守 `鎏金账房` product UI tabs 与 no box-in-box 规则。
+  - 后端 admin API 新增 `POST /embed/v1/admin/apps/{appCode}/debug-token` 与 `GET /embed/v1/admin/apps/{appCode}/sessions`。
+  - `MeetingSessionRepository` 支持按组织和 appCode 查询最近 session，用于调用日志入口。
+  - Vite dev proxy 与部署 Nginx 配置均补 `/embed/v1/` 后端代理，避免 embed admin/runtime API 被前端 SPA fallback 吞掉。
+- verification:
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test` -> success（PostgreSQL `cici_assistant_test`，首次运行前已创建测试库）。
+  - `git`: `git diff --check` -> success。
+  - `browser`: Playwright desktop 1440x1000 `/admin/embed-apps` screenshot -> success，应用目录和详情概览正常渲染。
+  - `browser`: Playwright debug tab -> success，admin 一次性调试 token 成功生成，console error 为 0。
+  - `browser`: Playwright mobile 390x844 full-page screenshot -> success，无横向溢出或文字遮挡。
+  - screenshots: `output/playwright/embed-apps-admin-desktop.png`, `output/playwright/embed-apps-admin-mobile.png`。
+- next_action: 继续 `TASK-093 Embed page and shared meeting UI`，实现 `/embed/meeting-minutes` iframe 内核并接入 admin 调试预览。
+
+### TASK-093 Embed page and shared meeting UI
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-embed
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 实现 `/embed/meeting-minutes` iframe 内核，抽取共享会议纪要面板，接入 embed runtime session、ASR、summary、writeback-preview/writeback skeleton 和 postMessage bridge，并让 admin 调试 tab 可直接预览 iframe。
+- completed_at: 2026-05-14T07:14:45Z
+- done:
+  - 新增 `frontend/src/meeting/MeetingMinutesPanel.tsx`，将工作台会议抽屉 UI 抽为共享组件，保留发言人内联编辑、实时转写列表、AI 纪要区、写回候选区和统一 footer actions。
+  - `frontend/src/assistant/AssistantApp.tsx` 的 FEAT-029 工作台会议抽屉已改为复用共享 `MeetingMinutesPanel`，避免复制 speaker 聚合和发言人编辑 UI。
+  - 新增 `frontend/src/embed/EmbedMeetingMinutesPage.tsx` 和 `/embed/meeting-minutes` 路由；页面从 query token 恢复 CRM record/customer context，调用 `/embed/v1/apps/meeting-minutes/sessions` 创建/恢复 session。
+  - 嵌入页接入 `useAsrVoiceInput`、讯飞 speaker diarization、runtime summary、writeback-preview 和 writeback skeleton；真实 CloudCC connector 仍保留给 `TASK-095`。
+  - 嵌入页实现 `host:update-context`、`host:request-close`、`host:focus` 监听，以及 `embed:ready`、`embed:meeting-started`、`embed:transcript-final`、`embed:summary-generated`、`embed:writeback-preview`、`embed:writeback-success`、`embed:error`、`embed:close` postMessage。
+  - `frontend/src/admin/pages/AdminEmbedAppsPage.tsx` 调试 tab 在生成 debug token 后渲染带 `allow="microphone"` 的 iframe 预览。
+  - 修复嵌入页桌面宽度在 1360px 以下被共享 drawer media rule 覆盖的问题，确保 iframe 内核填满容器；工作台普通会议抽屉宽度规则保持不变。
+- verification:
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `api`: admin debug token + `POST /embed/v1/apps/meeting-minutes/sessions` -> success，返回 `CREATED` session `meet_7038902dbda74d6397003bbb`，`objectId=debug-003`。
+  - `git`: targeted `git diff --check` for TASK-093 frontend files -> success。
+  - `browser`: 本机 Chrome 可见态验证 `/embed/meeting-minutes` 渲染共享面板，显示“会议 session 已就绪，可开始听记”，桌面布局无明显横向溢出、文字遮挡或内层卡片堆叠。
+  - `browser`: Playwright `/embed/meeting-minutes` desktop 1280x720 full-page screenshot -> success，嵌入页填满 iframe 容器，无右侧空白带。
+  - `browser`: Playwright `/embed/meeting-minutes` mobile 390x844 full-page screenshot -> success，上下堆叠布局无横向溢出或文字遮挡。
+  - `browser`: Playwright `/admin/embed-apps/meeting-minutes` debug tab -> success，生成一次性 debug token 后 iframe 预览加载 session ready 状态。
+  - `browser`: Playwright admin debug iframe mobile 390x844 full-page screenshot -> success，调试表单、token 区和 iframe 预览均可读。
+  - screenshots: `output/playwright/embed-meeting-desktop.png`, `output/playwright/embed-meeting-mobile.png`, `output/playwright/embed-apps-admin-debug-iframe-desktop.png`, `output/playwright/embed-apps-admin-debug-iframe-mobile.png`。
+- next_action: 继续 `TASK-095 CloudCC writeback connector`。
+
+### TASK-094 Framework agnostic browser SDK
+
+- status: completed
+- priority: P1
+- owner_role: frontend-sdk
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 实现框架无关浏览器 SDK，提供 `/sdk/meeting-minutes.js` 与版本化路径，用于 CloudCC/Vue 或原生页面以 drawer/inline 模式打开 AgentCiCi 会议纪要 iframe。
+- completed_at: 2026-05-14T07:22:59Z
+- done:
+  - 新增公开 SDK `frontend/public/sdk/meeting-minutes.js`，Vite/部署静态路径为 `/sdk/meeting-minutes.js`。
+  - 新增版本化副本 `frontend/public/sdk/meeting-minutes@1.0.0.js`，匹配 admin 文档中的 versioned SDK URL。
+  - 暴露 `window.AgentCiCiMeeting.version` 与 `window.AgentCiCiMeeting.open(options)`。
+  - 支持 `drawer` 与 `inline` 两种挂载模式；inline 接受 selector 或 DOM element container，drawer 自动创建右侧 iframe shell。
+  - iframe 统一加载 `/embed/meeting-minutes?token=...&sdkVersion=1.0.0&mode=...`，并带 `allow="microphone"`。
+  - 返回实例方法 `close()`、`destroy()`、`updateContext(nextContext)`、`postMessage(type, payload)`，便于 Vue `onUnmounted` 和 CRM 记录切换时调用。
+  - SDK 只接受 AgentCiCi embed origin 发出的 `agentcici-meeting-embed` 消息，并将 `embed:ready`、`embed:meeting-started`、`embed:transcript-final`、`embed:summary-generated`、`embed:writeback-preview`、`embed:writeback-success`、`embed:error`、`embed:close` 分发到 callbacks。
+- verification:
+  - `sdk`: `node --check frontend/public/sdk/meeting-minutes.js && node --check frontend/public/sdk/meeting-minutes@1.0.0.js` -> success。
+  - `static`: `HEAD http://localhost:5173/sdk/meeting-minutes.js` and `HEAD http://localhost:5173/sdk/meeting-minutes@1.0.0.js` -> 200。
+  - `browser`: Playwright same-origin SDK smoke inline mode -> success，iframe 加载 session ready 状态并触发 `embed:ready` callback。
+  - `browser`: Playwright same-origin SDK smoke drawer mode desktop/mobile -> success，drawer 加载 session ready 状态并无重复外层标题/关闭 chrome。
+  - `browser`: Playwright `updateContext()` + `close()` lifecycle smoke -> success，iframe 响应 `host:request-close` 后发出 `embed:close`，SDK shell 销毁。
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: targeted `git diff --check` -> success。
+  - screenshots: `output/playwright/embed-sdk-inline-desktop.png`, `output/playwright/embed-sdk-drawer-desktop.png`, `output/playwright/embed-sdk-drawer-mobile.png`。
+- next_action: 继续 `TASK-095 CloudCC writeback connector`。
+
+### TASK-095 CloudCC writeback connector
+
+- status: completed
+- priority: P1
+- owner_role: backend-cloudcc-integration
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 实现嵌入式会议纪要确认写回后的 CloudCC connector：服务端生成 note/task/field suggestion 候选，确认时只允许选择已生成候选，并通过 CloudCC OpenAPI `/openApi/common` 执行 insert/update，失败时记录结果并回滚本次已插入记录。
+- completed_at: 2026-05-14T09:42:30Z
+- done:
+  - 新增 `CloudccMeetingWritebackConnector`，复用 `CloudccAccessTokenService` 获取 run-as 用户 CloudCC `accessToken` 与组织 API gateway。
+  - 写回调用使用 CloudCC One OpenAPI `/openApi/common`，按官方 `insert` / `update` / `delete` 服务名提交 `serviceName`、`objectApiName` 和 JSON array 字符串 `data`。
+  - `MeetingEmbedRuntimeService` 的 `writeback-preview` 由占位 note 扩为服务端生成的 `summary-note`、从纪要行动项提取的 task，以及 signed CRM context 中的 field suggestion。
+  - `writeback` 确认接口校验 `selectedItemIds` 必须来自已持久化 preview，禁止浏览器提交任意 CloudCC payload。
+  - 成功写回后 session 进入 `WRITTEN_BACK`；CloudCC 调用失败时保留 `READY_TO_WRITEBACK`，写入 `FAILED` result，并对本轮已成功插入的 note/task 调用 `delete` 回滚。
+  - 嵌入页前端将 `writeback.status=FAILED` 显示为错误态，不再沿用 `CONNECTOR_PENDING` 文案。
+- verification:
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest test` -> success（PostgreSQL `cici_assistant_test`，覆盖 CloudCC mock 成功写回、未知候选拒绝和失败回滚）。
+  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: targeted `git diff --check` for TASK-095 backend/frontend files -> success。
+- next_action: 继续 `TASK-096 End-to-end CRM embed verification`，用 admin 调试台、本地模拟父页面和 CloudCC Vue 示例做端到端 smoke。
+
+### TASK-084 Agent evaluation and regression system design
+
+- status: completed
+- priority: P0
+- owner_role: product-agent-quality
+- spec_path: `docs/specs/FEAT-031-agent-evaluation-regression-system.md`
+- summary: 为 FEAT-025 路线中的“发布前评测 / 回归系统”完成设计文档，明确 Agent 发布前题集、回归用例、评测运行、断言、LLM judge、发布门禁、trace 回流、售后模板和实现拆分。
+- done:
+  - 已新增 `docs/specs/FEAT-031-agent-evaluation-regression-system.md`。
+  - 已定义 `agent_eval_suite`、`agent_eval_case`、`agent_eval_run`、`agent_eval_case_result`、`agent_eval_publish_gate` 等核心数据模型。
+  - 已明确 evaluation mode 复用 `ChatOrchestratorService`，默认禁止副作用写动作，并将 trace 标记为 `runMode=EVALUATION`。
+  - 已设计确定性 AssertionEngine 与可选 LLM judge 的边界：安全门禁依赖规则断言，语义质量可由 judge 辅助。
+  - 已设计发布门禁策略、从真实 trace 创建回归用例、Agent Builder 评测入口和售后 Agent 内置评测模板。
+  - 已拆分后续实现任务 `TASK-085` 到 `TASK-089`。
+- verification:
+  - `git`: `git diff --check -- docs/specs/FEAT-031-agent-evaluation-regression-system.md .claw/task-board.md .claw/current-status.md` -> success。
+- next_action: 从 `TASK-085 Evaluation data model and APIs` 开始实现 Flyway、实体、repository 和评测集/用例/运行 API。
 
 ### TASK-083 Chat model provider credentials
 
@@ -65,9 +226,11 @@ board_status: active
   - 听记面板已按用户要求加宽并改为桌面左右结构：左侧实时转写、右侧 AI 会议纪要，中间使用 1px 分隔线；窄屏保留上下单列结构。
   - `backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java` 已新增讯飞实时转写 provider，支持签名 URL、PCM 音频转发、`role_type=2` 说话人分离参数、结束帧和转写结果解析。
   - 已修复实时转写 speaker 与段落聚合：后端按讯飞词级 `cw.rl` 提取角色切换，`rl=0` 继承上一说话人，`rl=1/2/3...` 才切换 speaker；前端将连续同一发言人的 final 片段合并为一个完整段落，speaker 变化时新开段落。
+  - 已修复第二个发言人首句前半段被合并到上一发言人的边界问题：当讯飞在同一结果片段开头先返回 `rl=0/空`，随后首次明确给出新 speaker marker 时，后端 parser 会把已缓冲的开头文本一起归到新 speaker。
   - 已按用户截图新增会议转写面板交互：发言人名称支持鼠标双击内联编辑，保存后同步同一 speaker 的历史段落、识别中 partial 和后续转写；转写区在内容超过可视区域时自动滚到最新内容。
   - 已新增 `POST /ai/meeting-minutes/summary`，根据实时转写段落调用模型生成结构化 Markdown 会议纪要。
   - 已新增平台标准技能 `ai-meeting-notetaker`（AI 听记）并默认挂到 `cici-system`；会议结束生成纪要时，后端通过 `SkillPromptAssembler` 显式装配该技能上下文后再调用模型。
+  - `ai-meeting-notetaker` 标准技能的提示片段和规格正文已按当前启用的 `CloudCCAI听记` 自定义技能同步，覆盖客户拜访纪要、待办任务候选、CRM 记录建议和人工确认规则；新增 V49 迁移更新既有组织标准技能行。
   - `POST /ai/meeting-minutes/summary` 响应已回传 `skillCode/skillName`；前端会议面板生成中与完成提示同步展示 AI 听记技能调用语义。
   - 已修复 AI 听记技能化纪要生成仍返回 `Aliyun API key is not configured.`：纪要生成现在使用组织 `chat` 场景模型路由和模型厂商配置中的 baseUrl/apiKey，而不是只读环境变量 key。
   - `backend/src/main/resources/application.yml` 已补 `app.voice.iflytek.*` 配置占位，默认 disabled，避免无凭证环境误连。
@@ -122,7 +285,16 @@ board_status: active
   - `backend`: 2026-05-12 org model credentials fix `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
   - `runtime`: 2026-05-12 backend restart -> new screen `40363.cici-backend`; backend `/actuator/health` -> `{"status":"UP"}`。
   - `api`: 2026-05-12 `demo-org` smoke `POST /ai/meeting-minutes/summary` -> success，返回 `## Meeting Summary`，并包含 `skillCode=ai-meeting-notetaker`、`skillName=AI 听记`。
-- next_action: 请在真实会议纪要面板中再次点击“结束并生成纪要”，确认右侧 AI 会议纪要不再出现 `Aliyun API key is not configured.`；再用真实浏览器麦克风做多人说话端到端检查。
+  - `backend`: 2026-05-12 late speaker marker fix `mvn -q -Dmaven.repo.local=.m2 -Dtest=IflytekAsrResultParserTest test` -> success，覆盖 active speaker 为 1、片段开头 `rl=0`、随后首次明确 `rl=2` 时整句归到发言人 2。
+  - `frontend`: 2026-05-12 late speaker marker fix `npm run test -- meetingTranscript.test.ts meetingMinutesCommand.test.ts` -> success，`5` tests passed。
+  - `backend`: 2026-05-12 late speaker marker fix `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `git`: 2026-05-12 late speaker marker fix target `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParser.java backend/src/test/java/com/codehouse/ciciassistant/ai/ws/IflytekAsrResultParserTest.java` -> success。
+  - `backend`: 2026-05-12 AI 听记 CloudCC prompt sync `mvn -q -Dmaven.repo.local=.m2 -Dtest=MeetingMinutesServiceTest test` -> success。
+  - `backend`: 2026-05-12 AI 听记 CloudCC prompt sync `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest#shouldHidePlatformCoreSkillsAndBlockStandardSkillEditing test` -> success，覆盖标准技能列表中 `ai-meeting-notetaker` 的 prompt/spec 内容。
+  - `backend`: 2026-05-12 AI 听记 CloudCC prompt sync `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `runtime`: 2026-05-12 backend restart -> new screen `84883.cici-backend`; `/actuator/health` -> `{"status":"UP"}`；Flyway latest -> `49|ai meeting notetaker cloudcc prompt|true`。
+  - `db`: 2026-05-12 local `skill_definition` check for `ai-meeting-notetaker` -> `prompt_synced=true`, `spec_synced=true`。
+- next_action: 发布后确认线上 Flyway V49 成功，并用真实会议纪要面板复测 AI 纪要输出是否体现客户拜访纪要、待办和 CRM 建议语义；同时继续真实多人麦克风检查 speaker 边界。
 
 ### TASK-080 CloudCC customization skill runtime configuration
 

@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
         "/models": { target: backendTarget, changeOrigin: true },
         "/tools": { target: backendTarget, changeOrigin: true },
         "/integrations": { target: backendTarget, changeOrigin: true },
+        "/embed/v1": { target: backendTarget, changeOrigin: true },
         "/mcp-servers": { target: backendTarget, changeOrigin: true },
         "/admin/users": { target: backendTarget, changeOrigin: true },
         "/admin/agents": { target: backendTarget, changeOrigin: true },

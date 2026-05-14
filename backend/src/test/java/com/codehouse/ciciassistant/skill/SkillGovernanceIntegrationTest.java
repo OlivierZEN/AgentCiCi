@@ -88,13 +88,19 @@ class SkillGovernanceIntegrationTest {
                 .contains("general-assistant");
 
         JsonNode generalAssistant = null;
+        JsonNode aiMeetingNotetaker = null;
         for (JsonNode node : skills) {
             if ("general-assistant".equals(node.path("skillCode").asText())) {
                 generalAssistant = node;
-                break;
+            }
+            if ("ai-meeting-notetaker".equals(node.path("skillCode").asText())) {
+                aiMeetingNotetaker = node;
             }
         }
         assertThat(generalAssistant).isNotNull();
+        assertThat(aiMeetingNotetaker).isNotNull();
+        assertThat(aiMeetingNotetaker.path("promptFragment").asText()).contains("本次沟通重点", "CRM记录");
+        assertThat(aiMeetingNotetaker.path("draftSpecText").asText()).contains("客户拜访会议纪要及后续行动管理");
 
         mockMvc.perform(put("/skills/{id}", generalAssistant.path("id").asLong())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)

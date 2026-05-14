@@ -11,11 +11,13 @@ import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
 import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
+import AdminEmbedAppsPage from "./admin/pages/AdminEmbedAppsPage";
 import AdminWecomKfAccountsPage from "./admin/pages/AdminWecomKfAccountsPage";
 import AdminAgentBuilderPage from "./admin/pages/AdminAgentBuilderPage";
 import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
+import EmbedMeetingMinutesPage from "./embed/EmbedMeetingMinutesPage";
 import PlatformGuard from "./platform/PlatformGuard";
 import PlatformLogin from "./platform/PlatformLogin";
 import PlatformShell from "./platform/PlatformShell";
@@ -42,6 +44,7 @@ export default function App() {
         <Route path="/autoservice/cn" element={<AutoServiceLanding />} />
         <Route path="/autoservice/en" element={<Navigate to="/autoservice/global" replace />} />
         <Route path="/autoservice/zh" element={<Navigate to="/autoservice/cn" replace />} />
+        <Route path="/embed/meeting-minutes" element={<EmbedMeetingMinutesPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminGuard />}>
           <Route element={<AdminShell />}>
@@ -56,6 +59,8 @@ export default function App() {
             <Route path="agent-builder/:agentId/openapi-docs" element={<AdminAgentOpenApiDocsPage />} />
             <Route path="agent-builder/:agentId" element={<AdminAgentBuilderPage />} />
             <Route path="integrations" element={<AdminIntegrationsPage />} />
+            <Route path="embed-apps" element={<AdminEmbedAppsPage />} />
+            <Route path="embed-apps/:appCode" element={<AdminEmbedAppsPage />} />
             <Route path="channels/wechat-kf" element={<AdminWecomKfAccountsPage />} />
             <Route path="ops" element={<AdminOpsPage />} />
             <Route path="users" element={<AdminUsersPage />} />

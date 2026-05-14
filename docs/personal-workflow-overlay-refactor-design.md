@@ -642,7 +642,7 @@ MVP 支持：
 
 ### 10.1.1 新入口
 
-改造 [frontend/src/assistant/AssistantApp.tsx](/Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/frontend/src/assistant/AssistantApp.tsx)：
+改造 [frontend/src/assistant/AssistantApp.tsx](/Volumes/AISpace/codehouse/cc-agentcici/frontend/src/assistant/AssistantApp.tsx)：
 
 - 将现有头像入口从“我的邮箱”单一 modal 扩展为“个人设置中心”
 - 新增 `我的工作流` Tab
@@ -659,7 +659,7 @@ MVP 支持：
 
 ### 10.1.3 与现有 Agent Builder 的边界
 
-[frontend/src/assistant/AgentBuilderShell.tsx](/Volumes/workspace/codehouse/automan-projects/cc-cici-assistant/frontend/src/assistant/AgentBuilderShell.tsx) 继续只负责：
+[frontend/src/assistant/AgentBuilderShell.tsx](/Volumes/AISpace/codehouse/cc-agentcici/frontend/src/assistant/AgentBuilderShell.tsx) 继续只负责：
 
 - 共享 Agent 基本信息
 - 共享 Agent Spec
