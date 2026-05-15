@@ -1,23 +1,56 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-15T08:06:30Z
+updated_at: 2026-05-15T08:24:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-15T08:06:30Z
-last_run_status: success
+last_run_at: 2026-05-15T08:22:31Z
+last_run_status: mixed
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`
-- 范围：FEAT-021 Open API builtin skill resource and call-log detail fix
-- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test`; `frontend npm run build`; targeted `git diff --check`; in-app Browser desktop/mobile visual QA
-- 环境：local backend PostgreSQL test runtime, local Vite/browser QA
+- 状态：`mixed`
+- 范围：FEAT-021 `cici-system` Open API local network smoke
+- 命令：`curl` login/API key create/health/SSE/call-log/revoke checks against `192.168.0.105:5173` and `192.168.0.105:8080`
+- 环境：local Vite dev server, local Spring Boot backend, PostgreSQL-backed local data
 
 ## Latest Verified Results
+
+- FEAT-021 `cici-system` Open API local network smoke (2026-05-15T08:22:31Z):
+  - Commands:
+    - `frontend-url`: `POST http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` with a valid temporary API Key -> **HTTP 404**，确认当前 5173 Vite dev server 未代理 `/openapi`。
+    - `frontend-url`: `GET http://192.168.0.105:5173/openapi/v1/agents/cici-system/health` -> **HTTP 200 text/html**，返回 Vite SPA HTML 而不是 Open API JSON。
+    - `backend-health`: `GET http://192.168.0.105:8080/openapi/v1/agents/cici-system/health` with temporary API Key -> **HTTP 200**，`enabled=true`、`published=true`、`apiChannelEnabled=true`、`credentialStatus=ACTIVE`。
+    - `backend-stream`: `POST http://192.168.0.105:8080/openapi/v1/agents/cici-system/chat/stream` with temporary API Key -> **HTTP 200 SSE**，收到 `meta`、`phase=model`、`phase=generating`、多个 `delta` 和 `done`。
+    - `call-log`: `GET /agents/cici-system/api-calls` -> **success**，最新记录 `status=SUCCESS`、`httpStatus=200`、`responseSummary=收到，已确认开放 API stream smoke 运行正常。`、`traceId=9bb8986c-8a6e-4bdb-b0bf-b3da837a2b95`。
+    - `cleanup`: temporary credentials `6` and `7` -> **REVOKED**。
+    - `backend-cors`: `OPTIONS http://192.168.0.105:8080/openapi/v1/agents/cici-system/chat/stream` with `Origin: https://cnbh01.cloudcc.cn` -> **HTTP 403** `Invalid CORS request`，说明当前本地后端进程未放行该 Origin。
+  - Notes:
+    - Open API 后端本体可用；用户给出的 5173 URL 当前不可作为 Open API 地址使用，除非为 Vite dev server 增加 `/openapi` proxy。
+    - 浏览器跨域直连 8080 还需要确认本地 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*` 或等价配置已经注入运行中的后端进程。
+
+- Current local changes online test deploy (2026-05-15T08:20:00Z):
+  - Commands:
+    - `git`: `git diff --check` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ModelProviderServiceIntegrationTest,AgentOpenApiIntegrationTest,PlatformTenantLifecycleIntegrationTest test` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=CustomerInsightIntegrationTest,AgentOpenApiCorsConfigTest test` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `backend-package`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**。
+    - `git`: commit `0c291df feat: add customer insight app and openapi fixes`; `git push origin main` -> **success**。
+    - `ecs-backup`: `/opt/cici/backups/20260515-161843-before-2.0.B1-customer-insight-20260515-161832` -> **success**。
+    - `ecs-build`: backend image `sha256:6996e499dcab71f408cfe068901292d556e826436c86a96781137c34dd6144e8`, frontend image `sha256:e9f5fc0152790533fec500ccfe321897deee37c8f3cb1410ab617ad04bcc0403` -> **success**。
+    - `ecs-deploy`: `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d` with `CICI_IMAGE_TAG=2.0.B1-customer-insight-20260515-161832` -> **success**。
+    - `backend-health`: `GET http://127.0.0.1:8080/actuator/health` -> **UP**。
+    - `flyway`: latest rows `52|kb embedding model settings|true`, `51|customer insight ai app|true`, `50|embed app backend|true` -> **success**。
+    - `nginx`: `docker exec cici-frontend nginx -t` -> **success**。
+    - `server-local smoke`: Host `autoservice.agentcici.com` `/`, `/sdk/meeting-minutes.js`, and Open API preflight -> **HTTP 200**。
+    - `server-local customer insight`: fixed-password login succeeded; `GET /ai/customer-insights/catalog` -> **HTTP 200**, `success=true`, `count=26`。
+  - Notes:
+    - Full `./scripts/quality-check.sh` initially exposed real regressions and test fragility; fixed before deployment: `ModelProviderService.agentBaseModels` now uses a writable transaction, Open API test fixture cleanup runs inside `TransactionTemplate`, and platform lifecycle test data avoids scheduler/DB timezone and persistent mobile collisions.
+    - Like the previous hotfixes, this deployment used ECS-local images because ACR credentials are still not reliable; tag durability depends on the ECS host until registry credentials are repaired.
 
 - FEAT-021 Open API builtin skill resource and call-log detail fix (2026-05-15T08:06:30Z):
   - Commands:

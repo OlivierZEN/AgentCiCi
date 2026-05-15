@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-15T08:06:30Z
+updated_at: 2026-05-15T08:24:00Z
 updated_by: ai
 status: active
 phase: implementation
 active_task: "TASK-062 Agent Open API"
-current_task: 已修复 Open API 调用中 file-backed builtin skill 入口资源读取更稳健的问题，并让 API Key 调用日志可在桌面和移动端查看完整 request/response 摘要。
-next_action: 将本轮 backend/frontend 修复发布到线上测试环境后，在 CloudCC 实际页面重试 API stream 调用，确认不再出现 `Missing builtin skill resource: cloudcc-customization-expert-common/SKILL.md`。
+current_task: 已验证 `cici-system` Open API 后端直连可用，但用户给出的 `http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` 当前不可用，因为本地 Vite proxy 未代理 `/openapi`。
+next_action: 若需要通过 5173 开发前端地址调用 Open API，先为 Vite proxy 补 `/openapi`；若需要浏览器跨域直连 8080，则同步确认本地 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*` 等 CORS 配置已生效。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,10 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-15T08:22:31Z 已按用户提供地址验证 `cici-system` 开放 API：`http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` 即使携带有效临时 API Key 仍返回 HTTP 404；`GET` health 同路径返回 Vite SPA HTML，确认本地 Vite `5173` 未代理 `/openapi`。直连后端 `http://192.168.0.105:8080/openapi/v1/agents/cici-system/health` 在携带临时 Key 后返回 HTTP 200，`POST /chat/stream` 返回 `meta/phase/delta/done` SSE，模型 `qwen3.6-plus` 生成答复“收到，已确认开放 API stream smoke 运行正常。”，调用日志落库为 `SUCCESS`，`traceId=9bb8986c-8a6e-4bdb-b0bf-b3da837a2b95`。两个临时测试 Key（credential `6`、`7`）均已撤销。本地直连 `8080` 对 `Origin: https://cnbh01.cloudcc.cn` 的 CORS preflight 当前返回 HTTP 403 `Invalid CORS request`，说明当前本地运行进程没有放行该 Origin；线上测试环境此前服务器本机 vhost smoke 已验证 `Access-Control-Allow-Origin: *`。
+
+- 2026-05-15T08:20:00Z 已将当前本地最新修改提交并发布到线上测试环境。Git 提交 `0c291df` 已推送 `origin/main`，ECS 当前 `CICI_IMAGE_TAG=2.0.B1-customer-insight-20260515-161832`。后端镜像 `sha256:6996e499dcab...`，前端镜像 `sha256:e9f5fc015279...`；远端备份目录 `/opt/cici/backups/20260515-161843-before-2.0.B1-customer-insight-20260515-161832`。验证通过：六个 compose 服务 healthy，backend `/actuator/health` 为 `UP`，Flyway 最新 `52|kb embedding model settings|true`、`51|customer insight ai app|true`，Nginx 配置 OK，服务器本地 Host `autoservice.agentcici.com` 下 `/`、`/sdk/meeting-minutes.js`、Open API preflight 均 HTTP 200；固定密码登录成功，`GET /ai/customer-insights/catalog` 返回 HTTP 200 且 26 个模块。
 
 - 2026-05-15T08:06:30Z 已修复 Open API 调用时报 `Missing builtin skill resource: cloudcc-customization-expert-common/SKILL.md` 的代码路径风险：`FileBackedBuiltinSkillCatalog` 现在从扫描到的 `manifest.json` 同目录解析并缓存 `SKILL.md` 与模块文档资源，避免运行时 classpath 重新定位失败；缺失资源错误也会带上实际 source 描述便于排查。同步优化 `AgentOpenApiKeysDialog` 调用日志：桌面端点击摘要显示完整调用日志详情，移动端改用无横向溢出的分隔线列表并可展开 request/response/error 摘要。验证通过：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test`、`frontend npm run build`（保留 Vite chunk-size warning）、targeted `git diff --check`；Browser 1280x720 与 390x844 视觉复查确认详情完整展示且移动端 `scrollWidth=390`。本轮只改本地代码，尚未发布线上。
 

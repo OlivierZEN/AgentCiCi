@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-15T07:26:28Z
+updated_at: 2026-05-15T08:24:00Z
 updated_by: ai
 status: active
 ---
@@ -16,6 +16,18 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.0.B1 customer insight / Open API online test release on 2026-05-15:
+  - Git commit: `0c291df` on `origin/main`.
+  - Release tag in `/opt/cici/deploy/acr.env`: `2.0.B1-customer-insight-20260515-161832`.
+  - Scope: customer insight AI app, AI apps workspace follow-ups, Open API CORS and builtin skill resource robustness, API call-log detail UI, KB embedding model settings, and meeting-minutes SDK/page refinements.
+  - Deployment method: ACR credentials remain unreliable, so backend/frontend artifacts were copied to ECS and Docker images were built locally on the ECS host; infra images were tagged locally with the same `CICI_IMAGE_TAG`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.0.B1-customer-insight-20260515-161832`, image id `sha256:6996e499dcab71f408cfe068901292d556e826436c86a96781137c34dd6144e8`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.0.B1-customer-insight-20260515-161832`, image id `sha256:e9f5fc0152790533fec500ccfe321897deee37c8f3cb1410ab617ad04bcc0403`.
+  - Backup directory: `/opt/cici/backups/20260515-161843-before-2.0.B1-customer-insight-20260515-161832`, containing env, compose/nginx deploy files, and `postgres.dump`.
+  - Deploy command used on ECS: copy updated compose/nginx files into `/opt/cici/deploy`, update `/opt/cici/deploy/acr.env` `CICI_IMAGE_TAG`, then `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d`.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; Flyway latest rows were `52|kb embedding model settings|true`, `51|customer insight ai app|true`, and `50|embed app backend|true`; frontend Nginx config test passed; server-local HTTPS vhost smoke for `autoservice.agentcici.com` returned HTTP 200 for `/`, `/sdk/meeting-minutes.js`, and Open API preflight; fixed-password login succeeded; `GET /ai/customer-insights/catalog` returned HTTP 200 with 26 modules.
+  - Durability follow-up: repair ACR credentials and push/recreate this tag in ACR; until then this release image set is present on the ECS host but not guaranteed recoverable from registry after host/image cleanup.
 
 - 2.0.B1 Open API CORS hotfix on 2026-05-15:
   - Release tag in `/opt/cici/deploy/acr.env`: `2.0.B1-openapi-cors-20260515-1518`.

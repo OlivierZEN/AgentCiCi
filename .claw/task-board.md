@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-15T08:06:30Z
+updated_at: 2026-05-15T08:24:00Z
 updated_by: ai
 status: active
 board_status: active
@@ -31,7 +31,7 @@ board_status: active
 
 ### TASK-100 Frontend customer insight workspace
 
-- status: in_progress
+- status: completed
 - priority: P1
 - owner_role: frontend-product-assistant
 - spec_path: `docs/specs/FEAT-034-customer-insight-ai-app.md`
@@ -41,6 +41,8 @@ board_status: active
   - 2026-05-15T05:53:53Z 按用户截图反馈完成视觉收敛：移除多余小标题，减少项目/模块/摘要区横线，隐藏客户洞察 Markdown 分隔线，避免激活 rail tooltip 遮挡页面。
   - 2026-05-15T06:14:10Z 按用户截图反馈将模块菜单改为分组折叠模式，当前分组默认展开，其他分组折叠；分组标题新增浅金底、边线和展开/收起指示，组间分隔更明显。
   - 2026-05-15T06:44:00Z 按用户反馈补入“业务闭环”模块组，覆盖签约合同、订单与履约、客户服务、续约与增购；前端文案同步为合同订单/客户服务语义，旧项目打开时由后端自动补齐新增模块。
+  - 2026-05-15T08:24:00Z 已随提交 `0c291df` 发布到线上测试环境，`/ai/customer-insights/catalog` 线上 smoke 返回 26 个模块。
+- completed_at: 2026-05-15T08:24:00Z
 - verification:
   - `frontend`: 2026-05-15T05:53:53Z `npm run build` -> success（保留 Vite chunk-size warning）。
   - `browser`: 2026-05-15T05:53:53Z Playwright Chrome desktop 1280x720 与 mobile 390x844 screenshots -> success。
@@ -54,7 +56,8 @@ board_status: active
   - `git`: 2026-05-15T06:44:00Z `git diff --check` -> success。
   - `browser`: 2026-05-15T06:44:00Z Playwright CLI desktop smoke -> success，客户洞察显示 `业务闭环`、`签约合同`、`订单与履约`、`客户服务`，项目计数为 `/26`。
   - `browser`: 2026-05-15T06:44:00Z mobile 390x844 overflow measurement -> success，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
-- next_action: 后续补齐真实合同/订单/客服字段级连接器与 CloudCC 数据源场景。
+  - `deploy`: 2026-05-15T08:24:00Z ECS online test deploy `2.0.B1-customer-insight-20260515-161832` -> success；固定密码登录后 `GET /ai/customer-insights/catalog` -> HTTP 200，`count=26`。
+- next_action: 后续补齐真实合同/订单/客服字段级连接器与 CloudCC 数据源场景时新开任务。
 
 ### TASK-097 Assistant AI apps workspace
 
@@ -1023,6 +1026,7 @@ board_status: active
   - 已给 `deploy/nginx.cici.conf` 与 `deploy/nginx.cici.ssl.conf` 补充 `/openapi/` 代理。
   - 2026-05-15T15:12:35+08:00 已按 CloudCC 页面直接 `fetch` Open API 的 CORS 报错补充 `/openapi/v1/**` 专用 CORS filter；2026-05-15T15:14:00+08:00 按用户要求把默认与部署示例改为 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*`，即放开所有浏览器 Origin。
   - 2026-05-15T16:06:30+08:00 已修复 API 调用中 file-backed builtin skill 资源读取路径：运行时从扫描到的 `manifest.json` 同目录解析并缓存 `SKILL.md` 与模块文档，降低 Spring Boot jar/classpath 差异导致入口资源丢失的风险；同时调用日志支持点击摘要查看完整 request/response/error 详情，移动端改为无横向溢出的分隔线列表。
+  - 2026-05-15T16:22:31+08:00 已验证本地 `cici-system` Open API：后端 `8080` 带临时 Key 的 health 与 stream 可用，stream 返回 `meta/phase/delta/done` 并写入成功调用日志；用户提供的 `5173/openapi/...` 地址不可用，原因是当前 Vite proxy 未配置 `/openapi`。
 - verification:
   - `git`: `git diff --check -- docs/specs/FEAT-021-agent-open-api.md .claw/task-board.md .claw/current-status.md` -> success
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest test` -> success（覆盖 stream wrapper 与 `GET /agents/{agentId}/api-calls`）
@@ -1052,7 +1056,12 @@ board_status: active
   - `frontend`: 2026-05-15T16:06:30+08:00 `npm run build` -> success（保留 Vite chunk-size warning）。
   - `git`: 2026-05-15T16:06:30+08:00 targeted `git diff --check` for file-backed catalog and Open API log UI files -> success。
   - `browser`: 2026-05-15T16:06:30+08:00 in-app Browser desktop 1280x720 and mobile 390x844 QA -> success；调用日志详情完整展示 `cloudcc-customization-expert-common/SKILL.md`，移动端 `documentElement.scrollWidth=390`、dialog content `scrollWidth=clientWidth=390`。
-- next_action: 将 file-backed builtin skill 资源读取与调用日志详情修复发布到线上测试环境后，在 CloudCC 实际页面重试 Open API stream 调用。
+  - `api`: 2026-05-15T16:22:31+08:00 `GET http://192.168.0.105:8080/openapi/v1/agents/cici-system/health` with temporary API Key -> HTTP 200，`enabled=true`、`published=true`、`apiChannelEnabled=true`。
+  - `api`: 2026-05-15T16:22:31+08:00 `POST http://192.168.0.105:8080/openapi/v1/agents/cici-system/chat/stream` with temporary API Key -> HTTP 200 SSE，收到 `meta/phase/delta/done`，response summary 为“收到，已确认开放 API stream smoke 运行正常。”，`traceId=9bb8986c-8a6e-4bdb-b0bf-b3da837a2b95`。
+  - `api`: 2026-05-15T16:22:31+08:00 `POST http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` with temporary API Key -> HTTP 404；`GET /health` 同 5173 地址返回 Vite SPA HTML，确认本地 dev proxy 未覆盖 `/openapi`。
+  - `api`: 2026-05-15T16:22:31+08:00 `OPTIONS http://192.168.0.105:8080/openapi/v1/agents/cici-system/chat/stream` with `Origin: https://cnbh01.cloudcc.cn` -> HTTP 403 `Invalid CORS request`，本地运行进程未放行该 Origin。
+  - `cleanup`: 2026-05-15T16:22:31+08:00 temporary API credentials `6` and `7` -> revoked。
+- next_action: 若要本地通过 `5173/openapi/...` 调用，补 Vite `/openapi` proxy；若要从 CloudCC 浏览器跨域直连本地 `8080`，确认本地后端 CORS 环境变量已注入运行进程。随后再在 CloudCC 实际页面重试 Open API stream 调用。
 - handoff_notes:
   - 首版建议只开放已启用、已发布、且绑定 `api` channel 的 Agent。
   - 当前已支持 `Authorization: Bearer cici_ak_...` 与 `X-Cici-Api-Key`；`TenantContextFilter` 已跳过 Open API Key 的 JWT 解析。
