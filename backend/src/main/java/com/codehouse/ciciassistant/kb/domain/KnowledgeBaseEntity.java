@@ -55,6 +55,15 @@ public class KnowledgeBaseEntity {
     @Column(name = "score_threshold", nullable = false)
     private Double scoreThreshold;
 
+    @Column(name = "embedding_provider", nullable = false, length = 64)
+    private String embeddingProvider;
+
+    @Column(name = "embedding_model", nullable = false, length = 128)
+    private String embeddingModel;
+
+    @Column(name = "embedding_dimension", nullable = false)
+    private Integer embeddingDimension;
+
     protected KnowledgeBaseEntity() {
     }
 
@@ -71,6 +80,9 @@ public class KnowledgeBaseEntity {
         this.retrievalStrategy = "VECTOR";
         this.topK = 5;
         this.scoreThreshold = 0.0;
+        this.embeddingProvider = "local";
+        this.embeddingModel = "local-hash";
+        this.embeddingDimension = 1024;
     }
 
     public Long getId() {
@@ -129,6 +141,18 @@ public class KnowledgeBaseEntity {
         return scoreThreshold == null ? 0.0 : scoreThreshold;
     }
 
+    public String getEmbeddingProvider() {
+        return embeddingProvider == null || embeddingProvider.isBlank() ? "local" : embeddingProvider;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel == null || embeddingModel.isBlank() ? "local-hash" : embeddingModel;
+    }
+
+    public Integer getEmbeddingDimension() {
+        return embeddingDimension == null || embeddingDimension < 4 ? 1024 : embeddingDimension;
+    }
+
     public void update(String name, String description, String status) {
         this.name = name;
         this.description = description;
@@ -152,13 +176,19 @@ public class KnowledgeBaseEntity {
                                         String chunkDelimiter,
                                         String retrievalStrategy,
                                         Integer topK,
-                                        Double scoreThreshold) {
+                                        Double scoreThreshold,
+                                        String embeddingProvider,
+                                        String embeddingModel,
+                                        Integer embeddingDimension) {
         this.chunkSize = chunkSize;
         this.chunkOverlap = chunkOverlap;
         this.chunkDelimiter = chunkDelimiter;
         this.retrievalStrategy = retrievalStrategy;
         this.topK = topK;
         this.scoreThreshold = scoreThreshold;
+        this.embeddingProvider = embeddingProvider;
+        this.embeddingModel = embeddingModel;
+        this.embeddingDimension = embeddingDimension;
         this.updatedAt = Instant.now();
     }
 }

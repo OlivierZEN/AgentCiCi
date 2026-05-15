@@ -15,6 +15,9 @@ type KnowledgeBase = {
   retrievalStrategy?: string;
   topK?: number;
   scoreThreshold?: number;
+  embeddingProvider?: string;
+  embeddingModel?: string;
+  embeddingDimension?: number;
 };
 type KbDocument = {
   id: number;
@@ -57,6 +60,16 @@ type BatchFeedback = {
   tone: "success" | "warning";
   title: string;
   detail: string;
+};
+
+type EmbeddingModelOption = {
+  providerCode: string;
+  providerName: string;
+  modelName: string;
+  displayLabel: string;
+  defaultDimension: number;
+  dimensionChoices: number[];
+  supportsCustomDimension: boolean;
 };
 
 const STATUS_LABEL: Record<string, string> = {
@@ -107,6 +120,10 @@ export default function AdminKnowledgePage() {
   const [chunkDelimiter, setChunkDelimiter] = useState("\\n");
   const [topK, setTopK] = useState(5);
   const [scoreThreshold, setScoreThreshold] = useState(0);
+  const [embeddingProvider, setEmbeddingProvider] = useState("local");
+  const [embeddingModel, setEmbeddingModel] = useState("local-hash");
+  const [embeddingDimension, setEmbeddingDimension] = useState(1024);
+  const [embeddingOptions, setEmbeddingOptions] = useState<EmbeddingModelOption[]>([]);
   const [previewText, setPreviewText] = useState("");
   const [previewChunks, setPreviewChunks] = useState<Array<{ index: number; length: number; content: string }>>([]);
   const [previewExecuted, setPreviewExecuted] = useState(false);
@@ -166,9 +183,19 @@ export default function AdminKnowledgePage() {
       setChunkDelimiter(delimiter === "\n" ? "\\n" : delimiter);
       setTopK(Number(data.topK ?? 5));
       setScoreThreshold(Number(data.scoreThreshold ?? 0));
+      setEmbeddingProvider(String(data.embeddingProvider ?? "local"));
+      setEmbeddingModel(String(data.embeddingModel ?? "local-hash"));
+      setEmbeddingDimension(Number(data.embeddingDimension ?? 1024));
     },
     [headers],
   );
+
+  const loadEmbeddingOptions = useCallback(async () => {
+    const res = await fetch("/kb/embedding-models", { headers: headers() });
+    const json = await res.json();
+    if (!json.success) return;
+    setEmbeddingOptions((json.data ?? []) as EmbeddingModelOption[]);
+  }, [headers]);
 
   const createOrUpdateKb = async () => {
     if (!kbName.trim()) return;
@@ -205,6 +232,9 @@ export default function AdminKnowledgePage() {
         retrievalStrategy: "VECTOR",
         topK,
         scoreThreshold,
+        embeddingProvider,
+        embeddingModel,
+        embeddingDimension,
       }),
     });
     const json = await res.json();
@@ -746,13 +776,15 @@ export default function AdminKnowledgePage() {
     setChunkBatchFeedback(null);
     void listDocuments(kb.id);
     void loadKbSettings(kb.id);
+    void loadEmbeddingOptions();
     void loadRetrievalLogs(kb.id);
     void loadMetadataFields(kb.id);
   };
 
   useEffect(() => {
     void listKnowledgeBases();
-  }, [listKnowledgeBases]);
+    void loadEmbeddingOptions();
+  }, [listKnowledgeBases, loadEmbeddingOptions]);
 
   useEffect(() => {
     if (!selectedKb) return;
@@ -765,9 +797,10 @@ export default function AdminKnowledgePage() {
   useEffect(() => {
     if (!selectedKb || detailTab !== "settings") return;
     void loadKbSettings(selectedKb.id);
+    void loadEmbeddingOptions();
     void loadRetrievalLogs(selectedKb.id);
     void loadMetadataFields(selectedKb.id);
-  }, [selectedKb, detailTab, loadKbSettings, loadRetrievalLogs, loadMetadataFields]);
+  }, [selectedKb, detailTab, loadKbSettings, loadEmbeddingOptions, loadRetrievalLogs, loadMetadataFields]);
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -805,6 +838,27 @@ export default function AdminKnowledgePage() {
   );
   const selectedDocCount = selectedDocIds.size;
   const selectedChunkCount = selectedChunkIds.size;
+  const selectedEmbeddingValue = `${embeddingProvider}:::${embeddingModel}`;
+  const selectedEmbeddingOption = embeddingOptions.find(
+    (option) => option.providerCode === embeddingProvider && option.modelName === embeddingModel,
+  );
+  const visibleEmbeddingOptions = selectedEmbeddingOption || embeddingProvider === "local"
+    ? embeddingOptions
+    : [
+        {
+          providerCode: embeddingProvider,
+          providerName: embeddingProvider,
+          modelName: embeddingModel,
+          displayLabel: `${embeddingModel} · ${embeddingProvider}`,
+          defaultDimension: embeddingDimension,
+          dimensionChoices: [embeddingDimension],
+          supportsCustomDimension: false,
+        },
+        ...embeddingOptions,
+      ];
+  const embeddingDimensionChoices = selectedEmbeddingOption?.dimensionChoices?.length
+    ? selectedEmbeddingOption.dimensionChoices
+    : [embeddingDimension];
 
   /* ─── KB Grid View ─── */
   if (viewMode === "grid") {
@@ -883,7 +937,7 @@ export default function AdminKnowledgePage() {
               </p>
               <div className="dify-kb-card__meta">
                 <span className="dify-kb-card__tag">通用</span>
-                <span className="dify-kb-card__tag">向量检索</span>
+                <span className="dify-kb-card__tag">{kb.embeddingModel ?? "向量检索"}</span>
               </div>
               <div className="dify-kb-card__footer">
                 <span className="dify-kb-card__stat">
@@ -1378,6 +1432,53 @@ export default function AdminKnowledgePage() {
                 <button type="button" className="dify-btn dify-btn--primary" onClick={() => void saveKbSettings()}>
                   保存切片/检索参数
                 </button>
+              </div>
+
+              <h3 className="dify-kb-main__title dify-kb-main__title--section">向量模型</h3>
+              <div className="dify-kb-embedding-note">
+                <span>使用已启用模型厂商的 embedding 模型生成文档与问题向量。更换模型或维度后，需要重建已发布文档索引。</span>
+              </div>
+              <div className="dify-kb-settings__grid dify-kb-settings__grid--double">
+                <label className="dify-field">
+                  <span className="dify-field__label">embedding 模型</span>
+                  <select
+                    className="dify-field__input"
+                    value={selectedEmbeddingValue}
+                    onChange={(e) => {
+                      const [providerCode, modelName] = e.target.value.split(":::");
+                      const option = embeddingOptions.find((item) => item.providerCode === providerCode && item.modelName === modelName);
+                      setEmbeddingProvider(providerCode);
+                      setEmbeddingModel(modelName);
+                      setEmbeddingDimension(option?.defaultDimension ?? 1024);
+                    }}
+                  >
+                    {embeddingProvider === "local" && (
+                      <option value="local:::local-hash">local-hash · 本地测试向量</option>
+                    )}
+                    {visibleEmbeddingOptions.map((option) => (
+                      <option key={`${option.providerCode}-${option.modelName}`} value={`${option.providerCode}:::${option.modelName}`}>
+                        {option.displayLabel}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="subtle">
+                    {embeddingOptions.length === 0 ? "请先在模型配置中启用可提供 embedding 的模型厂商。" : "当前列表来自管理端已启用的模型厂商。"}
+                  </span>
+                </label>
+                <label className="dify-field">
+                  <span className="dify-field__label">向量维度</span>
+                  <select
+                    className="dify-field__input"
+                    value={embeddingDimension}
+                    onChange={(e) => setEmbeddingDimension(Number(e.target.value))}
+                    disabled={embeddingProvider === "local"}
+                  >
+                    {embeddingDimensionChoices.map((dimension) => (
+                      <option key={dimension} value={dimension}>{dimension}</option>
+                    ))}
+                  </select>
+                  <span className="subtle">Qdrant collection 维度必须与这里一致。</span>
+                </label>
               </div>
 
               <h3 className="dify-kb-main__title dify-kb-main__title--section">检索参数</h3>

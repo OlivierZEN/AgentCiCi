@@ -104,11 +104,11 @@ public class FileBackedBuiltinSkillCatalog {
                         FileBackedBuiltinSkillManifest.class
                 );
                 String directorySkillCode = inferSkillCodeFromResource(manifestResource);
-                validateManifest(directorySkillCode, manifest);
+                validateManifest(directorySkillCode, manifest, manifestResource);
                 if (disabledCodes.contains(manifest.skillCode().toLowerCase(Locale.ROOT))) {
                     continue;
                 }
-                bundles.add(buildBundle(manifest));
+                bundles.add(buildBundle(manifest, manifestResource));
             }
             bundles.sort(Comparator.comparing(FileBackedBuiltinSkillBundle::skillCode));
             return List.copyOf(bundles);
@@ -117,17 +117,23 @@ public class FileBackedBuiltinSkillCatalog {
         }
     }
 
-    private FileBackedBuiltinSkillBundle buildBundle(FileBackedBuiltinSkillManifest manifest) {
+    private FileBackedBuiltinSkillBundle buildBundle(FileBackedBuiltinSkillManifest manifest, Resource manifestResource) {
+        Map<String, Resource> resourcesByPath = new LinkedHashMap<>();
+        resourcesByPath.put("manifest.json", manifestResource);
         String entrypoint = manifest.entrypoint();
-        byte[] entrypointBytes = readBytes(manifest.skillCode(), entrypoint);
+        Resource entrypointResource = siblingResource(manifestResource, manifest.skillCode(), entrypoint);
+        resourcesByPath.put(entrypoint, entrypointResource);
+        byte[] entrypointBytes = readBytes(manifest.skillCode(), entrypoint, entrypointResource);
         Map<String, FileBackedModuleFile> moduleFiles = new LinkedHashMap<>();
         MessageDigest bundleDigest = sha256();
-        updateDigest(bundleDigest, "manifest.json", readBytes(manifest.skillCode(), "manifest.json"));
+        updateDigest(bundleDigest, "manifest.json", readBytes(manifest.skillCode(), "manifest.json", manifestResource));
         updateDigest(bundleDigest, entrypoint, entrypointBytes);
         for (FileBackedBuiltinSkillManifest.Module module : manifest.modules()) {
             for (String file : module.files()) {
                 String resourcePath = module.code() + "/" + file;
-                byte[] bytes = readBytes(manifest.skillCode(), resourcePath);
+                Resource documentResource = siblingResource(manifestResource, manifest.skillCode(), resourcePath);
+                resourcesByPath.put(resourcePath, documentResource);
+                byte[] bytes = readBytes(manifest.skillCode(), resourcePath, documentResource);
                 String checksum = sha256Hex(bytes);
                 moduleFiles.put(module.code() + "/" + file, new FileBackedModuleFile(module.code(), file, checksum));
                 updateDigest(bundleDigest, resourcePath, bytes);
@@ -139,11 +145,12 @@ public class FileBackedBuiltinSkillCatalog {
                 "classpath:/" + ROOT + "/" + manifest.skillCode(),
                 sha256Hex(entrypointBytes),
                 HexFormat.of().formatHex(bundleDigest.digest()),
-                Map.copyOf(moduleFiles)
+                Map.copyOf(moduleFiles),
+                Map.copyOf(resourcesByPath)
         );
     }
 
-    private void validateManifest(String directorySkillCode, FileBackedBuiltinSkillManifest manifest) {
+    private void validateManifest(String directorySkillCode, FileBackedBuiltinSkillManifest manifest, Resource manifestResource) {
         if (manifest.schemaVersion() != 1) {
             throw new IllegalStateException("Unsupported builtin skill manifest schemaVersion: " + manifest.schemaVersion());
         }
@@ -159,7 +166,7 @@ public class FileBackedBuiltinSkillCatalog {
         if (!"SKILL.md".equals(manifest.entrypoint())) {
             throw new IllegalStateException("File-backed builtin skill entrypoint must be SKILL.md: " + manifest.skillCode());
         }
-        readBytes(manifest.skillCode(), manifest.entrypoint());
+        readBytes(manifest.skillCode(), manifest.entrypoint(), siblingResource(manifestResource, manifest.skillCode(), manifest.entrypoint()));
         for (FileBackedBuiltinSkillManifest.Module module : manifest.modules()) {
             if (!isSafeSegment(module.code())) {
                 throw new IllegalStateException("Invalid builtin skill module code: " + module.code());
@@ -171,7 +178,8 @@ public class FileBackedBuiltinSkillCatalog {
                 if (!ALLOWED_DOC_FILES.contains(file)) {
                     throw new IllegalStateException("Unsupported builtin skill document file: " + module.code() + "/" + file);
                 }
-                readBytes(manifest.skillCode(), module.code() + "/" + file);
+                String resourcePath = module.code() + "/" + file;
+                readBytes(manifest.skillCode(), resourcePath, siblingResource(manifestResource, manifest.skillCode(), resourcePath));
             }
         }
     }
@@ -184,18 +192,42 @@ public class FileBackedBuiltinSkillCatalog {
         return matcher.group(1);
     }
 
-    private byte[] readBytes(String skillCode, String relativePath) {
+    private Resource siblingResource(Resource manifestResource, String skillCode, String relativePath) {
         if (!isSafeSegment(skillCode) || relativePath.contains("..") || relativePath.startsWith("/")) {
             throw new IllegalArgumentException("Unsafe builtin skill resource path");
         }
         try {
-            Resource resource = resourcePatternResolver.getResource("classpath:" + ROOT + "/" + skillCode + "/" + relativePath);
+            return manifestResource.createRelative(relativePath);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to resolve builtin skill resource: " + skillCode + "/" + relativePath, ex);
+        }
+    }
+
+    private byte[] readBytes(String skillCode, String relativePath) {
+        if (!isSafeSegment(skillCode) || relativePath.contains("..") || relativePath.startsWith("/")) {
+            throw new IllegalArgumentException("Unsafe builtin skill resource path");
+        }
+        Optional<FileBackedBuiltinSkillBundle> bundle = findBundle(skillCode);
+        if (bundle.isPresent()) {
+            Resource resource = bundle.get().resourcesByPath().get(relativePath);
+            if (resource != null) {
+                return readBytes(skillCode, relativePath, resource);
+            }
+        }
+        Resource resource = resourcePatternResolver.getResource("classpath:" + ROOT + "/" + skillCode + "/" + relativePath);
+        return readBytes(skillCode, relativePath, resource);
+    }
+
+    private byte[] readBytes(String skillCode, String relativePath, Resource resource) {
+        try {
             if (!resource.exists()) {
-                throw new IllegalStateException("Missing builtin skill resource: " + skillCode + "/" + relativePath);
+                throw new IllegalStateException("Missing builtin skill resource: " + skillCode + "/" + relativePath
+                        + " (source=" + resource.getDescription() + ")");
             }
             return resource.getInputStream().readAllBytes();
         } catch (IOException ex) {
-            throw new IllegalStateException("Failed to read builtin skill resource: " + skillCode + "/" + relativePath, ex);
+            throw new IllegalStateException("Failed to read builtin skill resource: " + skillCode + "/" + relativePath
+                    + " (source=" + resource.getDescription() + ")", ex);
         }
     }
 
@@ -263,7 +295,8 @@ public class FileBackedBuiltinSkillCatalog {
             String resourceUri,
             String entrypointChecksum,
             String bundleChecksum,
-            Map<String, FileBackedModuleFile> moduleFiles
+            Map<String, FileBackedModuleFile> moduleFiles,
+            Map<String, Resource> resourcesByPath
     ) {
         public Optional<FileBackedBuiltinSkillManifest.Module> module(String moduleCode) {
             String normalized = normalizeKey(moduleCode);

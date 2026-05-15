@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-14T11:56:09Z
+updated_at: 2026-05-15T07:26:28Z
 updated_by: ai
 status: active
 ---
@@ -16,6 +16,31 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.0.B1 Open API CORS hotfix on 2026-05-15:
+  - Release tag in `/opt/cici/deploy/acr.env`: `2.0.B1-openapi-cors-20260515-1518`.
+  - Scope: backend Open API CORS only; `/openapi/v1/**` now has a dedicated CORS filter and production env `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*`, allowing browser preflight from all origins for `Authorization`, `Content-Type`, `X-Cici-Api-Key`, `Idempotency-Key`, and related headers.
+  - Source control basis: clean temporary worktree from `HEAD 6e6868c`; only Open API CORS backend/config/deploy files were patched before packaging.
+  - Build: temporary worktree `backend mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiCorsConfigTest test` succeeded; `backend mvn -q -Dmaven.repo.local=.m2 -DskipTests package` produced `cc-cici-assistant-backend-0.0.1-SNAPSHOT.jar`.
+  - Deployment method: because ACR credentials are still not reliable, the jar and deploy compose were copied to ECS and the backend image was built locally on the ECS host.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.0.B1-openapi-cors-20260515-1518`, image id `sha256:5c904053aa0efc74d2e9673d6815d7fdb18d1a96765ab1e1be2c0f0d0681cf89`.
+  - Current frontend/database/redis/rabbitmq/qdrant images were also tagged with `2.0.B1-openapi-cors-20260515-1518` so the compose-wide `CICI_IMAGE_TAG` remains resolvable locally.
+  - Backup directory: `/opt/cici/backups/20260515-152355-before-openapi-cors`, containing `acr.env.before-openapi-cors`, `docker-compose.acr.yml.before-openapi-cors`, and `postgres.dump`.
+  - Deploy command used on ECS: update `/opt/cici/deploy/acr.env`, then `docker compose --env-file acr.env -f docker-compose.acr.yml -f docker-compose.acr.ssl.yml up -d --no-deps backend`.
+  - Verified after deploy: `cici-backend` healthy on image `2.0.B1-openapi-cors-20260515-1518`; `GET http://127.0.0.1:8080/actuator/health` returned `UP`; server-local HTTPS vhost preflight for `autoservice.agentcici.com` returned HTTP 200 with `Access-Control-Allow-Origin: *` for both `https://cnbh01.cloudcc.cn` and `https://example.anywhere`; all six compose services remained healthy.
+  - Workstation direct public curl to `https://autoservice.agentcici.com/...` still returned the previously observed connection reset; server-local Host-header smoke remains the trusted verification path for this known network issue.
+
+- 2.0.B1 SDK 404 hotfix on 2026-05-15:
+  - Release tag in `/opt/cici/deploy/acr.env`: `2.0.B1-sdk404fix-20260515-1103`.
+  - Scope: frontend SDK static assets only; the hotfix fixes `meeting-minutes.js` origin resolution so CloudCC parent pages create iframe URLs under `https://autoservice.agentcici.com/embed/meeting-minutes` instead of the CloudCC host.
+  - Source control basis: clean temporary worktree from `HEAD 6e6868c`; only `frontend/public/sdk/meeting-minutes.js` and `frontend/public/sdk/meeting-minutes@1.0.0.js` were patched in the release worktree before build.
+  - Build: temporary worktree `frontend npm install` then `npm run build` succeeded; Vite chunk-size warning remained.
+  - ACR note: Docker login using current `/opt/cici/deploy/acr.env` ACR credentials failed with `unauthorized: authentication required` both locally and on ECS, so the image could not be pushed to ACR during this session.
+  - Deployment method: ECS-local Docker build produced `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.0.B1-sdk404fix-20260515-1103`, image id `sha256:7d575b6ea5f2c8e08a63a3c883b287b143cbe6cf0d62a9ba668f7bdd8426be51`; existing local `2.0.B1` backend/database/redis/rabbitmq/qdrant images were tagged with the same hotfix tag so the single compose `CICI_IMAGE_TAG` can resolve locally.
+  - Backup directory: `/opt/cici/backups/20260515-110703-before-2.0.B1-sdk404fix-20260515-1103`, containing `acr.env.before-sdk404fix`.
+  - Deploy command used on ECS: update `CICI_IMAGE_TAG` in `/opt/cici/deploy/acr.env`, then `docker compose --env-file acr.env -f docker-compose.acr.yml -f docker-compose.acr.ssl.yml up -d --no-deps frontend`.
+  - Verified after deploy: `cici-frontend` healthy, backend and infrastructure containers remained healthy, `docker exec cici-frontend nginx -t` passed, and server-local HTTPS vhost smoke for `autoservice.agentcici.com` returned HTTP 200 for `/sdk/meeting-minutes.js`, `/embed/meeting-minutes`, and `/`.
+  - Durability follow-up: refresh/fix ACR credentials and push or recreate this hotfix tag in ACR; until then the hotfix image is present on the ECS host but not guaranteed recoverable from registry after host/image cleanup.
 
 - 2.0.B1 online test release on 2026-05-14:
   - Git commit: `44550bd` on `origin/main`.
@@ -96,6 +121,14 @@ status: active
   - Smoke result:
     - `HEAD http://127.0.0.1:5173/` -> `HTTP/1.1 200 OK`
   - Dev proxy (updated 2026-05-14): `vite.config.ts` / `vite.config.js` forward `/agents`, `/skills`, `/feishu`, `/wecom`, and `/embed/v1` to `VITE_BACKEND_TARGET` or `http://127.0.0.1:8080` so Agent Builder, channel callbacks, embedded app admin/runtime APIs, and related APIs are not answered by Vite as static 404.
+- Local LAN access for development:
+  - Verified on 2026-05-15T07:09:02Z from the host machine using Wi-Fi IP `192.168.0.105`.
+  - Frontend Vite already has `server.host: "0.0.0.0"` in `frontend/vite.config.ts`; `npm run dev` listens on `*:5173`.
+  - Spring Boot local profile listens on `*:8080`; no `server.address` override is configured.
+  - Verified smoke:
+    - `GET http://192.168.0.105:5173/` -> `HTTP 200`
+    - `GET http://192.168.0.105:8080/actuator/health` -> `HTTP 200`
+  - Other LAN devices should use `http://<host-lan-ip>:5173/`. If macOS blocks the connection, allow incoming connections for the Node/Vite process and Java/Maven backend process in Firewall settings.
 - Local service restart from Codex desktop with PostgreSQL:
   - `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant`
   - `screen -dmS cici-backend /bin/zsh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici/backend && exec mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local > /tmp/cici-backend.log 2>&1'`

@@ -68,8 +68,18 @@ public class KnowledgeBaseController {
                 request.chunkDelimiter(),
                 request.retrievalStrategy(),
                 request.topK(),
-                request.scoreThreshold()
+                request.scoreThreshold(),
+                request.embeddingProvider(),
+                request.embeddingModel(),
+                request.embeddingDimension()
         )));
+    }
+
+    @GetMapping("/embedding-models")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEmbeddingModelOptions() {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEmbeddingModelOptions(orgId));
     }
 
     @DeleteMapping("/{id}")
@@ -351,7 +361,10 @@ public class KnowledgeBaseController {
             String chunkDelimiter,
             String retrievalStrategy,
             Integer topK,
-            Double scoreThreshold
+            Double scoreThreshold,
+            String embeddingProvider,
+            String embeddingModel,
+            Integer embeddingDimension
     ) {
     }
 

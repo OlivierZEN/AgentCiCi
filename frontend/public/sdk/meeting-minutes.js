@@ -20,6 +20,8 @@
     return window.location.origin;
   }
 
+  var SDK_ORIGIN = currentScriptOrigin();
+
   function resolveContainer(container) {
     if (!container) {
       return null;
@@ -237,8 +239,7 @@
   }
 
   function open(options) {
-    var sdkOrigin = currentScriptOrigin();
-    var instance = new MeetingInstance(normalizeOptions(options), sdkOrigin);
+    var instance = new MeetingInstance(normalizeOptions(options), SDK_ORIGIN);
     return instance.mount();
   }
 

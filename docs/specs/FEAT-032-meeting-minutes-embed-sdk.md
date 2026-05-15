@@ -788,10 +788,13 @@ Content-Type: application/javascript; charset=utf-8
 
 ### TASK-096 End-to-end CRM embed verification
 
-- status: pending
+- status: in_progress
 - owner_role: qa-integration
 - depends_on: TASK-092, TASK-093, TASK-094, TASK-095
 - scope: admin 嵌入式智能应用调试台、本地模拟父页面、CloudCC Vue 示例页、麦克风权限、desktop/mobile 截图、写回 smoke。
+- progress:
+  - 2026-05-15T02:51:53Z 已修复 CloudCC 页面打开 AI 听记时报 404 的 iframe URL 生成问题。根因是 SDK 在 `open()` 点击回调中读取 `document.currentScript`，真实 CloudCC/Vue 场景下该值为空，于是回退到 CloudCC 父页面 origin 并生成 `https://yundong.lightning.cloudcc.cn/embed/meeting-minutes`。现两份公开 SDK 均改为加载时缓存脚本 origin，模拟验证会生成 `https://autoservice.agentcici.com/embed/meeting-minutes?...`。
+  - 2026-05-15T03:07:36Z 已将 SDK origin 修复发布到线上 ECS，frontend 容器为 `cici-frontend:2.0.B1-sdk404fix-20260515-1103`；服务器本地 Host `autoservice.agentcici.com` 下 `/sdk/meeting-minutes.js`、`/embed/meeting-minutes` 与 `/` 均 HTTP 200，线上 SDK 内容已包含 `SDK_ORIGIN`。当前 ACR 凭据返回 unauthorized，hotfix 镜像尚未推送到 ACR，需要后续持久化。
 
 ## 验收标准
 

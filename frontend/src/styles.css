@@ -13050,6 +13050,16 @@ td.skills-data-table__actions > * {
   margin-bottom: 10px;
 }
 
+.admin-main > .dify-kb-page .dify-kb-embedding-note {
+  margin: 0 0 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--admin-line);
+  border-bottom: 1px solid var(--admin-line);
+  color: var(--admin-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
 .admin-main .admin-page .dify-modal {
   border-radius: 10px;
   box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);

@@ -816,6 +816,7 @@ frontend/src/assistant/
 - 已按最新 UI 反馈移除 API Key 管理弹窗 tab 和行操作的弧形边框背景按钮样式，强制恢复为无背景、无边框、无圆角、无阴影的文本 tab / 文本命令；同时将“产品面板内部禁止带弧形边框背景伪按钮”写入 `DESIGN.md`、`DESIGN.json`、`AGENTS.md` 和 `README.md`。
 - 已按截图反馈移除 API Key 管理弹窗表单下方“当前执行身份”文字，避免与上方 run-as 用户选择器重复；已有 Key 的执行用户仍在列表列中展示。
 - 已补 `/openapi/` Nginx 代理到 `deploy/nginx.cici.conf` 和 `deploy/nginx.cici.ssl.conf`。
+- 2026-05-15T15:12:35+08:00 已修复浏览器从 CloudCC 页面直接调用 Open API 的 CORS 预检问题：新增 `/openapi/v1/**` 专用 CORS filter，支持配置 `app.agent-open-api.cors-allowed-origins` / `cors-allowed-origin-patterns`，允许 `Authorization`、`Content-Type`、`X-Cici-Api-Key`、`Idempotency-Key` 等请求头。2026-05-15T15:14:00+08:00 按用户要求将默认与部署示例调整为 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*`，即所有浏览器 Origin 均可调用；安全建议仍是 API Key 优先服务端持有，前端直传 Key 代表接受暴露风险。
 - 当前未完成：知识库/Skill 越权专项测试、真实模型链路 smoke 与公网 `/openapi` 部署验证。
 
 ## 交接说明

@@ -121,6 +121,94 @@ public class AgentRunTraceService {
                 Instant.now()));
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public String recordCustomerInsightRun(CustomerInsightTraceInput input) {
+        Instant endedAt = input.endedAt() == null ? Instant.now() : input.endedAt();
+        Instant startedAt = input.startedAt() == null ? endedAt : input.startedAt();
+        int elapsedMs = (int) Math.max(0L, Duration.between(startedAt, endedAt).toMillis());
+        String traceId = UUID.randomUUID().toString();
+        String status = input.success() ? "success" : "failed";
+        Map<String, Object> model = Map.of(
+                "provider", emptyToBlank(input.modelProvider()),
+                "modelName", emptyToBlank(input.modelName())
+        );
+        List<Map<String, Object>> nodes = List.of(
+                Map.of(
+                        "id", "customer-insight-request",
+                        "type", "USER_MESSAGE",
+                        "title", "客户洞察输入",
+                        "status", "success",
+                        "startedAt", startedAt.toString(),
+                        "endedAt", startedAt.toString(),
+                        "elapsedMs", 0,
+                        "summary", clip(input.inputSummary(), 220),
+                        "metadata", Map.of(
+                                "appCode", "customer-insight",
+                                "projectId", input.projectPublicId(),
+                                "sectionCode", input.sectionCode()
+                        )
+                ),
+                Map.of(
+                        "id", "customer-insight-model",
+                        "type", "MODEL_CALL",
+                        "title", "客户洞察分析",
+                        "status", status,
+                        "startedAt", startedAt.toString(),
+                        "endedAt", endedAt.toString(),
+                        "elapsedMs", elapsedMs,
+                        "summary", clip(input.outputSummary(), 260),
+                        "metadata", model
+                )
+        );
+        Map<String, Object> detail = new LinkedHashMap<>();
+        detail.put("app", Map.of(
+                "appCode", "customer-insight",
+                "projectId", input.projectPublicId(),
+                "sectionCode", input.sectionCode(),
+                "sectionTitle", input.sectionTitle()
+        ));
+        detail.put("request", Map.of(
+                "customerName", clip(input.customerName(), 160),
+                "inputSummary", clip(input.inputSummary(), 800),
+                "sourceSnapshotCount", input.sourceSnapshotCount()
+        ));
+        detail.put("response", Map.of(
+                "summary", clip(input.outputSummary(), 1200),
+                "error", clip(input.errorMessage(), 600)
+        ));
+        detail.put("model", model);
+        detail.put("skills", Map.of(
+                "activeSkillCode", input.skillCode(),
+                "activatedSkillCodes", List.of(input.skillCode()),
+                "skillNames", List.of(input.skillCode()),
+                "boundSkillCodes", List.of(input.skillCode())
+        ));
+        traceRepository.save(new AgentRunTraceEntity(
+                traceId,
+                input.orgId(),
+                input.userId(),
+                "web:customer-insight:" + input.projectPublicId(),
+                "cici-system",
+                "web",
+                status,
+                clip(input.customerName() + " · " + input.sectionTitle(), 80),
+                clip(input.outputSummary(), 512),
+                emptyToBlank(input.modelName()),
+                input.skillCode(),
+                startedAt,
+                endedAt,
+                elapsedMs,
+                1,
+                0,
+                0,
+                "[]",
+                writeJson(List.of(input.skillCode())),
+                writeJson(nodes),
+                writeJson(detail),
+                Instant.now()));
+        return traceId;
+    }
+
     public Map<String, Object> listRunLogs(String orgId, String userId, RunLogQuery query) {
         Instant to = query.to() == null ? Instant.now() : query.to();
         Instant from = query.from() == null ? to.minus(Duration.ofDays(7)) : query.from();
@@ -841,6 +929,25 @@ public class AgentRunTraceService {
             List<ToolCallTraceInput> toolCalls,
             AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult,
             int workflowElapsedMs,
+            Instant startedAt,
+            Instant endedAt) {
+    }
+
+    public record CustomerInsightTraceInput(
+            String orgId,
+            String userId,
+            String projectPublicId,
+            String customerName,
+            String sectionCode,
+            String sectionTitle,
+            String skillCode,
+            String modelProvider,
+            String modelName,
+            String inputSummary,
+            String outputSummary,
+            String errorMessage,
+            int sourceSnapshotCount,
+            boolean success,
             Instant startedAt,
             Instant endedAt) {
     }

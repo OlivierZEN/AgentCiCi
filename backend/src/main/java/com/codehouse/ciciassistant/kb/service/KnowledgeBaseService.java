@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogEntity;
 import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -50,11 +51,15 @@ public class KnowledgeBaseService {
     private final KbDocumentMetadataRepository documentMetadataRepository;
     private final KbRetrievalLogRepository retrievalLogRepository;
     private final AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
+    private final ModelProviderService modelProviderService;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final String indexingMode;
+    private final String defaultEmbeddingProvider;
+    private final String defaultEmbeddingModel;
+    private final Integer defaultEmbeddingDimension;
     private final Path storageRoot;
 
     public KnowledgeBaseService(KnowledgeBaseRepository kbRepository,
@@ -64,12 +69,16 @@ public class KnowledgeBaseService {
                                 KbDocumentMetadataRepository documentMetadataRepository,
                                 KbRetrievalLogRepository retrievalLogRepository,
                                 AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
+                                ModelProviderService modelProviderService,
                                 VectorStoreClient vectorStoreClient,
                                 EmbeddingService embeddingService,
                                 RabbitTemplate rabbitTemplate,
                                 ObjectMapper objectMapper,
                                 @Value("${app.kb.storage-dir:./data/kb-files}") String storageDir,
-                                @Value("${app.kb.indexing.mode:local}") String indexingMode) {
+                                @Value("${app.kb.indexing.mode:local}") String indexingMode,
+                                @Value("${app.kb.embedding.provider:local}") String defaultEmbeddingProvider,
+                                @Value("${app.kb.embedding.model:local-hash}") String defaultEmbeddingModel,
+                                @Value("${app.kb.embedding.dimension:1024}") Integer defaultEmbeddingDimension) {
         this.kbRepository = kbRepository;
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
@@ -77,16 +86,31 @@ public class KnowledgeBaseService {
         this.documentMetadataRepository = documentMetadataRepository;
         this.retrievalLogRepository = retrievalLogRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
+        this.modelProviderService = modelProviderService;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.indexingMode = indexingMode;
+        this.defaultEmbeddingProvider = normalizeEmbeddingProvider(defaultEmbeddingProvider);
+        this.defaultEmbeddingModel = normalizeEmbeddingModel(defaultEmbeddingModel);
+        this.defaultEmbeddingDimension = sanitizeEmbeddingDimension(defaultEmbeddingDimension);
         this.storageRoot = Path.of(storageDir).toAbsolutePath().normalize();
     }
 
     public Map<String, Object> createKnowledgeBase(String orgId, String name, String description) {
-        KnowledgeBaseEntity entity = kbRepository.save(new KnowledgeBaseEntity(orgId, name, description));
+        KnowledgeBaseEntity entity = new KnowledgeBaseEntity(orgId, name, description);
+        entity.updateKnowledgeSettings(
+                entity.getChunkSize(),
+                entity.getChunkOverlap(),
+                entity.getChunkDelimiter(),
+                entity.getRetrievalStrategy(),
+                entity.getTopK(),
+                entity.getScoreThreshold(),
+                defaultEmbeddingProvider,
+                defaultEmbeddingModel,
+                defaultEmbeddingDimension);
+        entity = kbRepository.save(entity);
         return kbPayload(entity);
     }
 
@@ -116,9 +140,26 @@ public class KnowledgeBaseService {
         int topK = sanitizeTopK(command.topK());
         double scoreThreshold = sanitizeScoreThreshold(command.scoreThreshold());
         String retrievalStrategy = normalizeRetrievalStrategy(command.retrievalStrategy());
-        kb.updateKnowledgeSettings(chunkSize, chunkOverlap, chunkDelimiter, retrievalStrategy, topK, scoreThreshold);
+        String embeddingProvider = normalizeEmbeddingProvider(command.embeddingProvider());
+        String embeddingModel = normalizeEmbeddingModel(command.embeddingModel());
+        int embeddingDimension = sanitizeEmbeddingDimension(command.embeddingDimension());
+        kb.updateKnowledgeSettings(
+                chunkSize,
+                chunkOverlap,
+                chunkDelimiter,
+                retrievalStrategy,
+                topK,
+                scoreThreshold,
+                embeddingProvider,
+                embeddingModel,
+                embeddingDimension);
         kbRepository.save(kb);
         return kbSettingsPayload(kb);
+    }
+
+    @Transactional
+    public List<Map<String, Object>> listEmbeddingModelOptions(String orgId) {
+        return modelProviderService.embeddingModelOptions(orgId);
     }
 
     public List<Map<String, Object>> listKnowledgeBases(String orgId) {
@@ -238,6 +279,7 @@ public class KnowledgeBaseService {
             vectorStoreClient.deleteByVectorIds(orgId, List.of(oldVectorId));
         }
         String contentHash = sha256(normalized);
+        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(orgId, chunk.getKnowledgeBaseId());
         String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
                 orgId,
                 chunk.getKnowledgeBaseId(),
@@ -246,7 +288,12 @@ public class KnowledgeBaseService {
                 chunk.getChunkIndex(),
                 normalized,
                 contentHash,
-                embeddingService.embed(normalized)));
+                embeddingService.embed(
+                        orgId,
+                        embeddingConfig.provider(),
+                        embeddingConfig.model(),
+                        embeddingConfig.dimension(),
+                        normalized)));
         chunk.updateContent(normalized, contentHash);
         chunk.setVectorId(vectorId);
         chunkRepository.save(chunk);
@@ -262,6 +309,7 @@ public class KnowledgeBaseService {
         }
         if (enabled) {
             if (chunk.getVectorId() == null || chunk.getVectorId().isBlank()) {
+                EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(orgId, chunk.getKnowledgeBaseId());
                 String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
                         orgId,
                         chunk.getKnowledgeBaseId(),
@@ -270,7 +318,12 @@ public class KnowledgeBaseService {
                         chunk.getChunkIndex(),
                         chunk.getContent(),
                         chunk.getContentHash(),
-                        embeddingService.embed(chunk.getContent())));
+                        embeddingService.embed(
+                                orgId,
+                                embeddingConfig.provider(),
+                                embeddingConfig.model(),
+                                embeddingConfig.dimension(),
+                                chunk.getContent())));
                 chunk.setVectorId(vectorId);
             }
             chunk.enable();
@@ -442,7 +495,12 @@ public class KnowledgeBaseService {
                 orgId,
                 List.of(String.valueOf(kbId)),
                 query,
-                embeddingService.embed(query),
+                embeddingService.embed(
+                        orgId,
+                        kb.getEmbeddingProvider(),
+                        kb.getEmbeddingModel(),
+                        kb.getEmbeddingDimension(),
+                        query),
                 Math.max(topK, 1)));
         ArrayList<Map<String, Object>> hits = new ArrayList<>();
         for (VectorSearchHit hit : rawHits) {
@@ -660,6 +718,7 @@ public class KnowledgeBaseService {
                 tags,
                 null,
                 contentHash));
+        EmbeddingConfig embeddingConfig = embeddingConfigForKnowledgeBase(orgId, normalizedKbId);
         String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
                 orgId,
                 normalizedKbId,
@@ -668,7 +727,12 @@ public class KnowledgeBaseService {
                 null,
                 normalizedContent,
                 contentHash,
-                embeddingService.embed(normalizedContent)));
+                embeddingService.embed(
+                        orgId,
+                        embeddingConfig.provider(),
+                        embeddingConfig.model(),
+                        embeddingConfig.dimension(),
+                        normalizedContent)));
         chunk.setVectorId(vectorId);
         chunkRepository.save(chunk);
         parseLong(normalizedKbId).flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId)).ifPresent(kb -> {
@@ -701,6 +765,9 @@ public class KnowledgeBaseService {
             int chunkSize = kbEntity == null ? DEFAULT_CHUNK_SIZE : sanitizeChunkSize(kbEntity.getChunkSize());
             int chunkOverlap = kbEntity == null ? DEFAULT_CHUNK_OVERLAP : sanitizeChunkOverlap(chunkSize, kbEntity.getChunkOverlap());
             String chunkDelimiter = kbEntity == null ? "\n" : normalizeDelimiter(kbEntity.getChunkDelimiter());
+            String embeddingProvider = kbEntity == null ? defaultEmbeddingProvider : kbEntity.getEmbeddingProvider();
+            String embeddingModel = kbEntity == null ? defaultEmbeddingModel : kbEntity.getEmbeddingModel();
+            Integer embeddingDimension = kbEntity == null ? defaultEmbeddingDimension : kbEntity.getEmbeddingDimension();
             int chunkIndex = 0;
             for (String chunkText : splitToChunks(text, chunkSize, chunkOverlap, chunkDelimiter)) {
                 if (chunkText.isBlank()) {
@@ -725,7 +792,12 @@ public class KnowledgeBaseService {
                         chunkIndex,
                         chunkText,
                         contentHash,
-                        embeddingService.embed(chunkText)));
+                        embeddingService.embed(
+                                doc.getOrgId(),
+                                embeddingProvider,
+                                embeddingModel,
+                                embeddingDimension,
+                                chunkText)));
                 chunk.setVectorId(vectorId);
                 chunkRepository.save(chunk);
                 indexedChunks.add(chunk);
@@ -852,6 +924,9 @@ public class KnowledgeBaseService {
         row.put("retrievalStrategy", kb.getRetrievalStrategy());
         row.put("topK", kb.getTopK());
         row.put("scoreThreshold", kb.getScoreThreshold());
+        row.put("embeddingProvider", kb.getEmbeddingProvider());
+        row.put("embeddingModel", kb.getEmbeddingModel());
+        row.put("embeddingDimension", kb.getEmbeddingDimension());
         if (kb.getDeletedAt() != null) {
             row.put("deletedAt", kb.getDeletedAt().toString());
         }
@@ -887,6 +962,9 @@ public class KnowledgeBaseService {
         row.put("retrievalStrategy", kb.getRetrievalStrategy());
         row.put("topK", kb.getTopK());
         row.put("scoreThreshold", kb.getScoreThreshold());
+        row.put("embeddingProvider", kb.getEmbeddingProvider());
+        row.put("embeddingModel", kb.getEmbeddingModel());
+        row.put("embeddingDimension", kb.getEmbeddingDimension());
         return row;
     }
 
@@ -1044,6 +1122,40 @@ public class KnowledgeBaseService {
         return Math.min(1.0, Math.max(0.0, value));
     }
 
+    private String normalizeEmbeddingProvider(String value) {
+        if (value == null || value.isBlank()) {
+            return "local";
+        }
+        return value.trim();
+    }
+
+    private String normalizeEmbeddingModel(String value) {
+        if (value == null || value.isBlank()) {
+            return "local-hash";
+        }
+        return value.trim();
+    }
+
+    private int sanitizeEmbeddingDimension(Integer value) {
+        if (value == null) {
+            return 1024;
+        }
+        return Math.min(4096, Math.max(4, value));
+    }
+
+    private EmbeddingConfig embeddingConfigForKnowledgeBase(String orgId, String knowledgeBaseId) {
+        return parseLong(knowledgeBaseId)
+                .flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId))
+                .map(kb -> new EmbeddingConfig(
+                        kb.getEmbeddingProvider(),
+                        kb.getEmbeddingModel(),
+                        kb.getEmbeddingDimension()))
+                .orElse(new EmbeddingConfig(
+                        defaultEmbeddingProvider,
+                        defaultEmbeddingModel,
+                        defaultEmbeddingDimension));
+    }
+
     private String normalizeRetrievalStrategy(String value) {
         if (value == null || value.isBlank()) {
             return "VECTOR";
@@ -1170,6 +1282,9 @@ public class KnowledgeBaseService {
         }
     }
 
+    private record EmbeddingConfig(String provider, String model, Integer dimension) {
+    }
+
     private record CleanupResult(boolean success, int deletedChunks, int deletedVectors, String message) {
 
         static CleanupResult from(int deletedChunks, VectorDeleteResult result) {
@@ -1239,7 +1354,10 @@ public class KnowledgeBaseService {
             String chunkDelimiter,
             String retrievalStrategy,
             Integer topK,
-            Double scoreThreshold
+            Double scoreThreshold,
+            String embeddingProvider,
+            String embeddingModel,
+            Integer embeddingDimension
     ) {
     }
 

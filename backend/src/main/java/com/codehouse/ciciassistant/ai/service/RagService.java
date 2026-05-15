@@ -57,6 +57,7 @@ public class RagService {
         }
         long validationStarted = System.nanoTime();
         Map<String, Double> scoreThresholdByKb = new HashMap<>();
+        Map<String, EmbeddingConfig> embeddingConfigByKb = new HashMap<>();
         int topK = 0;
         List<Long> requestedNumericIds = new ArrayList<>();
         Set<Long> seenNumericIds = new LinkedHashSet<>();
@@ -88,6 +89,10 @@ public class RagService {
             allowedKnowledgeBaseIds.add(kbId);
             retrievedKnowledgeBases.add(new RetrievedKnowledgeBase(kbId, kb.getName()));
             scoreThresholdByKb.put(kbId, kb.getScoreThreshold());
+            embeddingConfigByKb.put(kbId, new EmbeddingConfig(
+                    kb.getEmbeddingProvider(),
+                    kb.getEmbeddingModel(),
+                    kb.getEmbeddingDimension()));
             topK = Math.max(topK, kb.getTopK());
         }
         timingsMs.put("validation", elapsedMs(validationStarted));
@@ -97,15 +102,33 @@ public class RagService {
         }
         int safeTopK = Math.max(1, Math.min(20, topK == 0 ? 5 : topK));
         long embeddingStarted = System.nanoTime();
-        List<Float> embedding = embeddingService.embed(query);
+        Map<EmbeddingConfig, List<String>> kbIdsByEmbedding = new LinkedHashMap<>();
+        for (String kbId : allowedKnowledgeBaseIds) {
+            EmbeddingConfig config = embeddingConfigByKb.get(kbId);
+            if (config == null) {
+                config = new EmbeddingConfig("local", "local-hash", 1024);
+            }
+            kbIdsByEmbedding.computeIfAbsent(config, ignored -> new ArrayList<>()).add(kbId);
+        }
+        List<GroupEmbedding> groupEmbeddings = new ArrayList<>();
+        for (Map.Entry<EmbeddingConfig, List<String>> entry : kbIdsByEmbedding.entrySet()) {
+            EmbeddingConfig config = entry.getKey();
+            groupEmbeddings.add(new GroupEmbedding(
+                    entry.getValue(),
+                    embeddingService.embed(orgId, config.provider(), config.model(), config.dimension(), query)));
+        }
         timingsMs.put("embedding", elapsedMs(embeddingStarted));
         long vectorStarted = System.nanoTime();
-        List<VectorSearchHit> hits = vectorStoreClient.search(new VectorSearchQuery(
-                orgId,
-                allowedKnowledgeBaseIds,
-                query,
-                embedding,
-                safeTopK));
+        List<VectorSearchHit> hits = new ArrayList<>();
+        for (GroupEmbedding item : groupEmbeddings) {
+            hits.addAll(vectorStoreClient.search(new VectorSearchQuery(
+                    orgId,
+                    item.knowledgeBaseIds(),
+                    query,
+                    item.embedding(),
+                    safeTopK)));
+        }
+        hits.sort((left, right) -> Double.compare(right.score(), left.score()));
         timingsMs.put("vectorSearch", elapsedMs(vectorStarted));
         long filterStarted = System.nanoTime();
         Set<String> activeKnowledgeBaseIds = new HashSet<>(allowedKnowledgeBaseIds);
@@ -244,5 +267,11 @@ public class RagService {
     }
 
     public record RetrievedKnowledgeBase(String id, String name) {
+    }
+
+    private record EmbeddingConfig(String provider, String model, Integer dimension) {
+    }
+
+    private record GroupEmbedding(List<String> knowledgeBaseIds, List<Float> embedding) {
     }
 }

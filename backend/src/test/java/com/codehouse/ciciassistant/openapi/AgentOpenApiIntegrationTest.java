@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,6 +47,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -55,7 +58,10 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@TestPropertySource(properties = "spring.profiles.active=default")
+@TestPropertySource(properties = {
+        "spring.profiles.active=default",
+        "app.agent-open-api.cors-allowed-origins=*"
+})
 class AgentOpenApiIntegrationTest {
 
     @Autowired
@@ -91,8 +97,33 @@ class AgentOpenApiIntegrationTest {
     @Autowired
     private AgentRunTraceRepository traceRepository;
 
+    @Autowired
+    private TransactionTemplate transactionTemplate;
+
     @MockBean
     private ChatOrchestratorService chatOrchestratorService;
+
+    @Test
+    void shouldAllowWildcardCorsPreflightForOpenApiStream() throws Exception {
+        mockMvc.perform(options("/openapi/v1/agents/{agentId}/chat/stream", "openapi-cors-agent")
+                        .header(HttpHeaders.ORIGIN, "https://cnbh01.cloudcc.cn")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type,idempotency-key"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*"))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, containsString("POST")))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_HEADERS, containsString("authorization")));
+    }
+
+    @Test
+    void shouldAllowAnyOriginCorsPreflightForOpenApi() throws Exception {
+        mockMvc.perform(options("/openapi/v1/agents/{agentId}/chat/stream", "openapi-cors-agent")
+                        .header(HttpHeaders.ORIGIN, "https://another.example")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "*"));
+    }
 
     @Test
     void shouldCreateRotateRevokeApiKeyWithoutStoringPlainKey() throws Exception {
@@ -399,53 +430,55 @@ class AgentOpenApiIntegrationTest {
     }
 
     private void preparePublishedAgent(String agentId, boolean apiChannel) {
-        credentialRepository.findByOrgIdAndAgentIdOrderByCreatedAtDesc("demo-org", agentId)
-                .forEach(credentialRepository::delete);
-        agentChannelBindingRepository.deleteByOrgIdAndAgentId("demo-org", agentId);
-        agentWorkflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc("demo-org", agentId)
-                .forEach(agentWorkflowVersionRepository::delete);
-        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", agentId)
-                .ifPresent(agentDefinitionRepository::delete);
-        agentChannelBindingRepository.flush();
-        agentWorkflowVersionRepository.flush();
-        agentDefinitionRepository.flush();
-        AgentDefinitionEntity agent = agentDefinitionRepository.save(new AgentDefinitionEntity(
-                "demo-org",
-                agentId,
-                "Open API Agent",
-                "test",
-                "hello",
-                "cici-default",
-                "",
-                "",
-                "BALANCED",
-                "COPILOT",
-                "v1",
-                null,
-                false,
-                true));
-        AgentWorkflowVersionEntity version = agentWorkflowVersionRepository.save(new AgentWorkflowVersionEntity(
-                "demo-org",
-                agentId,
-                1,
-                "v1",
-                "test",
-                "export default {}",
-                "{}",
-                "{}",
-                "[]",
-                "[]",
-                "[]",
-                "openapi-test",
-                "[]",
-                "PUBLISHED"));
-        agent.setPublishedVersionId(version.getId());
-        agentDefinitionRepository.save(agent);
-        if (apiChannel) {
-            agentChannelBindingRepository.save(new AgentChannelBindingEntity("demo-org", agentId, "api", true));
-        }
-        agentDefinitionRepository.flush();
-        agentChannelBindingRepository.flush();
+        transactionTemplate.executeWithoutResult(status -> {
+            credentialRepository.findByOrgIdAndAgentIdOrderByCreatedAtDesc("demo-org", agentId)
+                    .forEach(credentialRepository::delete);
+            agentChannelBindingRepository.deleteByOrgIdAndAgentId("demo-org", agentId);
+            agentWorkflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc("demo-org", agentId)
+                    .forEach(agentWorkflowVersionRepository::delete);
+            agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", agentId)
+                    .ifPresent(agentDefinitionRepository::delete);
+            agentChannelBindingRepository.flush();
+            agentWorkflowVersionRepository.flush();
+            agentDefinitionRepository.flush();
+            AgentDefinitionEntity agent = agentDefinitionRepository.save(new AgentDefinitionEntity(
+                    "demo-org",
+                    agentId,
+                    "Open API Agent",
+                    "test",
+                    "hello",
+                    "cici-default",
+                    "",
+                    "",
+                    "BALANCED",
+                    "COPILOT",
+                    "v1",
+                    null,
+                    false,
+                    true));
+            AgentWorkflowVersionEntity version = agentWorkflowVersionRepository.save(new AgentWorkflowVersionEntity(
+                    "demo-org",
+                    agentId,
+                    1,
+                    "v1",
+                    "test",
+                    "export default {}",
+                    "{}",
+                    "{}",
+                    "[]",
+                    "[]",
+                    "[]",
+                    "openapi-test",
+                    "[]",
+                    "PUBLISHED"));
+            agent.setPublishedVersionId(version.getId());
+            agentDefinitionRepository.save(agent);
+            if (apiChannel) {
+                agentChannelBindingRepository.save(new AgentChannelBindingEntity("demo-org", agentId, "api", true));
+            }
+            agentDefinitionRepository.flush();
+            agentChannelBindingRepository.flush();
+        });
     }
 
     private String loginToken(String mobile) throws Exception {

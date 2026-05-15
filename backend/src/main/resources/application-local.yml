@@ -25,11 +25,16 @@ app:
     bootstrap-admin-mobiles: "13800138111,13900009999"
   agent-open-api:
     enabled: true
+    cors-allowed-origins: ["*"]
   kb:
     storage-dir: ./data/kb-files
     indexing:
       mode: mq
     vector-store: qdrant
+    embedding:
+      provider: aliyun-bailian
+      model: text-embedding-v4
+      dimension: 1024
     qdrant:
       base-url: http://localhost:6333
       collection: cici_kb_chunk

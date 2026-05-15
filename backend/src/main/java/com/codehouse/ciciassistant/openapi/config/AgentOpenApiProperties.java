@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.openapi.config;
 
+import java.util.ArrayList;
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -14,6 +16,9 @@ public class AgentOpenApiProperties {
     private int defaultMaxPromptChars = 8000;
     private int defaultMaxResponseChars = 12000;
     private long defaultTimeoutMs = 120000L;
+    private List<String> corsAllowedOrigins = new ArrayList<>();
+    private List<String> corsAllowedOriginPatterns = new ArrayList<>();
+    private long corsMaxAgeSeconds = 3600L;
 
     public boolean isEnabled() {
         return enabled;
@@ -69,5 +74,42 @@ public class AgentOpenApiProperties {
 
     public void setDefaultTimeoutMs(long defaultTimeoutMs) {
         this.defaultTimeoutMs = defaultTimeoutMs;
+    }
+
+    public List<String> getCorsAllowedOrigins() {
+        return corsAllowedOrigins;
+    }
+
+    public void setCorsAllowedOrigins(List<String> corsAllowedOrigins) {
+        this.corsAllowedOrigins = normalizeList(corsAllowedOrigins);
+    }
+
+    public List<String> getCorsAllowedOriginPatterns() {
+        return corsAllowedOriginPatterns;
+    }
+
+    public void setCorsAllowedOriginPatterns(List<String> corsAllowedOriginPatterns) {
+        this.corsAllowedOriginPatterns = normalizeList(corsAllowedOriginPatterns);
+    }
+
+    public long getCorsMaxAgeSeconds() {
+        return corsMaxAgeSeconds;
+    }
+
+    public void setCorsMaxAgeSeconds(long corsMaxAgeSeconds) {
+        this.corsMaxAgeSeconds = corsMaxAgeSeconds;
+    }
+
+    private List<String> normalizeList(List<String> raw) {
+        if (raw == null) {
+            return new ArrayList<>();
+        }
+        List<String> normalized = new ArrayList<>();
+        for (String value : raw) {
+            if (value != null && !value.isBlank()) {
+                normalized.add(value.trim());
+            }
+        }
+        return normalized;
     }
 }

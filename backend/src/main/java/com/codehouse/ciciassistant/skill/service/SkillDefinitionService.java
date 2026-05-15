@@ -60,6 +60,22 @@ public class SkillDefinitionService {
             输出要求：输出包含转写文本、会议纪要、待办事项清单、CRM记录建议及下一步操作指引。
             """.trim();
 
+    private static final String AI_CUSTOMER_INSIGHT_ANALYST_PROMPT_FRAGMENT = """
+            你是客户洞察分析师，面向销售、售前和客户成功团队输出客户画像、行业空间、战略/KPI、决策链、竞争关系、业务闭环和一客一策建议。必须先区分已知事实、合理推断和待人工确认项；不得编造客户收入、组织架构、联系人立场、合同金额、订单状态、服务结论、竞品动作、预算或商务承诺。事实不足时明确写“待补充”，并给出需要补充的字段。输出应可被业务人员继续编辑，语气克制、证据优先、行动建议明确。
+            """.trim();
+
+    private static final String AI_CUSTOMER_INSIGHT_ANALYST_DRAFT_SPEC_TEXT = """
+            技能名称：客户洞察分析师
+            目标：结合 CRM 只读事实、当前系统业务事实、人工补充信息和已生成模块，形成客户画像、行业空间、战略决策、竞争关系、业务闭环和一客一策报告。
+            处理步骤：
+            1. 阅读客户基本信息、行业、联系人、商机、签约合同、订单履约、客户服务记录和人工输入。
+            2. 按模块输出摘要、证据、风险、下一步动作和待确认项。
+            3. 对缺失事实标注“待补充”，不使用想象填空。
+            4. 涉及商务承诺、价格、合同解释、订单状态判断、服务责任归因、竞品指控、客户高管判断或 CRM 写回时必须人工确认。
+            工具边界：仅允许使用 CloudCC 只读查询工具获取对象、字段和分页数据；当前系统合同、订单、客服等业务数据只使用服务端提供的摘要；凭证与原始敏感字段不得进入最终输出。
+            输出要求：输出中文 Markdown，并尽量包含 summary、evidence、risks、nextActions、pendingFacts 字段语义。
+            """.trim();
+
     private static final List<BuiltinSkillSpec> BUILTIN_SKILLS = List.of(
             new BuiltinSkillSpec(
                     "conversation-core",
@@ -212,6 +228,22 @@ public class SkillDefinitionService {
                     "会议内容缺少关键事实、负责人或截止日期时，不要补造；在开放问题中标明待确认项。",
                     "输出必须是中文 Markdown，固定包含 Meeting Summary、Date & Time、Participants、Topic、Summary、Action Items、Decisions Made、Open Questions；行动项必须用表格。",
                     "LOW"
+            ),
+            new BuiltinSkillSpec(
+                    "ai-customer-insight-analyst",
+                    "客户洞察分析师",
+                    "面向客户画像、行业空间、战略决策、竞争关系、业务闭环和一客一策的结构化分析能力。",
+                    AI_CUSTOMER_INSIGHT_ANALYST_PROMPT_FRAGMENT,
+                    AI_CUSTOMER_INSIGHT_ANALYST_DRAFT_SPEC_TEXT,
+                    String.join(",",
+                            "cloudcc_getStandardObjects",
+                            "cloudcc_getCustomObjects",
+                            "cloudcc_getObjectFields",
+                            "cloudcc_pageQuery"),
+                    null,
+                    "涉及商务承诺、价格策略、合同解释、订单状态判断、服务责任归因、竞品指控、客户高管个人判断、CRM 写回或客户敏感数据外发时，必须人工确认。",
+                    "每个模块输出中文 Markdown，必须区分事实、推断、风险、下一步动作和待补充信息；整案报告包含客户画像、行业机会、决策链、竞争态势、签约合同、订单履约、客户服务、一客一策和待确认清单。",
+                    "MEDIUM"
             ),
             new BuiltinSkillSpec(
                     "web-search",

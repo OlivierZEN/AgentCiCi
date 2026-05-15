@@ -31,11 +31,17 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@TestPropertySource(properties = {
+        "spring.profiles.active=default",
+        "app.lifecycle.purge-worker-initial-delay-ms=3600000",
+        "app.lifecycle.purge-worker-delay-ms=3600000"
+})
 class PlatformTenantLifecycleIntegrationTest {
 
     @Autowired
@@ -367,22 +373,17 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         long queuedJobId = objectMapper.readTree(queueResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        Instant expiredAt = Instant.now().minusSeconds(60);
         jdbcTemplate.update("""
                         UPDATE organization_purge_job
                         SET status = 'RUNNING',
                             worker_id = 'stale-worker',
-                            locked_at = ?,
-                            lock_expires_at = ?,
-                            started_at = ?,
+                            locked_at = TIMESTAMP '2000-01-01 00:00:00',
+                            lock_expires_at = TIMESTAMP '2000-01-01 00:01:00',
+                            started_at = TIMESTAMP '2000-01-01 00:00:00',
                             attempt_count = 1,
-                            updated_at = ?
+                            updated_at = TIMESTAMP '2000-01-01 00:01:00'
                         WHERE id = ?
                         """,
-                Timestamp.from(expiredAt.minusSeconds(3600)),
-                Timestamp.from(expiredAt),
-                Timestamp.from(expiredAt.minusSeconds(3600)),
-                Timestamp.from(expiredAt),
                 queuedJobId);
 
         tenantLifecycleService.processQueuedPurgeJobs();
@@ -491,6 +492,7 @@ class PlatformTenantLifecycleIntegrationTest {
     }
 
     private CreatedOrg registerOrg(String mobile, String name) throws Exception {
+        String mobileToRegister = uniqueMobile(mobile);
         MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -499,11 +501,17 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "password": "szyd1234",
                                   "organizationName": "%s"
                                 }
-                                """.formatted(mobile, name)))
+                                """.formatted(mobileToRegister, name)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode data = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data");
         return new CreatedOrg(data.path("orgId").asText(), data.path("memberId").asText(), data.path("token").asText());
+    }
+
+    private String uniqueMobile(String seedMobile) {
+        String prefix = seedMobile == null || seedMobile.length() < 3 ? "139" : seedMobile.substring(0, 3);
+        String suffix = String.format("%08d", Math.floorMod(System.nanoTime(), 100_000_000L));
+        return prefix + suffix;
     }
 
     private void seedSensitiveRows(String orgId, String memberId) {

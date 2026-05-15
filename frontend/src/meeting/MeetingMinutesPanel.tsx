@@ -57,6 +57,7 @@ type Props = {
   onPrimaryAction: () => void;
   primaryActionLabel: string;
   primaryActionDisabled?: boolean;
+  primaryActionVisible?: boolean;
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
   onSpeakerEditStart: (lineId: string, speakerId: string, speakerName: string) => void;
@@ -69,6 +70,7 @@ type Props = {
   onConfirmWriteback?: () => void;
   confirmWritebackDisabled?: boolean;
   writebackResultMessage?: string;
+  hideHeader?: boolean;
 };
 
 export function MeetingMinutesPanel({
@@ -88,6 +90,7 @@ export function MeetingMinutesPanel({
   onPrimaryAction,
   primaryActionLabel,
   primaryActionDisabled,
+  primaryActionVisible = true,
   secondaryActionLabel = "收起",
   onSecondaryAction,
   onSpeakerEditStart,
@@ -100,28 +103,33 @@ export function MeetingMinutesPanel({
   onConfirmWriteback,
   confirmWritebackDisabled,
   writebackResultMessage,
+  hideHeader = false,
 }: Props) {
   const statusLabel = statusText(status);
+  const showWritebackAction = Boolean(onConfirmWriteback && writebackItems.length);
+  const showFooter = Boolean(onSecondaryAction || showWritebackAction || primaryActionVisible);
 
   return (
     <>
-      <header className="cici-meeting-drawer__header">
-        <div>
-          <p>{eyebrow}</p>
-          <h2>{title}</h2>
-          {recordName || customerName ? (
-            <div className="cici-meeting-drawer__context">
-              {recordName ? <span>{recordName}</span> : null}
-              {customerName ? <span>{customerName}</span> : null}
-            </div>
+      {!hideHeader ? (
+        <header className="cici-meeting-drawer__header">
+          <div>
+            <p>{eyebrow}</p>
+            <h2>{title}</h2>
+            {recordName || customerName ? (
+              <div className="cici-meeting-drawer__context">
+                {recordName ? <span>{recordName}</span> : null}
+                {customerName ? <span>{customerName}</span> : null}
+              </div>
+            ) : null}
+          </div>
+          {onClose ? (
+            <button type="button" className="cici-meeting-drawer__close" onClick={onClose} aria-label="关闭会议纪要">
+              ×
+            </button>
           ) : null}
-        </div>
-        {onClose ? (
-          <button type="button" className="cici-meeting-drawer__close" onClick={onClose} aria-label="关闭会议纪要">
-            ×
-          </button>
-        ) : null}
-      </header>
+        </header>
+      ) : null}
 
       <div className="cici-meeting-drawer__status">
         <span className={`cici-meeting-drawer__dot is-${status}`} aria-hidden />
@@ -243,33 +251,37 @@ export function MeetingMinutesPanel({
         </section>
       </div>
 
-      <footer className="cici-meeting-drawer__footer">
-        {onSecondaryAction ? (
-          <button type="button" className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary" onClick={onSecondaryAction}>
-            {secondaryActionLabel}
-          </button>
-        ) : <span />}
-        <div className="cici-meeting-drawer__footer-actions">
-          {onConfirmWriteback && writebackItems.length ? (
-            <button
-              type="button"
-              className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary"
-              onClick={onConfirmWriteback}
-              disabled={confirmWritebackDisabled}
-            >
-              确认写回
+      {showFooter ? (
+        <footer className="cici-meeting-drawer__footer">
+          {onSecondaryAction ? (
+            <button type="button" className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary" onClick={onSecondaryAction}>
+              {secondaryActionLabel}
             </button>
-          ) : null}
-          <button
-            type="button"
-            className="cici-meeting-drawer__btn cici-meeting-drawer__btn--primary"
-            onClick={onPrimaryAction}
-            disabled={primaryActionDisabled}
-          >
-            {primaryActionLabel}
-          </button>
-        </div>
-      </footer>
+          ) : <span />}
+          <div className="cici-meeting-drawer__footer-actions">
+            {showWritebackAction ? (
+              <button
+                type="button"
+                className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary"
+                onClick={onConfirmWriteback}
+                disabled={confirmWritebackDisabled}
+              >
+                确认写回
+              </button>
+            ) : null}
+            {primaryActionVisible ? (
+              <button
+                type="button"
+                className="cici-meeting-drawer__btn cici-meeting-drawer__btn--primary"
+                onClick={onPrimaryAction}
+                disabled={primaryActionDisabled}
+              >
+                {primaryActionLabel}
+              </button>
+            ) : null}
+          </div>
+        </footer>
+      ) : null}
     </>
   );
 }

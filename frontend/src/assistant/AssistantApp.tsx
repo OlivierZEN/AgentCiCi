@@ -15,6 +15,7 @@ import { getDisplayInitial } from "../shared/avatar";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
+import { CustomerInsightAppPanel } from "./customer-insight/CustomerInsightAppPanel";
 import {
   appendAssistantDelta,
   assistantResponseNeedsUserFollowup,
@@ -57,7 +58,7 @@ type CurrentUserUpdatedDetail = {
   displayName?: string;
   avatarBase64?: string;
 };
-type WorkspaceTab = "chat" | "workbench" | "monitor" | "customers" | "crm" | "settings" | "profile";
+type WorkspaceTab = "chat" | "workbench" | "monitor" | "customers" | "crm" | "aiApps" | "settings" | "profile";
 type LoginMode = "agent" | "human";
 type FrontLoginMode = "login_mode1" | "login_mode2";
 type LoginMode2CubePhase = "brand" | "loading";
@@ -158,6 +159,16 @@ type PublishedAgentPayload = {
 };
 
 type WorkbenchMetric = { label: string; value: string };
+
+type AiApplication = {
+  code: "meeting-minutes" | "customer-insight";
+  name: string;
+  shortName: string;
+  status: string;
+  summary: string;
+  description: string;
+  meta: string;
+};
 
 type WorkbenchOverviewItem = {
   id: string;
@@ -623,6 +634,27 @@ const WORKBENCH_METRICS_DEFAULT: WorkbenchMetric[] = [
   { label: "已完成", value: "—" },
   { label: "待审批", value: "—" },
   { label: "待跟进", value: "—" },
+];
+
+const AI_APPLICATIONS: AiApplication[] = [
+  {
+    code: "meeting-minutes",
+    name: "AI 听记",
+    shortName: "听",
+    status: "内置",
+    summary: "实时转写、发言人整理、结构化纪要生成。",
+    description: "适合客户拜访、项目例会和售后回访，结束后生成重点、待办和 CRM 记录建议。",
+    meta: "会议听记 · AI 纪要",
+  },
+  {
+    code: "customer-insight",
+    name: "客户洞察",
+    shortName: "客",
+    status: "内置",
+    summary: "客户画像、合同订单、服务体验和一客一策分析。",
+    description: "汇总 CRM、合同订单、客户服务和人工补充事实，形成可编辑的客户洞察报告。",
+    meta: "CRM 洞察 · 业务闭环",
+  },
 ];
 
 function createInitialWorkbenchMessages() {
@@ -1137,6 +1169,7 @@ export default function AssistantApp() {
   const [searchText, setSearchText] = useState("");
   const [activeChannel, setActiveChannel] = useState<"all" | ConversationThread["channel"]>("all");
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("workbench");
+  const [activeAiAppCode, setActiveAiAppCode] = useState<AiApplication["code"]>(AI_APPLICATIONS[0].code);
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
   const [conversationListNotice, setConversationListNotice] = useState("");
@@ -2489,12 +2522,12 @@ export default function AssistantApp() {
     }
   };
 
-  const startMeetingMinutes = async (triggerText: string) => {
+  const startMeetingMinutes = async (triggerText: string, source: "workbench" | "aiApps" = "workbench") => {
     if (!auth) {
       setSpeechNotice("请先登录后再开始会议纪要。");
       return;
     }
-    if (workspaceTab !== "workbench") {
+    if (source === "workbench" && workspaceTab !== "workbench") {
       return;
     }
     if (listening) {
@@ -2513,7 +2546,7 @@ export default function AssistantApp() {
     setInput("");
     setSkillPickerOpen(false);
     setQuickCommandMenuOpen(false);
-    setMeetingDrawerOpen(true);
+    setMeetingDrawerOpen(source === "workbench");
     setMeetingStatus("recording");
     setMeetingNotice("正在请求麦克风权限...");
     setMeetingSummary("");
@@ -2525,43 +2558,45 @@ export default function AssistantApp() {
     meetingSpeakerNamesRef.current = {};
     setMeetingTranscript([]);
 
-    const userBubble: ChatBubble = { role: "user", content: cleanTrigger, time: timestamp };
-    const assistantBubble: ChatBubble = {
-      role: "assistant",
-      content: "已打开实时会议纪要。录音开始后，我会按发言人整理转写，结束时生成会议纪要。",
-      time: timestamp,
-    };
-    setConversationThreads((prev) =>
-      prev.map((thread) =>
-        thread.id === sessionId
-          ? {
-              ...thread,
-              title: thread.title === "新工作台对话" ? "会议纪要" : thread.title,
-              lastMessage: cleanTrigger,
-              time: timestamp,
-              updatedAt: new Date().toISOString(),
-            }
-          : thread,
-      ),
-    );
-    setWorkbenchMessagesByAgent((prev) => ({
-      ...prev,
-      [agentKey]: [...(prev[agentKey] ?? []), userBubble, assistantBubble],
-    }));
-    setConversationMessages((prev) => ({
-      ...prev,
-      [sessionId]: [...(prev[sessionId] ?? workbenchMessages), userBubble, assistantBubble],
-    }));
-    setWorkbenchRuntimeByAgent((prev) => ({
-      ...prev,
-      [agentKey]: {
-        status: "处理中",
-        previousTask: prev[agentKey]?.currentTask ?? "—",
-        currentTask: "实时会议听记中",
-        nextTask: "结束会议后生成纪要",
-        thoughts: ["正在监听麦克风音频", "转写结果会按发言人实时显示"],
-      },
-    }));
+    if (source === "workbench") {
+      const userBubble: ChatBubble = { role: "user", content: cleanTrigger, time: timestamp };
+      const assistantBubble: ChatBubble = {
+        role: "assistant",
+        content: "已打开实时会议纪要。录音开始后，我会按发言人整理转写，结束时生成会议纪要。",
+        time: timestamp,
+      };
+      setConversationThreads((prev) =>
+        prev.map((thread) =>
+          thread.id === sessionId
+            ? {
+                ...thread,
+                title: thread.title === "新工作台对话" ? "会议纪要" : thread.title,
+                lastMessage: cleanTrigger,
+                time: timestamp,
+                updatedAt: new Date().toISOString(),
+              }
+            : thread,
+        ),
+      );
+      setWorkbenchMessagesByAgent((prev) => ({
+        ...prev,
+        [agentKey]: [...(prev[agentKey] ?? []), userBubble, assistantBubble],
+      }));
+      setConversationMessages((prev) => ({
+        ...prev,
+        [sessionId]: [...(prev[sessionId] ?? workbenchMessages), userBubble, assistantBubble],
+      }));
+      setWorkbenchRuntimeByAgent((prev) => ({
+        ...prev,
+        [agentKey]: {
+          status: "处理中",
+          previousTask: prev[agentKey]?.currentTask ?? "—",
+          currentTask: "实时会议听记中",
+          nextTask: "结束会议后生成纪要",
+          thoughts: ["正在监听麦克风音频", "转写结果会按发言人实时显示"],
+        },
+      }));
+    }
 
     await startAsrSession({
       token: auth.token,
@@ -3125,14 +3160,14 @@ export default function AssistantApp() {
 
   useEffect(() => {
     const element = meetingTranscriptScrollRef.current;
-    if (!meetingDrawerOpen || !element) {
+    if ((!meetingDrawerOpen && workspaceTab !== "aiApps") || !element) {
       return;
     }
     const frame = window.requestAnimationFrame(() => {
       element.scrollTop = element.scrollHeight;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [meetingDrawerOpen, meetingPartial?.text, meetingStatus, meetingTranscript]);
+  }, [meetingDrawerOpen, meetingPartial?.text, meetingStatus, meetingTranscript, workspaceTab]);
 
   useEffect(() => {
     if (!meetingSpeakerEdit) {
@@ -3149,6 +3184,29 @@ export default function AssistantApp() {
 
   const systemAgents = agentWorkspaces.filter((item) => item.category === "system");
   const publishedAgents = agentWorkspaces.filter((item) => item.category === "published");
+  const activeAiApplication = AI_APPLICATIONS.find((item) => item.code === activeAiAppCode) ?? AI_APPLICATIONS[0];
+  const aiMeetingCanStart =
+    meetingStatus === "idle" ||
+    meetingStatus === "done" ||
+    (meetingStatus === "error" && meetingTranscript.length === 0 && !meetingPartial);
+  const aiMeetingPrimaryLabel = meetingStatus === "recording"
+    ? "结束并生成纪要"
+    : aiMeetingCanStart
+      ? meetingStatus === "done" ? "开始新听记" : "开始听记"
+      : "生成纪要";
+  const aiMeetingPrimaryDisabled =
+    meetingStatus === "stopping" ||
+    meetingStatus === "summarizing" ||
+    ((listening || !speechSupported) && aiMeetingCanStart);
+  const aiMeetingShowHeroAction = aiMeetingCanStart;
+  const aiMeetingShowPanelPrimary = !aiMeetingCanStart;
+  const handleAiMeetingPrimaryAction = () => {
+    if (aiMeetingCanStart) {
+      void startMeetingMinutes("开始会议纪要", "aiApps");
+      return;
+    }
+    stopMeetingAndSummarize();
+  };
   const agentLoginForm = (
     <>
       <div className="boot-login__form">
@@ -3318,6 +3376,20 @@ export default function AssistantApp() {
               <circle cx="9" cy="7" r="4" />
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          </button>
+          <button
+            className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "aiApps" ? " is-active" : ""}`}
+            onClick={() => setWorkspaceTab("aiApps")}
+            data-menu-label="AI应用"
+            aria-label="AI应用"
+          >
+            <svg viewBox="0 0 24 24">
+              <rect x="4" y="4" width="6" height="6" rx="1.5" />
+              <rect x="14" y="4" width="6" height="6" rx="1.5" />
+              <rect x="4" y="14" width="6" height="6" rx="1.5" />
+              <path d="M15 17h4" />
+              <path d="M17 15v4" />
             </svg>
           </button>
           <button
@@ -4110,6 +4182,85 @@ export default function AssistantApp() {
                 <div className="cici-monitor__empty">请选择一条运行日志查看链路追踪。</div>
               )}
             </aside>
+          </section>
+        </main>
+      ) : workspaceTab === "aiApps" ? (
+        <main className="cici-ai-apps">
+          <aside className="cici-ai-apps__list" aria-label="AI应用列表">
+            <header className="cici-ai-apps__list-head">
+              <p>AI APPS</p>
+              <h1>AI应用</h1>
+            </header>
+            <div className="cici-ai-apps__cards">
+              {AI_APPLICATIONS.map((app) => {
+                const isActive = app.code === activeAiAppCode;
+                return (
+                  <button
+                    key={app.code}
+                    type="button"
+                    className={`cici-ai-app-card${isActive ? " is-active" : ""}`}
+                    onClick={() => setActiveAiAppCode(app.code)}
+                    aria-pressed={isActive}
+                  >
+                    <span className="cici-ai-app-card__mark" aria-hidden>{app.shortName}</span>
+                    <span className="cici-ai-app-card__body">
+                      <span className="cici-ai-app-card__title">
+                        <strong>{app.name}</strong>
+                        <small>{app.status}</small>
+                      </span>
+                      <span className="cici-ai-app-card__summary">{app.summary}</span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          <section className="cici-ai-apps__main" aria-label={`${activeAiApplication.name}主页面`}>
+            <header className="cici-ai-apps__hero">
+              <div>
+                {activeAiApplication.code === "meeting-minutes" ? <p>{activeAiApplication.meta}</p> : null}
+                <h2>{activeAiApplication.name}</h2>
+                <span>{activeAiApplication.description}</span>
+              </div>
+              {activeAiApplication.code === "meeting-minutes" && aiMeetingShowHeroAction ? (
+                <button
+                  type="button"
+                  className="cici-ai-apps__primary"
+                  onClick={handleAiMeetingPrimaryAction}
+                  disabled={aiMeetingPrimaryDisabled}
+                >
+                  {aiMeetingPrimaryLabel}
+                </button>
+              ) : null}
+            </header>
+            {activeAiApplication.code === "customer-insight" ? (
+              <CustomerInsightAppPanel token={auth?.token ?? ""} />
+            ) : (
+              <section className="cici-ai-apps__meeting-panel">
+                <MeetingMinutesPanel
+                  eyebrow="BUILT-IN AI APP"
+                  title="AI 听记"
+                  hideHeader
+                  status={meetingStatus}
+                  notice={meetingNotice || "点击开始听记后自动请求麦克风权限。"}
+                  transcript={meetingTranscript}
+                  partial={meetingPartial}
+                  summary={meetingSummary}
+                  speakerEdit={meetingSpeakerEdit}
+                  transcriptScrollRef={meetingTranscriptScrollRef}
+                  speakerEditInputRef={meetingSpeakerEditInputRef}
+                  onPrimaryAction={handleAiMeetingPrimaryAction}
+                  primaryActionLabel={aiMeetingPrimaryLabel}
+                  primaryActionDisabled={aiMeetingPrimaryDisabled}
+                  primaryActionVisible={aiMeetingShowPanelPrimary}
+                  onSpeakerEditStart={startMeetingSpeakerEdit}
+                  onSpeakerEditValueChange={(value) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value } : prev))}
+                  onSpeakerEditCommit={commitMeetingSpeakerEdit}
+                  onSpeakerEditKeyDown={handleMeetingSpeakerEditKeyDown}
+                />
+              </section>
+            )}
           </section>
         </main>
       ) : workspaceTab === "crm" ? (

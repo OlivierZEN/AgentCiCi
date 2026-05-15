@@ -144,7 +144,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Map<String, Object> settings = knowledgeBaseService.updateKnowledgeBaseSettings(
                 fixture.orgId(),
                 fixture.kbId(),
-                new KnowledgeBaseService.KbSettingsCommand(120, 20, "\\n", "VECTOR", 3, 0.0));
+                new KnowledgeBaseService.KbSettingsCommand(120, 20, "\\n", "VECTOR", 3, 0.0, "local", "local-hash", 1024));
         assertThat(settings.get("chunkSize")).isEqualTo(120);
         assertThat(settings.get("topK")).isEqualTo(3);
 

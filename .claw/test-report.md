@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-14T11:56:09Z
+updated_at: 2026-05-15T08:06:30Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-14T11:56:09Z
+last_run_at: 2026-05-15T08:06:30Z
 last_run_status: success
 ---
 
@@ -13,11 +13,170 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：2.0.B1 release build and online test deployment
-- 命令：backend package; frontend build; ACR image push; ECS backup/deploy; Flyway checksum repair; health/public smoke
-- 环境：`local workspace` + ECS `/opt/cici`
+- 范围：FEAT-021 Open API builtin skill resource and call-log detail fix
+- 命令：`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test`; `frontend npm run build`; targeted `git diff --check`; in-app Browser desktop/mobile visual QA
+- 环境：local backend PostgreSQL test runtime, local Vite/browser QA
 
 ## Latest Verified Results
+
+- FEAT-021 Open API builtin skill resource and call-log detail fix (2026-05-15T08:06:30Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: targeted `git diff --check -- backend/src/main/java/com/codehouse/ciciassistant/skill/service/FileBackedBuiltinSkillCatalog.java frontend/src/assistant/AgentOpenApiKeysDialog.tsx frontend/src/assistant/cici-ui.css` -> **success**。
+    - `browser`: in-app Browser desktop 1280x720 and mobile 390x844 visual QA -> **success**。
+  - Notes:
+    - Desktop 调用日志表保留紧凑表格，点击摘要后展示完整调用日志详情。
+    - Mobile 调用日志使用分隔线列表替代表格，`documentElement.scrollWidth=390`，dialog content `scrollWidth=clientWidth=390`，详情完整展示 `cloudcc-customization-expert-common/SKILL.md`。
+    - Browser QA 使用临时本地日志行验证详情展示，验证后已从本地 `agent_api_call_log` 删除。
+
+- FEAT-021 Open API CORS preflight fix (2026-05-15T07:12:35Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiCorsConfigTest test` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest test` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**。
+    - `git`: targeted `git diff --check` for Open API CORS files -> **success**。
+  - Notes:
+    - The focused unit test verifies wildcard CORS: preflight requests from multiple origins receive `Access-Control-Allow-Origin: *`, `POST`, and requested header allowance.
+    - The integration test covers wildcard CORS preflight plus the existing Open API credential, health, non-stream chat, stream chat, call log, usage, trace, and rate-limit flows.
+
+- FEAT-021 Open API CORS online test deploy (2026-05-15T07:26:28Z):
+  - Commands:
+    - `release-worktree`: clean temporary worktree from `HEAD 6e6868c` with only Open API CORS backend/config/deploy files patched -> **success**。
+    - `backend`: clean worktree `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiCorsConfigTest test` -> **success**。
+    - `backend`: clean worktree `mvn -q -Dmaven.repo.local=.m2 -DskipTests package` -> **success**。
+    - `ecs-backup`: `/opt/cici/backups/20260515-152355-before-openapi-cors` with env, compose, and PostgreSQL dump -> **success**。
+    - `ecs-build`: built `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.0.B1-openapi-cors-20260515-1518` -> **success**, image id `sha256:5c904053aa0efc74d2e9673d6815d7fdb18d1a96765ab1e1be2c0f0d0681cf89`。
+    - `ecs-deploy`: `docker compose --env-file acr.env -f docker-compose.acr.yml -f docker-compose.acr.ssl.yml up -d --no-deps backend` -> **success**。
+    - `backend-health`: `GET http://127.0.0.1:8080/actuator/health` -> **UP**。
+    - `server-local preflight`: Host `autoservice.agentcici.com`, origin `https://cnbh01.cloudcc.cn`, `OPTIONS /openapi/v1/agents/agent-473153/chat/stream` -> **HTTP 200**, `Access-Control-Allow-Origin: *`。
+    - `server-local preflight`: Host `autoservice.agentcici.com`, origin `https://example.anywhere`, same endpoint -> **HTTP 200**, `Access-Control-Allow-Origin: *`。
+    - `containers`: backend/frontend/database/redis/rabbitmq/qdrant -> **healthy**。
+  - Notes:
+    - Workstation direct public curl still returned `curl: (35) Recv failure: Connection reset by peer`, consistent with the known network path issue recorded in devops.
+
+- FEAT-034 customer insight business loop modules (2026-05-15T06:44:00Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=CustomerInsightIntegrationTest test` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check` -> **success**。
+    - `browser`: Playwright CLI desktop smoke -> **success**，客户洞察显示 `业务闭环`、`签约合同`、`订单与履约`、`客户服务`，项目计数为 `/26`。
+    - `browser`: Playwright CLI mobile 390x844 overflow measurement -> **success**，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
+    - `backend-runtime`: restarted local backend in detached `screen` session `cici-backend-local`; `GET http://127.0.0.1:8080/actuator/health` -> **UP**。
+  - Screenshots:
+    - `output/playwright/customer-insight-business-loop-desktop.png`
+    - `output/playwright/customer-insight-business-loop-mobile.png`
+
+- FEAT-034 customer insight module accordion (2026-05-15T06:14:10Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/assistant/customer-insight/CustomerInsightModuleNav.tsx frontend/src/assistant/cici-ui.css` -> **success**。
+    - `browser`: Playwright Chrome default accordion state -> **success**，`客户画像` 为 open/active 且 5 个模块可见；其余分组折叠，标题背景为 `rgb(250, 244, 232)`。
+    - `browser`: Playwright Chrome click `竞争与关系` -> **success**，该分组展开并显示 6 个模块。
+    - `browser`: mobile 390x844 screenshot and overflow measurement -> **success**，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
+  - Screenshots:
+    - `output/playwright/customer-insight-accordion-desktop.png`
+    - `output/playwright/customer-insight-accordion-expanded-desktop.png`
+    - `output/playwright/customer-insight-accordion-mobile.png`
+
+- FEAT-034 customer insight AI app visual cleanup (2026-05-15T05:53:53Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `browser`: Playwright Chrome login `13900009999/szyd1234`, open `AI应用`, select `客户洞察`, wait for `华东制造客户` -> **success**。
+    - `browser`: desktop 1280x720 full-page screenshot -> **success**。
+    - `browser`: mobile 390x844 full-page screenshot -> **success**。
+    - `browser`: mobile overflow measurement -> **success**，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
+  - Screenshots:
+    - `output/playwright/customer-insight-clean-desktop.png`
+    - `output/playwright/customer-insight-clean-mobile.png`
+  - Notes:
+    - Local console still reports the existing missing `favicon.ico` 404 and React DevTools info; no new page-blocking runtime error observed.
+
+- FEAT-032 SDK origin hotfix online deployment (2026-05-15T03:07:36Z):
+  - Commands:
+    - `release-scope`: created clean worktree from `HEAD 6e6868c` and applied only `frontend/public/sdk/meeting-minutes.js` plus `frontend/public/sdk/meeting-minutes@1.0.0.js` SDK origin fix -> **success**。
+    - `frontend`: `npm install` in temporary worktree -> **success**（reported `2` moderate audit findings; not changed in this hotfix）。
+    - `frontend`: `npm run build` in temporary worktree -> **success**（保留 Vite chunk-size warning）。
+    - `runtime-sim`: Node VM CloudCC parent-origin simulation -> **success**，iframe `src` 生成为 `https://autoservice.agentcici.com/embed/meeting-minutes?...`。
+    - `acr`: Docker login with current ACR credentials from `/opt/cici/deploy/acr.env` -> **failed** on local and ECS with `unauthorized: authentication required`。
+    - `ecs-build`: built ECS-local image `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.0.B1-sdk404fix-20260515-1103` -> **success**，image id `sha256:7d575b6ea5f2c8e08a63a3c883b287b143cbe6cf0d62a9ba668f7bdd8426be51`。
+    - `ecs-deploy`: backed up env to `/opt/cici/backups/20260515-110703-before-2.0.B1-sdk404fix-20260515-1103`, set `CICI_IMAGE_TAG=2.0.B1-sdk404fix-20260515-1103`, and recreated frontend only with `docker compose up -d --no-deps frontend` -> **success**。
+    - `nginx`: `docker exec cici-frontend nginx -t` -> **success**。
+    - `containers`: `cici-frontend` -> **healthy**; backend/database/redis/rabbitmq/qdrant remained **healthy** on `2.0.B1` images.
+    - `server-local vhost smoke`: Host `autoservice.agentcici.com` `/sdk/meeting-minutes.js`, `/embed/meeting-minutes`, and `/` -> **HTTP 200**。
+    - `server-local sdk content`: served `/sdk/meeting-minutes.js` contains `var SDK_ORIGIN = currentScriptOrigin();` and `open()` uses `SDK_ORIGIN` -> **success**。
+  - Notes:
+    - This is live on the ECS host, but the hotfix image was not pushed to ACR because current ACR credentials failed authentication. ACR credentials/push should be repaired so the hotfix tag is durable beyond this host.
+
+- FEAT-032 meeting minutes SDK embed origin fix (2026-05-15T02:51:53Z):
+  - Commands:
+    - `sdk`: `node --check frontend/public/sdk/meeting-minutes.js` -> **success**。
+    - `sdk`: `node --check frontend/public/sdk/meeting-minutes@1.0.0.js` -> **success**。
+    - `git`: `git diff --check -- frontend/public/sdk/meeting-minutes.js frontend/public/sdk/meeting-minutes@1.0.0.js` -> **success**。
+    - `runtime-sim`: Node VM 模拟脚本加载自 `https://autoservice.agentcici.com/sdk/meeting-minutes.js`、父页面为 `https://yundong.lightning.cloudcc.cn`、`open()` 时 `document.currentScript=null` -> **success**，iframe `src` 生成为 `https://autoservice.agentcici.com/embed/meeting-minutes?...`。
+    - `network`: `curl https://yundong.lightning.cloudcc.cn/embed/meeting-minutes` -> **404**，确认 CloudCC 宿主没有该前端路由。
+    - `network`: `curl https://autoservice.agentcici.com/embed/meeting-minutes` and `/sdk/meeting-minutes.js` -> **not verified from workstation**，仍为既有公网链路 `curl: (35) Recv failure: Connection reset by peer` 现象；不代表服务器本机路由失败。
+  - Notes:
+    - 根因是 SDK 在 `open()` 点击事件中才读取 `document.currentScript`，真实 Vue/CloudCC 场景下会回退到父页面 origin；修复为 SDK 加载时缓存 `SDK_ORIGIN`。
+
+- FEAT-033 AI app meeting action hierarchy (2026-05-14T23:51:24Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/meeting/MeetingMinutesPanel.tsx frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> **success**。
+    - `browser`: in-app Browser `http://127.0.0.1:5173/` click `AI应用` -> **success**，空闲态 DOM 中 `开始听记` 按钮数量为 `1`，`结束并生成纪要` 数量为 `0`。
+    - `browser`: Playwright DOM smoke -> **success**，`.cici-ai-apps__meeting-panel .cici-meeting-drawer__footer button` 为空，说明底部不再重复“开始听记”。
+    - `browser`: Playwright desktop screenshot -> **success**。
+  - Screenshots:
+    - `output/playwright/ai-app-meeting-single-start-desktop.png`
+  - Notes:
+    - `MeetingMinutesPanel` 新增 `primaryActionVisible`，默认值为 `true`，因此工作台会议抽屉和 embed 页面不受影响。
+    - AI 应用页顶部主按钮只用于开始/开始新听记；进入录音或可生成纪要状态后，底部主按钮恢复承担“结束并生成纪要 / 生成纪要”。
+
+- FEAT-033 AI app meeting panel full-height layout (2026-05-14T23:45:50Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css frontend/src/assistant/AssistantApp.tsx frontend/src/meeting/MeetingMinutesPanel.tsx` -> **success**。
+    - `browser`: in-app Browser `http://127.0.0.1:5173/` click `AI应用` -> **success**，视觉确认实时转写和 AI 会议纪要两栏撑满剩余区域，footer 主操作位于面板底部。
+    - `browser`: Playwright 1280x720 full-page screenshot -> **success**。
+    - `browser`: Playwright 390x844 full-page screenshot -> **success**。
+    - `browser`: Playwright layout measurement -> **success**，desktop 下 `.cici-ai-apps__meeting-panel` 高度 `576px`、body 高度 `460px`、转写/纪要滚动区高度 `434px`、footer bottom 与 panel bottom 对齐。
+  - Screenshots:
+    - `output/playwright/ai-app-meeting-layout-desktop.png`
+    - `output/playwright/ai-app-meeting-layout-mobile.png`
+  - Notes:
+    - 本机浏览器无麦克风权限，点击开始后会进入 `Permission denied` 错误态，无法在本机浏览器保持真实录音态；代码路径中 `meetingStatus === "recording"` 的主操作文案仍为“结束并生成纪要”。
+
+- FEAT-033 AI app duplicate header removal (2026-05-14T23:25:33Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/meeting/MeetingMinutesPanel.tsx frontend/src/assistant/AssistantApp.tsx` -> **success**。
+    - `browser`: in-app Browser click `AI应用` -> **success**，`.cici-ai-apps__meeting-panel .cici-meeting-drawer__header` count = `0`。
+  - Notes:
+    - `MeetingMinutesPanel` 新增 `hideHeader`，只在助手 AI 应用页启用；工作台会议抽屉和 `/embed/meeting-minutes` 默认头部不受影响。
+
+- FEAT-033 rail menu order adjustment (2026-05-14T23:19:40Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx` -> **success**。
+    - `browser`: in-app Browser `http://localhost:5173/` reload -> **success**，`AI应用` 与 `CRM 系统` 按钮均唯一。
+    - `browser`: clicked `AI应用` -> **success**，截图确认 AI应用按钮位于 CRM 按钮上方且右侧仍显示 AI 听记页面。
+  - Notes:
+    - 本轮仅调整 rail 菜单顺序，无样式或功能逻辑变更。
+
+- FEAT-033 assistant AI apps workspace (2026-05-14T13:28:00Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css docs/specs/FEAT-033-assistant-ai-apps-workspace.md .claw/task-board.md` -> **success**。
+    - `browser`: in-app Browser `http://localhost:5173/` reload and click `AI应用` -> **success**，DOM 包含 `AI 听记`、`开始听记`、`实时转写`。
+    - `browser`: 749px 宽视口 visual check -> **success**，页面保持左侧 AI 应用窄栏 + 右侧 AI 听记主页面。
+    - `browser`: 1280x900 desktop full-page screenshot -> **success**。
+    - `browser`: 390x844 mobile full-page screenshot -> **success**。
+  - Screenshots:
+    - `output/playwright/assistant-ai-apps-desktop.png`
+    - `output/playwright/assistant-ai-apps-mobile.png`
+  - Notes:
+    - AI 听记主页面复用现有 `MeetingMinutesPanel` 与 ASR/summary 状态；从 AI 应用页启动不写入工作台聊天历史。
+    - 移动端 rail tooltip 已在小视口隐藏，避免遮挡 AI 应用页面内容。
 
 - 2.0.B1 release and online test deployment (2026-05-14T11:56:09Z):
   - Commands:

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-14T09:42:30Z
+updated_at: 2026-05-15T08:06:30Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,84 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-098 Customer insight AI app design
+
+- status: completed
+- priority: P1
+- owner_role: product-architecture
+- spec_path: `docs/specs/FEAT-034-customer-insight-ai-app.md`
+- summary: 参考 `/Volumes/AISpace/codehouse/cc-customer-insight`，为 AgentCiCi 的“AI应用”列表新增“客户洞察”AI 应用完成实现设计方案，明确业务模块映射、`鎏金账房` UI 适配、后端 API/数据模型、标准技能、CloudCC 只读数据源、组织模型路由和 trace 融合路径。
+- completed_at: 2026-05-14T23:29:37Z
+- done:
+  - 已新增 `docs/specs/FEAT-034-customer-insight-ai-app.md`。
+  - 已确认参考项目核心能力来自 `ReportWorkbench.vue`、`SidebarMenu.vue` 与 `AI_FEATURES.md`，包括客户画像、行业空间、战略决策、竞争关系和一客一策报告。
+  - 已明确不能 iframe 或照搬 Vue/Element Plus，需作为当前 `/` AI 应用工作区的原生 React 产品页实现。
+  - 已明确模型调用必须后端化，复用 `ModelRouterService`、`ModelProviderService`、`SkillPromptAssembler`、标准技能、CloudCC 工具、租户权限和运行 trace。
+  - 已拆分后续 `TASK-099` 至 `TASK-102`，覆盖后端数据/API/技能、前端工作区、CRM source refresh、生成 trace 和视觉 QA。
+- verification:
+  - `design`: 已完成只读代码与参考项目分析；本轮未改动应用代码，未运行 build/test。
+- next_action: 进入 `TASK-099 Backend data model, API, and standard skill`，先确定 API contract 和 `ai-customer-insight-analyst` 标准技能，再接前端工作区。
+
+### TASK-100 Frontend customer insight workspace
+
+- status: in_progress
+- priority: P1
+- owner_role: frontend-product-assistant
+- spec_path: `docs/specs/FEAT-034-customer-insight-ai-app.md`
+- summary: 在 `/` 的 AI 应用工作区中实现“客户洞察”产品页，覆盖项目创建/选择、模块导航、事实补充、模块生成、报告摘要与响应式视觉 QA。
+- done:
+  - 已接入 AI 应用列表中的“客户洞察”分支和 React 原生客户洞察工作区。
+  - 2026-05-15T05:53:53Z 按用户截图反馈完成视觉收敛：移除多余小标题，减少项目/模块/摘要区横线，隐藏客户洞察 Markdown 分隔线，避免激活 rail tooltip 遮挡页面。
+  - 2026-05-15T06:14:10Z 按用户截图反馈将模块菜单改为分组折叠模式，当前分组默认展开，其他分组折叠；分组标题新增浅金底、边线和展开/收起指示，组间分隔更明显。
+  - 2026-05-15T06:44:00Z 按用户反馈补入“业务闭环”模块组，覆盖签约合同、订单与履约、客户服务、续约与增购；前端文案同步为合同订单/客户服务语义，旧项目打开时由后端自动补齐新增模块。
+- verification:
+  - `frontend`: 2026-05-15T05:53:53Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `browser`: 2026-05-15T05:53:53Z Playwright Chrome desktop 1280x720 与 mobile 390x844 screenshots -> success。
+  - `browser`: 2026-05-15T05:53:53Z mobile overflow measurement -> success，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
+  - `frontend`: 2026-05-15T06:14:10Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-15T06:14:10Z `git diff --check -- frontend/src/assistant/customer-insight/CustomerInsightModuleNav.tsx frontend/src/assistant/cici-ui.css` -> success。
+  - `browser`: 2026-05-15T06:14:10Z Playwright Chrome accordion smoke -> success，默认仅“客户画像”展开，点击“竞争与关系”后该分组展开并显示 6 个模块。
+  - `browser`: 2026-05-15T06:14:10Z mobile overflow measurement -> success，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
+  - `backend`: 2026-05-15T06:44:00Z `mvn -q -Dmaven.repo.local=.m2 -Dtest=CustomerInsightIntegrationTest test` -> success，覆盖 26 个模块目录、业务 source snapshots 和 trace。
+  - `frontend`: 2026-05-15T06:44:00Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-15T06:44:00Z `git diff --check` -> success。
+  - `browser`: 2026-05-15T06:44:00Z Playwright CLI desktop smoke -> success，客户洞察显示 `业务闭环`、`签约合同`、`订单与履约`、`客户服务`，项目计数为 `/26`。
+  - `browser`: 2026-05-15T06:44:00Z mobile 390x844 overflow measurement -> success，`documentElement.scrollWidth=390`, `body.scrollWidth=390`, `main scrollWidth/clientWidth=332/332`。
+- next_action: 后续补齐真实合同/订单/客服字段级连接器与 CloudCC 数据源场景。
+
+### TASK-097 Assistant AI apps workspace
+
+- status: completed
+- priority: P1
+- owner_role: frontend-product-assistant
+- spec_path: `docs/specs/FEAT-033-assistant-ai-apps-workspace.md`
+- summary: 在助手工作台 `/` 左侧 rail 新增“AI应用”入口，点击后主页面展示左侧 AI 应用卡片列表与右侧应用主页面，并把“AI 听记”作为首个内置 AI 应用接入。
+- completed_at: 2026-05-14T13:28:00Z
+- done:
+  - 已新增 `docs/specs/FEAT-033-assistant-ai-apps-workspace.md`，明确双栏页面、首个内置应用和验收标准。
+  - `frontend/src/assistant/AssistantApp.tsx` 已新增 `aiApps` 工作区和 rail “AI应用”菜单。
+  - AI 应用列表第一项为“AI 听记”，右侧主页面复用现有 `MeetingMinutesPanel`，支持直接点击“开始听记”进入录音、转写和纪要生成流程。
+  - 原工作台聊天输入“开始会议纪要”触发抽屉入口保持不变；AI 应用页启动听记不写入聊天历史。
+  - `frontend/src/assistant/cici-ui.css` 已新增双栏布局、应用卡片、主页面和移动端样式，并处理移动端 rail tooltip 遮挡。
+  - 2026-05-14T23:45:50Z follow-up：按用户截图修复 AI 听记主页面隐藏内层 header 后的高度分配，实时转写与 AI 会议纪要区域现在撑满剩余屏高，footer 主操作固定到底部；录音态主操作文案仍切换为“结束并生成纪要”。
+  - 2026-05-14T23:51:24Z follow-up：收敛 AI 听记操作层级，空闲态只保留顶部“开始听记”，面板底部不再重复；听记流程态继续在底部显示“结束并生成纪要 / 生成纪要”。
+- verification:
+  - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: `git diff --check -- frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css docs/specs/FEAT-033-assistant-ai-apps-workspace.md .claw/task-board.md` -> success。
+  - `browser`: in-app Browser `http://localhost:5173/` 点击 “AI应用” -> success，DOM 出现“AI 听记”和“开始听记”。
+  - `browser`: 749px 宽视口复查 -> success，主页面保持左窄栏 + 右 AI 听记主页面。
+  - `browser`: 1280x900 desktop screenshot -> success，保存 `output/playwright/assistant-ai-apps-desktop.png`。
+  - `browser`: 390x844 mobile screenshot -> success，保存 `output/playwright/assistant-ai-apps-mobile.png`。
+  - `frontend`: 2026-05-14T23:45:50Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-14T23:45:50Z `git diff --check -- frontend/src/assistant/cici-ui.css frontend/src/assistant/AssistantApp.tsx frontend/src/meeting/MeetingMinutesPanel.tsx` -> success。
+  - `browser`: 2026-05-14T23:45:50Z in-app Browser visual check -> success，AI 听记页面两栏撑满，footer 位于页面底部。
+  - `browser`: 2026-05-14T23:45:50Z Playwright 1280x720 / 390x844 full-page screenshots -> success，保存 `output/playwright/ai-app-meeting-layout-desktop.png` 与 `output/playwright/ai-app-meeting-layout-mobile.png`。
+  - `frontend`: 2026-05-14T23:51:24Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-14T23:51:24Z `git diff --check -- frontend/src/meeting/MeetingMinutesPanel.tsx frontend/src/assistant/AssistantApp.tsx frontend/src/assistant/cici-ui.css` -> success。
+  - `browser`: 2026-05-14T23:51:24Z in-app Browser / Playwright DOM smoke -> success，空闲态 `开始听记` 按钮数量为 `1`，`.cici-ai-apps__meeting-panel .cici-meeting-drawer__footer button` 为空。
+  - `browser`: 2026-05-14T23:51:24Z Playwright desktop screenshot -> success，保存 `output/playwright/ai-app-meeting-single-start-desktop.png`。
+- next_action: 等用户确认 AI 应用入口视觉与信息架构；后续如接入更多 AI 应用，再扩展目录数据源。
 
 ### TASK-090 Meeting minutes embed SDK design
 
@@ -153,6 +231,31 @@ board_status: active
   - `frontend`: `npm run build` -> success（保留 Vite chunk-size warning）。
   - `git`: targeted `git diff --check` for TASK-095 backend/frontend files -> success。
 - next_action: 继续 `TASK-096 End-to-end CRM embed verification`，用 admin 调试台、本地模拟父页面和 CloudCC Vue 示例做端到端 smoke。
+
+### TASK-096 End-to-end CRM embed verification
+
+- status: in_progress
+- priority: P1
+- owner_role: qa-integration
+- spec_path: `docs/specs/FEAT-032-meeting-minutes-embed-sdk.md`
+- summary: 验证 CloudCC/Vue 嵌入 AI 听记端到端链路；当前已先修复 SDK 生成 iframe URL 时误用 CloudCC 父页面 origin 导致 `/embed/meeting-minutes` 404 的问题。
+- done:
+  - 已确认用户贴出的 404 地址宿主为 `https://yundong.lightning.cloudcc.cn/embed/meeting-minutes`，而源码与规格的嵌入页应位于 AgentCiCi 宿主 `/embed/meeting-minutes`。
+  - 已修复 `frontend/public/sdk/meeting-minutes.js` 与 `frontend/public/sdk/meeting-minutes@1.0.0.js`：SDK 加载时缓存脚本 origin，`open()` 不再在点击回调中依赖 `document.currentScript`。
+  - 已用 Node VM 模拟 CloudCC 父页面调用，确认 iframe `src` 生成为 `https://autoservice.agentcici.com/embed/meeting-minutes?...`。
+  - 已从干净 worktree 构建并发布 frontend hotfix 到线上 ECS，当前 frontend 容器使用 `cici-frontend:2.0.B1-sdk404fix-20260515-1103`。
+- verification:
+  - `sdk`: `node --check frontend/public/sdk/meeting-minutes.js` -> success。
+  - `sdk`: `node --check frontend/public/sdk/meeting-minutes@1.0.0.js` -> success。
+  - `git`: `git diff --check -- frontend/public/sdk/meeting-minutes.js frontend/public/sdk/meeting-minutes@1.0.0.js` -> success。
+  - `network`: `https://yundong.lightning.cloudcc.cn/embed/meeting-minutes` -> HTTP 404 without token，确认 CloudCC 宿主无该 route。
+  - `network`: 当前工作站直连 `autoservice.agentcici.com` 仍出现既有 `curl: (35) Recv failure: Connection reset by peer`，线上 AgentCiCi 宿主需在服务器侧或 CloudCC 实际页面继续验证。
+  - `frontend`: clean worktree `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `ecs`: `docker compose ... up -d --no-deps frontend` -> success，`cici-frontend` healthy。
+  - `nginx`: `docker exec cici-frontend nginx -t` -> success。
+  - `server-local`: Host `autoservice.agentcici.com` `/sdk/meeting-minutes.js`、`/embed/meeting-minutes`、`/` -> HTTP 200，且 SDK 文件包含 `SDK_ORIGIN` 修复。
+  - `acr`: current ACR credentials failed with `unauthorized`; hotfix image is ECS-local and not yet pushed to registry.
+- next_action: 在 CloudCC 页面重新打开 drawer，确认 iframe host 为 `autoservice.agentcici.com`；随后修复 ACR 凭据并持久化 hotfix 镜像。
 
 ### TASK-084 Agent evaluation and regression system design
 
@@ -918,6 +1021,8 @@ board_status: active
   - 已按最新 UI 反馈移除 API Key 管理弹窗 tab 和行操作的弧形边框背景按钮样式，强制恢复为无背景、无边框、无圆角、无阴影的文本 tab / 文本命令；已同步项目禁令到 `DESIGN.md`、`DESIGN.json`、`AGENTS.md` 和 `README.md`。
   - 已按截图反馈移除 API Key 管理弹窗表单下方“当前执行身份”文字，避免重复展示上方 run-as 用户选择器的内容。
   - 已给 `deploy/nginx.cici.conf` 与 `deploy/nginx.cici.ssl.conf` 补充 `/openapi/` 代理。
+  - 2026-05-15T15:12:35+08:00 已按 CloudCC 页面直接 `fetch` Open API 的 CORS 报错补充 `/openapi/v1/**` 专用 CORS filter；2026-05-15T15:14:00+08:00 按用户要求把默认与部署示例改为 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*`，即放开所有浏览器 Origin。
+  - 2026-05-15T16:06:30+08:00 已修复 API 调用中 file-backed builtin skill 资源读取路径：运行时从扫描到的 `manifest.json` 同目录解析并缓存 `SKILL.md` 与模块文档，降低 Spring Boot jar/classpath 差异导致入口资源丢失的风险；同时调用日志支持点击摘要查看完整 request/response/error 详情，移动端改为无横向溢出的分隔线列表。
 - verification:
   - `git`: `git diff --check -- docs/specs/FEAT-021-agent-open-api.md .claw/task-board.md .claw/current-status.md` -> success
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest test` -> success（覆盖 stream wrapper 与 `GET /agents/{agentId}/api-calls`）
@@ -937,7 +1042,17 @@ board_status: active
   - `frontend`: `npm run build` -> success（移除弧形边框背景伪按钮样式，保留既有 Vite chunk-size warning）
   - `git`: `git diff --check -- frontend/src/assistant/cici-ui.css DESIGN.md DESIGN.json AGENTS.md README.md` -> success
   - `frontend`: `npm run build` -> success（移除 API Key 管理弹窗冗余执行身份文字，保留既有 Vite chunk-size warning）
-- next_action: 继续补知识库/Skill 越权专项测试、真实模型链路 smoke 与公网 `/openapi` 代理 smoke。
+  - `backend`: 2026-05-15T15:12:35+08:00 `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiCorsConfigTest test` -> success。
+  - `backend`: 2026-05-15T15:12:35+08:00 `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `git`: 2026-05-15T15:12:35+08:00 targeted `git diff --check` for Open API CORS files -> success。
+  - `backend`: 2026-05-15T15:15:07+08:00 `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest test` -> success（覆盖 wildcard CORS preflight、API Key 管理、health、non-stream chat、stream chat 与限流）。
+  - `release`: 2026-05-15T15:26:28+08:00 deployed online test backend image `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.0.B1-openapi-cors-20260515-1518` from clean worktree; backup directory `/opt/cici/backups/20260515-152355-before-openapi-cors`.
+  - `server-local smoke`: 2026-05-15T15:26:28+08:00 `OPTIONS https://autoservice.agentcici.com/openapi/v1/agents/agent-473153/chat/stream` via server-local Host header -> HTTP 200 with `Access-Control-Allow-Origin: *` for `https://cnbh01.cloudcc.cn` and `https://example.anywhere`.
+  - `backend`: 2026-05-15T16:06:30+08:00 `mvn -q -Dmaven.repo.local=.m2 -Dtest=FileBackedBuiltinSkillIntegrationTest test` -> success（覆盖 file-backed CloudCC builtin skill bundle 扫描、入口 checksum、模块文档解析与 runtime prompt 注入）。
+  - `frontend`: 2026-05-15T16:06:30+08:00 `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-15T16:06:30+08:00 targeted `git diff --check` for file-backed catalog and Open API log UI files -> success。
+  - `browser`: 2026-05-15T16:06:30+08:00 in-app Browser desktop 1280x720 and mobile 390x844 QA -> success；调用日志详情完整展示 `cloudcc-customization-expert-common/SKILL.md`，移动端 `documentElement.scrollWidth=390`、dialog content `scrollWidth=clientWidth=390`。
+- next_action: 将 file-backed builtin skill 资源读取与调用日志详情修复发布到线上测试环境后，在 CloudCC 实际页面重试 Open API stream 调用。
 - handoff_notes:
   - 首版建议只开放已启用、已发布、且绑定 `api` channel 的 Agent。
   - 当前已支持 `Authorization: Bearer cici_ak_...` 与 `X-Cici-Api-Key`；`TenantContextFilter` 已跳过 Open API Key 的 JWT 解析。

@@ -53,12 +53,17 @@ app:
     default-max-prompt-chars: 8000
     default-max-response-chars: 12000
     default-timeout-ms: 120000
+    cors-allowed-origins: ["*"]
+    cors-allowed-origin-patterns: []
+    cors-max-age-seconds: 3600
   kb:
     indexing:
       mode: local
     vector-store: memory
     embedding:
-      dimension: 16
+      provider: local
+      model: local-hash
+      dimension: 1024
     qdrant:
       base-url: http://localhost:6333
       collection: cici_kb_chunk

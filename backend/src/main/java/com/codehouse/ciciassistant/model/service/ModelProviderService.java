@@ -161,7 +161,7 @@ public class ModelProviderService {
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Map<String, Object>> agentBaseModels(String orgId) {
         ensureBuiltinRows(orgId);
         List<Map<String, Object>> out = new ArrayList<>();
@@ -180,6 +180,40 @@ public class ModelProviderService {
                 row.put("providerName", def.providerName());
                 row.put("modelName", modelName);
                 row.put("displayLabel", modelName + " · " + def.providerName());
+                out.add(row);
+            }
+        }
+        return out;
+    }
+
+    @Transactional
+    public List<Map<String, Object>> embeddingModelOptions(String orgId) {
+        ensureBuiltinRows(orgId);
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (ModelProviderConfigEntity entity : providerRepository.findByOrgIdOrderByIdAsc(orgId)) {
+            if (!entity.isEnabled()) {
+                continue;
+            }
+            ProviderDef def = requireDef(entity.getProviderCode());
+            LinkedHashMap<String, EmbeddingModelDef> candidates = new LinkedHashMap<>();
+            for (EmbeddingModelDef item : defaultEmbeddingModels(entity.getProviderCode())) {
+                candidates.put(item.modelName(), item);
+            }
+            for (String modelName : configuredModelsForProvider(entity, orgId)) {
+                if (!isEmbeddingModelName(modelName)) {
+                    continue;
+                }
+                candidates.putIfAbsent(modelName, inferEmbeddingModelDef(entity.getProviderCode(), modelName));
+            }
+            for (EmbeddingModelDef item : candidates.values()) {
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("providerCode", entity.getProviderCode());
+                row.put("providerName", def.providerName());
+                row.put("modelName", item.modelName());
+                row.put("displayLabel", item.modelName() + " · " + def.providerName());
+                row.put("defaultDimension", item.defaultDimension());
+                row.put("dimensionChoices", item.dimensionChoices());
+                row.put("supportsCustomDimension", item.supportsCustomDimension());
                 out.add(row);
             }
         }
@@ -483,6 +517,57 @@ public class ModelProviderService {
         return List.of();
     }
 
+    private List<EmbeddingModelDef> defaultEmbeddingModels(String providerCode) {
+        return switch (providerCode) {
+            case PROVIDER_ALIYUN -> List.of(
+                    new EmbeddingModelDef("text-embedding-v4", 1024, List.of(1024, 2048, 1536, 768, 512, 256, 128, 64), true),
+                    new EmbeddingModelDef("text-embedding-v3", 1024, List.of(1024, 768, 512, 256, 128, 64), true)
+            );
+            case PROVIDER_OPENAI -> List.of(
+                    new EmbeddingModelDef("text-embedding-3-small", 1536, List.of(1536, 1024, 512, 256), true),
+                    new EmbeddingModelDef("text-embedding-3-large", 3072, List.of(3072, 1536, 1024, 512, 256), true)
+            );
+            case PROVIDER_OLLAMA -> List.of(
+                    new EmbeddingModelDef("bge-m3", 1024, List.of(1024), false),
+                    new EmbeddingModelDef("nomic-embed-text", 768, List.of(768), false),
+                    new EmbeddingModelDef("mxbai-embed-large", 1024, List.of(1024), false)
+            );
+            default -> List.of();
+        };
+    }
+
+    private boolean isEmbeddingModelName(String modelName) {
+        String lower = modelName == null ? "" : modelName.toLowerCase();
+        return lower.contains("embedding")
+                || lower.contains("embed")
+                || lower.contains("bge")
+                || lower.contains("e5")
+                || lower.contains("gte");
+    }
+
+    private EmbeddingModelDef inferEmbeddingModelDef(String providerCode, String modelName) {
+        String lower = modelName == null ? "" : modelName.toLowerCase();
+        if (PROVIDER_ALIYUN.equals(providerCode)) {
+            if (lower.contains("v3")) {
+                return new EmbeddingModelDef(modelName, 1024, List.of(1024, 768, 512, 256, 128, 64), true);
+            }
+            return new EmbeddingModelDef(modelName, 1024, List.of(1024, 2048, 1536, 768, 512, 256, 128, 64), true);
+        }
+        if (PROVIDER_OPENAI.equals(providerCode)) {
+            if (lower.contains("large")) {
+                return new EmbeddingModelDef(modelName, 3072, List.of(3072, 1536, 1024, 512, 256), true);
+            }
+            return new EmbeddingModelDef(modelName, 1536, List.of(1536, 1024, 512, 256), true);
+        }
+        if (PROVIDER_OLLAMA.equals(providerCode)) {
+            if (lower.contains("nomic")) {
+                return new EmbeddingModelDef(modelName, 768, List.of(768), false);
+            }
+            return new EmbeddingModelDef(modelName, 1024, List.of(1024), false);
+        }
+        return new EmbeddingModelDef(modelName, 1024, List.of(1024), false);
+    }
+
     private String writeJson(Map<String, Object> map) {
         try {
             return objectMapper.writeValueAsString(map == null ? Map.of() : map);
@@ -605,6 +690,14 @@ public class ModelProviderService {
     private record ModelDetail(
             String modelName,
             List<String> capabilities
+    ) {
+    }
+
+    private record EmbeddingModelDef(
+            String modelName,
+            int defaultDimension,
+            List<Integer> dimensionChoices,
+            boolean supportsCustomDimension
     ) {
     }
 }

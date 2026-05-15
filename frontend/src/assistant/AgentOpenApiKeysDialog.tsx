@@ -107,6 +107,7 @@ export default function AgentOpenApiKeysDialog({
   const [saving, setSaving] = useState(false);
   const [plainKey, setPlainKey] = useState("");
   const [callQuery, setCallQuery] = useState("");
+  const [selectedCallRequestId, setSelectedCallRequestId] = useState("");
   const [form, setForm] = useState({
     name: "生产调用 Key",
     runAsUserId: "",
@@ -206,6 +207,7 @@ export default function AgentOpenApiKeysDialog({
     const suffix = search ? `?q=${encodeURIComponent(search)}` : "";
     const rows = await requestJson<ApiCallRow[]>(`/agents/${encodeURIComponent(agentId)}/api-calls${suffix}`);
     setCalls(rows ?? []);
+    setSelectedCallRequestId((current) => rows?.some((row) => row.requestId === current) ? current : "");
   };
 
   useEffect(() => {
@@ -302,6 +304,12 @@ export default function AgentOpenApiKeysDialog({
       setSaving(false);
     }
   };
+
+  const callPrimarySummary = (call: ApiCallRow) => (
+    call.responseSummary || call.requestSummary || call.errorCode || "无摘要"
+  );
+
+  const selectedCall = calls.find((call) => call.requestId === selectedCallRequestId) ?? null;
 
   const revokeKey = async (credentialId: number) => {
     if (!window.confirm("删除会永久作废这个 Key，历史调用日志仍会保留。完整 Key 无法恢复，只能重新创建。")) {
@@ -469,7 +477,15 @@ export default function AgentOpenApiKeysDialog({
                 查询
               </button>
             </div>
-            <table className="cici-openapi-keys__table">
+            <table className="cici-openapi-keys__table cici-openapi-keys__table--calls">
+              <colgroup>
+                <col style={{ width: "16%" }} />
+                <col style={{ width: "12%" }} />
+                <col style={{ width: "19%" }} />
+                <col style={{ width: "19%" }} />
+                <col style={{ width: "8%" }} />
+                <col style={{ width: "26%" }} />
+              </colgroup>
               <thead>
                 <tr>
                   <th>时间</th>
@@ -488,7 +504,16 @@ export default function AgentOpenApiKeysDialog({
                     <td><code>{call.requestId}</code><br /><small>{call.traceId || "无 trace"}</small></td>
                     <td>{call.externalSessionId || "一次性"}<br /><small>{call.externalUserId || "无外部用户"}</small></td>
                     <td>{call.elapsedMs}ms</td>
-                    <td>{call.responseSummary || call.requestSummary || call.errorCode || "无摘要"}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="cici-openapi-keys__summary-button"
+                        title="查看完整调用日志"
+                        onClick={() => setSelectedCallRequestId(call.requestId)}
+                      >
+                        {callPrimarySummary(call)}
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {calls.length === 0 ? (
@@ -496,6 +521,68 @@ export default function AgentOpenApiKeysDialog({
                 ) : null}
               </tbody>
             </table>
+            <div className="cici-openapi-keys__call-list" aria-label="调用日志列表">
+              {calls.map((call) => (
+                <button
+                  type="button"
+                  className="cici-openapi-keys__call-row"
+                  key={`mobile-${call.requestId}`}
+                  onClick={() => setSelectedCallRequestId(call.requestId)}
+                >
+                  <span>
+                    <strong>{formatTime(call.createdAt)}</strong>
+                    <small>{statusText(call.status)} · {call.httpStatus} · {call.elapsedMs}ms</small>
+                  </span>
+                  <span>
+                    <strong>{call.requestId}</strong>
+                    <small>{call.traceId || "无 trace"}</small>
+                  </span>
+                  <span>
+                    <strong>{call.externalSessionId || "一次性"}</strong>
+                    <small>{call.externalUserId || "无外部用户"}</small>
+                  </span>
+                  <span className="cici-openapi-keys__call-row-summary">{callPrimarySummary(call)}</span>
+                </button>
+              ))}
+              {calls.length === 0 ? <p>暂无调用记录。</p> : null}
+            </div>
+            {selectedCall ? (
+              <section className="cici-openapi-keys__call-detail" aria-label="完整调用日志">
+                <header>
+                  <div>
+                    <strong>完整调用日志</strong>
+                    <span>{formatTime(selectedCall.createdAt)} · {statusText(selectedCall.status)} {selectedCall.httpStatus}</span>
+                  </div>
+                  <button type="button" onClick={() => setSelectedCallRequestId("")}>收起</button>
+                </header>
+                <dl>
+                  <div>
+                    <dt>Request ID</dt>
+                    <dd>{selectedCall.requestId}</dd>
+                  </div>
+                  <div>
+                    <dt>Trace ID</dt>
+                    <dd>{selectedCall.traceId || "无 trace"}</dd>
+                  </div>
+                  <div>
+                    <dt>外部会话</dt>
+                    <dd>{selectedCall.externalSessionId || "一次性"} · {selectedCall.externalUserId || "无外部用户"}</dd>
+                  </div>
+                  <div>
+                    <dt>错误码</dt>
+                    <dd>{selectedCall.errorCode || "无"}</dd>
+                  </div>
+                  <div>
+                    <dt>请求摘要</dt>
+                    <dd><pre>{selectedCall.requestSummary || "无"}</pre></dd>
+                  </div>
+                  <div>
+                    <dt>响应 / 错误摘要</dt>
+                    <dd><pre>{selectedCall.responseSummary || selectedCall.errorCode || "无"}</pre></dd>
+                  </div>
+                </dl>
+              </section>
+            ) : null}
           </div>
         )}
       </section>
