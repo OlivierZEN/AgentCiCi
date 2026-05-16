@@ -160,7 +160,7 @@ public class ChatOrchestratorService {
                 clipForTrace(question, 220), Map.of("sessionId", sessionId)));
 
         Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
-        String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("modelName"));
+        String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
         ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
         boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
@@ -309,7 +309,7 @@ public class ChatOrchestratorService {
                         clipForTrace(question, 220), Map.of("sessionId", sessionId)));
 
                 Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
-                String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("modelName"));
+                String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
                 ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
                 boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
@@ -1014,7 +1014,8 @@ public class ChatOrchestratorService {
             return new ModelCallCredentials(
                     providerCode.trim(),
                     credentials.get("apiBaseUrl"),
-                    credentials.get("apiKey"));
+                    credentials.get("apiKey"),
+                    Boolean.parseBoolean(credentials.getOrDefault("apiKeyRequired", "true")));
         } catch (IllegalArgumentException ex) {
             log.warn("model provider credentials unavailable: org={} provider={} err={}", orgId, providerCode, ex.getMessage());
             return ModelCallCredentials.empty(providerCode);
@@ -1986,6 +1987,7 @@ public class ChatOrchestratorService {
             case "openai" -> "OpenAI";
             case "deepseek" -> "深度求索 (deepseek)";
             case "ollama-local" -> "本地 Ollama (ollama-local)";
+            case "lmstudio-local" -> "本地 LM Studio (lmstudio-local)";
             default -> provider;
         };
         return """
@@ -2028,13 +2030,13 @@ public class ChatOrchestratorService {
     }
 
     /**
-     * Use the agent's preferred model only when it is a model the current LLM provider
-     * can actually serve (Aliyun Bailian: qwen-* family).  Any placeholder or third-party
-     * model name (gpt-*, claude-*, gemini-*, cici-default, …) falls back to the
-     * org-level routed model so we never send an unsupported model to the API.
+     * Use the agent's preferred qwen model only when the routed provider is Aliyun Bailian.
+     * Local OpenAI-compatible providers can expose qwen-family names with different IDs, so
+     * they must use the org-level routed model exactly as configured.
      */
-    private static String resolveModelName(String agentModel, String routedModelName) {
-        if (agentModel != null && !agentModel.isBlank()
+    private static String resolveModelName(String agentModel, String routedProvider, String routedModelName) {
+        if ("aliyun-bailian".equals(routedProvider)
+                && agentModel != null && !agentModel.isBlank()
                 && agentModel.toLowerCase(Locale.ROOT).startsWith("qwen")) {
             return agentModel;
         }
@@ -2122,13 +2124,16 @@ public class ChatOrchestratorService {
         return new RagService.RetrievalResult(List.of(), List.of(), Map.of("total", 0L), false);
     }
 
-    private record ModelCallCredentials(String providerCode, String apiBaseUrl, String apiKey) {
+    private record ModelCallCredentials(String providerCode, String apiBaseUrl, String apiKey, boolean apiKeyRequired) {
         static ModelCallCredentials empty(String providerCode) {
-            return new ModelCallCredentials(providerCode == null ? "" : providerCode, "", "");
+            return new ModelCallCredentials(providerCode == null ? "" : providerCode, "", "", true);
         }
 
         boolean hasProviderCredentials() {
-            return apiBaseUrl != null && !apiBaseUrl.isBlank() && apiKey != null && !apiKey.isBlank();
+            if (apiBaseUrl == null || apiBaseUrl.isBlank()) {
+                return false;
+            }
+            return !apiKeyRequired || (apiKey != null && !apiKey.isBlank());
         }
     }
 }

@@ -1,7 +1,7 @@
 ---
 kind: project-baseline
 version: 3
-updated_at: 2026-05-08T23:47:10Z
+updated_at: 2026-05-16T02:51:35Z
 updated_by: ai
 status: active
 baseline_type: brownfield
@@ -46,7 +46,7 @@ baseline_type: brownfield
   - FEAT-010 平台 Skill / Tool 治理控制面、平台审计与运行时紧急禁用
   - Agent Builder 调试入口已切到后端真实运行优先，前端仅保留接口失败时的模拟兜底
   - FEAT-008 知识库生命周期第二阶段能力已基本落地，但当前按用户要求暂停在人工回归前
-  - 项目状态协议已按 `cc-aidev-guidelines-common` `3.4.0` 补齐 `README.md`、`AGENTS.md`、`.claw/current-status.md` 与本 baseline 的最小一致性
+  - 项目状态协议已按 `cc-aidev-guidelines-common` `3.6.0` 补齐并验证：`README.md`、`AGENTS.md` 托管声明块存在，`.claw/` 八个核心状态文件保留，`.claw/integration-queue.md`、`.claw/team-status.md` 与异步并行目录骨架已初始化。
 
 ## Verified Current Gaps
 

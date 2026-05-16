@@ -17,6 +17,7 @@ export default defineConfig(({ mode }) => {
         "/kb": { target: backendTarget, changeOrigin: true },
         "/ops": { target: backendTarget, changeOrigin: true },
         "/models": { target: backendTarget, changeOrigin: true },
+        "/openapi": { target: backendTarget, changeOrigin: true },
         "/tools": { target: backendTarget, changeOrigin: true },
         "/integrations": { target: backendTarget, changeOrigin: true },
         "/embed/v1": { target: backendTarget, changeOrigin: true },

@@ -10,6 +10,7 @@ type ProviderConfig = {
   apiBaseUrl: string;
   apiKeyMasked: string;
   apiKeySet: boolean;
+  apiKeyRequired?: boolean;
   defaultBaseUrl: string;
   docUrl: string;
 };
@@ -54,16 +55,19 @@ type EditingModelState = {
   modelName: string;
 };
 
-const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "anthropic", "openai"];
+const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "anthropic", "openai"];
 const MODEL_UI_STORAGE_KEY = "admin-model-ui-settings-v1";
 
 const PROVIDER_ICON_URLS: Record<string, string> = {
-  "aliyun-bailian": "/provider-logos/aliyun.svg",
+  "aliyun-bailian": "/provider-logos/aliyun-bailian.svg",
   deepseek: "/provider-logos/deepseek.svg",
   "ollama-local": "/provider-logos/ollama.svg",
+  "lmstudio-local": "/provider-logos/lmstudio.webp",
   anthropic: "/provider-logos/anthropic.svg",
   openai: "/provider-logos/openai.svg",
 };
+
+const DEFAULT_PROVIDER_ICON_URL = "/provider-logos/aliyun-bailian.svg";
 
 const CAPABILITY_META: Record<CapabilityKey, { label: string; icon: string; tone: string }> = {
   text: { label: "文本", icon: "✎", tone: "text" },
@@ -156,6 +160,7 @@ export default function AdminModelsPage() {
   const [showApiKey, setShowApiKey] = useState(false);
 
   const [sceneCode, setSceneCode] = useState("chat");
+  const [routeProvider, setRouteProvider] = useState("aliyun-bailian");
   const [modelName, setModelName] = useState("");
   const [providerModels, setProviderModels] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
@@ -204,6 +209,16 @@ export default function AdminModelsPage() {
       .sort((a, b) => a.localeCompare(b));
     return [...new Set(picked)];
   }, [selected, selectedModels]);
+  const routeModelOptions = useMemo(() => {
+    if (!routeProvider) return [];
+    const prefix = `${routeProvider}::`;
+    const picked = Array.from(selectedModels)
+      .filter((k) => k.startsWith(prefix))
+      .map((k) => k.slice(prefix.length))
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b));
+    return [...new Set(picked)];
+  }, [routeProvider, selectedModels]);
   const filteredAllModels = useMemo(() => {
     const kw = allModelsSearch.trim().toLowerCase();
     if (!kw) return allModelsData;
@@ -285,6 +300,9 @@ export default function AdminModelsPage() {
     setProviders(next);
     if (!next.some((p) => p.providerCode === selectedProvider) && next.length > 0) {
       setSelectedProvider(next[0].providerCode);
+    }
+    if (!next.some((p) => p.providerCode === routeProvider) && next.length > 0) {
+      setRouteProvider(next[0].providerCode);
     }
   };
 
@@ -494,14 +512,14 @@ export default function AdminModelsPage() {
   };
 
   const saveSceneModel = async () => {
-    if (!sceneCode.trim() || !selected || !modelName.trim()) {
-      setNotice("请先选择模型并填写场景码");
+    if (!sceneCode.trim() || !routeProvider || !modelName.trim()) {
+      setNotice("请先选择厂商、模型并填写场景码");
       return;
     }
     const res = await fetch("/models", {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders },
-      body: JSON.stringify({ sceneCode: sceneCode.trim(), provider: selected.providerCode, modelName: modelName.trim() }),
+      body: JSON.stringify({ sceneCode: sceneCode.trim(), provider: routeProvider, modelName: modelName.trim() }),
     });
     const json = await res.json();
     if (!res.ok || !json.success) {
@@ -592,6 +610,7 @@ export default function AdminModelsPage() {
       current.delete(name);
     } else {
       current.add(name);
+      setRouteProvider(providerCode);
       setModelName(name);
     }
     const nextNames = Array.from(current);
@@ -646,7 +665,6 @@ export default function AdminModelsPage() {
     setApiBaseUrl(selected.apiBaseUrl || selected.defaultBaseUrl);
     setApiKey("");
     setProviderEnabled(Boolean(selected.enabled));
-    setModelName("");
     void loadProviderModels(selected.providerCode, true);
   }, [selected?.providerCode, selected?.enabled]);
 
@@ -696,7 +714,7 @@ export default function AdminModelsPage() {
             >
               <span className="model-provider-item__icon">
                 <img
-                  src={PROVIDER_ICON_URLS[p.providerCode] || "/provider-logos/aliyun.svg"}
+                  src={PROVIDER_ICON_URLS[p.providerCode] || DEFAULT_PROVIDER_ICON_URL}
                   alt={p.providerName}
                   className="model-provider-item__img"
                 />
@@ -726,7 +744,13 @@ export default function AdminModelsPage() {
                       type={showApiKey ? "text" : "password"}
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
-                      placeholder={selected.apiKeySet ? `已配置：${selected.apiKeyMasked}` : "请输入 API Key"}
+                      placeholder={
+                        selected.apiKeySet
+                          ? `已配置：${selected.apiKeyMasked}`
+                          : selected.apiKeyRequired === false
+                            ? "本地服务通常无需 API Key"
+                            : "请输入 API Key"
+                      }
                     />
                     <button type="button" className="dify-btn dify-btn--ghost" onClick={() => setShowApiKey((v) => !v)}>
                       {showApiKey ? "隐藏" : "显示"}
@@ -791,7 +815,7 @@ export default function AdminModelsPage() {
                           <div className="provider-model-row__left">
                             <span className="provider-model-row__logo">
                               <img
-                                src={PROVIDER_ICON_URLS[selected.providerCode] || "/provider-logos/aliyun.svg"}
+                                src={PROVIDER_ICON_URLS[selected.providerCode] || DEFAULT_PROVIDER_ICON_URL}
                                 alt={selected.providerName}
                                 className="provider-model-row__logo-img"
                               />
@@ -829,6 +853,17 @@ export default function AdminModelsPage() {
                               <button
                                 type="button"
                                 className="model-row-icon-btn"
+                                title="用于场景映射"
+                                onClick={() => {
+                                  setRouteProvider(selected.providerCode);
+                                  setModelName(name);
+                                }}
+                              >
+                                ↗
+                              </button>
+                              <button
+                                type="button"
+                                className="model-row-icon-btn"
                                 title="从已选模型移除"
                                 onClick={() => void removeSelectedModel(selected.providerCode, name)}
                               >
@@ -842,54 +877,90 @@ export default function AdminModelsPage() {
                   </div>
                 )}
               </div>
-
-              <div className="kb-card admin-models__section-gap">
-                <h3>场景模型映射</h3>
-                <div className="model-scene-row">
-                  <label>
-                    场景码
-                    <input value={sceneCode} onChange={(e) => setSceneCode(e.target.value)} />
-                  </label>
-                  <label>
-                    模型名
-                    <input value={modelName} onChange={(e) => setModelName(e.target.value)} placeholder="先从上方模型列表点选" />
-                  </label>
-                  <button type="button" onClick={() => void saveSceneModel()}>保存映射</button>
-                </div>
-
-                <div className="list-box admin-models__section-gap">
-                  {models
-                    .filter((m) => m.provider === selected.providerCode)
-                    .map((m) => (
-                      <div key={m.sceneCode} className="doc-row">
-                        <div>
-                          <strong>{m.sceneCode}</strong>
-                          <div className="subtle">{m.provider} / {m.modelName}</div>
-                        </div>
-                        <div className="row">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSceneCode(m.sceneCode);
-                              setModelName(m.modelName);
-                            }}
-                          >
-                            编辑
-                          </button>
-                          <button type="button" onClick={() => void deleteModel(m.sceneCode)}>
-                            删除
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
             </>
           ) : (
             <p className="subtle">暂无可用厂商配置。</p>
           )}
         </section>
       </div>
+
+      <section className="model-routing-panel" aria-labelledby="model-routing-title">
+        <div className="model-routing-panel__head">
+          <h3 id="model-routing-title">模型路由</h3>
+          <span>按业务场景指定调用模型</span>
+        </div>
+
+        <div className="model-scene-row">
+          <label>
+            场景码
+            <input value={sceneCode} onChange={(e) => setSceneCode(e.target.value)} />
+          </label>
+          <label>
+            厂商
+            <select
+              value={routeProvider}
+              onChange={(e) => {
+                setRouteProvider(e.target.value);
+                setModelName("");
+              }}
+            >
+              {orderedProviders.map((provider) => (
+                <option key={provider.providerCode} value={provider.providerCode}>
+                  {provider.providerName}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            模型名
+            <select value={modelName} onChange={(e) => setModelName(e.target.value)}>
+              <option value="">选择已选模型</option>
+              {modelName && !routeModelOptions.includes(modelName) && (
+                <option value={modelName}>{modelName}</option>
+              )}
+              {routeModelOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="button" onClick={() => void saveSceneModel()}>保存映射</button>
+        </div>
+
+        <div className="model-routing-list">
+          {models.length === 0 ? (
+            <p className="subtle">暂无场景模型映射。</p>
+          ) : (
+            models.map((m) => {
+              const provider = providers.find((p) => p.providerCode === m.provider);
+              return (
+                <div key={m.sceneCode} className="model-routing-row">
+                  <div>
+                    <strong>{m.sceneCode}</strong>
+                    <div className="subtle">{provider?.providerName ?? m.provider} / {m.modelName}</div>
+                  </div>
+                  <div className="model-routing-row__actions">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSceneCode(m.sceneCode);
+                        setRouteProvider(m.provider);
+                        setModelName(m.modelName);
+                      }}
+                    >
+                      编辑
+                    </button>
+                    <button type="button" className="is-danger" onClick={() => void deleteModel(m.sceneCode)}>
+                      删除
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
 
       {showAllModelsModal && (
         <div className="all-models-overlay" onClick={() => setShowAllModelsModal(false)}>
@@ -922,7 +993,10 @@ export default function AdminModelsPage() {
                       <div
                         key={item.modelName}
                         className="all-models-item"
-                        onClick={() => setModelName(item.modelName)}
+                        onClick={() => {
+                          if (selected) setRouteProvider(selected.providerCode);
+                          setModelName(item.modelName);
+                        }}
                         title="点击填充到模型名"
                       >
                         <div className="all-models-item__name">{item.modelName}</div>

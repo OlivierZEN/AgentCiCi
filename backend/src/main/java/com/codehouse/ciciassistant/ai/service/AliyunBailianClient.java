@@ -140,7 +140,8 @@ public class AliyunBailianClient {
                                                               boolean stripThinkingFromAssistantContent,
                                                               String apiBaseUrl,
                                                               String apiKey) {
-        if (apiKey == null || apiKey.isBlank()) {
+        String normalizedBaseUrl = normalizeBaseUrl(apiBaseUrl);
+        if ((apiKey == null || apiKey.isBlank()) && normalizedBaseUrl.equals(baseUrl)) {
             return new ChatCompletionResult("assistant", "Aliyun API key is not configured.", null, "stop", 0, 0);
         }
         String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
@@ -164,7 +165,7 @@ public class AliyunBailianClient {
                     .build()
                     .post()
                     .uri("/chat/completions")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .headers(headers -> addOptionalBearer(headers, apiKey))
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(payload)
                     .retrieve()
@@ -181,6 +182,12 @@ public class AliyunBailianClient {
     private String normalizeBaseUrl(String value) {
         String safe = value == null || value.isBlank() ? baseUrl : value.trim();
         return safe.endsWith("/") ? safe.substring(0, safe.length() - 1) : safe;
+    }
+
+    private void addOptionalBearer(HttpHeaders headers, String apiKey) {
+        if (apiKey != null && !apiKey.isBlank()) {
+            headers.setBearerAuth(apiKey);
+        }
     }
 
     /**
@@ -201,7 +208,8 @@ public class AliyunBailianClient {
                                                       Consumer<String> onDelta,
                                                       String apiBaseUrl,
                                                       String apiKey) throws Exception {
-        if (apiKey == null || apiKey.isBlank()) {
+        String normalizedBaseUrl = normalizeBaseUrl(apiBaseUrl);
+        if ((apiKey == null || apiKey.isBlank()) && normalizedBaseUrl.equals(baseUrl)) {
             onDelta.accept("Aliyun API key is not configured.");
             return new ChatStreamResult(0, 0);
         }
@@ -219,14 +227,16 @@ public class AliyunBailianClient {
         }
 
         String jsonBody = objectMapper.writeValueAsString(payload);
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(normalizeBaseUrl(apiBaseUrl) + "/chat/completions"))
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                .uri(URI.create(normalizedBaseUrl + "/chat/completions"))
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .header(HttpHeaders.ACCEPT, "text/event-stream")
                 .timeout(STREAM_REQUEST_TIMEOUT)
-                .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8))
-                .build();
+                .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
+        if (apiKey != null && !apiKey.isBlank()) {
+            requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+        }
+        HttpRequest request = requestBuilder.build();
 
         HttpResponse<java.io.InputStream> response =
                 httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());

@@ -1,23 +1,112 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-15T08:24:00Z
+updated_at: 2026-05-16T06:36:51Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-15T08:22:31Z
-last_run_status: mixed
+last_run_at: 2026-05-16T06:36:51Z
+last_run_status: success
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`mixed`
-- 范围：FEAT-021 `cici-system` Open API local network smoke
-- 命令：`curl` login/API key create/health/SSE/call-log/revoke checks against `192.168.0.105:5173` and `192.168.0.105:8080`
-- 环境：local Vite dev server, local Spring Boot backend, PostgreSQL-backed local data
+- 状态：`success`
+- 范围：team developer identity registration
+- 命令：`validate-state.py` and `summarize-team-status.py --write`
+- 环境：local repository state files
 
 ## Latest Verified Results
+
+- Team developer identity registration (2026-05-16T06:36:51Z):
+  - Commands:
+    - `identity`: `cat /Users/owenmacbook/Downloads/owen_macmini_key.pub` -> **success**，读取开发者公钥。
+    - `identity`: `ssh-keygen -lf /Users/owenmacbook/Downloads/owen_macmini_key.pub` -> **success**，fingerprint 为 `SHA256:ENtLToPJT7GBBpMSfHIi3bFPHQtVGznViqFFFwgKXXQ`。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> **success**。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write` -> **success**。
+  - Notes:
+    - `.claw/developers/DEV-nezha.yaml` is the source of truth for the developer identity.
+    - `.claw/team-status.md` is regenerated and shows 2 active members.
+
+- Project manager identity initialization (2026-05-16T03:10:04Z):
+  - Commands:
+    - `identity`: `cat ~/.ssh/id_ed25519_agentcici_pm.pub` -> **success**，读取 Owen 项目经理公钥。
+    - `identity`: `ssh-keygen -lf ~/.ssh/id_ed25519_agentcici_pm.pub` -> **success**，fingerprint 为 `SHA256:wPxil4lqS7zeoyUa2h1aCvvzvA4jVuokW9uCcwdTa+E`。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> **success**。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write` -> **success**。
+  - Notes:
+    - `.claw/developers/MANAGER-001.yaml` is the source of truth for Owen's project-manager identity.
+    - `.claw/team-status.md` is regenerated and shows 1 active member.
+
+- cc-aidev state protocol 3.6.0 initialization (2026-05-16T02:51:35Z):
+  - Commands:
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> **success**。
+  - Notes:
+    - `.claw/` remains the canonical state directory.
+    - 3.6.0 async parallel scaffolding is present: `integration-queue.md`, `team-status.md`, `developers/`, `assignments/`, and `tasks/`.
+
+- FEAT-035 admin model routing panel IA correction (2026-05-15T15:49:48Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check -- frontend/src/admin/pages/AdminModelsPage.tsx frontend/src/styles.css` -> **success**。
+    - `browser`: Playwright login to `/admin/models`, routing panel DOM check -> **success**，`.model-routing-panel=1`，`.model-provider-main .model-routing-panel` and old provider-scoped `场景模型映射` block count `0`。
+    - `browser`: Playwright desktop full-page screenshot -> **success**。
+    - `browser`: Playwright mobile 390x844 full-page screenshot -> **success**，`scrollWidth=clientWidth=390`。
+  - Artifacts:
+    - `output/playwright/admin-models-routing-panel-desktop.png`
+    - `output/playwright/admin-models-routing-panel-mobile.png`
+  - Notes:
+    - 场景映射现在是独立模型路由配置：保存时显式提交 `sceneCode + provider + modelName`，不再依赖当前打开的厂商详情。
+
+- FEAT-035 admin model provider official icon correction (2026-05-15T13:29:42Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `static-assets`: `GET/HEAD http://127.0.0.1:5174/provider-logos/aliyun-bailian.svg` -> **HTTP 200**, `Content-Type: image/svg+xml`。
+    - `static-assets`: `GET/HEAD http://127.0.0.1:5174/provider-logos/lmstudio.webp` -> **HTTP 200**, `Content-Type: image/webp`。
+    - `browser`: Playwright login to `/admin/models`, provider image inspection -> **success**；阿里云百炼 `src=/provider-logos/aliyun-bailian.svg`，本地 LM Studio `src=/provider-logos/lmstudio.webp`，所有 provider image `naturalWidth>0`。
+    - `browser`: Playwright desktop full-page screenshot -> **success**。
+    - `browser`: Playwright mobile 390x844 full-page screenshot -> **success**，`scrollWidth=clientWidth=390`，broken images `[]`。
+    - `git`: `git diff --check -- frontend/src/admin/pages/AdminModelsPage.tsx frontend/public/provider-logos/aliyun-bailian.svg frontend/public/provider-logos/lmstudio.webp` -> **success**。
+  - Artifacts:
+    - `output/playwright/admin-models-provider-icons-desktop.png`
+    - `output/playwright/admin-models-provider-icons-mobile.png`
+  - Notes:
+    - `127.0.0.1:5173` 当前被另一个本机项目的 Vite 进程占用，本轮使用 `127.0.0.1:5174` 临时验证当前项目。
+
+- FEAT-035 local Ollama and LM Studio model providers (2026-05-15T13:09:03Z):
+  - Commands:
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ModelProviderServiceIntegrationTest,ChatOrchestratorServiceModelIdentityTest test` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `git`: `git diff --check` -> **success**。
+    - `runtime`: restarted local `cici-backend-local` screen; `/actuator/health` -> **UP**。
+    - `ollama-direct`: `GET http://127.0.0.1:11434/api/tags` -> **success**，返回 2 个模型。
+    - `ollama-backend`: `POST /models/providers/ollama-local/models/fetch` -> **success**，返回 `qwen3.6:35b-a3b-q8_0`、`qwen3.6:27b-q8_0`。
+    - `ollama-chat-direct`: direct OpenAI-compatible chat for `qwen3.6:27b-q8_0` -> **failed**，本机模型文件报 `tensor ... exceeds file size`，归类为本地模型 artifact/runtime 问题。
+    - `lmstudio-direct`: `GET http://127.0.0.1:1234/v1/models` -> **success**，返回 4 个模型；direct chat for `qwen3.5-35b-a3b` -> **success**，返回 `OK`。
+    - `lmstudio-backend`: `POST /models/providers/lmstudio-local/models/fetch` -> **success**，返回 4 个模型。
+    - `lmstudio-runtime`: `POST /ai/meeting-minutes/summary` with `chat` routed to `lmstudio-local/qwen3.5-35b-a3b` -> **success**，生成会议纪要摘要。
+    - `lmstudio-chat`: `POST /ai/chat` with the same route -> **expected local model limit**，后端已使用 LM Studio 配置模型名，但 LM Studio 当前加载模型 `n_ctx=4096`，完整助手提示超过上下文限制。
+    - `browser`: Playwright desktop `/admin/models` screenshot -> **success**，`本地 Ollama` 与 `本地 LM Studio` 可见，`scrollWidth=clientWidth=1440`。
+    - `browser`: Playwright mobile 390x844 `/admin/models` screenshot -> **success**，`scrollWidth=clientWidth=390`。
+  - Artifacts:
+    - `output/playwright/admin-models-local-providers-desktop.png`
+    - `output/playwright/admin-models-local-providers-mobile.png`
+  - Notes:
+    - Current local `demo-org` chat route is intentionally left as `lmstudio-local/qwen3.5-35b-a3b` for continued local model testing.
+
+- FEAT-021 Vite `/openapi` proxy fix and `cici-system` stream smoke (2026-05-15T09:05:47Z):
+  - Commands:
+    - `frontend`: `npm run build` -> **success**（保留 Vite chunk-size warning）。
+    - `runtime`: restarted local `cici-frontend` screen; new Vite Node PID `58015` listening on `*:5173` -> **success**。
+    - `frontend-proxy-health`: `GET http://192.168.0.105:5173/openapi/v1/agents/cici-system/health` with temporary API Key -> **HTTP 200 JSON**，`enabled=true`、`published=true`、`apiChannelEnabled=true`、`credentialStatus=ACTIVE`。
+    - `frontend-proxy-stream`: `POST http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` with temporary API Key -> **HTTP 200 SSE**，收到 `meta`、`phase=model`、`phase=generating`、多个 `delta` 和 `done`。
+    - `frontend-proxy-noauth`: same URL without API Key -> **HTTP 401 SSE**，`code=agent_api_key_missing`，确认请求已到达 Open API controller 而不是 Vite SPA fallback。
+    - `call-log`: latest `GET /agents/cici-system/api-calls` -> **success**，`status=SUCCESS`、`httpStatus=200`、`responseSummary=5173 OpenAPI 代理正常。`、`traceId=7ff92d97-f50a-45f7-b80a-9d302fdf201c`。
+    - `cleanup`: temporary credential `8` -> **REVOKED**。
+  - Notes:
+    - `frontend/vite.config.ts` now proxies `/openapi` to `backendTarget`, matching the existing local dev proxy style; tracked `frontend/vite.config.js` was updated by the build output with the same proxy entry.
 
 - FEAT-021 `cici-system` Open API local network smoke (2026-05-15T08:22:31Z):
   - Commands:

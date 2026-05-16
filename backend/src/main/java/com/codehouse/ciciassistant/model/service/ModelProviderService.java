@@ -27,6 +27,7 @@ public class ModelProviderService {
 
     public static final String PROVIDER_ALIYUN = "aliyun-bailian";
     public static final String PROVIDER_OLLAMA = "ollama-local";
+    public static final String PROVIDER_LMSTUDIO = "lmstudio-local";
     public static final String PROVIDER_ANTHROPIC = "anthropic";
     public static final String PROVIDER_OPENAI = "openai";
     public static final String PROVIDER_DEEPSEEK = "deepseek";
@@ -51,6 +52,7 @@ public class ModelProviderService {
                     "https://dashscope.aliyuncs.com/compatible-mode/v1",
                     "https://help.aliyun.com/zh/model-studio/",
                     FETCH_OPENAI_STYLE,
+                    true,
                     List.of("deepseek-v3.1", "glm-5", "kimi-k2-250711", "minimax-m2", "qwen3.5-plus", "qwen3.5-flash", "qwen3-max")
             )),
             Map.entry(PROVIDER_OLLAMA,
@@ -60,7 +62,18 @@ public class ModelProviderService {
                     "http://127.0.0.1:11434",
                     "https://github.com/ollama/ollama",
                     FETCH_OLLAMA,
+                    false,
                     List.of("qwen2.5:7b", "llama3.1:8b", "deepseek-r1:8b")
+            )),
+            Map.entry(PROVIDER_LMSTUDIO,
+            new ProviderDef(
+                    PROVIDER_LMSTUDIO,
+                    "本地 LM Studio",
+                    "http://127.0.0.1:1234/v1",
+                    "https://lmstudio.ai/docs",
+                    FETCH_OPENAI_STYLE,
+                    false,
+                    List.of("qwen3.5-35b-a3b", "llama-3.1-8b-instruct", "text-embedding-nomic-embed-text-v1.5")
             )),
             Map.entry(PROVIDER_ANTHROPIC,
             new ProviderDef(
@@ -69,6 +82,7 @@ public class ModelProviderService {
                     "https://api.anthropic.com",
                     "https://docs.anthropic.com/",
                     FETCH_ANTHROPIC,
+                    true,
                     List.of("claude-3-7-sonnet-latest", "claude-sonnet-4-5", "claude-opus-4-1")
             )),
             Map.entry(PROVIDER_OPENAI,
@@ -78,6 +92,7 @@ public class ModelProviderService {
                     "https://api.openai.com/v1",
                     "https://platform.openai.com/docs/models",
                     FETCH_OPENAI_STYLE,
+                    true,
                     List.of("gpt-4.1", "gpt-4o", "gpt-4o-mini")
             )),
             Map.entry(PROVIDER_DEEPSEEK,
@@ -87,6 +102,7 @@ public class ModelProviderService {
                     "https://api.deepseek.com/v1",
                     "https://platform.deepseek.com/api-docs/",
                     FETCH_OPENAI_STYLE,
+                    true,
                     List.of("deepseek-chat", "deepseek-reasoner")
             ))
     );
@@ -101,7 +117,10 @@ public class ModelProviderService {
         this.objectMapper = objectMapper;
         this.aliyunDefaultBaseUrl = aliyunDefaultBaseUrl;
         this.aliyunDefaultApiKey = aliyunDefaultApiKey;
-        this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(12)).build();
+        this.httpClient = HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .connectTimeout(Duration.ofSeconds(12))
+                .build();
     }
 
     @Transactional
@@ -271,7 +290,8 @@ public class ModelProviderService {
                 "apiBaseUrl", e.getApiBaseUrl(),
                 "apiKey", e.getApiKey(),
                 "providerCode", e.getProviderCode(),
-                "enabled", String.valueOf(e.isEnabled())
+                "enabled", String.valueOf(e.isEnabled()),
+                "apiKeyRequired", String.valueOf(requireDef(e.getProviderCode()).apiKeyRequired())
         );
     }
 
@@ -290,25 +310,26 @@ public class ModelProviderService {
         }
 
         return switch (def.fetchKind()) {
-            case FETCH_OPENAI_STYLE -> fetchOpenAiCompatibleModels(entity.getApiBaseUrl(), entity.getApiKey());
+            case FETCH_OPENAI_STYLE -> fetchOpenAiCompatibleModels(entity.getApiBaseUrl(), entity.getApiKey(), def.apiKeyRequired());
             case FETCH_OLLAMA -> fetchOllamaModels(entity.getApiBaseUrl());
             case FETCH_ANTHROPIC -> fetchAnthropicModels(entity.getApiBaseUrl(), entity.getApiKey());
             default -> throw new IllegalArgumentException("Unsupported provider fetch type: " + def.fetchKind());
         };
     }
 
-    private List<ModelDetail> fetchOpenAiCompatibleModels(String baseUrl, String apiKey) {
-        if (apiKey == null || apiKey.isBlank()) {
+    private List<ModelDetail> fetchOpenAiCompatibleModels(String baseUrl, String apiKey, boolean apiKeyRequired) {
+        if (apiKeyRequired && (apiKey == null || apiKey.isBlank())) {
             throw new IllegalArgumentException("API Key 不能为空");
         }
         String endpoint = appendPath(baseUrl, "/models");
-        HttpRequest req = HttpRequest.newBuilder(URI.create(endpoint))
-                .timeout(Duration.ofSeconds(20))
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                .GET()
-                .build();
+        HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(endpoint))
+                .timeout(Duration.ofSeconds(60))
+                .GET();
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+        }
 
-        return parseDataModelDetails(send(req, "OpenAI-compatible /models 调用失败"));
+        return parseDataModelDetails(send(builder.build(), "OpenAI-compatible /models 调用失败"));
     }
 
     private List<ModelDetail> fetchAnthropicModels(String baseUrl, String apiKey) {
@@ -600,6 +621,7 @@ public class ModelProviderService {
                 PROVIDER_DEFS.get(PROVIDER_ALIYUN),
                 PROVIDER_DEFS.get(PROVIDER_DEEPSEEK),
                 PROVIDER_DEFS.get(PROVIDER_OLLAMA),
+                PROVIDER_DEFS.get(PROVIDER_LMSTUDIO),
                 PROVIDER_DEFS.get(PROVIDER_ANTHROPIC),
                 PROVIDER_DEFS.get(PROVIDER_OPENAI)
         );
@@ -616,6 +638,7 @@ public class ModelProviderService {
         out.put("apiBaseUrl", nullableToBlank(e.getApiBaseUrl()));
         out.put("apiKeyMasked", maskApiKey(e.getApiKey()));
         out.put("apiKeySet", e.getApiKey() != null && !e.getApiKey().isBlank());
+        out.put("apiKeyRequired", def.apiKeyRequired());
         out.put("defaultBaseUrl", def.defaultBaseUrl());
         out.put("docUrl", def.docUrl());
         out.put("config", config);
@@ -683,6 +706,7 @@ public class ModelProviderService {
             String defaultBaseUrl,
             String docUrl,
             String fetchKind,
+            boolean apiKeyRequired,
             List<String> defaultModels
     ) {
     }

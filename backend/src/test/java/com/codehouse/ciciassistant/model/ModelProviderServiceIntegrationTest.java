@@ -22,6 +22,21 @@ class ModelProviderServiceIntegrationTest {
     void agentBaseModelsOnlyExposeConfiguredModels() {
         String orgId = "model-provider-test-org-" + UUID.randomUUID();
 
+        List<Map<String, Object>> providers = modelProviderService.listProviders(orgId);
+        assertThat(providers).extracting(row -> row.get("providerCode"))
+                .containsExactly(
+                        ModelProviderService.PROVIDER_ALIYUN,
+                        ModelProviderService.PROVIDER_DEEPSEEK,
+                        ModelProviderService.PROVIDER_OLLAMA,
+                        ModelProviderService.PROVIDER_LMSTUDIO,
+                        ModelProviderService.PROVIDER_ANTHROPIC,
+                        ModelProviderService.PROVIDER_OPENAI
+                );
+        assertThat(providers.stream()
+                .filter(row -> ModelProviderService.PROVIDER_OLLAMA.equals(row.get("providerCode"))
+                        || ModelProviderService.PROVIDER_LMSTUDIO.equals(row.get("providerCode"))))
+                .allSatisfy(row -> assertThat(row.get("apiKeyRequired")).isEqualTo(false));
+
         assertThat(modelProviderService.agentBaseModels(orgId))
                 .as("builtin provider presets must not appear as selectable agent base models")
                 .isEmpty();

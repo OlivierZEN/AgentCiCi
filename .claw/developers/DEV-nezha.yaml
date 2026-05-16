@@ -1,0 +1,15 @@
+developer_id: DEV-nezha
+display_name: 哪吒
+role: fullstack-agent
+public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIExeG8gQsV5Gltn+a7bJOJOKfMBRtWASTaPCEQVXFgI8 owen@macmini"
+git_platform: github
+git_username: OwenZheng-Cloud
+verified_identity: "github:OwenZheng-Cloud"
+ssh_signing_key_fingerprint: "SHA256:ENtLToPJT7GBBpMSfHIi3bFPHQtVGznViqFFFwgKXXQ"
+status: active
+managed_by: MANAGER-001
+allowed_scopes:
+  - "assignment-scoped"
+role_sharing_exception: "none"
+allowed_until: none
+notes: "Registered by MANAGER-001. Standing scope is assignment-scoped; concrete write scope must be granted through .claw/assignments/TASK-xxx.yaml. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
