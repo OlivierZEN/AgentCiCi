@@ -7314,11 +7314,12 @@ button:hover:not(:disabled),
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   gap: 14px;
-  min-height: 620px;
+  align-items: start;
 }
 
 .model-provider-list,
 .model-provider-main {
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
@@ -7414,6 +7415,31 @@ button:hover:not(:disabled),
 
 .model-provider-main {
   padding: 14px;
+}
+
+.model-routing-panel {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 14px;
+}
+
+.model-routing-panel__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.model-routing-panel__head h3 {
+  margin: 0;
+}
+
+.model-routing-panel__head span {
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .model-provider-main__head {
@@ -7680,7 +7706,7 @@ button:hover:not(:disabled),
 
 .model-scene-row {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr) 110px;
+  grid-template-columns: 160px 220px minmax(0, 1fr) 110px;
   gap: 10px;
   align-items: end;
 }
@@ -7692,12 +7718,66 @@ button:hover:not(:disabled),
   font-size: 12px;
 }
 
-.model-scene-row input {
+.model-scene-row input,
+.model-scene-row select {
   border: 1px solid var(--border);
   border-radius: 10px;
   height: 36px;
   padding: 0 10px;
   font-size: 14px;
+  background: var(--surface);
+  color: var(--text);
+  min-width: 0;
+}
+
+.model-routing-list {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.model-routing-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 48px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-routing-row:last-child {
+  border-bottom: none;
+}
+
+.model-routing-row__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-main .admin-page .model-routing-row__actions button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--admin-accent-strong, #876223);
+  padding: 0;
+  font-size: 13px;
+  font-weight: 650;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.admin-main .admin-page .model-routing-row__actions button:hover,
+.admin-main .admin-page .model-routing-row__actions button:focus-visible {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  text-decoration: underline;
+}
+
+.admin-main .admin-page .model-routing-row__actions button.is-danger {
+  color: var(--admin-danger, #b42318);
 }
 
 @media (max-width: 1024px) {
@@ -7707,6 +7787,21 @@ button:hover:not(:disabled),
 
   .model-scene-row {
     grid-template-columns: 1fr;
+  }
+
+  .model-routing-panel__head {
+    display: block;
+  }
+
+  .model-routing-panel__head span {
+    display: block;
+    margin-top: 4px;
+  }
+
+  .model-routing-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
   }
 
   .provider-model-row {

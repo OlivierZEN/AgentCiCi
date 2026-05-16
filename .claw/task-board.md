@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-15T08:24:00Z
+updated_at: 2026-05-16T06:36:51Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,107 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-106 Team developer identity registration
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 由项目经理 Owen (`MANAGER-001`) 为团队新增开发者身份 `DEV-nezha`，用于后续经理授权的任务分配和范围管控。
+- started_at: 2026-05-16T06:36:51Z
+- completed_at: 2026-05-16T06:36:51Z
+- done:
+  - 已读取用户提供公钥 `/Users/owenmacbook/Downloads/owen_macmini_key.pub`。
+  - 已核对 fingerprint：`SHA256:ENtLToPJT7GBBpMSfHIi3bFPHQtVGznViqFFFwgKXXQ`。
+  - 已创建 `.claw/developers/DEV-nezha.yaml`，显示名“哪吒”，角色 `fullstack-agent`，GitHub 用户名 `OwenZheng-Cloud`。
+  - 已将长期 scope 记录为 `assignment-scoped`，具体写入范围留给后续 `.claw/assignments/TASK-xxx.yaml` 授权。
+  - 已刷新 `.claw/team-status.md`，团队视图显示 2 个活跃成员。
+- verification:
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> success。
+  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write` -> success。
+- next_action: 为 `DEV-nezha` 分配任务前，先创建或确认对应 `TASK-xxx` task card 和 feature spec，再创建 assignment 与 per-task status slice。
+
+### TASK-105 Project manager identity initialization
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 为项目经理 Owen 初始化项目经理身份记录，用于后续项目经理授权模式下的开发者登记、任务分配和 scope 管控。
+- started_at: 2026-05-16T03:09:44Z
+- completed_at: 2026-05-16T03:10:04Z
+- done:
+  - 已读取用户指定公钥 `~/.ssh/id_ed25519_agentcici_pm.pub`。
+  - 已计算 SSH signing key fingerprint：`SHA256:wPxil4lqS7zeoyUa2h1aCvvzvA4jVuokW9uCcwdTa+E`。
+  - 已创建 `.claw/developers/MANAGER-001.yaml`，记录 Owen 的 `project-manager` 身份。
+  - 已刷新 `.claw/team-status.md`，派生视图显示 1 个活跃成员 `MANAGER-001`。
+- verification:
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> success。
+  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write` -> success。
+- next_action: 后续新增开发者时，在 `.claw/developers/DEV-xxx.yaml` 中使用 `managed_by: MANAGER-001`；分配任务时在 `.claw/assignments/TASK-xxx.yaml` 中使用 `assigned_by: MANAGER-001`。
+
+### TASK-104 cc-aidev state protocol 3.6.0 initialization
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 按当前安装的 `cc-aidev-guidelines-common` 3.6.0 对既有 brownfield 项目状态协议做初始化刷新，补齐异步并行交付骨架并验证状态文件结构。
+- started_at: 2026-05-16T02:50:42Z
+- completed_at: 2026-05-16T02:51:35Z
+- done:
+  - 已确认 canonical state directory 为 `.claw/`，不启用 `.ai-dev/` 双写。
+  - 已保留既有八个核心状态文件、`docs/specs/_feature-spec-template.md`、`docs/specs/_project-baseline-template.md` 与 `docs/specs/PROJECT-BASELINE.md`。
+  - 已新增 `.claw/integration-queue.md` 与 `.claw/team-status.md`。
+  - 已创建 `.claw/developers/`、`.claw/assignments/`、`.claw/tasks/` 目录，用于后续异步并行/经理授权交付记录。
+  - 已刷新 `README.md` 与 `AGENTS.md` 的托管 skill declaration；`AGENTS.md` 声明块保留在文件顶部，后续设计治理规则保持不变。
+- verification:
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> success。
+- next_action: 若启用项目经理授权的并行交付，先登记 `MANAGER-xxx` / `DEV-xxx` 身份，再创建 assignment 与 per-task status slice。
+
+### TASK-103 Local Ollama and LM Studio model providers
+
+- status: completed
+- priority: P1
+- owner_role: backend-agent-runtime
+- spec_path: `docs/specs/FEAT-035-local-model-providers.md`
+- summary: 为管理端模型厂商补齐本机 Ollama 与 LM Studio 的配置、模型拉取和本地无 API Key 调用联调；Ollama 已有入口但需修正聊天调用路径，LM Studio 需新增内置厂商。
+- started_at: 2026-05-15T12:55:55Z
+- completed_at: 2026-05-15T13:09:03Z
+- done:
+  - 已新增 `docs/specs/FEAT-035-local-model-providers.md`。
+  - `ModelProviderService` 已新增 `lmstudio-local`，默认地址 `http://127.0.0.1:1234/v1`，本地 Ollama / LM Studio 均标记为 `apiKeyRequired=false`。
+  - OpenAI-compatible 模型列表和 chat 调用已支持无 API Key；云厂商仍保留 API Key 必填。
+  - 模型厂商 HTTP client 已固定 HTTP/1.1，避免 LM Studio 本地 `/v1/models` 在 Java 默认协商下超时。
+  - `ChatOrchestratorService` 已限制 Agent qwen 模型覆盖逻辑仅对 `aliyun-bailian` 生效，本地 provider 使用组织级路由模型名。
+  - 管理端 `/admin/models` 已加入 LM Studio 排序、图标映射和本地厂商无需 API Key 的输入提示。
+  - 2026-05-15T13:29:42Z follow-up：已按用户反馈把阿里云百炼切到百炼控制台官方 SVG 图标，把 LM Studio 切到官网 app logo，不再复用其他厂商图标。
+  - 2026-05-15T15:49:48Z follow-up：已按用户产品判断把场景模型映射从当前厂商详情中移出，改为独立“模型路由”面板；保存映射时显式选择场景码、厂商和模型。
+  - 当前本地 `demo-org` 的 `chat` 场景已映射到 `lmstudio-local/qwen3.5-35b-a3b` 用于联调。
+- verification:
+  - `local`: 2026-05-15T12:55:55Z `GET http://127.0.0.1:11434/api/tags` -> success，返回 `qwen3.6:35b-a3b-q8_0`、`qwen3.6:27b-q8_0`。
+  - `local`: 2026-05-15T12:55:55Z `GET http://127.0.0.1:1234/v1/models` -> success，返回 `qwen3.6-35b-a3b-uncensored-hauhaucs-aggressive`、`qwen3.6-40b-claude-4.6-opus-deckard-heretic-uncensored-thinking-neo-code-di-imatrix-max`、`qwen3.5-35b-a3b`、`text-embedding-nomic-embed-text-v1.5`。
+  - `local`: 2026-05-15T12:55:55Z direct Ollama OpenAI-compatible chat for `qwen3.6:27b-q8_0` -> failed with model file tensor size error, indicating local model artifact/runtime issue rather than endpoint absence.
+  - `local`: 2026-05-15T12:55:55Z direct LM Studio OpenAI-compatible chat for `qwen3.5-35b-a3b` -> success，返回 `OK`。
+  - `backend`: 2026-05-15T13:09:03Z `mvn -q -Dmaven.repo.local=.m2 -Dtest=ModelProviderServiceIntegrationTest,ChatOrchestratorServiceModelIdentityTest test` -> success。
+  - `backend`: 2026-05-15T13:09:03Z `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success。
+  - `frontend`: 2026-05-15T13:09:03Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `git`: 2026-05-15T13:09:03Z `git diff --check` -> success。
+  - `api`: 2026-05-15T13:09:03Z local backend `POST /models/providers/ollama-local/models/fetch` -> success，返回 2 个 Ollama 模型。
+  - `api`: 2026-05-15T13:09:03Z local backend `POST /models/providers/lmstudio-local/models/fetch` -> success，返回 4 个 LM Studio 模型。
+  - `api`: 2026-05-15T13:09:03Z local backend `POST /ai/meeting-minutes/summary` with `chat` routed to `lmstudio-local/qwen3.5-35b-a3b` -> success，LM Studio 生成会议纪要摘要。
+  - `api`: 2026-05-15T13:09:03Z local backend `POST /ai/chat` with `chat` routed to LM Studio now uses the configured local model, but this app path exceeds the loaded LM Studio model context (`n_keep: 5131 >= n_ctx: 4096`); meeting-minutes path confirms runtime provider call works.
+  - `browser`: 2026-05-15T13:09:03Z Playwright desktop `/admin/models` screenshot -> success，`本地 Ollama` 与 `本地 LM Studio` 可见。
+  - `browser`: 2026-05-15T13:09:03Z Playwright mobile 390x844 `/admin/models` screenshot -> success，`scrollWidth=clientWidth=390`。
+  - `frontend`: 2026-05-15T13:29:42Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `static-assets`: 2026-05-15T13:29:42Z temporary Vite `127.0.0.1:5174` served `/provider-logos/aliyun-bailian.svg` and `/provider-logos/lmstudio.webp` -> HTTP 200。
+  - `browser`: 2026-05-15T13:29:42Z Playwright `/admin/models` provider image check -> success，阿里云百炼使用 `/provider-logos/aliyun-bailian.svg`，本地 LM Studio 使用 `/provider-logos/lmstudio.webp`，所有 provider 图片 `naturalWidth>0`。
+  - `browser`: 2026-05-15T13:29:42Z Playwright desktop/mobile screenshots -> success，mobile `scrollWidth=clientWidth=390`。
+  - `frontend`: 2026-05-15T15:49:48Z `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `browser`: 2026-05-15T15:49:48Z Playwright `/admin/models` routing panel check -> success，`.model-routing-panel=1`，厂商详情内旧映射块数量为 0。
+  - `browser`: 2026-05-15T15:49:48Z Playwright desktop/mobile screenshots -> success，mobile `scrollWidth=clientWidth=390`。
+- next_action: 若要把常规助手对话也跑在 LM Studio，请在 LM Studio 中用更大的 context length 重新加载模型，或选择上下文更大的本地模型；Ollama 当前需先修复本机模型文件错误后再做 chat smoke。
 
 ### TASK-098 Customer insight AI app design
 
@@ -1027,6 +1128,7 @@ board_status: active
   - 2026-05-15T15:12:35+08:00 已按 CloudCC 页面直接 `fetch` Open API 的 CORS 报错补充 `/openapi/v1/**` 专用 CORS filter；2026-05-15T15:14:00+08:00 按用户要求把默认与部署示例改为 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*`，即放开所有浏览器 Origin。
   - 2026-05-15T16:06:30+08:00 已修复 API 调用中 file-backed builtin skill 资源读取路径：运行时从扫描到的 `manifest.json` 同目录解析并缓存 `SKILL.md` 与模块文档，降低 Spring Boot jar/classpath 差异导致入口资源丢失的风险；同时调用日志支持点击摘要查看完整 request/response/error 详情，移动端改为无横向溢出的分隔线列表。
   - 2026-05-15T16:22:31+08:00 已验证本地 `cici-system` Open API：后端 `8080` 带临时 Key 的 health 与 stream 可用，stream 返回 `meta/phase/delta/done` 并写入成功调用日志；用户提供的 `5173/openapi/...` 地址不可用，原因是当前 Vite proxy 未配置 `/openapi`。
+  - 2026-05-15T17:05:47+08:00 已补上 `frontend/vite.config.ts` 的 `/openapi` proxy，构建同步更新已跟踪的 `frontend/vite.config.js`，并重启本地 `cici-frontend` screen；用户提供的 `5173/openapi/...` 地址现在可正常返回 Open API health JSON 与 SSE stream。
 - verification:
   - `git`: `git diff --check -- docs/specs/FEAT-021-agent-open-api.md .claw/task-board.md .claw/current-status.md` -> success
   - `backend`: `JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest test` -> success（覆盖 stream wrapper 与 `GET /agents/{agentId}/api-calls`）
@@ -1061,7 +1163,13 @@ board_status: active
   - `api`: 2026-05-15T16:22:31+08:00 `POST http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` with temporary API Key -> HTTP 404；`GET /health` 同 5173 地址返回 Vite SPA HTML，确认本地 dev proxy 未覆盖 `/openapi`。
   - `api`: 2026-05-15T16:22:31+08:00 `OPTIONS http://192.168.0.105:8080/openapi/v1/agents/cici-system/chat/stream` with `Origin: https://cnbh01.cloudcc.cn` -> HTTP 403 `Invalid CORS request`，本地运行进程未放行该 Origin。
   - `cleanup`: 2026-05-15T16:22:31+08:00 temporary API credentials `6` and `7` -> revoked。
-- next_action: 若要本地通过 `5173/openapi/...` 调用，补 Vite `/openapi` proxy；若要从 CloudCC 浏览器跨域直连本地 `8080`，确认本地后端 CORS 环境变量已注入运行进程。随后再在 CloudCC 实际页面重试 Open API stream 调用。
+  - `frontend`: 2026-05-15T17:05:47+08:00 `npm run build` -> success（保留 Vite chunk-size warning）。
+  - `runtime`: 2026-05-15T17:05:47+08:00 restarted local `cici-frontend` screen; Vite Node PID `58015` listens on `*:5173`。
+  - `api`: 2026-05-15T17:05:47+08:00 `GET http://192.168.0.105:5173/openapi/v1/agents/cici-system/health` with temporary API Key -> HTTP 200 JSON。
+  - `api`: 2026-05-15T17:05:47+08:00 `POST http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` with temporary API Key -> HTTP 200 SSE，收到 `meta/phase/delta/done`，response summary 为“5173 OpenAPI 代理正常。”，`traceId=7ff92d97-f50a-45f7-b80a-9d302fdf201c`。
+  - `api`: 2026-05-15T17:05:47+08:00 same 5173 stream URL without API Key -> HTTP 401 SSE `agent_api_key_missing`，确认请求已进入 Open API controller。
+  - `cleanup`: 2026-05-15T17:05:47+08:00 temporary API credential `8` -> revoked。
+- next_action: 在 CloudCC 实际页面使用 `5173/openapi/...` 重试 Open API stream 调用；若改为跨域直连 `8080`，确认本地后端 CORS 环境变量已注入运行进程。
 - handoff_notes:
   - 首版建议只开放已启用、已发布、且绑定 `api` channel 的 Agent。
   - 当前已支持 `Authorization: Bearer cici_ak_...` 与 `X-Cici-Api-Key`；`TenantContextFilter` 已跳过 Open API Key 的 JWT 解析。

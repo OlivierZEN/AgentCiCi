@@ -1,0 +1,15 @@
+developer_id: MANAGER-001
+display_name: Owen
+role: project-manager
+public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDvX8PtnMR4BLGwOuSe2i6MNv8fITsG8S+To2fUd12lk owen-agentcici-pm"
+git_platform: github
+git_username: "Owen"
+verified_identity: "github:zhengyancc@hotmail.com"
+ssh_signing_key_fingerprint: "SHA256:wPxil4lqS7zeoyUa2h1aCvvzvA4jVuokW9uCcwdTa+E"
+status: active
+managed_by: MANAGER-001
+allowed_scopes:
+  - "**"
+role_sharing_exception: "none"
+allowed_until: none
+notes: "Initial project manager identity for Owen. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."

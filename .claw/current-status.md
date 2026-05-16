@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-15T08:24:00Z
+updated_at: 2026-05-16T12:50:13Z
 updated_by: ai
 status: active
-phase: implementation
-active_task: "TASK-062 Agent Open API"
-current_task: 已验证 `cici-system` Open API 后端直连可用，但用户给出的 `http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` 当前不可用，因为本地 Vite proxy 未代理 `/openapi`。
-next_action: 若需要通过 5173 开发前端地址调用 Open API，先为 Vite proxy 补 `/openapi`；若需要浏览器跨域直连 8080，则同步确认本地 `APP_AGENT_OPEN_API_CORS_ALLOWED_ORIGINS=*` 等 CORS 配置已生效。
+phase: maintenance
+active_task: "TASK-103 Local Ollama and LM Studio model providers"
+current_task: PR #1 `[codex] Add local model providers and team state` 已完成收尾验证，准备作为 `2.0.B2` 候选打标。
+next_action: 推送当前分支、将 PR #1 从 draft 转为 ready for review，并在验证通过的提交上创建 annotated tag `2.0.B2`。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,22 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-16T12:50:13Z 已按用户要求处理当前分支 PR #1 `[codex] Add local model providers and team state`：本地 `origin` remote 已清理为不含 token 的 `https://github.com/OwenZheng-Cloud/CICI.git`；复核后端本地 provider 鉴权边界、chat/customer-insight 模型路由、Vite `/openapi` 双配置和 `/admin/models` 信息架构；修正模型路由行内“编辑/删除”文本动作，避免继承后台全局按钮圆角和 hover/focus chrome。验证通过：`git diff --check`、`.claw` `validate-state.py`、后端 `ModelProviderServiceIntegrationTest,ChatOrchestratorServiceModelIdentityTest`、前端 `npm run build`（保留既有 Vite chunk-size warning）。已用当前工作区临时 Vite `127.0.0.1:5174` 复测 `/admin/models` 桌面与 390px 移动：模型路由面板数量为 1，厂商详情内旧路由块为 0，无 broken image，无横向溢出，行内动作 computed 为透明背景、无阴影、0 圆角。截图为 `output/playwright/pr-1-admin-models-current-workspace-desktop-final.png` 与 `output/playwright/pr-1-admin-models-current-workspace-mobile-final.png`。
+
+- 2026-05-16T06:36:51Z 已由项目经理 `MANAGER-001` 登记团队开发者 `.claw/developers/DEV-nezha.yaml`：`developer_id=DEV-nezha`，显示名“哪吒”，角色 `fullstack-agent`，GitHub 用户名 `OwenZheng-Cloud`，SSH signing fingerprint 为 `SHA256:ENtLToPJT7GBBpMSfHIi3bFPHQtVGznViqFFFwgKXXQ`，状态 `active`；长期 scope 记录为 `assignment-scoped`，具体文件写入范围必须通过 assignment 授权。已刷新 `.claw/team-status.md`，团队视图显示 2 个活跃成员。验证通过：`validate-state.py` 与 `summarize-team-status.py --write`。
+
+- 2026-05-16T03:10:04Z 已为项目经理 Owen 创建 `.claw/developers/MANAGER-001.yaml`：身份为 `MANAGER-001`，角色 `project-manager`，Git 平台为 `github`，`git_username` 按用户提供记录为 `zhengyancc@hotmail.com`，SSH signing fingerprint 为 `SHA256:wPxil4lqS7zeoyUa2h1aCvvzvA4jVuokW9uCcwdTa+E`，状态 `active`。已刷新派生 `.claw/team-status.md`，团队视图显示 1 个活跃成员。验证通过：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw`。
+
+- 2026-05-16T02:51:35Z 已按 `cc-aidev-guidelines-common` 3.6.0 对当前项目做协议初始化刷新：确认 canonical state directory 为 `.claw/`，保留既有八个核心状态文件与 `docs/specs/PROJECT-BASELINE.md`；通过技能脚本补齐 `.claw/integration-queue.md`、`.claw/team-status.md` 以及 `.claw/developers/`、`.claw/assignments/`、`.claw/tasks/` 目录；刷新 `README.md` 与 `AGENTS.md` 托管声明块，并将 `AGENTS.md` 声明块保持在文件顶部以保留项目级加载顺序。验证通过：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw`。
+
+- 2026-05-15T15:49:48Z 已按用户反馈调整 `/admin/models` 信息架构：场景模型映射不再放在某个具体模型厂商配置里，改为厂商配置区下方的独立“模型路由”面板；保存映射时显式选择场景码、厂商和已选模型，映射列表展示全部场景，不再按当前选中厂商过滤。厂商详情切换不再清空路由表单。验证通过：`frontend npm run build` 成功（保留 Vite chunk-size warning）；Playwright 登录 `/admin/models` 后确认 `.model-routing-panel` 数量为 1、厂商详情内旧映射块数量为 0，桌面与 390px 移动截图成功，移动端 `scrollWidth=clientWidth=390`。截图为 `output/playwright/admin-models-routing-panel-desktop.png` 与 `output/playwright/admin-models-routing-panel-mobile.png`。
+
+- 2026-05-15T13:29:42Z 已按用户反馈修正 `/admin/models` 模型厂商图标：新增 `frontend/public/provider-logos/aliyun-bailian.svg`（百炼控制台官方 SVG）和 `frontend/public/provider-logos/lmstudio.webp`（LM Studio 官网 app logo），`AdminModelsPage` 将 `aliyun-bailian` 与 `lmstudio-local` 映射到对应图标，不再让 LM Studio 复用 Ollama 图标。验证通过：`frontend npm run build` 成功（保留 Vite chunk-size warning）；临时 Vite `127.0.0.1:5174` 下两个静态资源均 HTTP 200；Playwright 登录 `/admin/models` 后确认图片 `naturalWidth>0` 且无 broken image，桌面与 390px 移动截图成功，移动端 `scrollWidth=clientWidth=390`。截图为 `output/playwright/admin-models-provider-icons-desktop.png` 与 `output/playwright/admin-models-provider-icons-mobile.png`。
+
+- 2026-05-15T13:09:03Z 已完成 TASK-103 本地模型厂商联调：`ModelProviderService` 新增 `lmstudio-local`，本地 Ollama / LM Studio 标记 `apiKeyRequired=false`，OpenAI-compatible `/models` 与 `/chat/completions` 支持无 Bearer 调用，模型厂商 HTTP client 固定 HTTP/1.1；`ChatOrchestratorService` 只在 `aliyun-bailian` 下允许 Agent 自身 qwen 模型覆盖组织级路由，避免把 `qwen3.6-plus` 发给本地 provider；`AdminModelsPage` 展示 LM Studio 并对本地厂商提示无需 API Key。验证通过：`ModelProviderServiceIntegrationTest,ChatOrchestratorServiceModelIdentityTest`、`backend -DskipTests compile`、`frontend npm run build`、`git diff --check`；本机 Ollama API 拉取 2 个模型成功，但直接 chat 其中 `qwen3.6:27b-q8_0` 仍报本地模型文件 tensor size 错误；LM Studio `/models` 经后端返回 4 个模型，`/ai/meeting-minutes/summary` 经 `lmstudio-local/qwen3.5-35b-a3b` 生成摘要成功。Playwright 已截图 `/admin/models` 桌面与移动端，移动端 `scrollWidth=clientWidth=390`。
+
+- 2026-05-15T09:05:47Z 已按用户要求补上本地 Vite `/openapi` proxy：`frontend/vite.config.ts` 新增 `"/openapi": { target: backendTarget, changeOrigin: true }`，构建同步更新已跟踪的 `frontend/vite.config.js`。已重启 `cici-frontend` screen 会话，新 Node PID `58015` 监听 `*:5173`。验证通过：`frontend npm run build` 成功（保留 Vite chunk-size warning）；使用临时 API Key 调 `GET http://192.168.0.105:5173/openapi/v1/agents/cici-system/health` 返回 HTTP 200 JSON；`POST http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` 返回 HTTP 200 SSE，包含 `meta/phase/delta/done`，模型输出“5173 OpenAPI 代理正常。”，调用日志落库 `SUCCESS`，`traceId=7ff92d97-f50a-45f7-b80a-9d302fdf201c`。临时测试 Key credential `8` 已撤销；无 Key 请求现在经 5173 代理返回 Open API SSE 错误 `agent_api_key_missing`，确认不再被 Vite SPA fallback 吞掉。
 
 - 2026-05-15T08:22:31Z 已按用户提供地址验证 `cici-system` 开放 API：`http://192.168.0.105:5173/openapi/v1/agents/cici-system/chat/stream` 即使携带有效临时 API Key 仍返回 HTTP 404；`GET` health 同路径返回 Vite SPA HTML，确认本地 Vite `5173` 未代理 `/openapi`。直连后端 `http://192.168.0.105:8080/openapi/v1/agents/cici-system/health` 在携带临时 Key 后返回 HTTP 200，`POST /chat/stream` 返回 `meta/phase/delta/done` SSE，模型 `qwen3.6-plus` 生成答复“收到，已确认开放 API stream smoke 运行正常。”，调用日志落库为 `SUCCESS`，`traceId=9bb8986c-8a6e-4bdb-b0bf-b3da837a2b95`。两个临时测试 Key（credential `6`、`7`）均已撤销。本地直连 `8080` 对 `Origin: https://cnbh01.cloudcc.cn` 的 CORS preflight 当前返回 HTTP 403 `Invalid CORS request`，说明当前本地运行进程没有放行该 Origin；线上测试环境此前服务器本机 vhost smoke 已验证 `Access-Control-Allow-Origin: *`。
 

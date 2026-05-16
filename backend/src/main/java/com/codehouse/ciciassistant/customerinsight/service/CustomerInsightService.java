@@ -322,7 +322,8 @@ public class CustomerInsightService {
                                    CustomerInsightSectionEntity section,
                                    Map<String, Object> input,
                                    ModelChoice model) {
-        if ("mock".equalsIgnoreCase(model.provider()) || model.apiKey() == null || model.apiKey().isBlank()) {
+        if ("mock".equalsIgnoreCase(model.provider())
+                || (model.apiKeyRequired() && (model.apiKey() == null || model.apiKey().isBlank()))) {
             return mockMarkdown(project, section, input);
         }
         String systemPrompt = skillPromptAssembler.assemble("""
@@ -459,16 +460,21 @@ public class CustomerInsightService {
         String provider = routed.getOrDefault("provider", "mock");
         String modelName = routed.getOrDefault("modelName", "cici-default");
         if ("mock".equalsIgnoreCase(provider)) {
-            return new ModelChoice(provider, modelName, "", "");
+            return new ModelChoice(provider, modelName, "", "", true);
         }
         try {
             Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, provider);
             if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-                return new ModelChoice("mock", "cici-default", "", "");
+                return new ModelChoice("mock", "cici-default", "", "", true);
             }
-            return new ModelChoice(provider, modelName, credentials.get("apiBaseUrl"), credentials.get("apiKey"));
+            return new ModelChoice(
+                    provider,
+                    modelName,
+                    credentials.get("apiBaseUrl"),
+                    credentials.get("apiKey"),
+                    Boolean.parseBoolean(credentials.getOrDefault("apiKeyRequired", "true")));
         } catch (IllegalArgumentException ex) {
-            return new ModelChoice("mock", "cici-default", "", "");
+            return new ModelChoice("mock", "cici-default", "", "", true);
         }
     }
 
@@ -705,7 +711,7 @@ public class CustomerInsightService {
     public record SectionCommand(Map<String, Object> input, String markdown) {
     }
 
-    private record ModelChoice(String provider, String modelName, String apiBaseUrl, String apiKey) {
+    private record ModelChoice(String provider, String modelName, String apiBaseUrl, String apiKey, boolean apiKeyRequired) {
     }
 
     private record SectionDef(String group, String groupLabel, String code, String title, String description) {
