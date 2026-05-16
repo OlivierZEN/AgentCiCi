@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-16T06:36:51Z
+updated_at: 2026-05-16T12:50:13Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-16T06:36:51Z
+last_run_at: 2026-05-16T12:50:13Z
 last_run_status: success
 ---
 
@@ -13,11 +13,31 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：team developer identity registration
-- 命令：`validate-state.py` and `summarize-team-status.py --write`
-- 环境：local repository state files
+- 范围：PR #1 local model providers and team state closeout
+- 命令：`git diff --check`, `.claw validate-state.py`, targeted backend Maven tests, `frontend npm run build`, `/admin/models` desktop/mobile browser QA
+- 环境：local backend `127.0.0.1:8080`, current-workspace Vite `127.0.0.1:5174`
 
 ## Latest Verified Results
+
+- PR #1 local model providers closeout and 2.0.B2 candidate validation (2026-05-16T12:50:13Z):
+  - Commands:
+    - `git`: `git remote set-url origin https://github.com/OwenZheng-Cloud/CICI.git` -> **success**，本地 remote URL 已去除嵌入 token。
+    - `git`: `git diff --check` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> **success**。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ModelProviderServiceIntegrationTest,ChatOrchestratorServiceModelIdentityTest test` -> **success**。
+    - `frontend`: `npm run build` -> **success**（保留既有 Vite chunk-size warning）。
+  - Browser QA:
+    - `runtime`: current PR workspace served at `http://127.0.0.1:5174`; existing `5173` listener belongs to adjacent local checkout and was not used as validation evidence.
+    - `desktop`: `/admin/models` -> **success**，`.model-routing-panel=1`，`.model-provider-main .model-routing-panel=0`，provider buttons `6`，broken images `[]`，`scrollWidth=clientWidth=1280`。
+    - `mobile`: `/admin/models` at `390x844` -> **success**，provider buttons `6`，`.model-routing-panel=1`，broken images `[]`，`documentElement.scrollWidth=clientWidth=390`，`body.scrollWidth=390`。
+    - `design`: `.model-routing-row__actions button` computed styles -> **success**，background `transparent`、`box-shadow: none`、`border-radius: 0px`、`transform: none`，符合产品面板内联文本动作规则。
+  - Artifacts:
+    - `output/playwright/pr-1-admin-models-current-workspace-desktop-final.png`
+    - `output/playwright/pr-1-admin-models-current-workspace-mobile-final.png`
+  - Notes:
+    - PR #1 remains the release candidate for annotated tag `2.0.B2`.
+    - GitHub Actions checks are not reported for this branch; validation is local.
+    - The GitHub token previously embedded in local remote config should still be considered exposed to the local environment and rotated outside the repo.
 
 - Team developer identity registration (2026-05-16T06:36:51Z):
   - Commands:

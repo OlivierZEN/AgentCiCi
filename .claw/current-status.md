@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-16T06:36:51Z
+updated_at: 2026-05-16T12:50:13Z
 updated_by: ai
 status: active
 phase: maintenance
-active_task: "TASK-106 Team developer identity registration"
-current_task: 已由 `MANAGER-001` 登记团队开发者 `DEV-nezha`。
-next_action: 后续给 `DEV-nezha` 分配具体开发任务时，创建 `.claw/assignments/TASK-xxx.yaml` 与 `.claw/tasks/TASK-xxx.md`，并将写入范围限定在 assignment 的 `scope_files`。
+active_task: "TASK-103 Local Ollama and LM Studio model providers"
+current_task: PR #1 `[codex] Add local model providers and team state` 已完成收尾验证，准备作为 `2.0.B2` 候选打标。
+next_action: 推送当前分支、将 PR #1 从 draft 转为 ready for review，并在验证通过的提交上创建 annotated tag `2.0.B2`。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-16T12:50:13Z 已按用户要求处理当前分支 PR #1 `[codex] Add local model providers and team state`：本地 `origin` remote 已清理为不含 token 的 `https://github.com/OwenZheng-Cloud/CICI.git`；复核后端本地 provider 鉴权边界、chat/customer-insight 模型路由、Vite `/openapi` 双配置和 `/admin/models` 信息架构；修正模型路由行内“编辑/删除”文本动作，避免继承后台全局按钮圆角和 hover/focus chrome。验证通过：`git diff --check`、`.claw` `validate-state.py`、后端 `ModelProviderServiceIntegrationTest,ChatOrchestratorServiceModelIdentityTest`、前端 `npm run build`（保留既有 Vite chunk-size warning）。已用当前工作区临时 Vite `127.0.0.1:5174` 复测 `/admin/models` 桌面与 390px 移动：模型路由面板数量为 1，厂商详情内旧路由块为 0，无 broken image，无横向溢出，行内动作 computed 为透明背景、无阴影、0 圆角。截图为 `output/playwright/pr-1-admin-models-current-workspace-desktop-final.png` 与 `output/playwright/pr-1-admin-models-current-workspace-mobile-final.png`。
 
 - 2026-05-16T06:36:51Z 已由项目经理 `MANAGER-001` 登记团队开发者 `.claw/developers/DEV-nezha.yaml`：`developer_id=DEV-nezha`，显示名“哪吒”，角色 `fullstack-agent`，GitHub 用户名 `OwenZheng-Cloud`，SSH signing fingerprint 为 `SHA256:ENtLToPJT7GBBpMSfHIi3bFPHQtVGznViqFFFwgKXXQ`，状态 `active`；长期 scope 记录为 `assignment-scoped`，具体文件写入范围必须通过 assignment 授权。已刷新 `.claw/team-status.md`，团队视图显示 2 个活跃成员。验证通过：`validate-state.py` 与 `summarize-team-status.py --write`。
 

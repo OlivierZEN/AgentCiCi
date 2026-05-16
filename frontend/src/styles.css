@@ -7755,8 +7755,9 @@ button:hover:not(:disabled),
   gap: 10px;
 }
 
-.model-routing-row__actions button {
+.admin-main .admin-page .model-routing-row__actions button {
   border: 0;
+  border-radius: 0;
   background: transparent;
   color: var(--admin-accent-strong, #876223);
   padding: 0;
@@ -7766,12 +7767,16 @@ button:hover:not(:disabled),
   cursor: pointer;
 }
 
-.model-routing-row__actions button:hover,
-.model-routing-row__actions button:focus-visible {
+.admin-main .admin-page .model-routing-row__actions button:hover,
+.admin-main .admin-page .model-routing-row__actions button:focus-visible {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
   text-decoration: underline;
 }
 
-.model-routing-row__actions button.is-danger {
+.admin-main .admin-page .model-routing-row__actions button.is-danger {
   color: var(--admin-danger, #b42318);
 }
 
