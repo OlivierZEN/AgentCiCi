@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-16T12:50:13Z
+updated_at: 2026-05-16T13:05:32Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-16T12:50:13Z
+last_run_at: 2026-05-16T13:05:32Z
 last_run_status: success
 ---
 
@@ -13,11 +13,22 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：PR #1 local model providers and team state closeout
-- 命令：`git diff --check`, `.claw validate-state.py`, targeted backend Maven tests, `frontend npm run build`, `/admin/models` desktop/mobile browser QA
-- 环境：local backend `127.0.0.1:8080`, current-workspace Vite `127.0.0.1:5174`
+- 范围：PR #1 merge completion
+- 命令：`gh pr merge 1 --merge`, `git fetch origin main --tags`, `git switch main`, `git pull --ff-only origin main`
+- 环境：GitHub PR #1 and local main checkout
 
 ## Latest Verified Results
+
+- PR #1 merge completion (2026-05-16T13:05:32Z):
+  - Commands:
+    - `github`: `gh pr merge 1 --merge` -> **success**，无冲突。
+    - `github`: `gh pr view 1 --json state,mergedAt,mergeCommit` -> **success**，state `MERGED`，mergedAt `2026-05-16T13:04:56Z`，merge commit `71aa14e496f4f6e1f6835ce5134737cc45531511`。
+    - `git`: `git fetch origin main --tags` -> **success**。
+    - `git`: `git switch main && git pull --ff-only origin main` -> **success**，本地 `main` fast-forward 到 `origin/main`。
+    - `git`: `git status --short --branch` -> **success**，本地 `main` 与 `origin/main` 对齐。
+  - Notes:
+    - Annotated tag `2.0.B2` 已推送，指向验证通过的提交 `8f0b6612237abfab30410b04a6671a2ff83340fd`。
+    - PR 合并后未出现代码冲突或需要人工判断的问题。
 
 - PR #1 local model providers closeout and 2.0.B2 candidate validation (2026-05-16T12:50:13Z):
   - Commands:
