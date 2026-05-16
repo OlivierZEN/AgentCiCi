@@ -16,6 +16,22 @@
 - 技能可用后，必须按技能中的 Greenfield 或 Brownfield 流程维护 `README.md`、`AGENTS.md`、`.claw/` 或 `.ai-dev/` 以及 `docs/specs/`。
 <!-- cc-aidev-guidelines-common:end -->
 
+## Pull Request Completion Workflow
+
+- When the user asks an AI agent to finish or handle a project PR, the default workflow is: inspect the PR, run the relevant local verification, fix any issues found, and merge the PR once local verification passes.
+- Agents do not need to stop for a separate “Ready for review” or manual approval step after local verification succeeds, unless the user explicitly requests that pause.
+- If the merge reports conflicts, the agent should inspect the conflicting files and resolve them using the repo’s existing behavior, specs, and project state as the source of truth.
+- Only escalate merge conflicts to the user when the correct resolution cannot be determined safely from code, specs, tests, or product rules.
+- After a successful merge, the agent must synchronize the local `main` branch with `origin/main`, update `.claw/current-status.md` and `.claw/test-report.md` when meaningful, and push those state updates if they were changed.
+
+## PR 处理默认规则
+
+- 当用户要求 AI 智能体完成或处理项目 PR 时，默认流程是：检查 PR、运行相关本地验证、修复发现的问题，并在本地验证通过后合并 PR。
+- 本地验证通过后，不需要额外停下来等待“Ready for review”或人工确认，除非用户明确要求暂停。
+- 如果合并时出现冲突，智能体应先读取冲突文件，并根据仓库既有行为、规格文档和项目状态自行判断并解决。
+- 只有在无法从代码、规格、测试或产品规则中安全判断冲突解法时，才通知用户介入处理。
+- PR 合并成功后，智能体必须同步本地 `main` 到 `origin/main`；如有有意义的状态变化，应更新 `.claw/current-status.md` 与 `.claw/test-report.md`，并推送这些状态记录。
+
 ## Design Context
 
 - Default platform visual language name: `鎏金账房` (`The Gilded Ledger`).

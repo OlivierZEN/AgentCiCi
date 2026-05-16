@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-16T13:05:32Z
+updated_at: 2026-05-16T13:10:11Z
 updated_by: ai
 status: active
 phase: maintenance
-active_task: "TASK-103 Local Ollama and LM Studio model providers"
-current_task: PR #1 `[codex] Add local model providers and team state` 已完成验证、打标并合并到 `main`。
-next_action: 后续若需要线上发布 `2.0.B2`，基于 tag `2.0.B2` 或 merge commit `71aa14e` 执行部署流程；当前 PR 已无需后续处理。
+active_task: "Project PR handling workflow governance"
+current_task: 已将用户确认的 PR 处理默认规则写入 `AGENTS.md`。
+next_action: 后续处理项目 PR 时，按 `AGENTS.md` 的 Pull Request Completion Workflow 执行：本地验证通过后自动合并，冲突先由智能体自主判断解决，无法安全判断时再通知用户。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-16T13:10:11Z 已将用户确认的 PR 处理规则固定到 `AGENTS.md`：处理项目 PR 时，本地验证通过后默认直接合并；不再把 “Ready for review” 作为人工停顿点；合并冲突由智能体先按代码、规格、测试和产品规则自主判断解决，只有无法安全判断时再通知用户；合并成功后同步本地 `main` 并更新必要 `.claw` 状态记录。
 
 - 2026-05-16T13:05:32Z 已将 PR #1 合并到 `main`，GitHub 状态为 `MERGED`，merge commit 为 `71aa14e496f4f6e1f6835ce5134737cc45531511`；本地 `main` 已 fast-forward 到 `origin/main`。`2.0.B2` annotated tag 已推送，指向验证通过的提交 `8f0b6612237abfab30410b04a6671a2ff83340fd`。合并过程无冲突。
 
