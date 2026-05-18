@@ -1,7 +1,7 @@
 ---
 kind: team-status
 version: 3
-updated_at: 2026-05-18T02:59:14Z
+updated_at: 2026-05-18T03:39:07Z
 updated_by: summarize-team-status
 status: derived
 ---
@@ -26,8 +26,8 @@ status: derived
 
 | 指标 | 数量 |
 |------|------|
-| 开发者 | 3 |
-| 活跃开发者 | 3 |
+| 开发者 | 4 |
+| 活跃开发者 | 4 |
 | 授权任务 | 0 |
 | 已开始任务 | 0 |
 | 等待 review | 0 |
@@ -51,6 +51,18 @@ status: derived
 ### DEV-nezha
 
 - display_name: `哪吒`
+- role: `fullstack-agent`
+- identity_status: `active`
+- assigned_tasks: `none`
+- active_tasks: `none`
+- latest_pr: `none`
+- contribution_status: `none`
+- validation_status: `none`
+- integration_status: `none`
+
+### DEV-zhongda
+
+- display_name: `仲达`
 - role: `fullstack-agent`
 - identity_status: `active`
 - assigned_tasks: `none`

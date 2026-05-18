@@ -1,0 +1,15 @@
+developer_id: DEV-zhongda
+display_name: 仲达
+role: fullstack-agent
+public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMFIFd/HDfdLfz/UiMJ9djADVOdfVfB86HU9AWvWc8Wt zhongda-agentcici-dev"
+public_key_path: "/Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_zhongda.pub"
+git_platform: codeup
+git_username: shanchl
+verified_identity: "codeup:shanchl"
+ssh_signing_key_fingerprint: "SHA256:k1ljDVP4i3TEhZQxdmZlzTGsJ++pHxubUqwc6vNQUOc"
+status: active
+managed_by: MANAGER-001
+allowed_scopes:
+  - "assignment-scoped"
+allowed_until: none
+notes: "Registered by MANAGER-001. Standing scope is assignment-scoped; concrete write scope must be granted through .claw/assignments/TASK-xxx.yaml. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
