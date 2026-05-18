@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-18T04:04:58Z
+updated_at: 2026-05-18T09:10:30Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,31 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-113 cc-aidev 3.8.0 broad-code initialization
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 按当前安装的 `cc-aidev-guidelines-common` 3.8.0 对既有 brownfield 项目做宽代码模式初始化刷新，保留 `.claw/` 状态层并启用 `task_bounded_broad_code` assignment 模式。
+- started_at: 2026-05-18T09:10:30Z
+- completed_at: 2026-05-18T09:10:30Z
+- done:
+  - 已通过 `MANAGER-001` 本地 SSH challenge-response 验证项目经理身份。
+  - 已运行 3.8.0 `init-state.sh`；既有 `.claw/` 状态文件、`docs/specs/PROJECT-BASELINE.md`、规格模板、异步并行目录、`integration-queue.md` 与 `team-status.md` 均保留。
+  - 已将 `AGENTS.md` 托管 skill declaration 保持在文件顶部，避免项目级加载顺序漂移。
+  - 已为 `DEV-fengchu`、`DEV-nezha`、`DEV-wolong`、`DEV-zhongda` 配置 broad-code ceiling；具体开发仍必须受 active assignment、task boundary、protected paths 和本地 `dev-login.py` 约束。
+  - 已将 `.claw/assignments/TASK-112.yaml` 显式切到 `scope_mode: task_bounded_broad_code`，补齐 `allowed_write_roots`、`protected_paths`、`task_boundary` 与 `change_manifest_required`。
+  - 已将 `.claw-local/` 与 `.ai-dev-local/` 加入 `.gitignore`，符合本地身份缓存不得入库的规则。
+  - 已刷新 `.claw/team-status.md`。
+- verification:
+  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
+  - `init`: `bash /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/init-state.sh /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM .claw` -> success；既有文件被保留，README/AGENTS 托管声明刷新。
+  - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json` -> allowed，`scope_mode=task_bounded_broad_code`。
+  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> success。
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> success。
+- next_action: 将宽代码初始化状态提交并推送；后续每个开发任务仍由项目经理创建或调整 assignment，开发者本地 `dev-login.py` 通过后再编辑。
 
 ### TASK-112 Agent Open API Dify parity enhancement
 
@@ -30,9 +55,11 @@ board_status: active
   - 已创建 `.claw/assignments/TASK-112.yaml`，授权 `DEV-fengchu` 在 `codex/TASK-112-agent-openapi-dify-parity` 分支按 assignment scope 实现。
   - 已创建 `.claw/tasks/TASK-112.md` 作为凤雏的任务状态片。
   - 2026-05-18T04:40:00Z 已按凤雏反馈修正 `DEV-fengchu` 的 `allowed_scopes`，补入 TASK-112 assignment 的最小文件范围，避免 task-scoped `dev-login.py` 将 assignment scope 判定为超出开发者长期授权。
+  - 2026-05-18T09:10:30Z 已按宽代码模式将 assignment 显式切到 `scope_mode: task_bounded_broad_code`，用 `allowed_write_roots` 覆盖必要 source/test/resource/frontend/deploy 根，并保留 migrations、application config、`.claw` 身份授权文件和 identity scripts 的 protected path 约束。
 - verification:
   - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
   - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --json` -> allowed。
+  - `assignment-broad-code`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json` -> allowed，`scope_mode=task_bounded_broad_code`。
 - next_action: `DEV-fengchu` pull 最新 main 后，切到 `codex/TASK-112-agent-openapi-dify-parity`，按 `.claw/assignments/TASK-112.yaml` 运行完整 `dev-login.py` 私钥挑战，通过后开始实现，并持续更新 `.claw/tasks/TASK-112.md`。
 - handoff_notes:
   - 优先补 `knowledgeBaseIds` / `activeSkillCode` 越权校验、Dify 风格 `chat-messages` blocking/streaming 和 message/task/conversation 数据模型。

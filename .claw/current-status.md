@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-18T04:40:00Z
+updated_at: 2026-05-18T09:10:30Z
 updated_by: ai
 status: active
 phase: maintenance
 active_task: "TASK-112 Agent Open API Dify parity enhancement"
-current_task: 已按凤雏反馈修正 `DEV-fengchu` 开发者记录，为 TASK-112 增补与 assignment 匹配的最小 `allowed_scopes`；assignment scope 预检已返回 allowed。
-next_action: 将授权修正提交并推送到 main；凤雏 pull 后在自己的机器上用私钥运行完整 task-scoped `dev-login.py`。
+current_task: 已按 `cc-aidev-guidelines-common` 3.8.0 对项目做宽代码模式初始化刷新：`.claw/` 仍为 canonical state directory，开发者长期授权上限改为 broad-code ceiling，TASK-112 assignment 已补 `scope_mode: task_bounded_broad_code` 并通过预检。
+next_action: 将宽代码初始化状态提交并推送到 main；凤雏 pull 后在自己的机器上用私钥运行完整 task-scoped `dev-login.py`。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-18T09:10:30Z 已按用户要求完成 `cc-aidev-guidelines-common` 3.8.0 宽代码模式初始化刷新：运行 3.8.0 `init-state.sh`，确认 `.claw/` 仍为 canonical state directory，既有核心状态文件、规格模板、`integration-queue.md`、`team-status.md` 与异步并行目录均保留；`AGENTS.md` 托管声明块已保持在文件顶部。已为 `DEV-fengchu`、`DEV-nezha`、`DEV-wolong`、`DEV-zhongda` 配置 broad-code ceiling（正常 source/test/resource/frontend/spec/design/deploy/task-status 路径），仍要求每次开发必须有 active assignment 与本地 `dev-login.py`。`TASK-112` assignment 已显式切到 `scope_mode: task_bounded_broad_code`，保留 migrations / application config / `.claw` / identity scripts 等 protected path 约束。验证通过：`dev-login.py` 对 `MANAGER-001` 返回 `allowed`，`check-assignment.py` 对 `DEV-fengchu` / `TASK-112` 典型改动路径返回 `allowed` 且 `scope_mode=task_bounded_broad_code`，`summarize-team-status.py --write` 成功，`validate-state.py` 通过。`.gitignore` 已忽略 `.claw-local/` 与 `.ai-dev-local/`。
 
 - 2026-05-18T04:40:00Z 已按凤雏反馈修正 `.claw/developers/DEV-fengchu.yaml`：保留 `assignment-scoped` 语义，并补入 TASK-112 assignment 中的最小文件范围作为 `allowed_scopes`，避免 `dev-login.py` 将 `backend/src/main/java/com/codehouse/ciciassistant/openapi/**`、`frontend/src/assistant/**`、`docs/specs/FEAT-036...`、`.claw/tasks/TASK-112.md` 等授权范围判定为超出开发者长期授权。`check-assignment.py` 对 `DEV-fengchu` / `TASK-112` / `codex/TASK-112-agent-openapi-dify-parity` 已返回 `allowed`；本机只有凤雏公钥，完整 `dev-login.py` 私钥挑战需凤雏在自己机器上重跑。
 

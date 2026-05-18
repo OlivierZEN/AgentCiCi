@@ -8,28 +8,44 @@ spec_path: docs/specs/FEAT-036-agent-open-api-dify-parity.md
 task_status_path: .claw/tasks/TASK-112.md
 branch: codex/TASK-112-agent-openapi-dify-parity
 pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - backend/src/main/resources/**
+  - frontend/src/assistant/**
+  - frontend/vite.config.ts
+  - frontend/vite.config.js
+  - deploy/**
 scope_files:
-  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
-  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
   - backend/src/main/resources/db/migration/**
   - backend/src/main/resources/application.yml
   - backend/src/main/resources/application-local.yml
-  - deploy/**
-  - frontend/src/assistant/AgentOpenApiDocsDialog.tsx
-  - frontend/src/assistant/AgentOpenApiKeysDialog.tsx
-  - frontend/src/assistant/AgentBuilderShell.tsx
-  - frontend/src/assistant/cici-ui.css
-  - frontend/vite.config.ts
-  - frontend/vite.config.js
   - docs/specs/FEAT-036-agent-open-api-dify-parity.md
   - docs/specs/FEAT-021-agent-open-api.md
   - .claw/tasks/TASK-112.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
 touch_policy: exclusive
 shared_contracts:
   - docs/specs/FEAT-021-agent-open-api.md
   - docs/specs/FEAT-036-agent-open-api-dify-parity.md
   - DESIGN.md
   - DESIGN.json
+task_boundary:
+  - "Work must serve TASK-112 and the linked Dify parity acceptance criteria."
+  - "Broad source roots are allowed only when each touched module is necessary for Agent Open API compatibility, security, configuration, or UI documentation."
+  - "Out-of-scope product capabilities require a manager-updated assignment or a new task."
+change_manifest_required: true
 signature: "MANAGER-001 local ssh challenge allowed 2026-05-18T04:04:58Z; user requested assignment to DEV-fengchu."
 preflight_required: true
 local_login_required: true

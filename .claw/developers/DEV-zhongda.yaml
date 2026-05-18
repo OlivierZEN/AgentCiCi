@@ -11,5 +11,18 @@ status: active
 managed_by: MANAGER-001
 allowed_scopes:
   - "assignment-scoped"
+  - "backend/src/main/java/com/codehouse/ciciassistant/**"
+  - "backend/src/test/java/com/codehouse/ciciassistant/**"
+  - "backend/src/main/resources/**"
+  - "deploy/**"
+  - "frontend/src/**"
+  - "frontend/public/**"
+  - "frontend/vite.config.ts"
+  - "frontend/vite.config.js"
+  - "docs/specs/**"
+  - "DESIGN.md"
+  - "DESIGN.json"
+  - "PRODUCT.md"
+  - ".claw/tasks/**"
 allowed_until: none
-notes: "Registered by MANAGER-001. Standing scope is assignment-scoped; concrete write scope must be granted through .claw/assignments/TASK-xxx.yaml. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+notes: "Registered by MANAGER-001. Broad-code ceiling is enabled for normal source, test, design-source, feature-spec, deploy, and per-task status paths, but every edit still requires an active .claw/assignments/TASK-xxx.yaml boundary plus local dev-login before implementation. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."

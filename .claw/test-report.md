@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-18T03:50:21Z
+updated_at: 2026-05-18T09:10:30Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-18T03:50:21Z
+last_run_at: 2026-05-18T09:10:30Z
 last_run_status: success
 ---
 
@@ -13,11 +13,22 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：DEV-wolong developer identity registration
-- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `ssh-keygen -lf /Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_wolong.pub`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw`
+- 范围：cc-aidev 3.8.0 broad-code initialization
+- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `bash /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/init-state.sh /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM .claw`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw`
 - 环境：local main checkout
 
 ## Latest Verified Results
+
+- cc-aidev 3.8.0 broad-code initialization (2026-05-18T09:10:30Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**；verified `developer_record_active`、`ssh_key_fingerprint_matched`、`ssh_key_possession_verified`。
+    - `init`: `bash /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/init-state.sh /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM .claw` -> **success**；保留既有状态文件并刷新 README/AGENTS 托管声明。
+    - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json` -> **allowed**，`scope_mode=task_bounded_broad_code`。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+  - Notes:
+    - `.claw/assignments/TASK-112.yaml` now explicitly uses `scope_mode: task_bounded_broad_code`.
+    - Developer records keep manager-gated authorization: broad-code ceilings are not edit permission without active assignment and local `dev-login.py`.
 
 - Team developer identity registration: DEV-wolong (2026-05-18T03:50:21Z):
   - Commands:
