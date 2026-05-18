@@ -29,9 +29,11 @@ board_status: active
   - 已创建 `docs/specs/FEAT-036-agent-open-api-dify-parity.md`，明确 Dify 官方 Service API 对标范围、接口清单、数据模型建议、安全边界、验收标准和交接说明。
   - 已创建 `.claw/assignments/TASK-112.yaml`，授权 `DEV-fengchu` 在 `codex/TASK-112-agent-openapi-dify-parity` 分支按 assignment scope 实现。
   - 已创建 `.claw/tasks/TASK-112.md` 作为凤雏的任务状态片。
+  - 2026-05-18T04:40:00Z 已按凤雏反馈修正 `DEV-fengchu` 的 `allowed_scopes`，补入 TASK-112 assignment 的最小文件范围，避免 task-scoped `dev-login.py` 将 assignment scope 判定为超出开发者长期授权。
 - verification:
   - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
-- next_action: `DEV-fengchu` 切到 `codex/TASK-112-agent-openapi-dify-parity`，按 `.claw/assignments/TASK-112.yaml` 运行 `dev-login.py` 通过后开始实现，并持续更新 `.claw/tasks/TASK-112.md`。
+  - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --json` -> allowed。
+- next_action: `DEV-fengchu` pull 最新 main 后，切到 `codex/TASK-112-agent-openapi-dify-parity`，按 `.claw/assignments/TASK-112.yaml` 运行完整 `dev-login.py` 私钥挑战，通过后开始实现，并持续更新 `.claw/tasks/TASK-112.md`。
 - handoff_notes:
   - 优先补 `knowledgeBaseIds` / `activeSkillCode` 越权校验、Dify 风格 `chat-messages` blocking/streaming 和 message/task/conversation 数据模型。
   - 保持 FEAT-021 既有 `/health`、`/chat`、`/chat/stream` 兼容。

@@ -11,5 +11,20 @@ status: active
 managed_by: MANAGER-001
 allowed_scopes:
   - "assignment-scoped"
+  - "backend/src/main/java/com/codehouse/ciciassistant/openapi/**"
+  - "backend/src/test/java/com/codehouse/ciciassistant/openapi/**"
+  - "backend/src/main/resources/db/migration/**"
+  - "backend/src/main/resources/application.yml"
+  - "backend/src/main/resources/application-local.yml"
+  - "deploy/**"
+  - "frontend/src/assistant/AgentOpenApiDocsDialog.tsx"
+  - "frontend/src/assistant/AgentOpenApiKeysDialog.tsx"
+  - "frontend/src/assistant/AgentBuilderShell.tsx"
+  - "frontend/src/assistant/cici-ui.css"
+  - "frontend/vite.config.ts"
+  - "frontend/vite.config.js"
+  - "docs/specs/FEAT-036-agent-open-api-dify-parity.md"
+  - "docs/specs/FEAT-021-agent-open-api.md"
+  - ".claw/tasks/TASK-112.md"
 allowed_until: none
-notes: "Registered by MANAGER-001. Standing scope is assignment-scoped; concrete write scope must be granted through .claw/assignments/TASK-xxx.yaml. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+notes: "Registered by MANAGER-001. Standing scope remains assignment-scoped; listed path scopes authorize TASK-112 assignment preflight for Agent Open API Dify parity work and still require .claw/assignments/TASK-xxx.yaml plus local dev-login before edits. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
