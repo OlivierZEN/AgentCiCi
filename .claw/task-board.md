@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-17T15:23:41Z
+updated_at: 2026-05-18T02:57:58Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,29 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-109 Team developer identity registration
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 由项目经理 Owen (`MANAGER-001`) 为团队新增开发者身份 `DEV-fengchu`，用于后续经理授权的任务分配和范围管控。
+- started_at: 2026-05-18T02:57:58Z
+- completed_at: 2026-05-18T02:57:58Z
+- done:
+  - 已通过 `dev-login.py` 验证当前本地 `MANAGER-001` 身份，确认 manager 记录 active、SSH fingerprint 匹配、私钥持有验证通过。
+  - 已读取用户提供公钥 `/Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_fengchu.pub`。
+  - 已核对 fingerprint：`SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ`。
+  - 已创建 `.claw/developers/DEV-fengchu.yaml`，显示名“凤雏”，角色 `fullstack-agent`，Codeup/Git 用户名 `Bimo`。
+  - 已将长期 scope 记录为 `assignment-scoped`，具体写入范围留给后续 `.claw/assignments/TASK-xxx.yaml` 授权。
+  - 已刷新 `.claw/team-status.md`，团队视图显示 3 个活跃成员。
+- verification:
+  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
+  - `identity`: `ssh-keygen -lf /Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_fengchu.pub` -> fingerprint `SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ`。
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> success。
+  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> success。
+- next_action: 为 `DEV-fengchu` 分配任务前，先创建或确认对应 `TASK-xxx` task card 和 feature spec，再创建 assignment 与 per-task status slice。
 
 ### TASK-108 Project manager identity update
 
