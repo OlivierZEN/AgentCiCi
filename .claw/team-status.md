@@ -1,7 +1,7 @@
 ---
 kind: team-status
 version: 3
-updated_at: 2026-05-18T03:52:03Z
+updated_at: 2026-05-18T04:07:48Z
 updated_by: summarize-team-status
 status: derived
 ---
@@ -28,7 +28,7 @@ status: derived
 |------|------|
 | 开发者 | 5 |
 | 活跃开发者 | 5 |
-| 授权任务 | 0 |
+| 授权任务 | 1 |
 | 已开始任务 | 0 |
 | 等待 review | 0 |
 | 已集成任务 | 0 |
@@ -41,12 +41,12 @@ status: derived
 - display_name: `凤雏`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-112`
+- active_tasks: `TASK-112`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed`
+- validation_status: `not_run`
+- integration_status: `not_ready`
 
 ### DEV-nezha
 
@@ -98,8 +98,9 @@ status: derived
 
 ## 任务状态
 
-- 暂无任务授权记录。
-
+| Task | Title | Assignee | Board | Contribution | Validation | Integration | Branch | PR |
+|------|-------|----------|-------|--------------|------------|-------------|--------|----|
+| `TASK-112` | unknown | `DEV-fengchu` | `unknown` | `claimed` | `not_run` | `not_ready` | `codex/TASK-112-agent-openapi-dify-parity` | `n/a` |
 
 ## 集成状态
 

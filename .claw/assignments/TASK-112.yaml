@@ -1,0 +1,38 @@
+task_id: TASK-112
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-18T04:04:58Z
+expires_at: none
+spec_path: docs/specs/FEAT-036-agent-open-api-dify-parity.md
+task_status_path: .claw/tasks/TASK-112.md
+branch: codex/TASK-112-agent-openapi-dify-parity
+pr_url: n/a
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - deploy/**
+  - frontend/src/assistant/AgentOpenApiDocsDialog.tsx
+  - frontend/src/assistant/AgentOpenApiKeysDialog.tsx
+  - frontend/src/assistant/AgentBuilderShell.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/vite.config.ts
+  - frontend/vite.config.js
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - docs/specs/FEAT-021-agent-open-api.md
+  - .claw/tasks/TASK-112.md
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-021-agent-open-api.md
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - DESIGN.md
+  - DESIGN.json
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-18T04:04:58Z; user requested assignment to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Implement Agent Open API Dify parity enhancement. Preserve existing FEAT-021 endpoints and API Key security guarantees. Full API keys, private keys, passwords, bearer tokens, and reusable secrets must never be written to project files, logs, tests, or task notes."
+hard_gate_notes: "DEV-fengchu must run scripts/dev-login.py for TASK-112 on branch codex/TASK-112-agent-openapi-dify-parity before implementation edits. Chat-declared identity, cached key path, and check-assignment.py are not substitutes for local login."

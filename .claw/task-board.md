@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-18T03:50:21Z
+updated_at: 2026-05-18T04:04:58Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,33 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-112 Agent Open API Dify parity enhancement
+
+- status: assigned
+- priority: P0
+- owner_role: DEV-fengchu
+- spec_path: `docs/specs/FEAT-036-agent-open-api-dify-parity.md`
+- assignment_path: `.claw/assignments/TASK-112.yaml`
+- task_status_path: `.claw/tasks/TASK-112.md`
+- branch: `codex/TASK-112-agent-openapi-dify-parity`
+- summary: 对标 Dify Service API 的常用 Agent/OpenAPI 能力，增强 FEAT-021 Agent Open API，补齐参数发现、Dify 风格 chat-messages、停止生成、会话/消息列表、反馈、建议问题、文件上传、资源越权校验、幂等/重试语义、生产化配置和文档。
+- started_at: 2026-05-18T04:04:58Z
+- assigned_to: `DEV-fengchu`
+- assigned_by: `MANAGER-001`
+- done:
+  - 已用 `MANAGER-001` 本地 SSH challenge-response 通过 `dev-login.py` 验证项目经理身份。
+  - 已创建 `docs/specs/FEAT-036-agent-open-api-dify-parity.md`，明确 Dify 官方 Service API 对标范围、接口清单、数据模型建议、安全边界、验收标准和交接说明。
+  - 已创建 `.claw/assignments/TASK-112.yaml`，授权 `DEV-fengchu` 在 `codex/TASK-112-agent-openapi-dify-parity` 分支按 assignment scope 实现。
+  - 已创建 `.claw/tasks/TASK-112.md` 作为凤雏的任务状态片。
+- verification:
+  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
+- next_action: `DEV-fengchu` 切到 `codex/TASK-112-agent-openapi-dify-parity`，按 `.claw/assignments/TASK-112.yaml` 运行 `dev-login.py` 通过后开始实现，并持续更新 `.claw/tasks/TASK-112.md`。
+- handoff_notes:
+  - 优先补 `knowledgeBaseIds` / `activeSkillCode` 越权校验、Dify 风格 `chat-messages` blocking/streaming 和 message/task/conversation 数据模型。
+  - 保持 FEAT-021 既有 `/health`、`/chat`、`/chat/stream` 兼容。
+  - 文件上传首版先落权限绑定、元数据、引用和审计；真实多模态处理可按模型能力渐进。
+  - 任意 UI 改动必须遵守 `DESIGN.md`、`DESIGN.json` 和 `AGENTS.md` 的 `鎏金账房` 产品页规则。
 
 ### TASK-111 Team developer identity registration
 
