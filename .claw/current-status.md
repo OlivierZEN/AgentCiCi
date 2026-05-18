@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-18T03:37:58Z
+updated_at: 2026-05-18T03:50:21Z
 updated_by: ai
 status: active
 phase: maintenance
 active_task: "Team developer identity registration"
-current_task: 已按用户提供信息新增团队开发者 `DEV-zhongda`，并验证项目经理身份、公钥 fingerprint、状态文件和团队视图。
-next_action: 后续为 `DEV-zhongda` 分配任务前，先创建对应 task/spec，再通过 `.claw/assignments/` 授权具体 branch 与 scope。
+current_task: 已按用户提供信息新增团队开发者 `DEV-wolong`，并验证项目经理身份、公钥 fingerprint、状态文件和团队视图。
+next_action: 后续为 `DEV-wolong` 分配任务前，先创建对应 task/spec，再通过 `.claw/assignments/` 授权具体 branch 与 scope。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-18T03:50:21Z 已由项目经理 `MANAGER-001` 登记团队开发者 `.claw/developers/DEV-wolong.yaml`：`developer_id=DEV-wolong`，显示名“卧龙”，角色 `fullstack-agent`，Codeup/Git 用户名 `yljaychou`，SSH signing fingerprint 为 `SHA256:jjRE1V0lK4t5FwIjyGzmjbP8uID10ht5GyY429HHol0`，状态 `active`；长期 scope 记录为 `assignment-scoped`，具体文件写入范围必须通过 assignment 授权。已刷新 `.claw/team-status.md`。验证通过：`dev-login.py` 对 `MANAGER-001` 返回 `allowed`，卧龙公钥 fingerprint 核对通过，`validate-state.py` 通过。
 
 - 2026-05-18T03:37:58Z 已由项目经理 `MANAGER-001` 登记团队开发者 `.claw/developers/DEV-zhongda.yaml`：`developer_id=DEV-zhongda`，显示名“仲达”，角色 `fullstack-agent`，Codeup/Git 用户名 `shanchl`，SSH signing fingerprint 为 `SHA256:k1ljDVP4i3TEhZQxdmZlzTGsJ++pHxubUqwc6vNQUOc`，状态 `active`；长期 scope 记录为 `assignment-scoped`，具体文件写入范围必须通过 assignment 授权。已刷新 `.claw/team-status.md`。验证通过：`dev-login.py` 对 `MANAGER-001` 返回 `allowed`，仲达公钥 fingerprint 核对通过，`validate-state.py` 通过。
 

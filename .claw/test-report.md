@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-18T03:37:58Z
+updated_at: 2026-05-18T03:50:21Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-18T03:37:58Z
+last_run_at: 2026-05-18T03:50:21Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：DEV-zhongda developer identity registration
-- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `ssh-keygen -lf /Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_zhongda.pub`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw`
+- 范围：DEV-wolong developer identity registration
+- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `ssh-keygen -lf /Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_wolong.pub`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw`
 - 环境：local main checkout
 
 ## Latest Verified Results
+
+- Team developer identity registration: DEV-wolong (2026-05-18T03:50:21Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**；verified `developer_record_active`、`ssh_key_fingerprint_matched`、`ssh_key_possession_verified`。
+    - `identity`: `ssh-keygen -lf /Volumes/AISpace/datafiles/developer-group/id_ed25519_agentcici_wolong.pub` -> **success**，fingerprint 为 `SHA256:jjRE1V0lK4t5FwIjyGzmjbP8uID10ht5GyY429HHol0`。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+  - Notes:
+    - `.claw/developers/DEV-wolong.yaml` is the source of truth for the developer identity.
+    - `.claw/team-status.md` is regenerated and shows 5 active members.
 
 - Team developer identity registration: DEV-zhongda (2026-05-18T03:37:58Z):
   - Commands:
