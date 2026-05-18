@@ -10,6 +10,6 @@ status: active
 managed_by: MANAGER-001
 allowed_scopes:
   - "assignment-scoped"
-role_sharing_exception: "none"
+role_sharing_exception: "Shares GitHub username OwenZheng-Cloud with MANAGER-001 by manager decision; identities use distinct SSH signing key fingerprints and roles."
 allowed_until: none
 notes: "Registered by MANAGER-001. Standing scope is assignment-scoped; concrete write scope must be granted through .claw/assignments/TASK-xxx.yaml. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."

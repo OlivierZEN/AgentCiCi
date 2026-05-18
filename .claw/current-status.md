@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-16T13:10:11Z
+updated_at: 2026-05-17T15:23:41Z
 updated_by: ai
 status: active
 phase: maintenance
-active_task: "Project PR handling workflow governance"
-current_task: 已将用户确认的 PR 处理默认规则写入 `AGENTS.md`。
-next_action: 后续处理项目 PR 时，按 `AGENTS.md` 的 Pull Request Completion Workflow 执行：本地验证通过后自动合并，冲突先由智能体自主判断解决，无法安全判断时再通知用户。
+active_task: "Project manager identity update"
+current_task: 已按用户提供信息更新 `MANAGER-001` 项目经理身份记录，并验证 SSH key possession。
+next_action: 后续项目工作继续以 `MANAGER-001` / `OwenZheng-Cloud` 作为项目经理 GitHub 身份；新增任务授权时继续通过 `.claw/assignments/` 记录 scope。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,10 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-17T15:23:41Z 已按用户提供信息更新 `.claw/developers/MANAGER-001.yaml`：`display_name=Owen`，`git_username=OwenZheng-Cloud`，公钥来源 `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm.pub`，SSH signing fingerprint 为 `SHA256:lNTe9Id7U0v8iDDKBaCZcuEkkDZH7qPsFulGMZkN/Sk`；因 `DEV-nezha` 也使用 `OwenZheng-Cloud`，已在两个身份记录中明确 role sharing exception，且两者 SSH fingerprint 不同。已刷新 `.claw/team-status.md`。验证通过：`dev-login.py` 对 `MANAGER-001` 返回 `allowed`，`validate-state.py` 通过。
+
+- 2026-05-17T02:16:38Z 已按 `cc-aidev-guidelines-common` 3.7.0 对当前 brownfield 项目做协议初始化刷新：确认 canonical state directory 仍为 `.claw/`，保留既有八个核心状态文件、`docs/specs/PROJECT-BASELINE.md`、异步并行目录和团队身份记录；通过 3.7.0 `init-state.sh` 刷新 `README.md` 与 `AGENTS.md` 托管声明块，并将 `AGENTS.md` 声明块移回文件顶部以保留项目级加载顺序。验证通过：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw`。
 
 - 2026-05-16T13:10:11Z 已将用户确认的 PR 处理规则固定到 `AGENTS.md`：处理项目 PR 时，本地验证通过后默认直接合并；不再把 “Ready for review” 作为人工停顿点；合并冲突由智能体先按代码、规格、测试和产品规则自主判断解决，只有无法安全判断时再通知用户；合并成功后同步本地 `main` 并更新必要 `.claw` 状态记录。
 

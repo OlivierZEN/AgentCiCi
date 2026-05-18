@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-16T13:05:32Z
+updated_at: 2026-05-17T15:23:41Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-16T13:05:32Z
+last_run_at: 2026-05-17T15:23:41Z
 last_run_status: success
 ---
 
@@ -13,11 +13,29 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：PR #1 merge completion
-- 命令：`gh pr merge 1 --merge`, `git fetch origin main --tags`, `git switch main`, `git pull --ff-only origin main`
-- 环境：GitHub PR #1 and local main checkout
+- 范围：MANAGER-001 identity update
+- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw`
+- 环境：local main checkout
 
 ## Latest Verified Results
+
+- MANAGER-001 identity update (2026-05-17T15:23:41Z):
+  - Commands:
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write` -> **success**。
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**；verified `developer_record_active`、`ssh_key_fingerprint_matched`、`ssh_key_possession_verified`。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> **success**。
+  - Notes:
+    - `MANAGER-001` now binds to GitHub username `OwenZheng-Cloud` and SSH signing fingerprint `SHA256:lNTe9Id7U0v8iDDKBaCZcuEkkDZH7qPsFulGMZkN/Sk`.
+    - `MANAGER-001` and `DEV-nezha` explicitly record role sharing exceptions for the shared GitHub username; their SSH signing fingerprints remain distinct.
+
+- cc-aidev state protocol 3.7.0 initialization refresh (2026-05-17T02:16:38Z):
+  - Commands:
+    - `state`: `bash /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/init-state.sh /Volumes/AISpace/codehouse/cc-agentcici_PM .claw` -> **success**；刷新 `README.md` 与 `AGENTS.md` 托管声明，既有状态文件和模板均被跳过保留。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> **success**。
+  - Notes:
+    - `.claw/` remains the canonical state directory.
+    - 3.7.0 refresh preserved async parallel scaffolding: `integration-queue.md`, `team-status.md`, `developers/`, `assignments/`, and `tasks/`.
+    - `AGENTS.md` managed declaration was moved back to the file top after script refresh to preserve project-level load order.
 
 - PR #1 merge completion (2026-05-16T13:05:32Z):
   - Commands:

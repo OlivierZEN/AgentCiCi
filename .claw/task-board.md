@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-16T06:36:51Z
+updated_at: 2026-05-17T15:23:41Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,45 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-108 Project manager identity update
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 按用户提供的开发者身份信息更新项目经理 `MANAGER-001`，绑定 GitHub 用户名 `OwenZheng-Cloud` 与新的 ED25519 signing key fingerprint。
+- started_at: 2026-05-17T15:23:41Z
+- completed_at: 2026-05-17T15:23:41Z
+- done:
+  - 已更新 `.claw/developers/MANAGER-001.yaml`：`developer_id=MANAGER-001`，`display_name=Owen`，`git_username=OwenZheng-Cloud`，`verified_identity=github:OwenZheng-Cloud`。
+  - 已读取公钥 `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm.pub` 并写入 public identity material。
+  - 已核对 fingerprint：`SHA256:lNTe9Id7U0v8iDDKBaCZcuEkkDZH7qPsFulGMZkN/Sk`。
+  - 已为 `MANAGER-001` 与 `DEV-nezha` 记录同一 GitHub username 的显式 role sharing exception；两者 SSH signing fingerprint 不同。
+  - 已刷新 `.claw/team-status.md`。
+- verification:
+  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> success。
+  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw --write` -> success。
+- next_action: 后续由 `MANAGER-001` 创建或调整 assignment 时，继续使用 `OwenZheng-Cloud` 与该 SSH signing key 做本地身份验证。
+
+### TASK-107 cc-aidev state protocol 3.7.0 initialization
+
+- status: completed
+- priority: P1
+- owner_role: project-manager
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- summary: 按当前安装的 `cc-aidev-guidelines-common` 3.7.0 对既有 brownfield 项目状态协议做初始化刷新，保留既有状态并验证 3.7.0 脚本兼容性。
+- started_at: 2026-05-17T02:16:38Z
+- completed_at: 2026-05-17T02:16:38Z
+- done:
+  - 已确认 canonical state directory 为 `.claw/`，不启用 `.ai-dev/` 双写。
+  - 已运行 3.7.0 `init-state.sh`；既有八个核心状态文件、`docs/specs/_feature-spec-template.md`、`docs/specs/_project-baseline-template.md`、`docs/specs/PROJECT-BASELINE.md`、`.claw/integration-queue.md` 与 `.claw/team-status.md` 均保留。
+  - 已确认 `.claw/developers/`、`.claw/assignments/`、`.claw/tasks/` 异步并行目录存在，且既有 `MANAGER-001` 与 `DEV-nezha` 身份记录保留。
+  - 已刷新 `README.md` 与 `AGENTS.md` 的托管 skill declaration；`AGENTS.md` 声明块已移回文件顶部，后续设计治理和 PR 规则保持不变。
+- verification:
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-agentcici_PM/.claw` -> success。
+- next_action: 后续若启用经理授权的并行开发，继续通过 `MANAGER-001` 创建 assignment 与 per-task status slice；普通项目工作按 `.claw/current-status.md` 入口读取。
 
 ### TASK-106 Team developer identity registration
 

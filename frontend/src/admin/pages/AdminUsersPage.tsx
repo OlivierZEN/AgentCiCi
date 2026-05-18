@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useAdminToken } from "../useAdminToken";
 import { processAvatarFile } from "../../shared/avatar";
+import { LS_ADMIN_TOKEN } from "../../constants";
+
+const ROLE_OWNER = "OWNER";
+const STATUS_SUSPENDED = "SUSPENDED";
 
 type UserRow = {
   id: string;
@@ -14,8 +18,27 @@ type UserRow = {
   avatarBase64?: string;
 };
 
+type AdminAuthPayload = {
+  userId?: string;
+  roles?: string[];
+};
+
+function readAdminAuth(): AdminAuthPayload | null {
+  try {
+    const raw = localStorage.getItem(LS_ADMIN_TOKEN);
+    return raw ? (JSON.parse(raw) as AdminAuthPayload) : null;
+  } catch {
+    return null;
+  }
+}
+
+function userRoleLabel(roleCode: string): string {
+  return roleCode === ROLE_OWNER ? "组织创建者" : roleCode;
+}
+
 export default function AdminUsersPage() {
   const token = useAdminToken();
+  const adminAuth = readAdminAuth();
   const [notice, setNotice] = useState("");
   const [users, setUsers] = useState<UserRow[]>([]);
   const [pending, setPending] = useState<Record<string, string>>({});
@@ -29,6 +52,8 @@ export default function AdminUsersPage() {
     ccSafetymark: "",
   });
   const [inviteForm, setInviteForm] = useState({ mobile: "", nickname: "", roleCode: "ORG_USER" });
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [inviteSubmitting, setInviteSubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState("");
 
   const load = async () => {
@@ -105,20 +130,28 @@ export default function AdminUsersPage() {
       setNotice("请输入成员手机号");
       return;
     }
-    const res = await fetch("/admin/users/invitations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify(inviteForm),
-    });
-    const json = await res.json();
-    if (!res.ok || !json.success) {
-      setNotice(json.message ?? "添加成员失败");
-      return;
+    setInviteSubmitting(true);
+    try {
+      const res = await fetch("/admin/users/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify(inviteForm),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setNotice(json.message ?? "添加成员失败");
+        return;
+      }
+      setNotice("成员已加入组织");
+      setInviteForm({ mobile: "", nickname: "", roleCode: "ORG_USER" });
+      setInviteModalOpen(false);
+      setSelectedUserId(json.data?.id ?? "");
+      await load();
+    } catch {
+      setNotice("添加成员失败");
+    } finally {
+      setInviteSubmitting(false);
     }
-    setNotice("成员已加入组织");
-    setInviteForm({ mobile: "", nickname: "", roleCode: "ORG_USER" });
-    setSelectedUserId(json.data?.id ?? "");
-    await load();
   };
 
   const setMemberStatus = async (userId: string, action: "suspend" | "restore") => {
@@ -153,12 +186,27 @@ export default function AdminUsersPage() {
     void load();
   }, [token]);
 
+  useEffect(() => {
+    if (!inviteModalOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !inviteSubmitting) {
+        setInviteModalOpen(false);
+      }
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [inviteModalOpen, inviteSubmitting]);
+
   const filteredUsers = users.filter((u) => {
     const q = keyword.trim().toLowerCase();
     if (!q) return true;
     return u.mobile.toLowerCase().includes(q) || (u.nickname ?? "").toLowerCase().includes(q);
   });
   const selected = filteredUsers.find((u) => u.id === selectedUserId) ?? filteredUsers[0] ?? null;
+  const currentMember = users.find((u) => u.id === adminAuth?.userId);
+  const currentAdminIsOwner = currentMember?.roleCode === ROLE_OWNER || (!currentMember && adminAuth?.roles?.includes(ROLE_OWNER));
+  const selectedIsOwner = selected?.roleCode === ROLE_OWNER;
+  const selectedIsSuspended = selected?.memberStatus === STATUS_SUSPENDED;
 
   useEffect(() => {
     if (!selected) return;
@@ -199,28 +247,8 @@ export default function AdminUsersPage() {
 
       <div className="user-admin-layout">
         <aside className="user-list-panel">
-          <div className="user-invite-form">
-            <input
-              value={inviteForm.mobile}
-              onChange={(e) => setInviteForm((form) => ({ ...form, mobile: e.target.value }))}
-              placeholder="成员手机号"
-              aria-label="成员手机号"
-            />
-            <input
-              value={inviteForm.nickname}
-              onChange={(e) => setInviteForm((form) => ({ ...form, nickname: e.target.value }))}
-              placeholder="昵称"
-              aria-label="昵称"
-            />
-            <select
-              value={inviteForm.roleCode}
-              onChange={(e) => setInviteForm((form) => ({ ...form, roleCode: e.target.value }))}
-              aria-label="成员角色"
-            >
-              <option value="ORG_USER">ORG_USER</option>
-              <option value="ORG_ADMIN">ORG_ADMIN</option>
-            </select>
-            <button type="button" onClick={() => void inviteMember()} disabled={!inviteForm.mobile.trim()}>
+          <div className="user-list-toolbar">
+            <button type="button" className="user-add-member-button" onClick={() => setInviteModalOpen(true)}>
               添加成员
             </button>
           </div>
@@ -247,7 +275,7 @@ export default function AdminUsersPage() {
                 <div className="user-list-item__mobile">{u.nickname || u.mobile}</div>
                 <div className="user-list-item__meta">
                   <span>{u.nickname ? u.mobile : "未设置昵称"}</span>
-                  <span>{u.memberStatus === "SUSPENDED" ? "已停用" : u.roleCode}</span>
+                  <span>{u.memberStatus === STATUS_SUSPENDED ? "已停用" : userRoleLabel(u.roleCode)}</span>
                 </div>
               </button>
             ))}
@@ -271,17 +299,32 @@ export default function AdminUsersPage() {
                   )}
                 </div>
                 <div>
-                  <h3 className="user-detail-name">{selected.nickname || selected.mobile}</h3>
+                  <div className="user-detail-title-row">
+                    <h3 className="user-detail-name">{selected.nickname || selected.mobile}</h3>
+                    {selectedIsOwner && <span className="user-owner-tag">组织创建者</span>}
+                  </div>
                   <p className="subtle">{selected.mobile}</p>
                 </div>
                 <div className="user-detail-topbox">
                   <div className="user-detail-topbox__item">
                     <span className="subtle">当前角色</span>
-                    <strong>{pending[selected.id] ?? selected.roleCode}</strong>
+                    <strong>{userRoleLabel(pending[selected.id] ?? selected.roleCode)}</strong>
                   </div>
                   <div className="user-detail-topbox__item">
                     <span className="subtle">成员状态</span>
-                    <strong>{selected.memberStatus === "SUSPENDED" ? "已停用" : "有效"}</strong>
+                    <button
+                      type="button"
+                      className={`user-status-switch${selectedIsSuspended ? "" : " is-on"}`}
+                      role="switch"
+                      aria-checked={!selectedIsSuspended}
+                      aria-label={selectedIsSuspended ? "恢复成员" : "停用成员"}
+                      onClick={() => void setMemberStatus(selected.id, selectedIsSuspended ? "restore" : "suspend")}
+                    >
+                      <span className="user-status-switch__track" aria-hidden>
+                        <span className="user-status-switch__thumb" />
+                      </span>
+                      <span>{selectedIsSuspended ? "已停用" : "有效"}</span>
+                    </button>
                   </div>
                   <div className="user-detail-topbox__item">
                     <span className="subtle">创建时间</span>
@@ -354,7 +397,7 @@ export default function AdminUsersPage() {
                         onChange={(e) => setRoleLocal(selected.id, e.target.value)}
                         disabled={selected.roleCode === "OWNER"}
                       >
-                        {selected.roleCode === "OWNER" ? <option value="OWNER">OWNER</option> : null}
+                        {selected.roleCode === ROLE_OWNER ? <option value={ROLE_OWNER}>组织创建者</option> : null}
                         <option value="ORG_ADMIN">ORG_ADMIN</option>
                         <option value="ORG_USER">ORG_USER</option>
                       </select>
@@ -376,18 +419,9 @@ export default function AdminUsersPage() {
                     >
                       保存基本信息
                     </button>
-                    {selected.memberStatus === "SUSPENDED" ? (
-                      <button type="button" className="user-text-action" onClick={() => void setMemberStatus(selected.id, "restore")}>
-                        恢复成员
-                      </button>
-                    ) : (
-                      <button type="button" className="user-text-action user-text-action--danger" onClick={() => void setMemberStatus(selected.id, "suspend")}>
-                        停用成员
-                      </button>
-                    )}
-                    {selected.roleCode !== "OWNER" && selected.memberStatus !== "SUSPENDED" && (
+                    {currentAdminIsOwner && !selectedIsOwner && !selectedIsSuspended && (
                       <button type="button" className="user-text-action" onClick={() => void transferOwner(selected.id)}>
-                        转让 Owner
+                        转让创建者
                       </button>
                     )}
                   </div>
@@ -425,6 +459,85 @@ export default function AdminUsersPage() {
           )}
         </section>
       </div>
+
+      {inviteModalOpen && (
+        <div
+          className="user-invite-modal-backdrop"
+          role="presentation"
+          onClick={(event) => {
+            if (event.target === event.currentTarget && !inviteSubmitting) {
+              setInviteModalOpen(false);
+            }
+          }}
+        >
+          <form
+            className="user-invite-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="user-invite-modal-title"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void inviteMember();
+            }}
+          >
+            <div className="user-invite-modal__head">
+              <h2 id="user-invite-modal-title">添加成员</h2>
+              <button
+                type="button"
+                className="user-invite-modal__close"
+                aria-label="关闭添加成员"
+                onClick={() => setInviteModalOpen(false)}
+                disabled={inviteSubmitting}
+              >
+                ×
+              </button>
+            </div>
+            <div className="user-invite-modal__body">
+              <label className="user-invite-field">
+                <span>成员手机号</span>
+                <input
+                  value={inviteForm.mobile}
+                  onChange={(e) => setInviteForm((form) => ({ ...form, mobile: e.target.value }))}
+                  placeholder="请输入成员手机号"
+                  autoFocus
+                  required
+                />
+              </label>
+              <label className="user-invite-field">
+                <span>昵称</span>
+                <input
+                  value={inviteForm.nickname}
+                  onChange={(e) => setInviteForm((form) => ({ ...form, nickname: e.target.value }))}
+                  placeholder="请输入昵称"
+                />
+              </label>
+              <label className="user-invite-field">
+                <span>成员角色</span>
+                <select
+                  value={inviteForm.roleCode}
+                  onChange={(e) => setInviteForm((form) => ({ ...form, roleCode: e.target.value }))}
+                >
+                  <option value="ORG_USER">ORG_USER</option>
+                  <option value="ORG_ADMIN">ORG_ADMIN</option>
+                </select>
+              </label>
+            </div>
+            <div className="user-invite-modal__foot">
+              <button
+                type="button"
+                className="user-invite-modal__secondary"
+                onClick={() => setInviteModalOpen(false)}
+                disabled={inviteSubmitting}
+              >
+                取消
+              </button>
+              <button type="submit" className="user-invite-modal__primary" disabled={!inviteForm.mobile.trim() || inviteSubmitting}>
+                {inviteSubmitting ? "添加中" : "添加成员"}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

@@ -4983,55 +4983,193 @@ select {
   min-width: 0;
 }
 
-.user-invite-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
-  gap: 8px;
+.user-list-toolbar {
+  display: flex;
+  justify-content: flex-end;
   padding-bottom: 12px;
   margin-bottom: 12px;
   border-bottom: 1px solid #ded2bb;
 }
 
-.user-invite-form input,
-.user-invite-form select,
-.user-invite-form button {
-  min-width: 0;
-  height: 34px;
-  font-size: 13px;
-}
-
-.user-invite-form input,
-.user-invite-form select {
-  border-color: #ded2bb;
-  background: #fffdf8;
-  color: #2b2217;
-  box-shadow: none;
-}
-
-.user-invite-form input:focus,
-.user-invite-form select:focus {
-  border-color: #b99652;
-  box-shadow: 0 0 0 2px rgba(166, 124, 47, 0.12);
-}
-
-.user-invite-form button {
+.user-add-member-button {
+  min-height: 34px;
+  padding: 7px 13px;
   background: #a67c2f;
   color: #fffdf8;
   border: 1px solid #a67c2f;
   border-radius: 10px;
+  font-size: 13px;
   font-weight: 700;
   box-shadow: none;
 }
 
-.user-invite-form button:hover:not(:disabled) {
+.user-add-member-button:hover:not(:disabled),
+.user-add-member-button:focus-visible {
   background: #876223;
   border-color: #876223;
   box-shadow: none;
 }
 
-.user-invite-form button:disabled {
-  background: #f3e8d3;
+.user-invite-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(43, 34, 23, 0.34);
+}
+
+.user-invite-modal {
+  width: min(440px, 100%);
+  max-height: min(640px, calc(100vh - 48px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #b99652;
+  border-radius: 14px;
+  background: #fffdf8;
+  color: #2b2217;
+  box-shadow: 0 18px 44px rgba(65, 47, 18, 0.18);
+}
+
+.user-invite-modal__head,
+.user-invite-modal__foot {
+  display: flex;
+  align-items: center;
   border-color: #ded2bb;
+  background: #fffdf8;
+}
+
+.user-invite-modal__head {
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid #ded2bb;
+}
+
+.user-invite-modal__head h2 {
+  margin: 0;
+  color: #2b2217;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.user-invite-modal__close {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #7c6d59;
+  font-size: 20px;
+  line-height: 1;
+  box-shadow: none;
+  transform: none;
+}
+
+.user-invite-modal__close:hover:not(:disabled),
+.user-invite-modal__close:focus-visible {
+  background: #faf4e8;
+  color: #876223;
+  box-shadow: none;
+  transform: none;
+}
+
+.user-invite-modal__body {
+  display: grid;
+  gap: 13px;
+  padding: 18px;
+  overflow: auto;
+}
+
+.user-invite-field {
+  display: grid;
+  gap: 6px;
+}
+
+.user-invite-field span {
+  color: #5f523f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.user-invite-field input,
+.user-invite-field select {
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  border-color: #ded2bb;
+  background: #fffdf8;
+  color: #2b2217;
+  font-size: 13px;
+  box-shadow: none;
+}
+
+.user-invite-field input:focus,
+.user-invite-field select:focus {
+  border-color: #b99652;
+  box-shadow: 0 0 0 3px rgba(166, 124, 47, 0.14);
+}
+
+.user-invite-field input::placeholder {
+  color: #8b8172;
+}
+
+.user-invite-modal__foot {
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 18px 16px;
+  border-top: 1px solid #ded2bb;
+}
+
+.user-invite-modal__secondary,
+.user-invite-modal__primary {
+  min-height: 34px;
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.user-invite-modal__secondary {
+  border: 1px solid #ded2bb;
+  background: #fffdf8;
+  color: #2b2217;
+}
+
+.user-invite-modal__secondary:hover:not(:disabled),
+.user-invite-modal__secondary:focus-visible {
+  border-color: #b99652;
+  background: #faf4e8;
+  color: #876223;
+  box-shadow: none;
+}
+
+.user-invite-modal__primary {
+  border: 1px solid #a67c2f;
+  background: #a67c2f;
+  color: #fffdf8;
+}
+
+.user-invite-modal__primary:hover:not(:disabled),
+.user-invite-modal__primary:focus-visible {
+  border-color: #876223;
+  background: #876223;
+  box-shadow: none;
+}
+
+.user-invite-modal__primary:disabled {
+  border-color: #ded2bb;
+  background: #f3e8d3;
   color: #8b8172;
 }
 
@@ -5181,6 +5319,93 @@ select {
   font-size: 13px;
   color: #2b2217;
   font-weight: 700;
+}
+
+.user-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-owner-tag {
+  flex: 0 0 auto;
+  color: #876223;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.user-status-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #b42318;
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.2;
+  box-shadow: none;
+  transform: none;
+}
+
+.user-status-switch:hover:not(:disabled),
+.user-status-switch:focus,
+.user-status-switch:focus-visible,
+.user-status-switch:active {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #8f1d14;
+  box-shadow: none;
+  transform: none;
+  outline: none;
+}
+
+.user-status-switch.is-on {
+  color: #166534;
+}
+
+.user-status-switch.is-on:hover:not(:disabled),
+.user-status-switch.is-on:focus,
+.user-status-switch.is-on:focus-visible,
+.user-status-switch.is-on:active {
+  color: #14532d;
+}
+
+.user-status-switch__track {
+  position: relative;
+  width: 32px;
+  height: 18px;
+  border: 1px solid #d4a59d;
+  border-radius: 999px;
+  background: #fff3ef;
+  transition: border-color 160ms ease, background-color 160ms ease;
+}
+
+.user-status-switch__thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #b42318;
+  transition: transform 180ms ease, background-color 160ms ease;
+}
+
+.user-status-switch.is-on .user-status-switch__track {
+  border-color: #9fbd84;
+  background: #f1f7ea;
+}
+
+.user-status-switch.is-on .user-status-switch__thumb {
+  background: #166534;
+  transform: translateX(14px);
 }
 
 .user-avatar-placeholder {
@@ -5762,10 +5987,19 @@ select {
     flex: 1 1 0;
   }
 
-  .user-invite-form,
   .user-detail-grid,
   .user-detail-topbox {
     grid-template-columns: 1fr;
+  }
+
+  .user-invite-modal-backdrop {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .user-invite-modal__foot {
+    align-items: stretch;
+    flex-direction: column-reverse;
   }
 
   .user-detail-tabs {
