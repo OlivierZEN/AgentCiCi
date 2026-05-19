@@ -3,9 +3,10 @@ import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { LS_ADMIN_TOKEN } from "../constants";
 import type { AdminOutletContext } from "./useAdminToken";
 
-type AuthPayload = { token: string; orgId: string; userId: string; roles: string[] };
+type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
 type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string };
 type CurrentUserUpdatedDetail = { userId: string; mobile?: string; nickname?: string; avatarBase64?: string };
+type OrganizationProfileUpdatedDetail = { orgId: string; name: string; shortName?: string };
 
 const adminNavItems = [
   { to: "/admin/kb", label: "知识库" },
@@ -18,6 +19,7 @@ const adminNavItems = [
   { to: "/admin/channels/wechat-kf", label: "微信客服" },
   { to: "/admin/ops", label: "观测运维" },
   { to: "/admin/users", label: "用户" },
+  { to: "/admin/organization", label: "组织设置" },
 ];
 
 function readAuth(): AuthPayload | null {
@@ -35,6 +37,7 @@ export default function AdminShell() {
   const auth = readAuth();
   const token = auth?.token ?? "";
   const [me, setMe] = useState<MePayload>({});
+  const [organizationName, setOrganizationName] = useState(auth?.orgName || auth?.orgId || "");
 
   const ctx = useMemo<AdminOutletContext>(() => ({ token }), [token]);
 
@@ -49,6 +52,22 @@ export default function AdminShell() {
         }
       } catch {
         // ignore header profile fetch errors
+      }
+    })();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token || !auth) return;
+    void (async () => {
+      try {
+        const res = await fetch("/admin/organization/profile", { headers: { Authorization: `Bearer ${token}` } });
+        const json = await res.json();
+        if (res.ok && json.success && json.data?.name) {
+          setOrganizationName(json.data.name);
+          localStorage.setItem(LS_ADMIN_TOKEN, JSON.stringify({ ...auth, orgName: json.data.name }));
+        }
+      } catch {
+        // keep token payload organization fallback
       }
     })();
   }, [token]);
@@ -69,6 +88,18 @@ export default function AdminShell() {
     return () => window.removeEventListener("admin-current-user-updated", onCurrentUserUpdated);
   }, [auth]);
 
+  useEffect(() => {
+    const onOrganizationProfileUpdated = (evt: Event) => {
+      if (!auth) return;
+      const detail = (evt as CustomEvent<OrganizationProfileUpdatedDetail>).detail;
+      if (!detail || detail.orgId !== auth.orgId) return;
+      setOrganizationName(detail.shortName || detail.name || auth.orgId);
+      localStorage.setItem(LS_ADMIN_TOKEN, JSON.stringify({ ...auth, orgName: detail.name }));
+    };
+    window.addEventListener("admin-organization-profile-updated", onOrganizationProfileUpdated);
+    return () => window.removeEventListener("admin-organization-profile-updated", onOrganizationProfileUpdated);
+  }, [auth]);
+
   const logout = () => {
     localStorage.removeItem(LS_ADMIN_TOKEN);
     nav("/admin/login", { replace: true });
@@ -77,6 +108,8 @@ export default function AdminShell() {
   if (!auth) {
     return <Navigate to="/admin/login" replace />;
   }
+
+  const displayOrganizationName = organizationName && organizationName !== auth.orgId ? organizationName : "组织名称未设置";
 
   return (
     <div className="admin-layout">
@@ -97,7 +130,10 @@ export default function AdminShell() {
           </span>
           <span className="admin-nav__identity-body">
             <strong className="admin-nav__identity-name">{me.nickname || me.mobile || "当前用户"}</strong>
-            <span className="admin-nav__identity-org">{auth.orgId}</span>
+            <span className="admin-nav__identity-org" title={`${displayOrganizationName} · ${auth.orgId}`}>
+              {displayOrganizationName}
+              <small>{auth.orgId}</small>
+            </span>
           </span>
         </div>
         <nav className="admin-nav-links" aria-label="组织管理菜单">
