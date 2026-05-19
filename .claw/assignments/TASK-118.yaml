@@ -66,5 +66,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-19T14:22:00+08:00; u
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Completed 2026-05-19T14:18:30+08:00 with backend, frontend, routing, and visual QA evidence recorded in .claw/tasks/TASK-118.md."
+notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Completed 2026-05-19T16:38:37+08:00 after requested FEAT-40 continuation: added an edit button to the read-only organization profile page and a blocking modal editor for organization information."
 hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-118 on branch codex/TASK-118-admin-organization-profile before implementation edits."

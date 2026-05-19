@@ -1,0 +1,67 @@
+task_id: TASK-114
+assignee: DEV-nezha
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-18T23:20:36Z
+expires_at: none
+spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
+task_status_path: .claw/tasks/TASK-114.md
+branch: codex/TASK-114-feat-037-billing-ledger
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/**
+  - backend/src/test/java/com/codehouse/ciciassistant/tool/**
+  - frontend/src/admin/**
+  - frontend/src/platform/**
+  - frontend/src/utils/**
+scope_files:
+  - backend/src/main/resources/db/migration/V53__billing_usage_ledger.sql
+  - frontend/src/App.tsx
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - docs/specs/FEAT-003-saas-billing-and-packaging.md
+  - docs/specs/FEAT-022-agent-workload-billing-model.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+  - .claw/tasks/TASK-114.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - docs/specs/FEAT-003-saas-billing-and-packaging.md
+  - docs/specs/FEAT-022-agent-workload-billing-model.md
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "Work must implement FEAT-037 end to end: billing ledger foundation, rating/quota services, admin/platform APIs, admin/platform billing UI, and runtime metering hooks."
+  - "Open API files actively owned by TASK-112 must not be edited until TASK-112 lands or MANAGER-001 explicitly updates both assignments."
+  - "If Open API metering would conflict with TASK-112, leave a documented integration seam and follow-up note in .claw/tasks/TASK-114.md."
+  - "Migration edits are limited to V53__billing_usage_ledger.sql unless MANAGER-001 updates this assignment."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-18T23:20:36Z; user reassigned FEAT-037 full development to DEV-nezha on 2026-05-19."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Create FEAT-037 end to end: plans, subscriptions, usage meter events, credit ledger, read APIs, quota/rating services, product UI, deterministic seed behavior, runtime metering where safe, and focused tests. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "DEV-nezha must run scripts/dev-login.py for TASK-114 on branch codex/TASK-114-feat-037-billing-ledger before implementation edits."

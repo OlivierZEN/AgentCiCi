@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-18T09:10:30Z
+updated_at: 2026-05-19T08:38:37Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-18T09:10:30Z
+last_run_at: 2026-05-19T08:38:37Z
 last_run_status: success
 ---
 
@@ -13,11 +13,94 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：cc-aidev 3.8.0 broad-code initialization
-- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `bash /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/init-state.sh /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM .claw`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw`
-- 环境：local main checkout
+- 范围：TASK-118 FEAT-040 admin organization profile edit modal continuation
+- 命令：task-scoped identity gate, frontend production build, local Vite/mock API browser QA, desktop/mobile edit-modal screenshot checks, browser console check.
+- 环境：local branch `codex/TASK-118-admin-organization-profile`, Vite `http://127.0.0.1:5177`, mock backend `http://127.0.0.1:18083`
 
 ## Latest Verified Results
+
+- TASK-118 Admin organization profile edit modal continuation (2026-05-19T08:38:37Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-118` on `codex/TASK-118-admin-organization-profile` with intended frontend/spec/state files -> **allowed**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `browser-edit-modal`: in-app Browser with mocked `/auth` and `/admin/organization/profile` APIs -> **success**，edit button opens blocking organization information modal; save closes modal, shows success feedback, updates the read-only page, and refreshes the left navigation organization name.
+    - `browser-desktop`: screenshot `output/playwright/feat40-org-profile-edit-modal-desktop.png` -> **success**，`documentElement.scrollWidth=clientWidth=1440`，one `role="dialog"` with `aria-modal="true"`.
+    - `browser-mobile`: screenshot `output/playwright/feat40-org-profile-edit-modal-mobile.png` -> **success**，`documentElement.scrollWidth=clientWidth=375`，one `role="dialog"` with `aria-modal="true"`.
+    - `browser-console`: in-app Browser console error logs -> **success**，0 errors.
+  - Notes:
+    - Backend profile update API was unchanged in this continuation; the edit modal reuses the previously verified `PATCH /admin/organization/profile` path.
+
+- TASK-118 Admin organization readonly profile and usage summary adjustment (2026-05-19T06:51:50Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-118` on `codex/TASK-118-admin-organization-profile` with intended backend/frontend/state files -> **allowed**.
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=AdminOrganizationProfileIntegrationTest test` in `backend/` -> **success**, 2 tests / 0 failures / 0 errors.
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check` -> **success**.
+    - `browser-readonly-profile`: Playwright mock API `/admin/organization` at 1440x980 and 390x844 -> **success**，title/nav `组织简档`，usage board present，no visible `保存` operation.
+    - `browser-desktop`: screenshot `output/playwright/feat40-org-profile-desktop.png` -> **success**，`documentElement.scrollWidth=clientWidth=1440`.
+    - `browser-mobile`: screenshot `output/playwright/feat40-org-profile-mobile.png` -> **success**，`documentElement.scrollWidth=clientWidth=390`.
+  - Notes:
+    - The visual QA used mocked `/admin/organization/profile` and `/auth/me` responses to isolate the frontend route and layout from local backend auth state.
+
+- TASK-118 Admin organization profile and self-service settings (2026-05-19T06:18:30Z):
+  - Commands:
+    - `identity`: task-scoped `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py ... --developer MANAGER-001 --task TASK-118 --branch codex/TASK-118-admin-organization-profile --files ...` -> **allowed**.
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AdminOrganizationProfileIntegrationTest test` -> **success**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check` -> **success**.
+    - `browser`: Playwright direct `/admin/organization` -> **success**，page title `组织设置`; direct `/admin/organization/profile` remains backend API path.
+    - `browser-desktop`: Playwright 1440x1000 screenshot `output/playwright/feat40-admin-organization-desktop-final.png` -> **success**.
+    - `browser-mobile`: Playwright 390x844 screenshot `output/playwright/feat40-admin-organization-mobile-final.png` -> **success**，`documentElement.scrollWidth=clientWidth=390`.
+  - Notes:
+    - Temporary backend `8081` applied Flyway `V56__organization_profile.sql` to the local dev database for verification.
+    - The only console error during browser checks was the existing `/favicon.ico` 404.
+
+- TASK-117 AgentCiCi help center MVP (2026-05-19T04:34:12Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --task TASK-117 --branch codex/TASK-117-agentcici-help-center-site --git-username OwenZheng-Cloud --files frontend/src/App.tsx frontend/src/help/HelpCenterApp.tsx frontend/src/help/help-center.css frontend/src/help/helpContent.ts docs/help/README.md deploy/nginx.cici.ssl.conf docs/specs/FEAT-039-agentcici-help-center-site.md .claw/tasks/TASK-117.md --no-cache --json` -> **allowed**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `browser`: Playwright CLI `/help` at 1440x1000 -> **success**，screenshot `output/playwright/help-center-desktop.png`。
+    - `browser`: Playwright CLI `/help/openapi/quickstart` at 390x844 -> **success**，screenshot `output/playwright/help-center-mobile-openapi.png`，`documentElement.scrollWidth=390`。
+    - `browser`: typed `401` in help search -> **success**，3 results，first result `Open API 401 / 403 / 429`。
+    - `browser`: mobile `目录` button -> **success**，navigation overlay opens with `aria-expanded=true`。
+  - Notes:
+    - The only console error during Vite browser checks was existing `/favicon.ico` 404.
+    - Dedicated `help.agentcici.com` Nginx server is configured as SPA-only so public docs paths under `/openapi/*` do not hit backend Open API proxy locations.
+
+- New ECS `test.agentcici.com` test environment deployment (2026-05-19T03:46:05Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**.
+    - `disk`: initialized blank `/dev/vdb` on `120.55.193.145` as GPT + `/dev/vdb1` ext4, label `cici-test-data`, UUID `654b4c37-1f42-45b6-b10a-3e6811cd310f`, mounted at `/data` through `/etc/fstab`.
+    - `docker`: installed Docker 24.0.9 and copied Compose plugin v2.29.0 from the existing ECS; set `/etc/docker/daemon.json` `data-root=/data/docker`; `docker info` -> `DockerRootDir=/data/docker`.
+    - `deploy`: copied deploy config to `/data/cici/deploy`, symlinked `/opt/cici -> /data/cici`, loaded six `2.0.B1-customer-insight-20260515-161832` images from `47.97.119.160` because ACR login still returned `unauthorized`.
+    - `seed`: created old-ECS seed backup `/data/cici-maintenance/backups/20260519-114459-for-120-test-env-seed` and restored PostgreSQL, KB files, and Qdrant data on the new ECS from `/data/cici/import/20260519-114459-for-120-test-env-seed`.
+    - `proxy`: updated old-ECS `/opt/cici/deploy/nginx.cici.ssl.conf`, backed up previous config under `/opt/cici/backups/*-before-test-agentcici-proxy-nginx.cici.ssl.conf`, and reloaded `cici-frontend` after `nginx -t` passed.
+    - `verify`: `test.agentcici.com` DNS -> `47.97.119.160`; old-ECS local SNI `https://test.agentcici.com/` -> **HTTP 200**; login smoke `13900009999/szyd1234` -> **success**; all six new-ECS compose services -> **healthy**; backend `/actuator/health` -> `UP`; PostgreSQL quick counts `knowledge_base=2`, `kb_chunk=310`, `chat_session=73`; Qdrant `cici_kb_chunk` -> `status=green`, `points_count=161`; `/data` -> 196G total, about 185G available.
+  - Notes:
+    - TLS terminates on `47.97.119.160` using the existing `*.agentcici.com` certificate; upstream traffic to `120.55.193.145` uses private IP `192.168.8.77` over HTTP port 80.
+    - The workstation direct `curl` path for `https://test.agentcici.com/` still shows the same public TLS reset behavior previously observed for other `agentcici.com` hosts; server-local Host/SNI smoke remains the reliable deployment check for this known network path.
+
+- Online test ECS data disk and Docker data-root migration (2026-05-19T03:03:28Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --developer MANAGER-001 --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --no-cache --json` -> **allowed**.
+    - `disk`: initialized blank `/dev/vdb` as GPT + `/dev/vdb1` ext4, label `cici-data`, UUID `94178bdb-a985-4e17-a055-ca400b9f981e`, mounted at `/data` through `/etc/fstab`.
+    - `backup`: created `/data/cici-maintenance/backups/20260519-110019-before-docker-data-root-move` with `postgres.dump`, KB/Qdrant tarballs, `acr.env`, `daemon.json`, `fstab`, and pre-migration Docker/compose state.
+    - `docker`: stopped the compose stack, stopped Docker, copied `/var/lib/docker` to `/data/docker`, set Docker `data-root` to `/data/docker`, restarted Docker, and ran `docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml -f deploy/docker-compose.acr.ssl.yml up -d`.
+    - `verify`: `docker info` -> `DockerRootDir=/data/docker`; all six compose services -> **healthy**; backend `/actuator/health` -> `UP`; `docker exec cici-frontend nginx -t` -> **success**; server-local HTTPS Host smoke for `autoservice.agentcici.com` and `agentcici.com` -> `HTTP 200`; PostgreSQL quick counts `knowledge_base=2`, `kb_chunk=310`, `chat_session=73`; Qdrant `cici_kb_chunk` -> `status=green`, `points_count=161`.
+  - Notes:
+    - The old `/var/lib/docker` directory remains on the root disk as a short-term rollback copy. Remove it only after a soak period or an explicit cleanup request.
+
+- TASK-115 knowledge-base module maintenance assignment and baseline verification (2026-05-19T02:01:14Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**；verified `developer_record_active`、`ssh_key_fingerprint_matched`、`ssh_key_possession_verified`。
+    - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> **success**；8 tests / 0 failures / 0 errors。
+    - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-zhongda --task TASK-115 --branch codex/TASK-115-kb-module-maintenance --git-username shanchl --ssh-signing-key-fingerprint SHA256:k1ljDVP4i3TEhZQxdmZlzTGsJ++pHxubUqwc6vNQUOc --files backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java backend/src/main/resources/db/migration/V54__kb_module_maintenance.sql frontend/src/admin/pages/AdminKnowledgePage.tsx docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md .claw/tasks/TASK-115.md backend/pom.xml --json` -> **allowed**，`scope_mode=task_bounded_broad_code`。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+  - Notes:
+    - `.claw/assignments/TASK-115.yaml` assigns FEAT-008 knowledge-base module maintenance to `DEV-zhongda`.
+    - `backend/pom.xml` was added to `DEV-zhongda` allowed scopes because parser hardening may require backend dependency changes.
+    - TASK-115 protects TASK-112 Open API files and TASK-114 billing migration `V53__billing_usage_ledger.sql`.
 
 - cc-aidev 3.8.0 broad-code initialization (2026-05-18T09:10:30Z):
   - Commands:

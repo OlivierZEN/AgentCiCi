@@ -1,7 +1,7 @@
 ---
 kind: team-status
 version: 3
-updated_at: 2026-05-18T09:12:19Z
+updated_at: 2026-05-19T06:19:55Z
 updated_by: summarize-team-status
 status: derived
 ---
@@ -28,10 +28,10 @@ status: derived
 |------|------|
 | 开发者 | 5 |
 | 活跃开发者 | 5 |
-| 授权任务 | 1 |
-| 已开始任务 | 0 |
+| 授权任务 | 6 |
+| 已开始任务 | 2 |
 | 等待 review | 0 |
-| 已集成任务 | 0 |
+| 已集成任务 | 2 |
 | 阻塞任务 | 0 |
 
 ## 成员状态
@@ -53,54 +53,59 @@ status: derived
 - display_name: `哪吒`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-114`
+- active_tasks: `TASK-114`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed`
+- validation_status: `unknown`
+- integration_status: `not_ready`
 
 ### DEV-wolong
 
 - display_name: `卧龙`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-116`
+- active_tasks: `TASK-116`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed`
+- validation_status: `unknown`
+- integration_status: `not_ready`
 
 ### DEV-zhongda
 
 - display_name: `仲达`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-115`
+- active_tasks: `TASK-115`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed`
+- validation_status: `unknown`
+- integration_status: `not_ready`
 
 ### MANAGER-001
 
 - display_name: `Owen`
 - role: `project-manager`
 - identity_status: `active`
-- assigned_tasks: `none`
+- assigned_tasks: `TASK-117, TASK-118`
 - active_tasks: `none`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `merged`
+- validation_status: `unknown`
+- integration_status: `integrated`
 
 ## 任务状态
 
 | Task | Title | Assignee | Board | Contribution | Validation | Integration | Branch | PR |
 |------|-------|----------|-------|--------------|------------|-------------|--------|----|
 | `TASK-112` | unknown | `DEV-fengchu` | `unknown` | `claimed` | `not_run` | `not_ready` | `codex/TASK-112-agent-openapi-dify-parity` | `n/a` |
+| `TASK-114` | unknown | `DEV-nezha` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-114-feat-037-billing-ledger` | `n/a` |
+| `TASK-115` | unknown | `DEV-zhongda` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-115-kb-module-maintenance` | `n/a` |
+| `TASK-116` | unknown | `DEV-wolong` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-116-skill-module-completion` | `n/a` |
+| `TASK-117` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-117-agentcici-help-center-site` | `n/a` |
+| `TASK-118` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-118-admin-organization-profile` | `n/a` |
 
 ## 集成状态
 
