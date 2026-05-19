@@ -1,13 +1,13 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-18T09:10:30Z
+updated_at: 2026-05-19T16:12:00Z
 updated_by: ai
 status: active
 phase: maintenance
 active_task: "TASK-112 Agent Open API Dify parity enhancement"
-current_task: 已按 `cc-aidev-guidelines-common` 3.8.0 对项目做宽代码模式初始化刷新：`.claw/` 仍为 canonical state directory，开发者长期授权上限改为 broad-code ceiling，TASK-112 assignment 已补 `scope_mode: task_bounded_broad_code` 并通过预检。
-next_action: 将宽代码初始化状态提交并推送到 main；凤雏 pull 后在自己的机器上用私钥运行完整 task-scoped `dev-login.py`。
+current_task: Codeup change request !2 `[TASK-112] Agent Open API Dify parity` 已合并到 `main`；合并前将 Open API 迁移从 V53 重编号为 V57，避免当前 main 已应用 V56 后 Flyway out-of-order 校验失败。
+next_action: 继续处理后续已分配任务分支；TASK-114/TASK-115/TASK-116 仍等待对应开发者提交 Codeup MR。
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-19T16:12:00Z 已按用户要求处理 Codeup MR：`change/1` 已确认此前为 CLOSED；`change/2` `[TASK-112] Agent Open API Dify parity` 已合并到 `main`，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`。合并前发现 TASK-112 原新增 `V53__agent_open_api_dify_parity.sql` 会在当前 `main` 已有 `V56__organization_profile.sql` 的环境触发 Flyway out-of-order 校验失败，已在源分支补提交 `96779d7 fix(openapi): renumber migration after organization profile`，将迁移重编号为 `V57__agent_open_api_dify_parity.sql` 并更新任务/规格记录。验证通过：Codeup MR API 显示 !2 `MERGED`、!1 `CLOSED`；独立 worktree 合并无冲突；`backend mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test` 成功，日志确认测试库从 V56 迁移到 V57；`frontend npm run build` 成功（保留既有 Vite chunk-size warning）；`git diff --check HEAD^..HEAD` 成功；`.claw` `validate-state.py` 成功。本地 `main` 已同步到 `origin/main`。
 
 - 2026-05-18T09:10:30Z 已按用户要求完成 `cc-aidev-guidelines-common` 3.8.0 宽代码模式初始化刷新：运行 3.8.0 `init-state.sh`，确认 `.claw/` 仍为 canonical state directory，既有核心状态文件、规格模板、`integration-queue.md`、`team-status.md` 与异步并行目录均保留；`AGENTS.md` 托管声明块已保持在文件顶部。已为 `DEV-fengchu`、`DEV-nezha`、`DEV-wolong`、`DEV-zhongda` 配置 broad-code ceiling（正常 source/test/resource/frontend/spec/design/deploy/task-status 路径），仍要求每次开发必须有 active assignment 与本地 `dev-login.py`。`TASK-112` assignment 已显式切到 `scope_mode: task_bounded_broad_code`，保留 migrations / application config / `.claw` / identity scripts 等 protected path 约束。验证通过：`dev-login.py` 对 `MANAGER-001` 返回 `allowed`，`check-assignment.py` 对 `DEV-fengchu` / `TASK-112` 典型改动路径返回 `allowed` 且 `scope_mode=task_bounded_broad_code`，`summarize-team-status.py --write` 成功，`validate-state.py` 通过。`.gitignore` 已忽略 `.claw-local/` 与 `.ai-dev-local/`。
 

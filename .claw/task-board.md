@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-18T09:10:30Z
+updated_at: 2026-05-19T16:12:00Z
 updated_by: ai
 status: active
 board_status: active
@@ -38,7 +38,7 @@ board_status: active
 
 ### TASK-112 Agent Open API Dify parity enhancement
 
-- status: assigned
+- status: completed
 - priority: P0
 - owner_role: DEV-fengchu
 - spec_path: `docs/specs/FEAT-036-agent-open-api-dify-parity.md`
@@ -47,6 +47,7 @@ board_status: active
 - branch: `codex/TASK-112-agent-openapi-dify-parity`
 - summary: 对标 Dify Service API 的常用 Agent/OpenAPI 能力，增强 FEAT-021 Agent Open API，补齐参数发现、Dify 风格 chat-messages、停止生成、会话/消息列表、反馈、建议问题、文件上传、资源越权校验、幂等/重试语义、生产化配置和文档。
 - started_at: 2026-05-18T04:04:58Z
+- completed_at: 2026-05-19T16:12:00Z
 - assigned_to: `DEV-fengchu`
 - assigned_by: `MANAGER-001`
 - done:
@@ -56,11 +57,19 @@ board_status: active
   - 已创建 `.claw/tasks/TASK-112.md` 作为凤雏的任务状态片。
   - 2026-05-18T04:40:00Z 已按凤雏反馈修正 `DEV-fengchu` 的 `allowed_scopes`，补入 TASK-112 assignment 的最小文件范围，避免 task-scoped `dev-login.py` 将 assignment scope 判定为超出开发者长期授权。
   - 2026-05-18T09:10:30Z 已按宽代码模式将 assignment 显式切到 `scope_mode: task_bounded_broad_code`，用 `allowed_write_roots` 覆盖必要 source/test/resource/frontend/deploy 根，并保留 migrations、application config、`.claw` 身份授权文件和 identity scripts 的 protected path 约束。
+  - 2026-05-19T16:12:00Z 已合并 Codeup change request !2 `[TASK-112] Agent Open API Dify parity` 到 `main`，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`。
+  - 合并前已将 Open API 迁移从 `V53__agent_open_api_dify_parity.sql` 重编号为 `V57__agent_open_api_dify_parity.sql`，避免在已应用 `V56__organization_profile.sql` 的环境触发 Flyway out-of-order 校验失败。
 - verification:
   - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
   - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --json` -> allowed。
   - `assignment-broad-code`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json` -> allowed，`scope_mode=task_bounded_broad_code`。
-- next_action: `DEV-fengchu` pull 最新 main 后，切到 `codex/TASK-112-agent-openapi-dify-parity`，按 `.claw/assignments/TASK-112.yaml` 运行完整 `dev-login.py` 私钥挑战，通过后开始实现，并持续更新 `.claw/tasks/TASK-112.md`。
+  - `codeup`: change request !2 -> merged，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`；change request !1 -> closed。
+  - `merge-check`: independent worktree merge of `origin/main` + `origin/codex/TASK-112-agent-openapi-dify-parity` -> no conflicts。
+  - `backend`: `mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test` -> success，测试库从 V56 成功迁移到 V57。
+  - `frontend`: `npm run build` in `frontend/` -> success，保留既有 Vite chunk-size warning。
+  - `diff`: `git diff --check HEAD^..HEAD` -> success。
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /tmp/cc-agentcici-mr2-check/.claw` -> success。
+- next_action: TASK-112 已完成并合入 main；继续等待/处理 TASK-114、TASK-115、TASK-116 后续 Codeup MR。
 - handoff_notes:
   - 优先补 `knowledgeBaseIds` / `activeSkillCode` 越权校验、Dify 风格 `chat-messages` blocking/streaming 和 message/task/conversation 数据模型。
   - 保持 FEAT-021 既有 `/health`、`/chat`、`/chat/stream` 兼容。
