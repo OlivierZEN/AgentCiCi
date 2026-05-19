@@ -3,24 +3,32 @@ package com.codehouse.ciciassistant.openapi.service;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceEntity;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
+import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
+import com.codehouse.ciciassistant.openapi.config.AgentOpenApiProperties;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
+import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class AgentOpenApiRunService {
@@ -33,6 +41,13 @@ public class AgentOpenApiRunService {
     private final AgentOpenApiCallLogService callLogService;
     private final ChatOrchestratorService chatOrchestratorService;
     private final AgentRunTraceRepository traceRepository;
+    private final AgentKnowledgeBindingRepository knowledgeBindingRepository;
+    private final SkillDefinitionRepository skillDefinitionRepository;
+    private final AgentSkillBindingRepository agentSkillBindingRepository;
+    private final AgentDefinitionRepository agentDefinitionRepository;
+    private final OrgModelConfigRepository orgModelConfigRepository;
+    private final ModelProviderService modelProviderService;
+    private final AgentOpenApiProperties properties;
     private final ObjectMapper objectMapper;
 
     public AgentOpenApiRunService(AgentOpenApiAuthService authService,
@@ -41,6 +56,13 @@ public class AgentOpenApiRunService {
                                   AgentOpenApiCallLogService callLogService,
                                   ChatOrchestratorService chatOrchestratorService,
                                   AgentRunTraceRepository traceRepository,
+                                  AgentKnowledgeBindingRepository knowledgeBindingRepository,
+                                  SkillDefinitionRepository skillDefinitionRepository,
+                                  AgentSkillBindingRepository agentSkillBindingRepository,
+                                  AgentDefinitionRepository agentDefinitionRepository,
+                                  OrgModelConfigRepository orgModelConfigRepository,
+                                  ModelProviderService modelProviderService,
+                                  AgentOpenApiProperties properties,
                                   ObjectMapper objectMapper) {
         this.authService = authService;
         this.sessionService = sessionService;
@@ -48,18 +70,25 @@ public class AgentOpenApiRunService {
         this.callLogService = callLogService;
         this.chatOrchestratorService = chatOrchestratorService;
         this.traceRepository = traceRepository;
+        this.knowledgeBindingRepository = knowledgeBindingRepository;
+        this.skillDefinitionRepository = skillDefinitionRepository;
+        this.agentSkillBindingRepository = agentSkillBindingRepository;
+        this.agentDefinitionRepository = agentDefinitionRepository;
+        this.orgModelConfigRepository = orgModelConfigRepository;
+        this.modelProviderService = modelProviderService;
+        this.properties = properties;
         this.objectMapper = objectMapper;
     }
 
-    public Map<String, Object> chat(String agentId,
-                                    String requestId,
-                                    String idempotencyKey,
-                                    ChatCommand command,
-                                    HttpServletRequest request) {
-        Instant startedAt = Instant.now();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+    public ChatExecution chatWithAuth(AgentOpenApiAuthService.AuthenticatedCredential auth,
+                                      String requestId,
+                                      String idempotencyKey,
+                                      ChatCommand command,
+                                      HttpServletRequest request,
+                                      Instant startedAt) {
         String externalUserId = command == null ? "" : externalUserId(command.externalUser());
-        validateCommand(command, auth.credentialView());
+        validateCommand(command, auth);
+        ensureChatRouteHasUsableModel(auth);
         AgentOpenApiSessionService.SessionResolution session = sessionService.resolve(
                 auth,
                 command.sessionId(),
@@ -68,20 +97,15 @@ public class AgentOpenApiRunService {
         rateLimitService.reserve(auth);
         callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
         try {
-            Map<String, Object> chatPayload = chatOrchestratorService.chat(
-                    auth.credential().getOrgId(),
-                    auth.credential().getRunAsUserId(),
-                    session.internalSessionId(),
-                    command.message().trim(),
-                    command.knowledgeBaseIds(),
-                    auth.credential().getAgentId(),
-                    command.activeSkillCode());
+            Map<String, Object> chatPayload = invokeChatWithTimeout(auth, session, command);
             String answer = stringValue(chatPayload.get("answer"));
+            validateResponseSize(auth, answer);
             AgentRunTraceEntity trace = annotateLatestTrace(auth, session, requestId, externalUserId);
             int elapsedMs = elapsedMs(startedAt, Instant.now());
             callLogService.completeSuccess(auth.credential().getId(), requestId, trace == null ? "" : trace.getTraceId(), answer, elapsedMs);
             rateLimitService.markSuccess(auth, elapsedMs);
-            return responsePayload(auth, session, requestId, chatPayload, trace, answer, elapsedMs);
+            Map<String, Object> payload = responsePayload(auth, session, requestId, chatPayload, trace, answer, elapsedMs);
+            return new ChatExecution(auth, session, requestId, trace == null ? "" : trace.getTraceId(), answer, elapsedMs, payload);
         } catch (AgentOpenApiException ex) {
             int elapsedMs = elapsedMs(startedAt, Instant.now());
             callLogService.completeFailure(
@@ -110,58 +134,47 @@ public class AgentOpenApiRunService {
         }
     }
 
-    public SseEmitter chatStream(String agentId,
-                                 String requestId,
-                                 String idempotencyKey,
-                                 ChatCommand command,
-                                 HttpServletRequest request) {
-        Instant startedAt = Instant.now();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
-        String externalUserId = command == null ? "" : externalUserId(command.externalUser());
-        validateCommand(command, auth.credentialView());
-        if (!auth.credentialView().allowStream()) {
-            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "stream_not_allowed", "Streaming is not allowed for this API key");
-        }
-        AgentOpenApiSessionService.SessionResolution session = sessionService.resolve(
-                auth,
-                command.sessionId(),
-                externalUserId,
-                requestId);
-        rateLimitService.reserve(auth);
-        callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
-
-        SseEmitter clientEmitter = new SseEmitter(600_000L);
-        OpenApiStreamBridge bridge = new OpenApiStreamBridge(
-                clientEmitter,
-                auth,
-                session,
-                requestId,
-                externalUserId,
-                startedAt);
+    private Map<String, Object> invokeChatWithTimeout(AgentOpenApiAuthService.AuthenticatedCredential auth,
+                                                      AgentOpenApiSessionService.SessionResolution session,
+                                                      ChatCommand command) {
+        CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> chatOrchestratorService.chat(
+                auth.credential().getOrgId(),
+                auth.credential().getRunAsUserId(),
+                session.internalSessionId(),
+                command.message().trim(),
+                command.knowledgeBaseIds(),
+                auth.credential().getAgentId(),
+                command.activeSkillCode()));
         try {
-            clientEmitter.send(SseEmitter.event()
-                    .name("meta")
-                    .data(Map.of(
-                            "requestId", requestId,
-                            "agentId", auth.credential().getAgentId(),
-                            "sessionId", session.externalSessionId(),
-                            "internalSessionId", session.internalSessionId()
-                    )));
-            chatOrchestratorService.chatStream(
-                    auth.credential().getOrgId(),
-                    auth.credential().getRunAsUserId(),
-                    session.internalSessionId(),
-                    command.message().trim(),
-                    command.knowledgeBaseIds(),
-                    auth.credential().getAgentId(),
-                    command.activeSkillCode(),
-                    bridge);
-        } catch (IOException ex) {
-            bridge.completeWithError(ex);
-        } catch (RuntimeException ex) {
-            bridge.completeWithError(ex);
+            return future.get(normalizedTimeoutMs(), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException ex) {
+            future.cancel(true);
+            throw new AgentOpenApiException(HttpStatus.GATEWAY_TIMEOUT, "agent_open_api_timeout", "Agent runtime timed out");
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            throw new AgentOpenApiException(HttpStatus.GATEWAY_TIMEOUT, "agent_open_api_timeout", "Agent runtime interrupted");
+        } catch (ExecutionException ex) {
+            Throwable cause = ex.getCause();
+            if (cause instanceof AgentOpenApiException apiException) {
+                throw apiException;
+            }
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new AgentOpenApiException(HttpStatus.BAD_GATEWAY, "model_or_tool_failed", "Agent runtime failed");
         }
-        return clientEmitter;
+    }
+
+    private long normalizedTimeoutMs() {
+        long configured = properties.getDefaultTimeoutMs();
+        return configured <= 0 ? 120_000L : Math.min(configured, 600_000L);
+    }
+
+    private void validateResponseSize(AgentOpenApiAuthService.AuthenticatedCredential auth, String answer) {
+        int maxResponseChars = Math.max(1, auth.credentialView().maxResponseChars());
+        if (answer != null && answer.length() > maxResponseChars) {
+            throw new AgentOpenApiException(HttpStatus.BAD_GATEWAY, "response_too_large", "answer exceeds maxResponseChars");
+        }
     }
 
     @Transactional
@@ -211,10 +224,11 @@ public class AgentOpenApiRunService {
         return runtime;
     }
 
-    private void validateCommand(ChatCommand command, AgentOpenApiCredentialService.CredentialView credential) {
+    private void validateCommand(ChatCommand command, AgentOpenApiAuthService.AuthenticatedCredential auth) {
         if (command == null) {
             throw invalid("Request body is required");
         }
+        AgentOpenApiCredentialService.CredentialView credential = auth.credentialView();
         String message = command.message() == null ? "" : command.message().trim();
         if (message.isBlank()) {
             throw invalid("message is required");
@@ -232,10 +246,67 @@ public class AgentOpenApiRunService {
         if (jsonSize(command.metadata()) > 4096) {
             throw invalid("metadata is too large");
         }
+        validateKnowledgeBaseScope(auth, command.knowledgeBaseIds());
+        validateSkillScope(auth, command.activeSkillCode());
     }
 
     private AgentOpenApiException invalid(String message) {
         return new AgentOpenApiException(HttpStatus.BAD_REQUEST, "invalid_request", message);
+    }
+
+    private void ensureChatRouteHasUsableModel(AgentOpenApiAuthService.AuthenticatedCredential auth) {
+        String orgId = auth.credential().getOrgId();
+        String agentId = auth.credential().getAgentId();
+        OrgModelConfigEntity current = orgModelConfigRepository.findByOrgIdAndSceneCode(orgId, "chat").orElse(null);
+        if (current != null && !isPlaceholderModelRoute(current)) {
+            return;
+        }
+
+        ModelChoice choice = resolveOpenApiModelChoice(orgId, agentId);
+        if (choice == null) {
+            return;
+        }
+
+        OrgModelConfigEntity target = current == null
+                ? new OrgModelConfigEntity(orgId, "chat", choice.providerCode(), choice.modelName())
+                : current;
+        target.update(choice.providerCode(), choice.modelName());
+        orgModelConfigRepository.save(target);
+    }
+
+    private ModelChoice resolveOpenApiModelChoice(String orgId, String agentId) {
+        String agentModel = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+                .map(agent -> trimToNull(agent.getModel()))
+                .orElse(null);
+        List<ModelChoice> choices = modelProviderService.agentBaseModels(orgId).stream()
+                .map(this::toModelChoice)
+                .filter(choice -> choice != null)
+                .toList();
+        if (choices.isEmpty()) {
+            return null;
+        }
+        if (agentModel != null) {
+            for (ModelChoice choice : choices) {
+                if (agentModel.equalsIgnoreCase(choice.modelName())) {
+                    return choice;
+                }
+            }
+        }
+        return choices.get(0);
+    }
+
+    private ModelChoice toModelChoice(Map<String, Object> row) {
+        if (row == null) {
+            return null;
+        }
+        String providerCode = trimToNull(stringValue(row.get("providerCode")));
+        String modelName = trimToNull(stringValue(row.get("modelName")));
+        return providerCode == null || modelName == null ? null : new ModelChoice(providerCode, modelName);
+    }
+
+    private boolean isPlaceholderModelRoute(OrgModelConfigEntity route) {
+        return "mock".equalsIgnoreCase(nullToEmpty(route.getProvider()).trim())
+                || "cici-default".equalsIgnoreCase(nullToEmpty(route.getModelName()).trim());
     }
 
     private String externalUserId(Map<String, Object> externalUser) {
@@ -244,6 +315,41 @@ public class AgentOpenApiRunService {
         }
         Object raw = externalUser.get("id");
         return raw == null ? "" : String.valueOf(raw).trim();
+    }
+
+    private void validateKnowledgeBaseScope(AgentOpenApiAuthService.AuthenticatedCredential auth, List<String> knowledgeBaseIds) {
+        if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty()) {
+            return;
+        }
+        Set<String> allowedIds = knowledgeBindingRepository
+                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
+                        auth.credential().getOrgId(),
+                        auth.credential().getAgentId())
+                .stream()
+                .map(item -> String.valueOf(item.getKnowledgeBaseId()))
+                .collect(java.util.stream.Collectors.toSet());
+        for (String raw : knowledgeBaseIds) {
+            String value = raw == null ? "" : raw.trim();
+            if (value.isBlank() || !allowedIds.contains(value)) {
+                throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "knowledge_base_not_allowed", "knowledgeBaseIds must be bound to this Agent");
+            }
+        }
+    }
+
+    private void validateSkillScope(AgentOpenApiAuthService.AuthenticatedCredential auth, String activeSkillCode) {
+        String code = activeSkillCode == null ? "" : activeSkillCode.trim();
+        if (code.isBlank()) {
+            return;
+        }
+        SkillDefinitionEntity skill = skillDefinitionRepository
+                .findByOrgIdAndSkillCode(auth.credential().getOrgId(), code)
+                .orElseThrow(() -> new AgentOpenApiException(HttpStatus.FORBIDDEN, "skill_not_allowed", "activeSkillCode must be bound to this Agent"));
+        if (!skill.isEnabled() || !agentSkillBindingRepository.existsByOrgIdAndAgentIdAndSkillIdAndEnabledTrue(
+                auth.credential().getOrgId(),
+                auth.credential().getAgentId(),
+                skill.getId())) {
+            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "skill_not_allowed", "activeSkillCode must be bound to this Agent");
+        }
     }
 
     private int jsonSize(Object value) {
@@ -290,138 +396,20 @@ public class AgentOpenApiRunService {
         return value == null ? "" : String.valueOf(value);
     }
 
-    private Map<String, Object> streamRuntimePayload(AgentRunTraceEntity trace) {
-        Map<String, Object> runtime = new LinkedHashMap<>();
-        runtime.put("activatedSkillCodes", trace == null ? List.of() : readList(trace.getSkillNamesJson()));
-        runtime.put("boundSkillCodes", List.of());
-        runtime.put("toolCallCount", trace == null ? 0 : trace.getToolCallCount());
-        runtime.put("ragContextCount", trace == null ? 0 : trace.getRagContextCount());
-        return runtime;
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String nullToEmpty(String value) {
+        return value == null ? "" : value;
     }
 
     private static int elapsedMs(Instant start, Instant end) {
         return (int) Math.max(0L, Duration.between(start, end).toMillis());
-    }
-
-    private final class OpenApiStreamBridge extends SseEmitter {
-
-        private final SseEmitter clientEmitter;
-        private final AgentOpenApiAuthService.AuthenticatedCredential auth;
-        private final AgentOpenApiSessionService.SessionResolution session;
-        private final String requestId;
-        private final String externalUserId;
-        private final Instant startedAt;
-        private final StringBuilder streamedAnswer = new StringBuilder();
-        private final AtomicBoolean finished = new AtomicBoolean(false);
-
-        private OpenApiStreamBridge(SseEmitter clientEmitter,
-                                    AgentOpenApiAuthService.AuthenticatedCredential auth,
-                                    AgentOpenApiSessionService.SessionResolution session,
-                                    String requestId,
-                                    String externalUserId,
-                                    Instant startedAt) {
-            super(600_000L);
-            this.clientEmitter = clientEmitter;
-            this.auth = auth;
-            this.session = session;
-            this.requestId = requestId;
-            this.externalUserId = externalUserId;
-            this.startedAt = startedAt;
-        }
-
-        @Override
-        public void send(Object object) throws IOException {
-            clientEmitter.send(object);
-        }
-
-        @Override
-        public void send(Object object, MediaType mediaType) throws IOException {
-            clientEmitter.send(object, mediaType);
-        }
-
-        @Override
-        public void send(SseEventBuilder builder) throws IOException {
-            Set<ResponseBodyEmitter.DataWithMediaType> dataToSend = builder.build();
-            String eventName = eventName(dataToSend);
-            if ("delta".equals(eventName)) {
-                appendDelta(dataToSend);
-            }
-            if ("done".equals(eventName)) {
-                return;
-            }
-            clientEmitter.send(dataToSend);
-        }
-
-        @Override
-        public void complete() {
-            if (!finished.compareAndSet(false, true)) {
-                return;
-            }
-            try {
-                AgentRunTraceEntity trace = annotateLatestTrace(auth, session, requestId, externalUserId);
-                int elapsedMs = elapsedMs(startedAt, Instant.now());
-                String answer = streamedAnswer.toString();
-                callLogService.completeSuccess(
-                        auth.credential().getId(),
-                        requestId,
-                        trace == null ? "" : trace.getTraceId(),
-                        answer,
-                        elapsedMs);
-                rateLimitService.markSuccess(auth, elapsedMs);
-                clientEmitter.send(SseEmitter.event()
-                        .name("done")
-                        .data(Map.of(
-                                "ok", true,
-                                "requestId", requestId,
-                                "traceId", trace == null ? "" : trace.getTraceId(),
-                                "elapsedMs", elapsedMs,
-                                "runtime", streamRuntimePayload(trace)
-                        )));
-                clientEmitter.complete();
-            } catch (IOException ex) {
-                clientEmitter.completeWithError(ex);
-            }
-        }
-
-        @Override
-        public void completeWithError(Throwable ex) {
-            if (!finished.compareAndSet(false, true)) {
-                return;
-            }
-            int elapsedMs = elapsedMs(startedAt, Instant.now());
-            callLogService.completeFailure(
-                    auth.credential().getId(),
-                    requestId,
-                    HttpStatus.BAD_GATEWAY.value(),
-                    "model_or_tool_failed",
-                    elapsedMs,
-                    ex == null ? "stream failed" : ex.getMessage());
-            rateLimitService.markFailure(auth, elapsedMs);
-            clientEmitter.completeWithError(ex);
-        }
-
-        private void appendDelta(Set<ResponseBodyEmitter.DataWithMediaType> dataToSend) {
-            for (ResponseBodyEmitter.DataWithMediaType item : dataToSend) {
-                Object data = item.getData();
-                if (data instanceof Map<?, ?> payload) {
-                    Object text = payload.get("text");
-                    if (text != null) {
-                        streamedAnswer.append(text);
-                    }
-                }
-            }
-        }
-
-        private String eventName(Set<ResponseBodyEmitter.DataWithMediaType> dataToSend) {
-            for (ResponseBodyEmitter.DataWithMediaType item : dataToSend) {
-                Object data = item.getData();
-                if (data instanceof String text && text.startsWith("event:")) {
-                    int end = text.indexOf('\n');
-                    return (end < 0 ? text.substring("event:".length()) : text.substring("event:".length(), end)).trim();
-                }
-            }
-            return "";
-        }
     }
 
     public record ChatCommand(
@@ -432,5 +420,19 @@ public class AgentOpenApiRunService {
             String activeSkillCode,
             Map<String, Object> metadata
     ) {
+    }
+
+    public record ChatExecution(
+            AgentOpenApiAuthService.AuthenticatedCredential auth,
+            AgentOpenApiSessionService.SessionResolution session,
+            String requestId,
+            String traceId,
+            String answer,
+            int elapsedMs,
+            Map<String, Object> payload
+    ) {
+    }
+
+    private record ModelChoice(String providerCode, String modelName) {
     }
 }

@@ -16,9 +16,16 @@ type AgentOpenApiDocsDialogProps = {
 const SECTIONS = [
   { id: "base-url", label: "基础 URL" },
   { id: "auth", label: "鉴权" },
-  { id: "chat", label: "发送对话消息" },
-  { id: "stream", label: "流式对话" },
-  { id: "health", label: "健康检查" },
+  { id: "parameters", label: "参数发现" },
+  { id: "chat-messages", label: "发送消息" },
+  { id: "stop-task", label: "停止生成" },
+  { id: "file-upload", label: "文件上传" },
+  { id: "message-feedbacks", label: "消息反馈" },
+  { id: "suggested-questions", label: "建议问题" },
+  { id: "messages", label: "消息历史" },
+  { id: "conversations", label: "会话列表" },
+  { id: "conversation-name", label: "会话命名" },
+  { id: "conversation-delete", label: "删除会话" },
   { id: "sessions", label: "会话与终端用户" },
   { id: "errors", label: "错误码" },
   { id: "security", label: "安全建议" },
@@ -53,9 +60,16 @@ export default function AgentOpenApiDocsDialog({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const titleId = "agent-open-api-docs-title";
-  const healthPath = `/agents/${agentId || "{agentId}"}/health`;
-  const chatPath = `/agents/${agentId || "{agentId}"}/chat`;
-  const streamPath = `/agents/${agentId || "{agentId}"}/chat/stream`;
+  const parametersPath = `/agents/${agentId || "{agentId}"}/parameters`;
+  const chatMessagesPath = `/agents/${agentId || "{agentId}"}/chat-messages`;
+  const stopTaskPath = `/agents/${agentId || "{agentId}"}/chat-messages/{taskId}/stop`;
+  const filesPath = `/agents/${agentId || "{agentId}"}/files/upload`;
+  const feedbacksPath = `/agents/${agentId || "{agentId}"}/messages/{messageId}/feedbacks`;
+  const suggestedPath = `/agents/${agentId || "{agentId}"}/messages/{messageId}/suggested`;
+  const messagesPath = `/agents/${agentId || "{agentId}"}/messages`;
+  const conversationsPath = `/agents/${agentId || "{agentId}"}/conversations`;
+  const conversationNamePath = `/agents/${agentId || "{agentId}"}/conversations/{conversationId}/name`;
+  const conversationDeletePath = `/agents/${agentId || "{agentId}"}/conversations/{conversationId}`;
   const status = published ? (apiChannelEnabled ? "运行中" : "未开放 API") : "未发布";
   const normalizedBaseUrl = useMemo(() => baseUrl.replace(/\/$/, ""), [baseUrl]);
 
@@ -118,79 +132,151 @@ Authorization: Bearer {API_KEY}
 X-Cici-Api-Key: {API_KEY}
 \`\`\`
 
-## 发送对话消息
-
-用于普通请求响应式对话。\`sessionId\` 由调用方定义，同一个 Key、Agent 和 session 会映射到同一内部会话。
+## 参数发现
 
 \`\`\`text
-${methodLine("POST", chatPath)}
+${methodLine("GET", parametersPath)}
+\`\`\`
+
+返回开场白、建议问题、文件上传限制、retriever resource 和系统参数。集成方可以先用它渲染自有聊天入口。
+
+## 发送消息
+
+\`\`\`text
+${methodLine("POST", chatMessagesPath)}
 \`\`\`
 
 \`\`\`bash
-curl -X POST "${normalizedBaseUrl}${chatPath}" \\
+curl -X POST "${normalizedBaseUrl}${chatMessagesPath}" \\
   -H "Authorization: Bearer {API_KEY}" \\
   -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: crm-msg-001" \\
   -d '{
-    "sessionId": "crm-customer-001",
-    "message": "汇总一下这个客户最近的跟进重点",
-    "externalUser": {
-      "id": "customer-001",
-      "name": "张三",
-      "type": "customer"
-    },
-    "knowledgeBaseIds": ["1"],
-    "activeSkillCode": "lead-followup",
-    "metadata": {
-      "source": "crm",
-      "objectId": "001xx000003DGbY"
+    "query": "汇总一下这个客户最近的跟进重点",
+    "user": "customer-001",
+    "responseMode": "blocking",
+    "conversationId": "crm-customer-001",
+    "inputs": {
+      "source": "crm"
     }
   }'
 \`\`\`
 
-| 字段 | 说明 |
-| --- | --- |
-| sessionId | 外部业务会话 ID，可选但建议传入。 |
-| message | 用户本轮问题，默认最大 8000 字符。 |
-| externalUser | 终端用户元数据，只进入审计和上下文摘要。 |
-| knowledgeBaseIds | 必须是当前 Agent 已绑定知识库的子集。 |
-| activeSkillCode | 必须是当前 Agent 已绑定且启用的 Skill。 |
+会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。
 
-## 流式对话
-
-SSE 事件沿用内部流式语义，并在开始和结束事件中补充 requestId、session 和 trace 信息。
+## 停止生成
 
 \`\`\`text
-${methodLine("POST", streamPath)}
+${methodLine("POST", stopTaskPath)}
 \`\`\`
 
 \`\`\`bash
-curl -N -X POST "${normalizedBaseUrl}${streamPath}" \\
-  -H "Authorization: Bearer {API_KEY}" \\
-  -H "Accept: text/event-stream" \\
-  -H "Content-Type: application/json" \\
-  -d '{"sessionId":"crm-customer-001","message":"继续分析下一步动作"}'
-\`\`\`
-
-| 事件 | 说明 |
-| --- | --- |
-| meta | requestId、agentId、外部 sessionId、内部 internalSessionId。 |
-| phase | retrieving、rag_done、generating 等运行阶段。 |
-| delta | 增量文本。 |
-| done | ok、traceId、elapsedMs 和 runtime 摘要。 |
-| error | requestId、code、message。 |
-
-## 健康检查
-
-用于上线前探测 Key、Agent、发布版本和 API channel 是否可以调用。
-
-\`\`\`text
-${methodLine("GET", healthPath)}
-\`\`\`
-
-\`\`\`bash
-curl "${normalizedBaseUrl}${healthPath}" \\
+curl -X POST "${normalizedBaseUrl}${stopTaskPath}" \\
   -H "Authorization: Bearer {API_KEY}"
 \`\`\`
+
+对正在生成的任务标记取消请求，并返回稳定任务状态。可停止任务由发送消息返回的 \`task_id\` 定位。
+
+## 文件上传
+
+\`\`\`text
+${methodLine("POST", filesPath)}
+\`\`\`
+
+\`\`\`bash
+curl -X POST "${normalizedBaseUrl}${filesPath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -F "user=customer-001" \\
+  -F "conversation_id=crm-customer-001" \\
+  -F "file=@case-note.txt"
+\`\`\`
+
+文件上传后返回 \`id\`，再通过 \`chat-messages.files[].upload_file_id\` 引用。文件按 API Key、Agent、终端用户和会话隔离。
+
+## 消息反馈
+
+\`\`\`text
+${methodLine("POST", feedbacksPath)}
+\`\`\`
+
+\`\`\`bash
+curl -X POST "${normalizedBaseUrl}${feedbacksPath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "rating": "like",
+    "content": "回答准确"
+  }'
+\`\`\`
+
+对指定回答提交 \`like\` / \`dislike\` 和可选文字反馈。
+
+## 建议问题
+
+\`\`\`text
+${methodLine("GET", suggestedPath)}
+\`\`\`
+
+\`\`\`bash
+curl "${normalizedBaseUrl}${suggestedPath}" \\
+  -H "Authorization: Bearer {API_KEY}"
+\`\`\`
+
+读取指定回答后的下一步建议问题，用于在外部聊天入口渲染快捷追问。
+
+## 消息历史
+
+\`\`\`text
+${methodLine("GET", messagesPath)}
+\`\`\`
+
+\`\`\`bash
+curl "${normalizedBaseUrl}${messagesPath}?conversation_id=crm-customer-001&user=customer-001&limit=20" \\
+  -H "Authorization: Bearer {API_KEY}"
+\`\`\`
+
+按 \`conversation_id\`、\`user\` 查询消息历史，可用 \`first_id\` 和 \`limit\` 做滚动加载。
+
+## 会话列表
+
+\`\`\`text
+${methodLine("GET", conversationsPath)}
+\`\`\`
+
+\`\`\`bash
+curl "${normalizedBaseUrl}${conversationsPath}?user=customer-001" \\
+  -H "Authorization: Bearer {API_KEY}"
+\`\`\`
+
+按当前 API Key 和 Agent 查询外部会话列表，可选按终端用户过滤。
+
+## 会话命名
+
+\`\`\`text
+${methodLine("POST", conversationNamePath)}
+\`\`\`
+
+\`\`\`bash
+curl -X POST "${normalizedBaseUrl}${conversationNamePath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "客户 001 售后跟进"}'
+\`\`\`
+
+为指定外部会话写入展示名称，便于外部系统同步会话标题。
+
+## 删除会话
+
+\`\`\`text
+${methodLine("DELETE", conversationDeletePath)}
+\`\`\`
+
+\`\`\`bash
+curl -X DELETE "${normalizedBaseUrl}${conversationDeletePath}" \\
+  -H "Authorization: Bearer {API_KEY}"
+\`\`\`
+
+删除指定外部会话映射和可见历史。不同 Key 的同名会话不会互相影响。
 
 ## 会话与终端用户
 
@@ -332,64 +418,134 @@ curl "${normalizedBaseUrl}${healthPath}" \\
 X-Cici-Api-Key: {API_KEY}`)}
           </section>
 
-          <section id="chat" className="cici-openapi-docs__section">
-            <h3>发送对话消息</h3>
-            <p>用于普通请求响应式对话。`sessionId` 由调用方定义，同一个 Key、Agent 和 session 会映射到同一内部会话。</p>
-            <div className="cici-openapi-docs__method">{methodLine("POST", chatPath)}</div>
-            {renderCodeBlock("chatCurl", `curl -X POST "${normalizedBaseUrl}${chatPath}" \\
+          <section id="parameters" className="cici-openapi-docs__section">
+            <h3>参数发现</h3>
+            <p>集成方可先读取开场白、建议问题、文件上传限制、retriever resource 和系统参数，再渲染自己的聊天入口。</p>
+            <div className="cici-openapi-docs__method">{methodLine("GET", parametersPath)}</div>
+            {renderCodeBlock("parametersCurl", `curl "${normalizedBaseUrl}${parametersPath}" \\
+  -H "Authorization: Bearer {API_KEY}"`)}
+          </section>
+
+          <section id="chat-messages" className="cici-openapi-docs__section">
+            <h3>发送消息</h3>
+            <p>`chat-messages` 支持 `query`、`user`、`conversationId`、`inputs`、`files` 和 `responseMode`，用于外部系统接入 AgentCiCi 的多轮会话服务。</p>
+            <div className="cici-openapi-docs__method">{methodLine("POST", chatMessagesPath)}</div>
+            {renderCodeBlock("chatMessagesCurl", `curl -X POST "${normalizedBaseUrl}${chatMessagesPath}" \\
   -H "Authorization: Bearer {API_KEY}" \\
   -H "Content-Type: application/json" \\
+  -H "Idempotency-Key: crm-msg-001" \\
   -d '{
-    "sessionId": "crm-customer-001",
-    "message": "汇总一下这个客户最近的跟进重点",
-    "externalUser": {
-      "id": "customer-001",
-      "name": "张三",
-      "type": "customer"
-    },
-    "knowledgeBaseIds": ["1"],
-    "activeSkillCode": "lead-followup",
-    "metadata": {
-      "source": "crm",
-      "objectId": "001xx000003DGbY"
+    "query": "汇总一下这个客户最近的跟进重点",
+    "user": "customer-001",
+    "responseMode": "blocking",
+    "conversationId": "crm-customer-001",
+    "inputs": {
+      "source": "crm"
     }
   }'`)}
             <table className="cici-openapi-docs__table">
               <tbody>
-                <tr><th>sessionId</th><td>外部业务会话 ID，可选但建议传入。</td></tr>
-                <tr><th>message</th><td>用户本轮问题，默认最大 8000 字符。</td></tr>
-                <tr><th>externalUser</th><td>终端用户元数据，只进入审计和上下文摘要。</td></tr>
-                <tr><th>knowledgeBaseIds</th><td>必须是当前 Agent 已绑定知识库的子集。</td></tr>
-                <tr><th>activeSkillCode</th><td>必须是当前 Agent 已绑定且启用的 Skill。</td></tr>
+                <tr><th>query</th><td>用户本轮问题；也支持 `message` 作为别名。</td></tr>
+                <tr><th>user</th><td>终端用户标识；也支持 `externalUser.id`，两者同时传入时必须一致。</td></tr>
+                <tr><th>conversationId</th><td>外部业务会话 ID；也支持 `conversation_id` 和 `sessionId`。</td></tr>
+                <tr><th>responseMode</th><td>`blocking` 返回 JSON，`streaming` 返回 SSE `message / agent_thought / message_end / error`。</td></tr>
+                <tr><th>Idempotency-Key</th><td>同一 Key 下成功请求会按消息级幂等回放。</td></tr>
               </tbody>
             </table>
           </section>
 
-          <section id="stream" className="cici-openapi-docs__section">
-            <h3>流式对话</h3>
-            <p>SSE 事件沿用内部流式语义，并在开始和结束事件中补充 requestId、session 和 trace 信息。</p>
-            <div className="cici-openapi-docs__method">{methodLine("POST", streamPath)}</div>
-            {renderCodeBlock("streamCurl", `curl -N -X POST "${normalizedBaseUrl}${streamPath}" \\
+          <section id="stop-task" className="cici-openapi-docs__section">
+            <h3>停止生成</h3>
+            <p>用发送消息返回的 `task_id` 定位正在生成的任务，提交后会标记取消请求并返回稳定状态。</p>
+            <div className="cici-openapi-docs__method">{methodLine("POST", stopTaskPath)}</div>
+            {renderCodeBlock("stopTaskCurl", `curl -X POST "${normalizedBaseUrl}${stopTaskPath}" \\
+  -H "Authorization: Bearer {API_KEY}"`)}
+          </section>
+
+          <section id="file-upload" className="cici-openapi-docs__section">
+            <h3>文件上传</h3>
+            <p>上传文件后会返回 `id`，后续在 `chat-messages.files[].upload_file_id` 中引用。文件按 API Key、Agent、终端用户和会话隔离。</p>
+            <div className="cici-openapi-docs__method">{methodLine("POST", filesPath)}</div>
+            {renderCodeBlock("fileCurl", `curl -X POST "${normalizedBaseUrl}${filesPath}" \\
   -H "Authorization: Bearer {API_KEY}" \\
-  -H "Accept: text/event-stream" \\
-  -H "Content-Type: application/json" \\
-  -d '{"sessionId":"crm-customer-001","message":"继续分析下一步动作"}'`)}
+  -F "user=customer-001" \\
+  -F "conversation_id=crm-customer-001" \\
+  -F "file=@case-note.txt"`)}
             <table className="cici-openapi-docs__table">
               <tbody>
-                <tr><th>meta</th><td>requestId、agentId、外部 sessionId、内部 internalSessionId。</td></tr>
-                <tr><th>phase</th><td>retrieving、rag_done、generating 等运行阶段。</td></tr>
-                <tr><th>delta</th><td>增量文本。</td></tr>
-                <tr><th>done</th><td>ok、traceId、elapsedMs 和 runtime 摘要。</td></tr>
-                <tr><th>error</th><td>requestId、code、message。</td></tr>
+                <tr><th>user</th><td>终端用户标识，应与后续发送消息时的 `user` 保持一致。</td></tr>
+                <tr><th>conversation_id</th><td>外部业务会话 ID；传入后文件只能被同会话消息引用。</td></tr>
+                <tr><th>file</th><td>multipart 文件字段，支持文档和图片类型。</td></tr>
               </tbody>
             </table>
           </section>
 
-          <section id="health" className="cici-openapi-docs__section">
-            <h3>健康检查</h3>
-            <p>用于上线前探测 Key、Agent、发布版本和 API channel 是否可以调用。</p>
-            <div className="cici-openapi-docs__method">{methodLine("GET", healthPath)}</div>
-            {renderCodeBlock("healthCurl", `curl "${normalizedBaseUrl}${healthPath}" \\
+          <section id="message-feedbacks" className="cici-openapi-docs__section">
+            <h3>消息反馈</h3>
+            <p>对指定回答提交 `like` / `dislike` 和可选文字反馈，便于外部系统沉淀满意度和人工标注。</p>
+            <div className="cici-openapi-docs__method">{methodLine("POST", feedbacksPath)}</div>
+            {renderCodeBlock("feedbackCurl", `curl -X POST "${normalizedBaseUrl}${feedbacksPath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "rating": "like",
+    "content": "回答准确"
+  }'`)}
+            <table className="cici-openapi-docs__table">
+              <tbody>
+                <tr><th>rating</th><td>`like` 或 `dislike`。</td></tr>
+                <tr><th>content</th><td>可选文字反馈。</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section id="suggested-questions" className="cici-openapi-docs__section">
+            <h3>建议问题</h3>
+            <p>读取指定回答后的下一步建议问题，用于在外部聊天入口渲染快捷追问。</p>
+            <div className="cici-openapi-docs__method">{methodLine("GET", suggestedPath)}</div>
+            {renderCodeBlock("suggestedCurl", `curl "${normalizedBaseUrl}${suggestedPath}" \\
+  -H "Authorization: Bearer {API_KEY}"`)}
+          </section>
+
+          <section id="messages" className="cici-openapi-docs__section">
+            <h3>消息历史</h3>
+            <p>按外部会话和终端用户查询消息历史。可用 `first_id` 和 `limit` 做滚动加载。</p>
+            <div className="cici-openapi-docs__method">{methodLine("GET", messagesPath)}</div>
+            {renderCodeBlock("messagesCurl", `curl "${normalizedBaseUrl}${messagesPath}?conversation_id=crm-customer-001&user=customer-001&limit=20" \\
+  -H "Authorization: Bearer {API_KEY}"`)}
+            <table className="cici-openapi-docs__table">
+              <tbody>
+                <tr><th>conversation_id</th><td>外部业务会话 ID。</td></tr>
+                <tr><th>user</th><td>终端用户标识。</td></tr>
+                <tr><th>first_id</th><td>可选，上一页最后一条消息 ID，用于继续加载。</td></tr>
+                <tr><th>limit</th><td>可选，单页数量。</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section id="conversations" className="cici-openapi-docs__section">
+            <h3>会话列表</h3>
+            <p>按当前 API Key 和 Agent 查询外部会话列表，可选按终端用户过滤。</p>
+            <div className="cici-openapi-docs__method">{methodLine("GET", conversationsPath)}</div>
+            {renderCodeBlock("conversationsCurl", `curl "${normalizedBaseUrl}${conversationsPath}?user=customer-001" \\
+  -H "Authorization: Bearer {API_KEY}"`)}
+          </section>
+
+          <section id="conversation-name" className="cici-openapi-docs__section">
+            <h3>会话命名</h3>
+            <p>为指定外部会话写入展示名称，便于外部系统同步会话标题。</p>
+            <div className="cici-openapi-docs__method">{methodLine("POST", conversationNamePath)}</div>
+            {renderCodeBlock("conversationNameCurl", `curl -X POST "${normalizedBaseUrl}${conversationNamePath}" \\
+  -H "Authorization: Bearer {API_KEY}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"name": "客户 001 售后跟进"}'`)}
+          </section>
+
+          <section id="conversation-delete" className="cici-openapi-docs__section">
+            <h3>删除会话</h3>
+            <p>删除指定外部会话映射和可见历史。不同 Key 的同名会话不会互相影响。</p>
+            <div className="cici-openapi-docs__method">{methodLine("DELETE", conversationDeletePath)}</div>
+            {renderCodeBlock("conversationDeleteCurl", `curl -X DELETE "${normalizedBaseUrl}${conversationDeletePath}" \\
   -H "Authorization: Bearer {API_KEY}"`)}
           </section>
 
@@ -411,6 +567,10 @@ X-Cici-Api-Key: {API_KEY}`)}
                 <tr><th>agent_not_published</th><td>Agent 尚未发布。</td></tr>
                 <tr><th>rate_limit_exceeded</th><td>每分钟调用超限。</td></tr>
                 <tr><th>daily_quota_exceeded</th><td>日调用额度耗尽。</td></tr>
+                <tr><th>agent_api_scope_denied</th><td>API Key scope 不允许当前操作。</td></tr>
+                <tr><th>knowledge_base_not_allowed</th><td>请求知识库不是当前 Agent 绑定子集。</td></tr>
+                <tr><th>skill_not_allowed</th><td>请求 Skill 未绑定到当前 Agent。</td></tr>
+                <tr><th>file_not_allowed</th><td>文件不属于当前 Key、Agent、用户或会话。</td></tr>
               </tbody>
             </table>
           </section>

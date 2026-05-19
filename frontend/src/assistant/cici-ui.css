@@ -7760,6 +7760,41 @@
   accent-color: #a67c2f;
 }
 
+.cici-openapi-keys__scopes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cici-openapi-keys__scopes legend {
+  width: 100%;
+  margin: 0 0 2px;
+  color: #7c6d59;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.cici-openapi-keys__scopes label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  color: #5f523f;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.cici-openapi-keys__scopes input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #a67c2f;
+}
+
 .cici-openapi-keys__form-note {
   grid-column: 1 / -2;
   color: #7c6d59;

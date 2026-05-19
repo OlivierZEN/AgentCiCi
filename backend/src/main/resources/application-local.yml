@@ -25,6 +25,7 @@ app:
     bootstrap-admin-mobiles: "13800138111,13900009999"
   agent-open-api:
     enabled: true
+    conversation-api-enabled: true
     cors-allowed-origins: ["*"]
   kb:
     storage-dir: ./data/kb-files

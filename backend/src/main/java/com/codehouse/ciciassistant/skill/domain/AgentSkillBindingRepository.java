@@ -7,6 +7,8 @@ public interface AgentSkillBindingRepository extends JpaRepository<AgentSkillBin
 
     boolean existsByOrgIdAndAgentIdAndSkillId(String orgId, String agentId, Long skillId);
 
+    boolean existsByOrgIdAndAgentIdAndSkillIdAndEnabledTrue(String orgId, String agentId, Long skillId);
+
     List<AgentSkillBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String orgId, String agentId);
 
     List<AgentSkillBindingEntity> findByOrgIdAndSkillIdInAndEnabledTrue(String orgId, List<Long> skillIds);
