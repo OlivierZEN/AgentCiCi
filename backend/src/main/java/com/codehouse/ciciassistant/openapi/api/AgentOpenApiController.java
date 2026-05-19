@@ -1,103 +1,177 @@
 package com.codehouse.ciciassistant.openapi.api;
 
-import com.codehouse.ciciassistant.openapi.service.AgentOpenApiAuthService;
+import com.codehouse.ciciassistant.openapi.service.AgentOpenApiConversationService;
 import com.codehouse.ciciassistant.openapi.service.AgentOpenApiException;
-import com.codehouse.ciciassistant.openapi.service.AgentOpenApiRunService;
 import jakarta.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.time.Instant;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/openapi/v1/agents")
 public class AgentOpenApiController {
 
-    private final AgentOpenApiAuthService authService;
-    private final AgentOpenApiRunService runService;
+    private final AgentOpenApiConversationService conversationService;
 
-    public AgentOpenApiController(AgentOpenApiAuthService authService, AgentOpenApiRunService runService) {
-        this.authService = authService;
-        this.runService = runService;
+    public AgentOpenApiController(AgentOpenApiConversationService conversationService) {
+        this.conversationService = conversationService;
     }
 
-    @GetMapping("/{agentId}/health")
-    public ResponseEntity<Map<String, Object>> health(@PathVariable String agentId, HttpServletRequest request) {
+    @GetMapping("/{agentId}/parameters")
+    public ResponseEntity<Map<String, Object>> parameters(@PathVariable String agentId, HttpServletRequest request) {
         String requestId = requestId();
         try {
-            AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("requestId", requestId);
-            data.put("agentId", auth.agent().getAgentId());
-            data.put("enabled", auth.agent().isEnabled());
-            data.put("published", auth.agent().getPublishedVersionId() != null);
-            data.put("apiChannelEnabled", true);
-            data.put("credentialStatus", auth.credential().getStatus());
-            data.put("serverTime", Instant.now().toString());
-            return ResponseEntity.ok(success(data));
+            return ResponseEntity.ok(success(conversationService.parameters(agentId, request)));
         } catch (AgentOpenApiException ex) {
             return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
         }
     }
 
-    @PostMapping("/{agentId}/chat")
-    public ResponseEntity<Map<String, Object>> chat(@PathVariable String agentId,
-                                                    @RequestBody(required = false) AgentOpenApiRunService.ChatCommand requestBody,
+    @PostMapping(value = "/{agentId}/chat-messages", produces = {MediaType.APPLICATION_JSON_VALUE, MediaType.TEXT_EVENT_STREAM_VALUE})
+    public Object chatMessages(@PathVariable String agentId,
+                               @RequestBody(required = false) AgentOpenApiConversationService.ChatMessageCommand requestBody,
+                               HttpServletRequest request) {
+        String requestId = requestId();
+        String responseMode = requestBody == null ? "" : text(requestBody.responseMode()).toLowerCase(Locale.ROOT);
+        try {
+            if ("streaming".equals(responseMode)) {
+                SseEmitter emitter = conversationService.chatMessagesStream(
+                        agentId,
+                        requestId,
+                        header(request, "Idempotency-Key"),
+                        requestBody,
+                        request);
+                return emitter;
+            }
+            return ResponseEntity.ok(conversationService.chatMessages(
+                    agentId,
+                    requestId,
+                    header(request, "Idempotency-Key"),
+                    requestBody,
+                    request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
+    @PostMapping("/{agentId}/chat-messages/{taskId}/stop")
+    public ResponseEntity<Map<String, Object>> stop(@PathVariable String agentId,
+                                                    @PathVariable String taskId,
                                                     HttpServletRequest request) {
         String requestId = requestId();
         try {
-            Map<String, Object> data = runService.chat(
-                    agentId,
-                    requestId,
-                    header(request, "Idempotency-Key"),
-                    requestBody,
-                    request);
-            return ResponseEntity.ok(success(data));
+            return ResponseEntity.ok(conversationService.stop(agentId, taskId, request));
         } catch (AgentOpenApiException ex) {
             return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
         }
     }
 
-    @PostMapping(value = "/{agentId}/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public ResponseEntity<SseEmitter> chatStream(@PathVariable String agentId,
-                                                 @RequestBody(required = false) AgentOpenApiRunService.ChatCommand requestBody,
-                                                 HttpServletRequest request) {
+    @GetMapping("/{agentId}/conversations")
+    public ResponseEntity<Map<String, Object>> conversations(@PathVariable String agentId,
+                                                             @RequestParam(required = false) String user,
+                                                             HttpServletRequest request) {
         String requestId = requestId();
         try {
-            SseEmitter emitter = runService.chatStream(
-                    agentId,
-                    requestId,
-                    header(request, "Idempotency-Key"),
-                    requestBody,
-                    request);
-            return ResponseEntity.ok(emitter);
+            return ResponseEntity.ok(success(Map.of("data", conversationService.conversations(agentId, user, request))));
         } catch (AgentOpenApiException ex) {
-            SseEmitter emitter = new SseEmitter(10_000L);
-            try {
-                emitter.send(SseEmitter.event()
-                        .name("error")
-                        .data(Map.of(
-                                "requestId", requestId,
-                                "code", ex.getCode(),
-                                "message", ex.getMessage()
-                        )));
-                emitter.complete();
-            } catch (IOException ignored) {
-                emitter.completeWithError(ex);
-            }
-            return ResponseEntity.status(ex.getStatus()).body(emitter);
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
         }
     }
+
+    @GetMapping("/{agentId}/messages")
+    public ResponseEntity<Map<String, Object>> messages(@PathVariable String agentId,
+                                                        @RequestParam(required = false, name = "conversation_id") String conversationId,
+                                                        @RequestParam(required = false) String user,
+                                                        @RequestParam(required = false, name = "first_id") String firstId,
+                                                        @RequestParam(required = false) Integer limit,
+                                                        HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            AgentOpenApiConversationService.MessagePage page = conversationService.messages(agentId, conversationId, user, firstId, limit, request);
+            return ResponseEntity.ok(success(Map.of("data", page.data(), "has_more", page.hasMore(), "limit", page.limit())));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
+    @PostMapping("/{agentId}/conversations/{conversationId}/name")
+    public ResponseEntity<Map<String, Object>> renameConversation(@PathVariable String agentId,
+                                                                  @PathVariable String conversationId,
+                                                                  @RequestBody(required = false) AgentOpenApiConversationService.RenameConversationCommand requestBody,
+                                                                  HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            return ResponseEntity.ok(conversationService.renameConversation(agentId, conversationId, requestBody, request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
+    @DeleteMapping("/{agentId}/conversations/{conversationId}")
+    public ResponseEntity<Map<String, Object>> deleteConversation(@PathVariable String agentId,
+                                                                  @PathVariable String conversationId,
+                                                                  HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            return ResponseEntity.ok(conversationService.deleteConversation(agentId, conversationId, request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
+    @PostMapping("/{agentId}/messages/{messageId}/feedbacks")
+    public ResponseEntity<Map<String, Object>> feedback(@PathVariable String agentId,
+                                                        @PathVariable String messageId,
+                                                        @RequestBody(required = false) AgentOpenApiConversationService.FeedbackCommand requestBody,
+                                                        HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            return ResponseEntity.ok(conversationService.feedback(agentId, messageId, requestBody, request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
+    @GetMapping("/{agentId}/messages/{messageId}/suggested")
+    public ResponseEntity<Map<String, Object>> suggested(@PathVariable String agentId,
+                                                         @PathVariable String messageId,
+                                                         HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            return ResponseEntity.ok(conversationService.suggested(agentId, messageId, request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
+    @PostMapping(value = "/{agentId}/files/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadFile(@PathVariable String agentId,
+                                                          @RequestPart("file") MultipartFile file,
+                                                          @RequestParam(required = false) String user,
+                                                          @RequestParam(required = false, name = "conversation_id") String conversationId,
+                                                          HttpServletRequest request) {
+        String requestId = requestId();
+        try {
+            return ResponseEntity.ok(conversationService.uploadFile(agentId, file, user, conversationId, request));
+        } catch (AgentOpenApiException ex) {
+            return ResponseEntity.status(ex.getStatus()).body(error(ex, requestId));
+        }
+    }
+
 
     private Map<String, Object> success(Map<String, Object> data) {
         Map<String, Object> root = new LinkedHashMap<>();
@@ -127,5 +201,9 @@ public class AgentOpenApiController {
     private String header(HttpServletRequest request, String name) {
         String value = request.getHeader(name);
         return value == null ? "" : value.trim();
+    }
+
+    private String text(String value) {
+        return value == null ? "" : value.trim().toLowerCase();
     }
 }

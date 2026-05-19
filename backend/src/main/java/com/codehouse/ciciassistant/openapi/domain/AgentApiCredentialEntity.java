@@ -159,6 +159,7 @@ public class AgentApiCredentialEntity {
     public void updateMutableFields(String name,
                                     String runAsUserId,
                                     String allowedIpsJson,
+                                    String scopesJson,
                                     int rateLimitPerMinute,
                                     int dailyQuota,
                                     int maxPromptChars,
@@ -170,6 +171,7 @@ public class AgentApiCredentialEntity {
         this.name = name;
         this.runAsUserId = runAsUserId;
         this.allowedIpsJson = allowedIpsJson;
+        this.scopesJson = scopesJson;
         this.rateLimitPerMinute = rateLimitPerMinute;
         this.dailyQuota = dailyQuota;
         this.maxPromptChars = maxPromptChars;

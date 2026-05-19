@@ -1,33 +1,33 @@
 ---
 kind: feature-spec
 feature_id: FEAT-036
-title: Agent Open API Dify parity enhancement
-status: assigned
+title: Agent Open API conversation service enhancement
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-112
 related_decisions: FEAT-021, FEAT-015, FEAT-019, FEAT-022, FEAT-032
 related_issues: none
-updated_at: 2026-05-18T04:04:58Z
-updated_by: ai
+updated_at: 2026-05-18T09:48:26Z
+updated_by: DEV-fengchu
 ---
 
-# FEAT-036 - Agent Open API Dify parity enhancement
+# FEAT-036 - Agent Open API conversation service enhancement
 
 ## 背景与目标
 
-FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具备 health、non-stream chat、SSE stream、run-as、external session、调用日志、usage daily、trace metadata、CORS 和本地/测试环境 smoke。现在需要把 Open API 从“可调用”增强为“可集成”，对标 Dify Service API 的常用能力，方便 CloudCC、CRM、客户门户、嵌入式页面和第三方后端以更完整的会话、文件、反馈和运行控制能力接入 AgentCiCi。
+FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具备 run-as、external session、调用日志、usage daily、trace metadata、CORS 和本地/测试环境 smoke。当前项目仍处开发阶段，FEAT-036 将 Open API 收口为统一会话服务接口，在 AgentCiCi 自有平台内提供更完整的会话、文件、反馈和运行控制能力，方便 CloudCC、CRM、客户门户、嵌入式页面和第三方后端接入。
 
 本轮目标：
 
-- 补齐 Dify 式常用会话 API：参数发现、发送消息、停止生成、会话列表/消息列表、会话重命名/删除。
+- 补齐会话服务常用 API：参数发现、发送消息、停止生成、会话列表/消息列表、会话重命名/删除。
 - 补齐消息级体验 API：反馈、建议问题、引用/检索资源摘要、agent thoughts/tool events 的可观测输出。
 - 补齐文件输入能力的首版：文件上传、文件引用到 chat 请求、权限绑定到同一 Key/Agent/external user/session。
-- 明确 blocking/streaming 的统一请求契约，保留现有 FEAT-021 路径兼容，同时提供更接近 Dify 的 `/chat-messages` 兼容入口或参数别名。
+- 明确 blocking/streaming 的统一请求契约，统一到 AgentCiCi 自有 `/chat-messages` 会话服务入口和参数别名。
 - 收口安全与生产化：资源越权校验、幂等/重试语义、超时/响应大小/并发保护、生产 env 示例和公网 smoke。
 
-## Dify 对标事实源
+## 参考能力事实源
 
-本规格引用 2026-05-18 检索到的 Dify 官方文档作为对标来源：
+本规格引用 2026-05-18 检索到的 Dify 官方文档作为能力参考来源；实现目标是在 AgentCiCi 平台内提供自己的开放 API，不对外宣称或承诺第三方平台协议、生态或替代关系。
 
 - Dify 应用可以作为后端 API 服务直接集成，Conversational Applications 通过 `chat-messages` 发起对话，并使用 `conversation_id` 延续会话；Service API conversations 与 WebApp conversations 隔离。来源：https://docs.dify.ai/en/use-dify/publish/developing-with-apis
 - Dify `POST /chat-messages` 常用请求字段包括 `query`、`inputs`、`user`、`response_mode`、`conversation_id`、`files`、`auto_generate_name`；响应会返回 `task_id`、`message_id`、`conversation_id`、`answer`、`metadata`，streaming 使用 SSE。来源：https://docs.dify.ai/api-reference/chats/send-chat-message
@@ -51,17 +51,17 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
   - `POST /openapi/v1/agents/{agentId}/messages/{messageId}/feedbacks`
   - `GET /openapi/v1/agents/{agentId}/messages/{messageId}/suggested`
   - `POST /openapi/v1/agents/{agentId}/files/upload`
-- 保持 FEAT-021 既有 `health`、`chat`、`chat/stream` 兼容；新能力可复用既有 service，但不能破坏已有调用方。
-- 请求兼容 Dify 常用字段：
+- 移除开发期旧 Open API 入口 `health`、`chat`、`chat/stream`，只保留会话服务接口作为对外调用面。
+- 请求支持会话服务常用字段：
   - `query` 作为 `message` 别名。
   - `inputs` 作为外部变量对象，进入运行上下文和日志摘要，但不得覆盖系统提示词、模型、工具、真实 URL/Header/Token。
-  - `user` 映射为 `externalUser.id` 的兼容字段；若同时传 `externalUser.id`，二者必须一致或拒绝。
+  - `user` 映射为 `externalUser.id` 的简写字段；若同时传 `externalUser.id`，二者必须一致或拒绝。
   - `conversation_id` 映射 FEAT-021 external `sessionId`。
   - `response_mode=blocking|streaming` 统一入口，streaming 返回 SSE。
   - `files` 引用上传文件，首版支持文档/图片元数据入库和运行上下文注入；真实多模态模型处理按现有模型能力降级。
-- 响应兼容 Dify 常用概念：
+- 响应覆盖会话服务常用概念：
   - 返回 `task_id`、`message_id`、`conversation_id`、`answer`、`metadata.usage`、`metadata.retriever_resources`、`metadata.agent_thoughts`。
-  - SSE 至少包含 `message`、`agent_thought`、`message_end`、`error` 等可消费事件；可保留内部 `phase/tool/delta/done` 事件，但文档必须说明。
+  - SSE 包含 `message`、`agent_thought`、`message_end`、`error` 等可消费事件；不对外暴露内部 `phase/tool/delta/done` 事件。
 - 管理端文档弹窗和 Markdown 下载更新为增强版 API 文档，示例不展示真实 API Key。
 - API Key 管理新增能力开关或 scopes，至少区分 `chat`、`files`、`feedback`、`history`、`audio`。
 - 补齐 FEAT-021 既有缺口：
@@ -73,9 +73,9 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 ### Out Of Scope
 
 - 不开放 Agent 创建、编辑、发布、Skill 管理、知识库管理、模型配置管理等后台管理 API。
-- 不实现完整 Dify 兼容，包括 workflow-run、completion-messages、datasets、annotation、admin console API。
+- 不复刻第三方平台全量产品/API，包括 workflow-run、completion-messages、datasets、annotation、admin console API。
 - 不承诺首版直接处理所有文件内容；文档抽取、多模态模型输入和音视频解析可以分阶段，但文件权限、元数据、引用链路必须先落地。
-- 不把 API Key 暴露给浏览器作为推荐模式；允许浏览器直调只是现有 CORS 兼容，不改变安全建议。
+- 不把 API Key 暴露给浏览器作为推荐模式；允许浏览器直调只是现有 CORS 行为，不改变安全建议。
 
 ## 用户场景
 
@@ -89,7 +89,7 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 
 - FEAT-021 当前已实现 `AgentOpenApiController`、`AgentOpenApiAuthService`、`AgentOpenApiRunService`、`AgentOpenApiCredentialService`、`AgentOpenApiCallLogService` 和相关实体。
 - 当前 `ChatOrchestratorService.chat(...)` / `chatStream(...)` 是运行时事实源；增强 API 仍必须复用它，不复制 RAG、Skill、工具和模型逻辑。
-- 当前 `ChatCommand` 只包含 `sessionId`、`message`、`externalUser`、`knowledgeBaseIds`、`activeSkillCode`、`metadata`；Dify 兼容字段需要转换层。
+- 当前 `ChatCommand` 只包含 `sessionId`、`message`、`externalUser`、`knowledgeBaseIds`、`activeSkillCode`、`metadata`；新增会话服务字段需要转换层。
 - 当前 `agent_api_call_log` 以 requestId 为主键，缺 message/conversation/feedback/file upload 的完整模型；本任务大概率需要新增迁移。
 - 当前 stream wrapper 通过查询最新 trace 回填 traceId；实现时可先复用，但若要稳定输出 agent thoughts，建议让运行时更直接暴露 trace/message/task 关联。
 
@@ -97,11 +97,7 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 
 ### 1. API 分层
 
-- 保留 FEAT-021 原生接口：
-  - `/health`
-  - `/chat`
-  - `/chat/stream`
-- 新增 Dify-parity 接口：
+- 对外只保留会话服务接口：
   - `/parameters`
   - `/chat-messages`
   - `/chat-messages/{taskId}/stop`
@@ -166,15 +162,15 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 
 - 更新 `AgentOpenApiDocsDialog`：
   - 顶部状态仍保持 `鎏金账房` 产品 register。
-  - 新增 `Dify 兼容调用`、`参数发现`、`会话/消息`、`文件上传`、`反馈与建议问题`、`停止生成`、`错误码` 章节。
-  - 示例同时给出 AgentCiCi 原生字段和 Dify 兼容字段映射。
+  - 新增 `会话服务调用`、`参数发现`、`会话/消息`、`文件上传`、`反馈与建议问题`、`停止生成`、`错误码` 章节。
+  - 示例同时给出 AgentCiCi 原生字段和会话服务字段映射。
 - 更新 `AgentOpenApiKeysDialog`：
   - API Key scopes 展示和编辑。
   - 调用日志可搜索 message id / task id / conversation id。
 
 ## 任务拆分
 
-### TASK-112 - Agent Open API Dify parity enhancement
+### TASK-112 - Agent Open API conversation service enhancement
 
 负责人：`DEV-fengchu`。
 
@@ -182,7 +178,7 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 
 1. 阅读 FEAT-021 现状和本规格，确认当前迁移最新版本。
 2. 设计并落地 message/task/file/feedback 数据模型。
-3. 实现 Dify-parity controller 和 request/response DTO。
+3. 实现会话服务 controller 和 request/response DTO。
 4. 补资源越权校验、幂等、超时/响应大小/并发保护。
 5. 更新前端 API 文档弹窗和 Key scopes 管理。
 6. 补集成测试、CORS/代理回归、本地真实 Open API smoke。
@@ -208,8 +204,8 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 
 ## 风险与回滚
 
-- 风险：对 Dify 字段做过度兼容导致 AgentCiCi 原生概念被扭曲。
-  - 缓解：新增兼容层，保留原生 FEAT-021 接口和响应。
+- 风险：过度照搬参考平台字段导致 AgentCiCi 自有概念被扭曲。
+  - 缓解：新增独立转换层，收口为 AgentCiCi 自有会话服务响应。
 - 风险：文件上传扩大攻击面。
   - 缓解：限制大小、类型、存储路径、Key/Agent/user 绑定和保留期；不在首版自动执行不安全文件解析。
 - 风险：stop API 与当前运行时取消能力不匹配。
@@ -217,16 +213,19 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 - 风险：新增会话/消息 API 泄露跨调用方数据。
   - 缓解：所有查询使用 org + credential + agent + external user/session 联合约束。
 - 回滚：
-  - 保留 FEAT-021 原生接口。
-  - 新增兼容 endpoint 可通过 `app.agent-open-api.dify-parity-enabled=false` 或等价开关关闭。
-  - 新增表保留历史数据，不影响原有 chat/stream。
+  - 新增会话服务 endpoint 可通过 `app.agent-open-api.conversation-api-enabled=false` 或等价开关关闭。
+  - 新增表保留历史数据，不影响管理端 API Key 与调用日志能力。
 
 ## 实现进展
 
 - 2026-05-18T04:04:58Z：规格创建，并由 `MANAGER-001` 分配 `TASK-112` 给 `DEV-fengchu`。
+- 2026-05-18T07:11:02Z：`DEV-fengchu` 已完成首版实现：新增 V53 message/task/file/feedback 持久化模型；新增会话服务 endpoints，包括 `parameters`、`chat-messages`、`stop`、`conversations`、`messages`、`feedbacks`、`suggested`、`files/upload`；补 `knowledgeBaseIds` 和 `activeSkillCode` 绑定校验；API Key 新增 `scopes` 创建/更新；生产 deploy 示例补 `APP_AGENT_OPEN_API_ENABLED`、`APP_AGENT_OPEN_API_CONVERSATION_API_ENABLED`、`APP_AGENT_OPEN_API_KEY_PEPPER`；前端 Open API 文档和 Key 管理弹窗已更新。验证通过：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、`npm run build`、`git diff --check`、`mvn -q -Dtest=AgentOpenApiIntegrationTest test`。
+- 2026-05-18T08:51:04Z：根据产品语义调整，明确本功能是参考成熟会话 API 能力形态在 AgentCiCi 实现自有开放 API；前端文档、部署开关、错误码和规格表述均改为“会话服务 API / Open API 增强”。
+- 2026-05-18T09:30:42Z：按验收标准补齐请求字段别名、streaming `chat-messages`、消息分页、历史 feedback 回显、文件类型校验、启用状态下的 Skill 绑定校验、运行超时保护和响应长度保护。验证通过：`/Users/xuhm/Documents/apache-maven-3.9.9/bin/mvn -q -DskipTests compile`、`/Users/xuhm/Documents/apache-maven-3.9.9/bin/mvn -q -Dtest=AgentOpenApiIntegrationTest test`、`npm run build`、`git diff --check`、`python3 /Users/xuhm/.codex/skills/cc-aidev-guidelines-common/scripts/validate-state.py .claw`。
+- 2026-05-18T09:48:26Z：根据开发阶段无兼容负担的产品决策，删除旧公开 Open API 入口 `health`、`chat`、`chat/stream`，API Key 默认 scopes 移除 `health`，前端文档和集成测试统一收口到会话服务接口。
 
 ## 交接说明
 
 - 凤雏接手前必须运行 `dev-login.py`，使用 `.claw/assignments/TASK-112.yaml` 中授权 branch 和 scope。
 - 先读 `docs/specs/FEAT-021-agent-open-api.md`、本文件、`AgentOpenApiRunService`、`AgentOpenApiAuthService`、`ChatOrchestratorService`、`AgentRunTraceService`、`AgentOpenApiDocsDialog.tsx` 和 `AgentOpenApiKeysDialog.tsx`。
-- 不要把 Dify 的后台管理 API 或数据集管理 API 混入本任务；本任务只做面向外部调用方的 Agent Service API 常用能力。
+- 不要把参考平台的后台管理 API 或数据集管理 API 混入本任务；本任务只做面向外部调用方的 Agent Service API 常用能力。

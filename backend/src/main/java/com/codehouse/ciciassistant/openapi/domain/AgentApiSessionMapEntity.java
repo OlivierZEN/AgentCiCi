@@ -34,6 +34,12 @@ public class AgentApiSessionMapEntity {
     @Column(name = "external_user_id", length = 128)
     private String externalUserId;
 
+    @Column(name = "conversation_name", length = 160)
+    private String conversationName;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -66,11 +72,23 @@ public class AgentApiSessionMapEntity {
     public String getExternalSessionId() { return externalSessionId; }
     public String getInternalSessionId() { return internalSessionId; }
     public String getExternalUserId() { return externalUserId; }
+    public String getConversationName() { return conversationName; }
+    public Instant getDeletedAt() { return deletedAt; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
     public void updateExternalUserId(String externalUserId) {
         this.externalUserId = externalUserId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void rename(String name) {
+        this.conversationName = name;
+        this.updatedAt = Instant.now();
+    }
+
+    public void markDeleted() {
+        this.deletedAt = Instant.now();
         this.updatedAt = Instant.now();
     }
 }

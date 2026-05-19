@@ -47,6 +47,7 @@ app:
       rate-limit-enabled: true
   agent-open-api:
     enabled: false
+    conversation-api-enabled: true
     key-pepper: ""
     default-rate-limit-per-minute: 60
     default-daily-quota: 1000

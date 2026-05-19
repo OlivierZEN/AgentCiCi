@@ -17,7 +17,7 @@ public class AgentOpenApiCorsConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(properties.getCorsAllowedOrigins());
         configuration.setAllowedOriginPatterns(properties.getCorsAllowedOriginPatterns());
-        configuration.setAllowedMethods(List.of("GET", "POST", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
                 "Content-Type",
