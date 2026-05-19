@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -142,6 +143,24 @@ public class AgentOpenApiAuthService {
             throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found");
         }
         return text;
+    }
+
+    public void requireScope(AuthenticatedCredential auth, String scope) {
+        String normalized = scope == null ? "" : scope.trim().toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return;
+        }
+        List<String> scopes = auth.credentialView().scopes();
+        if (scopes == null || scopes.isEmpty() || scopes.contains("*")) {
+            return;
+        }
+        boolean allowed = scopes.stream()
+                .filter(item -> item != null)
+                .map(item -> item.trim().toLowerCase(Locale.ROOT))
+                .anyMatch(item -> item.equals(normalized));
+        if (!allowed) {
+            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_api_scope_denied", "API key scope does not allow this operation");
+        }
     }
 
     public record AuthenticatedCredential(

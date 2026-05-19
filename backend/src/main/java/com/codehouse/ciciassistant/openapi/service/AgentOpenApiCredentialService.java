@@ -66,7 +66,7 @@ public class AgentOpenApiCredentialService {
                 generated.keyHash(),
                 runAsUserId,
                 toJson(normalizeList(command.allowedIps())),
-                toJson(List.of("chat", "health")),
+                toJson(normalizeScopes(command.scopes())),
                 positiveOrDefault(command.rateLimitPerMinute(), properties.getDefaultRateLimitPerMinute(), 1, 10000),
                 positiveOrDefault(command.dailyQuota(), properties.getDefaultDailyQuota(), 1, 10000000),
                 positiveOrDefault(command.maxPromptChars(), properties.getDefaultMaxPromptChars(), 1, 64000),
@@ -94,6 +94,7 @@ public class AgentOpenApiCredentialService {
                 command.name() == null || command.name().isBlank() ? entity.getName() : requireText(command.name(), "name"),
                 runAsUserId,
                 command.allowedIps() == null ? entity.getAllowedIpsJson() : toJson(normalizeList(command.allowedIps())),
+                command.scopes() == null ? entity.getScopesJson() : toJson(normalizeScopes(command.scopes())),
                 positiveOrDefault(command.rateLimitPerMinute(), entity.getRateLimitPerMinute(), 1, 10000),
                 positiveOrDefault(command.dailyQuota(), entity.getDailyQuota(), 1, 10000000),
                 positiveOrDefault(command.maxPromptChars(), entity.getMaxPromptChars(), 1, 64000),
@@ -212,6 +213,20 @@ public class AgentOpenApiCredentialService {
         return List.copyOf(result);
     }
 
+    private List<String> normalizeScopes(List<String> values) {
+        List<String> normalized = normalizeList(values);
+        if (normalized.isEmpty()) {
+            return List.of("chat", "files", "feedback", "history");
+        }
+        List<String> allowed = List.of("chat", "files", "feedback", "history", "audio", "*");
+        for (String scope : normalized) {
+            if (!allowed.contains(scope)) {
+                throw new IllegalArgumentException("Unsupported API key scope: " + scope);
+            }
+        }
+        return normalized;
+    }
+
     private int positiveOrDefault(Integer value, int fallback, int min, int max) {
         int resolved = value == null ? fallback : value;
         if (resolved < min || resolved > max) {
@@ -264,7 +279,8 @@ public class AgentOpenApiCredentialService {
             Integer maxPromptChars,
             Integer maxResponseChars,
             Boolean allowStream,
-            Boolean allowTraceRead
+            Boolean allowTraceRead,
+            List<String> scopes
     ) {
     }
 
@@ -279,7 +295,8 @@ public class AgentOpenApiCredentialService {
             Integer maxResponseChars,
             Boolean allowStream,
             Boolean allowTraceRead,
-            String status
+            String status,
+            List<String> scopes
     ) {
     }
 

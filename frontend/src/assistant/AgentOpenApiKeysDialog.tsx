@@ -27,6 +27,7 @@ type ApiKeyRow = {
   maxPromptChars: number;
   maxResponseChars: number;
   allowStream: boolean;
+  scopes?: string[];
   expiresAt?: string | null;
   lastUsedAt?: string | null;
   createdAt?: string | null;
@@ -61,6 +62,13 @@ type UserRow = {
 };
 
 type TabKey = "keys" | "calls";
+
+const SCOPE_OPTIONS = [
+  { value: "chat", label: "对话" },
+  { value: "files", label: "文件" },
+  { value: "feedback", label: "反馈" },
+  { value: "history", label: "历史" },
+];
 
 function formatTime(value?: string | null) {
   if (!value) return "无";
@@ -117,6 +125,7 @@ export default function AgentOpenApiKeysDialog({
     maxPromptChars: "8000",
     maxResponseChars: "12000",
     allowStream: true,
+    scopes: ["chat", "files", "feedback", "history"],
   });
 
   const visibleKeys = useMemo(
@@ -245,6 +254,7 @@ export default function AgentOpenApiKeysDialog({
         maxPromptChars: Number(form.maxPromptChars) || 8000,
         maxResponseChars: Number(form.maxResponseChars) || 12000,
         allowStream: form.allowStream,
+        scopes: form.scopes,
       };
       const created = await requestJson<{ credential: ApiKeyRow; plainKey: string }>(
         `/agents/${encodeURIComponent(agentId)}/api-keys`,
@@ -310,6 +320,24 @@ export default function AgentOpenApiKeysDialog({
   );
 
   const selectedCall = calls.find((call) => call.requestId === selectedCallRequestId) ?? null;
+
+  const toggleScope = (scope: string) => {
+    setForm((current) => {
+      const existing = current.scopes.includes(scope)
+        ? current.scopes.filter((item) => item !== scope)
+        : [...current.scopes, scope];
+      return { ...current, scopes: existing };
+    });
+  };
+
+  const scopeText = (scopes?: string[]) => {
+    if (!scopes || scopes.length === 0) return "默认";
+    if (scopes.includes("*")) return "全部";
+    return SCOPE_OPTIONS
+      .filter((option) => scopes.includes(option.value))
+      .map((option) => option.label)
+      .join(" / ") || scopes.join(" / ");
+  };
 
   const revokeKey = async (credentialId: number) => {
     if (!window.confirm("删除会永久作废这个 Key，历史调用日志仍会保留。完整 Key 无法恢复，只能重新创建。")) {
@@ -411,6 +439,19 @@ export default function AgentOpenApiKeysDialog({
                 <input type="checkbox" checked={form.allowStream} onChange={(event) => setForm((current) => ({ ...current, allowStream: event.target.checked }))} />
                 <span>允许流式对话</span>
               </label>
+              <fieldset className="cici-openapi-keys__scopes">
+                <legend>能力 scope</legend>
+                {SCOPE_OPTIONS.map((scope) => (
+                  <label key={scope.value}>
+                    <input
+                      type="checkbox"
+                      checked={form.scopes.includes(scope.value)}
+                      onChange={() => toggleScope(scope.value)}
+                    />
+                    <span>{scope.label}</span>
+                  </label>
+                ))}
+              </fieldset>
               <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void createKey()} disabled={saving || !form.runAsUserId || !form.name.trim()}>
                 创建 Key
               </button>
@@ -444,7 +485,7 @@ export default function AgentOpenApiKeysDialog({
                     <td title={userDetailTitle(key.runAsUserId)}>{userDisplayName(key.runAsUserId)}</td>
                     <td><span className={`cici-openapi-keys__status ${statusClass(key.status)}`}>{statusText(key.status)}</span></td>
                     <td title="这里只是 Key 前缀，用于识别记录；完整 Key 只在创建或重新生成后显示一次。"><code>{key.keyPrefix}</code></td>
-                    <td>{key.rateLimitPerMinute}/min · {key.dailyQuota}/day</td>
+                    <td>{key.rateLimitPerMinute}/min · {key.dailyQuota}/day<br /><small>{scopeText(key.scopes)}</small></td>
                     <td>{formatTime(key.lastUsedAt)}</td>
                     <td>
                       <div className="cici-openapi-keys__actions">

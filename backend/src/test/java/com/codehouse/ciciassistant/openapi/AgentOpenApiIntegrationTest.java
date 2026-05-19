@@ -3,7 +3,9 @@ package com.codehouse.ciciassistant.openapi;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.asyncDispatch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -23,11 +25,23 @@ import com.codehouse.ciciassistant.ai.domain.AgentRunTraceEntity;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCallLogRepository;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiSessionMapRepository;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiUsageDailyRepository;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity;
+import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillBindingPolicy;
+import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
+import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
+import com.codehouse.ciciassistant.skill.domain.SkillEditPolicy;
+import com.codehouse.ciciassistant.skill.domain.SkillSourceType;
+import com.codehouse.ciciassistant.skill.domain.SkillUpdatePolicy;
+import com.codehouse.ciciassistant.skill.domain.SkillVisibility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -44,16 +58,15 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -98,6 +111,18 @@ class AgentOpenApiIntegrationTest {
     private AgentRunTraceRepository traceRepository;
 
     @Autowired
+    private OrgModelConfigRepository orgModelConfigRepository;
+
+    @Autowired
+    private ModelProviderService modelProviderService;
+
+    @Autowired
+    private SkillDefinitionRepository skillDefinitionRepository;
+
+    @Autowired
+    private AgentSkillBindingRepository agentSkillBindingRepository;
+
+    @Autowired
     private TransactionTemplate transactionTemplate;
 
     @MockBean
@@ -105,7 +130,7 @@ class AgentOpenApiIntegrationTest {
 
     @Test
     void shouldAllowWildcardCorsPreflightForOpenApiStream() throws Exception {
-        mockMvc.perform(options("/openapi/v1/agents/{agentId}/chat/stream", "openapi-cors-agent")
+        mockMvc.perform(options("/openapi/v1/agents/{agentId}/chat-messages", "openapi-cors-agent")
                         .header(HttpHeaders.ORIGIN, "https://cnbh01.cloudcc.cn")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type,idempotency-key"))
@@ -117,7 +142,7 @@ class AgentOpenApiIntegrationTest {
 
     @Test
     void shouldAllowAnyOriginCorsPreflightForOpenApi() throws Exception {
-        mockMvc.perform(options("/openapi/v1/agents/{agentId}/chat/stream", "openapi-cors-agent")
+        mockMvc.perform(options("/openapi/v1/agents/{agentId}/chat-messages", "openapi-cors-agent")
                         .header(HttpHeaders.ORIGIN, "https://another.example")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type"))
@@ -197,35 +222,49 @@ class AgentOpenApiIntegrationTest {
     }
 
     @Test
-    void shouldValidateOpenApiHealthWithoutTreatingApiKeyAsJwt() throws Exception {
+    void shouldValidateOpenApiParametersWithoutTreatingApiKeyAsJwt() throws Exception {
         String token = loginToken("13800138111");
         String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
-        String agentId = "openapi-health-agent";
+        String agentId = "openapi-parameters-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId);
 
-        mockMvc.perform(get("/openapi/v1/agents/{agentId}/health", agentId)
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/parameters", agentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.agentId").value(agentId))
-                .andExpect(jsonPath("$.data.apiChannelEnabled").value(true));
+                .andExpect(jsonPath("$.data.opening_statement").value("hello"))
+                .andExpect(jsonPath("$.data.file_upload.enabled").value(true));
 
-        mockMvc.perform(get("/openapi/v1/agents/{agentId}/health", agentId))
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/parameters", agentId))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error.code").value("agent_api_key_missing"));
 
         String disabledAgentId = "openapi-disabled-channel-agent";
         preparePublishedAgent(disabledAgentId, false);
         String disabledAgentKey = createPlainKey(token, disabledAgentId, runAsUserId);
-        mockMvc.perform(get("/openapi/v1/agents/{agentId}/health", disabledAgentId)
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/parameters", disabledAgentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + disabledAgentKey))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error.code").value("agent_channel_disabled"));
     }
 
     @Test
-    void shouldRunOpenApiChatWithMappedSessionCallLogUsageAndTraceMetadata() throws Exception {
+    void shouldNotExposeLegacyOpenApiRoutes() throws Exception {
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/health", "legacy-openapi-agent"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat", "legacy-openapi-agent")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNotFound());
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat/stream", "legacy-openapi-agent")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void shouldRunOpenApiChatMessagesWithMappedSessionCallLogUsageAndTraceMetadata() throws Exception {
         String token = loginToken("13800138111");
         String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-chat-agent";
@@ -233,39 +272,38 @@ class AgentOpenApiIntegrationTest {
         String plainKey = createPlainKey(token, agentId, runAsUserId);
         stubChatRuntime(agentId, runAsUserId, "外部调用回答");
 
-        MvcResult result = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat", agentId)
+        MvcResult result = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
                         .header("X-Cici-Api-Key", plainKey)
                         .header("X-Forwarded-For", "127.0.0.1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "crm-customer-001",
-                                  "message": "hello open api",
-                                  "externalUser": {
-                                    "id": "customer-001",
-                                    "name": "张三"
-                                  },
+                                  "conversationId": "crm-customer-001",
+                                  "query": "hello open api",
+                                  "user": "customer-001",
                                   "metadata": {
                                     "source": "crm"
                                   }
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.answer").value("外部调用回答"))
-                .andExpect(jsonPath("$.data.sessionId").value("crm-customer-001"))
-                .andExpect(jsonPath("$.data.internalSessionId").value(org.hamcrest.Matchers.startsWith("api:")))
-                .andExpect(jsonPath("$.data.traceId").isString())
-                .andExpect(jsonPath("$.data.runtime.ragContextCount").value(0))
+                .andExpect(jsonPath("$.answer").value("外部调用回答"))
+                .andExpect(jsonPath("$.conversation_id").value("crm-customer-001"))
+                .andExpect(jsonPath("$.metadata.trace_id").isString())
                 .andReturn();
 
-        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8)).path("data");
-        String requestId = data.path("requestId").asText();
-        String internalSessionId = data.path("internalSessionId").asText();
-        String traceId = data.path("traceId").asText();
+        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        String traceId = data.path("metadata").path("trace_id").asText();
+        AgentApiCredentialEntity credential = credentialRepository.findByPublicId(plainKeyPublicId(plainKey)).orElseThrow();
+        String internalSessionId = sessionMapRepository
+                .findByOrgIdAndCredentialIdAndAgentIdAndExternalSessionId("demo-org", credential.getId(), agentId, "crm-customer-001")
+                .orElseThrow()
+                .getInternalSessionId();
 
         assertThat(sessionMapRepository.findByInternalSessionId(internalSessionId)).isPresent();
-        assertThat(callLogRepository.findById(requestId)).isPresent()
-                .get()
+        assertThat(callLogRepository.findAll())
+                .filteredOn(log -> traceId.equals(log.getTraceId()))
+                .singleElement()
                 .satisfies(log -> {
                     assertThat(log.getStatus()).isEqualTo("SUCCESS");
                     assertThat(log.getTraceId()).isEqualTo(traceId);
@@ -275,9 +313,7 @@ class AgentOpenApiIntegrationTest {
         AgentRunTraceEntity trace = traceRepository.findById(traceId).orElseThrow();
         assertThat(trace.getChannel()).isEqualTo("api");
         assertThat(trace.getSourceType()).isEqualTo("open_api");
-        assertThat(trace.getRequestId()).isEqualTo(requestId);
         assertThat(trace.getExternalUserId()).isEqualTo("customer-001");
-        AgentApiCredentialEntity credential = credentialRepository.findByPublicId(plainKeyPublicId(plainKey)).orElseThrow();
         assertThat(usageDailyRepository.findByOrgIdAndCredentialIdAndUsageDate(
                 "demo-org",
                 credential.getId(),
@@ -292,79 +328,333 @@ class AgentOpenApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .param("q", "customer-001"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data[0].requestId").value(requestId))
                 .andExpect(jsonPath("$.data[0].status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data[0].externalUserId").value("customer-001"));
     }
 
     @Test
-    void shouldRunOpenApiStreamWithMetaDoneCallLogUsageAndTraceMetadata() throws Exception {
+    void shouldExposeConversationApiChatMessagesHistoryFeedbackAndFiles() throws Exception {
         String token = loginToken("13800138111");
         String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
-        String agentId = "openapi-stream-agent";
+        String agentId = "openapi-conversation-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId);
-        stubChatStreamRuntime(agentId, runAsUserId, "stream openapi answer");
+        stubChatRuntime(agentId, runAsUserId, "会话服务回答");
 
-        MvcResult asyncResult = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat/stream", agentId)
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/parameters", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.opening_statement").value("hello"))
+                .andExpect(jsonPath("$.data.file_upload.enabled").value(true));
+
+        MockMultipartFile rejectedFile = new MockMultipartFile(
+                "file",
+                "unsafe.bin",
+                MediaType.APPLICATION_OCTET_STREAM_VALUE,
+                "unsafe".getBytes(StandardCharsets.UTF_8));
+        mockMvc.perform(multipart("/openapi/v1/agents/{agentId}/files/upload", agentId)
+                        .file(rejectedFile)
+                        .param("user", "customer-conversation")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("file_type_not_allowed"));
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "case-note.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "case note".getBytes(StandardCharsets.UTF_8));
+        MvcResult uploadResult = mockMvc.perform(multipart("/openapi/v1/agents/{agentId}/files/upload", agentId)
+                        .file(file)
+                        .param("user", "customer-conversation")
+                        .param("conversation_id", "conv-conversation")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").isString())
+                .andExpect(jsonPath("$.name").value("case-note.txt"))
+                .andReturn();
+        String fileId = objectMapper.readTree(uploadResult.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("id")
+                .asText();
+
+        MvcResult chatResult = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .header("Idempotency-Key", "conversation-idempotency-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "query": "请分析附件",
+                                  "user": "customer-conversation",
+                                  "responseMode": "blocking",
+                                  "conversationId": "conv-conversation",
+                                  "inputs": {
+                                    "source": "crm"
+                                  },
+                                  "files": [
+                                    {
+                                      "type": "document",
+                                      "transfer_method": "local_file",
+                                      "upload_file_id": "%s"
+                                    }
+                                  ]
+                                }
+                                """.formatted(fileId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.task_id").isString())
+                .andExpect(jsonPath("$.message_id").isString())
+                .andExpect(jsonPath("$.conversation_id").value("conv-conversation"))
+                .andExpect(jsonPath("$.answer").value("会话服务回答"))
+                .andExpect(jsonPath("$.metadata.usage.elapsed_ms").isNumber())
+                .andReturn();
+        JsonNode chat = objectMapper.readTree(chatResult.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        String taskId = chat.path("task_id").asText();
+        String messageId = chat.path("message_id").asText();
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .header("Idempotency-Key", "conversation-idempotency-1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "query": "请分析附件",
+                                  "user": "customer-conversation",
+                                  "conversationId": "conv-conversation"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message_id").value(messageId))
+                .andExpect(jsonPath("$.metadata.idempotentReplay").value(true));
+
+        MvcResult secondChatResult = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "query": "继续分析附件",
+                                  "user": "customer-conversation",
+                                  "response_mode": "blocking",
+                                  "conversation_id": "conv-conversation"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.conversation_id").value("conv-conversation"))
+                .andReturn();
+        String secondMessageId = objectMapper.readTree(secondChatResult.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("message_id")
+                .asText();
+
+        MvcResult streamResult = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
                         .accept(MediaType.TEXT_EVENT_STREAM)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "sessionId": "crm-stream-001",
-                                  "message": "hello stream",
-                                  "externalUser": {
-                                    "id": "stream-user-001"
-                                  }
+                                  "query": "流式继续分析",
+                                  "user": "customer-conversation",
+                                  "response_mode": "streaming",
+                                  "conversation_id": "conv-conversation"
                                 }
                                 """))
                 .andExpect(request().asyncStarted())
                 .andReturn();
-
-        MvcResult result = mockMvc.perform(asyncDispatch(asyncResult))
+        mockMvc.perform(asyncDispatch(streamResult))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("event:meta")))
-                .andExpect(content().string(containsString("event:delta")))
-                .andExpect(content().string(containsString("stream openapi answer")))
-                .andExpect(content().string(containsString("event:done")))
-                .andExpect(content().string(containsString("requestId")))
-                .andExpect(content().string(containsString("traceId")))
-                .andReturn();
+                .andExpect(content().string(containsString("event:agent_thought")))
+                .andExpect(content().string(containsString("event:message")))
+                .andExpect(content().string(containsString("event:message_end")));
 
-        String body = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
-        String requestId = extractSseValue(body, "requestId");
-        String traceId = extractSseValue(body, "traceId");
-        assertThat(requestId).startsWith("req_");
-        assertThat(traceId).startsWith("trace-");
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/messages/{messageId}/feedbacks", agentId, messageId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "rating": "like",
+                                  "content": "useful"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("success"))
+                .andExpect(jsonPath("$.rating").value("like"));
 
-        assertThat(callLogRepository.findById(requestId)).isPresent()
-                .get()
-                .satisfies(log -> {
-                    assertThat(log.getStatus()).isEqualTo("SUCCESS");
-                    assertThat(log.getTraceId()).isEqualTo(traceId);
-                    assertThat(log.getExternalUserId()).isEqualTo("stream-user-001");
-                    assertThat(log.getResponseSummary()).contains("stream openapi answer");
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/messages", agentId)
+                        .queryParam("conversation_id", "conv-conversation")
+                        .queryParam("user", "customer-conversation")
+                        .queryParam("limit", "1")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.data[0].message_id").isString())
+                .andExpect(jsonPath("$.data.has_more").value(true))
+                .andExpect(jsonPath("$.data.limit").value(1));
+
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/messages", agentId)
+                        .queryParam("conversation_id", "conv-conversation")
+                        .queryParam("user", "customer-conversation")
+                        .queryParam("first_id", secondMessageId)
+                        .queryParam("limit", "20")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.data[0].message_id").value(messageId))
+                .andExpect(jsonPath("$.data.data[0].feedback.rating").value("like"));
+
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/messages/{messageId}/suggested", agentId, messageId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[0]").isString());
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/conversations/{conversationId}/name", agentId, "conv-conversation")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "CRM 客户会话"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("CRM 客户会话"));
+
+        mockMvc.perform(get("/openapi/v1/agents/{agentId}/conversations", agentId)
+                        .queryParam("user", "customer-conversation")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.data[0].id").value("conv-conversation"));
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages/{taskId}/stop", agentId, taskId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("cancel_requested"));
+
+        mockMvc.perform(delete("/openapi/v1/agents/{agentId}/conversations/{conversationId}", agentId, "conv-conversation")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result").value("deleted"));
+    }
+
+    @Test
+    void shouldReplacePlaceholderChatRouteWithConfiguredBaseModelForOpenApiChatMessages() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-model-route-agent";
+        modelProviderService.agentBaseModels("demo-org");
+        modelProviderService.updateSelectedModels("demo-org", "aliyun-bailian", List.of("qwen3.6-plus"));
+        OrgModelConfigEntity route = orgModelConfigRepository.findByOrgIdAndSceneCode("demo-org", "chat")
+                .orElse(new OrgModelConfigEntity("demo-org", "chat", "mock", "cici-default"));
+        route.update("mock", "cici-default");
+        orgModelConfigRepository.save(route);
+        preparePublishedApiAgent(agentId);
+        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", agentId)
+                .ifPresent(agent -> {
+                    agent.update(
+                            agent.getName(),
+                            agent.getSummary(),
+                            agent.getGreeting(),
+                            "qwen3.6-plus",
+                            agent.getSystemPrompt(),
+                            agent.getHandoffRule(),
+                            agent.getSafetyLevel(),
+                            agent.getExecutionMode(),
+                            agent.getVersionLabel(),
+                            agent.getAvatarBase64(),
+                            true,
+                            agent.isEnabled());
+                    agentDefinitionRepository.save(agent);
                 });
-        AgentRunTraceEntity trace = traceRepository.findById(traceId).orElseThrow();
-        assertThat(trace.getChannel()).isEqualTo("api");
-        assertThat(trace.getSourceType()).isEqualTo("open_api");
-        assertThat(trace.getRequestId()).isEqualTo(requestId);
-        assertThat(trace.getExternalUserId()).isEqualTo("stream-user-001");
-        AgentApiCredentialEntity credential = credentialRepository.findByPublicId(plainKeyPublicId(plainKey)).orElseThrow();
-        assertThat(usageDailyRepository.findByOrgIdAndCredentialIdAndUsageDate(
-                "demo-org",
-                credential.getId(),
-                LocalDate.now(ZoneOffset.UTC))).isPresent()
+        String plainKey = createPlainKey(token, agentId, runAsUserId);
+        stubChatRuntime(agentId, runAsUserId, "模型路由已补齐");
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "model-route-session",
+                                  "query": "hello model route"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("模型路由已补齐"));
+
+        assertThat(orgModelConfigRepository.findByOrgIdAndSceneCode("demo-org", "chat")).isPresent()
                 .get()
-                .satisfies(usage -> {
-                    assertThat(usage.getCallCount()).isEqualTo(1);
-                    assertThat(usage.getSuccessCount()).isEqualTo(1);
+                .satisfies(saved -> {
+                    assertThat(saved.getProvider()).isEqualTo("aliyun-bailian");
+                    assertThat(saved.getModelName()).isEqualTo("qwen3.6-plus");
                 });
     }
 
     @Test
-    void shouldRejectOpenApiChatWhenMinuteRateLimitIsExceeded() throws Exception {
+    void shouldRejectDisabledSkillBindingForOpenApiChatMessages() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-disabled-skill-agent";
+        preparePublishedApiAgent(agentId);
+        String skillCode = "openapi-disabled-skill-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        SkillDefinitionEntity skill = saveSkill(skillCode, true);
+        transactionTemplate.executeWithoutResult(status -> {
+            agentSkillBindingRepository.deleteByOrgIdAndAgentId("demo-org", agentId);
+            agentSkillBindingRepository.save(new AgentSkillBindingEntity(
+                    "demo-org",
+                    agentId,
+                    skill.getId(),
+                    "ALWAYS",
+                    "",
+                    1,
+                    false));
+        });
+        String plainKey = createPlainKey(token, agentId, runAsUserId);
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "disabled-skill-session",
+                                  "query": "hello",
+                                  "activeSkillCode": "%s"
+                                }
+                                """.formatted(skillCode)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("skill_not_allowed"));
+    }
+
+    @Test
+    void shouldRejectOpenApiChatMessagesWhenAnswerExceedsConfiguredLimit() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-response-limit-agent";
+        preparePublishedApiAgent(agentId);
+        MvcResult createResult = mockMvc.perform(post("/agents/{agentId}/api-keys", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "response limit",
+                                  "runAsUserId": "%s",
+                                  "maxResponseChars": 4
+                                }
+                                """.formatted(runAsUserId)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String plainKey = objectMapper.readTree(createResult.getResponse().getContentAsString(StandardCharsets.UTF_8))
+                .path("data")
+                .path("plainKey")
+                .asText();
+        stubChatRuntime(agentId, runAsUserId, "answer too long");
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "response-limit-session",
+                                  "query": "hello"
+                                }
+                                """))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error.code").value("response_too_large"));
+    }
+
+    @Test
+    void shouldRejectOpenApiChatMessagesWhenMinuteRateLimitIsExceeded() throws Exception {
         String token = loginToken("13800138111");
         String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-rate-agent";
@@ -389,17 +679,17 @@ class AgentOpenApiIntegrationTest {
 
         String body = """
                 {
-                  "sessionId": "rate-session",
-                  "message": "hello rate limit"
+                  "conversationId": "rate-session",
+                  "query": "hello rate limit"
                 }
                 """;
-        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat", agentId)
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat", agentId)
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
@@ -413,7 +703,7 @@ class AgentOpenApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "name": "health smoke",
+                                  "name": "open api smoke",
                                   "runAsUserId": "%s"
                                 }
                                 """.formatted(runAsUserId)))
@@ -481,6 +771,36 @@ class AgentOpenApiIntegrationTest {
         });
     }
 
+    private SkillDefinitionEntity saveSkill(String skillCode, boolean enabled) {
+        return transactionTemplate.execute(status -> {
+            skillDefinitionRepository.findByOrgIdAndSkillCode("demo-org", skillCode)
+                    .ifPresent(skillDefinitionRepository::delete);
+            skillDefinitionRepository.flush();
+            SkillDefinitionEntity skill = new SkillDefinitionEntity(
+                    "demo-org",
+                    skillCode,
+                    "Open API Skill",
+                    "test",
+                    false,
+                    enabled,
+                    "prompt",
+                    "spec",
+                    "",
+                    "",
+                    "",
+                    "",
+                    "LOW",
+                    SkillSourceType.TENANT_CUSTOM,
+                    SkillVisibility.VISIBLE,
+                    SkillEditPolicy.EDITABLE,
+                    SkillBindingPolicy.OPTIONAL,
+                    SkillUpdatePolicy.MANUAL,
+                    null,
+                    null);
+            return skillDefinitionRepository.saveAndFlush(skill);
+        });
+    }
+
     private String loginToken(String mobile) throws Exception {
         MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -543,62 +863,6 @@ class AgentOpenApiIntegrationTest {
                             "effectiveToolNames", List.of(),
                             "agentId", agentId);
                 });
-    }
-
-    private void stubChatStreamRuntime(String agentId, String runAsUserId, String answer) {
-        doAnswer(invocation -> {
-            String sessionId = invocation.getArgument(2);
-            String question = invocation.getArgument(3);
-            SseEmitter emitter = invocation.getArgument(7);
-            String traceId = "trace-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
-            Instant started = Instant.now().minusMillis(20);
-            traceRepository.save(new AgentRunTraceEntity(
-                    traceId,
-                    "demo-org",
-                    runAsUserId,
-                    sessionId,
-                    agentId,
-                    "api",
-                    "COMPLETED",
-                    question,
-                    answer,
-                    "mock-model",
-                    "",
-                    started,
-                    Instant.now(),
-                    20,
-                    1,
-                    0,
-                    0,
-                    "[]",
-                    "[]",
-                    "[]",
-                    "{}",
-                    Instant.now()));
-            emitter.send(SseEmitter.event().name("delta").data(Map.of("text", answer)));
-            emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true)));
-            emitter.complete();
-            return null;
-        }).when(chatOrchestratorService).chatStream(
-                eq("demo-org"),
-                eq(runAsUserId),
-                anyString(),
-                anyString(),
-                any(),
-                eq(agentId),
-                any(),
-                any());
-    }
-
-    private String extractSseValue(String body, String field) {
-        String needle = "\"" + field + "\":\"";
-        int start = body.indexOf(needle);
-        if (start < 0) {
-            return "";
-        }
-        int valueStart = start + needle.length();
-        int end = body.indexOf('"', valueStart);
-        return end < 0 ? "" : body.substring(valueStart, end);
     }
 
     private String plainKeyPublicId(String plainKey) {

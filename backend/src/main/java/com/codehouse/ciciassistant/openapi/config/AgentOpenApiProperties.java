@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 public class AgentOpenApiProperties {
 
     private boolean enabled;
+    private boolean conversationApiEnabled = true;
     private String keyPepper = "";
     private int defaultRateLimitPerMinute = 60;
     private int defaultDailyQuota = 1000;
@@ -26,6 +27,14 @@ public class AgentOpenApiProperties {
 
     public void setEnabled(boolean enabled) {
         this.enabled = enabled;
+    }
+
+    public boolean isConversationApiEnabled() {
+        return conversationApiEnabled;
+    }
+
+    public void setConversationApiEnabled(boolean conversationApiEnabled) {
+        this.conversationApiEnabled = conversationApiEnabled;
     }
 
     public String getKeyPepper() {
