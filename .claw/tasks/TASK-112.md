@@ -5,8 +5,8 @@ assignee: DEV-fengchu
 status: review
 branch: codex/TASK-112-agent-openapi-dify-parity
 pr_url: n/a
-updated_at: 2026-05-19T01:28:22Z
-updated_by: DEV-fengchu
+updated_at: 2026-05-19T16:05:00Z
+updated_by: MANAGER-001
 ---
 
 # TASK-112 - Agent Open API conversation service enhancement
@@ -30,7 +30,7 @@ updated_by: DEV-fengchu
 
 - 2026-05-18T04:04:58Z：`MANAGER-001` 已创建规格和 assignment，将任务分配给 `DEV-fengchu`。
 - 2026-05-18T07:11:02Z：`DEV-fengchu` 已完成 FEAT-036 首版实现。
-  - 新增 `V53__agent_open_api_dify_parity.sql`，落地 `agent_api_task`、`agent_api_message`、`agent_api_feedback`、`agent_api_file`，并为会话映射补会话名和软删除字段。
+  - 新增 `V57__agent_open_api_dify_parity.sql`，落地 `agent_api_task`、`agent_api_message`、`agent_api_feedback`、`agent_api_file`，并为会话映射补会话名和软删除字段。
   - 新增会话服务端点：`parameters`、`chat-messages`、`chat-messages/{taskId}/stop`、`conversations`、`messages`、`messages/{messageId}/feedbacks`、`messages/{messageId}/suggested`、`files/upload`。
   - 补 `knowledgeBaseIds` / `activeSkillCode` 绑定校验。
   - API Key 创建/更新支持 `scopes`，默认包含 `chat`、`files`、`feedback`、`history`。
@@ -53,13 +53,14 @@ updated_by: DEV-fengchu
 - 2026-05-18T11:15:32Z：通过 `http://127.0.0.1:9187/openapi-chat-test.html` 跑通会话服务接口全链路。
   - HTML 测试页覆盖 `parameters`、`files/upload`、`chat-messages` blocking/streaming、`messages`、`feedbacks`、`suggested`、`conversations`、重命名、`stop`、删除会话。
   - 浏览器测试发现后端 Open API CORS 未允许 `DELETE`，导致删除会话被 `Invalid CORS request` 拦截；已补充 `DELETE` 并加预检测试。
+- 2026-05-19T16:05:00Z：合并前集成检查发现 `main` 已包含 `V56__organization_profile.sql`，原 `V53__agent_open_api_dify_parity.sql` 会在已应用 V56 的环境触发 Flyway out-of-order 校验失败；已由 `MANAGER-001` 将迁移重编号为 `V57__agent_open_api_dify_parity.sql`。
 
 ## 修改范围
 
 - `backend/src/main/java/com/codehouse/ciciassistant/openapi/**`
 - `backend/src/main/java/com/codehouse/ciciassistant/skill/domain/AgentSkillBindingRepository.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/openapi/AgentOpenApiIntegrationTest.java`
-- `backend/src/main/resources/db/migration/V53__agent_open_api_dify_parity.sql`
+- `backend/src/main/resources/db/migration/V57__agent_open_api_dify_parity.sql`
 - `backend/src/main/resources/application.yml`
 - `backend/src/main/resources/application-local.yml`
 - `deploy/acr.env.example`
