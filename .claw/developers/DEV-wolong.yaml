@@ -14,6 +14,7 @@ allowed_scopes:
   - "backend/src/main/java/com/codehouse/ciciassistant/**"
   - "backend/src/test/java/com/codehouse/ciciassistant/**"
   - "backend/src/main/resources/**"
+  - "backend/pom.xml"
   - "deploy/**"
   - "frontend/src/**"
   - "frontend/public/**"
