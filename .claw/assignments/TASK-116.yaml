@@ -1,0 +1,94 @@
+task_id: TASK-116
+assignee: DEV-wolong
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-19T02:18:19Z
+expires_at: none
+spec_path: docs/specs/FEAT-038-admin-skill-module-completion.md
+task_status_path: .claw/tasks/TASK-116.md
+branch: codex/TASK-116-skill-module-completion
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/test/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/resources/db/migration/**
+  - frontend/src/admin/**
+  - frontend/src/platform/**
+  - frontend/src/assistant/**
+  - frontend/src/styles.css
+  - frontend/src/App.tsx
+  - frontend/src/constants.ts
+  - docs/specs/**
+scope_files:
+  - backend/pom.xml
+  - backend/src/main/resources/db/migration/V55__skill_module_completion.sql
+  - docs/specs/FEAT-038-admin-skill-module-completion.md
+  - docs/specs/FEAT-009-skill-layering-and-governance.md
+  - docs/specs/FEAT-014-skill-versioning-import-export.md
+  - docs/specs/FEAT-015-skill-declarative-api-runtime.md
+  - docs/specs/FEAT-028-file-backed-builtin-skills.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+  - .claw/tasks/TASK-116.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - backend/src/main/resources/db/migration/V53__billing_usage_ledger.sql
+  - backend/src/main/resources/db/migration/V54__kb_module_maintenance.sql
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-009-skill-layering-and-governance.md
+  - docs/specs/FEAT-014-skill-versioning-import-export.md
+  - docs/specs/FEAT-015-skill-declarative-api-runtime.md
+  - docs/specs/FEAT-028-file-backed-builtin-skills.md
+  - docs/specs/FEAT-010-platform-operations-console.md
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "Own completion and optimization of the admin skill module under FEAT-038."
+  - "Preserve existing working behavior: skill layering, standard skill read-only/configurable behavior, tenant custom skill CRUD, draft/publish versions, import/export, soft delete, platform governance, file-backed builtin skills, and runtime API injection must not regress."
+  - "P0: secure export downloads with org-admin authorization, artifact ownership/expiry, audit visibility, and tests."
+  - "P0: make SkillGovernanceIntegrationTest and related skill tests repeatable against non-empty local state."
+  - "P0: add import preview confirmation modal before creating imported skills."
+  - "P0: replace skill delete and version restore window.confirm/window.prompt flows with project-standard accessible modals."
+  - "P1: implement real high-risk Skill runtime API confirmation flow with tamper-resistant pending action semantics."
+  - "P1: improve runtime API editing from raw JSON toward structured controls and field-local validation."
+  - "P1: add version diff and restore impact preview for prompt/spec/tools/KB/risk/runtime APIs."
+  - "P1: add or verify management action audit for create/save/publish/restore/delete/export/import/runtime API governance."
+  - "Do not edit TASK-112 Open API files while TASK-112 is active unless MANAGER-001 explicitly updates both assignments."
+  - "Do not edit TASK-114 billing files or migration V53 while TASK-114 is active unless MANAGER-001 explicitly updates both assignments."
+  - "Do not edit TASK-115 knowledge-base files or migration V54 while TASK-115 is active unless MANAGER-001 explicitly updates both assignments."
+  - "Any admin product UI change must follow DESIGN.md, DESIGN.json, PRODUCT.md, and AGENTS.md product-register rules for `鎏金账房`."
+  - "For page/UI implementation, run local app screenshots for desktop and 390px mobile before handoff; document blockers if local visual QA cannot run."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-19T02:18:19Z; user assigned overall skill module completion and optimization to DEV-wolong."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "TASK-116 turns the 2026-05-19 admin skill module assessment into a maintained development package. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "DEV-wolong must run scripts/dev-login.py for TASK-116 on branch codex/TASK-116-skill-module-completion before implementation edits."

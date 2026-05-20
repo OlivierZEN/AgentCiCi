@@ -1,0 +1,64 @@
+task_id: TASK-117
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-19T04:20:18Z
+expires_at: none
+spec_path: docs/specs/FEAT-039-agentcici-help-center-site.md
+task_status_path: .claw/tasks/TASK-117.md
+branch: codex/TASK-117-agentcici-help-center-site
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/help/**
+  - frontend/src/components/**
+  - frontend/src/utils/**
+  - frontend/public/**
+  - docs/help/**
+  - docs/specs/**
+  - deploy/**
+scope_files:
+  - frontend/src/App.tsx
+  - frontend/src/main.tsx
+  - frontend/src/styles.css
+  - frontend/vite.config.ts
+  - frontend/vite.config.js
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+  - docs/specs/FEAT-039-agentcici-help-center-site.md
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/team-status.md
+  - .claw/tasks/TASK-117.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-039-agentcici-help-center-site.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Own FEAT-039 planning and implementation for help.agentcici.com as the AgentCiCi online help center."
+  - "Keep the help center as a product documentation surface, not a marketing landing page."
+  - "Reuse current AgentCiCi product facts from README.md, PRODUCT.md, DESIGN.md, DESIGN.json, existing FEAT specs, and current routes."
+  - "If implementation changes product visual language, update PRODUCT.md, DESIGN.md, and DESIGN.json in the same session."
+  - "Avoid editing active TASK-112, TASK-114, TASK-115, and TASK-116 implementation files unless MANAGER-001 explicitly expands both assignments."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-19T04:20:18Z; user assigned FEAT-039 to Owen."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. 2026-05-19T04:34:12Z MANAGER-001 expanded scope_files for required task closeout state updates: current-status, task-board, test-report, and generated team-status."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-117 on branch codex/TASK-117-agentcici-help-center-site before implementation edits."

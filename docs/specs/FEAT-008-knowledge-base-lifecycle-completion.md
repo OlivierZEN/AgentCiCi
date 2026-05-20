@@ -7,7 +7,7 @@ owner_role: fullstack-knowledge-platform
 task_ids: TASK-020
 related_decisions: none
 related_issues: ISSUE-2026-04-29-kb-delete-leaves-vector-points
-updated_at: 2026-04-29T13:53:11Z
+updated_at: 2026-05-19T02:01:14Z
 updated_by: ai
 ---
 
@@ -501,6 +501,14 @@ Chunk 详情：
 - 回滚方式：保留新增字段不删，恢复旧 API 行为时仍让 RAG 状态过滤生效；如果向量删除接口有问题，可暂时只做 DB 屏蔽并排队后台清理。
 
 ## 实现进展
+
+- 2026-05-19 复核结论：
+  - 当前知识库已经具备 P0 生命周期闭环：文档/知识库删除、取消发布、重建索引、chunk 启停/编辑/删除、RAG DB 状态过滤、切片预览、检索测试、metadata 字段、文档 metadata、批量操作和基础检索日志均已落地。
+  - 本轮验证通过：`mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test`，8 tests / 0 failures / 0 errors。
+  - 新维护任务：`TASK-115 Knowledge base module maintenance`，分配给 `DEV-zhongda`，assignment 为 `.claw/assignments/TASK-115.yaml`，任务状态片为 `.claw/tasks/TASK-115.md`，分支为 `codex/TASK-115-kb-module-maintenance`。
+  - P0 继续项：文件解析与上传限制、PDF/DOCX parser 或明确拒绝策略、真实 Qdrant 生命周期验证、管理端 modal/可访问性收口、失败与清理状态回归测试。
+  - P1 继续项：runtime metadata filters、结构化引用归因、数据源模型骨架、full-text/hybrid 检索首片和 rerank 扩展点。
+  - P2 继续项：Knowledge Service API/API access、Notion/网页/外部 KB 同步、Parent-child chunk 与更完整检索质量运营。
 
 - 当前状态：P0 第一阶段已实现并验证；第二阶段已完成“切片/检索参数 + preview/retrieval test + metadata filtering + 文档/chunk 细粒度运营 + 批量操作”三批落地，剩余人工回归与 UX 收尾。
 - 已完成项：
