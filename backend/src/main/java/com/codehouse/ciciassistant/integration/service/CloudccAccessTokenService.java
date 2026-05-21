@@ -19,6 +19,7 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,6 +40,7 @@ public class CloudccAccessTokenService {
             .build();
 
     private final ConcurrentHashMap<String, CachedToken> tokenCache = new ConcurrentHashMap<>();
+    private final ThreadLocal<CloudccSessionOverride> requestOverride = new ThreadLocal<>();
 
     public CloudccAccessTokenService(
             IntegrationAppRepository integrationAppRepository,
@@ -53,6 +55,26 @@ public class CloudccAccessTokenService {
         return getSessionContext(orgId, userId).map(CloudccSessionContext::accessToken);
     }
 
+    public <T> T withSessionContextOverride(String orgId,
+                                            String userId,
+                                            CloudccSessionContext sessionContext,
+                                            Supplier<T> supplier) {
+        CloudccSessionOverride previous = requestOverride.get();
+        requestOverride.set(new CloudccSessionOverride(
+                blankToEmpty(orgId),
+                blankToEmpty(userId),
+                sessionContext));
+        try {
+            return supplier.get();
+        } finally {
+            if (previous == null) {
+                requestOverride.remove();
+            } else {
+                requestOverride.set(previous);
+            }
+        }
+    }
+
     public void invalidateSessionContext(String orgId, String userId) {
         if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
             return;
@@ -63,6 +85,10 @@ public class CloudccAccessTokenService {
     public Optional<CloudccSessionContext> getSessionContext(String orgId, String userId) {
         if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
             return Optional.empty();
+        }
+        CloudccSessionOverride override = requestOverride.get();
+        if (override != null && override.orgId().equals(orgId)) {
+            return override.userId().equals(userId) ? Optional.of(override.sessionContext()) : Optional.empty();
         }
         String cacheKey = orgId + "::" + userId;
         CachedToken cached = tokenCache.get(cacheKey);
@@ -75,6 +101,32 @@ public class CloudccAccessTokenService {
             return fresh;
         } catch (Exception e) {
             log.warn("Failed to obtain CloudCC token for org={}, user={}: {}", orgId, userId, e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    public Optional<CloudccGatewayContext> getConfiguredGateway(String orgId) {
+        if (orgId == null || orgId.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            IntegrationAppEntity app = integrationAppRepository.findByOrgIdAndAppCode(orgId, APP_CODE).orElse(null);
+            if (app == null || !app.isEnabled()) {
+                return Optional.empty();
+            }
+            Map<String, Object> config = readConfig(app.getConfigJson());
+            String cloudccOrgId = stringVal(config.get("orgId"));
+            String orgapiSwitchAddress = stringVal(config.get("orgapi_switch_address"));
+            if (orgapiSwitchAddress.isBlank()) {
+                orgapiSwitchAddress = stringVal(config.get("baseUrl"));
+            }
+            if (orgapiSwitchAddress.isBlank() && cloudccOrgId.isBlank()) {
+                return Optional.empty();
+            }
+            String gateway = resolveGateway(cloudccOrgId, orgapiSwitchAddress);
+            return Optional.of(new CloudccGatewayContext(gateway, deriveSetupSvc(gateway)));
+        } catch (Exception ex) {
+            log.debug("Failed to resolve configured CloudCC gateway for org={}: {}", orgId, ex.getMessage());
             return Optional.empty();
         }
     }
@@ -165,7 +217,7 @@ public class CloudccAccessTokenService {
                     continue;
                 }
                 next.append("/");
-                if ("lightningapi".equalsIgnoreCase(part)) {
+                if ("lightningapi".equalsIgnoreCase(part) || "apisvc".equalsIgnoreCase(part)) {
                     next.append("setup");
                     replaced = true;
                 } else {
@@ -322,4 +374,8 @@ public class CloudccAccessTokenService {
     }
 
     private record CachedToken(String token, String baseUrl, String setupSvc, Instant expiresAt) {}
+
+    public record CloudccGatewayContext(String baseUrl, String setupSvc) {}
+
+    private record CloudccSessionOverride(String orgId, String userId, CloudccSessionContext sessionContext) {}
 }

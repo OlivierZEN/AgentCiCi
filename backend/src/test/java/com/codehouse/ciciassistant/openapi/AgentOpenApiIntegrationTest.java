@@ -28,6 +28,8 @@ import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
+import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService;
+import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService.CloudccSessionContext;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCallLogRepository;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
@@ -44,6 +46,7 @@ import com.codehouse.ciciassistant.skill.domain.SkillUpdatePolicy;
 import com.codehouse.ciciassistant.skill.domain.SkillVisibility;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Base64;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -51,6 +54,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -115,6 +119,9 @@ class AgentOpenApiIntegrationTest {
 
     @Autowired
     private ModelProviderService modelProviderService;
+
+    @Autowired
+    private CloudccAccessTokenService cloudccAccessTokenService;
 
     @Autowired
     private SkillDefinitionRepository skillDefinitionRepository;
@@ -187,6 +194,7 @@ class AgentOpenApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].plainKey").doesNotExist())
+                .andExpect(jsonPath("$.data[0].keyType").value("standard"))
                 .andExpect(jsonPath("$.data[0].status").value("ACTIVE"));
 
         mockMvc.perform(put("/agents/{agentId}/api-keys/{credentialId}", agentId, credentialId)
@@ -330,6 +338,173 @@ class AgentOpenApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].status").value("SUCCESS"))
                 .andExpect(jsonPath("$.data[0].externalUserId").value("customer-001"));
+    }
+
+    @Test
+    void shouldRequireCloudccContextOnlyForCloudccOpenApiKeys() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-cloudcc-context-rules";
+        preparePublishedApiAgent(agentId);
+        String standardKey = createPlainKey(token, agentId, runAsUserId);
+        String cloudccKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
+        String callerToken = futureJwt();
+
+        MvcResult standardResult = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + standardKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "cloudcc-standard-session",
+                                  "query": "hello",
+                                  "cloudccContext": {
+                                    "accessToken": "%s",
+                                    "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi"
+                                  }
+                                }
+                                """.formatted(callerToken)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("cloudcc_context_not_allowed"))
+                .andReturn();
+        assertThat(standardResult.getResponse().getContentAsString()).doesNotContain(callerToken);
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + cloudccKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "cloudcc-missing-session",
+                                  "query": "hello"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("cloudcc_token_required"));
+    }
+
+    @Test
+    void shouldUseCallerSuppliedCloudccTokenWithoutPersistingIt() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-cloudcc-runtime-agent";
+        preparePublishedApiAgent(agentId);
+        String plainKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
+        String callerToken = futureJwt();
+        AtomicReference<CloudccSessionContext> observedContext = new AtomicReference<>();
+        stubChatRuntimeWithCloudccContext(agentId, runAsUserId, "CloudCC caller token accepted", observedContext);
+
+        MvcResult result = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "cloudcc-runtime-session",
+                                  "query": "use caller token",
+                                  "cloudccContext": {
+                                    "accessToken": "%s",
+                                    "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi"
+                                  }
+                                }
+                                """.formatted(callerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("CloudCC caller token accepted"))
+                .andReturn();
+
+        assertThat(observedContext.get()).isNotNull();
+        assertThat(observedContext.get().accessToken()).isEqualTo(callerToken);
+        assertThat(observedContext.get().baseUrl()).isEqualTo("https://szyd.apis.cloudcc.cn/lightningapi");
+
+        JsonNode data = objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8));
+        String traceId = data.path("metadata").path("trace_id").asText();
+        AgentApiCredentialEntity credential = credentialRepository.findByPublicId(plainKeyPublicId(plainKey)).orElseThrow();
+        assertThat(credential.getKeyType()).isEqualTo("cloudcc");
+        assertThat(callLogRepository.findAll())
+                .filteredOn(log -> credential.getId().equals(log.getCredentialId()))
+                .allSatisfy(log -> {
+                    assertThat(log.getRequestSummary()).doesNotContain(callerToken);
+                    assertThat(log.getResponseSummary()).doesNotContain(callerToken);
+                    assertThat(String.valueOf(log.getErrorCode())).doesNotContain(callerToken);
+                });
+        AgentRunTraceEntity trace = traceRepository.findById(traceId).orElseThrow();
+        assertThat(trace.getTitle()).doesNotContain(callerToken);
+        assertThat(trace.getSummary()).doesNotContain(callerToken);
+        assertThat(trace.getDetailJson()).doesNotContain(callerToken);
+    }
+
+    @Test
+    void shouldRejectCloudccCallerTokenWhenBaseUrlIsDenied() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-cloudcc-url-denied-agent";
+        preparePublishedApiAgent(agentId);
+        String plainKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
+        String callerToken = futureJwt();
+
+        MvcResult result = mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "cloudcc-denied-session",
+                                  "query": "hello",
+                                  "cloudccContext": {
+                                    "accessToken": "%s",
+                                    "baseUrl": "http://127.0.0.1:8080/lightningapi"
+                                  }
+                                }
+                                """.formatted(callerToken)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("cloudcc_base_url_denied"))
+                .andReturn();
+        assertThat(result.getResponse().getContentAsString()).doesNotContain(callerToken);
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "cloudcc-denied-prefix-session",
+                                  "query": "hello",
+                                  "cloudccContext": {
+                                    "accessToken": "%s",
+                                    "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi2"
+                                  }
+                                }
+                                """.formatted(callerToken)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value("cloudcc_base_url_denied"));
+    }
+
+    @Test
+    void shouldAcceptCloudccLightningDomainGatewayBaseUrl() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String agentId = "openapi-cloudcc-lightning-domain-agent";
+        preparePublishedApiAgent(agentId);
+        String plainKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
+        String callerToken = futureJwt();
+        AtomicReference<CloudccSessionContext> observedContext = new AtomicReference<>();
+        stubChatRuntimeWithCloudccContext(agentId, runAsUserId, "CloudCC lightning gateway accepted", observedContext);
+
+        mockMvc.perform(post("/openapi/v1/agents/{agentId}/chat-messages", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "conversationId": "cloudcc-lightning-session",
+                                  "query": "hello",
+                                  "cloudccContext": {
+                                    "accessToken": "%s",
+                                    "baseUrl": "https://yundong.lightning.cloudcc.cn/ccdomaingateway/apisvc"
+                                  }
+                                }
+                                """.formatted(callerToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.answer").value("CloudCC lightning gateway accepted"));
+
+        assertThat(observedContext.get()).isNotNull();
+        assertThat(observedContext.get().accessToken()).isEqualTo(callerToken);
+        assertThat(observedContext.get().baseUrl()).isEqualTo("https://yundong.lightning.cloudcc.cn/ccdomaingateway/apisvc");
+        assertThat(observedContext.get().setupSvc()).isEqualTo("https://yundong.lightning.cloudcc.cn/ccdomaingateway/setup");
     }
 
     @Test
@@ -698,15 +873,20 @@ class AgentOpenApiIntegrationTest {
     }
 
     private String createPlainKey(String token, String agentId, String runAsUserId) throws Exception {
+        return createPlainKey(token, agentId, runAsUserId, "standard");
+    }
+
+    private String createPlainKey(String token, String agentId, String runAsUserId, String keyType) throws Exception {
         MvcResult result = mockMvc.perform(post("/agents/{agentId}/api-keys", agentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "name": "open api smoke",
-                                  "runAsUserId": "%s"
+                                  "runAsUserId": "%s",
+                                  "keyType": "%s"
                                 }
-                                """.formatted(runAsUserId)))
+                                """.formatted(runAsUserId, keyType)))
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString(StandardCharsets.UTF_8))
@@ -863,6 +1043,69 @@ class AgentOpenApiIntegrationTest {
                             "effectiveToolNames", List.of(),
                             "agentId", agentId);
                 });
+    }
+
+    private void stubChatRuntimeWithCloudccContext(String agentId,
+                                                   String runAsUserId,
+                                                   String answer,
+                                                   AtomicReference<CloudccSessionContext> observedContext) {
+        when(chatOrchestratorService.chat(
+                eq("demo-org"),
+                eq(runAsUserId),
+                anyString(),
+                anyString(),
+                any(),
+                eq(agentId),
+                any()))
+                .thenAnswer(invocation -> {
+                    observedContext.set(cloudccAccessTokenService.getSessionContext("demo-org", runAsUserId).orElse(null));
+                    String sessionId = invocation.getArgument(2);
+                    String question = invocation.getArgument(3);
+                    String traceId = "trace-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+                    Instant started = Instant.now().minusMillis(20);
+                    traceRepository.save(new AgentRunTraceEntity(
+                            traceId,
+                            "demo-org",
+                            runAsUserId,
+                            sessionId,
+                            agentId,
+                            "api",
+                            "COMPLETED",
+                            question,
+                            answer,
+                            "mock-model",
+                            "",
+                            started,
+                            Instant.now(),
+                            20,
+                            1,
+                            0,
+                            0,
+                            "[]",
+                            "[]",
+                            "[]",
+                            "{}",
+                            Instant.now()));
+                    return Map.of(
+                            "answer", answer,
+                            "model", Map.of("modelName", "mock-model"),
+                            "ragContext", List.of(),
+                            "resolvedSkills", List.of("general-assistant"),
+                            "effectiveToolNames", List.of(),
+                            "agentId", agentId);
+                });
+    }
+
+    private String futureJwt() {
+        return jwtWithExp(Instant.now().plusSeconds(3600));
+    }
+
+    private String jwtWithExp(Instant expiresAt) {
+        String header = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString("{\"alg\":\"none\"}".getBytes(StandardCharsets.UTF_8));
+        String payload = Base64.getUrlEncoder().withoutPadding()
+                .encodeToString(("{\"exp\":" + expiresAt.getEpochSecond() + "}").getBytes(StandardCharsets.UTF_8));
+        return header + "." + payload + ".signature";
     }
 
     private String plainKeyPublicId(String plainKey) {
