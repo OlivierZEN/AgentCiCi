@@ -127,6 +127,8 @@ ${normalizedBaseUrl}
 
 服务端保存 API Key，调用时任选一种 Header。不要把 Key 放进浏览器、移动端包或前端源码。
 
+API Key 类型分为 \`standard\` 与 \`cloudcc\`。\`standard\` 保持默认 run-as 行为；\`cloudcc\` 用于 CloudCC 嵌入页，发送消息时必须传入当前 CloudCC 用户的 \`cloudccContext.accessToken\`。
+
 \`\`\`http
 Authorization: Bearer {API_KEY}
 X-Cici-Api-Key: {API_KEY}
@@ -158,11 +160,15 @@ curl -X POST "${normalizedBaseUrl}${chatMessagesPath}" \\
     "conversationId": "crm-customer-001",
     "inputs": {
       "source": "crm"
+    },
+    "cloudccContext": {
+      "accessToken": "{CLOUDCC_PAGE_TOKEN}",
+      "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi"
     }
   }'
 \`\`\`
 
-会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。
+会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。仅 \`cloudcc\` Key 可以使用 \`cloudccContext\`，且 token 不会写入调用日志或 trace。
 
 ## 停止生成
 
@@ -296,6 +302,12 @@ curl -X DELETE "${normalizedBaseUrl}${conversationDeletePath}" \\
 | agent_not_published | Agent 尚未发布。 |
 | rate_limit_exceeded | 每分钟调用超限。 |
 | daily_quota_exceeded | 日调用额度耗尽。 |
+| unsupported_key_type | Key 类型不受支持。 |
+| cloudcc_token_required | CloudCC 嵌入 Key 缺少 \`cloudccContext.accessToken\`。 |
+| cloudcc_context_not_allowed | 标准 Key 不允许传入 CloudCC 身份上下文。 |
+| cloudcc_context_invalid | CloudCC 上下文字段格式不合法。 |
+| cloudcc_base_url_denied | CloudCC 网关地址不在允许范围内。 |
+| cloudcc_token_rejected | CloudCC token 已过期或被拒绝。 |
 
 ## 安全建议
 
@@ -303,6 +315,7 @@ curl -X DELETE "${normalizedBaseUrl}${conversationDeletePath}" \\
 - 生产 Key 设置过期时间、来源 IP、分钟限流和日配额。
 - 泄露后立即撤销或轮换，明文只会在创建或轮换结果里出现一次。
 - run-as 用户只授予这个 Agent 真实需要的系统和集成权限。
+- CloudCC 嵌入 Key 仍需要 AgentCiCi API Key 鉴权，CloudCC token 只作为当前 CRM 用户访问凭证，不替代 AgentCiCi 鉴权。
 `;
 
   const downloadMarkdown = () => {
@@ -414,6 +427,7 @@ curl -X DELETE "${normalizedBaseUrl}${conversationDeletePath}" \\
           <section id="auth" className="cici-openapi-docs__section">
             <h3>鉴权</h3>
             <p>服务端保存 API Key，调用时任选一种 Header。不要把 Key 放进浏览器、移动端包或前端源码。</p>
+            <p>`standard` Key 保持默认 run-as 行为；`cloudcc` Key 用于 CloudCC 嵌入页，发送消息时必须传入当前 CloudCC 用户的 `cloudccContext.accessToken`。</p>
             {renderCodeBlock("authCurl", `Authorization: Bearer {API_KEY}
 X-Cici-Api-Key: {API_KEY}`)}
           </section>
@@ -441,6 +455,10 @@ X-Cici-Api-Key: {API_KEY}`)}
     "conversationId": "crm-customer-001",
     "inputs": {
       "source": "crm"
+    },
+    "cloudccContext": {
+      "accessToken": "{CLOUDCC_PAGE_TOKEN}",
+      "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi"
     }
   }'`)}
             <table className="cici-openapi-docs__table">
@@ -449,6 +467,7 @@ X-Cici-Api-Key: {API_KEY}`)}
                 <tr><th>user</th><td>终端用户标识；也支持 `externalUser.id`，两者同时传入时必须一致。</td></tr>
                 <tr><th>conversationId</th><td>外部业务会话 ID；也支持 `conversation_id` 和 `sessionId`。</td></tr>
                 <tr><th>responseMode</th><td>`blocking` 返回 JSON，`streaming` 返回 SSE `message / agent_thought / message_end / error`。</td></tr>
+                <tr><th>cloudccContext</th><td>仅 `cloudcc` Key 可用；`accessToken` 必填，`baseUrl` 可传 CloudCC 组织 API 网关。</td></tr>
                 <tr><th>Idempotency-Key</th><td>同一 Key 下成功请求会按消息级幂等回放。</td></tr>
               </tbody>
             </table>

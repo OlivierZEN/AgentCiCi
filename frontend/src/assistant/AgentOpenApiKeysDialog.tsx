@@ -19,6 +19,7 @@ type ApiKeyRow = {
   publicId: string;
   name: string;
   keyPrefix: string;
+  keyType?: string;
   status: string;
   runAsUserId: string;
   allowedIps: string[];
@@ -70,6 +71,11 @@ const SCOPE_OPTIONS = [
   { value: "history", label: "历史" },
 ];
 
+const KEY_TYPE_OPTIONS = [
+  { value: "standard", label: "标准 Key" },
+  { value: "cloudcc", label: "CloudCC 嵌入 Key" },
+];
+
 function formatTime(value?: string | null) {
   if (!value) return "无";
   const date = new Date(value);
@@ -99,6 +105,11 @@ function statusClass(status: string) {
   return "";
 }
 
+function keyTypeText(keyType?: string) {
+  if (keyType === "cloudcc") return "CloudCC";
+  return "标准";
+}
+
 export default function AgentOpenApiKeysDialog({
   open,
   agentId,
@@ -120,6 +131,7 @@ export default function AgentOpenApiKeysDialog({
     name: "生产调用 Key",
     runAsUserId: "",
     allowedIps: "",
+    keyType: "standard",
     rateLimitPerMinute: "60",
     dailyQuota: "1000",
     maxPromptChars: "8000",
@@ -249,6 +261,7 @@ export default function AgentOpenApiKeysDialog({
           .split(/[,\n]/)
           .map((item) => item.trim())
           .filter(Boolean),
+        keyType: form.keyType,
         rateLimitPerMinute: Number(form.rateLimitPerMinute) || 60,
         dailyQuota: Number(form.dailyQuota) || 1000,
         maxPromptChars: Number(form.maxPromptChars) || 8000,
@@ -409,6 +422,7 @@ export default function AgentOpenApiKeysDialog({
               <span><strong>停用</strong>：临时禁止调用，可再次启用。</span>
               <span><strong>重新生成</strong>：旧 Key 立即失效，并只显示一次新的完整 Key。</span>
               <span><strong>删除</strong>：永久作废这个 Key，历史日志保留。</span>
+              <span><strong>CloudCC 嵌入 Key</strong>：调用时必须传入当前 CloudCC 用户的 `cloudccContext.accessToken`。</span>
             </div>
             <div className="cici-openapi-keys__form">
               <label>
@@ -420,6 +434,14 @@ export default function AgentOpenApiKeysDialog({
                 <select value={form.runAsUserId} onChange={(event) => setForm((current) => ({ ...current, runAsUserId: event.target.value }))}>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>{user.nickname ? `${user.nickname} · ${user.mobile}` : user.mobile}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Key 类型</span>
+                <select value={form.keyType} onChange={(event) => setForm((current) => ({ ...current, keyType: event.target.value }))}>
+                  {KEY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </label>
@@ -481,7 +503,7 @@ export default function AgentOpenApiKeysDialog({
               <tbody>
                 {visibleKeys.map((key) => (
                   <tr key={key.id}>
-                    <td title={`ID ${key.id}`}><span className="cici-openapi-keys__strong">{key.name}</span></td>
+                    <td title={`ID ${key.id}`}><span className="cici-openapi-keys__strong">{key.name}</span><br /><small>{keyTypeText(key.keyType)} Key</small></td>
                     <td title={userDetailTitle(key.runAsUserId)}>{userDisplayName(key.runAsUserId)}</td>
                     <td><span className={`cici-openapi-keys__status ${statusClass(key.status)}`}>{statusText(key.status)}</span></td>
                     <td title="这里只是 Key 前缀，用于识别记录；完整 Key 只在创建或重新生成后显示一次。"><code>{key.keyPrefix}</code></td>

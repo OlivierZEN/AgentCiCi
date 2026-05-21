@@ -9,6 +9,8 @@ import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.openapi.config.AgentOpenApiProperties;
+import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
+import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService;
 import com.codehouse.ciciassistant.skill.domain.AgentSkillBindingRepository;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionEntity;
 import com.codehouse.ciciassistant.skill.domain.SkillDefinitionRepository;
@@ -16,11 +18,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -47,6 +52,7 @@ public class AgentOpenApiRunService {
     private final AgentDefinitionRepository agentDefinitionRepository;
     private final OrgModelConfigRepository orgModelConfigRepository;
     private final ModelProviderService modelProviderService;
+    private final CloudccAccessTokenService cloudccAccessTokenService;
     private final AgentOpenApiProperties properties;
     private final ObjectMapper objectMapper;
 
@@ -62,6 +68,7 @@ public class AgentOpenApiRunService {
                                   AgentDefinitionRepository agentDefinitionRepository,
                                   OrgModelConfigRepository orgModelConfigRepository,
                                   ModelProviderService modelProviderService,
+                                  CloudccAccessTokenService cloudccAccessTokenService,
                                   AgentOpenApiProperties properties,
                                   ObjectMapper objectMapper) {
         this.authService = authService;
@@ -76,6 +83,7 @@ public class AgentOpenApiRunService {
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.orgModelConfigRepository = orgModelConfigRepository;
         this.modelProviderService = modelProviderService;
+        this.cloudccAccessTokenService = cloudccAccessTokenService;
         this.properties = properties;
         this.objectMapper = objectMapper;
     }
@@ -88,6 +96,7 @@ public class AgentOpenApiRunService {
                                       Instant startedAt) {
         String externalUserId = command == null ? "" : externalUserId(command.externalUser());
         validateCommand(command, auth);
+        CloudccAccessTokenService.CloudccSessionContext cloudccOverride = resolveCloudccContext(auth, command);
         ensureChatRouteHasUsableModel(auth);
         AgentOpenApiSessionService.SessionResolution session = sessionService.resolve(
                 auth,
@@ -97,7 +106,7 @@ public class AgentOpenApiRunService {
         rateLimitService.reserve(auth);
         callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
         try {
-            Map<String, Object> chatPayload = invokeChatWithTimeout(auth, session, command);
+            Map<String, Object> chatPayload = invokeChatWithTimeout(auth, session, command, cloudccOverride);
             String answer = stringValue(chatPayload.get("answer"));
             validateResponseSize(auth, answer);
             AgentRunTraceEntity trace = annotateLatestTrace(auth, session, requestId, externalUserId);
@@ -114,7 +123,7 @@ public class AgentOpenApiRunService {
                     ex.getStatus().value(),
                     ex.getCode(),
                     elapsedMs,
-                    ex.getMessage());
+                    sanitizeFailureMessage(ex.getMessage(), cloudccOverride));
             rateLimitService.markFailure(auth, elapsedMs);
             throw ex;
         } catch (RuntimeException ex) {
@@ -125,7 +134,7 @@ public class AgentOpenApiRunService {
                     HttpStatus.BAD_GATEWAY.value(),
                     "model_or_tool_failed",
                     elapsedMs,
-                    ex.getMessage());
+                    sanitizeFailureMessage(ex.getMessage(), cloudccOverride));
             rateLimitService.markFailure(auth, elapsedMs);
             throw new AgentOpenApiException(
                     HttpStatus.BAD_GATEWAY,
@@ -136,15 +145,18 @@ public class AgentOpenApiRunService {
 
     private Map<String, Object> invokeChatWithTimeout(AgentOpenApiAuthService.AuthenticatedCredential auth,
                                                       AgentOpenApiSessionService.SessionResolution session,
-                                                      ChatCommand command) {
-        CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> chatOrchestratorService.chat(
-                auth.credential().getOrgId(),
-                auth.credential().getRunAsUserId(),
-                session.internalSessionId(),
-                command.message().trim(),
-                command.knowledgeBaseIds(),
-                auth.credential().getAgentId(),
-                command.activeSkillCode()));
+                                                      ChatCommand command,
+                                                      CloudccAccessTokenService.CloudccSessionContext cloudccOverride) {
+        CompletableFuture<Map<String, Object>> future = CompletableFuture.supplyAsync(() -> {
+            if (cloudccOverride == null) {
+                return invokeChat(auth, session, command);
+            }
+            return cloudccAccessTokenService.withSessionContextOverride(
+                    auth.credential().getOrgId(),
+                    auth.credential().getRunAsUserId(),
+                    cloudccOverride,
+                    () -> invokeChat(auth, session, command));
+        });
         try {
             return future.get(normalizedTimeoutMs(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException ex) {
@@ -163,6 +175,19 @@ public class AgentOpenApiRunService {
             }
             throw new AgentOpenApiException(HttpStatus.BAD_GATEWAY, "model_or_tool_failed", "Agent runtime failed");
         }
+    }
+
+    private Map<String, Object> invokeChat(AgentOpenApiAuthService.AuthenticatedCredential auth,
+                                           AgentOpenApiSessionService.SessionResolution session,
+                                           ChatCommand command) {
+        return chatOrchestratorService.chat(
+                auth.credential().getOrgId(),
+                auth.credential().getRunAsUserId(),
+                session.internalSessionId(),
+                command.message().trim(),
+                command.knowledgeBaseIds(),
+                auth.credential().getAgentId(),
+                command.activeSkillCode());
     }
 
     private long normalizedTimeoutMs() {
@@ -248,6 +273,164 @@ public class AgentOpenApiRunService {
         }
         validateKnowledgeBaseScope(auth, command.knowledgeBaseIds());
         validateSkillScope(auth, command.activeSkillCode());
+    }
+
+    private CloudccAccessTokenService.CloudccSessionContext resolveCloudccContext(
+            AgentOpenApiAuthService.AuthenticatedCredential auth,
+            ChatCommand command) {
+        String keyType = auth.credentialView().keyType() == null
+                ? AgentApiCredentialEntity.KEY_TYPE_STANDARD
+                : auth.credentialView().keyType().trim().toLowerCase(java.util.Locale.ROOT);
+        CloudccContext context = command.cloudccContext();
+        if (AgentApiCredentialEntity.KEY_TYPE_STANDARD.equals(keyType)) {
+            if (hasCloudccContext(context)) {
+                throw new AgentOpenApiException(
+                        HttpStatus.BAD_REQUEST,
+                        "cloudcc_context_not_allowed",
+                        "cloudccContext is only allowed for cloudcc API keys");
+            }
+            return null;
+        }
+        if (!AgentApiCredentialEntity.KEY_TYPE_CLOUDCC.equals(keyType)) {
+            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "unsupported_key_type", "API key type is unsupported");
+        }
+        String accessToken = context == null ? null : trimToNull(context.accessToken());
+        if (accessToken == null) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_token_required", "cloudccContext.accessToken is required");
+        }
+        validateCloudccToken(accessToken);
+        String baseUrl = resolveCloudccBaseUrl(auth.credential().getOrgId(), context);
+        String setupSvc = resolveCloudccSetupSvc(baseUrl, context);
+        return new CloudccAccessTokenService.CloudccSessionContext(accessToken, baseUrl, setupSvc);
+    }
+
+    private boolean hasCloudccContext(CloudccContext context) {
+        return context != null
+                && (trimToNull(context.accessToken()) != null
+                || trimToNull(context.baseUrl()) != null
+                || trimToNull(context.setupSvc()) != null);
+    }
+
+    private void validateCloudccToken(String accessToken) {
+        if (accessToken.length() > 8192 || accessToken.chars().anyMatch(Character::isWhitespace)) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_context_invalid", "cloudccContext is invalid");
+        }
+        Optional<Instant> expiresAt = parseJwtExp(accessToken);
+        if (expiresAt.isPresent() && !expiresAt.get().isAfter(Instant.now().plusSeconds(30))) {
+            throw new AgentOpenApiException(HttpStatus.UNAUTHORIZED, "cloudcc_token_rejected", "CloudCC token is expired or rejected");
+        }
+    }
+
+    private String resolveCloudccBaseUrl(String orgId, CloudccContext context) {
+        String configured = cloudccAccessTokenService.getConfiguredGateway(orgId)
+                .map(CloudccAccessTokenService.CloudccGatewayContext::baseUrl)
+                .orElse("");
+        String rawBaseUrl = trimToNull(context == null ? null : context.baseUrl());
+        if (rawBaseUrl == null) {
+            if (configured.isBlank()) {
+                throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_context_invalid", "cloudccContext.baseUrl is required");
+            }
+            return configured;
+        }
+        return normalizeAllowedCloudccUrl(rawBaseUrl, configured, List.of("/lightningapi", "/ccdomaingateway/apisvc"));
+    }
+
+    private String resolveCloudccSetupSvc(String baseUrl, CloudccContext context) {
+        String rawSetupSvc = trimToNull(context == null ? null : context.setupSvc());
+        if (rawSetupSvc == null) {
+            return CloudccAccessTokenService.deriveSetupSvc(baseUrl);
+        }
+        return normalizeAllowedCloudccUrl(rawSetupSvc, baseUrl, List.of("/setup", "/ccdomaingateway/setup"));
+    }
+
+    private String normalizeAllowedCloudccUrl(String raw, String configuredPeer, List<String> allowedPathPrefixes) {
+        URI uri;
+        try {
+            uri = URI.create(raw.trim());
+        } catch (Exception ex) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_base_url_denied", "CloudCC base URL is not allowed");
+        }
+        String scheme = uri.getScheme() == null ? "" : uri.getScheme().toLowerCase(java.util.Locale.ROOT);
+        String host = uri.getHost() == null ? "" : uri.getHost().toLowerCase(java.util.Locale.ROOT);
+        if ((!scheme.equals("https") && !scheme.equals("http"))
+                || host.isBlank()
+                || uri.getUserInfo() != null
+                || uri.getRawQuery() != null
+                || uri.getRawFragment() != null
+                || isDeniedCloudccHost(host)
+                || !isAllowedCloudccHost(host, configuredPeer)) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_base_url_denied", "CloudCC base URL is not allowed");
+        }
+        String path = uri.getPath() == null || uri.getPath().isBlank() ? allowedPathPrefixes.iterator().next() : trimTrailingSlash(uri.getPath());
+        String normalizedPath = path.toLowerCase(java.util.Locale.ROOT);
+        if (!isAllowedCloudccPath(normalizedPath, allowedPathPrefixes)) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_base_url_denied", "CloudCC base URL is not allowed");
+        }
+        try {
+            return new URI(uri.getScheme(), uri.getAuthority(), path, null, null).toString();
+        } catch (Exception ex) {
+            throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "cloudcc_base_url_denied", "CloudCC base URL is not allowed");
+        }
+    }
+
+    private boolean isAllowedCloudccPath(String normalizedPath, List<String> allowedPathPrefixes) {
+        for (String prefix : allowedPathPrefixes) {
+            if (normalizedPath.equals(prefix) || normalizedPath.startsWith(prefix + "/")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean isAllowedCloudccHost(String host, String configuredPeer) {
+        String configuredHost = "";
+        if (configuredPeer != null && !configuredPeer.isBlank()) {
+            try {
+                configuredHost = URI.create(configuredPeer).getHost();
+                configuredHost = configuredHost == null ? "" : configuredHost.toLowerCase(java.util.Locale.ROOT);
+            } catch (Exception ignored) {
+                configuredHost = "";
+            }
+        }
+        return host.endsWith(".apis.cloudcc.cn")
+                || host.endsWith(".lightning.cloudcc.cn")
+                || (!configuredHost.isBlank() && host.equals(configuredHost));
+    }
+
+    private boolean isDeniedCloudccHost(String host) {
+        return host.equals("localhost")
+                || host.equals("127.0.0.1")
+                || host.equals("0.0.0.0")
+                || host.equals("::1")
+                || host.endsWith(".local")
+                || host.matches("^\\d+\\.\\d+\\.\\d+\\.\\d+$")
+                || host.contains(":");
+    }
+
+    private Optional<Instant> parseJwtExp(String token) {
+        try {
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) {
+                return Optional.empty();
+            }
+            byte[] bytes = Base64.getUrlDecoder().decode(parts[1]);
+            Map<String, Object> payload = objectMapper.readValue(bytes, new TypeReference<>() {});
+            Object exp = payload.get("exp");
+            if (exp instanceof Number number && number.longValue() > 0L) {
+                return Optional.of(Instant.ofEpochSecond(number.longValue()));
+            }
+            return Optional.empty();
+        } catch (Exception ex) {
+            throw new AgentOpenApiException(HttpStatus.UNAUTHORIZED, "cloudcc_token_rejected", "CloudCC token is expired or rejected");
+        }
+    }
+
+    private String sanitizeFailureMessage(String message, CloudccAccessTokenService.CloudccSessionContext cloudccOverride) {
+        String value = message == null ? "" : message;
+        if (cloudccOverride != null && cloudccOverride.accessToken() != null && !cloudccOverride.accessToken().isBlank()) {
+            value = value.replace(cloudccOverride.accessToken(), "[redacted]");
+        }
+        return value;
     }
 
     private AgentOpenApiException invalid(String message) {
@@ -404,6 +587,14 @@ public class AgentOpenApiRunService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
+    private String trimTrailingSlash(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        while (trimmed.endsWith("/") && trimmed.length() > 1) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        return trimmed;
+    }
+
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
     }
@@ -418,8 +609,12 @@ public class AgentOpenApiRunService {
             Map<String, Object> externalUser,
             List<String> knowledgeBaseIds,
             String activeSkillCode,
-            Map<String, Object> metadata
+            Map<String, Object> metadata,
+            CloudccContext cloudccContext
     ) {
+    }
+
+    public record CloudccContext(String accessToken, String baseUrl, String setupSvc) {
     }
 
     public record ChatExecution(

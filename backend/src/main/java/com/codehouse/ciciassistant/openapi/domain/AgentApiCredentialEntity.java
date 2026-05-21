@@ -15,6 +15,8 @@ public class AgentApiCredentialEntity {
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final String STATUS_PAUSED = "PAUSED";
     public static final String STATUS_REVOKED = "REVOKED";
+    public static final String KEY_TYPE_STANDARD = "standard";
+    public static final String KEY_TYPE_CLOUDCC = "cloudcc";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -37,6 +39,9 @@ public class AgentApiCredentialEntity {
 
     @Column(name = "key_hash", nullable = false, length = 128)
     private String keyHash;
+
+    @Column(name = "key_type", nullable = false, length = 32)
+    private String keyType = KEY_TYPE_STANDARD;
 
     @Column(name = "status", nullable = false, length = 32)
     private String status;
@@ -109,12 +114,36 @@ public class AgentApiCredentialEntity {
                                     boolean allowTraceRead,
                                     Instant expiresAt,
                                     String createdBy) {
+        this(publicId, orgId, agentId, name, keyPrefix, keyHash, KEY_TYPE_STANDARD, runAsUserId,
+                allowedIpsJson, scopesJson, rateLimitPerMinute, dailyQuota, maxPromptChars,
+                maxResponseChars, allowStream, allowTraceRead, expiresAt, createdBy);
+    }
+
+    public AgentApiCredentialEntity(String publicId,
+                                    String orgId,
+                                    String agentId,
+                                    String name,
+                                    String keyPrefix,
+                                    String keyHash,
+                                    String keyType,
+                                    String runAsUserId,
+                                    String allowedIpsJson,
+                                    String scopesJson,
+                                    int rateLimitPerMinute,
+                                    int dailyQuota,
+                                    int maxPromptChars,
+                                    int maxResponseChars,
+                                    boolean allowStream,
+                                    boolean allowTraceRead,
+                                    Instant expiresAt,
+                                    String createdBy) {
         this.publicId = publicId;
         this.orgId = orgId;
         this.agentId = agentId;
         this.name = name;
         this.keyPrefix = keyPrefix;
         this.keyHash = keyHash;
+        this.keyType = keyType == null || keyType.isBlank() ? KEY_TYPE_STANDARD : keyType.trim();
         this.status = STATUS_ACTIVE;
         this.runAsUserId = runAsUserId;
         this.allowedIpsJson = allowedIpsJson;
@@ -138,6 +167,7 @@ public class AgentApiCredentialEntity {
     public String getName() { return name; }
     public String getKeyPrefix() { return keyPrefix; }
     public String getKeyHash() { return keyHash; }
+    public String getKeyType() { return keyType == null || keyType.isBlank() ? KEY_TYPE_STANDARD : keyType; }
     public String getStatus() { return status; }
     public String getRunAsUserId() { return runAsUserId; }
     public String getAllowedIpsJson() { return allowedIpsJson; }

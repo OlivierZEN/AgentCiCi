@@ -1,7 +1,7 @@
 ---
 kind: team-status
 version: 3
-updated_at: 2026-05-18T09:12:19Z
+updated_at: 2026-05-21T03:01:55Z
 updated_by: summarize-team-status
 status: derived
 ---
@@ -28,10 +28,10 @@ status: derived
 |------|------|
 | 开发者 | 5 |
 | 活跃开发者 | 5 |
-| 授权任务 | 1 |
-| 已开始任务 | 0 |
+| 授权任务 | 7 |
+| 已开始任务 | 3 |
 | 等待 review | 0 |
-| 已集成任务 | 0 |
+| 已集成任务 | 3 |
 | 阻塞任务 | 0 |
 
 ## 成员状态
@@ -41,12 +41,12 @@ status: derived
 - display_name: `凤雏`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `TASK-112`
-- active_tasks: `TASK-112`
-- latest_pr: `none`
-- contribution_status: `claimed`
-- validation_status: `not_run`
-- integration_status: `not_ready`
+- assigned_tasks: `TASK-112, TASK-123`
+- active_tasks: `TASK-123`
+- latest_pr: `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/2`
+- contribution_status: `claimed, merged`
+- validation_status: `passed, unknown`
+- integration_status: `integrated, not_ready`
 
 ### DEV-nezha
 
@@ -65,42 +65,48 @@ status: derived
 - display_name: `卧龙`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-116`
+- active_tasks: `TASK-116`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed`
+- validation_status: `unknown`
+- integration_status: `not_ready`
 
 ### DEV-zhongda
 
 - display_name: `仲达`
 - role: `fullstack-agent`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-115`
+- active_tasks: `TASK-115`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed`
+- validation_status: `unknown`
+- integration_status: `not_ready`
 
 ### MANAGER-001
 
 - display_name: `Owen`
 - role: `project-manager`
 - identity_status: `active`
-- assigned_tasks: `none`
-- active_tasks: `none`
+- assigned_tasks: `TASK-114, TASK-117, TASK-118`
+- active_tasks: `TASK-114`
 - latest_pr: `none`
-- contribution_status: `none`
-- validation_status: `none`
-- integration_status: `none`
+- contribution_status: `claimed, merged`
+- validation_status: `unknown`
+- integration_status: `integrated, not_ready`
 
 ## 任务状态
 
 | Task | Title | Assignee | Board | Contribution | Validation | Integration | Branch | PR |
 |------|-------|----------|-------|--------------|------------|-------------|--------|----|
-| `TASK-112` | unknown | `DEV-fengchu` | `unknown` | `claimed` | `not_run` | `not_ready` | `codex/TASK-112-agent-openapi-dify-parity` | `n/a` |
+| `TASK-112` | unknown | `DEV-fengchu` | `unknown` | `merged` | `passed` | `integrated` | `codex/TASK-112-agent-openapi-dify-parity` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/2` |
+| `TASK-114` | unknown | `MANAGER-001` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-114-feat-037-billing-ledger` | `n/a` |
+| `TASK-115` | unknown | `DEV-zhongda` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-115-kb-module-maintenance` | `n/a` |
+| `TASK-116` | unknown | `DEV-wolong` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-116-skill-module-completion` | `n/a` |
+| `TASK-117` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-117-agentcici-help-center-site` | `n/a` |
+| `TASK-118` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-118-admin-organization-profile` | `n/a` |
+| `TASK-123` | unknown | `DEV-fengchu` | `unknown` | `claimed` | `unknown` | `not_ready` | `codex/TASK-123-openapi-cloudcc-token-override` | `n/a` |
 
 ## 集成状态
 

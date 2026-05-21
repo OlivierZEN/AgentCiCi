@@ -126,7 +126,8 @@ public class AgentOpenApiConversationService {
                 input.externalUser(),
                 input.knowledgeBaseIds(),
                 input.activeSkillCode(),
-                input.metadata());
+                input.metadata(),
+                input.cloudccContext());
         AgentApiTaskEntity task = taskRepository.save(new AgentApiTaskEntity(
                 taskId,
                 requestId,
@@ -388,6 +389,7 @@ public class AgentOpenApiConversationService {
                 requestBody.knowledgeBaseIds() == null ? List.of() : requestBody.knowledgeBaseIds(),
                 text(requestBody.activeSkillCode()),
                 metadata,
+                requestBody.cloudccContext(),
                 requestBody.files() == null ? List.of() : requestBody.files());
     }
 
@@ -684,7 +686,9 @@ public class AgentOpenApiConversationService {
             List<String> knowledgeBaseIds,
             @JsonAlias("active_skill_code")
             String activeSkillCode,
-            Map<String, Object> metadata
+            Map<String, Object> metadata,
+            @JsonAlias("cloudcc_context")
+            AgentOpenApiRunService.CloudccContext cloudccContext
     ) {
     }
 
@@ -696,6 +700,7 @@ public class AgentOpenApiConversationService {
             List<String> knowledgeBaseIds,
             String activeSkillCode,
             Map<String, Object> metadata,
+            AgentOpenApiRunService.CloudccContext cloudccContext,
             List<Map<String, Object>> files
     ) {
     }

@@ -10,6 +10,7 @@ import AdminModelsPage from "./admin/pages/AdminModelsPage";
 import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
+import AdminOrganizationPage from "./admin/pages/AdminOrganizationPage";
 import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
 import AdminEmbedAppsPage from "./admin/pages/AdminEmbedAppsPage";
 import AdminWecomKfAccountsPage from "./admin/pages/AdminWecomKfAccountsPage";
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="channels/wechat-kf" element={<AdminWecomKfAccountsPage />} />
             <Route path="ops" element={<AdminOpsPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="organization" element={<AdminOrganizationPage />} />
           </Route>
         </Route>
         <Route path="/platform/login" element={<PlatformLogin />} />

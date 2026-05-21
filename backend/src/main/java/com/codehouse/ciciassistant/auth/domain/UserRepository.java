@@ -25,7 +25,12 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
 
     long countByOrg_IdAndRoleCodeAndMemberStatus(String orgId, String roleCode, String memberStatus);
 
+    long countByOrg_IdAndMemberStatus(String orgId, String memberStatus);
+
     List<UserEntity> findByOrg_IdOrderByCreatedAtDesc(String orgId);
+
+    Optional<UserEntity> findFirstByOrg_IdAndRoleCodeAndMemberStatusOrderByCreatedAtAsc(
+            String orgId, String roleCode, String memberStatus);
 
     Optional<UserEntity> findByIdAndOrg_Id(String id, String orgId);
 

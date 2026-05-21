@@ -51,7 +51,8 @@ public class AgentOpenApiCredentialController {
                         request.maxResponseChars(),
                         request.allowStream(),
                         request.allowTraceRead(),
-                        request.scopes()));
+                        request.scopes(),
+                        request.keyType()));
         return ApiResponse.ok(
                 credentialService.toCreationPayload(created),
                 "API key created. Store the plain key now.");
@@ -112,7 +113,8 @@ public class AgentOpenApiCredentialController {
             Integer maxResponseChars,
             Boolean allowStream,
             Boolean allowTraceRead,
-            List<String> scopes
+            List<String> scopes,
+            String keyType
     ) {
     }
 

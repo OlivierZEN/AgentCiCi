@@ -23,7 +23,7 @@ export default defineConfig(function (_a) {
                 "/mcp-servers": { target: backendTarget, changeOrigin: true },
                 "/admin/users": { target: backendTarget, changeOrigin: true },
                 "/admin/agents": { target: backendTarget, changeOrigin: true },
-                "/admin/organization": { target: backendTarget, changeOrigin: true },
+                "^/admin/organization/(profile|export-jobs)(/|$)": { target: backendTarget, changeOrigin: true },
                 "/admin/wecom": { target: backendTarget, changeOrigin: true },
                 "/api/autoservice": { target: backendTarget, changeOrigin: true },
                 "/agents": { target: backendTarget, changeOrigin: true },

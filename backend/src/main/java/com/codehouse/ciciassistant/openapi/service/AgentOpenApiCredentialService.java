@@ -56,6 +56,7 @@ public class AgentOpenApiCredentialService {
     public CredentialCreation create(String orgId, String agentId, String actorUserId, CreateCredentialCommand command) {
         requireAgent(orgId, agentId);
         String runAsUserId = requireRunAsUser(orgId, command.runAsUserId());
+        String keyType = normalizeKeyType(command.keyType());
         AgentApiKeyGenerator.GeneratedKey generated = generateUniqueKey();
         AgentApiCredentialEntity entity = credentialRepository.save(new AgentApiCredentialEntity(
                 generated.publicId(),
@@ -64,6 +65,7 @@ public class AgentOpenApiCredentialService {
                 requireText(command.name(), "name"),
                 generated.keyPrefix(),
                 generated.keyHash(),
+                keyType,
                 runAsUserId,
                 toJson(normalizeList(command.allowedIps())),
                 toJson(normalizeScopes(command.scopes())),
@@ -127,6 +129,7 @@ public class AgentOpenApiCredentialService {
                 entity.getPublicId(),
                 entity.getName(),
                 entity.getKeyPrefix(),
+                entity.getKeyType(),
                 entity.getStatus(),
                 entity.getRunAsUserId(),
                 readStringList(entity.getAllowedIpsJson()),
@@ -196,6 +199,18 @@ public class AgentOpenApiCredentialService {
             return normalized;
         }
         throw new IllegalArgumentException("Unsupported API key status: " + status);
+    }
+
+    private String normalizeKeyType(String keyType) {
+        if (keyType == null || keyType.isBlank()) {
+            return AgentApiCredentialEntity.KEY_TYPE_STANDARD;
+        }
+        String normalized = keyType.trim().toLowerCase(Locale.ROOT);
+        if (AgentApiCredentialEntity.KEY_TYPE_STANDARD.equals(normalized)
+                || AgentApiCredentialEntity.KEY_TYPE_CLOUDCC.equals(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("Unsupported API key type: " + keyType);
     }
 
     private List<String> normalizeList(List<String> values) {
@@ -280,7 +295,8 @@ public class AgentOpenApiCredentialService {
             Integer maxResponseChars,
             Boolean allowStream,
             Boolean allowTraceRead,
-            List<String> scopes
+            List<String> scopes,
+            String keyType
     ) {
     }
 
@@ -308,6 +324,7 @@ public class AgentOpenApiCredentialService {
             String publicId,
             String name,
             String keyPrefix,
+            String keyType,
             String status,
             String runAsUserId,
             List<String> allowedIps,

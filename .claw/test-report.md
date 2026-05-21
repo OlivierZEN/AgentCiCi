@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-18T09:10:30Z
+updated_at: 2026-05-19T16:12:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-18T09:10:30Z
+last_run_at: 2026-05-19T16:12:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：cc-aidev 3.8.0 broad-code initialization
-- 命令：`python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json`, `bash /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/init-state.sh /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM .claw`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw`
-- 环境：local main checkout
+- 范围：TASK-112 Codeup MR !2 merge validation and closeout
+- 命令：`mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test`, `npm run build`, `git diff --check HEAD^..HEAD`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /tmp/cc-agentcici-mr2-check/.claw`, Codeup API merge for change request !2
+- 环境：independent merge-check worktree plus Codeup main
 
 ## Latest Verified Results
+
+- TASK-112 Codeup MR !2 merge validation and closeout (2026-05-19T16:12:00Z):
+  - Commands:
+    - `identity`: `dev-login.py` for `MANAGER-001` on intended state and migration renumber files -> **allowed**。
+    - `codeup-read`: change request !1 -> **CLOSED**；change request !2 `[TASK-112] Agent Open API Dify parity` -> **TO_BE_MERGED**, no conflicts, all requirements pass before merge。
+    - `integration-fix`: source branch update `96779d7 fix(openapi): renumber migration after organization profile` -> **pushed** to `codex/TASK-112-agent-openapi-dify-parity`。
+    - `merge-check`: independent worktree merge of `origin/main` and updated `origin/codex/TASK-112-agent-openapi-dify-parity` -> **success**, no conflicts。
+    - `backend`: `mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test` -> **success**；Flyway validated 54 migrations and migrated test DB from V56 to V57。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check HEAD^..HEAD` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /tmp/cc-agentcici-mr2-check/.claw` -> **success**。
+    - `codeup-merge`: change request !2 -> **MERGED**，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`。
+  - Notes:
+    - Original TASK-112 migration number `V53` would have failed Flyway validation in environments that already applied current main `V56__organization_profile.sql`; it was renumbered to `V57__agent_open_api_dify_parity.sql` before merge.
+    - Local `main` was synced to `origin/main` after merge.
 
 - cc-aidev 3.8.0 broad-code initialization (2026-05-18T09:10:30Z):
   - Commands:
