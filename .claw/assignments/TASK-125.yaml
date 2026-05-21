@@ -1,0 +1,51 @@
+task_id: TASK-125
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T05:53:09Z
+expires_at: none
+spec_path: docs/specs/FEAT-047-guidance-doc-compression.md
+task_status_path: .claw/tasks/TASK-125.md
+branch: codex/TASK-124-platform-tenant-manual-provisioning
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - AGENTS.md
+  - PRODUCT.md
+  - DESIGN.md
+  - docs/specs/**
+  - .claw/**
+scope_files:
+  - AGENTS.md
+  - PRODUCT.md
+  - DESIGN.md
+  - docs/specs/FEAT-047-guidance-doc-compression.md
+  - .claw/assignments/TASK-125.yaml
+  - .claw/tasks/TASK-125.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - README.md
+  - DESIGN.json
+  - docs/specs/FEAT-012-project-design-governance.md
+  - docs/specs/PROJECT-BASELINE.md
+task_boundary:
+  - "只精简顶层规范文档的职责和表述，不修改运行时代码、前端样式或设计 token。"
+  - "把 AGENTS.md、PRODUCT.md、DESIGN.md 全部改成中文描述，并降低重复信息。"
+  - "保留 cc-aidev-guidelines-common 托管声明块，以及 DESIGN.json 作为详细设计事实源。"
+  - "当前工作树已有大量未提交改动，本任务复用现有分支，只处理授权范围内的文档与状态文件。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T05:53:09Z; user requested to simplify AGENTS.md, PRODUCT.md, and DESIGN.md and convert them to Chinese descriptions."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "文档治理任务。因当前工作树较脏，本任务不切新分支，直接在现有任务分支上做最小范围的顶层规范收口。"
+hard_gate_notes: "MANAGER-001 必须在编辑 AGENTS.md、PRODUCT.md、DESIGN.md 前运行 TASK-125 的 task-scoped dev-login.py。"

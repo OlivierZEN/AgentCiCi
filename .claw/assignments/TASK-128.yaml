@@ -1,0 +1,43 @@
+task_id: TASK-128
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T06:44:35Z
+expires_at: none
+spec_path: docs/specs/FEAT-050-task-board-archive-normalization.md
+task_status_path: .claw/tasks/TASK-128.md
+branch: codex/TASK-124-platform-tenant-manual-provisioning
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - .claw/**
+  - docs/specs/**
+scope_files:
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/task-archive.md
+  - .claw/assignments/TASK-128.yaml
+  - .claw/tasks/TASK-128.md
+  - docs/specs/FEAT-050-task-board-archive-normalization.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - .claw/test-report.md
+  - docs/specs/PROJECT-BASELINE.md
+task_boundary:
+  - "只收口 .claw/task-board.md 与 .claw/task-archive.md 的冷热分层，不改实现代码。"
+  - "主板保留未完成任务与最近完成窗口，较早的完成态任务迁入 task-archive。"
+  - "同步更新 current-status、assignment、task status 与最小规格。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T06:44:35Z; user requested next-step cleanup after current-status simplification."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "task-board 与 task-archive 职责归位任务。"
+hard_gate_notes: "MANAGER-001 必须在编辑 .claw/task-board.md、.claw/task-archive.md 和 .claw/current-status.md 前运行 TASK-128 的 task-scoped dev-login.py。"

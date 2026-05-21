@@ -2,7 +2,6 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AssistantApp from "./assistant/AssistantApp";
 import AutoServiceLanding from "./autoservice/AutoServiceLanding";
 import SuiteLanding from "./suite/SuiteLanding";
-import HelpCenterApp from "./help/HelpCenterApp";
 import AdminGuard from "./admin/AdminGuard";
 import AdminLogin from "./admin/AdminLogin";
 import AdminShell from "./admin/AdminShell";
@@ -33,24 +32,11 @@ import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 export default function App() {
   const isSuiteWebsiteHost =
     typeof window !== "undefined" && (window.location.hostname === "agentcici.com" || window.location.hostname === "www.agentcici.com");
-  const isHelpCenterHost = typeof window !== "undefined" && window.location.hostname === "help.agentcici.com";
-
-  if (isHelpCenterHost) {
-    return (
-      <BrowserRouter>
-        <Routes>
-          <Route path="/*" element={<HelpCenterApp />} />
-        </Routes>
-      </BrowserRouter>
-    );
-  }
 
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={isSuiteWebsiteHost ? <SuiteLanding siteOverride="china" /> : <AssistantApp />} />
-        <Route path="/help" element={<HelpCenterApp />} />
-        <Route path="/help/*" element={<HelpCenterApp />} />
         <Route path="/suite" element={<Navigate to="/suite/cn" replace />} />
         <Route path="/suite/cn" element={<SuiteLanding siteOverride="china" />} />
         <Route path="/suite/global" element={<SuiteLanding siteOverride="global" />} />

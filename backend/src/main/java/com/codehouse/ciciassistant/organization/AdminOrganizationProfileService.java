@@ -14,7 +14,6 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,20 +25,17 @@ public class AdminOrganizationProfileService {
     private final UserRepository userRepository;
     private final OrganizationExportJobRepository exportJobRepository;
     private final AuditService auditService;
-    private final JdbcTemplate jdbcTemplate;
 
     public AdminOrganizationProfileService(OrgRepository orgRepository,
                                            OrganizationProfileRepository profileRepository,
                                            UserRepository userRepository,
                                            OrganizationExportJobRepository exportJobRepository,
-                                           AuditService auditService,
-                                           JdbcTemplate jdbcTemplate) {
+                                           AuditService auditService) {
         this.orgRepository = orgRepository;
         this.profileRepository = profileRepository;
         this.userRepository = userRepository;
         this.exportJobRepository = exportJobRepository;
         this.auditService = auditService;
-        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -113,7 +109,6 @@ public class AdminOrganizationProfileService {
                 .limit(5)
                 .map(AdminOrganizationProfileService::exportSummary)
                 .toList();
-        UsageSummary usageSummary = usageSummary(org.getId(), memberCount);
         return new OrganizationProfileView(
                 org.getId(),
                 org.getName(),
@@ -132,8 +127,7 @@ public class AdminOrganizationProfileService {
                 profile == null ? null : profile.getCreatedAt(),
                 profile == null ? null : profile.getUpdatedAt(),
                 profile == null ? null : profile.getUpdatedBy(),
-                recentExportJobs,
-                usageSummary
+                recentExportJobs
         );
     }
 
@@ -161,30 +155,6 @@ public class AdminOrganizationProfileService {
                 job.getFinishedAt(),
                 job.getUpdatedAt()
         );
-    }
-
-    private UsageSummary usageSummary(String orgId, long activeUserCount) {
-        return new UsageSummary(
-                activeUserCount,
-                count("SELECT COUNT(*) FROM organization_member WHERE org_id = ?", orgId),
-                count("SELECT COUNT(*) FROM knowledge_base WHERE org_id = ? AND status <> 'DELETED'", orgId),
-                count("SELECT COUNT(*) FROM kb_document WHERE org_id = ? AND status <> 'DELETED'", orgId),
-                count("""
-                        SELECT COUNT(*)
-                        FROM skill_definition
-                        WHERE org_id = ?
-                          AND enabled = TRUE
-                          AND (lifecycle_status IS NULL OR lifecycle_status <> 'DELETED')
-                        """, orgId),
-                count("SELECT COUNT(*) FROM agent_definition WHERE org_id = ? AND enabled = TRUE", orgId),
-                count("SELECT COUNT(*) FROM agent_definition WHERE org_id = ? AND enabled = TRUE AND published_version_id IS NOT NULL", orgId),
-                count("SELECT COUNT(*) FROM organization_export_job WHERE org_id = ?", orgId)
-        );
-    }
-
-    private long count(String sql, String orgId) {
-        Long value = jdbcTemplate.queryForObject(sql, Long.class, orgId);
-        return value == null ? 0L : value;
     }
 
     private static String required(String value, String field, int minLength, int maxLength) {
@@ -305,8 +275,7 @@ public class AdminOrganizationProfileService {
             Instant createdAt,
             Instant updatedAt,
             String updatedBy,
-            List<ExportJobSummary> recentExportJobs,
-            UsageSummary usageSummary
+            List<ExportJobSummary> recentExportJobs
     ) {
     }
 
@@ -320,18 +289,6 @@ public class AdminOrganizationProfileService {
             Instant createdAt,
             Instant finishedAt,
             Instant updatedAt
-    ) {
-    }
-
-    public record UsageSummary(
-            long activeUserCount,
-            long createdUserCount,
-            long knowledgeBaseCount,
-            long knowledgeDocumentCount,
-            long skillCount,
-            long agentCount,
-            long publishedAgentCount,
-            long exportJobCount
     ) {
     }
 }

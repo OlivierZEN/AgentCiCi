@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-19T03:46:05Z
+updated_at: 2026-05-15T08:24:00Z
 updated_by: ai
 status: active
 ---
@@ -10,17 +10,6 @@ status: active
 
 ## Production Capacity Snapshot
 
-- New `test.agentcici.com` test environment deployment on 2026-05-19T03:46:05Z:
-  - Public test domain `test.agentcici.com` resolves to the existing edge ECS `47.97.119.160`; that Nginx terminates TLS with the existing wildcard `*.agentcici.com` certificate and proxies to the new ECS private address `192.168.8.77` over HTTP port 80.
-  - New ECS public address is `120.55.193.145`; private address is `192.168.8.77`; OS is Alibaba Cloud Linux 4; Docker 24.0.9 and Docker Compose v2.29.0 are installed.
-  - The new ECS 200G data disk `/dev/vdb` was initialized as GPT + ext4 `/dev/vdb1`, label `cici-test-data`, UUID `654b4c37-1f42-45b6-b10a-3e6811cd310f`, and mounted persistently at `/data`.
-  - All service runtime state is on the data disk: Docker `data-root` is `/data/docker`; deployment root is `/data/cici`; `/opt/cici` is a symlink to `/data/cici`; Docker named volumes for PostgreSQL, Redis, RabbitMQ, Qdrant, and KB files are under `/data/docker/volumes`.
-  - Current deployed image tag is `2.0.B1-customer-insight-20260515-161832`. Because ACR login still returns `unauthorized`, the tag's six images were streamed from the old ECS local Docker cache to the new ECS.
-  - Test data was seeded from the old ECS backup `/data/cici-maintenance/backups/20260519-114459-for-120-test-env-seed`, restored on the new ECS from `/data/cici/import/20260519-114459-for-120-test-env-seed`.
-  - Verified capacity after deployment: `/data` is 196G with about 185G available; all six compose services are healthy; backend health is `UP`; PostgreSQL counts are `knowledge_base=2`, `kb_chunk=310`, `chat_session=73`; Qdrant `cici_kb_chunk` is green with `points_count=161`.
-
-- Data disk update on 2026-05-19T03:03:28Z for the online test ECS `47.97.119.160`: the previously attached but unused 200G disk `/dev/vdb` was initialized as GPT + ext4 `/dev/vdb1`, label `cici-data`, UUID `94178bdb-a985-4e17-a055-ca400b9f981e`, and mounted persistently at `/data`. Docker `data-root` was moved from `/var/lib/docker` to `/data/docker`, while the old `/var/lib/docker` directory was retained as a short-term rollback copy.
-- Post-migration capacity: `/dev/vda3` root remains 40G with about 31G available; `/data` is 196G with about 184G available after Docker data copy and maintenance backups. Docker volumes now resolve under `/data/docker/volumes`, including PostgreSQL, Redis, RabbitMQ, Qdrant, and KB files.
 - Observed read-only on 2026-05-12T10:08:10Z for `agentcici.com` ECS `47.97.119.160`: single Docker Compose host, 8 vCPU, 30GiB RAM, 40GiB root disk with 31GiB available; no backend container CPU or memory limit configured.
 - Idle/low-load `docker stats` at observation time: `cici-backend` about 763MiB RSS-equivalent container memory and 0.09% CPU, `cici-frontend` about 9MiB, PostgreSQL about 40MiB, Qdrant about 42MiB, RabbitMQ about 118MiB, Redis about 3MiB; host memory used about 2.2GiB with 28GiB available.
 - PostgreSQL observation at the same time: `max_connections=100`, `shared_buffers=128MB`, database size about 16MB; key live table estimates included `chat_message=581`, `chat_session=69`, `kb_chunk=310`, `agent_run_trace=14`, `audit_log=607`.
