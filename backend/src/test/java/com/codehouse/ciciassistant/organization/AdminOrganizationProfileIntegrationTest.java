@@ -47,7 +47,12 @@ class AdminOrganizationProfileIntegrationTest {
                 .andExpect(jsonPath("$.data.orgId").value(created.orgId()))
                 .andExpect(jsonPath("$.data.name").value("组织设置测试组织"))
                 .andExpect(jsonPath("$.data.owner.displayName").isNotEmpty())
-                .andExpect(jsonPath("$.data.memberCount").value(1));
+                .andExpect(jsonPath("$.data.memberCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.activeUserCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.createdUserCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.knowledgeBaseCount").value(0))
+                .andExpect(jsonPath("$.data.usageSummary.skillCount").value(0))
+                .andExpect(jsonPath("$.data.usageSummary.agentCount").value(0));
 
         mockMvc.perform(patch("/admin/organization/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + created.token())
