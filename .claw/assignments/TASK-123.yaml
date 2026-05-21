@@ -1,0 +1,57 @@
+task_id: TASK-123
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T03:18:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-045-openapi-cloudcc-token-override.md
+task_status_path: .claw/tasks/TASK-123.md
+branch: codex/TASK-123-openapi-cloudcc-token-override
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - backend/src/main/resources/**
+  - frontend/src/**
+  - frontend/public/**
+  - frontend/vite.config.ts
+  - frontend/vite.config.js
+  - deploy/**
+scope_files:
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - docs/specs/FEAT-045-openapi-cloudcc-token-override.md
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - docs/specs/FEAT-021-agent-open-api.md
+  - .claw/tasks/TASK-123.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-021-agent-open-api.md
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - docs/specs/FEAT-045-openapi-cloudcc-token-override.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Work must implement FEAT-045 OpenAPI CloudCC token override and key typing."
+  - "Shared OpenAPI runtime seams may be edited when necessary, but the feature must not regress current FEAT-021 compatibility."
+  - "If FEAT-036 parity endpoints are touched in the same branch, they must follow FEAT-045 keyType and CloudCC token rules."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T03:18:00Z; user requested formal in-repo renumbering and assignment to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Implement CloudCC caller-supplied token override for Agent OpenAPI. Full API keys, CloudCC tokens, passwords, bearer tokens, private keys, and reusable secrets must never be written to project files, logs, tests, or task notes."
+hard_gate_notes: "DEV-fengchu must run scripts/dev-login.py for TASK-123 on branch codex/TASK-123-openapi-cloudcc-token-override before implementation edits. Existing TASK-112 identity state is not a substitute."

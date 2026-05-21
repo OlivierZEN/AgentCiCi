@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 3
-updated_at: 2026-05-19T16:12:00Z
+updated_at: 2026-05-21T03:18:00Z
 updated_by: ai
 status: active
 phase: maintenance
@@ -21,6 +21,8 @@ priority: P1
 # Current Status
 
 ## Snapshot
+
+- 2026-05-21T03:18:00Z 已按用户要求把仓库外 OpenAPI CloudCC token override 草案正式收口到项目文档：因仓库内 `FEAT-037` 已被计费规格占用，本需求正式重编号为 `FEAT-045 OpenAPI CloudCC token override and key typing`，并新增 `docs/specs/FEAT-045-openapi-cloudcc-token-override.md`。同时已创建 `.claw/assignments/TASK-123.yaml` 与 `.claw/tasks/TASK-123.md`，将实现责任分配给 `DEV-fengchu`，任务分支为 `codex/TASK-123-openapi-cloudcc-token-override`。规格结论是：通过 `standard` / `cloudcc` key type、`cloudccContext` 和共享 OpenAPI runtime seam，把 CloudCC caller-supplied token override 落到当前 `/chat`、`/chat/stream` 及 FEAT-036 兼容接口将来的共用实现上，并明确禁止 token 落库、落 trace、落日志或静默 fallback 到 run-as 用户资料换 token。
 
 - 2026-05-19T16:12:00Z 已按用户要求处理 Codeup MR：`change/1` 已确认此前为 CLOSED；`change/2` `[TASK-112] Agent Open API Dify parity` 已合并到 `main`，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`。合并前发现 TASK-112 原新增 `V53__agent_open_api_dify_parity.sql` 会在当前 `main` 已有 `V56__organization_profile.sql` 的环境触发 Flyway out-of-order 校验失败，已在源分支补提交 `96779d7 fix(openapi): renumber migration after organization profile`，将迁移重编号为 `V57__agent_open_api_dify_parity.sql` 并更新任务/规格记录。验证通过：Codeup MR API 显示 !2 `MERGED`、!1 `CLOSED`；独立 worktree 合并无冲突；`backend mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test` 成功，日志确认测试库从 V56 迁移到 V57；`frontend npm run build` 成功（保留既有 Vite chunk-size warning）；`git diff --check HEAD^..HEAD` 成功；`.claw` `validate-state.py` 成功。本地 `main` 已同步到 `origin/main`。
 

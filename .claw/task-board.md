@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-19T16:12:00Z
+updated_at: 2026-05-21T03:18:00Z
 updated_by: ai
 status: active
 board_status: active
@@ -10,6 +10,31 @@ board_status: active
 # Task Board
 
 ## Task Cards
+
+### TASK-123 OpenAPI CloudCC token override and key typing
+
+- status: assigned
+- priority: P0
+- owner_role: DEV-fengchu
+- spec_path: `docs/specs/FEAT-045-openapi-cloudcc-token-override.md`
+- assignment_path: `.claw/assignments/TASK-123.yaml`
+- task_status_path: `.claw/tasks/TASK-123.md`
+- branch: `codex/TASK-123-openapi-cloudcc-token-override`
+- summary: 为 Agent OpenAPI 引入 `standard` / `cloudcc` key type，允许 CloudCC 嵌入页在受控前提下按请求传入当前 CloudCC 用户 token，并让 native CloudCC tool、CloudCC MCP tool 和 CloudCC skill API 统一复用该 runtime override，同时禁止 token 落库、落 trace、落日志或静默 fallback 到 run-as 用户资料换 token。
+- started_at: 2026-05-21T03:18:00Z
+- assigned_to: `DEV-fengchu`
+- assigned_by: `MANAGER-001`
+- done:
+  - 已将仓库外临时草案重新编号为 `FEAT-045`，避免与现有计费规格 `FEAT-037` 冲突。
+  - 已创建正式规格 `docs/specs/FEAT-045-openapi-cloudcc-token-override.md`，把需求收口为 repo 内 OpenAPI 主线能力，而不是仓库外草案。
+  - 已创建 `.claw/assignments/TASK-123.yaml` 与 `.claw/tasks/TASK-123.md`，并将实现责任分配给 `DEV-fengchu`。
+- verification:
+  - `identity-manager-assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments .claw/tasks docs/specs --no-cache --json` -> allowed。
+- next_action: `DEV-fengchu` pull 最新 main 后，切到 `codex/TASK-123-openapi-cloudcc-token-override`，按 `.claw/assignments/TASK-123.yaml` 运行完整 `dev-login.py` 私钥挑战，通过后按 FEAT-045 落 `key_type`、`cloudccContext`、共享 OpenAPI runtime 校验和 CloudCC request-scoped override。
+- handoff_notes:
+  - FEAT-045 与 FEAT-036 相邻，但不是替代关系；共享 OpenAPI 运行时逻辑应一次实现、两边复用。
+  - 现有 `/chat` 和 `/chat/stream` 也必须遵守 `standard` / `cloudcc` 规则，不能只补未来 `chat-messages`。
+  - `cloudcc` key 的任何失败路径都不能静默回退到 run-as 用户 `cc_username` / `cc_safetymark` 换 token。
 
 ### TASK-113 cc-aidev 3.8.0 broad-code initialization
 
