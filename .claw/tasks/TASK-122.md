@@ -5,6 +5,7 @@ task_id: TASK-122
 title: Platform console production polish and internal-info cleanup
 status: done
 assignee: MANAGER-001
+owner_role: project-manager
 branch: codex/TASK-122-platform-console-production-polish
 spec_path: docs/specs/FEAT-044-platform-console-production-polish.md
 assignment_path: .claw/assignments/TASK-122.yaml

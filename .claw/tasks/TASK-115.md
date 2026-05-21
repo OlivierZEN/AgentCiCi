@@ -2,6 +2,7 @@
 kind: task-status
 task_id: TASK-115
 assignee: DEV-zhongda
+owner_role: fullstack-agent
 status: ready
 branch: codex/TASK-115-kb-module-maintenance
 pr_url: n/a

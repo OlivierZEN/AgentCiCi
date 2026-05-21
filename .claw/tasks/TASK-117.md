@@ -2,6 +2,7 @@
 kind: task-status
 task_id: TASK-117
 assignee: MANAGER-001
+owner_role: project-manager
 status: done
 branch: codex/TASK-117-agentcici-help-center-site
 pr_url: n/a

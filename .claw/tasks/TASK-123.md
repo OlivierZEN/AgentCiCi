@@ -2,6 +2,7 @@
 kind: task-status
 task_id: TASK-123
 assignee: DEV-fengchu
+owner_role: fullstack-agent
 status: done
 branch: codex/TASK-123-openapi-cloudcc-token-override
 pr_url: n/a

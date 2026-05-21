@@ -1,50 +1,83 @@
 ---
 kind: task-status
-version: 1
 task_id: TASK-127
-title: current-status 热状态页精简
-status: done
 assignee: MANAGER-001
-branch: codex/TASK-124-platform-tenant-manual-provisioning
-spec_path: docs/specs/FEAT-049-current-status-hotfile-compression.md
+owner_role: project-manager
+status: done
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
+pr_url: n/a
+spec_path: docs/specs/FEAT-047-local-branch-integration-pass.md
 assignment_path: .claw/assignments/TASK-127.yaml
-updated_at: 2026-05-21T06:37:15Z
-updated_by: ai
+updated_at: 2026-05-21T10:49:05Z
+updated_by: MANAGER-001
 ---
 
-# TASK-127 - current-status 热状态页精简
+# TASK-127 - Merge remaining local branches into the current branch
 
-## 范围
+## Scope
 
-检查 `.claw/current-status.md` 是否承载了过多历史、验证和任务细节，并将其收口为只表达当前项目状态、近期关键变化和下一步动作的热状态文件；同时用一个最小 spec 记录该职责边界。
+- create a controlled integration step for merging every remaining unmerged local branch into `codex/TASK-124-feat-046-platform-tenant-provisioning`
+- preserve the current dirty worktree by stashing before merges and restoring it after verification
+- resolve merge conflicts using the repo state, active specs, and current branch intent as the source of truth
+- capture the merge result and verification evidence in this task file
 
-## 计划
+## Out Of Scope
 
-1. 创建本任务的 assignment 和 task status。
-2. 运行 `TASK-127` 的 task-scoped `dev-login.py`，确认状态文件编辑范围被授权。
-3. 精简 `.claw/current-status.md`，移除与 `task-board.md`、`test-report.md`、`tasks/TASK-xxx.md` 和 spec 重复的长段内容。
-4. 运行最小状态校验，确认 `.claw` 结构仍然有效。
+- publishing, pushing, or opening change requests unless explicitly requested later
+- rewriting unrelated feature scopes just because they appear in merged branches
+- force-resetting, dropping, or destructively rewriting existing local work
 
-## 协作说明
+## Preflight
 
-- 当前工作树已有大量未提交改动，本任务继续复用现有分支。
-- 本任务只处理 `.claw` 状态文件，不改实现代码。
-- 如果需要保留详细历史，只在 `task-board.md`、`tasks/TASK-xxx.md` 和 `test-report.md` 中维护。
-- 规格仅用于说明热状态文件边界，不重写已有项目基线。
+Before merge work, run task-scoped `dev-login.py` for `MANAGER-001` on branch `codex/TASK-124-feat-046-platform-tenant-provisioning`.
 
-## 进展
+## Merge Set
 
-- 2026-05-21T06:33:50Z：已创建 TASK-127 assignment 和 task status，准备运行 task-scoped `dev-login.py` 后开始收口 `current-status.md`。
-- 2026-05-21T06:35:05Z：已将 `current-status.md` 收口为热状态短版，只保留当前态、近期关键变化和下一步。
-- 2026-05-21T06:37:15Z：已补最小规格 `FEAT-049`、重新通过 task-scoped `dev-login.py`，并确认 `.claw` 状态校验通过。
+- `codex/TASK-118-admin-organization-profile`
+- `codex/TASK-120-platform-accountless-login`
+- `codex/TASK-121-db-rename-agentcici`
+- `codex/TASK-122-platform-console-production-polish`
+- `codex/TASK-124-platform-tenant-manual-provisioning`
+- `codex/recover-task119-122`
 
-## 验证
+## Verification Target
 
-- `identity-bootstrap`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/test-report.md .claw/assignments/TASK-127.yaml .claw/tasks/TASK-127.md --no-cache --json` -> allowed。
-- `identity-bootstrap-spec`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments/TASK-127.yaml .claw/tasks/TASK-127.md docs/specs/FEAT-049-current-status-hotfile-compression.md --no-cache --json` -> allowed。
-- `identity-task-scoped`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --task TASK-127 --branch codex/TASK-124-platform-tenant-manual-provisioning --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments/TASK-127.yaml .claw/tasks/TASK-127.md docs/specs/FEAT-049-current-status-hotfile-compression.md --no-cache --json` -> allowed。
-- `state-validate`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> passed。
+- current dirty worktree is safely restorable after the merge pass
+- all target local branches are either merged or intentionally skipped with a written reason
+- merge conflicts are resolved without destructive resets
+- a focused verification pass records build/test or diff evidence for the integrated result
 
-## 备注
+## Assignment History
 
-- 目标是减少重复和降低阅读成本，不是补充更多运行细节。
+- 2026-05-21T10:36:00Z: User requested a dedicated task for merging all remaining local branches into the current branch; `MANAGER-001` opened TASK-127 on `codex/TASK-124-feat-046-platform-tenant-provisioning`.
+
+## Progress
+
+- `dev-login.py` from the skill directory returned `allowed` for `MANAGER-001` on `TASK-127`.
+- Saved the dirty worktree with `git stash push -u -m "TASK-127 pre-merge safeguard"`.
+- Merged `codex/TASK-118-admin-organization-profile` and resolved `.claw/` state conflicts in favor of the current branch source-of-truth files before creating merge commit `5c0fded`.
+- Processed `codex/TASK-120-platform-accountless-login`, `codex/TASK-121-db-rename-agentcici`, `codex/TASK-122-platform-console-production-polish`, and `codex/TASK-124-platform-tenant-manual-provisioning`; once the branch advanced, each reported `Already up to date`.
+- Merged `codex/recover-task119-122` with merge commit `b3361de`, bringing the recovered TASK-119~122/TASK-124~128 state and platform-account implementation snapshot onto the current branch.
+- Restored the pre-merge dirty worktree with `git stash pop`; when same-name untracked task/spec files could not be auto-restored, reapplied the stash versions manually so the local worktree content remained available.
+
+## Changed Files
+
+- `.claw/current-status.md`
+- `.claw/task-board.md`
+- `.claw/assignments/TASK-127.yaml`
+- `.claw/tasks/TASK-127.md`
+- `docs/specs/FEAT-047-local-branch-integration-pass.md`
+- merged branch content across `.claw/`, `backend/`, `frontend/`, `deploy/`, and `docs/specs/`
+
+## Verification Notes
+
+- `2026-05-21T10:40:00Z`: task-scoped `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --task TASK-127 --branch codex/TASK-124-feat-046-platform-tenant-provisioning --json` -> `allowed`.
+- `2026-05-21T10:46:00Z`: `git branch --no-merged | wc -l` -> `0`.
+- `2026-05-21T10:46:00Z`: `git diff --check` -> success.
+- `2026-05-21T10:47:00Z`: `npm run build` in `frontend/` -> success, with the existing Vite chunk-size warning.
+- `2026-05-21T10:48:00Z`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` did not produce a final success/failure result within the observation window, so backend compile evidence is still pending.
+- `2026-05-21T10:49:00Z`: `git stash list --max-count=1` still shows `TASK-127 pre-merge safeguard`; it was intentionally left in place as a safety copy after the manual same-name file restore.
+
+## Open Risk
+
+- Backend compile/test evidence for the integrated branch still needs a fresh source-aligned rerun; this task only completed the merge pass, dirty-worktree restoration, and focused diff/frontend verification.

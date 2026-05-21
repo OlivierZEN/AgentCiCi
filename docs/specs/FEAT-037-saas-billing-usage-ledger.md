@@ -1,10 +1,14 @@
 ---
-updated_at: 2026-05-18T23:20:36Z
-status: active
+kind: feature-spec
 feature_id: FEAT-037
-related_specs:
-  - docs/specs/FEAT-003-saas-billing-and-packaging.md
-  - docs/specs/FEAT-022-agent-workload-billing-model.md
+title: SaaS Billing Usage Ledger
+status: in_implementation
+owner_role: project-manager
+task_ids: TASK-114
+related_decisions: FEAT-003, FEAT-022
+related_issues: none
+updated_at: 2026-05-20T01:54:39Z
+updated_by: MANAGER-001
 ---
 
 # FEAT-037 SaaS Billing Usage Ledger

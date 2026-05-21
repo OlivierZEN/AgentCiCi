@@ -53,7 +53,7 @@ status: active
 - Why this won:
   - Production and local runtime already use PostgreSQL, so tests should validate the real SQL dialect, Flyway behavior, indexes, and schema validation path.
   - PostgreSQL-specific migrations are allowed; agents should not rewrite migrations only to satisfy H2.
-  - Test configuration now points to `jdbc:postgresql://localhost:5432/cici_assistant_test` by default and may be overridden with `TEST_DATABASE_URL`, `TEST_DATABASE_USERNAME`, and `TEST_DATABASE_PASSWORD`.
+  - Test configuration now points to `jdbc:postgresql://localhost:5432/agentcici_test` by default and may be overridden with `TEST_DATABASE_URL`, `TEST_DATABASE_USERNAME`, and `TEST_DATABASE_PASSWORD`.
 - Implications:
   - H2 is removed from backend Maven dependencies.
   - Future verification notes must say PostgreSQL when PostgreSQL was actually used; H2 runs should not be used as acceptance evidence.

@@ -17,7 +17,6 @@ import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
 import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import java.security.MessageDigest;
-import java.security.SecureRandom;
 import java.security.spec.KeySpec;
 import java.time.Instant;
 import java.util.Arrays;
@@ -27,7 +26,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
@@ -45,6 +43,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final AuthPasswordRepository authPasswordRepository;
     private final JwtService jwtService;
+    private final OrganizationProvisioningService organizationProvisioningService;
+    private final PasswordHashService passwordHashService;
     private final Set<String> bootstrapAdminMobiles;
     private final Set<String> platformAdminMobiles;
     private final Set<String> platformOperatorMobiles;
@@ -59,6 +59,8 @@ public class AuthService {
                        UserRepository userRepository,
                        AuthPasswordRepository authPasswordRepository,
                        JwtService jwtService,
+                       OrganizationProvisioningService organizationProvisioningService,
+                       PasswordHashService passwordHashService,
                        @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw,
                        @Value("${app.auth.platform-admin-mobiles:}") String platformAdminMobilesRaw,
                        @Value("${app.auth.platform-operator-mobiles:}") String platformOperatorMobilesRaw,
@@ -72,6 +74,8 @@ public class AuthService {
         this.userRepository = userRepository;
         this.authPasswordRepository = authPasswordRepository;
         this.jwtService = jwtService;
+        this.organizationProvisioningService = organizationProvisioningService;
+        this.passwordHashService = passwordHashService;
         this.bootstrapAdminMobiles = parseMobileSet(bootstrapAdminMobilesRaw);
         this.platformAdminMobiles = parseMobileSet(platformAdminMobilesRaw);
         this.platformOperatorMobiles = parseMobileSet(platformOperatorMobilesRaw);
@@ -131,21 +135,12 @@ public class AuthService {
         if (mobileNorm.isBlank()) {
             throw new IllegalArgumentException("手机号不能为空");
         }
-        if (userAccountRepository.findByPrimaryMobile(mobileNorm).isPresent()
-                || accountLoginIdentifierRepository.findByIdentifierTypeAndNormalizedValueAndStatus(
-                        AccountLoginIdentifierEntity.TYPE_MOBILE,
-                        mobileNorm,
-                        AccountLoginIdentifierEntity.STATUS_ACTIVE).isPresent()) {
+        if (organizationProvisioningService.findMobileAccount(mobileNorm).isPresent()) {
             throw new IllegalArgumentException("该手机号已注册，请登录后创建或切换组织");
         }
-        UserAccountEntity account = userAccountRepository.save(new UserAccountEntity(mobileNorm));
-        accountLoginIdentifierRepository.save(new AccountLoginIdentifierEntity(
-                account,
-                AccountLoginIdentifierEntity.TYPE_MOBILE,
-                mobileNorm,
-                mobileNorm));
-        OrgEntity org = createOrg(organizationName);
-        UserEntity owner = userRepository.save(new UserEntity(org, account, RoleCodes.OWNER));
+        UserAccountEntity account = organizationProvisioningService.createMobileAccount(mobileNorm, null, null);
+        OrgEntity org = organizationProvisioningService.createOrganization(organizationName);
+        UserEntity owner = organizationProvisioningService.createOwnerMembership(org, account, null);
         return issueLoginForMember(owner);
     }
 
@@ -175,8 +170,8 @@ public class AuthService {
     public Map<String, Object> createOrganization(String currentUserId, String organizationName) {
         UserEntity current = userRepository.findById(currentUserId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
-        OrgEntity org = createOrg(organizationName);
-        UserEntity owner = userRepository.save(new UserEntity(org, current.getAccount(), RoleCodes.OWNER));
+        OrgEntity org = organizationProvisioningService.createOrganization(organizationName);
+        UserEntity owner = organizationProvisioningService.createOwnerMembership(org, current.getAccount(), null);
         return issueLoginForMember(owner);
     }
 
@@ -423,7 +418,7 @@ public class AuthService {
                         AccountAuthCredentialEntity.TYPE_PASSWORD,
                         AccountAuthCredentialEntity.STATUS_ACTIVE)
                 .orElseGet(() -> new AccountAuthCredentialEntity(user.getAccount()));
-        PasswordHash hash = hashPassword(nextPassword);
+        PasswordHashService.PasswordHash hash = passwordHashService.hash(nextPassword);
         credential.replacePassword(hash.passwordHash(), hash.salt(), hash.iterations(), hash.algorithm());
         accountAuthCredentialRepository.save(credential);
         return Map.of("updated", true);
@@ -461,18 +456,6 @@ public class AuthService {
             throw new IllegalArgumentException("Organization is disabled");
         }
         return org;
-    }
-
-    private OrgEntity createOrg(String organizationName) {
-        String name = trimOrNull(organizationName);
-        if (name == null) {
-            throw new IllegalArgumentException("组织名称不能为空");
-        }
-        String id;
-        do {
-            id = "org-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        } while (orgRepository.existsById(id));
-        return orgRepository.save(new OrgEntity(id, name, "ACTIVE"));
     }
 
     private List<Map<String, Object>> organizationRows(String accountId, String currentOrgId) {
@@ -593,21 +576,6 @@ public class AuthService {
         }
     }
 
-    private PasswordHash hashPassword(String password) {
-        byte[] saltBytes = new byte[16];
-        new SecureRandom().nextBytes(saltBytes);
-        String salt = Base64.getEncoder().encodeToString(saltBytes);
-        int iterations = 120000;
-        String algorithm = "PBKDF2WithHmacSHA256";
-        try {
-            KeySpec spec = new PBEKeySpec(password.toCharArray(), salt.getBytes(java.nio.charset.StandardCharsets.UTF_8), iterations, 256);
-            String passwordHash = Base64.getEncoder().encodeToString(SecretKeyFactory.getInstance(algorithm).generateSecret(spec).getEncoded());
-            return new PasswordHash(passwordHash, salt, iterations, algorithm);
-        } catch (Exception ex) {
-            throw new IllegalStateException("Password hashing failed", ex);
-        }
-    }
-
     private String deriveDisplayName(String firstName, String lastName, String mobile) {
         String joined = ((trimOrNull(lastName) == null ? "" : trimOrNull(lastName))
                 + (trimOrNull(firstName) == null ? "" : trimOrNull(firstName))).trim();
@@ -618,9 +586,6 @@ public class AuthService {
         if (value == null) return null;
         String v = value.trim();
         return v.isEmpty() ? null : v;
-    }
-
-    private record PasswordHash(String passwordHash, String salt, int iterations, String algorithm) {
     }
 
     private record LoginIdentifier(String type, String value) {

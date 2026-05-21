@@ -5,6 +5,7 @@ task_id: TASK-128
 title: task-board 与 task-archive 归档归位
 status: done
 assignee: MANAGER-001
+owner_role: project-manager
 branch: codex/TASK-124-platform-tenant-manual-provisioning
 spec_path: docs/specs/FEAT-050-task-board-archive-normalization.md
 assignment_path: .claw/assignments/TASK-128.yaml

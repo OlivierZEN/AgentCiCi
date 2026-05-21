@@ -1,23 +1,65 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-19T16:12:00Z
+updated_at: 2026-05-21T10:49:05Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-19T16:12:00Z
-last_run_status: success
+last_run_at: 2026-05-21T10:49:05Z
+last_run_status: partial
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`
-- 范围：TASK-112 Codeup MR !2 merge validation and closeout
-- 命令：`mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test`, `npm run build`, `git diff --check HEAD^..HEAD`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /tmp/cc-agentcici-mr2-check/.claw`, Codeup API merge for change request !2
-- 环境：independent merge-check worktree plus Codeup main
+- 状态：`partial`
+- 范围：TASK-127 local branch integration pass
+- 命令：task-scoped `dev-login.py`, `git stash push -u`, `git merge --no-ff`, `git stash pop`, `git branch --no-merged`, `git diff --check`, `npm run build`, backend `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile`
+- 环境：local branch `codex/TASK-124-feat-046-platform-tenant-provisioning`
 
 ## Latest Verified Results
+
+- TASK-127 local branch integration pass (2026-05-21T10:49:05Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-127` on `codex/TASK-124-feat-046-platform-tenant-provisioning` -> **allowed**。
+    - `stash-save`: `git stash push -u -m "TASK-127 pre-merge safeguard"` -> **success**。
+    - `merge-task118`: `git merge --no-ff codex/TASK-118-admin-organization-profile` -> **conflicts resolved**, then committed as `5c0fded`。
+    - `merge-task120`: `git merge --no-ff codex/TASK-120-platform-accountless-login` -> **already up to date**。
+    - `merge-task121`: `git merge --no-ff codex/TASK-121-db-rename-agentcici` -> **already up to date**。
+    - `merge-task122`: `git merge --no-ff codex/TASK-122-platform-console-production-polish` -> **already up to date**。
+    - `merge-task124`: `git merge --no-ff codex/TASK-124-platform-tenant-manual-provisioning` -> **already up to date**。
+    - `merge-recover`: `git merge --no-ff codex/recover-task119-122` -> **success**, merge commit `b3361de`。
+    - `stash-restore`: `git stash pop` -> **partial restore**；tracked files restored, same-name untracked task/spec files had to be reapplied manually from the stash snapshot.
+    - `branch-check`: `git branch --no-merged | wc -l` -> **success**, `0`。
+    - `diff`: `git diff --check` -> **success**。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **no final result within observation window**。
+  - Notes:
+    - The safeguard stash was intentionally left in `git stash list` after manual same-name file recovery.
+    - The merge pass completed and the dirty worktree was restored, but backend compile evidence remains pending.
+
+- TASK-125 restore database rename to agentcici (2026-05-21T09:18:03Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-125` on `codex/TASK-124-feat-046-platform-tenant-provisioning` with intended config/script/state files -> **allowed**。
+    - `search`: `rg -n --hidden -S "cici_assistant" docker-compose.yml backend/src/main/resources backend/src/test/resources deploy/acr.env.example deploy/docker-compose.acr.yml scripts/run-full-demo.sh docs/release-local-to-cici-cloudcc-cn.md .claw/decisions.md` -> **success**，no matches。
+    - `db-list`: `docker exec cici-postgres psql -U cici -d postgres -Atc "select datname from pg_database where datname in ('cici_assistant','agentcici','cici_assistant_test','agentcici_test') order by datname;"` -> **success**，output `agentcici`, `agentcici_test`。
+    - `backend-health`: `GET http://127.0.0.1:8080/actuator/health` -> **success**，`{"status":"UP"}`。
+    - `db-ready`: `docker exec cici-postgres pg_isready -U cici -d agentcici` -> **success**，accepting connections。
+    - `db-activity`: `docker exec cici-postgres psql -U cici -d postgres -Atc "select datname, application_name, state, count(*) from pg_stat_activity where datname in ('agentcici','agentcici_test') group by datname, application_name, state order by datname, application_name, state;"` -> **success**，`agentcici|PostgreSQL JDBC Driver|idle|10`。
+    - `diff`: targeted `git diff --check` for TASK-125 files -> **success**。
+  - Notes:
+    - This restore intentionally touched only database-name defaults and related state/spec records.
+    - Unrelated historical identifiers such as `cici_assistant_token`, package paths, and container names remain unchanged by design.
+
+- `.claw` 4.1.0 state cleanup and history archive (2026-05-21T07:34:29Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> **success**。
+  - Notes:
+    - `current-status.md` was rewritten as a sub-60-line hot index.
+    - `task-board.md` now keeps only live tasks; historical cards were moved to `.claw/task-archive.md`.
+    - Task status files now carry valid `owner_role` values, and the referenced live specs/baseline were normalized to 4.1.0 front matter expectations.
 
 - TASK-112 Codeup MR !2 merge validation and closeout (2026-05-19T16:12:00Z):
   - Commands:

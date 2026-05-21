@@ -2,6 +2,7 @@
 kind: task-status
 task_id: TASK-116
 assignee: DEV-wolong
+owner_role: fullstack-agent
 status: ready
 branch: codex/TASK-116-skill-module-completion
 pr_url: n/a

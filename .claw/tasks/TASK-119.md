@@ -2,6 +2,7 @@
 kind: task-status
 task_id: TASK-119
 assignee: MANAGER-001
+owner_role: project-manager
 status: ready
 branch: codex/TASK-119-agent-access-control
 pr_url: n/a

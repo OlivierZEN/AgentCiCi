@@ -2,7 +2,7 @@ spring:
   application:
     name: cc-cici-assistant-backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/cici_assistant
+    url: jdbc:postgresql://localhost:5432/agentcici
     username: cici
     password: cici123
   jpa:

@@ -10,12 +10,12 @@ docker compose up -d --remove-orphans postgres redis rabbitmq qdrant
 
 echo "==> Wait for PostgreSQL"
 for _ in $(seq 1 40); do
-  if docker compose exec -T postgres pg_isready -U cici -d cici_assistant >/dev/null 2>&1; then
+  if docker compose exec -T postgres pg_isready -U cici -d agentcici >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
-docker compose exec -T postgres pg_isready -U cici -d cici_assistant
+docker compose exec -T postgres pg_isready -U cici -d agentcici
 
 BACKEND_LOG="${BACKEND_LOG:-/tmp/cici-backend-demo.log}"
 echo "==> Start backend (logs: ${BACKEND_LOG})"

@@ -2,8 +2,8 @@
 kind: feature-spec
 feature_id: FEAT-008
 title: Knowledge base lifecycle completion
-status: in_progress
-owner_role: fullstack-knowledge-platform
+status: in_implementation
+owner_role: fullstack-agent
 task_ids: TASK-020
 related_decisions: none
 related_issues: ISSUE-2026-04-29-kb-delete-leaves-vector-points

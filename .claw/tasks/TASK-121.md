@@ -5,6 +5,7 @@ task_id: TASK-121
 title: Database rename to agentcici
 status: done
 assignee: MANAGER-001
+owner_role: project-manager
 branch: codex/TASK-121-db-rename-agentcici
 spec_path: docs/specs/FEAT-043-database-rename-agentcici.md
 assignment_path: .claw/assignments/TASK-121.yaml

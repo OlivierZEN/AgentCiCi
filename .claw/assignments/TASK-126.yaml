@@ -2,27 +2,20 @@ task_id: TASK-126
 assignee: MANAGER-001
 assigned_by: MANAGER-001
 status: active
-assigned_at: 2026-05-21T06:09:17Z
+assigned_at: 2026-05-21T10:10:00Z
 expires_at: none
-spec_path: docs/specs/FEAT-048-design-factsource-zh.md
+spec_path: docs/specs/FEAT-041-platform-accountless-login.md
 task_status_path: .claw/tasks/TASK-126.md
-branch: codex/TASK-124-platform-tenant-manual-provisioning
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
 pr_url: n/a
-scope_mode: task_bounded_broad_code
-allowed_write_roots:
-  - README.md
-  - DESIGN.json
-  - docs/specs/**
-  - .claw/**
+scope_mode: exact_files
 scope_files:
-  - README.md
-  - DESIGN.json
-  - docs/specs/FEAT-048-design-factsource-zh.md
-  - .claw/assignments/TASK-126.yaml
+  - docs/specs/FEAT-041-platform-accountless-login.md
   - .claw/tasks/TASK-126.md
-  - .claw/task-board.md
   - .claw/current-status.md
+  - .claw/task-archive.md
 protected_paths:
+  - .claw/assignments/**
   - .claw/developers/**
   - scripts/dev-login.py
   - scripts/check-assignment.py
@@ -31,19 +24,14 @@ protected_paths:
   - infrastructure/**
 touch_policy: exclusive
 shared_contracts:
-  - AGENTS.md
-  - PRODUCT.md
-  - DESIGN.md
-  - docs/specs/FEAT-047-guidance-doc-compression.md
-  - docs/specs/FEAT-012-project-design-governance.md
+  - docs/specs/FEAT-041-platform-accountless-login.md
 task_boundary:
-  - "只清理 README.md 的设计事实源引用，并将 DESIGN.json 的人类可读文案翻译为中文。"
-  - "保持 DESIGN.json 的键名、层级结构和 token 数值不变。"
-  - "当前工作树已有大量未提交改动，本任务继续复用现有分支，不处理实现代码。"
-change_manifest_required: true
-signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T06:09:17Z; user requested to continue README cleanup and translate DESIGN.json to Chinese."
+  - "Recover the missing FEAT-041 platform accountless login spec from repository history without changing its documented behavior."
+  - "Only restore the missing spec file and the minimum .claw state needed to record the rescue."
+change_manifest_required: false
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T10:10:00Z; user requested FEAT-041 content recovery."
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "设计事实源中文化任务。只处理 README.md、DESIGN.json 与必要状态文件。"
-hard_gate_notes: "MANAGER-001 必须在编辑 README.md 和 DESIGN.json 前运行 TASK-126 的 task-scoped dev-login.py。"
+notes: "Manager rescue assignment for restoring the missing FEAT-041 spec from Git history. No product behavior changes are authorized in this task."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-126 before restoring docs/specs/FEAT-041-platform-accountless-login.md or related .claw rescue records."

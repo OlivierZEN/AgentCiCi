@@ -159,7 +159,7 @@ cp deploy/acr.env "$BACKUP_DIR/acr.env.before-release"
 
 docker exec cici-database pg_dump \
   -U "${POSTGRES_USER:-cici}" \
-  -d "${POSTGRES_DB:-cici_assistant}" \
+  -d "${POSTGRES_DB:-agentcici}" \
   -Fc \
   -f /tmp/cici-before-release.dump
 docker cp cici-database:/tmp/cici-before-release.dump "$BACKUP_DIR/postgres.dump"

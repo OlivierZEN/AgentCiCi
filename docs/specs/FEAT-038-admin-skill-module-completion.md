@@ -2,8 +2,8 @@
 kind: feature-spec
 feature_id: FEAT-038
 title: Admin Skill Module Completion And Optimization
-status: planned
-owner_role: DEV-wolong
+status: in_implementation
+owner_role: fullstack-agent
 task_ids: TASK-116
 related_decisions: FEAT-009, FEAT-014, FEAT-015, FEAT-028
 related_issues: none

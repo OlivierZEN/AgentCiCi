@@ -1,9 +1,11 @@
 ---
 kind: project-baseline
+title: Project baseline
 version: 3
 updated_at: 2026-05-17T02:16:38Z
 updated_by: ai
-status: active
+status: active_reference
+owner_role: shared
 baseline_type: brownfield
 ---
 

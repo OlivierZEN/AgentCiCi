@@ -5,6 +5,7 @@ task_id: TASK-120
 title: Platform accountless login
 status: done
 assignee: MANAGER-001
+owner_role: project-manager
 branch: codex/TASK-120-platform-accountless-login
 spec_path: docs/specs/FEAT-041-platform-accountless-login.md
 assignment_path: .claw/assignments/TASK-120.yaml

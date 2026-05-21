@@ -1,45 +1,87 @@
 ---
 kind: task-status
-version: 1
 task_id: TASK-124
-title: Platform tenant manual provisioning and lifecycle entry split
-status: ready
 assignee: MANAGER-001
-branch: codex/TASK-124-platform-tenant-manual-provisioning
+owner_role: project-manager
+status: in_progress
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
+pr_url: n/a
 spec_path: docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
 assignment_path: .claw/assignments/TASK-124.yaml
-updated_at: 2026-05-21T04:35:00Z
-updated_by: ai
+updated_at: 2026-05-21T08:57:18Z
+updated_by: MANAGER-001
 ---
 
-# TASK-124 - Platform tenant manual provisioning and lifecycle entry split
+# TASK-124 FEAT-046 Platform tenant manual provisioning and lifecycle split
 
 ## Scope
 
-Define and then implement the platform-side adjustment where `/platform/tenants` becomes the tenant list entry page, each tenant gets a dedicated lifecycle detail route, the list page gains a manual "open new tenant" action, and all future new tenants adopt the shared 20-character `org` ID rule.
+Implement FEAT-046 end to end:
 
-## Plan
+- split `/platform/tenants` into a list entry page plus `/platform/tenants/:orgId` detail route
+- add the platform manual tenant provisioning modal and success redirect flow
+- add backend `POST /platform/tenants` support with owner account reuse/new-account creation
+- unify new organization ID generation to the `^org[a-z0-9]{17}$` rule across future creation entry points
+- add focused backend tests, frontend build verification, and desktop/mobile visual QA
 
-1. Register task/spec/state files and confirm the current platform tenant flow, account model, and old org ID generation rule.
-2. Land a feature spec that defines route split, modal-based manual provisioning, owner-account reuse logic, audit expectations, and the new ID format.
-3. In a follow-up implementation pass, update backend creation logic and platform tenant routes/pages.
-4. Run build, targeted integration tests, and desktop/mobile visual QA once code changes begin.
+## Out Of Scope
 
-## Coordination
+- package, subscription, contract, invoice, or payment integration
+- historical tenant-id backfill or migration
+- unrelated `/admin/*` organization profile restructuring
 
-- Before implementation edits, run task-scoped `dev-login.py` for `MANAGER-001` on `TASK-124`.
-- Keep unrelated dirty worktree changes intact.
-- Do not expand this task into billing, subscription, or non-platform account features.
+## Preflight
+
+Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `codex/TASK-124-feat-046-platform-tenant-provisioning`.
+
+## Verification Target
+
+- Platform tenant lifecycle backend integration tests pass.
+- Backend compile passes for touched modules.
+- Frontend build passes.
+- Desktop and 390px mobile screenshots for `/platform/tenants` and `/platform/tenants/:orgId` are reviewed.
+- `.claw` state validation passes after handoff updates.
+
+## Assignment History
+
+- 2026-05-21T08:48:00Z: User requested FEAT-046 completion; `MANAGER-001` opened TASK-124 and assigned full delivery on branch `codex/TASK-124-feat-046-platform-tenant-provisioning`.
 
 ## Progress
 
-- 2026-05-21T04:35:00Z: Completed context loading for `cc-aidev-guidelines-common` and `impeccable`, reviewed FEAT-024 / FEAT-010 / current platform tenant implementation / existing `AuthService.createOrg(...)`, and created FEAT-046 plus TASK-124 assignment/status files.
+- Frontend route split is present: `/platform/tenants` now acts as the list entry page and `/platform/tenants/:orgId` carries the lifecycle detail workspace.
+- Platform manual tenant provisioning UI is present, including modal structure, owner-account reuse copy, success redirect handling, and mobile-safe list layout.
+- Backend FEAT-046 code paths are present in the current worktree: shared organization ID generation, shared provisioning service, `POST /platform/tenants`, and focused auth/platform integration-test coverage.
 
-## Verification
+## Changed Files
 
-- `identity-bootstrap`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments .claw/tasks docs/specs --no-cache --json` -> allowed.
+- `frontend/src/App.tsx`
+- `frontend/src/platform/pages/PlatformTenantsPage.tsx`
+- `frontend/src/platform/pages/PlatformTenantDetailPage.tsx`
+- `frontend/src/platform/pages/platformTenantsShared.ts`
+- `frontend/src/styles.css`
+- `backend/src/main/java/com/codehouse/ciciassistant/auth/service/AuthService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/auth/service/OrganizationIdGenerator.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/auth/service/OrganizationProvisioningService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/auth/service/PasswordHashService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/platform/api/PlatformTenantLifecycleController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformTenantLifecycleService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/auth/AuthFlowIntegrationTest.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/platform/PlatformTenantLifecycleIntegrationTest.java`
+- `docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md`
 
-## Notes
+## Verification Notes
 
-- This task is currently in the spec-first stage only; no frontend or backend implementation has been started yet.
-- The new tenant ID rule must be shared across platform manual provisioning, `/auth/register`, and authenticated organization creation, while leaving historical org IDs unchanged.
+- `2026-05-21T08:48:00Z`: task-scoped `dev-login.py` passed for `MANAGER-001` on `codex/TASK-124-feat-046-platform-tenant-provisioning`.
+- `npm run build` in `frontend/`: passed after FEAT-046 responsive list refinement.
+- `mvn -q -DskipTests compile` in `backend/`: passed for the touched backend modules.
+- Visual QA captured and reviewed against the current worktree frontend on port `4173` using mocked platform auth/API data:
+  - desktop `/platform/tenants`
+  - desktop `/platform/tenants` with provisioning modal
+  - desktop `/platform/tenants/:orgId`
+  - mobile 390px `/platform/tenants`
+  - mobile 390px `/platform/tenants/:orgId`
+- Mobile list regression found and fixed in this pass: the 4-column tenant table was too compressed at 390px, so the list now switches to a stacked row layout on narrow screens while desktop keeps the native table.
+
+## Open Risk
+
+- Targeted backend integration tests were not completed in this session. `mvn -q -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` did not produce a fast pass/fail result in the local environment before datasource bootstrap stalled, so real backend test evidence still needs a fresh rerun on a source-aligned local runtime.

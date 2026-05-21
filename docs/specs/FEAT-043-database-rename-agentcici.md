@@ -1,90 +1,67 @@
 ---
 kind: feature-spec
 feature_id: FEAT-043
-title: Rename local PostgreSQL database to agentcici
-status: completed
-owner_role: MANAGER-001
-task_ids: TASK-121
+title: Rename default PostgreSQL database to agentcici
+status: implemented
+owner_role: project-manager
+task_ids: TASK-125
 related_decisions: DEC-027
 related_issues: none
-updated_at: 2026-05-21T02:14:53Z
-updated_by: ai
+updated_at: 2026-05-21T09:18:03Z
+updated_by: MANAGER-001
 ---
 
-# FEAT-043 - Rename local PostgreSQL database to agentcici
+# FEAT-043 - Rename default PostgreSQL database to agentcici
 
 ## 背景与目标
 
-- 当前项目本地和默认部署配置仍把 PostgreSQL 数据库名写成 `cici_assistant`。
-- 产品与仓库当前统一使用 `AgentCiCi` / `agentcici` 品牌，继续沿用旧数据库名会增加环境配置、发布脚本和测试库命名的认知成本。
-- 本次目标是把项目默认数据库名统一改为 `agentcici`，并同步更新本地开发、测试、演示脚本和部署默认值。
+- 当前仓库的默认配置又回到了历史数据库名 `cici_assistant`，但本地真实 PostgreSQL 数据库已经保持在 `agentcici` / `agentcici_test`。
+- 这会让当前代码默认连不到本地实际数据库，也会让 compose、部署示例和测试默认值互相不一致。
+- 本次目标是把数据库名相关的默认配置重新统一回 `agentcici`，并让项目状态记录与当前本地数据库事实一致。
 
 ## 范围
 
 ### In Scope
 
-- 更新本地 `docker-compose.yml`、Spring 默认数据源、测试默认数据源和相关脚本中的数据库名。
-- 更新 ACR 部署默认环境变量和 compose 默认值中的数据库名。
-- 更新与当前数据库默认值直接相关的运维/发布文档和项目状态记录。
-- 执行本地 PostgreSQL 数据库重命名或等价迁移，使当前代码默认值与本机实际数据库一致。
+- 重新修改本地 compose、Spring runtime/test 配置、部署默认值和辅助脚本中的数据库名默认值。
+- 恢复与本次数据库名迁移直接相关的状态/规格文档。
+- 验证代码默认值与本地真实数据库 `agentcici` / `agentcici_test` 对齐。
 
 ### Out Of Scope
 
-- 不修改 Java package、前端 `localStorage` 键名、API header/key 前缀等历史 `cici` 技术标识。
-- 不重写历史任务中仅用于叙述过去事实的日志性记录，除非它们会误导当前默认配置。
-- 不改动业务表结构、Flyway migration version 或现有业务数据内容。
-
-## 用户场景
-
-- 开发者启动本地依赖、运行后端或执行测试时，应默认连接 `agentcici` / `agentcici_test`。
-- 部署人员使用示例 env 或 compose 模板时，不需要再手工把 `cici_assistant` 改成新数据库名。
-- 运维人员查看当前项目状态或运行脚本时，能明确当前默认数据库名已经切换。
+- 不改动 `cici_assistant_token`、容器名、Java package、业务表名或历史协议字段。
+- 不改动与 FEAT-046 业务实现无关的前后端功能代码。
 
 ## 现状与约束
 
-- 当前本地 PostgreSQL 由根目录 `docker-compose.yml` 提供，默认数据库名是 `cici_assistant`。
-- Spring Boot `application.yml`、`application-local.yml` 和测试配置也直接写死了旧数据库名。
-- 仓库里存在大量历史状态记录提到旧数据库名，其中部分是历史事实，不能机械全量替换。
-- 当前工作树已有未提交改动，本次数据库名调整必须避免覆盖用户或既有任务变更。
+- 当前分支为 `codex/TASK-124-feat-046-platform-tenant-provisioning`，工作树已经存在 FEAT-046 未提交改动。
+- `.claw/` 当前采用精简 hot board 模式，状态更新需要保持简洁。
+- 本地 PostgreSQL 当前只有 `agentcici` / `agentcici_test`，没有默认的 `cici_assistant` / `cici_assistant_test`。
 
 ## 方案设计
 
-- 将“当前默认数据库名”统一改为 `agentcici`，测试默认库改为 `agentcici_test`。
-- 对 task-scoped 临时测试库沿用同样前缀规则，例如 `agentcici_feat041`。
-- 保留容器名、卷名和非数据库技术标识不变，避免扩大变更面。
-- 对真实本地数据库执行 rename，并在需要时同步处理测试数据库。
+- 只恢复“数据库名默认值”这一条主线，不扩散到其他历史 `cici_*` 技术标识。
+- 使用单独 `TASK-125` 记录这次恢复工作，但沿用当前分支，避免打断正在进行的 FEAT-046 工作树。
+- 验证以 `rg` 检查关键路径、数据库存在性和后端当前连接事实为主。
 
 ## 接口与数据影响
 
-- 配置层：`jdbc:postgresql://.../cici_assistant` -> `jdbc:postgresql://.../agentcici`
-- 配置层：`.../cici_assistant_test` -> `.../agentcici_test`
-- 部署层：`POSTGRES_DB` 默认值改为 `agentcici`
-- 数据层：执行数据库 rename；不改 schema/table/data
-- 回滚层：如需回退，可把配置改回 `cici_assistant` 并将数据库重命名回原名
-
-## 任务拆分
-
-- `TASK-121`：调整代码、脚本、部署默认值、状态文档，并完成本地数据库重命名验证。
+- `jdbc:postgresql://localhost:5432/cici_assistant` -> `jdbc:postgresql://localhost:5432/agentcici`
+- `jdbc:postgresql://localhost:5432/cici_assistant_test` -> `jdbc:postgresql://localhost:5432/agentcici_test`
+- `POSTGRES_DB` 默认值 -> `agentcici`
 
 ## 验收标准
 
-- `rg -n "cici_assistant"` 在代码、脚本、当前默认运维配置中不再出现数据库名旧值。
-- 本地 PostgreSQL 存在并可连接 `agentcici`。
-- 后端默认配置指向 `agentcici`，测试默认配置指向 `agentcici_test`。
-- 至少完成一次针对性校验，证明重命名后的配置与本地数据库一致。
+- 关键配置路径不再把数据库默认名写成 `cici_assistant`。
+- 本地数据库仍为 `agentcici` / `agentcici_test`。
+- 当前状态文档明确“代码默认值”和“本地真实数据库”已重新对齐。
 
 ## 风险与回滚
 
-- 风险：本地后端仍在占用旧数据库连接，可能阻塞 rename。
-- 风险：测试库如果直接沿用旧库历史，仍可能保留既有 Flyway 漂移。
-- 回滚：停止本地服务后，将 `agentcici` 重命名回 `cici_assistant`，并恢复配置默认值。
+- 风险：再次被其他分支或状态整理覆盖。
+- 回滚：仅需把数据库名默认值恢复成旧值；本次不涉及业务数据结构变更。
 
 ## 实现进展
 
-- 2026-05-21：开始 FEAT-043，创建 `TASK-121` 承接数据库默认名迁移。
-- 2026-05-21：已完成本地 compose、Spring runtime/test、部署默认值和辅助脚本中的数据库名替换；本地 PostgreSQL `cici_assistant` / `cici_assistant_test` 已重命名为 `agentcici` / `agentcici_test`，后端已用新默认值重启成功。
-
-## 交接说明
-
-- 后续接手者优先核对 `docker-compose.yml`、`backend/src/main/resources/*.yml`、`backend/src/test/resources/application.yml` 和部署示例 env。
-- 如果本地 rename 被活动连接阻塞，先停掉本地 backend 再操作。
+- 2026-05-21：恢复任务已重新开启，准备在当前分支上把数据库名相关默认值补回。
+- 2026-05-21：关键数据库名默认值已重新补回 `agentcici` / `agentcici_test`，并与当前本地 PostgreSQL 实际数据库重新对齐。

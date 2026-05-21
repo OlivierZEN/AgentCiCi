@@ -2,8 +2,8 @@
 kind: feature-spec
 feature_id: FEAT-023
 title: AI Native After-Sales Agent
-status: in_progress
-owner_role: product-agent-runtime
+status: in_implementation
+owner_role: shared
 task_ids: TASK-063, TASK-066
 related_decisions: FEAT-015, FEAT-018, FEAT-019, FEAT-021, FEAT-022
 related_issues: none

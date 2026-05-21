@@ -2,6 +2,7 @@
 kind: task-status
 task_id: TASK-114
 assignee: MANAGER-001
+owner_role: project-manager
 status: ready
 branch: codex/TASK-114-feat-037-billing-ledger
 pr_url: n/a

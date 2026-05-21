@@ -1,49 +1,57 @@
 ---
 kind: task-status
-version: 1
 task_id: TASK-126
-title: 设计事实源中文化与 README 引用收口
-status: done
 assignee: MANAGER-001
-branch: codex/TASK-124-platform-tenant-manual-provisioning
-spec_path: docs/specs/FEAT-048-design-factsource-zh.md
+owner_role: project-manager
+status: done
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
+pr_url: n/a
+spec_path: docs/specs/FEAT-041-platform-accountless-login.md
 assignment_path: .claw/assignments/TASK-126.yaml
-updated_at: 2026-05-21T06:13:36Z
-updated_by: ai
+updated_at: 2026-05-21T10:18:00Z
+updated_by: MANAGER-001
 ---
 
-# TASK-126 - 设计事实源中文化与 README 引用收口
+# TASK-126 - Recover missing FEAT-041 spec
 
-## 范围
+## Scope
 
-把 `DESIGN.json` 的人类可读说明翻成中文，并同步清理 `README.md` 中对旧版 `DESIGN.md` 章节的重引用，使当前设计事实源入口更一致。
+- restore `docs/specs/FEAT-041-platform-accountless-login.md` from repository history
+- record the rescue in the minimum required `.claw` state files
 
-## 计划
+## Out Of Scope
 
-1. 创建 FEAT-048、TASK-126 assignment 和状态文件。
-2. 运行 `TASK-126` 的 task-scoped `dev-login.py`。
-3. 翻译 `DESIGN.json` 的说明性字符串，并收口 `README.md` 的设计治理段落。
-4. 运行状态校验，确认 `.claw` 未漂移。
+- any backend or frontend behavior change
+- rewriting FEAT-041 requirements during recovery
+- unrelated task-board or assignment cleanup
 
-## 协作说明
+## Preflight
 
-- 本任务不修改 `DESIGN.json` 的键名和 token 数值。
-- 本任务不改实现代码，不切新分支。
-- 当前工作树较脏，只处理授权文件。
+Before editing the recovered spec or rescue state files, run task-scoped `dev-login.py` for `MANAGER-001` on branch `codex/TASK-124-feat-046-platform-tenant-provisioning`.
 
-## 进展
+## Verification Target
 
-- 2026-05-21T06:09:17Z：已创建 FEAT-048、TASK-126 assignment 和 task status，准备执行 task-scoped `dev-login.py` 后开始翻译与收口。
-- 2026-05-21T06:13:36Z：已通过 `TASK-126` task-scoped `dev-login.py`，完成 `README.md` 设计治理段落收口与 `DESIGN.json` 中文化，并确认 JSON 解析与 `.claw` 状态校验均通过。
+- task-scoped `dev-login.py` passes for `TASK-126`
+- restored spec content matches the intended Git-history source snapshot
+- `git diff --check` passes
 
-## 验证
+## Assignment History
 
-- `identity-bootstrap`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments/TASK-126.yaml .claw/tasks/TASK-126.md docs/specs/FEAT-048-design-factsource-zh.md README.md DESIGN.json --no-cache --json` -> allowed。
-- `identity-task-scoped`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --task TASK-126 --branch codex/TASK-124-platform-tenant-manual-provisioning --git-username OwenZheng-Cloud --files README.md DESIGN.json docs/specs/FEAT-048-design-factsource-zh.md .claw/assignments/TASK-126.yaml .claw/tasks/TASK-126.md .claw/task-board.md .claw/current-status.md --no-cache --json` -> allowed。
-- `design-json-parse`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json OK')"` -> success。
-- `state-validate`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> passed。
+- 2026-05-21T10:10:00Z: User reported FEAT-041 content missing. `MANAGER-001` opened TASK-126 to restore the missing spec from Git history.
 
-## 备注
+## Progress
 
-- 本任务是 FEAT-047 之后的补充收口，不回退前一轮职责拆分。
-- 为避免潜在结构化消费断裂，`role`、颜色值、尺寸值和少量标识型字段保持原语义，不做翻译。
+- Located the missing spec in Git history at commit `5e6d803968eb488e0e4b1cf3ae501bb7a6dcd9db`.
+- Prepared a manager-scoped rescue assignment so the restore can pass the hard identity gate before writing files.
+- Restored `docs/specs/FEAT-041-platform-accountless-login.md` from the recovered Git snapshot.
+
+## Completed Work
+
+- Added a manager rescue assignment for `TASK-126` with exact-file scope covering the missing spec and the minimum `.claw` state files.
+- Ran task-scoped `dev-login.py` for `TASK-126` and confirmed the intended rescue file set was authorized.
+- Restored the missing `FEAT-041` spec content from commit `5e6d803968eb488e0e4b1cf3ae501bb7a6dcd9db` without changing the historical document body.
+
+## Verification Evidence
+
+- `identity-manager`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --json` -> allowed.
+- `identity-task`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --task TASK-126 --branch codex/TASK-124-feat-046-platform-tenant-provisioning --git-username OwenZheng-Cloud --files docs/specs/FEAT-041-platform-accountless-login.md .claw/tasks/TASK-126.md .claw/current-status.md .claw/task-archive.md --json` -> allowed.

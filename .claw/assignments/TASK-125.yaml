@@ -2,28 +2,37 @@ task_id: TASK-125
 assignee: MANAGER-001
 assigned_by: MANAGER-001
 status: active
-assigned_at: 2026-05-21T05:53:09Z
+assigned_at: 2026-05-21T09:16:57Z
 expires_at: none
-spec_path: docs/specs/FEAT-047-guidance-doc-compression.md
+spec_path: docs/specs/FEAT-043-database-rename-agentcici.md
 task_status_path: .claw/tasks/TASK-125.md
-branch: codex/TASK-124-platform-tenant-manual-provisioning
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
-  - AGENTS.md
-  - PRODUCT.md
-  - DESIGN.md
-  - docs/specs/**
+  - backend/src/main/resources/**
+  - backend/src/test/resources/**
+  - deploy/**
+  - scripts/**
+  - docs/**
   - .claw/**
 scope_files:
-  - AGENTS.md
-  - PRODUCT.md
-  - DESIGN.md
-  - docs/specs/FEAT-047-guidance-doc-compression.md
+  - docker-compose.yml
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - backend/src/test/resources/application.yml
+  - deploy/acr.env.example
+  - deploy/docker-compose.acr.yml
+  - scripts/run-full-demo.sh
+  - docs/release-local-to-cici-cloudcc-cn.md
+  - docs/specs/FEAT-043-database-rename-agentcici.md
   - .claw/assignments/TASK-125.yaml
   - .claw/tasks/TASK-125.md
   - .claw/task-board.md
   - .claw/current-status.md
+  - .claw/decisions.md
+  - .claw/test-report.md
+  - .claw/team-status.md
 protected_paths:
   - .claw/developers/**
   - scripts/dev-login.py
@@ -31,21 +40,19 @@ protected_paths:
   - .github/workflows/**
   - infra/**
   - infrastructure/**
+  - backend/src/main/resources/db/migration/**
 touch_policy: exclusive
 shared_contracts:
-  - README.md
-  - DESIGN.json
-  - docs/specs/FEAT-012-project-design-governance.md
+  - docs/specs/FEAT-043-database-rename-agentcici.md
   - docs/specs/PROJECT-BASELINE.md
 task_boundary:
-  - "只精简顶层规范文档的职责和表述，不修改运行时代码、前端样式或设计 token。"
-  - "把 AGENTS.md、PRODUCT.md、DESIGN.md 全部改成中文描述，并降低重复信息。"
-  - "保留 cc-aidev-guidelines-common 托管声明块，以及 DESIGN.json 作为详细设计事实源。"
-  - "当前工作树已有大量未提交改动，本任务复用现有分支，只处理授权范围内的文档与状态文件。"
+  - "Restore the database-name rename so project defaults use agentcici instead of cici_assistant."
+  - "Only edit database-name-related config, deploy defaults, helper scripts, and state/spec files."
+  - "Do not alter FEAT-046 product behavior or unrelated cici_* technical identifiers."
 change_manifest_required: true
-signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T05:53:09Z; user requested to simplify AGENTS.md, PRODUCT.md, and DESIGN.md and convert them to Chinese descriptions."
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T09:16:57Z; user requested restoring the database rename."
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "文档治理任务。因当前工作树较脏，本任务不切新分支，直接在现有任务分支上做最小范围的顶层规范收口。"
-hard_gate_notes: "MANAGER-001 必须在编辑 AGENTS.md、PRODUCT.md、DESIGN.md 前运行 TASK-125 的 task-scoped dev-login.py。"
+notes: "TASK-125 is intentionally scoped to config/state restore on top of the current FEAT-046 branch."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-125 on branch codex/TASK-124-feat-046-platform-tenant-provisioning before implementation edits."

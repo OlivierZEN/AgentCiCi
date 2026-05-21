@@ -26,6 +26,7 @@ import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
 import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoServiceDemoRequestsPage";
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
 import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
+import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 
@@ -75,6 +76,7 @@ export default function App() {
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
+            <Route path="tenants/:orgId" element={<PlatformTenantDetailPage />} />
             <Route path="website-leads" element={<PlatformAutoServiceDemoRequestsPage />} />
             <Route path="audit" element={<PlatformAuditPage />} />
           </Route>

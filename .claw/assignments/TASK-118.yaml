@@ -6,7 +6,7 @@ assigned_at: 2026-05-19T14:22:00+08:00
 expires_at: none
 spec_path: docs/specs/FEAT-040-admin-organization-profile.md
 task_status_path: .claw/tasks/TASK-118.md
-branch: codex/TASK-118-admin-organization-profile
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
@@ -66,5 +66,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-19T14:22:00+08:00; u
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Completed 2026-05-20T10:19:06+08:00 after follow-up UI adjustment: usage summary now uses separate metric cards without a large enclosing frame."
-hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-118 on branch codex/TASK-118-admin-organization-profile before implementation edits."
+notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Restored lost FEAT-40 organization profile edit-modal changes on codex/TASK-124-feat-046-platform-tenant-provisioning at 2026-05-21T18:21:11+08:00 and verified the frontend build plus browser edit/save flow."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-118 on the active branch before implementation edits."

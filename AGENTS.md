@@ -49,8 +49,8 @@
 - `/`、`/admin/*`、`/platform/*` 的默认 register 一律是 `product`。除非先完成单独的 shape brief 并确认，否则不得把这些认证后的产品页面按营销页、品牌页或活动页来设计。
 - `PRODUCT.md`, `DESIGN.md`, and `DESIGN.json` are the project design source of truth. If a page change alters the visual language, tokens, or component vocabulary, update these files in the same session.
 - `PRODUCT.md`、`DESIGN.md`、`DESIGN.json` 是项目设计事实源。只要页面改动影响视觉语言、设计 token 或组件表达，就必须在同一会话同步更新这些文件。
-- Page implementation must follow `DESIGN.md` > `Page Implementation Quality Workflow`: build the smallest runnable version first, run the local app, capture desktop and mobile full-page screenshots, inspect them with designer/QA judgment, fix issues, reshoot, and only finish after responsive layout, visual hierarchy, text fit, and key interaction feedback are verified.
-- 页面实现必须遵循 `DESIGN.md` 的 `Page Implementation Quality Workflow`：先搭建可运行最小版本，再本地运行并截取桌面端与移动端完整页面截图，用设计师与 QA 视角检查，修复后复测截图；只有响应式布局、视觉层级、文本适配和关键交互反馈都确认后才能收尾。
+- Page implementation must follow `DESIGN.md` > `Page Implementation Quality Workflow`: build the smallest runnable version first, run the local app, capture a desktop full-page screenshot, inspect it with designer/QA judgment, fix issues, reshoot, and only finish after desktop layout, visual hierarchy, text fit, and key interaction feedback are verified.
+- 页面实现必须遵循 `DESIGN.md` 的 `Page Implementation Quality Workflow`：先搭建可运行最小版本，再本地运行并截取桌面端完整页面截图，用设计师与 QA 视角检查，修复后复测截图；只有桌面端布局、视觉层级、文本适配和关键交互反馈都确认后才能收尾。
 - For critical UI modules, run focused A/B comparisons when there are meaningful alternatives; choose the variant with clearer task flow, better readability, stronger accessibility, and closer alignment with `鎏金账房`, then remove unused experimental code.
 - 关键 UI 模块存在有效替代方案时，必须做聚焦 A/B 对比；选择任务流更清晰、可读性更好、可访问性更稳、且更符合 `鎏金账房` 的方案，并移除未采用的实验代码。
 - Use image generation or a deliberate asset workflow only when the page genuinely needs bitmap illustrations, icons, empty-state visuals, or brand materials; generated assets must match the product register and must not become decorative clutter.
