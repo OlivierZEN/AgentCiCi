@@ -244,10 +244,10 @@ export default function PlatformTenantDetailPage() {
       if (!response.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
-      setMessage(`Dry-run Manifest 已生成，共 ${body.data.totalRows ?? 0} 行候选记录。`);
+      setMessage(`预演清单已生成，共 ${body.data.totalRows ?? 0} 行候选记录。`);
       await loadDetail();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "生成 Dry-run Manifest 失败");
+      setError(err instanceof Error ? err.message : "生成预演清单失败");
     } finally {
       setBusy(false);
     }
@@ -331,9 +331,8 @@ export default function PlatformTenantDetailPage() {
     <div className="admin-page skills-catalog platform-page platform-tenants-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
-          <p className="skills-catalog__kicker">Tenant Lifecycle</p>
           <h1 className="skills-catalog__title">租户生命周期</h1>
-          <p className="subtle skills-catalog__subtitle">聚焦单租户的保留、导出、预演与真实销毁治理，不再与全量列表同屏混排。</p>
+          <p className="subtle skills-catalog__subtitle">聚焦单租户的保留、导出、预演与真实销毁治理。</p>
         </div>
         <div className="platform-page-head__aside">
           <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate("/platform/tenants")}>
@@ -384,7 +383,7 @@ export default function PlatformTenantDetailPage() {
                     生成导出包
                   </button>
                   <button type="button" className="platform-button platform-button--primary" onClick={createDryRun} disabled={busy}>
-                    生成 Dry-run Manifest
+                    生成预演清单
                   </button>
                   <button
                     type="button"
@@ -428,15 +427,15 @@ export default function PlatformTenantDetailPage() {
                     <input value={form.policySource} onChange={(event) => setForm((prev) => ({ ...prev, policySource: event.target.value }))} />
                   </label>
                   <label>
-                    <span>Legal hold 审批人</span>
+                    <span>法务保留审批人</span>
                     <input value={form.legalHoldApprovedBy} onChange={(event) => setForm((prev) => ({ ...prev, legalHoldApprovedBy: event.target.value }))} />
                   </label>
                   <label>
-                    <span>Legal hold 复核日</span>
+                    <span>法务保留复核日</span>
                     <input type="date" value={form.legalHoldReviewAt} onChange={(event) => setForm((prev) => ({ ...prev, legalHoldReviewAt: event.target.value }))} />
                   </label>
                   <label className="tenant-lifecycle__field--full">
-                    <span>Legal hold 原因</span>
+                    <span>法务保留原因</span>
                     <input
                       value={form.legalHoldReason}
                       onChange={(event) => setForm((prev) => ({ ...prev, legalHoldReason: event.target.value }))}
@@ -445,7 +444,7 @@ export default function PlatformTenantDetailPage() {
                   </label>
                   <label className="tenant-lifecycle__legal-hold">
                     <input type="checkbox" checked={form.legalHold} onChange={(event) => setForm((prev) => ({ ...prev, legalHold: event.target.checked }))} />
-                    <span>Legal hold，暂停自动销毁</span>
+                    <span>开启法务保留，暂停自动销毁</span>
                   </label>
                 </div>
                 <div className="platform-console__actions">
@@ -488,7 +487,7 @@ export default function PlatformTenantDetailPage() {
               </div>
 
               <div className="platform-console__section">
-                <h3 className="platform-console__subheading">Dry-run 历史</h3>
+                <h3 className="platform-console__subheading">预演与销毁记录</h3>
                 <div className="skills-table-wrap tenant-lifecycle__inner-table">
                   <table className="skills-data-table">
                     <thead>
@@ -504,7 +503,7 @@ export default function PlatformTenantDetailPage() {
                       {purgeJobs.map((job) => (
                         <tr key={job.id}>
                           <td className="skills-data-table__mono">#{job.id}</td>
-                          <td>{job.dryRun ? "Dry-run" : "真实销毁"} · {jobLabel(job.status)}</td>
+                          <td>{job.dryRun ? "预演" : "真实销毁"} · {jobLabel(job.status)}</td>
                           <td className="skills-data-table__mono">{job.totalRows ?? "—"}</td>
                           <td className="skills-data-table__mono">{job.unsupportedCount ?? "—"}</td>
                           <td>
@@ -534,7 +533,7 @@ export default function PlatformTenantDetailPage() {
                       ))}
                       {purgeJobs.length === 0 ? (
                         <tr>
-                          <td colSpan={5} className="skills-data-table__summary">还没有 dry-run 记录。</td>
+                          <td colSpan={5} className="skills-data-table__summary">还没有预演或销毁记录。</td>
                         </tr>
                       ) : null}
                     </tbody>
@@ -544,7 +543,7 @@ export default function PlatformTenantDetailPage() {
 
               {latestManifest ? (
                 <div className="platform-console__section">
-                  <h3 className="platform-console__subheading">最近 Manifest 覆盖</h3>
+                  <h3 className="platform-console__subheading">最近预演覆盖</h3>
                   <div className="skills-table-wrap tenant-lifecycle__inner-table">
                     <table className="skills-data-table">
                       <thead>
@@ -590,7 +589,7 @@ export default function PlatformTenantDetailPage() {
           <div className="tenant-lifecycle__modal" role="dialog" aria-modal="true" aria-labelledby="tenant-purge-title">
             <div className="tenant-lifecycle__modal-head">
               <div>
-                <p className="platform-section-label">{purgeMode === "retry" ? "Retry purge" : "Real purge"}</p>
+                <p className="platform-section-label">{purgeMode === "retry" ? "重试销毁" : "真实销毁"}</p>
                 <h2 id="tenant-purge-title" className="platform-console__heading">
                   {purgeMode === "retry" ? "重试真实销毁" : "确认真实销毁"}
                 </h2>
@@ -617,9 +616,9 @@ export default function PlatformTenantDetailPage() {
                 <code>{detail.tenant.orgId}</code>
               </div>
               <div className="tenant-lifecycle__confirm-line">
-                <span>来源 Dry-run</span>
+                <span>来源预演</span>
                 <strong>#{modalSourceDryRunId ?? "—"}</strong>
-                <code>{modalSourceRows ?? 0} rows</code>
+                <code>{modalSourceRows ?? 0} 行</code>
               </div>
               {purgeMode === "retry" && retryJob ? (
                 <div className="tenant-lifecycle__confirm-line">
@@ -628,11 +627,10 @@ export default function PlatformTenantDetailPage() {
                   <code>{retryJob.errorMessage || retryJob.reason || "failed"}</code>
                 </div>
               ) : null}
-              <div className="tenant-lifecycle__confirm-line">
-                <span>执行模式</span>
-                <strong>{purgeMode === "retry" ? "失败任务重试" : "首次真实销毁"}</strong>
-                <code>{purgeMode === "retry" ? "retry" : "execute"}</code>
-              </div>
+                <div className="tenant-lifecycle__confirm-line">
+                  <span>执行模式</span>
+                  <strong>{purgeMode === "retry" ? "失败任务重试" : "首次真实销毁"}</strong>
+                </div>
               <label>
                 <span>销毁原因</span>
                 <input value={purgeReason} onChange={(event) => setPurgeReason(event.target.value)} placeholder="客户确认导出后销毁" />

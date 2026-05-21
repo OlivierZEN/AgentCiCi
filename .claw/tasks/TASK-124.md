@@ -8,7 +8,7 @@ branch: codex/TASK-124-feat-046-platform-tenant-provisioning
 pr_url: n/a
 spec_path: docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
 assignment_path: .claw/assignments/TASK-124.yaml
-updated_at: 2026-05-21T08:57:18Z
+updated_at: 2026-05-21T12:32:27Z
 updated_by: MANAGER-001
 ---
 
@@ -50,6 +50,7 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 
 - Frontend route split is present: `/platform/tenants` now acts as the list entry page and `/platform/tenants/:orgId` carries the lifecycle detail workspace.
 - Platform manual tenant provisioning UI is present, including modal structure, owner-account reuse copy, success redirect handling, and mobile-safe list layout.
+- Platform theme token regression is fixed: the tenant provisioning modal now resolves its opaque surface color again instead of falling back to a transparent dialog shell.
 - Backend FEAT-046 code paths are present in the current worktree: shared organization ID generation, shared provisioning service, `POST /platform/tenants`, and focused auth/platform integration-test coverage.
 
 ## Changed Files
@@ -74,6 +75,8 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 - `2026-05-21T08:48:00Z`: task-scoped `dev-login.py` passed for `MANAGER-001` on `codex/TASK-124-feat-046-platform-tenant-provisioning`.
 - `npm run build` in `frontend/`: passed after FEAT-046 responsive list refinement.
 - `mvn -q -DskipTests compile` in `backend/`: passed for the touched backend modules.
+- `2026-05-21T11:15:23Z`: modal transparency regression fix verified on the live local page at `127.0.0.1:5173/platform/tenants`; the "开通新租户" dialog surface is opaque again after restoring the missing `--platform-surface` token in `frontend/src/styles.css`.
+- `2026-05-21T12:32:27Z`: focused backend gate passed on the integrated branch with `mvn clean -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` after TASK-127 renumbered the inherited platform-account migration to `V59__platform_account.sql` and reset the local `agentcici_test` database.
 - Visual QA captured and reviewed against the current worktree frontend on port `4173` using mocked platform auth/API data:
   - desktop `/platform/tenants`
   - desktop `/platform/tenants` with provisioning modal
@@ -84,4 +87,4 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 
 ## Open Risk
 
-- Targeted backend integration tests were not completed in this session. `mvn -q -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` did not produce a fast pass/fail result in the local environment before datasource bootstrap stalled, so real backend test evidence still needs a fresh rerun on a source-aligned local runtime.
+- No open backend verification blocker remains for the focused FEAT-046 auth/platform integration gate; remaining work is feature completion and any broader regression coverage outside this task's targeted scope.

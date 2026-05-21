@@ -736,11 +736,11 @@ export default function AdminModelsPage() {
               </div>
 
               <div className="model-form-grid">
-                <label className="dify-field">
-                  <span className="dify-field__label">API Key</span>
+                <label className="cici-field">
+                  <span className="cici-field__label">API Key</span>
                   <div className="model-key-row">
                     <input
-                      className="dify-field__input"
+                      className="cici-field__input"
                       type={showApiKey ? "text" : "password"}
                       value={apiKey}
                       onChange={(e) => setApiKey(e.target.value)}
@@ -752,17 +752,17 @@ export default function AdminModelsPage() {
                             : "请输入 API Key"
                       }
                     />
-                    <button type="button" className="dify-btn dify-btn--ghost" onClick={() => setShowApiKey((v) => !v)}>
+                    <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setShowApiKey((v) => !v)}>
                       {showApiKey ? "隐藏" : "显示"}
                     </button>
-                    <button type="button" className="dify-btn dify-btn--ghost" onClick={() => setApiKey("")}>重置</button>
+                    <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setApiKey("")}>重置</button>
                   </div>
                 </label>
 
-                <label className="dify-field">
-                  <span className="dify-field__label">API 地址</span>
+                <label className="cici-field">
+                  <span className="cici-field__label">API 地址</span>
                   <input
-                    className="dify-field__input"
+                    className="cici-field__input"
                     value={apiBaseUrl}
                     onChange={(e) => setApiBaseUrl(e.target.value)}
                     placeholder={selected.defaultBaseUrl}
@@ -1084,7 +1084,7 @@ export default function AdminModelsPage() {
                 <button type="button" className="model-edit-more-btn" onClick={() => setShowAdvanced((v) => !v)}>
                   {showAdvanced ? "收起设置" : "更多设置"}
                 </button>
-                <button type="button" className="dify-btn dify-btn--primary" onClick={saveModelEditor}>保存</button>
+                <button type="button" className="cici-btn cici-btn--primary" onClick={saveModelEditor}>保存</button>
               </div>
 
               {showAdvanced && (

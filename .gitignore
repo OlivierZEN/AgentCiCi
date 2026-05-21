@@ -3,6 +3,7 @@
 # Java
 backend/target/
 backend/.m2/
+.m2/
 
 # Node
 frontend/node_modules/

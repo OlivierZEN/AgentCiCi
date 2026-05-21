@@ -1,0 +1,48 @@
+task_id: TASK-129
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T11:46:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md
+task_status_path: .claw/tasks/TASK-129.md
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/admin/**
+  - frontend/src/utils/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - docs/specs/**
+scope_files:
+  - frontend/src/styles.css
+  - .claw/tasks/TASK-129.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "Update /admin/login to remove the orgId field and use the existing account-first password login flow."
+  - "When /auth/password/login returns requiresOrganizationSelection, render organization choices and complete entry into the selected organization."
+  - "Admin entry must still require OWNER or ORG_ADMIN after the org-scoped token is issued."
+  - "Keep /auth/password/login, /auth/me, assistant login, and platform login behavior unchanged unless a tightly related regression requires a focused test fix."
+  - "Do not edit active TASK-114, TASK-115, TASK-116, or TASK-124 implementation files outside this task boundary."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T11:46:00Z; user requested admin login org-selection alignment."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Use the existing FEAT-024 account-first organization selection contract and keep the admin surface within the product register. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-129 on branch codex/TASK-124-feat-046-platform-tenant-provisioning before implementation edits."

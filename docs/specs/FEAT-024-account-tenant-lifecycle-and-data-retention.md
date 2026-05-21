@@ -2,15 +2,13 @@
 kind: feature-spec
 feature_id: FEAT-024
 title: Account, tenant lifecycle, and data retention
-status: email_login_implemented
+status: implemented
 owner_role: product-architecture-auth
 task_ids: TASK-069
-related_decisions:
-  - DEC-024
-  - DEC-025
+related_decisions: DEC-024, DEC-025
 related_issues: none
-updated_at: 2026-05-10T01:27:23Z
-updated_by: ai
+updated_at: 2026-05-21T12:24:00Z
+updated_by: MANAGER-001
 ---
 
 # FEAT-024 - Account, tenant lifecycle, and data retention
@@ -665,7 +663,7 @@ POST /platform/tenants/{orgId}/purge-jobs/{jobId}/retry
 - 已完成项：产品架构、数据模型、登录流程、多组织流程、订阅生命周期、组织数据销毁策略；后端 `V1__init_auth_tables.sql` 已下线 `app_user` 并创建 `user_account`、`account_login_identifier`、`organization_member`；`UserEntity`/`UserRepository` 已映射到 `organization_member`；固定密码登录已创建/复用全局账号和组织成员；JWT 已新增 `account_id` 与 `member_id`；`/auth/me` 与登录响应已返回 `accountId/memberId`。
 - 本批次个人账号完成项：新增 `V47__account_profile_and_password.sql`，`user_account` 支持 `first_name`、`last_name`、`email`；新增 `account_auth_credential` 账号级密码凭证；`PUT /auth/me/profile` 支持当前用户维护姓、名、显示名称、手机号和邮箱，`PUT /auth/me/password` 支持将账号切换到个人密码登录；无个人密码的账号继续兼容固定密码。
 - 本批次邮箱登录完成项：`PUT /auth/me/profile` 保存邮箱时同步维护 `account_login_identifier` 的 ACTIVE EMAIL 标识；清空邮箱会删除该 EMAIL 标识；`POST /auth/password/login` 兼容旧 `mobile` 字段并新增 `identifier` 字段，服务端按单个账号输入值自动识别手机号或邮箱；邮箱按小写规范化匹配，登录页保持单个“电子邮件地址或手机号码”输入框，不拆分两个框。
-- 本批次新增完成项：`POST /auth/register` 支持新手机号创建首个组织和 `OWNER` 成员；`POST /auth/password/login` 支持无 `orgId` 登录，单组织直接进入、多组织返回组织选择；`GET /auth/organizations`、`POST /auth/switch-organization`、`POST /auth/organizations` 支持登录态组织列表、切换组织和创建组织；助手端登录页已移除组织 ID 输入，支持注册创建组织、多组织选择和登录后轻量组织菜单；`OWNER` 具备组织管理权限。
+- 本批次新增完成项：`POST /auth/register` 支持新手机号创建首个组织和 `OWNER` 成员；`POST /auth/password/login` 支持无 `orgId` 登录，单组织直接进入、多组织返回组织选择；`GET /auth/organizations`、`POST /auth/switch-organization`、`POST /auth/organizations` 支持登录态组织列表、切换组织和创建组织；助手端登录页已移除组织 ID 输入，支持注册创建组织、多组织选择和登录后轻量组织菜单；管理端 `/admin/login` 同步改为账号优先登录，多组织管理员先选组织再进入后台；`OWNER` 具备组织管理权限。
 - 本批次追加完成项：`POST /admin/users/invitations` 支持按手机号添加组织成员并复用/创建全局账号；`POST /admin/users/{id}/suspend`、`/restore` 支持成员停用与恢复；`POST /admin/users/{id}/transfer-owner` 支持 Owner 转让，且停用唯一 Owner、停用当前登录成员和普通角色编辑 Owner 会被拒绝；登录、`/auth/me` 和组织切换只接受 `ACTIVE` 成员；管理端用户页已接入新增成员、停用/恢复和转让 Owner，移动端用户页改为上下结构避免详情面板横向溢出。
 - 本批次生命周期完成项：新增 `organization_retention_policy` 与 `organization_purge_job`；新增平台 API `GET /platform/tenants`、`GET/PATCH /platform/tenants/{orgId}/retention`、`POST /platform/tenants/{orgId}/suspend`、`POST /platform/tenants/{orgId}/resume`、`POST /platform/tenants/{orgId}/purge-jobs` 和 `GET /platform/tenants/{orgId}/purge-jobs/{jobId}`；首版 dry-run manifest 只返回每个 org-scoped 数据域的表级计数与不支持域说明，不包含消息正文、记忆正文、工具参数或密钥；平台 `/platform/tenants` 页面已接入租户列表、保留策略、冻结/恢复、dry-run 生成、历史和 manifest 覆盖。
 - 本批次执行闭环完成项：`V44__organization_lifecycle_execution.sql` 为 retention policy 增加 legal hold 原因、审批人与复核时间，为 purge job 增加 source dry-run、确认文本、manifest hash 和 result 摘要，并新增 `organization_export_job`；平台可创建组织导出 job 但不能下载业务内容归档；组织管理员可在 `/admin/organization/export-jobs/{jobId}/download` 下载脱敏 zip；真实 purge 仅允许 `PENDING_PURGE` 且无 legal hold 的组织执行，必须引用 24 小时内成功 dry-run 并输入 `PURGE {orgId}`，执行器删除 org scoped DB 数据、已登记 KB 文件、导出归档和 VectorStoreClient 已登记向量，成功后组织状态进入 `PURGED`，失败进入 `PARTIAL_FAILED` 并保留 result/failure 摘要。

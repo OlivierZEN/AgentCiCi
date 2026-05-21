@@ -235,7 +235,7 @@ Authorization: Bearer <platform-token>
 
 ## Data Model Impact
 
-新增迁移，例如 `V57__platform_account.sql`：
+新增迁移，例如 `V59__platform_account.sql`：
 
 - `platform_account`
 - `platform_account_credential`
@@ -287,7 +287,7 @@ Authorization: Bearer <platform-token>
 ## Implementation Status
 
 - 2026-05-20T13:36:12Z: Implemented in `TASK-120` on branch `codex/TASK-120-platform-accountless-login`.
-- Delivered backend pieces: `V58__platform_account.sql`, `platform_account` / `platform_account_credential` JPA model, bootstrap default account, shared password verifier, platform password login, platform me API, `typ=platform` JWT, platform token isolation in `TenantContextFilter`, and platform audit actor IDs based on `platform:<platformAccountId>`.
+- Delivered backend pieces: `V59__platform_account.sql`, `platform_account` / `platform_account_credential` JPA model, bootstrap default account, shared password verifier, platform password login, platform me API, `typ=platform` JWT, platform token isolation in `TenantContextFilter`, and platform audit actor IDs based on `platform:<platformAccountId>`.
 - Delivered frontend pieces: `/platform/login` no longer asks for organization ID, defaults the account field to `admin@cloudcc.com`, calls `/auth/platform/password/login`, persists `cici_platform_token`, and `PlatformGuard` validates platform identity through `/auth/platform/me`.
 - Verified with backend compile, focused platform-auth tests, adjacent auth/platform regression tests, frontend build, `git diff --check`, and Playwright desktop/mobile/login-flow checks. See `.claw/test-report.md` for exact commands and screenshot paths.
 

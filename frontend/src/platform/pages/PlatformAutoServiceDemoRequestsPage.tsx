@@ -139,14 +139,13 @@ export default function PlatformAutoServiceDemoRequestsPage() {
     <div className="admin-page skills-catalog platform-page autoservice-demo-admin">
       <header className="skills-catalog__header platform-page-head autoservice-demo-admin__header">
         <div className="platform-page-head__main">
-          <p className="skills-catalog__kicker">Website Leads</p>
           <h1 className="skills-catalog__title">网站注册与预约演示</h1>
-          <p className="subtle skills-catalog__subtitle">来自 AutoService 官网的演示预约进入运营控制面，由平台运营人员统一跟进。</p>
+          <p className="subtle skills-catalog__subtitle">统一跟进官网提交的注册线索与预约演示请求。</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">当前 {counts.all}</span>
           <span className="platform-inline-stat">待跟进 {counts.new}</span>
-          <button type="button" className="dify-btn dify-btn--ghost" onClick={() => void load()} disabled={loading}>
+          <button type="button" className="platform-button platform-button--secondary" onClick={() => void load()} disabled={loading}>
             刷新列表
           </button>
         </div>
@@ -189,7 +188,7 @@ export default function PlatformAutoServiceDemoRequestsPage() {
           }}
         >
           <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索公司、联系人、电话或邮箱" />
-          <button type="submit" className="dify-btn dify-btn--ghost">
+          <button type="submit" className="platform-button platform-button--secondary">
             搜索
           </button>
         </form>
@@ -222,10 +221,7 @@ export default function PlatformAutoServiceDemoRequestsPage() {
                   <div className="autoservice-demo-admin__main-cell">
                     <strong>{row.companyName}</strong>
                     <span>{row.scenario || "未填写关注场景"}</span>
-                    <small>
-                      {siteLabel(row.site)}
-                      {row.sourcePath ? ` · ${row.sourcePath}` : ""}
-                    </small>
+                    <small>{siteLabel(row.site)}</small>
                   </div>
                 </td>
                 <td>

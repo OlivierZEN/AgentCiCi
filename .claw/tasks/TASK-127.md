@@ -8,7 +8,7 @@ branch: codex/TASK-124-feat-046-platform-tenant-provisioning
 pr_url: n/a
 spec_path: docs/specs/FEAT-047-local-branch-integration-pass.md
 assignment_path: .claw/assignments/TASK-127.yaml
-updated_at: 2026-05-21T10:49:05Z
+updated_at: 2026-05-21T12:32:27Z
 updated_by: MANAGER-001
 ---
 
@@ -59,6 +59,8 @@ Before merge work, run task-scoped `dev-login.py` for `MANAGER-001` on branch `c
 - Processed `codex/TASK-120-platform-accountless-login`, `codex/TASK-121-db-rename-agentcici`, `codex/TASK-122-platform-console-production-polish`, and `codex/TASK-124-platform-tenant-manual-provisioning`; once the branch advanced, each reported `Already up to date`.
 - Merged `codex/recover-task119-122` with merge commit `b3361de`, bringing the recovered TASK-119~122/TASK-124~128 state and platform-account implementation snapshot onto the current branch.
 - Restored the pre-merge dirty worktree with `git stash pop`; when same-name untracked task/spec files could not be auto-restored, reapplied the stash versions manually so the local worktree content remained available.
+- Follow-up local integration verification found the inherited Flyway version collision between `V58__platform_account.sql` and `V58__agent_open_api_cloudcc_key_type.sql`; resolved it on this integrated branch by renumbering the platform-account migration to `V59__platform_account.sql`.
+- Reset the local `agentcici_test` database after the renumbering because Flyway schema history still contained the old version-58 checksum from the previous local run.
 
 ## Changed Files
 
@@ -67,6 +69,8 @@ Before merge work, run task-scoped `dev-login.py` for `MANAGER-001` on branch `c
 - `.claw/assignments/TASK-127.yaml`
 - `.claw/tasks/TASK-127.md`
 - `docs/specs/FEAT-047-local-branch-integration-pass.md`
+- `backend/src/main/resources/db/migration/V59__platform_account.sql`
+- `docs/specs/FEAT-041-platform-accountless-login.md`
 - merged branch content across `.claw/`, `backend/`, `frontend/`, `deploy/`, and `docs/specs/`
 
 ## Verification Notes
@@ -77,7 +81,11 @@ Before merge work, run task-scoped `dev-login.py` for `MANAGER-001` on branch `c
 - `2026-05-21T10:47:00Z`: `npm run build` in `frontend/` -> success, with the existing Vite chunk-size warning.
 - `2026-05-21T10:48:00Z`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` did not produce a final success/failure result within the observation window, so backend compile evidence is still pending.
 - `2026-05-21T10:49:00Z`: `git stash list --max-count=1` still shows `TASK-127 pre-merge safeguard`; it was intentionally left in place as a safety copy after the manual same-name file restore.
+- `2026-05-21T12:28:00Z`: task-scoped `dev-login.py` from the skill directory returned `allowed` for `TASK-127` on files `backend/src/main/resources/db/migration/V58__platform_account.sql` and `docs/specs/FEAT-041-platform-accountless-login.md`, then `check-assignment.py` returned `allowed` again for the final `V59__platform_account.sql` path.
+- `2026-05-21T12:30:00Z`: `mvn -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` still read the stale deleted resource under `backend/target/classes`; reran with `mvn clean`.
+- `2026-05-21T12:31:00Z`: local `agentcici_test` contained the previously applied checksum for `V58__platform_account.sql`; reset the test database with `dropdb` + `createdb` inside `cici-postgres`.
+- `2026-05-21T12:32:27Z`: `mvn clean -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` -> success, 22 tests run, 0 failures, 0 errors.
 
 ## Open Risk
 
-- Backend compile/test evidence for the integrated branch still needs a fresh source-aligned rerun; this task only completed the merge pass, dirty-worktree restoration, and focused diff/frontend verification.
+- No remaining focused integration blocker from the branch-merge pass; the inherited Flyway collision has been resolved and the auth/platform backend integration gate is green on a freshly reset local test database.

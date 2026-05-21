@@ -256,7 +256,7 @@ export default function AdminIntegrationsPage() {
                 <span className="integration-card__toggle-status">{app.enabled ? "已启用" : "已停用"}</span>
                 <button
                   type="button"
-                  className={`dify-toggle ${app.enabled ? "dify-toggle--on" : ""}`}
+                  className={`cici-toggle ${app.enabled ? "cici-toggle--on" : ""}`}
                   onClick={() => void toggleEnabled(app)}
                   aria-label={app.enabled ? "停用应用" : "启用应用"}
                 />
@@ -267,25 +267,25 @@ export default function AdminIntegrationsPage() {
       </div>
 
       {editing && (
-        <div className="dify-modal-overlay" onClick={() => setEditing(null)}>
+        <div className="cici-modal-overlay" onClick={() => setEditing(null)}>
           <div
-            className="dify-modal dify-modal--wide"
+            className="cici-modal cici-modal--wide"
             role="dialog"
             aria-modal="true"
             aria-labelledby="admin-integration-edit-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="dify-modal__title" id="admin-integration-edit-title">编辑：{editing.appName}</h2>
+            <h2 className="cici-modal__title" id="admin-integration-edit-title">编辑：{editing.appName}</h2>
             {testResult && (
               <div className={`admin-integrations__test-result ${testResult.startsWith("测试成功") ? "is-success" : "is-error"}`}>
                 {testResult}
               </div>
             )}
-            <div className="dify-modal__body">
-              <label className="dify-field">
-                <span className="dify-field__label">应用描述</span>
+            <div className="cici-modal__body">
+              <label className="cici-field">
+                <span className="cici-field__label">应用描述</span>
                 <textarea
-                  className="dify-field__textarea"
+                  className="cici-field__textarea"
                   rows={2}
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
@@ -296,37 +296,37 @@ export default function AdminIntegrationsPage() {
                 const meta = getFieldMeta(editing.appCode, key);
                 const secret = isSecretField(editing.appCode, key);
                 return (
-                  <label className="dify-field" key={key}>
-                    <span className="dify-field__label">
+                  <label className="cici-field" key={key}>
+                    <span className="cici-field__label">
                       {meta.label}
-                      {meta.required && <span className="dify-field__required">*</span>}
+                      {meta.required && <span className="cici-field__required">*</span>}
                     </span>
                     <input
-                      className="dify-field__input"
+                      className="cici-field__input"
                       type={secret ? "password" : "text"}
                       autoComplete={secret ? "new-password" : undefined}
                       placeholder={meta.placeholder}
                       value={form[key] ?? ""}
                       onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
                     />
-                    {meta.hint && <span className="dify-field__hint-text">{meta.hint}</span>}
+                    {meta.hint && <span className="cici-field__hint-text">{meta.hint}</span>}
                   </label>
                 );
               })}
             </div>
-            <div className="dify-modal__actions">
-              <button type="button" className="dify-btn dify-btn--ghost" onClick={() => setEditing(null)}>取消</button>
+            <div className="cici-modal__actions">
+              <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setEditing(null)}>取消</button>
               {editing.appCode === "tavily" && (
                 <button
                   type="button"
-                  className="dify-btn dify-btn--ghost"
+                  className="cici-btn cici-btn--ghost"
                   disabled={testing}
                   onClick={() => void testTavily()}
                 >
                   {testing ? "测试中..." : "测试连接"}
                 </button>
               )}
-              <button type="button" className="dify-btn dify-btn--primary" disabled={saving} onClick={() => void save()}>
+              <button type="button" className="cici-btn cici-btn--primary" disabled={saving} onClick={() => void save()}>
                 {saving ? "保存中..." : "保存"}
               </button>
             </div>

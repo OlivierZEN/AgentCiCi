@@ -1,23 +1,45 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-21T10:49:05Z
+updated_at: 2026-05-21T12:24:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-21T10:49:05Z
-last_run_status: partial
+last_run_at: 2026-05-21T12:24:00Z
+last_run_status: success
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`partial`
-- 范围：TASK-127 local branch integration pass
-- 命令：task-scoped `dev-login.py`, `git stash push -u`, `git merge --no-ff`, `git stash pop`, `git branch --no-merged`, `git diff --check`, `npm run build`, backend `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile`
+- 状态：`success`
+- 范围：TASK-129 admin login organization-selection alignment
+- 命令：manager/bootstrap `dev-login.py`, task-scoped `dev-login.py`, `npm run build`, `git diff --check`, `validate-state.py`, Playwright desktop/mobile and mocked flow checks
 - 环境：local branch `codex/TASK-124-feat-046-platform-tenant-provisioning`
 
 ## Latest Verified Results
+
+- TASK-129 admin login organization-selection alignment (2026-05-21T12:24:00Z):
+  - Commands:
+    - `identity-bootstrap`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments .claw/tasks docs/specs --no-cache --json` -> **allowed**。
+    - `identity-task`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-129` on `codex/TASK-124-feat-046-platform-tenant-provisioning` with intended admin frontend/spec/test-report files -> **allowed**。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+    - `browser-static`: Playwright screenshots `output/playwright/task129-admin-login-desktop.png` and `output/playwright/task129-admin-login-mobile.png` -> **success**；desktop/mobile `组织 ID` label count both `0`。
+    - `browser-org-choice`: Playwright mocked multi-org flow screenshots `output/playwright/task129-admin-login-org-choice-desktop.png` and `output/playwright/task129-admin-login-success-desktop.png` -> **success**；organization options `["销售运营团队Owner","交付支持中心组织管理员"]` rendered, `cici_admin_token` stored, final path `/admin/kb`。
+  - Notes:
+    - The admin login surface now matches the assistant's account-first entry model while still requiring `OWNER` / `ORG_ADMIN` before entering `/admin/*`.
+
+- TASK-118 final organization profile visual restore (2026-05-21T11:19:20Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-118` on `codex/TASK-124-feat-046-platform-tenant-provisioning` with intended frontend/state files -> **allowed**。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check` -> **success**。
+    - `browser`: Playwright CLI with mocked `/auth/me` and `/admin/organization/profile` APIs at 1058x773 -> **success**，screenshot `output/playwright/feat40-org-profile-restored-current-branch.png`; profile header `spanCount=0`; usage header text is only `使用情况汇总`; recent export block absent; old profile grid absent; profile columns `[3,3,3]`; usage section top border `1px`; page padding `18px 22px 20px`; `.admin-main` border `0px`; `mainScroll=false`; `documentElement.scrollWidth=clientWidth=1058`。
+    - `browser-console`: Playwright console error logs -> **success**，0 errors。
+  - Notes:
+    - This restore re-applied the user's final organization profile visual simplification changes that had been lost during current-branch integration.
 
 - TASK-127 local branch integration pass (2026-05-21T10:49:05Z):
   - Commands:
@@ -3981,3 +4003,52 @@ last_run_status: partial
 - Add backend integration tests for the newly added delete/update management APIs.
 - Add frontend E2E checks for new model/tool/ops management flows.
 - Add end-to-end local verification for publish-document -> MQ task -> chunk indexing -> vector recall path with live RabbitMQ/Qdrant (`app.kb.vector-store=qdrant` in local profile).
+
+## 2026-05-21 TASK-118 Current-Branch Usage Metric Cards Restore
+
+- Frontend build:
+  - Command: `npm run build` in `frontend/`
+  - Result: success
+  - Notes: Vite still reports the existing large chunk warning after build.
+- Visual verification:
+  - Command: Playwright with mocked `/auth/me` and `/admin/organization/profile`, route `/admin/organization`, viewport 1440x900
+  - Result: success
+  - Evidence: screenshot `output/playwright/admin-organization-cards-current-branch.png`.
+  - Notes: usage summary outer panel has `0px none` border, transparent background, and `0px` radius; all six usage metrics render as standalone cards with `1px solid` border, warm ivory background, `14px` radius, 12px grid gap, and no horizontal overflow.
+
+## 2026-05-21 TASK-118 Usage Summary Data Restore
+
+- Backend compile:
+  - Command: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/`
+  - Result: success
+  - Notes: confirms the restored `usageSummary` API aggregation compiles.
+- Backend integration test:
+  - Command: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=AdminOrganizationProfileIntegrationTest test` in `backend/`
+  - Result: blocked before test assertions
+  - Notes: Spring context startup is blocked by existing duplicate Flyway migration version `58`: `V58__platform_account.sql` and `V58__agent_open_api_cloudcc_key_type.sql`.
+- Static diff check:
+  - Command: `git diff --check`
+  - Result: success
+
+## 2026-05-21 TASK-127 Integrated Branch Backend Verification Unblock
+
+- Authorization:
+  - Command: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --task TASK-127 --branch codex/TASK-124-feat-046-platform-tenant-provisioning --files backend/src/main/resources/db/migration/V58__platform_account.sql docs/specs/FEAT-041-platform-accountless-login.md --json`
+  - Result: success
+  - Notes: `MANAGER-001` passed SSH-key possession and task-scope authorization for the merge-follow-up migration/spec fix.
+- Migration collision fix:
+  - Change: renamed `backend/src/main/resources/db/migration/V58__platform_account.sql` to `backend/src/main/resources/db/migration/V59__platform_account.sql`
+  - Result: success
+  - Notes: also synced `docs/specs/FEAT-041-platform-accountless-login.md` so the documented migration version matches the integrated branch.
+- First rerun:
+  - Command: `mvn -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` in `backend/`
+  - Result: blocked by stale build output
+  - Notes: Flyway still saw deleted `backend/target/classes/db/migration/V58__platform_account.sql`; a clean rebuild was required.
+- Test-database reset:
+  - Command: `docker exec cici-postgres sh -lc "dropdb -U cici agentcici_test && createdb -U cici agentcici_test"`
+  - Result: success
+  - Notes: reset the local PostgreSQL integration database after Flyway reported a checksum mismatch for previously applied version `58`.
+- Focused backend integration gate:
+  - Command: `mvn clean -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` in `backend/`
+  - Result: success
+  - Notes: `AuthFlowIntegrationTest` 16/16 passed, `PlatformTenantLifecycleIntegrationTest` 6/6 passed, total 22/22 green on local `agentcici_test`.

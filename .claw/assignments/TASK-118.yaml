@@ -66,5 +66,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-19T14:22:00+08:00; u
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Restored lost FEAT-40 organization profile edit-modal changes on codex/TASK-124-feat-046-platform-tenant-provisioning at 2026-05-21T18:21:11+08:00 and verified the frontend build plus browser edit/save flow."
+notes: "Owen is represented by MANAGER-001 for this assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Completed 2026-05-21T19:27:41+08:00 after restoring missing organization usageSummary API data on the current branch."
 hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-118 on the active branch before implementation edits."

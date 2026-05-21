@@ -112,9 +112,9 @@ const CATEGORY_STYLES: Record<string, CategoryStyle> = {
 };
 
 const RISK_TAG: Record<string, { label: string; cls: string }> = {
-  低风险: { label: "低风险", cls: "dify-doc-badge--published" },
-  中风险: { label: "中风险", cls: "dify-doc-badge--uploaded" },
-  高风险: { label: "高风险", cls: "dify-doc-badge--failed" },
+  低风险: { label: "低风险", cls: "cici-doc-badge--published" },
+  中风险: { label: "中风险", cls: "cici-doc-badge--uploaded" },
+  高风险: { label: "高风险", cls: "cici-doc-badge--failed" },
 };
 
 function categoryStyle(category: string | null | undefined): CategoryStyle {
@@ -412,17 +412,17 @@ export default function AdminToolsPage() {
   /* ── Builtin tools view ── */
   if (topTab === "builtin") {
     return (
-      <div className="dify-kb-page">
-        {notice && <div className="dify-toast">{notice}</div>}
-        <div className="dify-kb-topbar">
-          <h1 className="dify-kb-topbar__title">工具</h1>
+      <div className="cici-kb-page">
+        {notice && <div className="cici-toast">{notice}</div>}
+        <div className="cici-kb-topbar">
+          <h1 className="cici-kb-topbar__title">工具</h1>
         </div>
         {TopTabs}
         <div className="admin-tools-toolbar">
-          <div className="dify-search dify-search--sm">
-            <svg className="dify-search__icon" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5"/><path d="m14 14 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+          <div className="cici-search cici-search--sm">
+            <svg className="cici-search__icon" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.5"/><path d="m14 14 3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             <input
-              className="dify-search__input"
+              className="cici-search__input"
               placeholder="搜索工具名 / 描述 / 分类"
               value={builtinQuery}
               onChange={(e) => setBuiltinQuery(e.target.value)}
@@ -453,16 +453,16 @@ export default function AdminToolsPage() {
   /* ── MCP tab view (list/detail inside tab) ── */
   if (topTab === "mcp") {
     return (
-      <div className="dify-kb-page">
-        {notice && <div className="dify-toast">{notice}</div>}
-        <div className="dify-kb-topbar">
-          <h1 className="dify-kb-topbar__title">工具</h1>
+      <div className="cici-kb-page">
+        {notice && <div className="cici-toast">{notice}</div>}
+        <div className="cici-kb-topbar">
+          <h1 className="cici-kb-topbar__title">工具</h1>
         </div>
         {TopTabs}
         {mcpView === "list" && (
           <>
             <div className="admin-tools-tab-panel__header">
-              <button type="button" className="dify-btn dify-btn--primary admin-tools__add-btn" onClick={() => openEdit()}>+ 添加 MCP 服务器</button>
+              <button type="button" className="cici-btn cici-btn--primary admin-tools__add-btn" onClick={() => openEdit()}>+ 添加 MCP 服务器</button>
             </div>
             <div className="mcp-server-list">
               {servers.length === 0 && <p className="mcp-empty">暂无 MCP 服务器，点击当前 Tab 内按钮添加。</p>}
@@ -471,7 +471,7 @@ export default function AdminToolsPage() {
                   <div className="mcp-server-row__info">
                     <div className="mcp-server-row__head">
                       <span className="mcp-server-row__name">{srv.name}</span>
-                      <span className={`dify-doc-badge ${srv.enabled ? "dify-doc-badge--published" : "dify-doc-badge--uploaded"}`}>
+                      <span className={`cici-doc-badge ${srv.enabled ? "cici-doc-badge--published" : "cici-doc-badge--uploaded"}`}>
                         {srv.enabled ? "已启用" : "已停用"}
                       </span>
                     </div>
@@ -487,8 +487,8 @@ export default function AdminToolsPage() {
                     </div>
                   </div>
                   <div className="mcp-server-row__actions" onClick={e => e.stopPropagation()}>
-                    <button type="button" className="dify-btn dify-btn--text dify-btn--xs" onClick={() => openEdit(srv)}>编辑</button>
-                    <button type="button" className="dify-btn dify-btn--text dify-btn--xs dify-btn--danger" onClick={() => void deleteServer(srv.id)}>删除</button>
+                    <button type="button" className="cici-btn cici-btn--text cici-btn--xs" onClick={() => openEdit(srv)}>编辑</button>
+                    <button type="button" className="cici-btn cici-btn--text cici-btn--xs cici-btn--danger" onClick={() => void deleteServer(srv.id)}>删除</button>
                   </div>
                 </div>
               ))}
@@ -497,44 +497,44 @@ export default function AdminToolsPage() {
         )}
 
         {mcpView === "detail" && selected && (
-          <div className="dify-kb-detail">
-            <aside className="dify-kb-sidebar">
-              <div className="dify-kb-sidebar__head">
+          <div className="cici-kb-detail">
+            <aside className="cici-kb-sidebar">
+              <div className="cici-kb-sidebar__head">
                 <div className="mcp-detail-badge">
                   <span className="mcp-detail-badge__name">{selected.name}</span>
-                  <span className={`dify-doc-badge dify-doc-badge--sm ${selected.enabled ? "dify-doc-badge--published" : "dify-doc-badge--uploaded"}`}>
+                  <span className={`cici-doc-badge cici-doc-badge--sm ${selected.enabled ? "cici-doc-badge--published" : "cici-doc-badge--uploaded"}`}>
                     {selected.enabled ? "运行中" : "已停用"}
                   </span>
                 </div>
               </div>
-              <nav className="dify-kb-sidebar__nav">
-                <button type="button" className={`dify-kb-sidebar__link ${detailTab === "general" ? "active" : ""}`} onClick={() => setDetailTab("general")}>
+              <nav className="cici-kb-sidebar__nav">
+                <button type="button" className={`cici-kb-sidebar__link ${detailTab === "general" ? "active" : ""}`} onClick={() => setDetailTab("general")}>
                   <svg viewBox="0 0 20 20" width="18" height="18" fill="none"><rect x="3" y="3" width="14" height="14" rx="3" stroke="currentColor" strokeWidth="1.4"/><path d="M7 7h6M7 10h4M7 13h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
                   通用
                 </button>
-                <button type="button" className={`dify-kb-sidebar__link ${detailTab === "tools" ? "active" : ""}`} onClick={() => { setDetailTab("tools"); void loadToolCache(selected.id); }}>
+                <button type="button" className={`cici-kb-sidebar__link ${detailTab === "tools" ? "active" : ""}`} onClick={() => { setDetailTab("tools"); void loadToolCache(selected.id); }}>
                   <svg viewBox="0 0 20 20" width="18" height="18" fill="none"><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.6 5.6l1.4 1.4M13 13l1.4 1.4M14.4 5.6l-1.4 1.4M7 13l-1.4 1.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/><circle cx="10" cy="10" r="3" stroke="currentColor" strokeWidth="1.4"/></svg>
                   工具 ({selected.toolCacheCount ?? 0})
                 </button>
               </nav>
-              <div className="dify-kb-sidebar__footer">
-                <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm dify-btn--full" onClick={() => { setMcpView("list"); setSelected(null); setTools([]); }}>
+              <div className="cici-kb-sidebar__footer">
+                <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm cici-btn--full" onClick={() => { setMcpView("list"); setSelected(null); setTools([]); }}>
                   ← 返回列表
                 </button>
               </div>
             </aside>
 
-            <main className="dify-kb-main">
+            <main className="cici-kb-main">
               {detailTab === "general" && (
                 <div className="mcp-general">
                   <div className="mcp-general__header">
-                    <h2 className="dify-kb-main__title">通用配置</h2>
+                    <h2 className="cici-kb-main__title">通用配置</h2>
                     <div className="admin-tools__header-actions">
-                      <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={connecting} onClick={() => void testConnection(selected.id)}>
+                      <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={connecting} onClick={() => void testConnection(selected.id)}>
                         {connecting ? "连接中..." : "测试连接"}
                       </button>
-                      <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" onClick={() => openEdit(selected)}>编辑</button>
-                      <button type="button" className="dify-btn dify-btn--danger dify-btn--sm" onClick={() => void deleteServer(selected.id)}>删除</button>
+                      <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" onClick={() => openEdit(selected)}>编辑</button>
+                      <button type="button" className="cici-btn cici-btn--danger cici-btn--sm" onClick={() => void deleteServer(selected.id)}>删除</button>
                     </div>
                   </div>
 
@@ -566,7 +566,7 @@ export default function AdminToolsPage() {
                     <div className="mcp-field-row">
                       <span className="mcp-field-row__label">状态</span>
                       <span className="mcp-field-row__value">
-                        <span className={`dify-doc-badge ${selected.enabled ? "dify-doc-badge--published" : "dify-doc-badge--uploaded"}`}>
+                        <span className={`cici-doc-badge ${selected.enabled ? "cici-doc-badge--published" : "cici-doc-badge--uploaded"}`}>
                           {selected.enabled ? "已启用" : "已停用"}
                         </span>
                       </span>
@@ -579,7 +579,7 @@ export default function AdminToolsPage() {
                 <div className="mcp-tools-tab">
                   <div className="mcp-tools-tab__header">
                     <div className="mcp-tools-tab__summary">
-                      <h2 className="dify-kb-main__title">工具列表</h2>
+                      <h2 className="cici-kb-main__title">工具列表</h2>
                       <div className="mcp-tools-tab__summary-meta">
                         <span>包含 {tools.length} 个工具</span>
                         <span>更新于 {formatRelativeTime(toolCacheUpdatedAt)}</span>
@@ -592,7 +592,7 @@ export default function AdminToolsPage() {
                         <div className="mcp-tools-tab__error">失败原因：{toolCacheErrorMessage}</div>
                       )}
                     </div>
-                    <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={discovering} onClick={() => void discoverTools(selected.id)}>
+                    <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={discovering} onClick={() => void discoverTools(selected.id)}>
                       {discovering ? "发现中..." : "刷新工具"}
                     </button>
                   </div>
@@ -619,14 +619,14 @@ export default function AdminToolsPage() {
                           <div className="mcp-tool-row__switch">
                             <button
                               type="button"
-                              className={`dify-toggle ${pref.enabled ? "dify-toggle--on" : ""}`}
+                              className={`cici-toggle ${pref.enabled ? "cici-toggle--on" : ""}`}
                               onClick={() => setToolPref(t.name, { enabled: !pref.enabled })}
                             />
                           </div>
                           <div className="mcp-tool-row__switch">
                             <button
                               type="button"
-                              className={`dify-toggle ${pref.autoApprove ? "dify-toggle--on" : ""}`}
+                              className={`cici-toggle ${pref.autoApprove ? "cici-toggle--on" : ""}`}
                               onClick={() => setToolPref(t.name, { autoApprove: !pref.autoApprove })}
                             />
                           </div>
@@ -670,7 +670,7 @@ export default function AdminToolsPage() {
             {style.label}
           </span>
           {risk && (
-            <span className={`dify-doc-badge ${risk.cls} dify-doc-badge--sm`}>{risk.label}</span>
+            <span className={`cici-doc-badge ${risk.cls} cici-doc-badge--sm`}>{risk.label}</span>
           )}
           <span className="admin-tools-card__builtin">内置</span>
         </div>
@@ -680,53 +680,53 @@ export default function AdminToolsPage() {
 
   function renderModal() {
     return (
-      <div className="dify-modal-overlay" onClick={() => setShowModal(false)}>
-        <div className="dify-modal dify-modal--wide" onClick={e => e.stopPropagation()}>
-          <h2 className="dify-modal__title">{editId ? "编辑 MCP 服务器" : "添加 MCP 服务器"}</h2>
-          <div className="dify-modal__body">
-            <label className="dify-field">
-              <span className="dify-field__label">名称<span className="dify-field__required">*</span></span>
-              <input className="dify-field__input" value={fName} onChange={e => setFName(e.target.value)} placeholder="CC-MCP-Cloud" />
+      <div className="cici-modal-overlay" onClick={() => setShowModal(false)}>
+        <div className="cici-modal cici-modal--wide" onClick={e => e.stopPropagation()}>
+          <h2 className="cici-modal__title">{editId ? "编辑 MCP 服务器" : "添加 MCP 服务器"}</h2>
+          <div className="cici-modal__body">
+            <label className="cici-field">
+              <span className="cici-field__label">名称<span className="cici-field__required">*</span></span>
+              <input className="cici-field__input" value={fName} onChange={e => setFName(e.target.value)} placeholder="CC-MCP-Cloud" />
             </label>
-            <label className="dify-field">
-              <span className="dify-field__label">描述</span>
-              <textarea className="dify-field__textarea" value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="描述此 MCP 服务器的用途" rows={2} />
+            <label className="cici-field">
+              <span className="cici-field__label">描述</span>
+              <textarea className="cici-field__textarea" value={fDesc} onChange={e => setFDesc(e.target.value)} placeholder="描述此 MCP 服务器的用途" rows={2} />
             </label>
-            <label className="dify-field">
-              <span className="dify-field__label">传输类型<span className="dify-field__required">*</span></span>
-              <select className="dify-field__input" value={fType} onChange={e => setFType(e.target.value)}>
+            <label className="cici-field">
+              <span className="cici-field__label">传输类型<span className="cici-field__required">*</span></span>
+              <select className="cici-field__input" value={fType} onChange={e => setFType(e.target.value)}>
                 {TRANSPORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </label>
-            <label className="dify-field">
-              <span className="dify-field__label">URL<span className="dify-field__required">*</span></span>
-              <input className="dify-field__input" value={fUrl} onChange={e => setFUrl(e.target.value)} placeholder="https://mcp.cloudcc.cn/mcp" />
+            <label className="cici-field">
+              <span className="cici-field__label">URL<span className="cici-field__required">*</span></span>
+              <input className="cici-field__input" value={fUrl} onChange={e => setFUrl(e.target.value)} placeholder="https://mcp.cloudcc.cn/mcp" />
             </label>
-            <label className="dify-field">
-              <span className="dify-field__label">请求头</span>
-              <textarea className="dify-field__textarea" value={fHeaders} onChange={e => setFHeaders(e.target.value)} placeholder={"Content-Type=application/json\nAuthorization=Bearer token"} rows={3} />
-              <span className="dify-field__hint-text">每行一个 Key=Value，选填</span>
+            <label className="cici-field">
+              <span className="cici-field__label">请求头</span>
+              <textarea className="cici-field__textarea" value={fHeaders} onChange={e => setFHeaders(e.target.value)} placeholder={"Content-Type=application/json\nAuthorization=Bearer token"} rows={3} />
+              <span className="cici-field__hint-text">每行一个 Key=Value，选填</span>
             </label>
             <div className="mcp-modal-row">
-              <label className="dify-field admin-tools__field-flex">
-                <span className="dify-field__label">超时（秒）</span>
-                <input className="dify-field__input" type="number" value={fTimeout} onChange={e => setFTimeout(Number(e.target.value))} min={1} />
-                <span className="dify-field__hint-text">默认 60 秒</span>
+              <label className="cici-field admin-tools__field-flex">
+                <span className="cici-field__label">超时（秒）</span>
+                <input className="cici-field__input" type="number" value={fTimeout} onChange={e => setFTimeout(Number(e.target.value))} min={1} />
+                <span className="cici-field__hint-text">默认 60 秒</span>
               </label>
               {editId !== null && (
-                <label className="dify-field admin-tools__field-flex">
-                  <span className="dify-field__label">启用状态</span>
+                <label className="cici-field admin-tools__field-flex">
+                  <span className="cici-field__label">启用状态</span>
                   <div className="admin-tools__toggle-row">
-                    <button type="button" className={`dify-toggle ${fEnabled ? "dify-toggle--on" : ""}`} onClick={() => setFEnabled(!fEnabled)} />
+                    <button type="button" className={`cici-toggle ${fEnabled ? "cici-toggle--on" : ""}`} onClick={() => setFEnabled(!fEnabled)} />
                     <span className="admin-tools__toggle-label">{fEnabled ? "启用" : "停用"}</span>
                   </div>
                 </label>
               )}
             </div>
           </div>
-          <div className="dify-modal__actions">
-            <button type="button" className="dify-btn dify-btn--ghost" onClick={() => setShowModal(false)}>取消</button>
-            <button type="button" className="dify-btn dify-btn--primary" onClick={saveServer}>{editId ? "保存" : "创建"}</button>
+          <div className="cici-modal__actions">
+            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setShowModal(false)}>取消</button>
+            <button type="button" className="cici-btn cici-btn--primary" onClick={saveServer}>{editId ? "保存" : "创建"}</button>
           </div>
         </div>
       </div>

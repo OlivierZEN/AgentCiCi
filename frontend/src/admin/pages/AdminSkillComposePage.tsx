@@ -1365,7 +1365,7 @@ export default function AdminSkillComposePage() {
 
   return (
     <div className="admin-page skills-compose">
-      {notice ? <div className="dify-toast">{notice}</div> : null}
+      {notice ? <div className="cici-toast">{notice}</div> : null}
 
       <div className="skills-compose__top">
         <div className="skills-compose__heading">
@@ -2171,14 +2171,14 @@ export default function AdminSkillComposePage() {
 
       {publishDialogOpen ? (
         <div
-          className="dify-modal-overlay"
+          className="cici-modal-overlay"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget && !busy) setPublishDialogOpen(false);
           }}
         >
           <div
-            className="dify-modal skills-publish-modal"
+            className="cici-modal skills-publish-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="skills-publish-modal-title"
@@ -2224,14 +2224,14 @@ export default function AdminSkillComposePage() {
 
       {whitelistPickerOpen ? (
         <div
-          className="dify-modal-overlay"
+          className="cici-modal-overlay"
           role="presentation"
           onClick={(event) => {
             if (event.target === event.currentTarget) setWhitelistPickerOpen(null);
           }}
         >
           <div
-            className="dify-modal skills-whitelist-picker"
+            className="cici-modal skills-whitelist-picker"
             role="dialog"
             aria-modal="true"
             aria-labelledby="skills-whitelist-picker-title"
@@ -2364,18 +2364,18 @@ export default function AdminSkillComposePage() {
       ) : null}
 
       {libraryModalOpen ? (
-        <div className="dify-modal-overlay" role="presentation" onClick={() => setLibraryModalOpen(false)}>
+        <div className="cici-modal-overlay" role="presentation" onClick={() => setLibraryModalOpen(false)}>
           <div
-            className="dify-modal skills-library-modal"
+            className="cici-modal skills-library-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="skills-library-modal-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 id="skills-library-modal-title" className="dify-modal__title">
+            <h2 id="skills-library-modal-title" className="cici-modal__title">
               技能库
             </h2>
-            <div className="dify-modal__body skills-library-modal__body">
+            <div className="cici-modal__body skills-library-modal__body">
               <p className="skills-library-modal__hint">
                 选模板填充表单并关闭，或一键落库。
               </p>
@@ -2414,8 +2414,8 @@ export default function AdminSkillComposePage() {
                 ))}
               </div>
             </div>
-            <div className="dify-modal__actions">
-              <button type="button" className="dify-btn dify-btn--ghost" onClick={() => setLibraryModalOpen(false)}>
+            <div className="cici-modal__actions">
+              <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setLibraryModalOpen(false)}>
                 关闭
               </button>
             </div>

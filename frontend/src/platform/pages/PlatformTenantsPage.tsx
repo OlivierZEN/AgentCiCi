@@ -83,9 +83,8 @@ export default function PlatformTenantsPage() {
     <div className="admin-page skills-catalog platform-page platform-tenants-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
-          <p className="skills-catalog__kicker">Tenant Lifecycle</p>
           <h1 className="skills-catalog__title">租户生命周期</h1>
-          <p className="subtle skills-catalog__subtitle">先浏览全量租户，再进入单租户生命周期工作页处理保留、导出、预演与真实销毁动作。</p>
+          <p className="subtle skills-catalog__subtitle">按租户进入独立治理页，处理保留策略、导出、预演与销毁动作。</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">租户 {tenants.length}</span>
@@ -104,7 +103,6 @@ export default function PlatformTenantsPage() {
           <div className="tenant-lifecycle-list__panel-head">
             <div>
               <p className="platform-section-label">租户目录</p>
-              <p className="skills-data-table__summary">点击任意租户即可进入独立生命周期页，避免在同屏详情区里来回切换。</p>
             </div>
           </div>
           <table className="skills-data-table tenant-lifecycle__table">
@@ -204,7 +202,7 @@ export default function PlatformTenantsPage() {
               </button>
             </div>
             <div className="tenant-lifecycle__modal-body">
-              <p className="skills-data-table__summary">平台运营可在这里直接开通租户。若手机号已绑定全局账号，系统会复用该账号并新增此租户的 OWNER 成员关系。</p>
+              <p className="skills-data-table__summary">填写必要信息后即可直接开通租户；若手机号已绑定账号，系统会复用该账号并补充租户 Owner 关系。</p>
               <div className="platform-console__form-grid tenant-lifecycle__provision-form">
                 <label>
                   <span>租户名称</span>

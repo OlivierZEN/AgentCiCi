@@ -39,6 +39,18 @@
 - Reuse this style for premium internal control-plane pages that need warm ivory surfaces, compact density, ink-heavy typography, and bright champagne-gold structural linework.
 - Do not turn this style into marketing glamour: gold should emphasize borders, active states, focus, and premium actions, not large decorative fills.
 
+## Naming Hygiene
+
+- Never use external product, vendor, competitor, or reference-project names in AgentCiCi implementation naming. This ban applies to source-code identifiers, CSS classes, components, variables, helpers, routes, tests, generated asset names, and implementation comments.
+- When another product must be researched or benchmarked, keep that naming only in specs, research notes, or comparison documents where the reference is materially required. Those names must not leak into shipped code, reusable code, or build artifacts.
+- Treat borrowed external-product naming inside implementation as a defect and rename it to AgentCiCi-native naming in the same change that discovers it.
+
+## 命名卫生规则
+
+- 严禁把其他产品、厂商、竞品或参考项目的名称直接用于 AgentCiCi 的实现命名。该禁令适用于源码标识符、CSS 类名、组件名、变量名、辅助函数名、路由名、测试名、生成产物命名以及实现注释。
+- 如确需参考其他产品，只能在确有必要的规格文档、调研记录或竞品对比文档中保留相关名称，不得泄漏到已交付代码、可复用代码或构建产物中。
+- 在实现层发现借用外部产品命名时，一律按缺陷处理，并在发现该问题的同一次改动中更名为 AgentCiCi 自有语义命名。
+
 ## Impeccable Design Governance
 
 - This project adopts the `impeccable` skill as the mandatory design workflow for any page analysis, design, redesign, critique, polish, or UI implementation.

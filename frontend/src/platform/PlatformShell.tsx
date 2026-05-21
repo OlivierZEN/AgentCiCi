@@ -25,45 +25,33 @@ export default function PlatformShell() {
     <div className="admin-layout platform-layout">
       <aside className="admin-nav platform-nav">
         <div className="platform-nav__head">
-          <p className="brand admin-brand">Platform Console</p>
-          <h1 className="platform-nav__title">运营控制面</h1>
-          <p className="platform-nav__summary">平台技能、内置工具、策略版本和审计事实在这里统一治理。</p>
+          <p className="brand admin-brand">运营平台</p>
+          <h1 className="platform-nav__title">运营控制台</h1>
           <div className="platform-nav__meta">
             <span className="platform-nav__meta-label">当前组织</span>
             <strong className="platform-nav__org">{auth.orgId}</strong>
           </div>
-          <p className="platform-nav__hint">Policy Bundle · Skill · Tool · Audit</p>
         </div>
         <nav className="admin-nav-links platform-nav__links">
           <NavLink to="/platform" end className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>概览</span>
-            <small>控制面状态</small>
+            <span>平台概览</span>
           </NavLink>
           <NavLink to="/platform/skills" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>平台技能</span>
-            <small>模板与策略版本</small>
+            <span>标准技能</span>
           </NavLink>
           <NavLink to="/platform/tools" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>内置工具</span>
-            <small>风险与依赖治理</small>
           </NavLink>
           <NavLink to="/platform/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>租户生命周期</span>
-            <small>保留策略与销毁预览</small>
           </NavLink>
           <NavLink to="/platform/website-leads" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>网站注册</span>
-            <small>预约演示用户</small>
           </NavLink>
           <NavLink to="/platform/audit" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>平台审计</span>
-            <small>最近平台动作</small>
           </NavLink>
         </nav>
-        <div className="platform-nav__foot">
-          <p className="platform-nav__foot-title">工作模式</p>
-          <p className="platform-nav__foot-copy">高频运营界面默认保持紧凑布局，优先支持扫描、比对和配置修改。</p>
-        </div>
         <div className="row admin-nav__logout-row platform-nav__logout-row">
           <button
             type="button"
@@ -73,7 +61,7 @@ export default function PlatformShell() {
               nav("/platform/login", { replace: true });
             }}
           >
-            退出平台后台
+            退出登录
           </button>
         </div>
       </aside>

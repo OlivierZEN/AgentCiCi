@@ -29,13 +29,13 @@ function normalizePlatformIdentifier(identifier: string): string {
 
 export default function PlatformLogin() {
   const nav = useNavigate();
-  const [identifier, setIdentifier] = useState("admin@cloudcc.com");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("");
 
   const login = async () => {
     try {
-      setNotice("登录中...");
+      setNotice("登录中…");
       const res = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -67,8 +67,9 @@ export default function PlatformLogin() {
       <section className="login-card login-card--admin platform-login__card">
         <div className="platform-login__intro">
           <div>
-            <p className="brand">Platform Console</p>
-            <h1>平台运营登录</h1>
+            <p className="brand">运营平台</p>
+            <h1>运营平台登录</h1>
+            <p className="platform-login__intro-copy">登录后可处理平台技能、内置工具、租户生命周期与平台审计。</p>
           </div>
         </div>
 
@@ -76,12 +77,24 @@ export default function PlatformLogin() {
           <div className="platform-login__panel">
             <div className="platform-login__form">
               <label>电子邮件地址或手机号码</label>
-              <input value={identifier} onChange={(e) => setIdentifier(e.target.value)} inputMode="text" autoComplete="username" />
+              <input
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                inputMode="text"
+                autoComplete="username"
+                placeholder="请输入平台账号邮箱或手机号"
+              />
               <label>密码</label>
-              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" />
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="请输入密码"
+              />
               <div className="row platform-login__actions">
                 <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!password.trim()}>
-                  进入平台后台
+                  进入运营平台
                 </button>
               </div>
               {notice ? (

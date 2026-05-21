@@ -40,6 +40,7 @@ class AdminOrganizationProfileIntegrationTest {
     @Test
     void ownerCanReadAndUpdateOrganizationProfileWithoutChangingOrgId() throws Exception {
         CreatedOrg created = registerOrg("组织设置测试组织");
+        seedUsageSummaryData(created.orgId());
 
         mockMvc.perform(get("/admin/organization/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + created.token()))
@@ -47,7 +48,15 @@ class AdminOrganizationProfileIntegrationTest {
                 .andExpect(jsonPath("$.data.orgId").value(created.orgId()))
                 .andExpect(jsonPath("$.data.name").value("组织设置测试组织"))
                 .andExpect(jsonPath("$.data.owner.displayName").isNotEmpty())
-                .andExpect(jsonPath("$.data.memberCount").value(1));
+                .andExpect(jsonPath("$.data.memberCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.activeUserCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.createdUserCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.knowledgeBaseCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.knowledgeDocumentCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.skillCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.agentCount").value(2))
+                .andExpect(jsonPath("$.data.usageSummary.publishedAgentCount").value(1))
+                .andExpect(jsonPath("$.data.usageSummary.exportJobCount").value(1));
 
         mockMvc.perform(patch("/admin/organization/profile")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + created.token())
@@ -147,6 +156,49 @@ class AdminOrganizationProfileIntegrationTest {
                 .andExpect(status().isOk())
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private void seedUsageSummaryData(String orgId) {
+        jdbcTemplate.update("""
+                INSERT INTO knowledge_base(org_id, name, description, status, created_at, updated_at)
+                VALUES (?, '组织简档统计知识库', 'usage summary fixture', 'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, orgId);
+        Long kbId = jdbcTemplate.queryForObject(
+                "SELECT id FROM knowledge_base WHERE org_id = ? AND name = '组织简档统计知识库'",
+                Long.class,
+                orgId);
+        jdbcTemplate.update("""
+                INSERT INTO kb_document(org_id, knowledge_base_id, name, content_type, storage_path, status, created_at, updated_at)
+                VALUES (?, ?, '组织简档统计文档', 'text/plain', '/tmp/usage-summary.txt', 'PUBLISHED', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, orgId, kbId);
+        jdbcTemplate.update("""
+                INSERT INTO skill_definition(
+                    org_id, skill_code, name, description, builtin, enabled, prompt_fragment,
+                    tool_whitelist, kb_whitelist, handoff_rule, output_contract, risk_level, created_at, updated_at
+                )
+                VALUES (?, 'usage-summary-skill', '统计技能', 'usage summary fixture', FALSE, TRUE, '',
+                    '', '', '', '', 'LOW', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, orgId);
+        jdbcTemplate.update("""
+                INSERT INTO agent_definition(
+                    org_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
+                    safety_level, execution_mode, version_label, builtin, enabled, published_version_id, created_at, updated_at
+                )
+                VALUES (?, 'usage-summary-agent-published', '已发布统计智能体', '', '', 'demo-model', '', '',
+                    'LOW', 'CHAT', 'v1', FALSE, TRUE, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, orgId);
+        jdbcTemplate.update("""
+                INSERT INTO agent_definition(
+                    org_id, agent_id, name, summary, greeting, model, system_prompt, handoff_rule,
+                    safety_level, execution_mode, version_label, builtin, enabled, published_version_id, created_at, updated_at
+                )
+                VALUES (?, 'usage-summary-agent-draft', '草稿统计智能体', '', '', 'demo-model', '', '',
+                    'LOW', 'CHAT', 'draft', FALSE, TRUE, NULL, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, orgId);
+        jdbcTemplate.update("""
+                INSERT INTO organization_export_job(org_id, status, requested_by, reason, manifest_json, created_at, updated_at)
+                VALUES (?, 'SUCCEEDED', 'test-owner', 'usage summary fixture', '{}', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                """, orgId);
     }
 
     private static String randomMobile() {

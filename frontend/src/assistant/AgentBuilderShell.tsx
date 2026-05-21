@@ -988,7 +988,7 @@ function WorkflowPreviewCanvas({
   };
 
   return (
-    <div className="cici-builder-graph__canvas cici-builder-graph__canvas--dify">
+    <div className="cici-builder-graph__canvas cici-builder-graph__canvas--cici">
       <div className="cici-builder-graph__scroll" ref={containerRef} onScroll={syncViewport}>
         <div className="cici-builder-graph__stage" style={{ width: scaledWidth, height: scaledHeight }}>
           <div className="cici-builder-graph__viewport" style={{ width: layout.width, height: layout.height, transform: `scale(${scale})` }}>

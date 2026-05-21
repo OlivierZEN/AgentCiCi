@@ -63,23 +63,6 @@ type ProfileField = {
   action?: "copy-org-id";
 };
 
-function formatDateTime(value?: string | null): string {
-  if (!value) return "暂无";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  })
-    .format(date)
-    .replace(/\//g, "-");
-}
-
 function formatText(value?: string | null): string {
   const normalized = value?.trim();
   return normalized ? normalized : "暂无";
@@ -95,13 +78,6 @@ function statusLabel(status?: string): string {
   if (status === "PENDING_PURGE") return "待销毁";
   if (status === "PURGED") return "已销毁";
   return status || "未知";
-}
-
-function exportStatusLabel(status: string): string {
-  if (status === "SUCCEEDED") return "已完成";
-  if (status === "RUNNING") return "生成中";
-  if (status === "FAILED") return "失败";
-  return status;
 }
 
 function profileToForm(profile: OrganizationProfile): OrganizationProfileForm {
@@ -132,16 +108,11 @@ export default function AdminOrganizationPage() {
   const [saveError, setSaveError] = useState("");
 
   const usage = profile?.usageSummary;
-  const exportJobs = profile?.recentExportJobs ?? [];
 
   const fields = useMemo<ProfileField[]>(
     () => [
       { label: "组织名称", value: formatText(profile?.name) },
-      { label: "组织简称", value: formatText(profile?.shortName) },
       { label: "组织 ID", value: profile?.orgId ?? "暂无", mono: true, action: "copy-org-id" },
-      { label: "当前状态", value: statusLabel(profile?.status) },
-      { label: "Owner", value: profile?.owner?.displayName || "暂无" },
-      { label: "Owner 手机", value: formatText(profile?.owner?.mobile) },
       { label: "联系人", value: formatText(profile?.contactName) },
       { label: "联系电话", value: formatText(profile?.contactPhone) },
       { label: "联系邮箱", value: formatText(profile?.contactEmail) },
@@ -149,11 +120,13 @@ export default function AdminOrganizationPage() {
       { label: "行业", value: formatText(profile?.industry) },
       { label: "组织规模", value: formatText(profile?.organizationSize) },
       { label: "时区", value: formatText(profile?.timezone || "Asia/Shanghai") },
-      { label: "资料创建", value: formatDateTime(profile?.createdAt) },
-      { label: "最近更新", value: formatDateTime(profile?.updatedAt) },
-      { label: "更新人", value: formatText(profile?.updatedBy) },
     ],
     [profile],
+  );
+
+  const fieldColumns = useMemo(
+    () => [fields.slice(0, 3), fields.slice(3, 6), fields.slice(6, 9)],
+    [fields],
   );
 
   const usageItems = [
@@ -162,7 +135,7 @@ export default function AdminOrganizationPage() {
     { label: "技能", value: formatNumber(usage?.skillCount), hint: "启用中" },
     { label: "智能体", value: formatNumber(usage?.agentCount), hint: `已发布 ${formatNumber(usage?.publishedAgentCount)}` },
     { label: "组织成员", value: formatNumber(profile?.memberCount), hint: statusLabel(profile?.status) },
-    { label: "数据导出", value: formatNumber(usage?.exportJobCount), hint: exportJobs.length ? `最近 ${exportJobs.length} 条` : "暂无记录" },
+    { label: "数据导出", value: formatNumber(usage?.exportJobCount), hint: "暂无记录" },
   ];
 
   useEffect(() => {
@@ -298,36 +271,34 @@ export default function AdminOrganizationPage() {
         </section>
       ) : (
         <>
-          <section className="admin-organization-panel" aria-label="组织信息">
+          <section className="admin-organization-panel admin-organization-panel--profile" aria-label="组织信息">
             <div className="admin-organization-section admin-organization-section--intro">
               <h2>{formatText(profile?.name)}</h2>
-              <span>{statusLabel(profile?.status)}</span>
             </div>
-            <dl className="admin-organization-profile-grid">
-              {fields.map((field) => (
-                <div key={field.label}>
-                  <dt>{field.label}</dt>
-                  <dd>
-                    <span className={field.mono ? "admin-organization-mono" : undefined}>{field.value}</span>
-                    {field.action === "copy-org-id" ? (
-                      <button type="button" className="admin-organization-text-action" onClick={() => void copyOrgId()} disabled={!profile?.orgId}>
-                        {copied ? "已复制" : "复制"}
-                      </button>
-                    ) : null}
-                  </dd>
+            <dl className="admin-organization-profile-list">
+              {fieldColumns.map((column, index) => (
+                <div className="admin-organization-profile-column" key={index}>
+                  {column.map((field) => (
+                    <div className="admin-organization-profile-item" key={field.label}>
+                      <dt>{field.label}</dt>
+                      <dd>
+                        <span className={field.mono ? "admin-organization-mono" : undefined}>{field.value}</span>
+                        {field.action === "copy-org-id" ? (
+                          <button type="button" className="admin-organization-text-action" onClick={() => void copyOrgId()} disabled={!profile?.orgId}>
+                            {copied ? "已复制" : "复制"}
+                          </button>
+                        ) : null}
+                      </dd>
+                    </div>
+                  ))}
                 </div>
               ))}
             </dl>
-            <div className="admin-organization-notes-readonly">
-              <h2>备注</h2>
-              <p>{formatText(profile?.notes)}</p>
-            </div>
           </section>
 
-          <section className="admin-organization-panel" aria-label="组织使用情况汇总">
+          <section className="admin-organization-panel admin-organization-panel--usage" aria-label="组织使用情况汇总">
             <div className="admin-organization-section admin-organization-section--intro">
               <h2>使用情况汇总</h2>
-              <span>当前组织</span>
             </div>
             <div className="admin-organization-usage-grid">
               {usageItems.map((item) => (
@@ -337,24 +308,6 @@ export default function AdminOrganizationPage() {
                   <small>{item.hint}</small>
                 </div>
               ))}
-            </div>
-            <div className="admin-organization-export">
-              <div className="admin-organization-export__head">
-                <h2>最近数据导出</h2>
-              </div>
-              {exportJobs.length === 0 ? (
-                <p className="admin-organization-empty">暂无导出记录</p>
-              ) : (
-                <ol className="admin-organization-export-list">
-                  {exportJobs.map((job) => (
-                    <li key={job.id}>
-                      <span>{exportStatusLabel(job.status)}</span>
-                      <strong>#{job.id}</strong>
-                      <time>{formatDateTime(job.finishedAt || job.updatedAt || job.createdAt)}</time>
-                    </li>
-                  ))}
-                </ol>
-              )}
             </div>
           </section>
         </>

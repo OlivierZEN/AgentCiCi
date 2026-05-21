@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-21T10:49:05Z
+updated_at: 2026-05-21T12:24:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -139,6 +139,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-129 - Admin login organization-selection alignment
+
+- status: `done`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md`
+- task_status_path: `.claw/tasks/TASK-129.md`
+- assignment_path: `.claw/assignments/TASK-129.yaml`
+- blocked_by: `none`
+- next_action: `none`; `/admin/login` now removes the orgId field, supports organization selection after account login, and passed desktop/mobile QA.
 
 ### TASK-127 - Merge remaining local branches into the current branch
 
