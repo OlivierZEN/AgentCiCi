@@ -174,6 +174,8 @@ class FileBackedBuiltinSkillIntegrationTest {
                 .isEqualTo("https://ap10.apis.cloudcc.cn/setup");
         assertThat(CloudccAccessTokenService.deriveSetupSvc("ap10.apis.cloudcc.cn"))
                 .isEqualTo("https://ap10.apis.cloudcc.cn/setup");
+        assertThat(CloudccAccessTokenService.deriveSetupSvc("https://yundong.lightning.cloudcc.cn/ccdomaingateway/apisvc"))
+                .isEqualTo("https://yundong.lightning.cloudcc.cn/ccdomaingateway/setup");
     }
 
     @Test

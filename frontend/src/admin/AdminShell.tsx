@@ -19,7 +19,7 @@ const adminNavItems = [
   { to: "/admin/channels/wechat-kf", label: "微信客服" },
   { to: "/admin/ops", label: "观测运维" },
   { to: "/admin/users", label: "用户" },
-  { to: "/admin/organization", label: "组织简档" },
+  { to: "/admin/organization", label: "组织设置" },
 ];
 
 function readAuth(): AuthPayload | null {

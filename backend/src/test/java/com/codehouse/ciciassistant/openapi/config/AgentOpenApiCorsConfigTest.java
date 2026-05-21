@@ -42,6 +42,22 @@ class AgentOpenApiCorsConfigTest {
         assertThat(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN)).isEqualTo("*");
     }
 
+    @Test
+    void shouldAllowConversationDeletePreflight() throws Exception {
+        CorsFilter filter = corsFilter("*");
+        MockHttpServletRequest request = preflight(
+                "https://another.example",
+                "DELETE",
+                "/openapi/v1/agents/agent-1/conversations/conversation-1");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, new MockFilterChain());
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(response.getHeader(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS))
+                .contains("DELETE");
+    }
+
     private CorsFilter corsFilter(String allowedOrigin) {
         AgentOpenApiProperties properties = new AgentOpenApiProperties();
         properties.setCorsAllowedOrigins(List.of(allowedOrigin));
@@ -51,9 +67,13 @@ class AgentOpenApiCorsConfigTest {
     }
 
     private MockHttpServletRequest preflight(String origin) {
-        MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", "/openapi/v1/agents/agent-1/chat/stream");
+        return preflight(origin, "POST", "/openapi/v1/agents/agent-1/chat-messages");
+    }
+
+    private MockHttpServletRequest preflight(String origin, String method, String path) {
+        MockHttpServletRequest request = new MockHttpServletRequest("OPTIONS", path);
         request.addHeader(HttpHeaders.ORIGIN, origin);
-        request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "POST");
+        request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, method);
         request.addHeader(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "authorization,content-type,idempotency-key");
         return request;
     }

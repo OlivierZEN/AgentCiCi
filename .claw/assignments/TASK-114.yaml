@@ -1,8 +1,8 @@
 task_id: TASK-114
-assignee: DEV-nezha
+assignee: MANAGER-001
 assigned_by: MANAGER-001
 status: active
-assigned_at: 2026-05-18T23:20:36Z
+assigned_at: 2026-05-20T01:54:39Z
 expires_at: none
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 task_status_path: .claw/tasks/TASK-114.md
@@ -59,9 +59,9 @@ task_boundary:
   - "If Open API metering would conflict with TASK-112, leave a documented integration seam and follow-up note in .claw/tasks/TASK-114.md."
   - "Migration edits are limited to V53__billing_usage_ledger.sql unless MANAGER-001 updates this assignment."
 change_manifest_required: true
-signature: "MANAGER-001 local ssh challenge allowed 2026-05-18T23:20:36Z; user reassigned FEAT-037 full development to DEV-nezha on 2026-05-19."
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-20T01:54:39Z; user reassigned FEAT-037 full development from DEV-nezha to MANAGER-001 and requested no further task assignment to DEV-nezha."
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Create FEAT-037 end to end: plans, subscriptions, usage meter events, credit ledger, read APIs, quota/rating services, product UI, deterministic seed behavior, runtime metering where safe, and focused tests. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
-hard_gate_notes: "DEV-nezha must run scripts/dev-login.py for TASK-114 on branch codex/TASK-114-feat-037-billing-ledger before implementation edits."
+notes: "Create FEAT-037 end to end: plans, subscriptions, usage meter events, credit ledger, read APIs, quota/rating services, product UI, deterministic seed behavior, runtime metering where safe, and focused tests. Reassigned from DEV-nezha to MANAGER-001 on 2026-05-20; DEV-nezha currently has no active task assignment. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-114 on branch codex/TASK-114-feat-037-billing-ledger before implementation edits."

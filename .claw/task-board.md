@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 3
-updated_at: 2026-05-19T08:38:37Z
+updated_at: 2026-05-21T03:18:00Z
 updated_by: ai
 status: active
 board_status: active
@@ -11,169 +11,30 @@ board_status: active
 
 ## Task Cards
 
-### TASK-118 Admin organization profile and self-service settings
-
-- status: completed
-- priority: P1
-- owner_role: MANAGER-001
-- spec_path: `docs/specs/FEAT-040-admin-organization-profile.md`
-- assignment_path: `.claw/assignments/TASK-118.yaml`
-- task_status_path: `.claw/tasks/TASK-118.md`
-- branch: `codex/TASK-118-admin-organization-profile`
-- summary: 为组织管理后台新增 `/admin/organization` 组织简档能力，明确 `orgId` 是系统生成且不可编辑的组织唯一标识；当前入口展示只读组织信息和使用情况汇总看板，并通过「编辑」按钮弹出组织信息编辑 modal 完成资料维护。
-- started_at: 2026-05-19T05:47:39Z
-- done:
-  - 已创建 `docs/specs/FEAT-040-admin-organization-profile.md`，沉淀组织资料维护设计。
-  - 已明确 `orgId` 不得作为组织名称展示或编辑；普通管理端优先展示用户定义的组织名称，`orgId` 仅作为只读系统标识和支持排查信息。
-  - 已区分 `/admin/organization` 当前组织自助设置与 `/platform/tenants` 跨租户平台治理边界。
-  - 已创建 `.claw/assignments/TASK-118.yaml` 与 `.claw/tasks/TASK-118.md`，并由 `MANAGER-001` 完成本轮实现。
-  - 已新增 `organization_profile` migration、当前组织资料 API、组织资料服务、审计写入和集成测试。
-  - 已新增 `/admin/organization` 页面、管理端导航入口、左侧组织名称展示同步、只读组织 ID/Owner/成员数/最近导出摘要。
-  - 已收窄 Vite 与 Nginx 代理规则，避免 `/admin/organization` 直达页面被后端 API 代理吞掉。
-  - 已按用户继续调整将导航文案从「组织设置」改成「组织简档」，页面首屏从编辑表单改为只读组织信息。
-  - 已扩展 `GET /admin/organization/profile` 的 `usageSummary`，并在组织信息下方展示已创建用户、活跃用户、知识库、知识文档、技能、智能体、已发布智能体和数据导出统计。
-  - 已按用户继续调整增加「编辑」按钮和阻塞组织信息编辑 modal；保存后关闭 modal、刷新只读资料，并同步更新左侧组织名称。
-- verification:
-  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files docs/specs/FEAT-040-admin-organization-profile.md .claw/task-board.md .claw/current-status.md --no-cache --json` -> allowed。
-  - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-118` on `codex/TASK-118-admin-organization-profile` with intended backend/frontend/state files -> allowed。
-  - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=AdminOrganizationProfileIntegrationTest test` in `backend/` -> success，2 tests / 0 failures / 0 errors。
-  - `frontend`: `npm run build` in `frontend/` -> success，保留既有 Vite chunk-size warning。
-  - `diff`: `git diff --check` -> success。
-  - `browser-desktop`: Playwright `/admin/organization` 1440x1000 -> screenshot `output/playwright/feat40-admin-organization-desktop-final.png`。
-  - `browser-mobile`: Playwright `/admin/organization` 390x844 -> screenshot `output/playwright/feat40-admin-organization-mobile-final.png`，`documentElement.scrollWidth=clientWidth=390`。
-  - `browser-readonly-profile`: Playwright mock API `/admin/organization` -> title/nav `组织简档`，统计看板存在，无可见 `保存` 操作；桌面截图 `output/playwright/feat40-org-profile-desktop.png`，移动截图 `output/playwright/feat40-org-profile-mobile.png`，390px 移动端无横向溢出。
-  - `browser-edit-modal`: in-app Browser mock API `/admin/organization` -> 「编辑」打开 `role="dialog"` / `aria-modal="true"` modal，保存组织名称后 modal 关闭、只读页更新、左侧组织名称同步；桌面截图 `output/playwright/feat40-org-profile-edit-modal-desktop.png`，移动截图 `output/playwright/feat40-org-profile-edit-modal-mobile.png`，无横向溢出，console error 为空。
-  - `routing`: direct `/admin/organization` -> SPA page; `/admin/organization/profile` -> backend API path.
-- next_action: 提交并合并 `codex/TASK-118-admin-organization-profile`；发布时确认 Nginx 新代理规则已生效。
-- handoff_notes:
-  - 实现必须遵守 `PRODUCT.md`、`DESIGN.md`、`DESIGN.json` 和 `AGENTS.md` 的 `鎏金账房` 产品页规则。
-  - 不得把平台租户生命周期、冻结、恢复、销毁和 purge 能力下放到组织管理端。
-  - 保存组织名称后应刷新管理端 shell 中的组织展示名，避免继续用 `orgId` 当作可见名称。
-
-### TASK-117 AgentCiCi help center site
-
-- status: completed
-- priority: P1
-- owner_role: MANAGER-001
-- spec_path: `docs/specs/FEAT-039-agentcici-help-center-site.md`
-- assignment_path: `.claw/assignments/TASK-117.yaml`
-- task_status_path: `.claw/tasks/TASK-117.md`
-- branch: `codex/TASK-117-agentcici-help-center-site`
-- summary: 负责 FEAT-039 `help.agentcici.com` 帮助中心站点规划与后续落地，覆盖用户工作台、组织管理后台、平台控制面、Open API 与嵌入、场景方案、故障排查、安全权限和更新日志的信息架构、文档模板、MVP 内容与产品文档站视觉约束。
-- started_at: 2026-05-19T04:20:18Z
-- assigned_to: `MANAGER-001`
-- assigned_by: `MANAGER-001`
-- done:
-  - 已创建 `docs/specs/FEAT-039-agentcici-help-center-site.md`，定义帮助中心站点定位、栏目目录、URL slug、单篇文档模板、MVP 12 篇文档、内容来源映射、视觉要求、实施阶段和验收标准。
-  - 已按用户要求将 FEAT-039 分配给 Owen，对应项目身份 `MANAGER-001`。
-  - 已创建 `.claw/assignments/TASK-117.yaml` 与 `.claw/tasks/TASK-117.md`。
-  - 已实现帮助中心 MVP：`/help/*` 与 `help.agentcici.com/*` 路由、结构化导航与搜索、首页角色入口、文档正文模板、相关文档、上一篇/下一篇和移动目录。
-  - 已新增 16 篇首批结构化帮助文档，覆盖快速开始、用户工作台、管理后台、Open API、故障排查、安全和更新日志。
-  - 已新增 `docs/help/README.md` 内容维护入口，并在 `deploy/nginx.cici.ssl.conf` 中加入 `help.agentcici.com` 独立 HTTPS SPA fallback。
-- verification:
-  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/task-board.md .claw/current-status.md .claw/assignments/TASK-117.yaml .claw/tasks/TASK-117.md --no-cache --json` -> allowed。
-  - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer MANAGER-001 --task TASK-117 --branch codex/TASK-117-agentcici-help-center-site --git-username OwenZheng-Cloud --ssh-signing-key-fingerprint SHA256:lNTe9Id7U0v8iDDKBaCZcuEkkDZH7qPsFulGMZkN/Sk --files docs/specs/FEAT-039-agentcici-help-center-site.md .claw/tasks/TASK-117.md frontend/src/help/HelpCenterApp.tsx frontend/src/App.tsx --json` -> allowed，`scope_mode=task_bounded_broad_code`。
-  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> success。
-  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> success。
-  - `frontend`: `npm run build` in `frontend/` -> success，保留既有 Vite chunk-size warning。
-  - `browser-desktop`: Playwright CLI `/help` at 1440px -> screenshot `output/playwright/help-center-desktop.png`，无横向溢出。
-  - `browser-mobile`: Playwright CLI `/help/openapi/quickstart` at 390px -> screenshot `output/playwright/help-center-mobile-openapi.png`，`documentElement.scrollWidth=390`。
-  - `browser-search`: Playwright CLI typed `401` -> 3 results，first result `Open API 401 / 403 / 429`。
-  - `browser-mobile-nav`: Playwright CLI verified mobile `目录` opens navigation overlay.
-- next_action: 如需要上线，提交并部署 `codex/TASK-117-agentcici-help-center-site`；部署后配置/确认 `help.agentcici.com` DNS、证书覆盖和 HTTPS Host smoke。
-- handoff_notes:
-  - FEAT-039 是产品帮助中心，不是营销站，也不是研发规格镜像。
-  - 视觉与交互必须按 product register 和 `鎏金账房` 基线处理。
-  - 当前 TASK-112/114/115/116 仍在并行推进，帮助中心实现不得抢改这些任务的活跃实现文件。
-
-### TASK-116 Skill module completion and optimization
+### TASK-123 OpenAPI CloudCC token override and key typing
 
 - status: assigned
 - priority: P0
-- owner_role: DEV-wolong
-- spec_path: `docs/specs/FEAT-038-admin-skill-module-completion.md`
-- assignment_path: `.claw/assignments/TASK-116.yaml`
-- task_status_path: `.claw/tasks/TASK-116.md`
-- branch: `codex/TASK-116-skill-module-completion`
-- summary: 接手管理端技能模块整体功能补齐和优化，在现有技能分层、租户自定义技能 CRUD、草稿/发布版本、导入导出、软删除、平台治理、file-backed builtin skills 和 Skill runtime API 运行时基础上，继续补齐导出下载安全、测试幂等、导入预览确认、删除/恢复 modal、高风险 runtime API 确认流、结构化 API builder、版本 diff/恢复预览和管理动作审计。
-- started_at: 2026-05-19T02:18:19Z
-- assigned_to: `DEV-wolong`
+- owner_role: DEV-fengchu
+- spec_path: `docs/specs/FEAT-045-openapi-cloudcc-token-override.md`
+- assignment_path: `.claw/assignments/TASK-123.yaml`
+- task_status_path: `.claw/tasks/TASK-123.md`
+- branch: `codex/TASK-123-openapi-cloudcc-token-override`
+- summary: 为 Agent OpenAPI 引入 `standard` / `cloudcc` key type，允许 CloudCC 嵌入页在受控前提下按请求传入当前 CloudCC 用户 token，并让 native CloudCC tool、CloudCC MCP tool 和 CloudCC skill API 统一复用该 runtime override，同时禁止 token 落库、落 trace、落日志或静默 fallback 到 run-as 用户资料换 token。
+- started_at: 2026-05-21T03:18:00Z
+- assigned_to: `DEV-fengchu`
 - assigned_by: `MANAGER-001`
 - done:
-  - 已复核当前技能模块实现与缺口：工程骨架较完整，但导出下载鉴权、导入确认流、原生 confirm/prompt、测试幂等、高风险 API 确认流和审计/版本体验仍需补齐。
-  - 已运行 `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest,FileBackedBuiltinSkillIntegrationTest test`，当前 18 tests / 3 failures / 0 errors，失败集中在本地已有固定测试 skill code 与平台标准技能名称断言漂移，作为 TASK-116 P0 修复目标。
-  - 已创建 `docs/specs/FEAT-038-admin-skill-module-completion.md`，作为技能模块补齐和优化规格源。
-  - 已创建 `.claw/assignments/TASK-116.yaml`，授权 `DEV-wolong` 在 `codex/TASK-116-skill-module-completion` 分支维护技能模块。
-  - 已创建 `.claw/tasks/TASK-116.md` 作为卧龙的任务状态片。
+  - 已将仓库外临时草案重新编号为 `FEAT-045`，避免与现有计费规格 `FEAT-037` 冲突。
+  - 已创建正式规格 `docs/specs/FEAT-045-openapi-cloudcc-token-override.md`，把需求收口为 repo 内 OpenAPI 主线能力，而不是仓库外草案。
+  - 已创建 `.claw/assignments/TASK-123.yaml` 与 `.claw/tasks/TASK-123.md`，并将实现责任分配给 `DEV-fengchu`。
 - verification:
-  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
-  - `baseline`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest,FileBackedBuiltinSkillIntegrationTest test` -> failed，18 tests / 3 failures / 0 errors；失败作为 TASK-116 P0 test-idempotency input。
-  - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-wolong --task TASK-116 --branch codex/TASK-116-skill-module-completion --git-username yljaychou --ssh-signing-key-fingerprint SHA256:jjRE1V0lK4t5FwIjyGzmjbP8uID10ht5GyY429HHol0 --files backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillDefinitionService.java backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillApiToolService.java backend/src/main/resources/db/migration/V55__skill_module_completion.sql frontend/src/admin/pages/AdminSkillsListPage.tsx frontend/src/admin/pages/AdminSkillComposePage.tsx frontend/src/styles.css docs/specs/FEAT-038-admin-skill-module-completion.md .claw/tasks/TASK-116.md backend/pom.xml --json` -> allowed。
-  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> success。
-  - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> success。
-- next_action: `DEV-wolong` pull 最新 main 后，切到 `codex/TASK-116-skill-module-completion`，按 `.claw/assignments/TASK-116.yaml` 运行 task-scoped `dev-login.py`，通过后先做 P0 安全与回归基线，再推进 P1/P2。
+  - `identity-manager-assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments .claw/tasks docs/specs --no-cache --json` -> allowed。
+- next_action: `DEV-fengchu` pull 最新 main 后，切到 `codex/TASK-123-openapi-cloudcc-token-override`，按 `.claw/assignments/TASK-123.yaml` 运行完整 `dev-login.py` 私钥挑战，通过后按 FEAT-045 落 `key_type`、`cloudccContext`、共享 OpenAPI runtime 校验和 CloudCC request-scoped override。
 - handoff_notes:
-  - TASK-116 以 FEAT-038 为规格源，并引用 FEAT-009、FEAT-014、FEAT-015、FEAT-028 作为既有设计事实源。
-  - TASK-112 仍由凤雏负责 Open API 增强，TASK-116 不得抢改 Open API 活跃文件。
-  - TASK-114 仍由哪吒负责 SaaS billing，TASK-116 不得使用 `V53__billing_usage_ledger.sql` 或编辑 billing 范围。
-  - TASK-115 仍由仲达负责知识库维护，TASK-116 不得使用 `V54__kb_module_maintenance.sql` 或编辑 KB 范围。
-  - 管理端技能 UI 改动必须遵守 `DESIGN.md`、`DESIGN.json`、`PRODUCT.md` 和 `AGENTS.md` 的 `鎏金账房` 产品页规则，并按桌面/390px 移动截图验证。
-
-### TASK-115 Knowledge base module maintenance
-
-- status: assigned
-- priority: P0
-- owner_role: DEV-zhongda
-- spec_path: `docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md`
-- assignment_path: `.claw/assignments/TASK-115.yaml`
-- task_status_path: `.claw/tasks/TASK-115.md`
-- branch: `codex/TASK-115-kb-module-maintenance`
-- summary: 接手知识库模块整体维护，在 FEAT-008 当前 P0 生命周期闭环基础上，继续补齐文件解析与上传限制、真实 Qdrant 验证、管理端 modal/可访问性收口、runtime metadata filter、引用归因、数据源模型、hybrid/full-text 检索、rerank 扩展点和 Knowledge Service API 方案或首片。
-- started_at: 2026-05-19T02:01:14Z
-- assigned_to: `DEV-zhongda`
-- assigned_by: `MANAGER-001`
-- done:
-  - 已复核当前知识库实现：删除/下线/重建索引、RAG DB 状态过滤、chunk/metadata/retrieval test/批量操作均已落地。
-  - 已运行 `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test`，结果 8 tests / 0 failures / 0 errors。
-  - 已创建 `.claw/assignments/TASK-115.yaml`，授权 `DEV-zhongda` 在 `codex/TASK-115-kb-module-maintenance` 分支维护知识库模块。
-  - 已创建 `.claw/tasks/TASK-115.md` 作为仲达的任务状态片。
-- verification:
-  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
-  - `backend`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> success，8 tests / 0 failures / 0 errors。
-  - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-zhongda --task TASK-115 --branch codex/TASK-115-kb-module-maintenance --git-username shanchl --ssh-signing-key-fingerprint SHA256:k1ljDVP4i3TEhZQxdmZlzTGsJ++pHxubUqwc6vNQUOc --files backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java backend/src/main/resources/db/migration/V54__kb_module_maintenance.sql frontend/src/admin/pages/AdminKnowledgePage.tsx docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md .claw/tasks/TASK-115.md backend/pom.xml --json` -> allowed。
-  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> success。
-- next_action: `DEV-zhongda` pull 最新 main 后，切到 `codex/TASK-115-kb-module-maintenance`，按 `.claw/assignments/TASK-115.yaml` 运行 task-scoped `dev-login.py`，通过后先做 P0 hardening，再推进 P1/P2。
-- handoff_notes:
-  - TASK-115 以 FEAT-008 为规格源；当前 P0 生命周期闭环必须保持不回退。
-  - TASK-112 仍由凤雏负责 Open API 增强，TASK-115 不得抢改 Open API 活跃文件。
-  - TASK-114 仍由哪吒负责 SaaS billing，TASK-115 不得使用 `V53__billing_usage_ledger.sql` 或编辑 billing 范围；知识库需要新迁移时使用预留 `V54__kb_module_maintenance.sql`。
-  - 管理端知识库 UI 改动必须遵守 `DESIGN.md`、`DESIGN.json`、`PRODUCT.md` 和 `AGENTS.md` 的 `鎏金账房` 产品页规则，并按桌面/390px 移动截图验证。
-
-### TASK-114 FEAT-037 SaaS billing usage ledger
-
-- status: assigned
-- priority: P0
-- owner_role: DEV-nezha
-- spec_path: `docs/specs/FEAT-037-saas-billing-usage-ledger.md`
-- assignment_path: `.claw/assignments/TASK-114.yaml`
-- task_status_path: `.claw/tasks/TASK-114.md`
-- branch: `codex/TASK-114-feat-037-billing-ledger`
-- summary: 按 FEAT-003 的 SaaS 计费包装和 FEAT-022 的智能体工作量 credits 口径，实现 FEAT-037 第一版计费事实层：套餐/订阅、usage meter event、work-credit rating、credit ledger、quota hooks、组织管理端账单中心、平台账单治理页和可安全接入的运行链路计量。
-- started_at: 2026-05-18T23:20:36Z
-- assigned_to: `DEV-nezha`
-- assigned_by: `MANAGER-001`
-- done:
-  - 已创建 `docs/specs/FEAT-037-saas-billing-usage-ledger.md`，并明确其与 FEAT-003、FEAT-022 的上下游关系：FEAT-003 是商业包装源，FEAT-022 是 credits 口径源，FEAT-037 是工程落地规格。
-  - 已创建 `.claw/assignments/TASK-114.yaml`，授权 `DEV-nezha` 在 `codex/TASK-114-feat-037-billing-ledger` 分支端到端实现 FEAT-037。
-  - 已创建 `.claw/tasks/TASK-114.md` 作为任务状态片。
-  - 已按用户要求取消早先多人拆分草案，FEAT-037 不再分配给卧龙或仲达；哪吒为当前唯一实现负责人。
-- verification:
-  - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
-- next_action: `DEV-nezha` pull 最新 main 后，切到 `codex/TASK-114-feat-037-billing-ledger`，按 `.claw/assignments/TASK-114.yaml` 运行 task-scoped `dev-login.py`，通过后开始实现并持续更新 `.claw/tasks/TASK-114.md`。
-- handoff_notes:
-  - 先落 billing schema/domain/service/API，再接管理端和平台端页面，最后接入运行链路计量与 quota hooks。
-  - 当前 `TASK-112` 仍由凤雏负责，Open API 相关 metering 不得抢改 TASK-112 活跃文件；若会冲突，先留 integration seam 和任务状态说明。
-  - 任何账单 UI 必须遵守 `DESIGN.md`、`DESIGN.json` 和 `AGENTS.md` 的 `鎏金账房` 产品页规则。
+  - FEAT-045 与 FEAT-036 相邻，但不是替代关系；共享 OpenAPI 运行时逻辑应一次实现、两边复用。
+  - 现有 `/chat` 和 `/chat/stream` 也必须遵守 `standard` / `cloudcc` 规则，不能只补未来 `chat-messages`。
+  - `cloudcc` key 的任何失败路径都不能静默回退到 run-as 用户 `cc_username` / `cc_safetymark` 换 token。
 
 ### TASK-113 cc-aidev 3.8.0 broad-code initialization
 
@@ -202,7 +63,7 @@ board_status: active
 
 ### TASK-112 Agent Open API Dify parity enhancement
 
-- status: assigned
+- status: completed
 - priority: P0
 - owner_role: DEV-fengchu
 - spec_path: `docs/specs/FEAT-036-agent-open-api-dify-parity.md`
@@ -211,6 +72,7 @@ board_status: active
 - branch: `codex/TASK-112-agent-openapi-dify-parity`
 - summary: 对标 Dify Service API 的常用 Agent/OpenAPI 能力，增强 FEAT-021 Agent Open API，补齐参数发现、Dify 风格 chat-messages、停止生成、会话/消息列表、反馈、建议问题、文件上传、资源越权校验、幂等/重试语义、生产化配置和文档。
 - started_at: 2026-05-18T04:04:58Z
+- completed_at: 2026-05-19T16:12:00Z
 - assigned_to: `DEV-fengchu`
 - assigned_by: `MANAGER-001`
 - done:
@@ -220,11 +82,19 @@ board_status: active
   - 已创建 `.claw/tasks/TASK-112.md` 作为凤雏的任务状态片。
   - 2026-05-18T04:40:00Z 已按凤雏反馈修正 `DEV-fengchu` 的 `allowed_scopes`，补入 TASK-112 assignment 的最小文件范围，避免 task-scoped `dev-login.py` 将 assignment scope 判定为超出开发者长期授权。
   - 2026-05-18T09:10:30Z 已按宽代码模式将 assignment 显式切到 `scope_mode: task_bounded_broad_code`，用 `allowed_write_roots` 覆盖必要 source/test/resource/frontend/deploy 根，并保留 migrations、application config、`.claw` 身份授权文件和 identity scripts 的 protected path 约束。
+  - 2026-05-19T16:12:00Z 已合并 Codeup change request !2 `[TASK-112] Agent Open API Dify parity` 到 `main`，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`。
+  - 合并前已将 Open API 迁移从 `V53__agent_open_api_dify_parity.sql` 重编号为 `V57__agent_open_api_dify_parity.sql`，避免在已应用 `V56__organization_profile.sql` 的环境触发 Flyway out-of-order 校验失败。
 - verification:
   - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> allowed。
   - `assignment`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --json` -> allowed。
   - `assignment-broad-code`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/check-assignment.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --developer DEV-fengchu --task TASK-112 --branch codex/TASK-112-agent-openapi-dify-parity --git-username Bimo --ssh-signing-key-fingerprint SHA256:xvufU1n4Ov0fE7jEGrV82H/ABxHdm2VD2TKRHoNSEdQ --files backend/src/main/java/com/codehouse/ciciassistant/openapi/AgentOpenApiController.java frontend/src/assistant/AgentOpenApiDocsDialog.tsx docs/specs/FEAT-036-agent-open-api-dify-parity.md .claw/tasks/TASK-112.md --json` -> allowed，`scope_mode=task_bounded_broad_code`。
-- next_action: `DEV-fengchu` pull 最新 main 后，切到 `codex/TASK-112-agent-openapi-dify-parity`，按 `.claw/assignments/TASK-112.yaml` 运行完整 `dev-login.py` 私钥挑战，通过后开始实现，并持续更新 `.claw/tasks/TASK-112.md`。
+  - `codeup`: change request !2 -> merged，merge revision `c46121293bb74a62c5a8822f49ce0848ae356b07`；change request !1 -> closed。
+  - `merge-check`: independent worktree merge of `origin/main` + `origin/codex/TASK-112-agent-openapi-dify-parity` -> no conflicts。
+  - `backend`: `mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test` -> success，测试库从 V56 成功迁移到 V57。
+  - `frontend`: `npm run build` in `frontend/` -> success，保留既有 Vite chunk-size warning。
+  - `diff`: `git diff --check HEAD^..HEAD` -> success。
+  - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /tmp/cc-agentcici-mr2-check/.claw` -> success。
+- next_action: TASK-112 已完成并合入 main；继续等待/处理 TASK-114、TASK-115、TASK-116 后续 Codeup MR。
 - handoff_notes:
   - 优先补 `knowledgeBaseIds` / `activeSkillCode` 越权校验、Dify 风格 `chat-messages` blocking/streaming 和 message/task/conversation 数据模型。
   - 保持 FEAT-021 既有 `/health`、`/chat`、`/chat/stream` 兼容。

@@ -1,13 +1,13 @@
 ---
 kind: task-status
 task_id: TASK-114
-assignee: DEV-nezha
+assignee: MANAGER-001
 status: ready
 branch: codex/TASK-114-feat-037-billing-ledger
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-114.yaml
-updated_at: 2026-05-18T23:20:36Z
+updated_at: 2026-05-20T01:54:39Z
 updated_by: MANAGER-001
 ---
 
@@ -33,7 +33,7 @@ Implement FEAT-037 end to end:
 
 ## Preflight
 
-Before editing, run task-scoped `dev-login.py` for `DEV-nezha` on branch `codex/TASK-114-feat-037-billing-ledger`.
+Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `codex/TASK-114-feat-037-billing-ledger`.
 
 ## Verification Target
 
@@ -47,3 +47,4 @@ Before editing, run task-scoped `dev-login.py` for `DEV-nezha` on branch `codex/
 
 - 2026-05-18T23:20:36Z: Initial draft split FEAT-037 into separate backend/UI tasks.
 - 2026-05-19T07:20:36+08:00: User assigned FEAT-037 full development to `DEV-nezha`; TASK-114 now owns the whole feature.
+- 2026-05-20T09:54:39+08:00: User reassigned TASK-114 from `DEV-nezha` to Owen (`MANAGER-001`) and requested no further task assignment to `DEV-nezha`.

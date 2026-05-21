@@ -1,0 +1,42 @@
+task_id: TASK-127
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T06:33:50Z
+expires_at: none
+spec_path: docs/specs/FEAT-049-current-status-hotfile-compression.md
+task_status_path: .claw/tasks/TASK-127.md
+branch: codex/TASK-124-platform-tenant-manual-provisioning
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - .claw/**
+  - docs/specs/**
+scope_files:
+  - .claw/assignments/TASK-127.yaml
+  - .claw/tasks/TASK-127.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - docs/specs/FEAT-049-current-status-hotfile-compression.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - .claw/test-report.md
+  - docs/specs/PROJECT-BASELINE.md
+task_boundary:
+  - "只精简 .claw/current-status.md，使其回到热状态文件职责，并补一个最小规格记录该职责边界。"
+  - "仅补充本任务所需的 assignment、task status 和 task-board 记录，不扩散修改其他规范或实现文件。"
+  - "详细验证、长历史和任务执行细节继续分别留在 test-report、task-board 和 tasks/TASK-xxx.md。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T06:33:50Z; user requested review and simplify current-status.md redundancy."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "状态文件精简任务。只处理 current-status 的热状态收口和必要状态同步。"
+hard_gate_notes: "MANAGER-001 必须在编辑 .claw/current-status.md 和 .claw/task-board.md 前运行 TASK-127 的 task-scoped dev-login.py。"

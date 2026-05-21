@@ -1,0 +1,60 @@
+task_id: TASK-124
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T04:35:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
+task_status_path: .claw/tasks/TASK-124.md
+branch: codex/TASK-124-platform-tenant-manual-provisioning
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/platform/**
+  - frontend/src/styles.css
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - docs/**
+  - .claw/**
+scope_files:
+  - frontend/src/platform/PlatformShell.tsx
+  - frontend/src/platform/pages/PlatformTenantsPage.tsx
+  - frontend/src/styles.css
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/api/PlatformTenantLifecycleController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformTenantLifecycleService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/AuthService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/PlatformTenantLifecycleIntegrationTest.java
+  - docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
+  - .claw/assignments/TASK-124.yaml
+  - .claw/tasks/TASK-124.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
+  - docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md
+  - docs/specs/FEAT-010-platform-operations-console.md
+  - docs/specs/PROJECT-BASELINE.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Split platform tenant lifecycle entry into a list page plus per-tenant detail route, and add manual tenant provisioning from the platform list page."
+  - "Apply the new shared tenant ID generation rule to all future organization creation entry points without rewriting historical org IDs."
+  - "Preserve unrelated dirty worktree changes and avoid widening this task into billing, subscription, or non-platform redesign."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T04:35:00Z; user requested a design-first adjustment for platform tenant lifecycle management, manual tenant provisioning, and new tenant ID rules."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Spec-first task. Current session lands the design document and assignment; implementation can proceed on the planned branch in a follow-up step."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-124 before implementation edits outside the current doc/state scope."

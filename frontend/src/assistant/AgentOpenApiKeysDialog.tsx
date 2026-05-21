@@ -19,6 +19,7 @@ type ApiKeyRow = {
   publicId: string;
   name: string;
   keyPrefix: string;
+  keyType?: string;
   status: string;
   runAsUserId: string;
   allowedIps: string[];
@@ -27,6 +28,7 @@ type ApiKeyRow = {
   maxPromptChars: number;
   maxResponseChars: number;
   allowStream: boolean;
+  scopes?: string[];
   expiresAt?: string | null;
   lastUsedAt?: string | null;
   createdAt?: string | null;
@@ -62,6 +64,18 @@ type UserRow = {
 
 type TabKey = "keys" | "calls";
 
+const SCOPE_OPTIONS = [
+  { value: "chat", label: "对话" },
+  { value: "files", label: "文件" },
+  { value: "feedback", label: "反馈" },
+  { value: "history", label: "历史" },
+];
+
+const KEY_TYPE_OPTIONS = [
+  { value: "standard", label: "标准 Key" },
+  { value: "cloudcc", label: "CloudCC 嵌入 Key" },
+];
+
 function formatTime(value?: string | null) {
   if (!value) return "无";
   const date = new Date(value);
@@ -91,6 +105,11 @@ function statusClass(status: string) {
   return "";
 }
 
+function keyTypeText(keyType?: string) {
+  if (keyType === "cloudcc") return "CloudCC";
+  return "标准";
+}
+
 export default function AgentOpenApiKeysDialog({
   open,
   agentId,
@@ -112,11 +131,13 @@ export default function AgentOpenApiKeysDialog({
     name: "生产调用 Key",
     runAsUserId: "",
     allowedIps: "",
+    keyType: "standard",
     rateLimitPerMinute: "60",
     dailyQuota: "1000",
     maxPromptChars: "8000",
     maxResponseChars: "12000",
     allowStream: true,
+    scopes: ["chat", "files", "feedback", "history"],
   });
 
   const visibleKeys = useMemo(
@@ -240,11 +261,13 @@ export default function AgentOpenApiKeysDialog({
           .split(/[,\n]/)
           .map((item) => item.trim())
           .filter(Boolean),
+        keyType: form.keyType,
         rateLimitPerMinute: Number(form.rateLimitPerMinute) || 60,
         dailyQuota: Number(form.dailyQuota) || 1000,
         maxPromptChars: Number(form.maxPromptChars) || 8000,
         maxResponseChars: Number(form.maxResponseChars) || 12000,
         allowStream: form.allowStream,
+        scopes: form.scopes,
       };
       const created = await requestJson<{ credential: ApiKeyRow; plainKey: string }>(
         `/agents/${encodeURIComponent(agentId)}/api-keys`,
@@ -310,6 +333,24 @@ export default function AgentOpenApiKeysDialog({
   );
 
   const selectedCall = calls.find((call) => call.requestId === selectedCallRequestId) ?? null;
+
+  const toggleScope = (scope: string) => {
+    setForm((current) => {
+      const existing = current.scopes.includes(scope)
+        ? current.scopes.filter((item) => item !== scope)
+        : [...current.scopes, scope];
+      return { ...current, scopes: existing };
+    });
+  };
+
+  const scopeText = (scopes?: string[]) => {
+    if (!scopes || scopes.length === 0) return "默认";
+    if (scopes.includes("*")) return "全部";
+    return SCOPE_OPTIONS
+      .filter((option) => scopes.includes(option.value))
+      .map((option) => option.label)
+      .join(" / ") || scopes.join(" / ");
+  };
 
   const revokeKey = async (credentialId: number) => {
     if (!window.confirm("删除会永久作废这个 Key，历史调用日志仍会保留。完整 Key 无法恢复，只能重新创建。")) {
@@ -381,6 +422,7 @@ export default function AgentOpenApiKeysDialog({
               <span><strong>停用</strong>：临时禁止调用，可再次启用。</span>
               <span><strong>重新生成</strong>：旧 Key 立即失效，并只显示一次新的完整 Key。</span>
               <span><strong>删除</strong>：永久作废这个 Key，历史日志保留。</span>
+              <span><strong>CloudCC 嵌入 Key</strong>：调用时必须传入当前 CloudCC 用户的 `cloudccContext.accessToken`。</span>
             </div>
             <div className="cici-openapi-keys__form">
               <label>
@@ -392,6 +434,14 @@ export default function AgentOpenApiKeysDialog({
                 <select value={form.runAsUserId} onChange={(event) => setForm((current) => ({ ...current, runAsUserId: event.target.value }))}>
                   {users.map((user) => (
                     <option key={user.id} value={user.id}>{user.nickname ? `${user.nickname} · ${user.mobile}` : user.mobile}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>Key 类型</span>
+                <select value={form.keyType} onChange={(event) => setForm((current) => ({ ...current, keyType: event.target.value }))}>
+                  {KEY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
                   ))}
                 </select>
               </label>
@@ -411,6 +461,19 @@ export default function AgentOpenApiKeysDialog({
                 <input type="checkbox" checked={form.allowStream} onChange={(event) => setForm((current) => ({ ...current, allowStream: event.target.checked }))} />
                 <span>允许流式对话</span>
               </label>
+              <fieldset className="cici-openapi-keys__scopes">
+                <legend>能力 scope</legend>
+                {SCOPE_OPTIONS.map((scope) => (
+                  <label key={scope.value}>
+                    <input
+                      type="checkbox"
+                      checked={form.scopes.includes(scope.value)}
+                      onChange={() => toggleScope(scope.value)}
+                    />
+                    <span>{scope.label}</span>
+                  </label>
+                ))}
+              </fieldset>
               <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void createKey()} disabled={saving || !form.runAsUserId || !form.name.trim()}>
                 创建 Key
               </button>
@@ -440,11 +503,11 @@ export default function AgentOpenApiKeysDialog({
               <tbody>
                 {visibleKeys.map((key) => (
                   <tr key={key.id}>
-                    <td title={`ID ${key.id}`}><span className="cici-openapi-keys__strong">{key.name}</span></td>
+                    <td title={`ID ${key.id}`}><span className="cici-openapi-keys__strong">{key.name}</span><br /><small>{keyTypeText(key.keyType)} Key</small></td>
                     <td title={userDetailTitle(key.runAsUserId)}>{userDisplayName(key.runAsUserId)}</td>
                     <td><span className={`cici-openapi-keys__status ${statusClass(key.status)}`}>{statusText(key.status)}</span></td>
                     <td title="这里只是 Key 前缀，用于识别记录；完整 Key 只在创建或重新生成后显示一次。"><code>{key.keyPrefix}</code></td>
-                    <td>{key.rateLimitPerMinute}/min · {key.dailyQuota}/day</td>
+                    <td>{key.rateLimitPerMinute}/min · {key.dailyQuota}/day<br /><small>{scopeText(key.scopes)}</small></td>
                     <td>{formatTime(key.lastUsedAt)}</td>
                     <td>
                       <div className="cici-openapi-keys__actions">

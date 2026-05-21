@@ -50,7 +50,9 @@ public class AgentOpenApiCredentialController {
                         request.maxPromptChars(),
                         request.maxResponseChars(),
                         request.allowStream(),
-                        request.allowTraceRead()));
+                        request.allowTraceRead(),
+                        request.scopes(),
+                        request.keyType()));
         return ApiResponse.ok(
                 credentialService.toCreationPayload(created),
                 "API key created. Store the plain key now.");
@@ -75,7 +77,8 @@ public class AgentOpenApiCredentialController {
                         request.maxResponseChars(),
                         request.allowStream(),
                         request.allowTraceRead(),
-                        request.status())));
+                        request.status(),
+                        request.scopes())));
     }
 
     @PostMapping("/{credentialId}/rotate")
@@ -109,7 +112,9 @@ public class AgentOpenApiCredentialController {
             Integer maxPromptChars,
             Integer maxResponseChars,
             Boolean allowStream,
-            Boolean allowTraceRead
+            Boolean allowTraceRead,
+            List<String> scopes,
+            String keyType
     ) {
     }
 
@@ -124,7 +129,8 @@ public class AgentOpenApiCredentialController {
             Integer maxResponseChars,
             Boolean allowStream,
             Boolean allowTraceRead,
-            String status
+            String status,
+            List<String> scopes
     ) {
     }
 }

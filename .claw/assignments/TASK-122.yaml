@@ -1,0 +1,59 @@
+task_id: TASK-122
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T02:26:46Z
+expires_at: none
+spec_path: docs/specs/FEAT-044-platform-console-production-polish.md
+task_status_path: .claw/tasks/TASK-122.md
+branch: codex/TASK-122-platform-console-production-polish
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/platform/**
+  - frontend/src/styles.css
+  - docs/**
+  - .claw/**
+scope_files:
+  - frontend/src/platform/PlatformLogin.tsx
+  - frontend/src/platform/PlatformShell.tsx
+  - frontend/src/platform/pages/PlatformHomePage.tsx
+  - frontend/src/platform/pages/PlatformSkillsPage.tsx
+  - frontend/src/platform/pages/PlatformToolsPage.tsx
+  - frontend/src/platform/pages/PlatformTenantsPage.tsx
+  - frontend/src/platform/pages/PlatformAutoServiceDemoRequestsPage.tsx
+  - frontend/src/platform/pages/PlatformAuditPage.tsx
+  - frontend/src/styles.css
+  - docs/specs/FEAT-044-platform-console-production-polish.md
+  - .claw/assignments/TASK-122.yaml
+  - .claw/tasks/TASK-122.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-044-platform-console-production-polish.md
+  - docs/specs/PROJECT-BASELINE.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Polish the production quality of /platform/* pages and remove leaked build/internal implementation information from the visible UI."
+  - "Keep platform business capabilities, routes, API usage, and governance flows intact while tightening copy, hierarchy, layout, and responsive behavior."
+  - "Do not expand this task into new backend features, new platform modules, or cross-surface redesign outside /platform/*."
+  - "Preserve unrelated dirty worktree changes."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T02:26:46Z; user requested platform operations console production cleanup and visual polish."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Task scoped to platform console frontend cleanup, production-language hardening, and visual quality verification."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-122 on branch codex/TASK-122-platform-console-production-polish before implementation edits."

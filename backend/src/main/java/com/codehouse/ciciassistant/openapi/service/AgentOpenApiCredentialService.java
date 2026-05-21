@@ -56,6 +56,7 @@ public class AgentOpenApiCredentialService {
     public CredentialCreation create(String orgId, String agentId, String actorUserId, CreateCredentialCommand command) {
         requireAgent(orgId, agentId);
         String runAsUserId = requireRunAsUser(orgId, command.runAsUserId());
+        String keyType = normalizeKeyType(command.keyType());
         AgentApiKeyGenerator.GeneratedKey generated = generateUniqueKey();
         AgentApiCredentialEntity entity = credentialRepository.save(new AgentApiCredentialEntity(
                 generated.publicId(),
@@ -64,9 +65,10 @@ public class AgentOpenApiCredentialService {
                 requireText(command.name(), "name"),
                 generated.keyPrefix(),
                 generated.keyHash(),
+                keyType,
                 runAsUserId,
                 toJson(normalizeList(command.allowedIps())),
-                toJson(List.of("chat", "health")),
+                toJson(normalizeScopes(command.scopes())),
                 positiveOrDefault(command.rateLimitPerMinute(), properties.getDefaultRateLimitPerMinute(), 1, 10000),
                 positiveOrDefault(command.dailyQuota(), properties.getDefaultDailyQuota(), 1, 10000000),
                 positiveOrDefault(command.maxPromptChars(), properties.getDefaultMaxPromptChars(), 1, 64000),
@@ -94,6 +96,7 @@ public class AgentOpenApiCredentialService {
                 command.name() == null || command.name().isBlank() ? entity.getName() : requireText(command.name(), "name"),
                 runAsUserId,
                 command.allowedIps() == null ? entity.getAllowedIpsJson() : toJson(normalizeList(command.allowedIps())),
+                command.scopes() == null ? entity.getScopesJson() : toJson(normalizeScopes(command.scopes())),
                 positiveOrDefault(command.rateLimitPerMinute(), entity.getRateLimitPerMinute(), 1, 10000),
                 positiveOrDefault(command.dailyQuota(), entity.getDailyQuota(), 1, 10000000),
                 positiveOrDefault(command.maxPromptChars(), entity.getMaxPromptChars(), 1, 64000),
@@ -126,6 +129,7 @@ public class AgentOpenApiCredentialService {
                 entity.getPublicId(),
                 entity.getName(),
                 entity.getKeyPrefix(),
+                entity.getKeyType(),
                 entity.getStatus(),
                 entity.getRunAsUserId(),
                 readStringList(entity.getAllowedIpsJson()),
@@ -197,6 +201,18 @@ public class AgentOpenApiCredentialService {
         throw new IllegalArgumentException("Unsupported API key status: " + status);
     }
 
+    private String normalizeKeyType(String keyType) {
+        if (keyType == null || keyType.isBlank()) {
+            return AgentApiCredentialEntity.KEY_TYPE_STANDARD;
+        }
+        String normalized = keyType.trim().toLowerCase(Locale.ROOT);
+        if (AgentApiCredentialEntity.KEY_TYPE_STANDARD.equals(normalized)
+                || AgentApiCredentialEntity.KEY_TYPE_CLOUDCC.equals(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("Unsupported API key type: " + keyType);
+    }
+
     private List<String> normalizeList(List<String> values) {
         if (values == null || values.isEmpty()) {
             return List.of();
@@ -210,6 +226,20 @@ public class AgentOpenApiCredentialService {
             result.add(text);
         }
         return List.copyOf(result);
+    }
+
+    private List<String> normalizeScopes(List<String> values) {
+        List<String> normalized = normalizeList(values);
+        if (normalized.isEmpty()) {
+            return List.of("chat", "files", "feedback", "history");
+        }
+        List<String> allowed = List.of("chat", "files", "feedback", "history", "audio", "*");
+        for (String scope : normalized) {
+            if (!allowed.contains(scope)) {
+                throw new IllegalArgumentException("Unsupported API key scope: " + scope);
+            }
+        }
+        return normalized;
     }
 
     private int positiveOrDefault(Integer value, int fallback, int min, int max) {
@@ -264,7 +294,9 @@ public class AgentOpenApiCredentialService {
             Integer maxPromptChars,
             Integer maxResponseChars,
             Boolean allowStream,
-            Boolean allowTraceRead
+            Boolean allowTraceRead,
+            List<String> scopes,
+            String keyType
     ) {
     }
 
@@ -279,7 +311,8 @@ public class AgentOpenApiCredentialService {
             Integer maxResponseChars,
             Boolean allowStream,
             Boolean allowTraceRead,
-            String status
+            String status,
+            List<String> scopes
     ) {
     }
 
@@ -291,6 +324,7 @@ public class AgentOpenApiCredentialService {
             String publicId,
             String name,
             String keyPrefix,
+            String keyType,
             String status,
             String runAsUserId,
             List<String> allowedIps,
