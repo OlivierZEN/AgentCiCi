@@ -7,6 +7,7 @@ status: review
 assignee: MANAGER-001
 owner_role: project-manager
 branch: codex/local-uncommitted-feature-mr
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6
 spec_path: docs/specs/FEAT-053-platform-account-orgless-auth-context.md
 assignment_path: .claw/assignments/TASK-131.yaml
 updated_at: 2026-05-22T05:10:00Z
@@ -41,6 +42,7 @@ updated_by: MANAGER-001
 - 2026-05-22T05:10:00Z: Completed the orgless platform auth implementation pass: platform login now uses `/auth/platform/password/login`, platform guard validates `/auth/platform/me`, platform JWT/context uses `typ=platform` and `platform_account_id`, platform APIs use an internal governance scope instead of token `org_id`, org tokens are rejected from `/platform/*`, and platform console no longer displays `demo-org` or current-organization metadata.
 - 2026-05-22T05:10:00Z: Fixed platform overview table layout so the orgless account/status values stay inside the desktop panel.
 - 2026-05-22T10:45:33Z: Moved the previously local uncommitted feature work onto `codex/local-uncommitted-feature-mr` for Codeup review.
+- 2026-05-22T10:52:00Z: Codeup change request created: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6
 
 ## Verification
 

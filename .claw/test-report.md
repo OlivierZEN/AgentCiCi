@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-22T10:45:33Z
+updated_at: 2026-05-22T10:52:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-22T10:45:33Z
+last_run_at: 2026-05-22T10:52:00Z
 last_run_status: passed
 ---
 
@@ -14,7 +14,7 @@ last_run_status: passed
 
 - 状态：`passed`
 - 范围：local uncommitted feature MR branch preparation
-- 命令：manager `dev-login.py`, `validate-state.py`, `git diff --check`, `bash -n`, `release-acr.sh --dry-run`, frontend build, backend compile
+- 命令：manager `dev-login.py`, `validate-state.py`, `git diff --check`, `bash -n`, `release-acr.sh --dry-run`, frontend build, backend compile, Codeup change request creation
 - 环境：temporary branch `codex/local-uncommitted-feature-mr` based on latest `origin/main`.
 
 ## Latest Verified Results
@@ -28,6 +28,7 @@ last_run_status: passed
     - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**; generated `2.0.B3` without building, pushing, or tagging.
     - `frontend`: `npm run build` in `frontend/` -> **success** after linking the existing local `node_modules` into the temporary checkout; existing Vite chunk-size warning remains.
     - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `codeup-mr`: direct Codeup OpenAPI create with `createFrom=WEB`, repository `6826857`, source/target project `6826857`, source branch `codex/local-uncommitted-feature-mr`, target `main` -> **success**, https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6.
   - Notes:
     - `PlatformAuthIntegrationTest` was not rerun in this MR-prep pass because the latest TASK-131 focused integration gate is still blocked by local Docker/Postgres availability; rerun once the local database is available.
 

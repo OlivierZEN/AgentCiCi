@@ -7,6 +7,7 @@ status: done
 assignee: MANAGER-001
 owner_role: project-manager
 branch: codex/local-uncommitted-feature-mr
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6
 spec_path: docs/specs/FEAT-052-acr-release-version-governance.md
 assignment_path: .claw/assignments/TASK-130.yaml
 updated_at: 2026-05-22T04:42:10Z
@@ -53,6 +54,7 @@ updated_by: MANAGER-001
 - 2026-05-22T03:07:01Z: Opened TASK-130 and FEAT-052 for the user's release version governance request.
 - 2026-05-22T04:42:10Z: Implemented the canonical ACR release script, backend `/system/version`, frontend build-time version badge, Docker/Compose metadata propagation, and production release runbook governance.
 - 2026-05-22T10:45:33Z: Moved the previously local uncommitted feature work onto `codex/local-uncommitted-feature-mr` for Codeup review.
+- 2026-05-22T10:52:00Z: Codeup change request created: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6
 
 ## Verification
 

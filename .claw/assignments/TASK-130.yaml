@@ -7,7 +7,7 @@ expires_at: none
 spec_path: docs/specs/FEAT-052-acr-release-version-governance.md
 task_status_path: .claw/tasks/TASK-130.md
 branch: codex/local-uncommitted-feature-mr
-pr_url: n/a
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - frontend/src/**

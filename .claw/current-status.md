@@ -5,7 +5,7 @@ updated_at: 2026-05-22T10:32:57Z
 updated_by: MANAGER-001
 phase: maintenance
 active_task: "TASK-133 / TASK-132 / TASK-131 / TASK-114 / TASK-115 / TASK-116 / TASK-124"
-next_action: "DEV-fengchu runs task-scoped dev-login.py on codex/TASK-133-agent-builder-new-agent-model-config-fix, then fixes the no-model new-Agent click path and validates the /admin/models notice handoff."
+next_action: "Review Codeup change/6 for the local feature MR; rerun PlatformAuthIntegrationTest after local Docker/Postgres is available; DEV-fengchu can fetch main and start TASK-132/TASK-133."
 read_next:
   goals: false
   decisions: false
@@ -25,7 +25,7 @@ read_next:
 - Focus: close FEAT-053 platform account orgless auth context, then continue FEAT-046 on the now-integrated local branch while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.0.
 - Mainline active work: `TASK-133`, `TASK-132`, `TASK-131`, `TASK-114`, `TASK-115`, `TASK-116`, `TASK-124`
 - Newly assigned: `TASK-133` gives `DEV-fengchu` the Agent Builder no-model new-Agent feedback; `TASK-132` remains assigned to `DEV-fengchu` for focused Agent detail reload.
-- `TASK-131` implementation pass is in review: platform login/token/current-account context is orgless, org tokens are rejected from `/platform/*`, platform shell/overview no longer show `demo-org` or current-organization metadata, and desktop Playwright QA is green. Final backend integration rerun is waiting on local Docker/Postgres.
+- `TASK-131` implementation pass is in Codeup review at `change/6`: platform login/token/current-account context is orgless, org tokens are rejected from `/platform/*`, platform shell/overview no longer show `demo-org` or current-organization metadata, and desktop Playwright QA is green. Final backend integration rerun is waiting on local Docker/Postgres.
 - Latest maintenance: `FEAT-052` completed ACR release version governance; production release source of truth is `docs/production-release-runbook.md`, with `scripts/release-acr.sh` generating the canonical version.
 - Just completed: `TASK-130` added unified ACR/Git/backend/frontend/deploy version propagation and authenticated left-nav version badges.
 - `TASK-127` completed: remaining local branches were processed on `codex/TASK-124-feat-046-platform-tenant-provisioning`; `git branch --no-merged` now reports `0`.
@@ -33,7 +33,7 @@ read_next:
 - Recently restored: `TASK-125` database-name defaults now again target `agentcici` / `agentcici_test`
 - Recently completed and archived: `TASK-127`, `TASK-126`, `TASK-123`, `TASK-118`, `TASK-117`, `TASK-112`
 - Parked follow-ups: `TASK-023`, `TASK-036`, `TASK-096`, `TASK-020`, `TASK-007`, `TASK-070`, `TASK-063`
-- Latest verification: `TASK-133` assignment passed manager identity, team-status regeneration, `.claw` state validation, and targeted `git diff --check`; implementation has not started.
+- Latest verification: local feature MR branch passed manager identity, `.claw` state validation, `git diff --check`, release dry-run, frontend build, and backend compile; Codeup change request `change/6` is open.
 
 ## Read Next
 

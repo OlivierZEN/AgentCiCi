@@ -1,7 +1,7 @@
 ---
 kind: team-status
 version: 3
-updated_at: 2026-05-22T10:46:27Z
+updated_at: 2026-05-22T10:52:51Z
 updated_by: summarize-team-status
 status: derived
 ---
@@ -91,7 +91,7 @@ status: derived
 - identity_status: `active`
 - assigned_tasks: `TASK-114, TASK-117, TASK-118, TASK-119, TASK-120, TASK-121, TASK-122, TASK-124, TASK-125, TASK-126, TASK-127, TASK-128, TASK-129, TASK-130, TASK-131`
 - active_tasks: `TASK-114, TASK-119, TASK-124, TASK-131`
-- latest_pr: `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/5`
+- latest_pr: `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6`
 - contribution_status: `claimed, code_submitted, merged, review_requested`
 - validation_status: `unknown`
 - integration_status: `integrated, not_ready, waiting_review`
@@ -117,8 +117,8 @@ status: derived
 | `TASK-127` | Merge remaining local branches into the current branch | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `n/a` |
 | `TASK-128` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-124-platform-tenant-manual-provisioning` | `None` |
 | `TASK-129` | Admin login organization-selection alignment | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `None` |
-| `TASK-130` | ACR release version governance and app version badge | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/local-uncommitted-feature-mr` | `None` |
-| `TASK-131` | Platform account orgless auth context | `MANAGER-001` | `review` | `review_requested` | `unknown` | `waiting_review` | `codex/local-uncommitted-feature-mr` | `None` |
+| `TASK-130` | ACR release version governance and app version badge | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/local-uncommitted-feature-mr` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6` |
+| `TASK-131` | Platform account orgless auth context | `MANAGER-001` | `review` | `review_requested` | `unknown` | `waiting_review` | `codex/local-uncommitted-feature-mr` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6` |
 | `TASK-132` | Agent Builder focused-agent skill binding refresh bugfix | `DEV-fengchu` | `ready` | `claimed` | `unknown` | `not_ready` | `codex/TASK-132-agent-builder-skill-refresh-bugfix` | `None` |
 | `TASK-133` | Agent Builder no-model new-Agent model-config redirect | `DEV-fengchu` | `ready` | `claimed` | `unknown` | `not_ready` | `codex/TASK-133-agent-builder-new-agent-model-config-fix` | `None` |
 

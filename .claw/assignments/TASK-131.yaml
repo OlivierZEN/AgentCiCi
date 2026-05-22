@@ -7,7 +7,7 @@ expires_at: none
 spec_path: docs/specs/FEAT-053-platform-account-orgless-auth-context.md
 task_status_path: .claw/tasks/TASK-131.md
 branch: codex/local-uncommitted-feature-mr
-pr_url: n/a
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/auth/**
