@@ -1,23 +1,33 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-22T10:52:00Z
+updated_at: 2026-05-22T12:02:40Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-22T10:52:00Z
-last_run_status: passed
+last_run_at: 2026-05-22T12:02:40Z
+last_run_status: passed_with_environment_note
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`passed`
-- 范围：local uncommitted feature MR branch preparation
-- 命令：manager `dev-login.py`, `validate-state.py`, `git diff --check`, `bash -n`, `release-acr.sh --dry-run`, frontend build, backend compile, Codeup change request creation
-- 环境：temporary branch `codex/local-uncommitted-feature-mr` based on latest `origin/main`.
+- 状态：`passed_with_environment_note`
+- 范围：skill authoring generate/refine timeout hotfix
+- 命令：manager `dev-login.py`, `npm run build`, `git diff --check`, targeted config/source inspection
+- 环境：temporary clean worktree on `codex/skill-authoring-timeout-fix`; Nginx `nginx -t` could not run because local `nginx` was unavailable and Docker/Colima runtime was not running.
 
 ## Latest Verified Results
+
+- Skill authoring generate/refine timeout hotfix (2026-05-22T12:02:40Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` with intended deploy/frontend/test-report files -> **allowed**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `diff`: `git diff --check` -> **success**.
+    - `config-inspection`: confirmed `location /skills/authoring/` appears before the broad `/skills` regex in both `deploy/nginx.cici.conf` and `deploy/nginx.cici.ssl.conf`, with `proxy_read_timeout 180s` and `proxy_send_timeout 180s`.
+  - Notes:
+    - Nginx syntax validation was attempted through Docker, but the Docker API socket was unavailable; local `nginx` was also not installed. `colima start --cpu 2 --memory 2` was started to enable the check, but it remained in disk-image download/startup and was stopped before changing project files.
+    - Frontend authoring generate/refine now use `safeFetchJson`, so HTML 504 responses fall back to `HTTP <status>` notices instead of throwing JSON parse errors.
 
 - Local uncommitted feature MR branch preparation (2026-05-22T10:45:33Z):
   - Commands:
