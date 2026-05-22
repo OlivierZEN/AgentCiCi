@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-22T10:30:01Z
+updated_at: 2026-05-22T13:25:28Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -36,17 +36,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - assignment_path: `.claw/assignments/TASK-132.yaml`
 - blocked_by: `none`
 - next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-132-agent-builder-skill-refresh-bugfix`, then fixes `AgentBuilderShell` to fetch the focused Agent detail and validates Skill bindings after refresh.
-
-### TASK-131 - Platform account orgless auth context
-
-- status: `review`
-- priority: `high`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-053-platform-account-orgless-auth-context.md`
-- task_status_path: `.claw/tasks/TASK-131.md`
-- assignment_path: `.claw/assignments/TASK-131.yaml`
-- blocked_by: `none`
-- next_action: Rerun `PlatformAuthIntegrationTest` after local Docker/Postgres is available, then close TASK-131 if the backend integration gate is green.
 
 ### TASK-124 - FEAT-046 platform tenant manual provisioning and lifecycle split
 
@@ -172,6 +161,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-131 - Platform account orgless auth context
+
+- status: `done`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-053-platform-account-orgless-auth-context.md`
+- task_status_path: `.claw/tasks/TASK-131.md`
+- assignment_path: `.claw/assignments/TASK-131.yaml`
+- blocked_by: `none`
+- next_action: `none`; Codeup change/6 was merged with post-merge state, frontend, backend compile, script, and diff verification. Rerun `PlatformAuthIntegrationTest` later when local Docker/Postgres is available.
 
 ### TASK-130 - ACR release version governance and app version badge
 

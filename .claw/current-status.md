@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-22T10:32:57Z
+updated_at: 2026-05-22T13:25:28Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-133 / TASK-132 / TASK-131 / TASK-114 / TASK-115 / TASK-116 / TASK-124"
-next_action: "Review Codeup change/6 for the local feature MR; rerun PlatformAuthIntegrationTest after local Docker/Postgres is available; DEV-fengchu can fetch main and start TASK-132/TASK-133."
+active_task: "TASK-133 / TASK-132 / TASK-114 / TASK-115 / TASK-116 / TASK-124"
+next_action: "Push merged main after Codeup change/6 and change/7 post-merge verification; rerun PlatformAuthIntegrationTest later when local Docker/Postgres is available."
 read_next:
   goals: false
   decisions: false
@@ -22,10 +22,11 @@ read_next:
 
 ## Snapshot
 
-- Focus: close FEAT-053 platform account orgless auth context, then continue FEAT-046 on the now-integrated local branch while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.0.
-- Mainline active work: `TASK-133`, `TASK-132`, `TASK-131`, `TASK-114`, `TASK-115`, `TASK-116`, `TASK-124`
+- Focus: continue FEAT-046 and the assigned Agent Builder fixes while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.0.
+- Mainline active work: `TASK-133`, `TASK-132`, `TASK-114`, `TASK-115`, `TASK-116`, `TASK-124`
 - Newly assigned: `TASK-133` gives `DEV-fengchu` the Agent Builder no-model new-Agent feedback; `TASK-132` remains assigned to `DEV-fengchu` for focused Agent detail reload.
-- `TASK-131` implementation pass is in Codeup review at `change/6`: platform login/token/current-account context is orgless, org tokens are rejected from `/platform/*`, platform shell/overview no longer show `demo-org` or current-organization metadata, and desktop Playwright QA is green. Final backend integration rerun is waiting on local Docker/Postgres.
+- Codeup changes merged locally on `main`: `change/6` platform account orgless auth context and `change/7` skill-authoring timeout fix. Post-merge verification passed state validation, frontend build, backend compile, script syntax, and `git diff --check`.
+- `TASK-131` is merged to `main`; focused `PlatformAuthIntegrationTest` rerun remains an environment follow-up for when local Docker/Postgres is available.
 - Latest maintenance: `FEAT-052` completed ACR release version governance; production release source of truth is `docs/production-release-runbook.md`, with `scripts/release-acr.sh` generating the canonical version.
 - Just completed: `TASK-130` added unified ACR/Git/backend/frontend/deploy version propagation and authenticated left-nav version badges.
 - `TASK-127` completed: remaining local branches were processed on `codex/TASK-124-feat-046-platform-tenant-provisioning`; `git branch --no-merged` now reports `0`.
@@ -33,14 +34,13 @@ read_next:
 - Recently restored: `TASK-125` database-name defaults now again target `agentcici` / `agentcici_test`
 - Recently completed and archived: `TASK-127`, `TASK-126`, `TASK-123`, `TASK-118`, `TASK-117`, `TASK-112`
 - Parked follow-ups: `TASK-023`, `TASK-036`, `TASK-096`, `TASK-020`, `TASK-007`, `TASK-070`, `TASK-063`
-- Latest verification: local feature MR branch passed manager identity, `.claw` state validation, `git diff --check`, release dry-run, frontend build, and backend compile; Codeup change request `change/6` is open.
+- Latest verification: Codeup `change/6` + `change/7` post-merge gate passed manager identity, `.claw` state validation, `git diff --check`, script syntax, frontend build, and backend compile.
 
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks only
 - `.claw/tasks/TASK-133.md` - Agent Builder no-model new-Agent feedback assigned to `DEV-fengchu`
 - `.claw/tasks/TASK-132.md` - Agent Builder focused-agent skill binding refresh bug assigned to `DEV-fengchu`
-- `.claw/tasks/TASK-131.md` - FEAT-053 orgless platform account auth context implementation and verification notes
 - `.claw/tasks/TASK-114.md` - billing ledger work slice
 - `.claw/tasks/TASK-115.md` - knowledge base maintenance slice
 - `.claw/tasks/TASK-116.md` - skill module completion slice
