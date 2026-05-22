@@ -851,9 +851,9 @@ export default function AdminSkillComposePage() {
           preferredProvider: preferred.preferredProvider,
         }),
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        flash(`生成失败：${json.message ?? `HTTP ${res.status}`}`);
+      const { body: json } = await safeFetchJson<SkillAuthoringResult>(res);
+      if (!res.ok || !json?.success) {
+        flash(`生成失败：${json?.message ?? `HTTP ${res.status}`}`);
         return;
       }
       const result = (json.data ?? null) as SkillAuthoringResult | null;
@@ -912,9 +912,9 @@ export default function AdminSkillComposePage() {
           preferredProvider: preferred.preferredProvider,
         }),
       });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        flash(`优化失败：${json.message ?? `HTTP ${res.status}`}`);
+      const { body: json } = await safeFetchJson<SkillAuthoringResult>(res);
+      if (!res.ok || !json?.success) {
+        flash(`优化失败：${json?.message ?? `HTTP ${res.status}`}`);
         return;
       }
       const result = (json.data ?? null) as SkillAuthoringResult | null;
