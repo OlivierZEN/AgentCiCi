@@ -5,26 +5,16 @@ import { safeFetchJson } from "../utils/http";
 
 type AuthPayload = {
   token: string;
-  orgId: string;
-  userId: string;
-  accountId: string;
+  tokenType: "platform";
+  platformAccountId: string;
+  email: string;
+  mobile: string;
+  displayName: string;
   roles: string[];
 };
 
-const PLATFORM_ORG_ID = "demo-org";
-const PLATFORM_BOOTSTRAP_EMAIL = "admin@cloudcc.com";
-const PLATFORM_BOOTSTRAP_MOBILE = "13800138111";
-
 function hasPlatformRole(roles: string[]): boolean {
   return roles.some((role) => role.startsWith("PLATFORM_"));
-}
-
-function normalizePlatformIdentifier(identifier: string): string {
-  const value = identifier.trim();
-  if (value.toLowerCase() === PLATFORM_BOOTSTRAP_EMAIL) {
-    return PLATFORM_BOOTSTRAP_MOBILE;
-  }
-  return value;
 }
 
 export default function PlatformLogin() {
@@ -36,12 +26,11 @@ export default function PlatformLogin() {
   const login = async () => {
     try {
       setNotice("登录中…");
-      const res = await fetch("/auth/password/login", {
+      const res = await fetch("/auth/platform/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          orgId: PLATFORM_ORG_ID,
-          identifier: normalizePlatformIdentifier(identifier),
+          identifier: identifier.trim(),
           password,
         }),
       });
@@ -54,7 +43,7 @@ export default function PlatformLogin() {
         setNotice("该账号当前没有平台角色，请先确认平台账号或手机号白名单配置。");
         return;
       }
-      localStorage.setItem(LS_PLATFORM_TOKEN, JSON.stringify({ ...body.data, tokenType: "platform" }));
+      localStorage.setItem(LS_PLATFORM_TOKEN, JSON.stringify(body.data));
       setNotice("登录成功。");
       nav("/platform", { replace: true });
     } catch (err) {
@@ -93,7 +82,7 @@ export default function PlatformLogin() {
                 placeholder="请输入密码"
               />
               <div className="row platform-login__actions">
-                <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!password.trim()}>
+                <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!identifier.trim() || !password.trim()}>
                   进入运营平台
                 </button>
               </div>

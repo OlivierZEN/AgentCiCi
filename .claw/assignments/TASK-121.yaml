@@ -24,7 +24,7 @@ scope_files:
   - deploy/acr.env.example
   - deploy/docker-compose.acr.yml
   - scripts/run-full-demo.sh
-  - docs/release-local-to-cici-cloudcc-cn.md
+  - docs/production-release-runbook.md
   - docs/specs/FEAT-043-database-rename-agentcici.md
   - .claw/assignments/TASK-121.yaml
   - .claw/tasks/TASK-121.md

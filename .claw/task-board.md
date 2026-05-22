@@ -37,6 +37,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-132-agent-builder-skill-refresh-bugfix`, then fixes `AgentBuilderShell` to fetch the focused Agent detail and validates Skill bindings after refresh.
 
+### TASK-131 - Platform account orgless auth context
+
+- status: `review`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-053-platform-account-orgless-auth-context.md`
+- task_status_path: `.claw/tasks/TASK-131.md`
+- assignment_path: `.claw/assignments/TASK-131.yaml`
+- blocked_by: `none`
+- next_action: Rerun `PlatformAuthIntegrationTest` after local Docker/Postgres is available, then close TASK-131 if the backend integration gate is green.
+
 ### TASK-124 - FEAT-046 platform tenant manual provisioning and lifecycle split
 
 - status: `in_progress`
@@ -161,6 +172,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-130 - ACR release version governance and app version badge
+
+- status: `done`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-052-acr-release-version-governance.md`
+- task_status_path: `.claw/tasks/TASK-130.md`
+- assignment_path: `.claw/assignments/TASK-130.yaml`
+- blocked_by: `none`
+- next_action: `none`; production releases now use `docs/production-release-runbook.md` and `scripts/release-acr.sh` for one canonical version across ACR tags, Git tag, backend metadata, frontend badge, and deploy env.
 
 ### TASK-129 - Admin login organization-selection alignment
 

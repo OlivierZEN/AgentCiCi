@@ -1,7 +1,7 @@
 ---
 title: FEAT-048 设计事实源中文化与 README 引用收口
 status: active
-updated_at: 2026-05-21T06:09:17Z
+updated_at: 2026-05-21T15:39:43Z
 updated_by: ai
 ---
 
@@ -43,3 +43,8 @@ updated_by: ai
 
 - 后续若新增跨页面设计规则，优先在 `DESIGN.json` 增补中文说明，再按需在 `DESIGN.md` 补一条摘要。
 - 如果未来存在外部工具必须读取英文文案，再单独设计多语言字段，不要回退这次中文化。
+
+## 当前进展
+
+- `README.md` 的 UI Design Governance 已随 FEAT-047 收口，不再复制旧版 `DESIGN.md` 的细粒度规则。
+- `DESIGN.json` 的人类可读字符串仍待中文化；本轮未修改其键名、结构或 token 数值。

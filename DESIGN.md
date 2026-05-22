@@ -1,296 +1,62 @@
----
-name: AgentCiCi Product Surfaces
-description: Shared product-surface design baseline for assistant, admin, and platform workflows.
-colors:
-  ink-900: "#2b2217"
-  ink-700: "#5f523f"
-  ink-500: "#7c6d59"
-  line-soft: "#ded2bb"
-  line-strong: "#b99652"
-  canvas: "#f7f3eb"
-  surface: "#fffdf8"
-  surface-muted: "#faf4e8"
-  surface-tint: "#f3e8d3"
-  accent-primary: "#a67c2f"
-  accent-primary-soft: "#f4e7c7"
-  accent-primary-strong: "#876223"
-  success-soft: "#f1f7ea"
-  success-ink: "#166534"
-  danger-soft: "#fff3ef"
-  danger-ink: "#b42318"
-typography:
-  display:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", sans-serif"
-    fontSize: "28px"
-    fontWeight: 650
-    lineHeight: 1.15
-    letterSpacing: "-0.02em"
-  headline:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", sans-serif"
-    fontSize: "18px"
-    fontWeight: 650
-    lineHeight: 1.3
-  title:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", sans-serif"
-    fontSize: "14px"
-    fontWeight: 600
-    lineHeight: 1.4
-  body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", sans-serif"
-    fontSize: "13px"
-    fontWeight: 500
-    lineHeight: 1.5
-  label:
-    fontFamily: "-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", sans-serif"
-    fontSize: "11px"
-    fontWeight: 700
-    lineHeight: 1.4
-    letterSpacing: "0.08em"
-rounded:
-  sm: "10px"
-  md: "14px"
-  lg: "18px"
-spacing:
-  xs: "6px"
-  sm: "10px"
-  md: "14px"
-  lg: "20px"
-  xl: "28px"
-components:
-  button-primary:
-    backgroundColor: "{colors.accent-primary}"
-    textColor: "{colors.surface}"
-    rounded: "{rounded.sm}"
-    padding: "9px 14px"
-  button-primary-hover:
-    backgroundColor: "{colors.accent-primary-strong}"
-    textColor: "{colors.surface}"
-    rounded: "{rounded.sm}"
-    padding: "9px 14px"
-  button-secondary:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-900}"
-    rounded: "{rounded.sm}"
-    padding: "9px 14px"
-  panel:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-900}"
-    rounded: "{rounded.md}"
-    padding: "16px"
-  input:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.ink-900}"
-    rounded: "{rounded.sm}"
-    padding: "10px 12px"
----
+# DESIGN
 
-# Design System: AgentCiCi Product Surfaces
+## 作用
 
-## Overview
+`DESIGN.md` 是 AgentCiCi 认证后产品界面的人工可读设计摘要。详细颜色、字号、组件规则、页面质量流程和回归检查以 `DESIGN.json` 为结构化事实源；不要把细则在多份顶层文档里重复展开。
 
-**Creative North Star: "The Gilded Ledger"**
+## 事实源分工
 
-**Style Name: "鎏金账房"**
+- `PRODUCT.md`：产品定位、用户和非目标。
+- `DESIGN.md`：共享视觉基线和关键约束摘要。
+- `DESIGN.json`：token、组件规则、页面实现质量流程、管理端列表规则等细则。
+- `docs/specs/`：功能级设计、例外、A/B 结论和交接记录。
 
-This system is the default baseline for all authenticated product surfaces in this repository, including the assistant workbench, admin console, and platform control plane. It treats those surfaces like a disciplined operations ledger: calm, bright, exact, and built for repeated daily use. Trust comes from orderly hierarchy, familiar controls, compact spacing, and strong information rhythm rather than decorative flourish.
+## 视觉基线
 
-The visual language should feel close to a mature SaaS control plane with a restrained luxury finish. Surfaces stay warm and light, thin champagne-gold linework provides distinction, and accent color is reserved for selection, confirmation, and primary actions. The system explicitly rejects glass cards, dark command-center theatrics, loud gradients, and any pattern that reads like a marketing page or an AI-generated dashboard template.
+默认风格名：`鎏金账房`。
 
-**Key Characteristics:**
-- High-density, scan-friendly data layouts
-- Light neutral surfaces with restrained gold emphasis
-- Stable split-pane workflows for list plus detail editing
-- Compact controls with clear focus and selection states
-- Familiar enterprise product behavior over novelty
+它适用于 `/`、`/admin/*`、`/platform/*` 等认证后产品表面：暖象牙底、墨色文字、紧凑密度、香槟金结构线。金色只用于边框、焦点、激活态和高价值操作，不做大面积装饰填充。
 
-**Named Style Guidance:**
-- **鎏金账房** means warm ivory surfaces, ink-heavy typography, and brighter champagne-gold linework used as structural emphasis.
-- This style is appropriate for internal control planes, premium admin surfaces, and governance-heavy dashboards where the product should feel more valuable without becoming flashy.
-- Reuse this style by preserving three anchors together: warm neutral canvas, compact layout density, and bright gold edge contrast on panels, fields, active states, and buttons.
+各表面节奏不同：
 
-## Project-wide Application
+- `/` 助手工作台：阅读流更平稳，保留同一中性色、焦点态和控制语汇。
+- `/admin/*`：优先表格、表单、详情与反馈的稳定 CRUD。
+- `/platform/*`：治理、发布、审计信息密度最高，结构线可以更清晰。
 
-This file is the default design baseline for `/`, `/admin/*`, and `/platform/*`. Unless a route-specific spec explicitly says otherwise, all authenticated product pages inherit this file's palette discipline, typography hierarchy, spacing density, component vocabulary, and interaction rules.
+新品牌页、营销页或路由级视觉偏离必须先 shape、得到用户确认，并记录到 `docs/specs/`。
 
-### Surface tuning
+## 页面质量流程
 
-- **Assistant workbench (`/`)**: keep conversation areas calmer and more breathable, but preserve the same neutral base, focus styling, and control language.
-- **Admin (`/admin/*`)**: prefer table + detail, form + feedback, and compact CRUD structure with restrained borders and clear empty/error states.
-- **Platform (`/platform/*`)**: use the strongest governance density and the clearest gold structural linework, because these pages carry versioning, policy, and audit operations.
+新建或明显改动产品页面时，按 `DESIGN.json.extensions.pageImplementationWorkflow` 执行：
 
-### Exception rule
+- 先做可运行的最小版本，核心结构、导航、状态变化和主交互必须可用。
+- 本地运行，在真实浏览器验证路由，并截取桌面端完整页面截图。
+- 用产品设计和 QA 视角检查桌面端层级、间距、对比度、文字适配、溢出、面板稳定性和导航清晰度。
+- 验证被改动控件的 hover、focus、active、selected、disabled、loading、empty、error 状态。
+- 截图发现问题就修复后复测；关键模块有有效替代方案时做聚焦 A/B 对比，保留更清晰、更可访问、更一致的方案。
+- 功能设计、实现和测试默认不新增移动端兼容实现、移动端布局适配、移动端截图或移动端自动化测试；除非用户明确单独要求，不把移动端兼容作为交付范围或验收门槛。
 
-- If a new brand or marketing surface appears, do not inherit this file by default. Run `impeccable shape`, get user confirmation, and record the exception in `docs/specs/` before implementation.
-- If code changes visual tokens, component vocabulary, or cross-page interaction patterns, update `DESIGN.md` and `DESIGN.json` in the same session.
+## 关键 UI 约束
 
-### Page Implementation Quality Workflow
+- 尺度：默认控件、菜单、表格动作和内联设置使用 13px；辅助信息 11-12px；紧凑工具和图标按钮高 32-34px、图标 15-16px。
+- 面板内部：已被外层框定的产品面板内不再加背景盒；行、tab、状态、摘要和指标组优先用文字层级与必要的 1px 分隔线。
+- 选中与焦点：产品面板内不得用阴影、发光、浮起、内阴影、选中填充或浏览器式 focus shadow；优先用文字颜色、字重或直线下划线。
+- 按钮：主操作用香槟金实心；取消和次要操作用暖白底与金色系边框；危险操作只在语义需要时使用危险语汇。不要混入旧蓝色、青绿色、黑色或渐变按钮。
+- 文本命令：产品面板内的 tab、行操作、筛选标签、状态动作和内联命令不做圆角白底、胶囊、带框小卡或 hover 填充；使用纯文本、颜色、字重、下划线或分隔线。
+- 产品 tab：文本 tab 为默认形态；未选中暖棕文字，选中深金文字加 2px 直线金色下划线。原生 `button` 实现时所有状态都要显式重置为透明背景、0 圆角、无阴影、无 transform。
+- 弹窗：选择器、确认框、编辑框、导入预览和发布弹框默认是带遮罩的 modal，使用 `role="dialog"`、`aria-modal="true"`、关联标题、不透明面板和统一页脚；右上角 `×` 必须是无边框裸图标。
+- 轻量菜单：输入框工具、图标按钮和行操作菜单使用紧凑行高、不透明暖象牙表面和浅金边；默认不显示实现代码或 slug，不做逐行背景块、hover 背景、选中背景或行阴影。
+- 表格与列表：不要直接把 `table`、`thead`、`tbody`、`tr`、`th`、`td` 改成 flex/grid/block/clamp；截断、标签、菜单和动作都放进单元格内部元素。管理端列表默认避免横向滚动，行操作使用统一三点 hover/focus 菜单。
+- 可访问性：主要文字和交互控件尽量满足 WCAG AA；键盘焦点要清楚但克制；不必要动画、布局抖动和文本溢出都视为缺陷。
+- 移动端范围：不要为了常规功能新增移动断点、移动端专属布局、移动端适配 CSS 或移动端测试；只在用户明确开单时处理。
 
-All new or materially changed product pages must follow this implementation and visual QA loop before they are considered complete.
+## 明确禁止
 
-- **Build the smallest runnable version first:** implement the core page structure, navigation path, state changes, and primary interaction logic before visual polish. The first pass must be usable by a non-technical user without relying on explanatory placeholder copy.
-- **Run locally before judging:** start the relevant local app surface and verify the route in a real browser. Capture a full-page desktop screenshot before final review.
-- **Use visual inspection as a quality gate:** inspect screenshots like a product designer and QA reviewer. Check visual hierarchy, spacing rhythm, contrast, text fit, container overflow, table or panel stability, and whether navigation flows are understandable without technical context.
-- **Check interaction feedback:** verify hover, focus, active, selected, disabled, loading, empty, and error states for the controls touched by the change. Product-panel hover and selected states must still obey the no-shadow, no-background-box rules in this file.
-- **Iterate and reshoot:** fix every visual, copy, or interaction issue found during screenshot review, then capture the desktop screenshot again. Do not close the task on the first screenshot pass when issues remain.
-- **Run focused A/B comparisons for critical modules:** when a key module has meaningful alternatives, such as button hierarchy, toolbar layout, list density, or primary action placement, compare at least two variants against task clarity, scan speed, accessibility, and implementation consistency. Keep the stronger variant and remove unused experimental code.
-- **Use generated assets only when they serve the product:** when a page needs a bitmap illustration, icon set, brand visual, empty-state image, or other visual material, use image generation or a deliberate asset workflow and integrate the result with `鎏金账房` color, density, and tone. Do not add decorative assets that reduce task clarity.
-- **Final acceptance requires desktop visual proof:** a page implementation is not done until the desktop screenshot has been reviewed, desktop layout is stable, text is readable, key interactions have feedback, and the user flow is clear for non-technical users. If local run or screenshots are blocked, document the blocker and the unverified risk in the handoff.
+认证后产品面禁止装饰性渐变文字、厚侧边强调线、默认玻璃拟态、大面积深色命令中心、夸张 hero 指标、无差别卡片宫格，以及把 modal 当作第一交互反应。
 
-## Colors
+## 维护规则
 
-The palette is restrained and operational: warm neutrals carry the surface, while a single champagne-gold accent marks intent, selection, and high-value structure.
-
-### Primary
-- **Champagne Gold** (`#a67c2f`): Used for primary actions, active navigation, focused form controls, and selected workspace states.
-
-### Neutral
-- **Ledger Ink** (`#2b2217`): Primary text and strong data labels.
-- **Warm Bronze Secondary** (`#5f523f`): Section labels, subheadings, and medium-emphasis content.
-- **Quiet Metadata** (`#7c6d59`): Timestamps, helper text, empty-state support copy.
-- **Gold Mist Line** (`#ded2bb`): Table rules, panel borders, separators.
-- **Pressed Gold Line** (`#b99652`): Hovered or selected boundaries, stronger field edges.
-- **Ivory Canvas** (`#f7f3eb`): App background.
-- **Porcelain Surface** (`#fffdf8`): Main panels and form surfaces.
-- **Champagne Shelf** (`#f3e8d3`): Side navigation, inactive work surfaces, compact stat tiles.
-
-### Named Rules
-**The One Accent Rule.** Gold belongs to intent, focus, and linework. It is not decorative fill.
-
-## Typography
-
-**Display Font:** `-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif`
-**Body Font:** `-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif`
-**Label/Mono Font:** `ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace` for codes, ids, and timestamps
-
-**Character:** Typography should feel native, compact, and quietly authoritative. Large text is rare and purposeful; most of the system lives in a disciplined small-scale hierarchy designed for tables, forms, and metadata.
-
-### Hierarchy
-- **Display** (650, 28px, 1.15): Page titles and login hero headline only.
-- **Headline** (650, 18px, 1.3): Panel titles and key workspace headings.
-- **Title** (600, 14px, 1.4): Section subheadings and emphasized row labels.
-- **Body** (500, 13px, 1.5): Default copy, table content, form values.
-- **Label** (700, 11px, 0.08em tracking): Eyebrows, field labels, table headers, compact status markers.
-
-### Product UI Scale
-- **Default feature UI text:** New product controls, chooser rows, popovers, composer tools, table actions, toolbar buttons, menu items, and inline settings must default to Body scale (`13px`) unless they are true section titles or page headings.
-- **Secondary text:** Codes, descriptions, helper text, menu metadata, and compact badges should use `11px` to `12px`, with muted bronze or metadata color.
-- **Compact controls:** Small product tools and icon buttons should use a 32px to 34px height, 10px radius, 13px text, and 15px to 16px icons. Larger 38px+ controls are reserved for primary actions, dialog footers, or touch-heavy contexts.
-- **Picker and popover rows:** Skill lists, command menus, row menus, and lightweight pickers must use compact row density. Avoid card-like rows, per-item background blocks, row shadows, oversized icons, and 15px+ menu labels unless the picker is the main page surface.
-- **Lightweight floating menus:** Small menus attached to composer tools, icon buttons, or row actions should use 12px primary text, 10px to 11px metadata only when it is required for the task, 13px to 14px icons, 26px to 30px rows, 168px to 220px width, opaque warm ivory surfaces, gold-mist borders, and restrained shadows only when needed. Do not style these menus as stacked cards.
-- **Lightweight list labels:** Compact skill, command, and picker lists should display the human-facing name as the primary label. Do not show implementation codes, slugs, ids, or secondary metadata by default, and do not put a separate rounded background block, selected background, hover background, or shadow behind each row.
-- **No nested background frames:** Product pages must not put additional background boxes inside an already framed panel. Rows, tabs, search interiors, status labels, trace details, metric groups, and detail summaries should use text hierarchy plus the minimum necessary 1px divider lines. Do not use per-row background blocks, card-like inner containers, chip backgrounds, selected-row fills, hover fills, row shadows, or box-shadow focus frames inside a panel.
-- **Selection without lift:** Selected, active, hover, pressed, focus, and focus-visible states inside product panels must never add `box-shadow`, row shadow, glow, inset shadow, raised card treatment, or browser-like focus shadow. Prefer strong text color, font weight, or a tab underline. Do not add a new border for selection when text hierarchy or an existing divider can carry the state.
-- **No framed pseudo-buttons in panels:** Product panel tabs, row actions, filter labels, status actions, and inline text commands must not use rounded bordered background button chrome. Avoid pill-like or curved-border white backgrounds, hover/active background fills, and shadowed mini-buttons for these controls. Use plain text, text color, font weight, underline, or a 1px divider/underline instead. Reserve real rounded buttons only for primary form actions, dialog footers, and explicit toolbar commands.
-- **Text-tab hard reset:** Tabs, scope filters, and filter labels implemented with native `button` elements must explicitly reset default, hover, active, selected, focus, and focus-visible states to `background: transparent`, `border-radius: 0`, `box-shadow: none`, and `transform: none`. Do not rely on later cascade accidents to undo global button styles.
-- **New UI rule:** Any newly added product UI must first reuse the typography and control scale in this file. Do not introduce page-local large fonts, fat buttons, or oversized menu rows for isolated features.
-
-### Named Rules
-**The No-Drama Scale Rule.** Product UI hierarchy comes from discipline, not giant jumps in size.
-
-## Elevation
-
-Depth is conveyed primarily through tonal separation and crisp borders. Shadows are present but quiet, used only to separate persistent work surfaces from the canvas or to emphasize one active workspace region.
-
-### Shadow Vocabulary
-- **Shell Lift** (`box-shadow: 0 12px 32px rgba(15, 23, 42, 0.06)`): For the main app shell and login card.
-- **Panel Lift** (`box-shadow: 0 8px 20px rgba(15, 23, 42, 0.04)`): For secondary panels and stat tiles when they need separation from the canvas.
-
-### Named Rules
-**The Border-First Rule.** If a panel can be separated with border and tone, do that before adding shadow.
-
-## Components
-
-### Buttons
-- **Shape:** Rounded rectangle, calm corners (`10px`)
-- **Primary:** Solid bronze-gold fill with warm white text, medium weight, compact horizontal padding
-- **Hover / Focus:** Darker bronze on hover, visible warm-gold focus ring, no flashy gradient
-- **Secondary / Ghost:** White or tinted neutral background with line border and dark text
-- **Default discipline:** Buttons on product pages must use the shared primary / secondary / danger vocabulary. Do not let page-local buttons fall back to legacy blue, teal, black, gradient, or unscoped global button styles.
-- **Text action discipline:** Inline actions inside lists, tables, tabs, and already-framed product panels are not buttons visually. They must be borderless, backgroundless text commands with no rounded border, no pill background, and no shadow.
-- **Dialog actions:** Modal footers use secondary for cancel / close actions and primary gold for confirm / save actions. Both buttons must share height, radius, padding, weight, and hover / focus behavior.
-
-### Modals
-- **Default behavior:** Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless the feature spec explicitly says it should be a popover, drawer, toast, or inline disclosure.
-- **Structure:** Modal windows use a blocking overlay, `role="dialog"`, `aria-modal="true"`, a labelled heading, an opaque surface, and a fixed footer when actions are present.
-- **Visual language:** Modal surfaces inherit `鎏金账房`: warm ivory background, thin gold-tinted borders, compact density, ink typography, and restrained shadows. Close controls are quiet icon buttons, not bordered button blocks.
-- **Close control rule:** The top-right close `×` must render as a bare icon/glyph with no visible border, no bordered square or circle, and no button chrome. Hover and focus may use a subtle tinted background, but the close control itself must remain borderless.
-- **Exception rule:** Non-modal popups require a task-specific reason and must be documented in the relevant spec or design note before implementation.
-
-### Cards / Containers
-- **Corner Style:** Soft but not pill-like (`14px` to `18px`)
-- **Background:** White or muted neutral only
-- **Shadow Strategy:** Minimal lift, mostly border-defined
-- **Border:** Thin gold-tinted line, slightly stronger on active states
-- **Internal Padding:** 14px to 20px, tighter in data-dense panels
-- **Strict no box-in-box rule:** Once a region is already framed as a panel, its children must not become separate background cards unless they are true modals or repeated standalone cards required by the feature. Inner content uses simple dividers, text color, underlines, or a single border rule; no rounded background wrappers, nested panels, row cards, chip blocks, or stacked detail boxes.
-
-### Inputs / Fields
-- **Style:** White fill, crisp border, compact height, dark text
-- **Focus:** Strong warm-gold outline or ring plus subtle border shift
-- **Error / Disabled:** Error uses pale red background with strong text; disabled stays low-contrast but readable
-- **Inline search rule:** Search fields inside dense product workspaces should avoid inner input boxes. Use one simple outer control or one bottom rule, and ensure the native input itself has transparent background, no inner border, no box shadow, and no blue browser focus frame.
-
-### Navigation
-- **Style:** Tinted neutral sidebar, compact vertical rhythm, active item shown with gold-tinted background and strong bronze label color. Mobile collapses to a top-first stack rather than preserving a tall fixed rail.**
-
-### Product Tabs
-- **Default form:** Product-page tabs use text tabs, not pills, chips, segmented controls, or bordered mini-cards.
-- **No button chrome:** Tabs must never appear as rounded bordered background buttons. Inactive, hover, focus, and active states stay backgroundless and shadowless.
-- **Native button reset:** When a tab is a `<button>`, every state (`:hover`, `:focus`, `:focus-visible`, `:active`, `.active`, `.is-active`, `[aria-selected="true"]`) must remain transparent, square-edged, shadowless, and non-raised. The only visible state change is text emphasis and/or the active underline.
-- **Container:** Place tabs on a single `#ded2bb` bottom rule when the following content needs separation. Do not add a rounded container around the tab row.
-- **Inactive state:** Use warm bronze text (`#5f523f`), compact bold weight, and no background fill.
-- **Active state:** Use strong bronze text (`#876223`) with a 2px pressed-gold underline (`#b99652`) aligned to the tab label; no rounded active background.
-- **Usage:** Detail panes such as user information, skill fields, and settings sections should reuse this style unless a feature spec explicitly calls for a different tab pattern.
-
-### Tables and Workspace Rows
-- **Style:** Fixed header feel, compact row padding, muted header strip, and simple row dividers.
-- **Selection:** Selected rows use strong text color, font weight, or an underline. Avoid adding a selected border; only reuse an existing divider when absolutely necessary. Do not use selected-row background fills, row cards, row shadows, glow, inset shadows, raised frames, or box-shadow focus frames.
-
-### Admin CRUD Lists
-
-Admin list pages must be stable before they are decorative. Lists, filters, search fields, and row actions are repeated work surfaces, so they must not shift, stretch, or change component vocabulary when data, filters, focus, or hover state changes.
-
-**Layout and density rules:**
-- Keep list pages compact. Page title, toolbar, filters, and table should use content-height rows (`auto`) and `align-content: start`; do not let CSS grid distribute extra vertical space across controls.
-- Any full-width search or input in a toolbar must use `box-sizing: border-box`, `max-width: 100%`, and an explicit compact height. Focus rings must not change layout size.
-- Page, toolbar, table wrapper, and table elements must use `min-width: 0` inside grid or flex parents so child content cannot widen the whole page.
-- Empty states must not create oversized blank panels unless the page intentionally needs a full empty-state composition. CRUD tables should keep the same compact table frame with a concise empty row or note.
-
-**Table implementation rules:**
-- Never apply `display: flex`, `display: grid`, `display: block`, or `display: -webkit-box` directly to real `table`, `thead`, `tbody`, `tr`, `th`, or `td` elements. This breaks column alignment.
-- If a cell needs clamping, wrapping, chips, or flex actions, put an inner element inside the `td` and style that inner element.
-- Use `table-layout: fixed` plus an explicit `colgroup` or equivalent column contract for dense admin tables. Long text should truncate or wrap inside the cell, not widen the table.
-- Avoid horizontal scroll in normal admin CRUD tables. If a route truly needs horizontal scroll, document it in the feature spec and keep it local to that table.
-
-**Toolbar buttons and filters:**
-- Buttons in the same toolbar must share the same component family, height, border radius, padding, font weight, and hover/focus behavior. Do not mix button classes from compose pages, modal footers, and list pages in one toolbar.
-- Secondary toolbar buttons on admin lists use warm white surfaces, gold-tinted borders, ink or bronze text, and restrained hover. Gold fill is reserved for high-value primary actions, not every list action.
-- Filter categories that only switch list scope should look like text tabs, not large pill buttons. Active state should use the gold family (`#876223` text with `#b99652` underline) on `鎏金账房` pages. Do not use teal or green active states in gold-led admin surfaces unless the state is explicitly semantic success.
-
-**Row action rules:**
-- Do not show multiple row action buttons permanently in dense tables. Use a hover/focus "more" trigger for secondary row actions when the actions are not the main task of the page.
-- The unified row action structure is a three-dot trigger plus an opaque vertical menu. In code, prefer the shared `admin-row-menu` class family for new admin tables; legacy page-specific menus should match its sizing, trigger behavior, opacity, radius, and menu-item vocabulary.
-- Row action menus must be opaque, use the same menu-item styling for links and buttons, and avoid button chrome inside the menu. Dangerous actions may use danger text and hover background, but should still align with normal menu item sizing.
-- Keep the real `td` as a table cell. Put the three-dot trigger and menu inside a child wrapper, never by making the `td` itself flex/grid/block.
-- Do not expose actions that violate the page's responsibility. For example, if publishing must happen in an editor or governance flow, do not add publish buttons to a list page.
-- Standard or read-only rows should not show edit/view affordances if the product decision is that users cannot inspect or change them from that surface.
-
-## Do's and Don'ts
-
-### Do:
-- **Do** keep page content compact, with obvious alignment between titles, metrics, tables, and edit panels.
-- **Do** use restrained neutral layers and thin borders to separate navigation, content, and detail workspaces.
-- **Do** treat brighter gold lines as structure, not decoration: panel edges, selected rows, active nav, focused inputs, and premium primary actions.
-- **Do** align numbers and timestamps for fast scanning.
-- **Do** keep success and error feedback inline, quiet, and close to the action that triggered it.
-- **Do** preserve standard enterprise patterns for side navigation, data tables, and form layouts.
-- **Do** protect list pages against layout shifts caused by filtering, searching, empty results, long text, focus rings, hover menus, or conditional actions.
-
-### Don't:
-- **Don't** use decorative gradients, dark-mode hero backgrounds, or glassmorphism in authenticated product surfaces.
-- **Don't** flood large surfaces with gold; keep it on edges, emphasis, and controlled highlights.
-- **Don't** turn overview data into oversized hero metrics or marketing-style value statements.
-- **Don't** use heavy saturated fills for inactive states.
-- **Don't** make cards oversized or airy enough to reduce operational density.
-- **Don't** ship controls that look different from page to page without a functional reason.
-- **Don't** style table cells themselves as flex/grid/clamped boxes, and don't allow a search field or empty result state to stretch the page.
+- 新增跨页面设计规则时，先更新 `DESIGN.json`，再按需在本文件补一行摘要。
+- 改产品定位时更新 `PRODUCT.md`，不要把定位结论散落到设计或 agent 指令里。
+- 改视觉语言、token、组件语汇或跨页交互模式时，同会话同步 `DESIGN.json`、`DESIGN.md` 和相关 spec。
+- 生成图片、图标、空态或品牌素材只在服务理解、导航或任务完成时使用，且必须贴合 `鎏金账房` 的产品 register。

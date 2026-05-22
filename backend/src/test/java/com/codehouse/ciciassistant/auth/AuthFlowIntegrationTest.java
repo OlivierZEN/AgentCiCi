@@ -574,8 +574,8 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void shouldExposePlatformRoleAndAllowPlatformBootstrap() throws Exception {
-        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
+    void shouldKeepPlatformRoleOutOfOrganizationLoginAndAllowDedicatedPlatformBootstrap() throws Exception {
+        mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -586,15 +586,28 @@ class AuthFlowIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles").isArray())
+                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").doesNotExist());
+
+        MvcResult platformLoginResult = mockMvc.perform(post("/auth/platform/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "admin@cloudcc.com",
+                                  "password": "szyd1234"
+                                }
+                                """))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
+                .andExpect(jsonPath("$.data.orgId").doesNotExist())
                 .andReturn();
 
-        String token = objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+        String token = objectMapper.readTree(platformLoginResult.getResponse().getContentAsString()).path("data").path("token").asText();
 
         mockMvc.perform(get("/platform/bootstrap")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists());
+                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
+                .andExpect(jsonPath("$.data.orgId").doesNotExist());
     }
 
     @Test

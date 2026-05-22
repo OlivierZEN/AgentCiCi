@@ -91,7 +91,7 @@ updated_by: MANAGER-001
 3. **Visual and accessibility hardening**
    - All changed admin product UI must follow `PRODUCT.md`, `DESIGN.md`, `DESIGN.json`, and AGENTS.md `鎏金账房` rules.
    - Modal close controls must be bare `×` glyphs, footer actions unified, and product-panel tabs/text actions must avoid button chrome.
-   - Verify desktop and 390px mobile screenshots for changed `/admin/skills` routes.
+   - Verify desktop screenshots for changed `/admin/skills` routes; mobile compatibility implementation and mobile tests are out of scope unless separately requested.
 
 ## Out Of Scope
 
@@ -119,4 +119,4 @@ updated_by: MANAGER-001
 - High-risk runtime API tools can complete only through a bound confirmation flow; unconfirmed or tampered calls are blocked.
 - Runtime API editing is understandable without editing raw JSON for the common path.
 - Version restore shows enough impact context for an administrator to make a safe decision.
-- Relevant backend tests, frontend build, and visual desktop/mobile checks are recorded in `.claw/tasks/TASK-116.md`.
+- Relevant backend tests, frontend build, and desktop visual checks are recorded in `.claw/tasks/TASK-116.md`.

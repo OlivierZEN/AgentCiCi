@@ -11,6 +11,7 @@ import AvatarView from "../components/AvatarView";
 import ChatMarkdown from "../components/ChatMarkdown";
 import { LS_ASSISTANT_TOKEN } from "../constants";
 import { MeetingMinutesPanel } from "../meeting/MeetingMinutesPanel";
+import AppVersionBadge from "../shared/AppVersionBadge";
 import { getDisplayInitial } from "../shared/avatar";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
@@ -3445,6 +3446,7 @@ export default function AssistantApp() {
           >
             <div className="cici-rail__logo-icon">CB</div>
           </button>
+          <AppVersionBadge compact />
         </div>
       </nav>
       {organizationMenuOpen && auth?.token ? (

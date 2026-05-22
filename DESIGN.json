@@ -73,26 +73,26 @@
         "Build a smallest runnable version first, covering core page structure, navigation path, state changes, and primary interaction logic before visual polish.",
         "The first runnable pass must be understandable and navigable by non-technical users without relying on explanatory placeholder copy.",
         "Run the relevant local app surface and verify the route in a real browser before judging the UI.",
-        "Capture full-page screenshots for both desktop and mobile breakpoints before final review.",
-        "Inspect screenshots with both product-design and QA judgment, checking hierarchy, spacing rhythm, contrast, text fit, responsive behavior, overflow, panel stability, and navigation clarity.",
+        "Capture a desktop full-page screenshot before final review.",
+        "Inspect screenshots with both product-design and QA judgment, checking desktop hierarchy, spacing rhythm, contrast, text fit, overflow, panel stability, and navigation clarity.",
         "Verify hover, focus, active, selected, disabled, loading, empty, and error states for controls touched by the change.",
         "Product-panel hover and selected states must continue to obey the no-shadow, no-background-box rules.",
-        "Fix every visual, responsive, copy, or interaction issue found in screenshot review, then capture desktop and mobile screenshots again.",
+        "Fix every desktop visual, copy, or interaction issue found in screenshot review, then capture the desktop screenshot again.",
         "Do not close a page task on the first screenshot pass when known issues remain.",
-        "For critical modules with meaningful alternatives, run focused A/B comparisons across task clarity, scan speed, accessibility, responsive stability, and consistency with The Gilded Ledger.",
+        "For critical modules with meaningful alternatives, run focused A/B comparisons across task clarity, scan speed, accessibility, desktop stability, and consistency with The Gilded Ledger.",
         "Keep the stronger A/B variant and remove unused experimental code.",
         "Use generated bitmap assets, icons, empty-state visuals, or brand materials only when they serve product comprehension or navigation.",
         "Generated assets must match the product register and The Gilded Ledger color, density, and tone; decorative clutter is not allowed.",
-        "Final acceptance requires reviewed desktop and mobile screenshots, stable responsive layout, readable text, clear user flow, and verified key interaction feedback.",
+        "Final acceptance requires a reviewed desktop screenshot, stable desktop layout, readable text, clear user flow, and verified key interaction feedback.",
+        "Do not add mobile compatibility implementation, mobile-specific layout adaptation, mobile screenshots, or mobile automated tests during feature design, implementation, or verification unless the user explicitly asks for a separate mobile scope.",
         "If local run or screenshot capture is blocked, document the blocker and the unverified risk in the handoff."
       ],
       "requiredArtifacts": [
         "localRouteVerified",
         "desktopFullPageScreenshot",
-        "mobileFullPageScreenshot",
         "visualQaNotes",
         "iterationFixesWhenIssuesExist",
-        "finalResponsiveCheck"
+        "finalDesktopVisualCheck"
       ],
       "abTestTriggers": [
         "primary action placement",
@@ -107,12 +107,20 @@
         "spacing and rhythm",
         "contrast and readability",
         "text fit and wrapping",
-        "desktop responsive behavior",
-        "mobile responsive behavior",
+        "desktop layout stability",
         "container overflow",
         "hover and focus feedback",
         "click or selected-state feedback",
         "navigation clarity for non-technical users"
+      ]
+    },
+    "featureScopeRules": {
+      "purpose": "Scope guardrails for feature design, implementation, and verification.",
+      "rules": [
+        "Default product feature work targets desktop product surfaces only.",
+        "Do not add mobile compatibility implementation, mobile-specific breakpoints, mobile layout adaptation, mobile screenshots, or mobile automated tests by default.",
+        "Existing mobile behavior may remain untouched, but new feature work should not spend scope on mobile compatibility unless the user explicitly requests a separate mobile task.",
+        "If a feature spec or task still mentions desktop/mobile verification, the newer project-level no-new-mobile-scope rule wins."
       ]
     },
     "componentRules": {

@@ -1,0 +1,52 @@
+task_id: TASK-130
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-22T03:07:01Z
+expires_at: none
+spec_path: docs/specs/FEAT-052-acr-release-version-governance.md
+task_status_path: .claw/tasks/TASK-130.md
+branch: codex/local-uncommitted-feature-mr
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/**
+  - backend/src/main/java/com/codehouse/ciciassistant/system/**
+  - backend/src/main/resources/**
+  - deploy/**
+  - scripts/**
+  - docs/**
+scope_files:
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/tasks/TASK-130.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - docs/specs/FEAT-052-acr-release-version-governance.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/production-release-runbook.md
+task_boundary:
+  - "Create one canonical release version for ACR image tags, Git tags, backend runtime metadata, and frontend program display."
+  - "Add the version marker only to authenticated product surfaces: assistant workbench, organization admin console, and platform console."
+  - "Keep login pages, database migrations, auth contracts, and unrelated feature modules unchanged."
+  - "Do not push images, create real release tags, or deploy production unless the user explicitly requests a release run."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-22T03:07:01Z; user requested unified ACR/image/program/tag version flow and left-bottom app version display."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; no private keys, passwords, bearer tokens, ACR credentials, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-130 on branch main before implementation edits."

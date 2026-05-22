@@ -249,7 +249,7 @@ Any adjustment must require an explicit reason. Do not silently rewrite historic
 
 - Add `/admin/billing` route and navigation entry.
 - Add `/platform/billing` route and navigation entry.
-- Implement responsive desktop/mobile tables without horizontal overflow.
+- Implement stable desktop tables without horizontal overflow.
 - Use real APIs with clear loading, empty, and error states.
 
 ### Phase 3: Runtime Metering
@@ -279,7 +279,7 @@ Scope:
 - admin and platform billing APIs
 - `/admin/billing` and `/platform/billing` product UI
 - runtime metering hooks for chat, RAG, tool, workflow, KB indexing, and Open API where they do not collide with active TASK-112 work
-- focused backend tests, frontend build, and desktop/mobile screenshot QA
+- focused backend tests, frontend build, and desktop screenshot QA
 
 Notes:
 
@@ -295,7 +295,7 @@ Notes:
 - Platform operators can inspect plans, subscriptions, usage events, and ledger entries across organizations.
 - Demo and test data are deterministic.
 - Quota checks are designed before enforcement is enabled.
-- Product UI follows `DESIGN.md` product rules and has desktop/mobile screenshot verification before shipping.
+- Product UI follows `DESIGN.md` product rules and has desktop screenshot verification before shipping.
 - No private keys, API keys, bearer tokens, or reusable secrets are written to docs, logs, tests, or task status files.
 
 ## Verification Plan
@@ -303,5 +303,5 @@ Notes:
 - Backend focused tests for billing repositories/services/controllers.
 - Backend compile after migrations and entity wiring.
 - Frontend build.
-- Browser QA for `/admin/billing` and `/platform/billing` at desktop and 390px mobile.
+- Browser QA for `/admin/billing` and `/platform/billing` at desktop size only; mobile compatibility implementation and mobile tests are out of scope unless separately requested.
 - `.claw` state validation after task and assignment updates.

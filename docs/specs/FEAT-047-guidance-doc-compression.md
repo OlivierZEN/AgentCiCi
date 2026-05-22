@@ -1,7 +1,7 @@
 ---
 title: FEAT-047 顶层规范文档减重与职责拆分
-status: active
-updated_at: 2026-05-21T05:53:09Z
+status: done
+updated_at: 2026-05-21T15:39:43Z
 updated_by: ai
 ---
 
@@ -53,3 +53,11 @@ updated_by: ai
 
 - 后续如果要加新的跨页面设计规则，优先更新 `DESIGN.json`，再视需要在 `DESIGN.md` 增加一行摘要。
 - 后续如果要改产品定位，优先更新 `PRODUCT.md`，不要把定位结论散落到 `AGENTS.md`。
+
+## 实施记录
+
+- `AGENTS.md` 已收口为项目执行规则、PR 默认流程、文档职责、命名卫生和设计治理入口。
+- `PRODUCT.md` 已收口为产品定位、用户表面、市场重点、非目标和产品语气。
+- `DESIGN.md` 已收口为 `鎏金账房` 摘要、页面质量流程入口和关键 UI 约束摘要，详细规则指向 `DESIGN.json`。
+- `README.md` 的 UI Design Governance 也已同步减重，避免后续 agent 读取 README 时再次加载旧版细则堆叠。
+- 验证：`DESIGN.json` JSON parse 成功；`git diff --check` 成功；`.claw` 状态校验成功。

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { LS_ADMIN_TOKEN } from "../constants";
+import AppVersionBadge from "../shared/AppVersionBadge";
 import type { AdminOutletContext } from "./useAdminToken";
 
 type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
@@ -195,6 +196,7 @@ export default function AdminShell() {
             );
           })}
         </nav>
+        <AppVersionBadge />
       </aside>
       <main className="admin-main">
         <Outlet context={ctx} />

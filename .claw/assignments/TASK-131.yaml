@@ -1,0 +1,52 @@
+task_id: TASK-131
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-22T04:22:41Z
+expires_at: none
+spec_path: docs/specs/FEAT-053-platform-account-orgless-auth-context.md
+task_status_path: .claw/tasks/TASK-131.md
+branch: codex/local-uncommitted-feature-mr
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - frontend/src/platform/**
+  - docs/specs/**
+scope_files:
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/tasks/TASK-131.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-053-platform-account-orgless-auth-context.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-053-platform-account-orgless-auth-context.md
+task_boundary:
+  - "Remove organization-membership assumptions from platform account login, token payload, guard checks, and platform console account display."
+  - "Keep platform accounts in the dedicated platform_account table and do not create user_account or organization_member rows for platform login."
+  - "Use the existing internal platform governance data scope only as backend storage compatibility; do not expose it as the platform account's organization."
+  - "Do not change tenant lifecycle business rules, organization admin login, migrations, or mobile compatibility scope."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-22T04:22:41Z; user requested platform accounts be treated as platform-level dedicated accounts with no organization association."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-131 on branch codex/local-uncommitted-feature-mr before implementation edits."

@@ -8,7 +8,7 @@ branch: codex/TASK-115-kb-module-maintenance
 pr_url: n/a
 spec_path: docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
 assignment_path: .claw/assignments/TASK-115.yaml
-updated_at: 2026-05-19T02:01:14Z
+updated_at: 2026-05-21T15:47:23Z
 updated_by: MANAGER-001
 ---
 
@@ -63,9 +63,10 @@ Before editing, run task-scoped `dev-login.py` for `DEV-zhongda` on branch `code
 - Focused new backend tests for the changed KB behavior
 - Backend compile when backend dependencies or shared service contracts change
 - `npm run build` when frontend changes are made
-- Desktop and 390px mobile screenshots for `/admin/kb` when product UI changes are made
+- Desktop screenshots for `/admin/kb` when product UI changes are made; do not add mobile compatibility implementation or mobile tests unless separately requested
 - `.claw` state validation passes after handoff updates
 
 ## Assignment History
 
 - 2026-05-19T10:01:14+08:00: User asked to organize the KB assessment into development tasks and assign overall knowledge-base module maintenance to `DEV-zhongda`.
+- 2026-05-21T23:47:23+08:00: Verification scope aligned with the project rule that new feature work does not add mobile compatibility implementation, screenshots, or tests by default.

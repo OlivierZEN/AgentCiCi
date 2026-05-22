@@ -255,7 +255,7 @@ POST /platform/tenants
   - 已落地 `/platform/tenants` 列表页与 `/platform/tenants/:orgId` 详情页拆分
   - 已落地平台“开通新租户” modal、成功跳转与共享 tenant provisioning 数据流
   - 已落地共享 `org` ID 生成器与平台/认证侧组织创建收口
-  - 已完成桌面端与 390px 移动端截图复核，并修正移动端列表压缩问题
+  - 已完成桌面端截图复核；既有移动端截图与修复仅作为历史证据，后续不再默认追加移动端兼容实现或移动端测试
 - 未完成项：
   - 需在当前源码对齐的本地后端运行态下重新跑 FEAT-046 目标集成测试，补齐真实测试证据
 
@@ -266,4 +266,4 @@ POST /platform/tenants
   1. 抽共享组织 ID 生成器
   2. 落平台 `POST /platform/tenants` 开通接口
   3. 拆分 `/platform/tenants` 列表页与 `/platform/tenants/:orgId` 详情页
-  4. 做桌面端与移动端截图复核
+  4. 做桌面端截图复核；不追加移动端兼容实现或移动端测试，除非用户单独开单

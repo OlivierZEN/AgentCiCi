@@ -22,7 +22,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,11 +45,6 @@ public class AuthService {
     private final OrganizationProvisioningService organizationProvisioningService;
     private final PasswordHashService passwordHashService;
     private final Set<String> bootstrapAdminMobiles;
-    private final Set<String> platformAdminMobiles;
-    private final Set<String> platformOperatorMobiles;
-    private final Set<String> platformSupportMobiles;
-    private final Set<String> platformBillingMobiles;
-    private final Set<String> platformAuditorMobiles;
 
     public AuthService(OrgRepository orgRepository,
                        UserAccountRepository userAccountRepository,
@@ -61,12 +55,7 @@ public class AuthService {
                        JwtService jwtService,
                        OrganizationProvisioningService organizationProvisioningService,
                        PasswordHashService passwordHashService,
-                       @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw,
-                       @Value("${app.auth.platform-admin-mobiles:}") String platformAdminMobilesRaw,
-                       @Value("${app.auth.platform-operator-mobiles:}") String platformOperatorMobilesRaw,
-                       @Value("${app.auth.platform-support-mobiles:}") String platformSupportMobilesRaw,
-                       @Value("${app.auth.platform-billing-mobiles:}") String platformBillingMobilesRaw,
-                       @Value("${app.auth.platform-auditor-mobiles:}") String platformAuditorMobilesRaw) {
+                       @Value("${app.auth.bootstrap-admin-mobiles:}") String bootstrapAdminMobilesRaw) {
         this.orgRepository = orgRepository;
         this.userAccountRepository = userAccountRepository;
         this.accountAuthCredentialRepository = accountAuthCredentialRepository;
@@ -77,11 +66,6 @@ public class AuthService {
         this.organizationProvisioningService = organizationProvisioningService;
         this.passwordHashService = passwordHashService;
         this.bootstrapAdminMobiles = parseMobileSet(bootstrapAdminMobilesRaw);
-        this.platformAdminMobiles = parseMobileSet(platformAdminMobilesRaw);
-        this.platformOperatorMobiles = parseMobileSet(platformOperatorMobilesRaw);
-        this.platformSupportMobiles = parseMobileSet(platformSupportMobilesRaw);
-        this.platformBillingMobiles = parseMobileSet(platformBillingMobilesRaw);
-        this.platformAuditorMobiles = parseMobileSet(platformAuditorMobilesRaw);
     }
 
     private static Set<String> parseMobileSet(String raw) {
@@ -425,25 +409,7 @@ public class AuthService {
     }
 
     private List<String> resolveRoles(UserEntity user) {
-        LinkedHashSet<String> roles = new LinkedHashSet<>();
-        roles.add(user.getRoleCode());
-        String mobile = user.getMobile() == null ? "" : user.getMobile().trim();
-        if (platformAdminMobiles.contains(mobile)) {
-            roles.add(RoleCodes.PLATFORM_ADMIN);
-        }
-        if (platformOperatorMobiles.contains(mobile)) {
-            roles.add(RoleCodes.PLATFORM_OPERATOR);
-        }
-        if (platformSupportMobiles.contains(mobile)) {
-            roles.add(RoleCodes.PLATFORM_SUPPORT);
-        }
-        if (platformBillingMobiles.contains(mobile)) {
-            roles.add(RoleCodes.PLATFORM_BILLING);
-        }
-        if (platformAuditorMobiles.contains(mobile)) {
-            roles.add(RoleCodes.PLATFORM_AUDITOR);
-        }
-        return List.copyOf(roles);
+        return List.of(user.getRoleCode());
     }
 
     private OrgEntity requireOrg(String orgId) {

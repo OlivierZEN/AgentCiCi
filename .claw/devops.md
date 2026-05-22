@@ -237,6 +237,7 @@ status: active
   - With Lima `cici-docker`, use `limactl shell cici-docker sh -lc 'cd /Volumes/AISpace/codehouse/cc-agentcici && docker compose ps'`.
   - Vector retrieval uses **Qdrant** on host `6333` only; legacy `cici-milvus` container removed (2026-04-19).
 - ACR one-click deployment:
+  - Canonical production release runbook: `docs/production-release-runbook.md`.
   - `cp deploy/acr.env.example deploy/acr.env`
   - Edit `deploy/acr.env` for ACR credentials, production passwords, JWT secret, model API key, and ports.
   - `./scripts/deploy-acr.sh`
@@ -247,10 +248,10 @@ status: active
   - Verified on 2026-05-07: compose config, deploy script syntax, mounted frontend Nginx config syntax, and target diff whitespace checks passed.
   - Note: backend/frontend ACR images currently require `CICI_PLATFORM=linux/amd64` on arm64 hosts.
 - ACR backend/frontend image build and push:
-  - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests package`
-  - `cd frontend && npm run build`
-  - `docker buildx build --platform linux/amd64 -f deploy/Dockerfile.backend -t op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:latest --push .`
-  - `docker buildx build --platform linux/amd64 -f deploy/Dockerfile.frontend -t op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:latest --push .`
+  - Canonical command: `./scripts/release-acr.sh`; use `./scripts/release-acr.sh --dry-run` first to see the next generated version.
+  - The script uses one version for `cici-backend:<version>`, `cici-frontend:<version>`, Git tag `<version>`, backend `CICI_APP_VERSION`, and frontend `VITE_CICI_APP_VERSION`.
+  - Default version train is `2.0.B<n>`; after `2.0.B2`, the next generated release is `2.0.B3`.
+  - Deploy with both `CICI_IMAGE_TAG=<version>` and `CICI_APP_VERSION=<version>` in `deploy/acr.env`; `latest` is only a convenience alias, not the release identity.
   - Codex desktop note from V1.7: when using a temporary Docker config for ACR auth, symlink `/Users/owenspace/.docker/cli-plugins` into that temp config before running buildx, otherwise Docker cannot find the `buildx` plugin.
   - Last pushed on 2026-05-07:
     - backend digest `sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`
@@ -321,12 +322,12 @@ status: active
     - Frontend image digest: `sha256:7adfa06e8d95046131d82d09c966e0a03035cac278c4af994df7e4e6a7093370`.
     - `CICI_IMAGE_TAG=V1.7` applies to all six compose services; infra images `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` required `V1.7` manifest aliases from their existing `latest` tags before compose could pull the full stack.
     - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `41|agent open api|t`, backend recent logs contained no `error|exception|failed|using dev fallback` matches.
-    - Verified publicly: `http://cici.cloudcc.cn/` -> `301`, `https://cici.cloudcc.cn/` -> `200`, org-admin fixed-password smoke returned core counts, platform-admin smoke returned platform skill/tool counts, and `/openapi/v1/agents/smoke/health` returned backend JSON `401 agent_api_key_missing`.
+    - Verified publicly on current domains: `https://agentcici.com/` and `https://www.agentcici.com/` serve the public website; `https://autoservice.agentcici.com/` serves the product login surface.
   - V1.7 AgentCiCi domain cutover on 2026-05-09:
     - Backup directory: `/opt/cici/backups/20260509-210523-before-agentcici-v1.7-domain-account`.
     - Backend image digest: `sha256:2336525817b5f8e43adc2f737510d5679a0d99607fc848c5a5e23ae4c8a6c2d4`.
     - Frontend image digest: `sha256:879dbd9c589c6387143ac1a04a9bf041b500cf90cbb8fe288659442a59b5cd49`.
-    - Nginx SSL server names now declare only `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com`; old `cici.cloudcc.cn` is no longer declared as an application host.
+    - Nginx SSL server names now declare `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com` as the AgentCiCi production hosts.
     - Production Flyway repair was required because the live database had historical V1/V8/V9 checksums from the pre-account-table schema. The repair updated checksums to the V1.7-resolved values, then V42-V46 migrated successfully.
     - Production account backfill created `user_account`, `account_login_identifier`, and `organization_member` from legacy `app_user`, preserving `app_user.id` as `organization_member.id` so historical member/user references remain stable.
     - Verified remotely: six containers healthy, backend health `UP`, frontend `nginx -t` success, Flyway latest version `46|organization purge worker lease|t`, account table counts `13/13/13`.

@@ -61,7 +61,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldManageTenantRetentionAndCreateContentFreeDryRunManifest() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402401", "生命周期测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -278,7 +278,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldProvisionTenantAndReuseExistingOwnerAccountFromPlatform() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         String reusableMobile = uniqueMobile("13902402405");
 
         MvcResult firstProvisionResult = mockMvc.perform(post("/platform/tenants")
@@ -352,7 +352,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldCancelQueuedRealPurgeJobBeforeWorkerRuns() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402403", "销毁取消测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -408,7 +408,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldDeadLetterExpiredRunningRealPurgeJobWithoutDeletingData() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402404", "销毁死信测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -477,7 +477,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldRetryFailedRealPurgeJobFromSourceDryRun() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402402", "销毁重试测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -773,6 +773,21 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "password": "szyd1234"
                                 }
                                 """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private String platformToken() throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/auth/platform/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "admin@cloudcc.com",
+                                  "password": "szyd1234"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andReturn();
 

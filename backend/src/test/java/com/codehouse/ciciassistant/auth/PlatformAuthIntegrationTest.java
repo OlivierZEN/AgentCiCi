@@ -96,7 +96,8 @@ class PlatformAuthIntegrationTest {
         mockMvc.perform(get("/platform/bootstrap")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists());
+                .andExpect(jsonPath("$.data.roles[?(@ == 'PLATFORM_ADMIN')]").exists())
+                .andExpect(jsonPath("$.data.orgId").doesNotExist());
 
         mockMvc.perform(get("/auth/me")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
@@ -114,7 +115,7 @@ class PlatformAuthIntegrationTest {
                         .content("""
                                 {
                                   "orgId": "demo-org",
-                                  "mobile": "13900009999",
+                                  "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }
                                 """))

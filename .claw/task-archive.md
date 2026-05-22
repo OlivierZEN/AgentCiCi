@@ -59,7 +59,7 @@ Historical task cards have been removed from the hot board. Keep details in task
 - TASK-064 — completed — Personal memory row action visibility
 - TASK-062 — stream_chat_and_key_ui_implemented — Agent Open API
 - TASK-061 — completed — Feishu tool-limit readable fallback
-- TASK-060 — completed — ECS SSL deployment for cici.cloudcc.cn
+- TASK-060 — completed — Legacy ECS SSL deployment before AgentCiCi domain cutover
 - TASK-059 — images_refreshed — ACR one-click docker compose deployment
 - TASK-058 — completed — Fixed password login for three entries
 - TASK-057 — admin_ops_integrated — Agent observability monitoring frontend implementation

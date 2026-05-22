@@ -3343,6 +3343,42 @@ button.secondary:hover:not(:disabled) {
     0 0 0 1px rgba(223, 191, 130, 0.18);
 }
 
+.app-version-badge {
+  margin-top: auto;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 100%;
+  padding: 6px 2px 0;
+  color: #8a7a63;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.app-version-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--admin-line-strong, #c8a056);
+  box-shadow: 0 0 0 3px rgba(200, 160, 86, 0.16);
+  flex: 0 0 auto;
+}
+
+.app-version-badge__text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.platform-nav .app-version-badge {
+  margin-top: 8px;
+}
+
 .admin-page {
   min-height: 100%;
 }

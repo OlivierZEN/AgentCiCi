@@ -248,6 +248,21 @@
   stroke-width: 1.5;
 }
 
+.cici-rail .app-version-badge {
+  width: 48px;
+  min-height: 22px;
+  margin-top: 0;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  color: rgba(115, 91, 53, 0.74);
+  font-size: 9px;
+}
+
+.cici-rail .app-version-badge__dot {
+  display: none;
+}
+
 .cici-org-menu {
   position: fixed;
   left: 68px;

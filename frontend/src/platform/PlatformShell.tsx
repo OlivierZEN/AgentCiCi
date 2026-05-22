@@ -1,7 +1,14 @@
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
 import { LS_PLATFORM_TOKEN } from "../constants";
+import AppVersionBadge from "../shared/AppVersionBadge";
 
-type AuthPayload = { token: string; orgId: string };
+type AuthPayload = {
+  token: string;
+  platformAccountId?: string;
+  email?: string;
+  mobile?: string;
+  displayName?: string;
+};
 
 function readAuth(): AuthPayload | null {
   const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
@@ -11,6 +18,10 @@ function readAuth(): AuthPayload | null {
   } catch {
     return null;
   }
+}
+
+function accountLabel(auth: AuthPayload): string {
+  return auth.displayName?.trim() || auth.email?.trim() || auth.mobile?.trim() || auth.platformAccountId?.trim() || "平台账号";
 }
 
 export default function PlatformShell() {
@@ -28,8 +39,8 @@ export default function PlatformShell() {
           <p className="brand admin-brand">运营平台</p>
           <h1 className="platform-nav__title">运营控制台</h1>
           <div className="platform-nav__meta">
-            <span className="platform-nav__meta-label">当前组织</span>
-            <strong className="platform-nav__org">{auth.orgId}</strong>
+            <span className="platform-nav__meta-label">平台账号</span>
+            <strong className="platform-nav__org">{accountLabel(auth)}</strong>
           </div>
         </div>
         <nav className="admin-nav-links platform-nav__links">
@@ -64,6 +75,7 @@ export default function PlatformShell() {
             退出登录
           </button>
         </div>
+        <AppVersionBadge />
       </aside>
       <main className="admin-main platform-main">
         <div className="platform-main__inner">

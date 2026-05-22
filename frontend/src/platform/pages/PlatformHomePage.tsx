@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
 type BootstrapPayload = {
-  orgId: string;
   roles: string[];
   skillCount: number;
   hiddenSkillCount: number;
@@ -100,9 +99,13 @@ export default function PlatformHomePage() {
                 <p className="skills-data-table__summary">当前平台运行治理事实与基础数据摘要。</p>
               </div>
               <div className="skills-table-wrap">
-                <table className="skills-data-table">
+                <table className="skills-data-table" style={{ minWidth: 0, tableLayout: "fixed", width: "100%" }}>
+                  <colgroup>
+                    <col style={{ width: "42%" }} />
+                    <col style={{ width: "58%" }} />
+                  </colgroup>
                   <tbody>
-                    <tr><th>组织</th><td>{data.orgId}</td></tr>
+                    <tr><th>账号体系</th><td>平台底层专属账号</td></tr>
                     <tr><th>平台角色</th><td>{data.roles.map(roleLabel).join("、") || "—"}</td></tr>
                     <tr><th>核心策略版本</th><td>第 {data.policyBundleVersionNo} 版</td></tr>
                     <tr><th>覆盖已发布智能体</th><td>{data.policyBundleLivePublishedAgentCount}</td></tr>

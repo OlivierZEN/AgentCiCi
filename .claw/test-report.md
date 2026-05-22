@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-22T10:32:57Z
+updated_at: 2026-05-22T10:45:33Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-22T10:32:57Z
+last_run_at: 2026-05-22T10:45:33Z
 last_run_status: passed
 ---
 
@@ -13,11 +13,23 @@ last_run_status: passed
 ## Latest Run Summary
 
 - 状态：`passed`
-- 范围：TASK-132/TASK-133 Agent Builder assignment publishing
-- 命令：manager `dev-login.py`, `summarize-team-status.py --write`, `validate-state.py`, targeted `git diff --check`
-- 环境：temporary main worktree; assignment/state-only update, no product code changed.
+- 范围：local uncommitted feature MR branch preparation
+- 命令：manager `dev-login.py`, `validate-state.py`, `git diff --check`, `bash -n`, `release-acr.sh --dry-run`, frontend build, backend compile
+- 环境：temporary branch `codex/local-uncommitted-feature-mr` based on latest `origin/main`.
 
 ## Latest Verified Results
+
+- Local uncommitted feature MR branch preparation (2026-05-22T10:45:33Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` on `codex/local-uncommitted-feature-mr` with all changed files -> **allowed**.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `diff`: `git diff --check` -> **success**.
+    - `scripts`: `bash -n scripts/release-acr.sh scripts/deploy-acr.sh` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**; generated `2.0.B3` without building, pushing, or tagging.
+    - `frontend`: `npm run build` in `frontend/` -> **success** after linking the existing local `node_modules` into the temporary checkout; existing Vite chunk-size warning remains.
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+  - Notes:
+    - `PlatformAuthIntegrationTest` was not rerun in this MR-prep pass because the latest TASK-131 focused integration gate is still blocked by local Docker/Postgres availability; rerun once the local database is available.
 
 - TASK-133 Agent Builder no-model new-Agent feedback assignment (2026-05-22T10:32:57Z):
   - Commands:
@@ -31,11 +43,71 @@ last_run_status: passed
 - TASK-132 Agent Builder focused-agent skill binding refresh bugfix assignment (2026-05-22T10:29:03Z):
   - Commands:
     - `identity`: manager `dev-login.py` for `MANAGER-001` with intended `.claw` assignment, task, board, status, team-status, and test-report files -> **allowed**.
-    - `state`: `validate-state.py .claw` -> **success**.
+    - `assignment`: `check-assignment.py` for `DEV-fengchu` / `TASK-132` on `codex/TASK-132-agent-builder-skill-refresh-bugfix` with intended `frontend/src/assistant/AgentBuilderShell.tsx`, focused frontend test, task status, and baseline spec files -> **allowed**.
+    - `state`: `validate-state.py .claw --json` -> **success**.
     - `team-status`: `summarize-team-status.py .claw --write` -> **success**; `DEV-fengchu` now shows active `TASK-132`.
     - `diff`: targeted `git diff --check` for the new/updated `.claw` coordination files -> **success**.
   - Notes:
     - This was a manager assignment/update only. The implementation remains for `DEV-fengchu` after task-scoped login.
+
+- FEAT-053 platform account orgless auth context (2026-05-22T05:10:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-131` on `main` with intended backend/frontend/spec/state files -> **allowed**.
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**; loaded `PRODUCT.md` and `DESIGN.md`.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests test-compile` in `backend/` -> **success**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=PlatformAuthIntegrationTest test` in `backend/` -> **blocked**; Spring/Flyway could not connect to `localhost:5432`, and `docker ps` could not connect to the Docker API socket.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `browser`: Playwright desktop verification at `1365x900` with mocked platform token, `/auth/platform/me`, and `/api/platform/bootstrap` -> **success**; platform shell shows `平台账号`, overview table shows `账号体系 平台底层专属账号`, page text contains no `当前组织` or `demo-org`, `scrollWidth=clientWidth=1365`, and console errors are `0`. Screenshot: `output/playwright/feat053-platform-orgless-desktop.png`.
+    - `search`: targeted `rg` over `frontend/src/platform` for `当前组织` / `demo-org` -> **success**, no runtime UI matches.
+    - `diff`: `git diff --check` -> **success**.
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw --json` -> **success**.
+  - Notes:
+    - Implementation is ready for backend integration rerun once local Docker/Postgres is available; do not mark TASK-131 done until the focused backend integration gate is green.
+
+- FEAT-052 ACR release version governance (2026-05-22T04:42:10Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-130` on `main` with intended frontend/backend/deploy/script/docs/state files -> **allowed**。
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**，loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**，generated next version `2.0.B3` and printed backend/frontend image tags, optional `latest`, image inspect commands, Git tag commands, and deploy env values without building, pushing, or tagging.
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**。
+    - `scripts`: `bash -n scripts/release-acr.sh scripts/deploy-acr.sh` -> **success**。
+    - `browser`: Playwright desktop verification at 1365x900 with `VITE_CICI_APP_VERSION=2.0.B3` and mocked auth/API data -> **success**；`/` shows `2.0.B3`, `/admin/kb` and `/platform` show `版本 2.0.B3` in the left navigation bottom. Screenshots: `output/playwright/feat052-assistant-version.png`, `output/playwright/feat052-admin-version.png`, `output/playwright/feat052-platform-version.png`.
+    - `search`: targeted `rg` for legacy release runbook filename, old production host, legacy cert names, and stale ACR variable-name references in current release guidance and FEAT-052 files -> **success**，no matches.
+    - `diff`: `git diff --check` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw --json` -> **success**。
+  - Notes:
+    - The production release source of truth is `docs/production-release-runbook.md`; `scripts/release-acr.sh` is the canonical ACR push path and keeps ACR tags, Git tag, frontend badge, backend `/system/version`, and deploy env aligned.
+
+- Production release runbook rename and domain governance (2026-05-22T04:15:31Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --branch main --git-username OwenZheng-Cloud --files ... --no-cache --json` -> **allowed**。
+    - `search`: targeted `rg` for the legacy runbook filename, legacy production host, and legacy cert names across current guidance/runbook/devops/spec files -> **success**，current publication entry files no longer reference the old runbook name or legacy production host.
+    - `diff`: `git diff --check` over updated guidance, devops, task, assignment, runbook, and FEAT-021 spec files -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw --json` -> **success**。
+  - Notes:
+    - Canonical release runbook is now `docs/production-release-runbook.md`; `AGENTS.md` points production/ACR deployment agents to that long-term source of truth, and current public smoke targets use `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com`. FEAT-021 Open API examples now use `autoservice.agentcici.com`.
+
+- FEAT-051 no-new-mobile-compatibility scope rule (2026-05-21T15:47:23Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --json` -> **allowed** for `MANAGER-001`。
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**，loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `search`: targeted `rg` over top-level guidance, active task files, and active FEAT-037/038/046/051 specs -> **success**，remaining mobile mentions are now either the new no-new-mobile rule or historical FEAT-046 evidence.
+    - `design-json`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**。
+    - `diff`: targeted `git diff --check` for updated guidance/state/spec files -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw` -> **success**。
+  - Notes:
+    - Project rules now state that feature design, implementation, and testing do not add mobile compatibility implementation, mobile screenshots, or mobile automated tests by default. Active task cards for TASK-114/115/116/124 were aligned to desktop-only visual QA.
+
+- FEAT-047 top-level guidance document compression (2026-05-21T15:39:43Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --json` -> **allowed** for `MANAGER-001`。
+    - `design-json`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**。
+    - `diff`: `git diff --check -- AGENTS.md PRODUCT.md DESIGN.md README.md docs/specs/FEAT-047-guidance-doc-compression.md docs/specs/FEAT-048-design-factsource-zh.md .claw/current-status.md .claw/test-report.md` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw` -> **success**。
+  - Notes:
+    - `AGENTS.md`, `PRODUCT.md`, and `DESIGN.md` are now compact source-of-truth entry files; README UI governance was also shortened so future agents do not reload the old repeated design rule stack.
 
 - TASK-129 admin login organization-selection alignment (2026-05-21T12:24:00Z):
   - Commands:

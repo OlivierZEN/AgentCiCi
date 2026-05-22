@@ -1,5 +1,7 @@
 # Deployment Runbook (Step 3)
 
+Production releases are governed by `docs/production-release-runbook.md`. This file remains as supporting deployment notes and local/ACR reference material.
+
 ## Local Environment
 
 Root `docker-compose.yml` is **local development infrastructure only**. It intentionally starts PostgreSQL, Redis, RabbitMQ, and Qdrant, then developers run backend/frontend on the host through Maven and Vite.
@@ -116,20 +118,20 @@ Stop the stack:
 docker compose --env-file deploy/acr.env -f deploy/docker-compose.acr.yml down
 ```
 
-## cici.cloudcc.cn Deployment Record
+## AgentCiCi Production Deployment Record
 
-Verified on 2026-05-07:
+Current production host and domain shape:
 
 - Host: `47.97.119.160`
-- Domain: `https://cici.cloudcc.cn`
+- Domains: `https://agentcici.com`, `https://www.agentcici.com`, `https://autoservice.agentcici.com`
 - Remote path: `/opt/cici`
 - Compose files: `/opt/cici/deploy/docker-compose.acr.yml` + `/opt/cici/deploy/docker-compose.acr.ssl.yml`
-- SSL certs: `/opt/cici/deploy/certs/cloudcc.cn.pem` and `/opt/cici/deploy/certs/cloudcc.cn.key`
+- SSL certs: `/opt/cici/deploy/certs/agentcici.com.pem` and `/opt/cici/deploy/certs/agentcici.com.key`
 - Public ports: `80` redirects to HTTPS, `443` serves the frontend.
 - Internal host-bound ports: backend `127.0.0.1:8080`, PostgreSQL `127.0.0.1:5432`, Redis `127.0.0.1:6379`, RabbitMQ `127.0.0.1:5672` / `15672`, Qdrant `127.0.0.1:6333`.
 - ACR infra images `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` were refreshed as `linux/amd64` images because the prior tags were arm64-only and could not run on the x86_64 ECS.
 - Verification:
   - `docker compose ps` showed all six containers healthy.
-  - `http://cici.cloudcc.cn/` returned `301` to HTTPS.
-  - `https://cici.cloudcc.cn/` returned `200`.
-  - `POST https://cici.cloudcc.cn/auth/password/login` with the fixed password returned `200`, a token, and `ORG_ADMIN`.
+  - `https://agentcici.com/` and `https://www.agentcici.com/` serve the public website.
+  - `https://autoservice.agentcici.com/` serves the authenticated product surface and API proxy roots.
+  - `POST https://autoservice.agentcici.com/auth/password/login` with the fixed password should return `200`, a token, and `ORG_ADMIN`.

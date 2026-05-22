@@ -30,6 +30,13 @@ management:
       exposure:
         include: health,info
 
+info:
+  app:
+    name: AgentCiCi
+    version: ${CICI_APP_VERSION:dev}
+    image-tag: ${CICI_IMAGE_TAG:${CICI_APP_VERSION:dev}}
+    git-commit: ${GIT_COMMIT:unknown}
+
 app:
   auth:
     jwt-secret: "change-me-in-prod-change-me-in-prod-2026"

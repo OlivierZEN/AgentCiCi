@@ -7,7 +7,7 @@ owner_role: backend-openapi-runtime
 task_ids: TASK-062
 related_decisions: FEAT-015, FEAT-019, FEAT-020
 related_issues: none
-updated_at: 2026-05-07T17:22:30+08:00
+updated_at: 2026-05-22T12:15:31+08:00
 updated_by: ai
 ---
 
@@ -15,7 +15,7 @@ updated_by: ai
 
 ## 背景与目标
 
-AgentCiCi 当前已经支持组织内用户通过助手工作台调用 Agent，也已经具备 Agent Builder、Skill 绑定、知识库、工具调用、运行 trace、固定密码登录、当前 `cici.cloudcc.cn` 部署环境以及多渠道会话能力。下一步要把已发布 Agent 作为稳定服务能力开放给外部业务系统调用，例如 CRM、客户门户、低代码页面、Salesforce、CloudCC、飞书之外的第三方渠道或客户自有系统。品牌域名已确定为 `agentcici.com`；公网 API 基础地址迁移需在部署/DNS 方案中单独确认。
+AgentCiCi 当前已经支持组织内用户通过助手工作台调用 Agent，也已经具备 Agent Builder、Skill 绑定、知识库、工具调用、运行 trace、固定密码登录、当前 `agentcici.com` / `autoservice.agentcici.com` 生产域名以及多渠道会话能力。下一步要把已发布 Agent 作为稳定服务能力开放给外部业务系统调用，例如 CRM、客户门户、低代码页面、Salesforce、CloudCC、飞书之外的第三方渠道或客户自有系统。
 
 本功能目标是新增一套 **Agent Open API**：
 
@@ -386,7 +386,7 @@ Create response:
 - 模态尺寸：桌面使用接近全屏的文档窗口，建议 `min(1180px, calc(100vw - 64px))` 宽、`calc(100vh - 64px)` 高；移动端降级为全屏 modal。
 - 顶部 sticky 工具条：
   - 左侧：文档标题 `对话型 Agent API`、当前 Agent 名称、当前 Agent ID。
-  - 中间：`API 服务器` 只读地址，例如 `https://cici.cloudcc.cn/openapi/v1`，右侧带 copy icon。
+  - 中间：`API 服务器` 只读地址，例如 `https://autoservice.agentcici.com/openapi/v1`，右侧带 copy icon。
   - 右侧：状态文字 `运行中` / `未发布` / `未开放 API`，以及 `API 密钥` 入口按钮。
 - 主体两栏：
   - 左侧为文档内容，最大行宽 72ch，包含说明、参数表和代码块。
@@ -425,7 +425,7 @@ Method + Path
 
 | 章节 | 内容 |
 |---|---|
-| 基础 URL | `https://cici.cloudcc.cn/openapi/v1`，支持复制 |
+| 基础 URL | `https://autoservice.agentcici.com/openapi/v1`，支持复制 |
 | 鉴权 | `Authorization: Bearer {API_KEY}` 和 `X-Cici-Api-Key: {API_KEY}` 两种方式，强调后端保存 Key |
 | 发送对话消息 | `POST /agents/{agentId}/chat`，说明 `sessionId`、`message`、`externalUser`、`knowledgeBaseIds`、`activeSkillCode`、`metadata` |
 | 流式对话 | `POST /agents/{agentId}/chat/stream`，说明 SSE 的 `meta`、`phase`、`delta`、`done`、`error` |
@@ -712,7 +712,7 @@ frontend/src/assistant/
 - `AgentSkillBindingService` / 知识库绑定校验
   - 提供只校验请求子集的服务方法，避免 Open API 传入未绑定资源。
 - `deploy/nginx.cici.conf` 和 `deploy/nginx.cici.ssl.conf`
-  - 补充 `/openapi` 到后端的代理规则，确保公网 `https://cici.cloudcc.cn/openapi/v1/...` 可用。
+  - 补充 `/openapi` 到后端的代理规则，确保公网 `https://autoservice.agentcici.com/openapi/v1/...` 可用。
 
 ## 任务拆分
 
@@ -777,7 +777,7 @@ frontend/src/assistant/
 - 每次调用都写入 call log；聊天完成后可通过 trace 看到 `channel=api` 和外部 request metadata。
 - 智能体构建页有 `开放API文档` 按钮；点击后弹出符合项目 modal 规范的 API 文档页，内容覆盖基础 URL、鉴权、发送对话、流式对话、健康检查、会话、错误码和安全建议。
 - API 文档弹窗的 `API 服务器`、鉴权 Header 和代码示例支持复制；示例不展示真实 API Key。
-- 公网部署后 `https://cici.cloudcc.cn/openapi/v1/agents/{agentId}/health` 能被 Nginx 正确代理到后端。
+- 公网部署后 `https://autoservice.agentcici.com/openapi/v1/agents/{agentId}/health` 能被 Nginx 正确代理到后端。
 - 内部 `/ai/chat`、`/ai/chat/stream`、`/me/agents/run-logs` 的现有行为保持兼容。
 
 ## 风险与回滚

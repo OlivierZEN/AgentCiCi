@@ -9,6 +9,7 @@ public final class TenantContext {
     private static final ThreadLocal<String> ORG_ID_HOLDER = new ThreadLocal<>();
     private static final ThreadLocal<String> USER_ID_HOLDER = new ThreadLocal<>();
     private static final ThreadLocal<List<String>> ROLES_HOLDER = new ThreadLocal<>();
+    private static final ThreadLocal<String> TOKEN_TYPE_HOLDER = new ThreadLocal<>();
 
     private TenantContext() {
     }
@@ -46,9 +47,22 @@ public final class TenantContext {
         return r == null ? List.of() : r;
     }
 
+    public static void setTokenType(String tokenType) {
+        if (tokenType == null || tokenType.isBlank()) {
+            TOKEN_TYPE_HOLDER.remove();
+        } else {
+            TOKEN_TYPE_HOLDER.set(tokenType);
+        }
+    }
+
+    public static Optional<String> getTokenType() {
+        return Optional.ofNullable(TOKEN_TYPE_HOLDER.get());
+    }
+
     public static void clear() {
         ORG_ID_HOLDER.remove();
         USER_ID_HOLDER.remove();
         ROLES_HOLDER.remove();
+        TOKEN_TYPE_HOLDER.remove();
     }
 }
