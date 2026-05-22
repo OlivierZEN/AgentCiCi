@@ -1,0 +1,60 @@
+task_id: TASK-132
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-22T10:26:20Z
+expires_at: none
+spec_path: docs/specs/PROJECT-BASELINE.md
+task_status_path: .claw/tasks/TASK-132.md
+branch: codex/TASK-132-agent-builder-skill-refresh-bugfix
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+scope_files:
+  - docs/specs/PROJECT-BASELINE.md
+  - docs/specs/FEAT-009-skill-layering-and-governance.md
+  - docs/specs/FEAT-014-skill-versioning-import-export.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+  - .claw/tasks/TASK-132.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - frontend/src/admin/**
+  - frontend/src/platform/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/PROJECT-BASELINE.md
+  - docs/specs/FEAT-009-skill-layering-and-governance.md
+  - docs/specs/FEAT-014-skill-versioning-import-export.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "Fix the Agent Builder initialization bug reported from `/admin/agent-builder/agent-611846`: when a focused Agent id is present in the URL and exists in `GET /agents`, fetch `GET /agents/{focusAgentId}` instead of always fetching the first listed Agent."
+  - "Preserve the fallback behavior: if the focused Agent id is absent from the list, load the first listed Agent detail and select it."
+  - "Construct the library so the full detail response overrides only the matching Agent record, and set the selected Agent to the detail Agent id."
+  - "Ensure the editing draft uses `agent_skill_binding` / detail `skillBindings`; do not use published `agent_workflow_skill_ref` snapshots as the edit-page draft source."
+  - "Add focused frontend regression coverage for the non-first focused Agent path, including that `skillBindings` from the detail response survive refresh."
+  - "Run desktop product-quality verification for the Agent Builder edit page; do not add mobile compatibility implementation, mobile screenshots, or mobile automation unless separately requested."
+  - "Keep the fix narrow to Agent Builder refresh/loading behavior; do not redesign the Skill picker, publish workflow, or backend data model in this task."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-22T10:26:20Z; user assigned the Agent Builder skill refresh bugfix to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Bug report source: /Volumes/AISpace/devops/dev_request/agent-builder-skill-refresh-bugfix.md. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-132 on branch codex/TASK-132-agent-builder-skill-refresh-bugfix before implementation edits."

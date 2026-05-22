@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-21T12:24:00Z
+updated_at: 2026-05-22T10:30:01Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,28 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-133 - Agent Builder no-model new-Agent model-config redirect
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- task_status_path: `.claw/tasks/TASK-133.md`
+- assignment_path: `.claw/assignments/TASK-133.yaml`
+- blocked_by: `none`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-133-agent-builder-new-agent-model-config-fix`, then makes `+ 新建 Agent` redirect to `/admin/models` with `请先配置模型` when no base model is available.
+
+### TASK-132 - Agent Builder focused-agent skill binding refresh bugfix
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- task_status_path: `.claw/tasks/TASK-132.md`
+- assignment_path: `.claw/assignments/TASK-132.yaml`
+- blocked_by: `none`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-132-agent-builder-skill-refresh-bugfix`, then fixes `AgentBuilderShell` to fetch the focused Agent detail and validates Skill bindings after refresh.
 
 ### TASK-124 - FEAT-046 platform tenant manual provisioning and lifecycle split
 

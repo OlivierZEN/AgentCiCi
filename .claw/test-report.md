@@ -1,23 +1,41 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-21T12:24:00Z
+updated_at: 2026-05-22T10:32:57Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-21T12:24:00Z
-last_run_status: success
+last_run_at: 2026-05-22T10:32:57Z
+last_run_status: passed
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`
-- 范围：TASK-129 admin login organization-selection alignment
-- 命令：manager/bootstrap `dev-login.py`, task-scoped `dev-login.py`, `npm run build`, `git diff --check`, `validate-state.py`, Playwright desktop/mobile and mocked flow checks
-- 环境：local branch `codex/TASK-124-feat-046-platform-tenant-provisioning`
+- 状态：`passed`
+- 范围：TASK-132/TASK-133 Agent Builder assignment publishing
+- 命令：manager `dev-login.py`, `summarize-team-status.py --write`, `validate-state.py`, targeted `git diff --check`
+- 环境：temporary main worktree; assignment/state-only update, no product code changed.
 
 ## Latest Verified Results
+
+- TASK-133 Agent Builder no-model new-Agent feedback assignment (2026-05-22T10:32:57Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` -> **allowed**.
+    - `team-status`: `summarize-team-status.py .claw --write` -> **success**; `DEV-fengchu` now shows active `TASK-132` and `TASK-133`.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `diff`: targeted `git diff --check` for the updated/new `.claw` coordination files -> **success**.
+  - Notes:
+    - This was a manager assignment/update only. The implementation remains for `DEV-fengchu` after task-scoped login on `codex/TASK-133-agent-builder-new-agent-model-config-fix`.
+
+- TASK-132 Agent Builder focused-agent skill binding refresh bugfix assignment (2026-05-22T10:29:03Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended `.claw` assignment, task, board, status, team-status, and test-report files -> **allowed**.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `team-status`: `summarize-team-status.py .claw --write` -> **success**; `DEV-fengchu` now shows active `TASK-132`.
+    - `diff`: targeted `git diff --check` for the new/updated `.claw` coordination files -> **success**.
+  - Notes:
+    - This was a manager assignment/update only. The implementation remains for `DEV-fengchu` after task-scoped login.
 
 - TASK-129 admin login organization-selection alignment (2026-05-21T12:24:00Z):
   - Commands:
