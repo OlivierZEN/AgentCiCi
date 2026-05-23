@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-22T13:25:28Z
+updated_at: 2026-05-23T15:17:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-22T13:25:28Z
+last_run_at: 2026-05-23T15:17:00Z
 last_run_status: passed
 ---
 
@@ -13,11 +13,24 @@ last_run_status: passed
 ## Latest Run Summary
 
 - 状态：`passed`
-- 范围：Codeup change/6 and change/7 post-merge validation on `main`
-- 命令：manager `dev-login.py`, `validate-state.py`, `npm ci`, `npm run build`, backend compile, script syntax, `git diff --check`
-- 环境：local `main` after merging `change/6` and `change/7`; frontend dependencies were installed with `npm ci` because `tsc` was initially unavailable in `frontend/node_modules`.
+- 范围：Google Fonts/network dependency localization on `codex/local-google-assets`
+- 命令：manager `dev-login.py`, `impeccable` context load, targeted Google URL search, font file validation, `npm run build`, local Vite browser/curl verification
+- 环境：local branch `codex/local-google-assets`, Vite dev server `http://127.0.0.1:5173/`
 
 ## Latest Verified Results
+
+- Google Fonts/network dependency localization (2026-05-23T15:17:00Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` with intended frontend/state files -> **allowed**.
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**, loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `search-before`: `rg` found Google network loading only in `frontend/index.html` for Google Fonts preconnect/CSS.
+    - `font-files`: downloaded and validated 10 local TrueType files under `frontend/public/fonts/` for Fraunces and Plus Jakarta Sans requested weights/styles -> **success**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `search-after`: targeted `rg` for `googleapis`, `gstatic`, `fonts.google`, `google.com`, `googletagmanager`, `google-analytics`, and `googleusercontent` excluding `frontend/node_modules/**` and `frontend/dist/**` -> **success**, no matches.
+    - `browser`: in-app browser opened `http://127.0.0.1:5173/`; page rendered, `document` links had no Google URLs, injected CSS contained local `/fonts/...` `@font-face` declarations -> **success**.
+    - `curl`: Vite served `/` without Google font links and served `/fonts/fraunces-400.ttf` plus `/fonts/plus-jakarta-sans-400.ttf` as `200 OK` `font/ttf` -> **success**.
+  - Notes:
+    - The app now keeps existing `Fraunces` and `Plus Jakarta Sans` font-family names while resolving them from local static assets instead of Google-hosted CSS or font files.
 
 - Codeup change/6 and change/7 post-merge validation (2026-05-22T13:25:28Z):
   - Commands:
