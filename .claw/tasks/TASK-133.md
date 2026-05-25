@@ -3,14 +3,14 @@ kind: task-status
 version: 1
 task_id: TASK-133
 title: Agent Builder no-model new-Agent model-config redirect
-status: ready
+status: review
 assignee: DEV-fengchu
 owner_role: fullstack-agent
 branch: codex/TASK-133-agent-builder-new-agent-model-config-fix
 spec_path: docs/specs/PROJECT-BASELINE.md
 assignment_path: .claw/assignments/TASK-133.yaml
-updated_at: 2026-05-22T10:30:01Z
-updated_by: MANAGER-001
+updated_at: 2026-05-25T01:49:30Z
+updated_by: DEV-fengchu
 ---
 
 # TASK-133 - Agent Builder No-Model New-Agent Model-Config Redirect
@@ -54,6 +54,31 @@ updated_by: MANAGER-001
 - The user feedback proposes the target files: `frontend/src/admin/pages/AdminAgentBuilderPage.tsx`, `frontend/src/assistant/AgentBuilderShell.tsx`, and `frontend/src/admin/pages/AdminModelsPage.tsx`.
 - Reuse existing notice state and visual treatment on the model page; do not add a separate toast system for this task.
 - Background spec to preserve: `docs/specs/FEAT-035-local-model-providers.md`.
+
+## Progress
+
+- Added the `onRequireModelConfig` callback path from `AdminAgentBuilderPage` into `AgentBuilderShell`.
+- Changed the no-model new-Agent branch to show the concise `请先配置模型` fallback locally, or route the admin user to `/admin/models` when the admin page provides the callback.
+- `AdminModelsPage` now reads a one-time `notice` navigation state, displays it through the existing `.notice` rendering path, and clears the history state with `replace`.
+- Preserved the existing create flow when an available base model exists.
+
+## Changed Files
+
+- `frontend/src/admin/pages/AdminAgentBuilderPage.tsx`
+- `frontend/src/admin/pages/AdminModelsPage.tsx`
+- `frontend/src/assistant/AgentBuilderShell.tsx`
+- `frontend/src/assistant/AgentBuilderShell.test.ts`
+
+## Verification Evidence
+
+- `python3 /Users/xuhm/.codex/skills/cc-aidev-guidelines-common/scripts/dev-login.py .claw --ssh-key /Users/xuhm/.ssh/id_ed25519_agentcici_fengchu --developer DEV-fengchu --git-username Bimo --task TASK-133 --branch codex/TASK-133-agent-builder-new-agent-model-config-fix --files frontend/src/admin/pages/AdminAgentBuilderPage.tsx frontend/src/admin/pages/AdminModelsPage.tsx frontend/src/assistant/AgentBuilderShell.tsx frontend/src/assistant/AgentBuilderShell.test.ts .claw/tasks/TASK-133.md --no-cache --json` -> allowed.
+- `npm run test -- AgentBuilderShell` in `frontend/` -> passed, 3 tests.
+- `npm run build` in `frontend/` -> passed; Vite reported the existing large chunk warning.
+- `git diff --check` -> passed.
+- External Google Chrome desktop validation on `127.0.0.1:5177`: no-model `+ 新建 Agent` redirected to `/admin/models`, displayed `请先配置模型`, cleared `history.state.usr`, and did not POST `/agents`.
+- External Google Chrome desktop validation on `127.0.0.1:5177`: with a mocked available base model, `+ 新建 Agent` POSTed `/agents` with `model: qwen3.6-plus` and routed to `/admin/agent-builder/{agentId}`.
+- Real local project startup on 2026-05-25: Docker infrastructure containers were already healthy; backend started with `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local`; `GET http://127.0.0.1:8080/actuator/health` -> `{"status":"UP"}`; frontend started with `npm run dev`; `HEAD http://127.0.0.1:5173/` -> `HTTP 200`.
+- Real local Chrome validation on `127.0.0.1:5173` with `13900009999/szyd1234`: `/models/agent/base-models` returned `0` models; clicking `+ 新建 Agent` redirected to `/admin/models`, displayed `请先配置模型`, cleared `history.state.usr`, and kept `/agents` count unchanged at `4`. Screenshot: `/private/tmp/task133-local-real-backend.png`.
 
 ## Assignment History
 
