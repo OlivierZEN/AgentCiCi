@@ -7,10 +7,10 @@ status: review
 assignee: MANAGER-001
 owner_role: fullstack-agent
 branch: codex/TASK-134-ai-minutes-local-audio-upload
-pr_url: none
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/12
 spec_path: docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
 assignment_path: .claw/assignments/TASK-134.yaml
-updated_at: 2026-05-25T12:24:00Z
+updated_at: 2026-05-25T13:07:26Z
 updated_by: MANAGER-001
 ---
 
@@ -43,6 +43,7 @@ updated_by: MANAGER-001
 - 2026-05-25T01:18:00Z: Verified the revised upload transport with a generated 1-second silence WAV; 百炼 ASR returned `ASR_RESPONSE_HAVE_NO_WORDS`, confirming upload/task submission reached the provider and failed only because the sample contained no speech.
 - 2026-05-25T01:50:00Z: User explicitly approved real private-recording upload; full 7.1MB file still failed at 百炼 temporary OSS upload with `Connection reset`, generated 7MB control file reproduced the same reset, and 60-second ffmpeg chunks were prepared. Testing is paused per user request; handoff plan is in `docs/specs/FEAT-054-bailian-real-audio-test-plan.md`.
 - 2026-05-25T12:24:00Z: Per user direction, stopped after proving upload works. Real 60-second chunks successfully uploaded to 百炼, completed Fun-ASR, and returned speaker diarization segments; whole-file upload still appears blocked by local network/temporary OSS reset. Also fixed 百炼 result JSON download to preserve pre-signed OSS URLs verbatim.
+- 2026-05-25T13:07:26Z: Created Codeup change request change/12 for TASK-134 and updated the branch with latest `origin/main`.
 
 ## Verification
 

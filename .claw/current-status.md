@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-25T12:24:00Z
+updated_at: 2026-05-25T13:07:26Z
 updated_by: MANAGER-001
 phase: maintenance
 active_task: "TASK-134 / TASK-133 / TASK-132 / TASK-114 / TASK-115 / TASK-116 / TASK-124"
-next_action: "Keep TASK-134 in review; real 百炼 upload/ASR is proven on 60-second chunks, while whole-file upload remains local-network reset."
+next_action: "Review Codeup change/12 for TASK-134; real 百炼 upload/ASR is proven on 60-second chunks, while whole-file upload remains local-network reset."
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,7 @@ read_next:
 
 - Focus: review TASK-134 AI 听记 local audio upload and 百炼 multi-speaker transcription implementation while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.0.
 - Mainline active work: `TASK-134`, `TASK-133`, `TASK-132`, `TASK-114`, `TASK-115`, `TASK-116`, `TASK-124`
-- `TASK-134` is in review: AI 听记 now has local audio/video upload, backend 百炼 temporary OSS upload, Fun-ASR async transcription with speaker diarization, multi-speaker transcript normalization, frontend upload state handling, Spring 256MB multipart limits, and focused tests. Whole-file 7.1MB upload still resets on this local network, but 60-second chunks successfully upload to 百炼 and return Fun-ASR speaker transcript segments.
+- `TASK-134` is in Codeup review at change/12: AI 听记 now has local audio/video upload, backend 百炼 temporary OSS upload, Fun-ASR async transcription with speaker diarization, multi-speaker transcript normalization, frontend upload state handling, Spring 256MB multipart limits, and focused tests. Whole-file 7.1MB upload still resets on this local network, but 60-second chunks successfully upload to 百炼 and return Fun-ASR speaker transcript segments.
 - Latest verification: TASK-134 passed task-scoped identity gate, backend focused tests, frontend build, in-app browser desktop QA, local account login smoke, generated silence provider smoke, real 60-second chunk upload/ASR smoke, and focused rerun after preserving 百炼 result URLs verbatim.
 - Newly assigned: `TASK-133` gives `DEV-fengchu` the Agent Builder no-model new-Agent feedback; `TASK-132` remains assigned to `DEV-fengchu` for focused Agent detail reload.
 - Codeup changes merged locally on `main`: `change/6` platform account orgless auth context and `change/7` skill-authoring timeout fix. Post-merge verification passed state validation, frontend build, backend compile, script syntax, and `git diff --check`.
