@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAdminToken } from "../useAdminToken";
 
 type ModelConfig = { sceneCode: string; provider: string; modelName: string };
@@ -54,6 +55,10 @@ type EditingModelState = {
   providerName: string;
   modelName: string;
 };
+
+type LocationState = {
+  notice?: string;
+} | null;
 
 const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "anthropic", "openai"];
 const MODEL_UI_STORAGE_KEY = "admin-model-ui-settings-v1";
@@ -146,6 +151,9 @@ const normalizeModelSetting = (raw: Partial<ModelUiSetting>, providerName: strin
 
 export default function AdminModelsPage() {
   const token = useAdminToken();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const routeNotice = (location.state as LocationState)?.notice ?? "";
 
   const [notice, setNotice] = useState("");
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -226,6 +234,12 @@ export default function AdminModelsPage() {
   }, [allModelsData, allModelsSearch]);
 
   const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
+
+  useEffect(() => {
+    if (!routeNotice) return;
+    setNotice(routeNotice);
+    navigate(`${location.pathname}${location.search}`, { replace: true, state: null });
+  }, [location.pathname, location.search, navigate, routeNotice]);
 
   const setSelectedModelsForProvider = (providerCode: string, modelNames: string[]) => {
     const nextNames = dedupeModels(modelNames);
