@@ -1334,6 +1334,17 @@ function toPublishConfig(configs?: Record<string, unknown>): PublishConfigDraft 
   };
 }
 
+export function resolveAgentDetailTarget(agents: AgentApiRecord[], focusAgentId?: string): string {
+  if (focusAgentId && agents.some((item) => item.agentId === focusAgentId)) {
+    return focusAgentId;
+  }
+  return agents[0]?.agentId ?? "";
+}
+
+export function applyAgentDetailToList(agents: AgentApiRecord[], detail: AgentApiRecord): AgentApiRecord[] {
+  return agents.map((item) => (item.agentId === detail.agentId ? detail : item));
+}
+
 function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: KnowledgeBase[]): AgentRecord {
   const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((kb) => kb.id));
   const model = item.model && item.model.trim() ? item.model : fallbackDraft.model;
@@ -1473,8 +1484,9 @@ export default function AgentBuilderShell({
           return;
         }
 
-        const firstAgentId = listBody.data[0].agentId;
-        const detailRes = await fetch(`/agents/${encodeURIComponent(firstAgentId)}`, {
+        const detailAgentId = resolveAgentDetailTarget(listBody.data, focusAgentId);
+        if (!detailAgentId) return;
+        const detailRes = await fetch(`/agents/${encodeURIComponent(detailAgentId)}`, {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -1484,13 +1496,10 @@ export default function AgentBuilderShell({
         }
         if (cancelled) return;
 
-        const fullById = new Map<string, AgentApiRecord>();
-        fullById.set(firstAgentId, detailBody.data);
-        const nextLibrary = listBody.data.map((item) =>
-          toAgentRecordFromApi(fullById.get(item.agentId) ?? item, orgId, kbs),
-        );
+        const hydratedList = applyAgentDetailToList(listBody.data, detailBody.data);
+        const nextLibrary = hydratedList.map((item) => toAgentRecordFromApi(item, orgId, kbs));
         const first = nextLibrary[0];
-        const preferred = (focusAgentId ? nextLibrary.find((item) => item.id === focusAgentId) : null) ?? first;
+        const preferred = nextLibrary.find((item) => item.id === detailAgentId) ?? first;
         const skillsRes = await fetch("/skills", {
           method: "GET",
           headers: { Authorization: `Bearer ${token}` },
