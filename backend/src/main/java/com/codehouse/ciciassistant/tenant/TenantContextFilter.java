@@ -57,9 +57,18 @@ public class TenantContextFilter extends OncePerRequestFilter {
                         return;
                     }
                     orgId = claims.get("org_id", String.class);
-                    String memberId = claims.get("member_id", String.class);
-                    userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
+                    TenantContext.setTokenType(tokenType == null || tokenType.isBlank() ? "organization" : tokenType);
                     TenantContext.setRoles(extractRoles(claims));
+                    if ("platform".equals(tokenType)) {
+                        userId = claims.get("platform_account_id", String.class);
+                        if (userId == null || userId.isBlank()) {
+                            userId = claims.getSubject();
+                        }
+                        orgId = null;
+                    } else {
+                        String memberId = claims.get("member_id", String.class);
+                        userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
+                    }
                 } catch (Exception ex) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     response.setContentType("application/json");

@@ -1,4 +1,4 @@
-# 本地到线上环境发布方案
+# AgentCiCi 生产发布运行手册
 
 ## 1. 发布目标
 
@@ -6,7 +6,7 @@
 
 - 产品品牌：AgentCiCi
 - 品牌域名：`agentcici.com`
-- 当前线上地址：`https://cici.cloudcc.cn`（历史部署域名；切换到 `agentcici.com` 前仍按本文执行发布与 smoke）
+- 当前公网地址：`https://agentcici.com`、`https://www.agentcici.com`、`https://autoservice.agentcici.com`
 - 服务器：`root@47.97.119.160`
 - 线上目录：`/opt/cici`
 - 部署方式：Docker Compose + 阿里云 ACR 镜像
@@ -19,10 +19,11 @@
 
 1. 先验收本地代码，再构建镜像。
 2. 镜像使用不可变版本号发布，避免只依赖 `latest`。
-3. 线上发布前必须备份 PostgreSQL、环境变量、知识库文件和 Qdrant 数据。
-4. 数据库迁移只允许 Flyway 正向迁移，不修改已上线 migration。
-5. 发布后先做容器健康检查，再做公网业务 smoke。
-6. 回滚优先回滚镜像和配置；已执行的数据库迁移不做“反向改历史”，必要时用正向修复迁移或整库恢复。
+3. ACR 镜像 tag、Git tag、后端运行版本和登录后左下角程序版本必须使用同一个版本号。
+4. 线上发布前必须备份 PostgreSQL、环境变量、知识库文件和 Qdrant 数据。
+5. 数据库迁移只允许 Flyway 正向迁移，不修改已上线 migration。
+6. 发布后先做容器健康检查，再做公网业务 smoke。
+7. 回滚优先回滚镜像和配置；已执行的数据库迁移不做“反向改历史”，必要时用正向修复迁移或整库恢复。
 
 ## 3. 发布前准备
 
@@ -65,60 +66,90 @@ cd backend
 mvn -q -Dmaven.repo.local=.m2 -DskipTests compile
 ```
 
-### 3.3 发布变量
+### 3.3 发布变量与版本号
 
-使用版本号绑定本次发布：
+统一发布入口是 `scripts/release-acr.sh`。它会在每次 ACR 推送前生成一个规范版本号，并把同一个值用于：
+
+- backend 镜像 tag：`cici-backend:<version>`
+- frontend 镜像 tag：`cici-frontend:<version>`
+- Git annotated tag：`<version>`
+- 前端程序版本：`VITE_CICI_APP_VERSION=<version>`
+- 后端运行版本：`CICI_APP_VERSION=<version>`
+- 线上部署变量：`CICI_IMAGE_TAG=<version>` 与 `CICI_APP_VERSION=<version>`
+
+默认版本 train 是 `2.0`，脚本会读取现有 Git tag 并递增 `B<n>`。例如当前已有 `2.0.B2` 时，下一版为 `2.0.B3`。
 
 ```bash
-export ACR_PREFIX=op-registry.cloudcc.cn/cloudcc-ai-native
-export RELEASE_TAG="$(date +%Y%m%d-%H%M)-$(git rev-parse --short HEAD)"
+export ACR_IMAGE_PREFIX=op-registry.cloudcc.cn/cloudcc-ai-native
 export SSH_KEY=/Volumes/workspace/datafiles/cc-cici-ecs.pem
 export REMOTE=root@47.97.119.160
+
+# 只查看下一版号和将执行的动作，不推送镜像、不创建 tag
+./scripts/release-acr.sh --dry-run
 ```
 
-建议同时推送 `$RELEASE_TAG` 和 `latest`，线上 `deploy/acr.env` 使用 `CICI_IMAGE_TAG=$RELEASE_TAG` 发布。这样回滚时可以直接切回上一版 tag。
+如需指定版本号，可以显式传入：
+
+```bash
+./scripts/release-acr.sh --version 2.0.B3
+```
+
+建议同时推送 `<version>` 和 `latest`，线上 `deploy/acr.env` 必须使用 `CICI_IMAGE_TAG=<version>` 发布。这样回滚时可以直接切回上一版 tag。
 
 ## 4. 构建并推送镜像
 
-### 4.1 后端打包
+### 4.1 一键构建并推送
+
+推荐使用统一脚本完成后端打包、前端构建、镜像构建、ACR 推送、镜像 inspect 和 Git tag 创建：
 
 ```bash
+./scripts/release-acr.sh
+export RELEASE_VERSION=<script-output-version>
+```
+
+脚本默认拒绝脏工作区，避免 Git tag 指向的代码和实际镜像内容不一致。确需从脏工作区做临时热修复时，必须显式声明并在发布记录写清楚：
+
+```bash
+ALLOW_DIRTY_RELEASE=true ./scripts/release-acr.sh --version <hotfix-version>
+```
+
+### 4.2 手动等价命令
+
+只有在脚本不可用时才使用手动等价命令。手动流程也必须先确定同一个版本号：
+
+```bash
+export RELEASE_VERSION=2.0.B3
+export CICI_APP_VERSION="$RELEASE_VERSION"
+export GIT_COMMIT="$(git rev-parse --short=12 HEAD)"
+
 cd backend
-mvn -q -Dmaven.repo.local=.m2 -DskipTests package
+mvn -q -Dmaven.repo.local=../.m2 -DskipTests package
+cd ../frontend
+VITE_CICI_APP_VERSION="$RELEASE_VERSION" npm run build
 cd ..
-```
 
-### 4.2 前端构建
-
-```bash
-cd frontend
-npm run build
-cd ..
-```
-
-### 4.3 推送 backend/frontend 镜像
-
-```bash
 docker buildx build \
   --platform linux/amd64 \
   -f deploy/Dockerfile.backend \
-  -t "$ACR_PREFIX/cici-backend:$RELEASE_TAG" \
-  -t "$ACR_PREFIX/cici-backend:latest" \
+  --build-arg CICI_APP_VERSION="$RELEASE_VERSION" \
+  --build-arg CICI_GIT_COMMIT="$GIT_COMMIT" \
+  -t "$ACR_IMAGE_PREFIX/cici-backend:$RELEASE_VERSION" \
+  -t "$ACR_IMAGE_PREFIX/cici-backend:latest" \
   --push .
 
 docker buildx build \
   --platform linux/amd64 \
   -f deploy/Dockerfile.frontend \
-  -t "$ACR_PREFIX/cici-frontend:$RELEASE_TAG" \
-  -t "$ACR_PREFIX/cici-frontend:latest" \
+  --build-arg CICI_APP_VERSION="$RELEASE_VERSION" \
+  --build-arg CICI_GIT_COMMIT="$GIT_COMMIT" \
+  -t "$ACR_IMAGE_PREFIX/cici-frontend:$RELEASE_VERSION" \
+  -t "$ACR_IMAGE_PREFIX/cici-frontend:latest" \
   --push .
-```
 
-确认镜像已存在：
-
-```bash
-docker buildx imagetools inspect "$ACR_PREFIX/cici-backend:$RELEASE_TAG"
-docker buildx imagetools inspect "$ACR_PREFIX/cici-frontend:$RELEASE_TAG"
+docker buildx imagetools inspect "$ACR_IMAGE_PREFIX/cici-backend:$RELEASE_VERSION"
+docker buildx imagetools inspect "$ACR_IMAGE_PREFIX/cici-frontend:$RELEASE_VERSION"
+git tag -a "$RELEASE_VERSION" -m "Release $RELEASE_VERSION"
+git push origin "$RELEASE_VERSION"
 ```
 
 ## 5. 同步部署配置
@@ -136,8 +167,8 @@ rsync -av -e "ssh -i $SSH_KEY" \
 
 证书文件不从仓库同步。线上证书应继续保留在：
 
-- `/opt/cici/deploy/certs/cloudcc.cn.pem`
-- `/opt/cici/deploy/certs/cloudcc.cn.key`
+- `/opt/cici/deploy/certs/agentcici.com.pem`
+- `/opt/cici/deploy/certs/agentcici.com.key`
 
 ## 6. 线上备份
 
@@ -159,7 +190,7 @@ cp deploy/acr.env "$BACKUP_DIR/acr.env.before-release"
 
 docker exec cici-database pg_dump \
   -U "${POSTGRES_USER:-cici}" \
-  -d "${POSTGRES_DB:-cici_assistant}" \
+  -d "${POSTGRES_DB:-agentcici}" \
   -Fc \
   -f /tmp/cici-before-release.dump
 docker cp cici-database:/tmp/cici-before-release.dump "$BACKUP_DIR/postgres.dump"
@@ -193,18 +224,23 @@ cd /opt/cici/deploy
 grep -E '^(CICI_IMAGE_TAG|SSL_ENABLED|CICI_PLATFORM|ACR_IMAGE_PREFIX)=' acr.env
 ```
 
-将镜像版本改为本次发布 tag：
+将镜像版本和程序版本改为本次发布 tag：
 
 ```bash
 ssh -i "$SSH_KEY" "$REMOTE" "
 set -euo pipefail
 cd /opt/cici/deploy
 if grep -q '^CICI_IMAGE_TAG=' acr.env; then
-  sed -i.bak 's/^CICI_IMAGE_TAG=.*/CICI_IMAGE_TAG=$RELEASE_TAG/' acr.env
+  sed -i.bak 's/^CICI_IMAGE_TAG=.*/CICI_IMAGE_TAG=$RELEASE_VERSION/' acr.env
 else
-  printf '\nCICI_IMAGE_TAG=$RELEASE_TAG\n' >> acr.env
+  printf '\nCICI_IMAGE_TAG=$RELEASE_VERSION\n' >> acr.env
 fi
-grep '^CICI_IMAGE_TAG=' acr.env
+if grep -q '^CICI_APP_VERSION=' acr.env; then
+  sed -i.bak 's/^CICI_APP_VERSION=.*/CICI_APP_VERSION=$RELEASE_VERSION/' acr.env
+else
+  printf '\nCICI_APP_VERSION=$RELEASE_VERSION\n' >> acr.env
+fi
+grep -E '^(CICI_IMAGE_TAG|CICI_APP_VERSION)=' acr.env
 "
 ```
 
@@ -272,13 +308,16 @@ docker logs --tail=100 cici-frontend
 
 - `cici-database`、`cici-redis`、`cici-rabbitmq`、`cici-qdrant`、`cici-backend`、`cici-frontend` 均健康或正常运行。
 - 后端健康检查返回 `{"status":"UP"}`。
+- 后端 `GET http://127.0.0.1:8080/system/version` 返回本次 `version`。
 - 后端日志没有 Flyway、数据源、Redis、RabbitMQ、Qdrant、模型配置启动错误。
 
 ### 8.2 公网 smoke
 
 ```bash
-curl -I http://cici.cloudcc.cn/
-curl -I https://cici.cloudcc.cn/
+curl -I http://agentcici.com/
+curl -I https://agentcici.com/
+curl -I https://www.agentcici.com/
+curl -I https://autoservice.agentcici.com/
 ```
 
 期望：
@@ -292,7 +331,7 @@ curl -I https://cici.cloudcc.cn/
 使用发布负责人掌握的测试账号执行：
 
 ```bash
-curl -sS https://cici.cloudcc.cn/auth/password/login \
+curl -sS https://autoservice.agentcici.com/auth/password/login \
   -H 'Content-Type: application/json' \
   -d '{"orgId":"demo-org","mobile":"<mobile>","password":"<password>"}'
 ```
@@ -302,33 +341,33 @@ curl -sS https://cici.cloudcc.cn/auth/password/login \
 ```bash
 export TOKEN='<jwt>'
 
-curl -fsS https://cici.cloudcc.cn/auth/me \
+curl -fsS https://autoservice.agentcici.com/auth/me \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://cici.cloudcc.cn/agents \
+curl -fsS https://autoservice.agentcici.com/agents \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://cici.cloudcc.cn/skills \
+curl -fsS https://autoservice.agentcici.com/skills \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://cici.cloudcc.cn/me/agents/run-logs \
+curl -fsS https://autoservice.agentcici.com/me/agents/run-logs \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 如果本次涉及管理端或开放 API，还需要补充：
 
 ```bash
-curl -fsS https://cici.cloudcc.cn/admin/agents/run-logs?limit=10 \
+curl -fsS https://autoservice.agentcici.com/admin/agents/run-logs?limit=10 \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://cici.cloudcc.cn/api/platform/skills \
+curl -fsS https://autoservice.agentcici.com/api/platform/skills \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 Open API 需要使用真实 API Key 验证：
 
 ```bash
-curl -fsS https://cici.cloudcc.cn/openapi/v1/agents/<agentId>/health \
+curl -fsS https://autoservice.agentcici.com/openapi/v1/agents/<agentId>/health \
   -H "Authorization: Bearer <api-key>"
 ```
 
@@ -337,9 +376,10 @@ curl -fsS https://cici.cloudcc.cn/openapi/v1/agents/<agentId>/health \
 满足以下条件才算发布成功：
 
 - ACR backend/frontend 镜像已推送并能 inspect。
+- Git annotated tag、backend/frontend 镜像 tag、`/system/version` 和登录后左下角程序版本一致。
 - 线上备份目录已生成，包含 `postgres.dump`、`acr.env.before-release`、`kb-files.tgz`、`qdrant.tgz`。
 - 六个容器状态正常。
-- `https://cici.cloudcc.cn/` 返回 `200`。
+- `https://agentcici.com/`、`https://www.agentcici.com/` 和 `https://autoservice.agentcici.com/` 返回 `200`。
 - 登录、`/auth/me`、核心列表接口、管理端接口按本次发布范围通过 smoke。
 - 本次涉及的重点用户路径已在浏览器人工点验。
 - 发布 tag、镜像 digest、备份目录、验收结果已记录到发布记录。

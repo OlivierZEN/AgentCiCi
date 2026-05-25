@@ -169,7 +169,7 @@ export default function AdminSkillsListPage() {
 
   return (
     <div className="admin-page skills-catalog">
-      {notice ? <div className="dify-toast">{notice}</div> : null}
+      {notice ? <div className="cici-toast">{notice}</div> : null}
 
       <header className="skills-catalog__header">
         <div>

@@ -1,8 +1,18 @@
 FROM eclipse-temurin:21-jre
 
+ARG CICI_APP_VERSION=dev
+ARG CICI_GIT_COMMIT=unknown
+
 WORKDIR /app
 
 COPY backend/target/cc-cici-assistant-backend-*.jar /app/app.jar
+
+ENV CICI_APP_VERSION=${CICI_APP_VERSION}
+ENV GIT_COMMIT=${CICI_GIT_COMMIT}
+
+LABEL org.opencontainers.image.title="AgentCiCi Backend"
+LABEL org.opencontainers.image.version="${CICI_APP_VERSION}"
+LABEL org.opencontainers.image.revision="${CICI_GIT_COMMIT}"
 
 EXPOSE 8080
 

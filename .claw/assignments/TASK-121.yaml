@@ -1,0 +1,61 @@
+task_id: TASK-121
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T02:11:08Z
+expires_at: none
+spec_path: docs/specs/FEAT-043-database-rename-agentcici.md
+task_status_path: .claw/tasks/TASK-121.md
+branch: codex/TASK-121-db-rename-agentcici
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/resources/**
+  - backend/src/test/resources/**
+  - deploy/**
+  - scripts/**
+  - docs/**
+  - .claw/**
+scope_files:
+  - docker-compose.yml
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - backend/src/test/resources/application.yml
+  - deploy/acr.env.example
+  - deploy/docker-compose.acr.yml
+  - scripts/run-full-demo.sh
+  - docs/production-release-runbook.md
+  - docs/specs/FEAT-043-database-rename-agentcici.md
+  - .claw/assignments/TASK-121.yaml
+  - .claw/tasks/TASK-121.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/decisions.md
+  - .claw/devops.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-043-database-rename-agentcici.md
+  - docs/specs/PROJECT-BASELINE.md
+  - .claw/decisions.md
+task_boundary:
+  - "Rename the project's default PostgreSQL database from cici_assistant to agentcici."
+  - "Update local compose, Spring runtime/test configuration, deploy defaults, helper scripts, and current ops documentation that directly encode the database name."
+  - "Do not rename unrelated legacy cici identifiers such as localStorage keys, API headers, package names, or container names."
+  - "Do not edit Flyway migration SQL contents unless the database name is referenced directly."
+  - "Preserve existing unrelated dirty worktree changes."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T02:11:08Z; user requested database rename to agentcici."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Task scoped to database default-name migration and aligned runtime/deploy documentation."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-121 on branch codex/TASK-121-db-rename-agentcici before implementation edits."

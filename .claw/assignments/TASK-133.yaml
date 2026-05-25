@@ -1,0 +1,62 @@
+task_id: TASK-133
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-22T10:30:01Z
+expires_at: none
+spec_path: docs/specs/PROJECT-BASELINE.md
+task_status_path: .claw/tasks/TASK-133.md
+branch: codex/TASK-133-agent-builder-new-agent-model-config-fix
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/admin/**
+  - frontend/src/assistant/**
+  - docs/specs/**
+scope_files:
+  - frontend/src/admin/pages/AdminAgentBuilderPage.tsx
+  - frontend/src/admin/pages/AdminModelsPage.tsx
+  - frontend/src/assistant/AgentBuilderShell.tsx
+  - docs/specs/PROJECT-BASELINE.md
+  - docs/specs/FEAT-035-local-model-providers.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+  - .claw/tasks/TASK-133.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - frontend/src/platform/**
+  - deploy/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/PROJECT-BASELINE.md
+  - docs/specs/FEAT-035-local-model-providers.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "Fix the Agent Builder list-page bug reported from `/admin/agent-builder`: clicking `+ 新建 Agent` with no available base model must not appear inert."
+  - "If a usable model exists, preserve the existing new-Agent creation flow."
+  - "If no usable model exists, route the admin user to `/admin/models` with a visible one-time notice `请先配置模型`; do not create an Agent."
+  - "Use the existing model page notice/toast pattern rather than adding a new modal or visual system."
+  - "Keep the change narrow to `AdminAgentBuilderPage`, `AgentBuilderShell`, `AdminModelsPage`, and focused frontend tests where practical."
+  - "Before UI edits, follow the `impeccable` workflow and read `PRODUCT.md` plus `DESIGN.md`; use `DESIGN.json` only if detailed token/component rules are needed."
+  - "Do not change backend APIs, model-provider persistence, platform routes, or mobile compatibility scope in this task."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-22T10:30:01Z; user assigned the Agent Builder new-Agent no-model feedback to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Bug report source: /Volumes/AISpace/devops/dev_request/agent-builder-new-agent-model-config-fix-plan.md. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-133 on branch codex/TASK-133-agent-builder-new-agent-model-config-fix before implementation edits."

@@ -61,7 +61,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldManageTenantRetentionAndCreateContentFreeDryRunManifest() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402401", "生命周期测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -277,8 +277,82 @@ class PlatformTenantLifecycleIntegrationTest {
     }
 
     @Test
+    void shouldProvisionTenantAndReuseExistingOwnerAccountFromPlatform() throws Exception {
+        String platformToken = platformToken();
+        String reusableMobile = uniqueMobile("13902402405");
+
+        MvcResult firstProvisionResult = mockMvc.perform(post("/platform/tenants")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tenantName": "平台开通组织 A",
+                                  "ownerMobile": "%s",
+                                  "ownerDisplayName": "张三",
+                                  "ownerEmail": "tenant-a@example.com",
+                                  "initialPassword": "tenantPass1",
+                                  "provisionNote": "platform provisioning test"
+                                }
+                                """.formatted(reusableMobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.orgId").isNotEmpty())
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.data.ownerMemberId").isNotEmpty())
+                .andExpect(jsonPath("$.data.ownerAccountId").isNotEmpty())
+                .andExpect(jsonPath("$.data.reusedExistingAccount").value(false))
+                .andReturn();
+        JsonNode firstProvision = objectMapper.readTree(firstProvisionResult.getResponse().getContentAsString()).path("data");
+        String firstOrgId = firstProvision.path("orgId").asText();
+        String ownerAccountId = firstProvision.path("ownerAccountId").asText();
+        assertThat(firstOrgId).matches("^org[a-z0-9]{17}$");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM organization_retention_policy WHERE org_id = ?",
+                Long.class,
+                firstOrgId)).isEqualTo(1L);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM platform_audit_log WHERE org_id = ? AND event_type = 'platform.tenant.create'",
+                Long.class,
+                firstOrgId)).isEqualTo(1L);
+
+        mockMvc.perform(post("/auth/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "orgId": "%s",
+                                  "mobile": "%s",
+                                  "password": "tenantPass1"
+                                }
+                                """.formatted(firstOrgId, reusableMobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accountId").value(ownerAccountId));
+
+        MvcResult secondProvisionResult = mockMvc.perform(post("/platform/tenants")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "tenantName": "平台开通组织 B",
+                                  "ownerMobile": "%s",
+                                  "ownerDisplayName": "张三复用",
+                                  "provisionNote": "reuse existing owner"
+                                }
+                                """.formatted(reusableMobile)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.reusedExistingAccount").value(true))
+                .andExpect(jsonPath("$.data.ownerAccountId").value(ownerAccountId))
+                .andReturn();
+
+        String secondOrgId = objectMapper.readTree(secondProvisionResult.getResponse().getContentAsString()).path("data").path("orgId").asText();
+        assertThat(secondOrgId).matches("^org[a-z0-9]{17}$");
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM organization_member WHERE account_id = ? AND role_code = 'OWNER'",
+                Long.class,
+                ownerAccountId)).isGreaterThanOrEqualTo(2L);
+    }
+
+    @Test
     void shouldCancelQueuedRealPurgeJobBeforeWorkerRuns() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402403", "销毁取消测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -334,7 +408,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldDeadLetterExpiredRunningRealPurgeJobWithoutDeletingData() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402404", "销毁死信测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -403,7 +477,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
     @Test
     void shouldRetryFailedRealPurgeJobFromSourceDryRun() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402402", "销毁重试测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
 
@@ -699,6 +773,21 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "password": "szyd1234"
                                 }
                                 """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private String platformToken() throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/auth/platform/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "admin@cloudcc.com",
+                                  "password": "szyd1234"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andReturn();
 

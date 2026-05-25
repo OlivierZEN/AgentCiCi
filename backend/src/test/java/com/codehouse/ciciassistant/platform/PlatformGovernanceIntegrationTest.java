@@ -34,7 +34,7 @@ class PlatformGovernanceIntegrationTest {
 
     @Test
     void shouldManagePlatformSkillTemplateVersionsAndBuiltinToolsWithAuditAndRuntimeKillSwitch() throws Exception {
-        String platformToken = loginToken("13800138111");
+        String platformToken = platformToken();
 
         MvcResult platformSkillsResult = mockMvc.perform(get("/platform/skills")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
@@ -255,6 +255,21 @@ class PlatformGovernanceIntegrationTest {
                                   "password": "szyd1234"
                                 }
                                 """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private String platformToken() throws Exception {
+        MvcResult loginResult = mockMvc.perform(post("/auth/platform/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "identifier": "admin@cloudcc.com",
+                                  "password": "szyd1234"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andReturn();
 

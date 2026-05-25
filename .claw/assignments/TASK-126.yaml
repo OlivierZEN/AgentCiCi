@@ -1,0 +1,37 @@
+task_id: TASK-126
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T10:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-041-platform-accountless-login.md
+task_status_path: .claw/tasks/TASK-126.md
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
+pr_url: n/a
+scope_mode: exact_files
+scope_files:
+  - docs/specs/FEAT-041-platform-accountless-login.md
+  - .claw/tasks/TASK-126.md
+  - .claw/current-status.md
+  - .claw/task-archive.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-041-platform-accountless-login.md
+task_boundary:
+  - "Recover the missing FEAT-041 platform accountless login spec from repository history without changing its documented behavior."
+  - "Only restore the missing spec file and the minimum .claw state needed to record the rescue."
+change_manifest_required: false
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T10:10:00Z; user requested FEAT-041 content recovery."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Manager rescue assignment for restoring the missing FEAT-041 spec from Git history. No product behavior changes are authorized in this task."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-126 before restoring docs/specs/FEAT-041-platform-accountless-login.md or related .claw rescue records."

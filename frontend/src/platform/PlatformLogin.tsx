@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { LS_PLATFORM_TOKEN } from "../constants";
 import { safeFetchJson } from "../utils/http";
 
-type AuthPayload = { token: string; orgId: string; userId: string; roles: string[] };
+type AuthPayload = {
+  token: string;
+  tokenType: "platform";
+  platformAccountId: string;
+  email: string;
+  mobile: string;
+  displayName: string;
+  roles: string[];
+};
 
 function hasPlatformRole(roles: string[]): boolean {
   return roles.some((role) => role.startsWith("PLATFORM_"));
@@ -11,18 +19,20 @@ function hasPlatformRole(roles: string[]): boolean {
 
 export default function PlatformLogin() {
   const nav = useNavigate();
-  const [orgId, setOrgId] = useState("demo-org");
-  const [mobile, setMobile] = useState("13800138111");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
-  const [notice, setNotice] = useState("平台运营入口");
+  const [notice, setNotice] = useState("");
 
   const login = async () => {
     try {
-      setNotice("登录中...");
-      const res = await fetch("/auth/password/login", {
+      setNotice("登录中…");
+      const res = await fetch("/auth/platform/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId, identifier: mobile, password }),
+        body: JSON.stringify({
+          identifier: identifier.trim(),
+          password,
+        }),
       });
       const { body } = await safeFetchJson<AuthPayload>(res);
       if (!res.ok || !body?.success || !body.data?.token) {
@@ -30,7 +40,7 @@ export default function PlatformLogin() {
         return;
       }
       if (!hasPlatformRole(body.data.roles ?? [])) {
-        setNotice("该账号当前没有平台角色，请先确认账号手机号已加入 platform-*-mobiles 配置。");
+        setNotice("该账号当前没有平台角色，请先确认平台账号或手机号白名单配置。");
         return;
       }
       localStorage.setItem(LS_PLATFORM_TOKEN, JSON.stringify(body.data));
@@ -46,49 +56,43 @@ export default function PlatformLogin() {
       <section className="login-card login-card--admin platform-login__card">
         <div className="platform-login__intro">
           <div>
-            <p className="brand">Platform Console</p>
-            <h1>平台运营登录</h1>
-            <p className="subtle platform-login__lede">面向平台运营角色的独立控制面，集中处理治理、版本和审计工作。</p>
-          </div>
-          <div className="platform-login__chips">
-            <span className="platform-login__chip">浅色控制台</span>
-            <span className="platform-login__chip">紧凑工作流</span>
-            <span className="platform-login__chip">独立权限</span>
+            <p className="brand">运营平台</p>
+            <h1>运营平台登录</h1>
+            <p className="platform-login__intro-copy">登录后可处理平台技能、内置工具、租户生命周期与平台审计。</p>
           </div>
         </div>
 
         <div className="platform-login__body">
           <div className="platform-login__panel">
-            <label>组织 ID</label>
-            <input value={orgId} onChange={(e) => setOrgId(e.target.value)} />
-            <label>电子邮件地址或手机号码</label>
-            <input value={mobile} onChange={(e) => setMobile(e.target.value)} inputMode="email" autoComplete="username" />
-            <label>密码</label>
-            <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="off" />
-            <div className="row platform-login__actions">
-              <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!password.trim()}>
-                进入平台后台
-              </button>
+            <div className="platform-login__form">
+              <label>电子邮件地址或手机号码</label>
+              <input
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                inputMode="text"
+                autoComplete="username"
+                placeholder="请输入平台账号邮箱或手机号"
+              />
+              <label>密码</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                placeholder="请输入密码"
+              />
+              <div className="row platform-login__actions">
+                <button type="button" className="platform-button platform-button--primary" onClick={login} disabled={!identifier.trim() || !password.trim()}>
+                  进入运营平台
+                </button>
+              </div>
+              {notice ? (
+                <p className="notice platform-login__notice" aria-live="polite">
+                  {notice}
+                </p>
+              ) : null}
             </div>
-            <p className="notice platform-login__notice">{notice}</p>
           </div>
-
-          <aside className="platform-login__aside">
-            <div className="platform-login__aside-block">
-              <p className="platform-login__aside-title">适用角色</p>
-              <p className="platform-login__aside-copy">仅平台角色可进入，组织管理后台与平台控制面分离。</p>
-            </div>
-            <div className="platform-login__aside-block">
-              <p className="platform-login__aside-title">默认节奏</p>
-              <p className="platform-login__aside-copy">先看控制面状态，再进入技能、工具或审计页面处理具体事项。</p>
-            </div>
-            <p className="subtle admin-login__assistant-link">
-              组织管理？前往{" "}
-              <Link to="/admin/login" className="text-link">
-                管理控制台
-              </Link>
-            </p>
-          </aside>
         </div>
       </section>
     </main>

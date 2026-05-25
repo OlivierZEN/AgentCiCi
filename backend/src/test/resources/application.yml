@@ -1,7 +1,7 @@
 # Merge with main application.yml: integration tests use PostgreSQL, not H2.
 spring:
   datasource:
-    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/cici_assistant_test}
+    url: ${TEST_DATABASE_URL:jdbc:postgresql://localhost:5432/agentcici_test}
     username: ${TEST_DATABASE_USERNAME:cici}
     password: ${TEST_DATABASE_PASSWORD:cici123}
   jpa:

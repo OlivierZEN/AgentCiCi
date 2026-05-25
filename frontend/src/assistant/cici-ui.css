@@ -248,6 +248,21 @@
   stroke-width: 1.5;
 }
 
+.cici-rail .app-version-badge {
+  width: 48px;
+  min-height: 22px;
+  margin-top: 0;
+  justify-content: center;
+  gap: 4px;
+  padding: 0;
+  color: rgba(115, 91, 53, 0.74);
+  font-size: 9px;
+}
+
+.cici-rail .app-version-badge__dot {
+  display: none;
+}
+
 .cici-org-menu {
   position: fixed;
   left: 68px;
@@ -3226,7 +3241,7 @@
   height: 0;
 }
 
-.cici-builder-graph__canvas--dify {
+.cici-builder-graph__canvas--cici {
   background:
     radial-gradient(circle at 1px 1px, rgba(186, 198, 214, 0.55) 1px, transparent 0);
   background-size: 18px 18px;
@@ -10775,7 +10790,7 @@
   color: #b42318;
 }
 
-.cici-builder-graph__canvas--dify {
+.cici-builder-graph__canvas--cici {
   background:
     radial-gradient(circle at 1px 1px, rgba(185, 150, 82, 0.36) 1px, transparent 0),
     #fffdf8;

@@ -5,6 +5,8 @@ import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +32,22 @@ public class PlatformTenantLifecycleController {
     @GetMapping
     public ApiResponse<List<PlatformTenantLifecycleService.TenantLifecycleView>> listTenants() {
         return ApiResponse.ok(tenantLifecycleService.listTenants());
+    }
+
+    @PostMapping
+    public ApiResponse<PlatformTenantLifecycleService.TenantProvisionView> createTenant(
+            @Valid @RequestBody CreateTenantRequest request) {
+        return ApiResponse.ok(tenantLifecycleService.createTenant(
+                new PlatformTenantLifecycleService.TenantProvisionCommand(
+                        request.tenantName(),
+                        request.ownerMobile(),
+                        request.ownerDisplayName(),
+                        request.ownerEmail(),
+                        request.initialPassword(),
+                        request.provisionNote()
+                ),
+                actorId(),
+                actorRole()));
     }
 
     @GetMapping("/{orgId}/retention")
@@ -181,6 +199,18 @@ public class PlatformTenantLifecycleController {
             String legalHoldApprovedBy,
             String legalHoldApprovedAt,
             String legalHoldReviewAt
+    ) {
+    }
+
+    public record CreateTenantRequest(
+            @NotBlank String tenantName,
+            @NotBlank
+            @Pattern(regexp = "^1\\d{10}$", message = "must be an 11-digit mainland China mobile number")
+            String ownerMobile,
+            String ownerDisplayName,
+            String ownerEmail,
+            String initialPassword,
+            String provisionNote
     ) {
     }
 

@@ -863,22 +863,22 @@ export default function AdminKnowledgePage() {
   /* ─── KB Grid View ─── */
   if (viewMode === "grid") {
     return (
-      <div className="dify-kb-page">
-        {notice && <div className="dify-toast">{notice}</div>}
+      <div className="cici-kb-page">
+        {notice && <div className="cici-toast">{notice}</div>}
 
         {/* top bar */}
-        <div className="dify-kb-topbar">
-          <div className="dify-kb-topbar__left">
-            <h1 className="dify-kb-topbar__title">知识库</h1>
+        <div className="cici-kb-topbar">
+          <div className="cici-kb-topbar__left">
+            <h1 className="cici-kb-topbar__title">知识库</h1>
           </div>
-          <div className="dify-kb-topbar__right">
-            <div className="dify-search">
-              <svg className="dify-search__icon" viewBox="0 0 20 20" fill="none">
+          <div className="cici-kb-topbar__right">
+            <div className="cici-search">
+              <svg className="cici-search__icon" viewBox="0 0 20 20" fill="none">
                 <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
                 <path d="M13.5 13.5 17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
               <input
-                className="dify-search__input"
+                className="cici-search__input"
                 placeholder="搜索知识库..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -888,11 +888,11 @@ export default function AdminKnowledgePage() {
         </div>
 
         {/* card grid */}
-        <div className="dify-kb-grid">
+        <div className="cici-kb-grid">
           {/* create card */}
           <button
             type="button"
-            className="dify-kb-card dify-kb-card--create"
+            className="cici-kb-card cici-kb-card--create"
             onClick={() => {
               setEditingKbId(null);
               setKbName("");
@@ -900,18 +900,18 @@ export default function AdminKnowledgePage() {
               setShowCreateModal(true);
             }}
           >
-            <span className="dify-kb-card__plus">+</span>
-            <span className="dify-kb-card__create-label">创建知识库</span>
+            <span className="cici-kb-card__plus">+</span>
+            <span className="cici-kb-card__create-label">创建知识库</span>
           </button>
 
           {filteredKbs.map((kb) => (
             <div
               key={kb.id}
-              className="dify-kb-card"
+              className="cici-kb-card"
               onClick={() => openKbDetail(kb)}
             >
-              <div className="dify-kb-card__header">
-                <div className="dify-kb-card__icon">
+              <div className="cici-kb-card__header">
+                <div className="cici-kb-card__icon">
                   <svg viewBox="0 0 24 24" fill="none" width="28" height="28">
                     <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5" />
                     <path d="M7 8h10M7 12h6M7 16h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -919,7 +919,7 @@ export default function AdminKnowledgePage() {
                 </div>
                 <button
                   type="button"
-                  className="dify-kb-card__menu"
+                  className="cici-kb-card__menu"
                   onClick={(e) => {
                     e.stopPropagation();
                     if (window.confirm(`删除知识库「${kb.name}」？`)) {
@@ -931,23 +931,23 @@ export default function AdminKnowledgePage() {
                   ···
                 </button>
               </div>
-              <h3 className="dify-kb-card__name">{kb.name}</h3>
-              <p className="dify-kb-card__desc">
+              <h3 className="cici-kb-card__name">{kb.name}</h3>
+              <p className="cici-kb-card__desc">
                 {kb.description || "暂无描述"}
               </p>
-              <div className="dify-kb-card__meta">
-                <span className="dify-kb-card__tag">通用</span>
-                <span className="dify-kb-card__tag">{kb.embeddingModel ?? "向量检索"}</span>
+              <div className="cici-kb-card__meta">
+                <span className="cici-kb-card__tag">通用</span>
+                <span className="cici-kb-card__tag">{kb.embeddingModel ?? "向量检索"}</span>
               </div>
-              <div className="dify-kb-card__footer">
-                <span className="dify-kb-card__stat">
+              <div className="cici-kb-card__footer">
+                <span className="cici-kb-card__stat">
                   <svg viewBox="0 0 16 16" width="14" height="14" fill="none">
                     <path d="M3 3h10v10H3z" stroke="currentColor" strokeWidth="1.2" rx="1.5" />
                     <path d="M5.5 6.5h5M5.5 9h3" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                   </svg>
                   {kb.documentCount ?? docs.length ?? 0}
                 </span>
-                <span className="dify-kb-card__time">
+                <span className="cici-kb-card__time">
                   {kb.updatedAt ? formatDate(kb.updatedAt) : kb.createdAt ? formatDate(kb.createdAt) : ""}
                 </span>
               </div>
@@ -957,26 +957,26 @@ export default function AdminKnowledgePage() {
 
         {/* create/edit modal */}
         {showCreateModal && (
-          <div className="dify-modal-overlay" onClick={() => setShowCreateModal(false)}>
-            <div className="dify-modal" onClick={(e) => e.stopPropagation()}>
-              <h2 className="dify-modal__title">
+          <div className="cici-modal-overlay" onClick={() => setShowCreateModal(false)}>
+            <div className="cici-modal" onClick={(e) => e.stopPropagation()}>
+              <h2 className="cici-modal__title">
                 {editingKbId ? "编辑知识库" : "创建知识库"}
               </h2>
-              <div className="dify-modal__body">
-              <label className="dify-field">
-                <span className="dify-field__label">知识库名称</span>
+              <div className="cici-modal__body">
+              <label className="cici-field">
+                <span className="cici-field__label">知识库名称</span>
                 <input
-                  className="dify-field__input"
+                  className="cici-field__input"
                   value={kbName}
                   onChange={(e) => setKbName(e.target.value)}
                   placeholder="输入知识库名称"
                   autoFocus
                 />
               </label>
-              <label className="dify-field">
-                <span className="dify-field__label">描述</span>
+              <label className="cici-field">
+                <span className="cici-field__label">描述</span>
                 <textarea
-                  className="dify-field__textarea"
+                  className="cici-field__textarea"
                   value={kbDescription}
                   onChange={(e) => setKbDescription(e.target.value)}
                   placeholder="描述知识库的用途和内容范围"
@@ -984,17 +984,17 @@ export default function AdminKnowledgePage() {
                 />
               </label>
               </div>
-              <div className="dify-modal__actions">
+              <div className="cici-modal__actions">
                 <button
                   type="button"
-                  className="dify-btn dify-btn--ghost"
+                  className="cici-btn cici-btn--ghost"
                   onClick={() => setShowCreateModal(false)}
                 >
                   取消
                 </button>
                 <button
                   type="button"
-                  className="dify-btn dify-btn--primary"
+                  className="cici-btn cici-btn--primary"
                   onClick={createOrUpdateKb}
                 >
                   {editingKbId ? "保存" : "创建"}
@@ -1009,28 +1009,28 @@ export default function AdminKnowledgePage() {
 
   /* ─── KB Detail View ─── */
   return (
-    <div className="dify-kb-page">
-      {notice && <div className="dify-toast">{notice}</div>}
+    <div className="cici-kb-page">
+      {notice && <div className="cici-toast">{notice}</div>}
 
-      <div className="dify-kb-detail">
+      <div className="cici-kb-detail">
         {/* sidebar */}
-        <aside className="dify-kb-sidebar">
-          <div className="dify-kb-sidebar__head">
-            <div className="dify-kb-sidebar__icon">
+        <aside className="cici-kb-sidebar">
+          <div className="cici-kb-sidebar__head">
+            <div className="cici-kb-sidebar__icon">
               <svg viewBox="0 0 24 24" fill="none" width="32" height="32">
                 <rect x="3" y="3" width="18" height="18" rx="4" stroke="currentColor" strokeWidth="1.5" />
                 <path d="M7 8h10M7 12h6M7 16h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
-            <h2 className="dify-kb-sidebar__name">{selectedKb?.name}</h2>
-            <p className="dify-kb-sidebar__desc">
+            <h2 className="cici-kb-sidebar__name">{selectedKb?.name}</h2>
+            <p className="cici-kb-sidebar__desc">
               {selectedKb?.description || "暂无描述"}
             </p>
           </div>
-          <nav className="dify-kb-sidebar__nav">
+          <nav className="cici-kb-sidebar__nav">
             <button
               type="button"
-              className={`dify-kb-sidebar__link ${detailTab === "documents" ? "active" : ""}`}
+              className={`cici-kb-sidebar__link ${detailTab === "documents" ? "active" : ""}`}
               onClick={() => setDetailTab("documents")}
             >
               <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
@@ -1041,7 +1041,7 @@ export default function AdminKnowledgePage() {
             </button>
             <button
               type="button"
-              className={`dify-kb-sidebar__link ${detailTab === "settings" ? "active" : ""}`}
+              className={`cici-kb-sidebar__link ${detailTab === "settings" ? "active" : ""}`}
               onClick={() => setDetailTab("settings")}
             >
               <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
@@ -1051,10 +1051,10 @@ export default function AdminKnowledgePage() {
               设置
             </button>
           </nav>
-          <div className="dify-kb-sidebar__footer">
+          <div className="cici-kb-sidebar__footer">
             <button
               type="button"
-              className="dify-btn dify-btn--ghost dify-btn--sm dify-btn--full"
+              className="cici-btn cici-btn--ghost cici-btn--sm cici-btn--full"
               onClick={() => {
                 setViewMode("grid");
                 setSelectedKb(null);
@@ -1067,24 +1067,24 @@ export default function AdminKnowledgePage() {
         </aside>
 
         {/* main */}
-        <main className="dify-kb-main">
+        <main className="cici-kb-main">
           {detailTab === "documents" && (
             <>
-              <div className="dify-kb-main__header">
+              <div className="cici-kb-main__header">
                 <div>
-                  <h2 className="dify-kb-main__title">文档</h2>
-                  <p className="dify-kb-main__subtitle">
+                  <h2 className="cici-kb-main__title">文档</h2>
+                  <p className="cici-kb-main__subtitle">
                     知识库的所有文件都在这里显示，上传后自动发布索引。
                   </p>
                 </div>
-                <div className="dify-kb-main__actions">
-                  <div className="dify-search dify-search--sm">
-                    <svg className="dify-search__icon" viewBox="0 0 20 20" fill="none">
+                <div className="cici-kb-main__actions">
+                  <div className="cici-search cici-search--sm">
+                    <svg className="cici-search__icon" viewBox="0 0 20 20" fill="none">
                       <circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.6" />
                       <path d="M13.5 13.5 17 17" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                     </svg>
                     <input
-                      className="dify-search__input"
+                      className="cici-search__input"
                       placeholder="搜索文档..."
                       value={docSearch}
                       onChange={(e) => setDocSearch(e.target.value)}
@@ -1102,7 +1102,7 @@ export default function AdminKnowledgePage() {
                   />
                   <button
                     type="button"
-                    className="dify-btn dify-btn--primary"
+                    className="cici-btn cici-btn--primary"
                     onClick={() => fileInputRef.current?.click()}
                   >
                     + 添加文件
@@ -1110,41 +1110,41 @@ export default function AdminKnowledgePage() {
                 </div>
               </div>
 
-              <div className="dify-kb-settings__actions dify-kb-settings__actions--batch">
+              <div className="cici-kb-settings__actions cici-kb-settings__actions--batch">
                 <span className="subtle">已选 {selectedDocCount} 项</span>
                 <button
                   type="button"
-                  className="dify-btn dify-btn--ghost dify-btn--sm"
+                  className="cici-btn cici-btn--ghost cici-btn--sm"
                   disabled={selectedDocCount === 0}
                   onClick={() => setSelectedDocIds(new Set())}
                 >
                   清空选择
                 </button>
-                <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("enable", "批量启用文档")}>
+                <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("enable", "批量启用文档")}>
                   批量启用
                 </button>
-                <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("disable", "批量停用文档")}>
+                <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("disable", "批量停用文档")}>
                   批量停用
                 </button>
-                <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("archive", "批量归档文档")}>
+                <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("archive", "批量归档文档")}>
                   批量归档
                 </button>
-                <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("unarchive", "批量取消归档文档")}>
+                <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("unarchive", "批量取消归档文档")}>
                   批量取消归档
                 </button>
-                <button type="button" className="dify-btn dify-btn--danger dify-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("delete", "批量删除文档")}>
+                <button type="button" className="cici-btn cici-btn--danger cici-btn--sm" disabled={selectedDocCount === 0} onClick={() => void runDocumentBatchAction("delete", "批量删除文档")}>
                   批量删除
                 </button>
               </div>
               {docBatchFeedback && (
-                <div className={`dify-inline-feedback dify-inline-feedback--${docBatchFeedback.tone}`}>
-                  <div className="dify-inline-feedback__main">
+                <div className={`cici-inline-feedback cici-inline-feedback--${docBatchFeedback.tone}`}>
+                  <div className="cici-inline-feedback__main">
                     <strong>{docBatchFeedback.title}</strong>
                     <span>{docBatchFeedback.detail}</span>
                   </div>
                   <button
                     type="button"
-                    className="dify-btn dify-btn--text dify-btn--xs"
+                    className="cici-btn cici-btn--text cici-btn--xs"
                     onClick={() => setDocBatchFeedback(null)}
                   >
                     关闭
@@ -1153,8 +1153,8 @@ export default function AdminKnowledgePage() {
               )}
 
               {/* document table */}
-              <div className="dify-doc-table-wrap">
-                <table className="dify-doc-table">
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
                   <thead>
                     <tr>
                       <th>
@@ -1170,19 +1170,19 @@ export default function AdminKnowledgePage() {
                           }}
                         />
                       </th>
-                      <th className="dify-doc-table__th--num">#</th>
+                      <th className="cici-doc-table__th--num">#</th>
                       <th>名称</th>
                       <th>类型</th>
                       <th>切片</th>
                       <th>上传时间</th>
                       <th>状态</th>
-                      <th className="dify-doc-table__th--actions">操作</th>
+                      <th className="cici-doc-table__th--actions">操作</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredDocs.length === 0 && (
                       <tr>
-                        <td colSpan={8} className="dify-doc-table__empty">
+                        <td colSpan={8} className="cici-doc-table__empty">
                           暂无文档，点击「+ 添加文件」上传
                         </td>
                       </tr>
@@ -1196,38 +1196,38 @@ export default function AdminKnowledgePage() {
                             onChange={(e) => toggleDocSelection(doc.id, e.target.checked)}
                           />
                         </td>
-                        <td className="dify-doc-table__num">{i + 1}</td>
+                        <td className="cici-doc-table__num">{i + 1}</td>
                         <td>
-                          <div className="dify-doc-name">
-                            <span className="dify-doc-name__icon">{fileIcon(doc.contentType)}</span>
-                            <span className="dify-doc-name__text">{doc.name}</span>
+                          <div className="cici-doc-name">
+                            <span className="cici-doc-name__icon">{fileIcon(doc.contentType)}</span>
+                            <span className="cici-doc-name__text">{doc.name}</span>
                           </div>
                         </td>
-                        <td className="dify-doc-table__type">{doc.contentType?.split("/")[1] ?? "-"}</td>
-                        <td className="dify-doc-table__type">{doc.chunkCount ?? 0}</td>
-                        <td className="dify-doc-table__time">{formatDate(doc.createdAt)}</td>
+                        <td className="cici-doc-table__type">{doc.contentType?.split("/")[1] ?? "-"}</td>
+                        <td className="cici-doc-table__type">{doc.chunkCount ?? 0}</td>
+                        <td className="cici-doc-table__time">{formatDate(doc.createdAt)}</td>
                         <td>
-                          <div className="dify-doc-status">
+                          <div className="cici-doc-status">
                             <button
                               type="button"
-                              className={`dify-toggle ${doc.status === "PUBLISHED" ? "dify-toggle--on" : ""} ${doc.status === "INDEXING" || doc.status === "DELETING" ? "dify-toggle--loading" : ""}`}
+                              className={`cici-toggle ${doc.status === "PUBLISHED" ? "cici-toggle--on" : ""} ${doc.status === "INDEXING" || doc.status === "DELETING" ? "cici-toggle--loading" : ""}`}
                               onClick={() => void toggleDocStatus(doc)}
                               disabled={doc.status === "INDEXING" || doc.status === "DELETING" || doc.status === "CLEANUP_FAILED"}
                             />
                             <span
-                              className={`dify-doc-badge dify-doc-badge--${doc.status.toLowerCase()}`}
+                              className={`cici-doc-badge cici-doc-badge--${doc.status.toLowerCase()}`}
                             >
                               {(doc.status === "INDEXING" || doc.status === "DELETING") && (
-                                <span className="dify-spinner" />
+                                <span className="cici-spinner" />
                               )}
                               {STATUS_LABEL[doc.status] ?? doc.status}
                             </span>
                           </div>
                           {(doc.status === "FAILED" || doc.status === "CLEANUP_FAILED") && doc.errorMessage && (
-                            <div className="dify-doc-status__error">{doc.errorMessage}</div>
+                            <div className="cici-doc-status__error">{doc.errorMessage}</div>
                           )}
                         </td>
-                        <td className="dify-doc-table__actions">
+                        <td className="cici-doc-table__actions">
                           <div className={`admin-row-menu${openDocActionMenuId === doc.id ? " is-open" : ""}`} data-admin-row-menu>
                             <button
                               type="button"
@@ -1356,19 +1356,19 @@ export default function AdminKnowledgePage() {
                 </table>
               </div>
 
-              <div className="dify-kb-main__footer">
+              <div className="cici-kb-main__footer">
                 <span>{filteredDocs.length} 文档</span>
               </div>
             </>
           )}
 
           {detailTab === "settings" && selectedKb && (
-            <div className="dify-kb-settings">
-              <h2 className="dify-kb-main__title">知识库设置</h2>
-              <label className="dify-field">
-                <span className="dify-field__label">名称</span>
+            <div className="cici-kb-settings">
+              <h2 className="cici-kb-main__title">知识库设置</h2>
+              <label className="cici-field">
+                <span className="cici-field__label">名称</span>
                 <input
-                  className="dify-field__input"
+                  className="cici-field__input"
                   defaultValue={selectedKb.name}
                   onBlur={(e) => setKbName(e.target.value)}
                   onFocus={(e) => {
@@ -1377,10 +1377,10 @@ export default function AdminKnowledgePage() {
                   }}
                 />
               </label>
-              <label className="dify-field">
-                <span className="dify-field__label">描述</span>
+              <label className="cici-field">
+                <span className="cici-field__label">描述</span>
                 <textarea
-                  className="dify-field__textarea"
+                  className="cici-field__textarea"
                   defaultValue={selectedKb.description}
                   rows={3}
                   onBlur={(e) => setKbDescription(e.target.value)}
@@ -1390,10 +1390,10 @@ export default function AdminKnowledgePage() {
                   }}
                 />
               </label>
-              <div className="dify-kb-settings__actions">
+              <div className="cici-kb-settings__actions">
                 <button
                   type="button"
-                  className="dify-btn dify-btn--primary"
+                  className="cici-btn cici-btn--primary"
                   onClick={async () => {
                     setEditingKbId(selectedKb.id);
                     await createOrUpdateKb();
@@ -1406,43 +1406,43 @@ export default function AdminKnowledgePage() {
                 </button>
                 <button
                   type="button"
-                  className="dify-btn dify-btn--danger"
+                  className="cici-btn cici-btn--danger"
                   onClick={() => void deleteKnowledgeBase(selectedKb.id)}
                 >
                   删除知识库
                 </button>
               </div>
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">切片参数</h3>
-              <div className="dify-kb-settings__grid dify-kb-settings__grid--triple">
-                <label className="dify-field">
-                  <span className="dify-field__label">chunkSize</span>
-                  <input className="dify-field__input" type="number" min={80} max={1200} value={chunkSize} onChange={(e) => setChunkSize(Number(e.target.value))} />
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">切片参数</h3>
+              <div className="cici-kb-settings__grid cici-kb-settings__grid--triple">
+                <label className="cici-field">
+                  <span className="cici-field__label">chunkSize</span>
+                  <input className="cici-field__input" type="number" min={80} max={1200} value={chunkSize} onChange={(e) => setChunkSize(Number(e.target.value))} />
                 </label>
-                <label className="dify-field">
-                  <span className="dify-field__label">overlap</span>
-                  <input className="dify-field__input" type="number" min={0} max={1199} value={chunkOverlap} onChange={(e) => setChunkOverlap(Number(e.target.value))} />
+                <label className="cici-field">
+                  <span className="cici-field__label">overlap</span>
+                  <input className="cici-field__input" type="number" min={0} max={1199} value={chunkOverlap} onChange={(e) => setChunkOverlap(Number(e.target.value))} />
                 </label>
-                <label className="dify-field">
-                  <span className="dify-field__label">delimiter</span>
-                  <input className="dify-field__input" value={chunkDelimiter} onChange={(e) => setChunkDelimiter(e.target.value)} />
+                <label className="cici-field">
+                  <span className="cici-field__label">delimiter</span>
+                  <input className="cici-field__input" value={chunkDelimiter} onChange={(e) => setChunkDelimiter(e.target.value)} />
                 </label>
               </div>
-              <div className="dify-kb-settings__actions">
-                <button type="button" className="dify-btn dify-btn--primary" onClick={() => void saveKbSettings()}>
+              <div className="cici-kb-settings__actions">
+                <button type="button" className="cici-btn cici-btn--primary" onClick={() => void saveKbSettings()}>
                   保存切片/检索参数
                 </button>
               </div>
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">向量模型</h3>
-              <div className="dify-kb-embedding-note">
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">向量模型</h3>
+              <div className="cici-kb-embedding-note">
                 <span>使用已启用模型厂商的 embedding 模型生成文档与问题向量。更换模型或维度后，需要重建已发布文档索引。</span>
               </div>
-              <div className="dify-kb-settings__grid dify-kb-settings__grid--double">
-                <label className="dify-field">
-                  <span className="dify-field__label">embedding 模型</span>
+              <div className="cici-kb-settings__grid cici-kb-settings__grid--double">
+                <label className="cici-field">
+                  <span className="cici-field__label">embedding 模型</span>
                   <select
-                    className="dify-field__input"
+                    className="cici-field__input"
                     value={selectedEmbeddingValue}
                     onChange={(e) => {
                       const [providerCode, modelName] = e.target.value.split(":::");
@@ -1465,10 +1465,10 @@ export default function AdminKnowledgePage() {
                     {embeddingOptions.length === 0 ? "请先在模型配置中启用可提供 embedding 的模型厂商。" : "当前列表来自管理端已启用的模型厂商。"}
                   </span>
                 </label>
-                <label className="dify-field">
-                  <span className="dify-field__label">向量维度</span>
+                <label className="cici-field">
+                  <span className="cici-field__label">向量维度</span>
                   <select
-                    className="dify-field__input"
+                    className="cici-field__input"
                     value={embeddingDimension}
                     onChange={(e) => setEmbeddingDimension(Number(e.target.value))}
                     disabled={embeddingProvider === "local"}
@@ -1481,33 +1481,33 @@ export default function AdminKnowledgePage() {
                 </label>
               </div>
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">检索参数</h3>
-              <div className="dify-kb-settings__grid dify-kb-settings__grid--double">
-                <label className="dify-field">
-                  <span className="dify-field__label">topK</span>
-                  <input className="dify-field__input" type="number" min={1} max={20} value={topK} onChange={(e) => setTopK(Number(e.target.value))} />
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">检索参数</h3>
+              <div className="cici-kb-settings__grid cici-kb-settings__grid--double">
+                <label className="cici-field">
+                  <span className="cici-field__label">topK</span>
+                  <input className="cici-field__input" type="number" min={1} max={20} value={topK} onChange={(e) => setTopK(Number(e.target.value))} />
                 </label>
-                <label className="dify-field">
-                  <span className="dify-field__label">scoreThreshold(0-1)</span>
-                  <input className="dify-field__input" type="number" min={0} max={1} step={0.01} value={scoreThreshold} onChange={(e) => setScoreThreshold(Number(e.target.value))} />
+                <label className="cici-field">
+                  <span className="cici-field__label">scoreThreshold(0-1)</span>
+                  <input className="cici-field__input" type="number" min={0} max={1} step={0.01} value={scoreThreshold} onChange={(e) => setScoreThreshold(Number(e.target.value))} />
                 </label>
               </div>
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">切片预览</h3>
-              <label className="dify-field">
-                <span className="dify-field__label">输入示例文本</span>
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">切片预览</h3>
+              <label className="cici-field">
+                <span className="cici-field__label">输入示例文本</span>
                 <textarea
-                  className="dify-field__textarea"
+                  className="cici-field__textarea"
                   rows={4}
                   value={previewText}
                   onChange={(e) => setPreviewText(e.target.value)}
                   placeholder="输入一段文本，预览当前 chunk 参数下的切片效果"
                 />
               </label>
-              <div className="dify-kb-settings__actions">
+              <div className="cici-kb-settings__actions">
                 <button
                   type="button"
-                  className="dify-btn dify-btn--primary"
+                  className="cici-btn cici-btn--primary"
                   disabled={!previewText.trim()}
                   onClick={() => void runChunkPreview()}
                 >
@@ -1515,8 +1515,8 @@ export default function AdminKnowledgePage() {
                 </button>
               </div>
               {previewChunks.length > 0 && (
-                <div className="dify-doc-table-wrap">
-                  <table className="dify-doc-table">
+                <div className="cici-doc-table-wrap">
+                  <table className="cici-doc-table">
                     <thead>
                       <tr>
                         <th>#</th>
@@ -1537,23 +1537,23 @@ export default function AdminKnowledgePage() {
                 </div>
               )}
               {previewExecuted && previewChunks.length === 0 && (
-                <div className="dify-kb-empty-tip">当前参数下未生成可预览切片。</div>
+                <div className="cici-kb-empty-tip">当前参数下未生成可预览切片。</div>
               )}
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">检索测试</h3>
-              <label className="dify-field">
-                <span className="dify-field__label">测试问题</span>
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">检索测试</h3>
+              <label className="cici-field">
+                <span className="cici-field__label">测试问题</span>
                 <input
-                  className="dify-field__input"
+                  className="cici-field__input"
                   value={retrievalQuery}
                   onChange={(e) => setRetrievalQuery(e.target.value)}
                   placeholder="输入问题查看命中切片"
                 />
               </label>
-              <label className="dify-field">
-                <span className="dify-field__label">metadata 过滤（可选）</span>
+              <label className="cici-field">
+                <span className="cici-field__label">metadata 过滤（可选）</span>
                 <input
-                  className="dify-field__input"
+                  className="cici-field__input"
                   value={retrievalMetadataFilterText}
                   onChange={(e) => setRetrievalMetadataFilterText(e.target.value)}
                   placeholder="例如 region=east,product=crm"
@@ -1562,10 +1562,10 @@ export default function AdminKnowledgePage() {
                   可用字段：{metadataFields.length === 0 ? "-" : metadataFields.map((field) => field.fieldKey).join(", ")}
                 </span>
               </label>
-              <div className="dify-kb-settings__actions">
+              <div className="cici-kb-settings__actions">
                 <button
                   type="button"
-                  className="dify-btn dify-btn--primary"
+                  className="cici-btn cici-btn--primary"
                   disabled={!retrievalQuery.trim()}
                   onClick={() => void runRetrievalTest()}
                 >
@@ -1573,8 +1573,8 @@ export default function AdminKnowledgePage() {
                 </button>
               </div>
               {retrievalHits.length > 0 && (
-                <div className="dify-doc-table-wrap">
-                  <table className="dify-doc-table">
+                <div className="cici-doc-table-wrap">
+                  <table className="cici-doc-table">
                     <thead>
                       <tr>
                         <th>来源</th>
@@ -1597,12 +1597,12 @@ export default function AdminKnowledgePage() {
                 </div>
               )}
               {retrievalExecuted && retrievalHits.length === 0 && (
-                <div className="dify-kb-empty-tip">本次检索命中 0 条，请调整问题或 metadata 过滤条件后重试。</div>
+                <div className="cici-kb-empty-tip">本次检索命中 0 条，请调整问题或 metadata 过滤条件后重试。</div>
               )}
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">最近检索记录</h3>
-              <div className="dify-doc-table-wrap">
-                <table className="dify-doc-table">
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">最近检索记录</h3>
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
                   <thead>
                     <tr>
                       <th>时间</th>
@@ -1613,7 +1613,7 @@ export default function AdminKnowledgePage() {
                   <tbody>
                     {retrievalLogs.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="dify-doc-table__empty">暂无记录</td>
+                        <td colSpan={3} className="cici-doc-table__empty">暂无记录</td>
                       </tr>
                     )}
                     {retrievalLogs.map((item) => (
@@ -1627,24 +1627,24 @@ export default function AdminKnowledgePage() {
                 </table>
               </div>
 
-              <h3 className="dify-kb-main__title dify-kb-main__title--section">Metadata 字段</h3>
-              <div className="dify-kb-settings__grid dify-kb-settings__grid--metadata">
-                <label className="dify-field">
-                  <span className="dify-field__label">fieldKey</span>
-                  <input className="dify-field__input" value={newFieldKey} onChange={(e) => setNewFieldKey(e.target.value)} placeholder="region" />
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">Metadata 字段</h3>
+              <div className="cici-kb-settings__grid cici-kb-settings__grid--metadata">
+                <label className="cici-field">
+                  <span className="cici-field__label">fieldKey</span>
+                  <input className="cici-field__input" value={newFieldKey} onChange={(e) => setNewFieldKey(e.target.value)} placeholder="region" />
                 </label>
-                <label className="dify-field">
-                  <span className="dify-field__label">显示名</span>
-                  <input className="dify-field__input" value={newFieldName} onChange={(e) => setNewFieldName(e.target.value)} placeholder="区域" />
+                <label className="cici-field">
+                  <span className="cici-field__label">显示名</span>
+                  <input className="cici-field__input" value={newFieldName} onChange={(e) => setNewFieldName(e.target.value)} placeholder="区域" />
                 </label>
-                <div className="dify-kb-settings__field-action">
-                  <button type="button" className="dify-btn dify-btn--primary" onClick={() => void createMetadataField()}>
+                <div className="cici-kb-settings__field-action">
+                  <button type="button" className="cici-btn cici-btn--primary" onClick={() => void createMetadataField()}>
                     新增字段
                   </button>
                 </div>
               </div>
-              <div className="dify-doc-table-wrap">
-                <table className="dify-doc-table">
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
                   <thead>
                     <tr>
                       <th>key</th>
@@ -1655,7 +1655,7 @@ export default function AdminKnowledgePage() {
                   <tbody>
                     {metadataFields.length === 0 && (
                       <tr>
-                        <td colSpan={3} className="dify-doc-table__empty">暂无 metadata 字段</td>
+                        <td colSpan={3} className="cici-doc-table__empty">暂无 metadata 字段</td>
                       </tr>
                     )}
                     {metadataFields.map((field) => (
@@ -1674,46 +1674,46 @@ export default function AdminKnowledgePage() {
       </div>
 
       {chunkDocId !== null && (
-        <div className="dify-modal-overlay" onClick={closeChunkPanel}>
-          <div className="dify-modal dify-modal--kb-chunks" onClick={(e) => e.stopPropagation()}>
-            <h2 className="dify-modal__title">切片管理 · {chunkDocName}</h2>
-            <div className="dify-kb-settings__actions dify-kb-settings__actions--batch">
+        <div className="cici-modal-overlay" onClick={closeChunkPanel}>
+          <div className="cici-modal cici-modal--kb-chunks" onClick={(e) => e.stopPropagation()}>
+            <h2 className="cici-modal__title">切片管理 · {chunkDocName}</h2>
+            <div className="cici-kb-settings__actions cici-kb-settings__actions--batch">
               <span className="subtle">已选 {selectedChunkCount} 项</span>
               <button
                 type="button"
-                className="dify-btn dify-btn--ghost dify-btn--sm"
+                className="cici-btn cici-btn--ghost cici-btn--sm"
                 disabled={selectedChunkCount === 0}
                 onClick={() => setSelectedChunkIds(new Set())}
               >
                 清空选择
               </button>
-              <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={selectedChunkCount === 0} onClick={() => void runChunkBatchAction("enable", "批量启用切片")}>
+              <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={selectedChunkCount === 0} onClick={() => void runChunkBatchAction("enable", "批量启用切片")}>
                 批量启用
               </button>
-              <button type="button" className="dify-btn dify-btn--ghost dify-btn--sm" disabled={selectedChunkCount === 0} onClick={() => void runChunkBatchAction("disable", "批量停用切片")}>
+              <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" disabled={selectedChunkCount === 0} onClick={() => void runChunkBatchAction("disable", "批量停用切片")}>
                 批量停用
               </button>
-              <button type="button" className="dify-btn dify-btn--danger dify-btn--sm" disabled={selectedChunkCount === 0} onClick={() => void runChunkBatchAction("delete", "批量删除切片")}>
+              <button type="button" className="cici-btn cici-btn--danger cici-btn--sm" disabled={selectedChunkCount === 0} onClick={() => void runChunkBatchAction("delete", "批量删除切片")}>
                 批量删除
               </button>
             </div>
             {chunkBatchFeedback && (
-              <div className={`dify-inline-feedback dify-inline-feedback--${chunkBatchFeedback.tone}`}>
-                <div className="dify-inline-feedback__main">
+              <div className={`cici-inline-feedback cici-inline-feedback--${chunkBatchFeedback.tone}`}>
+                <div className="cici-inline-feedback__main">
                   <strong>{chunkBatchFeedback.title}</strong>
                   <span>{chunkBatchFeedback.detail}</span>
                 </div>
                 <button
                   type="button"
-                  className="dify-btn dify-btn--text dify-btn--xs"
+                  className="cici-btn cici-btn--text cici-btn--xs"
                   onClick={() => setChunkBatchFeedback(null)}
                 >
                   关闭
                 </button>
               </div>
             )}
-            <div className="dify-doc-table-wrap">
-              <table className="dify-doc-table">
+            <div className="cici-doc-table-wrap">
+              <table className="cici-doc-table">
                 <thead>
                   <tr>
                     <th>
@@ -1732,13 +1732,13 @@ export default function AdminKnowledgePage() {
                     <th>#</th>
                     <th>状态</th>
                     <th>内容</th>
-                    <th className="dify-doc-table__th--actions">操作</th>
+                    <th className="cici-doc-table__th--actions">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {chunkRows.length === 0 && (
                     <tr>
-                      <td colSpan={5} className="dify-doc-table__empty">暂无切片</td>
+                      <td colSpan={5} className="cici-doc-table__empty">暂无切片</td>
                     </tr>
                   )}
                   {chunkRows.map((chunk) => (
@@ -1753,20 +1753,20 @@ export default function AdminKnowledgePage() {
                       <td>{(chunk.chunkIndex ?? 0) + 1}</td>
                       <td>{chunk.status}</td>
                       <td>{chunk.content}</td>
-                      <td className="dify-doc-table__actions">
-                        <button type="button" className="dify-btn dify-btn--text dify-btn--xs" onClick={() => void editChunkContent(chunk)}>
+                      <td className="cici-doc-table__actions">
+                        <button type="button" className="cici-btn cici-btn--text cici-btn--xs" onClick={() => void editChunkContent(chunk)}>
                           编辑
                         </button>
                         <button
                           type="button"
-                          className="dify-btn dify-btn--text dify-btn--xs"
+                          className="cici-btn cici-btn--text cici-btn--xs"
                           onClick={() => void toggleChunkEnabled(chunk, !chunk.enabled)}
                         >
                           {chunk.enabled ? "停用" : "启用"}
                         </button>
                         <button
                           type="button"
-                          className="dify-btn dify-btn--text dify-btn--xs dify-btn--danger"
+                          className="cici-btn cici-btn--text cici-btn--xs cici-btn--danger"
                           onClick={() => void deleteChunk(chunk)}
                         >
                           删除
@@ -1777,8 +1777,8 @@ export default function AdminKnowledgePage() {
                 </tbody>
               </table>
             </div>
-            <div className="dify-modal__actions">
-              <button type="button" className="dify-btn dify-btn--ghost" onClick={closeChunkPanel}>
+            <div className="cici-modal__actions">
+              <button type="button" className="cici-btn cici-btn--ghost" onClick={closeChunkPanel}>
                 关闭
               </button>
             </div>

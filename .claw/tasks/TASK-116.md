@@ -2,12 +2,13 @@
 kind: task-status
 task_id: TASK-116
 assignee: DEV-wolong
+owner_role: fullstack-agent
 status: ready
 branch: codex/TASK-116-skill-module-completion
 pr_url: n/a
 spec_path: docs/specs/FEAT-038-admin-skill-module-completion.md
 assignment_path: .claw/assignments/TASK-116.yaml
-updated_at: 2026-05-19T02:18:19Z
+updated_at: 2026-05-21T15:47:23Z
 updated_by: MANAGER-001
 ---
 
@@ -48,7 +49,7 @@ Complete and optimize the admin skill module from the current working baseline. 
 - Clarify export standardization fallback policy and surface it in user-visible export job metadata.
 - Improve standard skill detail read-only explanations and platform template version visibility.
 - Keep tenant derivation hidden unless a future confirmed spec reopens it.
-- Tighten mobile/desktop visual polish for `/admin/skills` and skill editor routes.
+- Tighten desktop visual polish for `/admin/skills` and skill editor routes; do not add mobile compatibility implementation unless separately requested.
 
 ## Out Of Scope
 
@@ -66,7 +67,7 @@ Before editing, run task-scoped `dev-login.py` for `DEV-wolong` on branch `codex
 - `mvn -q -Dmaven.repo.local=.m2 -Dtest=SkillGovernanceIntegrationTest,SkillAuthoringIntegrationTest,FileBackedBuiltinSkillIntegrationTest test`
 - Additional focused backend tests for export download authorization and high-risk runtime API confirmation
 - `npm run build` when frontend changes are made
-- Desktop and 390px mobile screenshots for changed `/admin/skills` routes
+- Desktop screenshots for changed `/admin/skills` routes; no mobile screenshots or mobile tests by default
 - `.claw` state validation passes after handoff updates
 
 ## Known Initial Test Finding
@@ -87,3 +88,4 @@ failed with 3 failures in `SkillGovernanceIntegrationTest` because local seeded 
 ## Assignment History
 
 - 2026-05-19T10:18:19+08:00: User asked to assign overall skill module completion and optimization to `DEV-wolong`.
+- 2026-05-21T23:47:23+08:00: Verification scope aligned with the project rule that new feature work does not add mobile compatibility implementation, screenshots, or tests by default.

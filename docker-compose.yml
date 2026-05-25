@@ -11,7 +11,7 @@ services:
     image: postgres:16
     container_name: cici-postgres
     environment:
-      POSTGRES_DB: cici_assistant
+      POSTGRES_DB: agentcici
       POSTGRES_USER: cici
       POSTGRES_PASSWORD: cici123
     ports:
@@ -19,7 +19,7 @@ services:
     volumes:
       - cici_pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cici -d cici_assistant"]
+      test: ["CMD-SHELL", "pg_isready -U cici -d agentcici"]
       interval: 5s
       timeout: 3s
       retries: 20

@@ -66,6 +66,7 @@ export default function AdminAgentBuilderPage() {
       focusAgentId={agentId}
       onOpenAgent={(id) => nav(`/admin/agent-builder/${encodeURIComponent(id)}`)}
       onBackToList={() => nav("/admin/agent-builder")}
+      onRequireModelConfig={(message) => nav("/admin/models", { state: { notice: message } })}
     />
   );
 }

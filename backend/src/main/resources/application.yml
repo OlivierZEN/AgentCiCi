@@ -2,7 +2,7 @@ spring:
   application:
     name: cc-cici-assistant-backend
   datasource:
-    url: jdbc:postgresql://localhost:5432/cici_assistant
+    url: jdbc:postgresql://localhost:5432/agentcici
     username: cici
     password: cici123
   jpa:
@@ -29,6 +29,13 @@ management:
     web:
       exposure:
         include: health,info
+
+info:
+  app:
+    name: AgentCiCi
+    version: ${CICI_APP_VERSION:dev}
+    image-tag: ${CICI_IMAGE_TAG:${CICI_APP_VERSION:dev}}
+    git-commit: ${GIT_COMMIT:unknown}
 
 app:
   auth:

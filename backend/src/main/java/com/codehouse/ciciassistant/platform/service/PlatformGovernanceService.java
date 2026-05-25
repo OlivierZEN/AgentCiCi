@@ -280,7 +280,8 @@ public class PlatformGovernanceService {
                 currentActorId(),
                 null
         ));
-        logAudit("platform.policy.version.create",
+        logAudit(orgId,
+                "platform.policy.version.create",
                 "PLATFORM_POLICY_BUNDLE_VERSION",
                 created.getBundleCode() + "@v" + created.getVersionNo(),
                 "draft policy bundle version created");
@@ -299,7 +300,8 @@ public class PlatformGovernanceService {
                 item.markSuperseded();
             }
         }
-        logAudit("platform.policy.publish",
+        logAudit(orgId,
+                "platform.policy.publish",
                 "PLATFORM_POLICY_BUNDLE",
                 version.getBundleCode() + "@v" + version.getVersionNo(),
                 "published platform policy bundle version");
@@ -318,7 +320,8 @@ public class PlatformGovernanceService {
                 item.markSuperseded();
             }
         }
-        logAudit("platform.policy.rollback",
+        logAudit(orgId,
+                "platform.policy.rollback",
                 "PLATFORM_POLICY_BUNDLE",
                 version.getBundleCode() + "@v" + version.getVersionNo(),
                 "rolled back platform policy bundle version");
@@ -353,7 +356,8 @@ public class PlatformGovernanceService {
         ));
         template.updateMetadata(created.getName(), inferSkillCategory(skill, created.getToolWhitelist()), created.getDescription(), "ACTIVE");
         platformSkillTemplateRepository.save(template);
-        logAudit("platform.skill.version.create",
+        logAudit(orgId,
+                "platform.skill.version.create",
                 "PLATFORM_SKILL_TEMPLATE_VERSION",
                 template.getTemplateCode() + "@v" + created.getVersionNo(),
                 "draft version created");
@@ -378,7 +382,8 @@ public class PlatformGovernanceService {
         template.updateMetadata(version.getName(), inferSkillCategory(skill, version.getToolWhitelist()), version.getDescription(), "ACTIVE");
         template.setCurrentVersionNo(version.getVersionNo());
         platformSkillTemplateRepository.save(template);
-        logAudit("platform.skill.publish",
+        logAudit(orgId,
+                "platform.skill.publish",
                 "PLATFORM_SKILL_TEMPLATE",
                 template.getTemplateCode() + "@v" + version.getVersionNo(),
                 "published platform skill template version");
@@ -402,7 +407,8 @@ public class PlatformGovernanceService {
         applyPublishedTemplate(skill, version, command);
         template.setCurrentVersionNo(version.getVersionNo());
         platformSkillTemplateRepository.save(template);
-        logAudit("platform.skill.rollback",
+        logAudit(orgId,
+                "platform.skill.rollback",
                 "PLATFORM_SKILL_TEMPLATE",
                 template.getTemplateCode() + "@v" + version.getVersionNo(),
                 "rolled back platform skill template version");
@@ -431,7 +437,8 @@ public class PlatformGovernanceService {
                 command.enabled() == null || command.enabled()
         );
         platformToolDefinitionRepository.save(tool);
-        logAudit("platform.tool.update",
+        logAudit(orgId,
+                "platform.tool.update",
                 "PLATFORM_TOOL",
                 tool.getToolName(),
                 "updated platform tool governance");
@@ -1134,9 +1141,9 @@ public class PlatformGovernanceService {
                 .orElse(RoleCodes.PLATFORM_ADMIN);
     }
 
-    private void logAudit(String eventType, String resourceType, String resourceKey, String detail) {
+    private void logAudit(String orgId, String eventType, String resourceType, String resourceKey, String detail) {
         platformAuditService.log(
-                TenantContext.requireOrgId(),
+                orgId,
                 currentActorId(),
                 currentPlatformRole(),
                 eventType,

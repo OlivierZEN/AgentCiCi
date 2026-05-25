@@ -2,8 +2,8 @@
 kind: feature-spec
 feature_id: FEAT-015
 title: Skill Declarative API Runtime
-status: in_progress
-owner_role: backend-agent-runtime
+status: in_implementation
+owner_role: backend-agent
 task_ids: TASK-036
 related_decisions: FEAT-009
 related_issues: none

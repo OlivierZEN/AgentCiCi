@@ -34,7 +34,7 @@ export default function PlatformGuard() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch("/auth/me", { headers: { Authorization: `Bearer ${auth.token}` } });
+        const r = await fetch("/auth/platform/me", { headers: { Authorization: `Bearer ${auth.token}` } });
         const { body } = await safeFetchJson<{ roles?: string[] }>(r);
         const roles = (body?.data?.roles ?? []) as string[];
         if (cancelled) return;

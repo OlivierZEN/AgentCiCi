@@ -1,7 +1,14 @@
 ---
-updated_at: 2026-04-24T16:20:00Z
-status: active
+kind: feature-spec
 feature_id: FEAT-003
+title: SaaS Billing And Packaging
+status: approved
+owner_role: shared
+task_ids: TASK-007
+related_decisions: none
+related_issues: none
+updated_at: 2026-04-24T16:20:00Z
+updated_by: ai
 ---
 
 # FEAT-003 SaaS Billing And Packaging

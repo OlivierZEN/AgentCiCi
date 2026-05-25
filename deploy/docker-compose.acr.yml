@@ -7,7 +7,7 @@ services:
     container_name: cici-database
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-cici_assistant}
+      POSTGRES_DB: ${POSTGRES_DB:-agentcici}
       POSTGRES_USER: ${POSTGRES_USER:-cici}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cici123}
     ports:
@@ -85,7 +85,9 @@ services:
         condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-local}
-      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-cici_assistant}
+      CICI_APP_VERSION: ${CICI_APP_VERSION:-latest}
+      CICI_IMAGE_TAG: ${CICI_IMAGE_TAG:-latest}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://database:5432/${POSTGRES_DB:-agentcici}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-cici}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-cici123}
       SPRING_DATA_REDIS_HOST: redis
@@ -134,6 +136,9 @@ services:
     platform: ${CICI_PLATFORM:-linux/amd64}
     container_name: cici-frontend
     restart: unless-stopped
+    environment:
+      CICI_APP_VERSION: ${CICI_APP_VERSION:-latest}
+      CICI_IMAGE_TAG: ${CICI_IMAGE_TAG:-latest}
     depends_on:
       backend:
         condition: service_started

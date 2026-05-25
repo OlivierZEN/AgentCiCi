@@ -2,12 +2,13 @@
 kind: task-status
 task_id: TASK-114
 assignee: MANAGER-001
+owner_role: project-manager
 status: ready
 branch: codex/TASK-114-feat-037-billing-ledger
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-114.yaml
-updated_at: 2026-05-20T01:54:39Z
+updated_at: 2026-05-21T15:47:23Z
 updated_by: MANAGER-001
 ---
 
@@ -24,7 +25,7 @@ Implement FEAT-037 end to end:
 - `/admin/billing` and `/platform/billing` product UI
 - runtime metering hooks for chat, RAG, tools, workflow, KB indexing, and Open API where they do not collide with active TASK-112 work
 - deterministic default plan/subscription seed behavior
-- focused backend tests, frontend build, and desktop/mobile visual QA
+- focused backend tests, frontend build, and desktop visual QA
 
 ## Out Of Scope
 
@@ -40,7 +41,7 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 - Backend focused billing tests pass.
 - Backend compile passes.
 - Frontend build passes.
-- Desktop and 390px mobile screenshots for `/admin/billing` and `/platform/billing` are reviewed.
+- Desktop screenshots for `/admin/billing` and `/platform/billing` are reviewed; do not add mobile compatibility implementation or mobile tests unless separately requested.
 - `.claw` state validation passes after handoff updates.
 
 ## Assignment History
@@ -48,3 +49,4 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 - 2026-05-18T23:20:36Z: Initial draft split FEAT-037 into separate backend/UI tasks.
 - 2026-05-19T07:20:36+08:00: User assigned FEAT-037 full development to `DEV-nezha`; TASK-114 now owns the whole feature.
 - 2026-05-20T09:54:39+08:00: User reassigned TASK-114 from `DEV-nezha` to Owen (`MANAGER-001`) and requested no further task assignment to `DEV-nezha`.
+- 2026-05-21T23:47:23+08:00: Verification scope aligned with the project rule that new feature work does not add mobile compatibility implementation, screenshots, or tests by default.

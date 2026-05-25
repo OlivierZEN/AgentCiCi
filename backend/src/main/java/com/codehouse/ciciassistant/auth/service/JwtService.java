@@ -44,6 +44,20 @@ public class JwtService {
                 .compact();
     }
 
+    public String issuePlatformToken(String platformAccountId, List<String> roles) {
+        Instant now = Instant.now();
+        Instant exp = now.plusSeconds(expirationSeconds);
+        return Jwts.builder()
+                .subject(platformAccountId)
+                .claim("typ", "platform")
+                .claim("platform_account_id", platformAccountId)
+                .claim("roles", roles == null ? List.of() : roles)
+                .issuedAt(Date.from(now))
+                .expiration(Date.from(exp))
+                .signWith(signingKey)
+                .compact();
+    }
+
     public String issueToken(String subject, Map<String, Object> claims, long ttlSeconds) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(ttlSeconds);

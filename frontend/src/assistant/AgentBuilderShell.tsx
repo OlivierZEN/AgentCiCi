@@ -122,13 +122,26 @@ type AgentBuilderShellProps = {
   focusAgentId?: string;
   onOpenAgent?: (agentId: string) => void;
   onBackToList?: () => void;
+  onRequireModelConfig?: (message: string) => void;
 };
 
-type BaseModelOption = {
+export type BaseModelOption = {
   value: string;
   label: string;
   note: string;
 };
+
+export const MODEL_CONFIG_REQUIRED_NOTICE = "请先配置模型";
+
+export function resolveAgentCreationModel(
+  draftModel: string,
+  modelOptions: BaseModelOption[],
+): { model: string; requiresModelConfig: boolean } {
+  if (draftModel) return { model: draftModel, requiresModelConfig: false };
+  const fallback = modelOptions[0]?.value ?? "";
+  if (fallback) return { model: fallback, requiresModelConfig: false };
+  return { model: "", requiresModelConfig: true };
+}
 
 type CompileResponse = {
   workflowCode: string;
@@ -988,7 +1001,7 @@ function WorkflowPreviewCanvas({
   };
 
   return (
-    <div className="cici-builder-graph__canvas cici-builder-graph__canvas--dify">
+    <div className="cici-builder-graph__canvas cici-builder-graph__canvas--cici">
       <div className="cici-builder-graph__scroll" ref={containerRef} onScroll={syncViewport}>
         <div className="cici-builder-graph__stage" style={{ width: scaledWidth, height: scaledHeight }}>
           <div className="cici-builder-graph__viewport" style={{ width: layout.width, height: layout.height, transform: `scale(${scale})` }}>
@@ -1368,6 +1381,7 @@ export default function AgentBuilderShell({
   focusAgentId,
   onOpenAgent,
   onBackToList,
+  onRequireModelConfig,
 }: AgentBuilderShellProps) {
   const [library, setLibrary] = useState<AgentRecord[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string>("");
@@ -2088,11 +2102,14 @@ export default function AgentBuilderShell({
 
   const createAgent = async () => {
     const nextDraft = createDraft(orgId, kbs.slice(0, 1).map((item) => item.id));
-    if (!nextDraft.model && modelOptions.length > 0) {
-      nextDraft.model = modelOptions[0].value;
-    }
-    if (!nextDraft.model) {
-      setNotice("当前没有可用基础模型，请先在管理端配置并启用模型厂商。");
+    const creationModel = resolveAgentCreationModel(nextDraft.model, modelOptions);
+    nextDraft.model = creationModel.model;
+    if (creationModel.requiresModelConfig) {
+      if (onRequireModelConfig) {
+        onRequireModelConfig(MODEL_CONFIG_REQUIRED_NOTICE);
+      } else {
+        setNotice(MODEL_CONFIG_REQUIRED_NOTICE);
+      }
       return;
     }
     const proposedName = "未命名 Agent";

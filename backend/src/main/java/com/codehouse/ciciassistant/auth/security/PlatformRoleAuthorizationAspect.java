@@ -16,6 +16,9 @@ public class PlatformRoleAuthorizationAspect {
 
     @Before("@annotation(requirePlatformRole) || @within(requirePlatformRole)")
     public void requirePlatformRole(JoinPoint joinPoint, RequirePlatformRole requirePlatformRole) {
+        if (TenantContext.getTokenType().filter("platform"::equals).isEmpty()) {
+            throw new ForbiddenException("需要平台账号权限");
+        }
         List<String> roles = TenantContext.getRoles();
         if (roles.stream().noneMatch(RoleCodes::isPlatformRole)) {
             throw new ForbiddenException("需要平台角色权限");

@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.platform.api;
 
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
+import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.domain.PlatformAuditLogEntity;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
@@ -27,23 +28,25 @@ public class PlatformController {
 
     private final PlatformGovernanceService platformGovernanceService;
     private final PlatformAuditService platformAuditService;
+    private final PlatformAccountProperties platformAccountProperties;
 
     public PlatformController(PlatformGovernanceService platformGovernanceService,
-                              PlatformAuditService platformAuditService) {
+                              PlatformAuditService platformAuditService,
+                              PlatformAccountProperties platformAccountProperties) {
         this.platformGovernanceService = platformGovernanceService;
         this.platformAuditService = platformAuditService;
+        this.platformAccountProperties = platformAccountProperties;
     }
 
     @GetMapping("/bootstrap")
     public ApiResponse<Map<String, Object>> bootstrap() {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         platformGovernanceService.ensurePlatformAssets(orgId);
         List<PlatformGovernanceService.PlatformSkillView> platformSkills = platformGovernanceService.listPlatformSkills(orgId);
         List<PlatformGovernanceService.PlatformToolView> platformTools = platformGovernanceService.listPlatformTools(orgId);
         PlatformGovernanceService.PlatformPolicyBundleView corePolicyBundle =
                 platformGovernanceService.getCorePolicyBundleSummary(orgId);
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("orgId", orgId);
         payload.put("roles", TenantContext.getRoles());
         payload.put("skillCount", platformSkills.size());
         payload.put("hiddenSkillCount", platformSkills.stream().filter(item -> "HIDDEN".equals(item.visibility())).count());
@@ -57,33 +60,33 @@ public class PlatformController {
 
     @GetMapping("/skills")
     public ApiResponse<List<PlatformGovernanceService.PlatformSkillView>> listPlatformSkills() {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.listPlatformSkills(orgId));
     }
 
     @GetMapping("/skills/{id}/versions")
     public ApiResponse<List<PlatformGovernanceService.PlatformSkillVersionView>> listPlatformSkillVersions(
             @PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.listPlatformSkillVersions(orgId, id));
     }
 
     @GetMapping("/policies/core")
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> getCorePolicyBundle() {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.getCorePolicyBundleSummary(orgId));
     }
 
     @GetMapping("/policies/core/versions")
     public ApiResponse<List<PlatformGovernanceService.PlatformPolicyBundleVersionView>> listCorePolicyBundleVersions() {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.listCorePolicyBundleVersions(orgId));
     }
 
     @PostMapping("/policies/core/versions")
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> createCorePolicyBundleDraft(
             @Valid @RequestBody PolicyBundleDraftRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.saveCorePolicyBundleDraft(orgId,
                 new PlatformGovernanceService.PolicyBundleDraftCommand(
                         request.name(),
@@ -97,14 +100,14 @@ public class PlatformController {
     @PostMapping("/policies/core/publish")
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> publishCorePolicyBundle(
             @Valid @RequestBody PolicyBundlePublishRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.publishCorePolicyBundleVersion(orgId, request.versionNo()));
     }
 
     @PostMapping("/policies/core/rollback")
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> rollbackCorePolicyBundle(
             @Valid @RequestBody PolicyBundlePublishRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.rollbackCorePolicyBundleVersion(orgId, request.versionNo()));
     }
 
@@ -112,7 +115,7 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> createPlatformSkillDraft(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillDraftRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.savePlatformSkillDraft(orgId, id,
                 new PlatformGovernanceService.SkillTemplateDraftCommand(
                         request.name(),
@@ -131,7 +134,7 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> publishPlatformSkillVersion(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillPublishRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.publishPlatformSkillVersion(orgId, id, request.versionNo(),
                 new PlatformGovernanceService.SkillGovernanceCommand(
                         request.enabled(),
@@ -144,7 +147,7 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> rollbackPlatformSkillVersion(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillPublishRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.rollbackPlatformSkillVersion(orgId, id, request.versionNo(),
                 new PlatformGovernanceService.SkillGovernanceCommand(
                         request.enabled(),
@@ -155,7 +158,7 @@ public class PlatformController {
 
     @GetMapping("/tools")
     public ApiResponse<List<PlatformGovernanceService.PlatformToolView>> listBuiltinTools() {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.listPlatformTools(orgId));
     }
 
@@ -163,7 +166,7 @@ public class PlatformController {
     public ApiResponse<PlatformGovernanceService.PlatformToolView> updateBuiltinTool(
             @PathVariable String toolName,
             @Valid @RequestBody PlatformToolUpdateRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.updatePlatformTool(orgId, toolName,
                 new PlatformGovernanceService.ToolGovernanceCommand(
                         request.displayName(),
@@ -176,8 +179,13 @@ public class PlatformController {
 
     @GetMapping("/audit/logs")
     public ApiResponse<List<Map<String, Object>>> listPlatformAuditLogs() {
-        String orgId = TenantContext.requireOrgId();
+        String orgId = platformScopeId();
         return ApiResponse.ok(platformAuditService.latest(orgId).stream().map(this::toAuditPayload).toList());
+    }
+
+    private String platformScopeId() {
+        String configured = platformAccountProperties.getGovernanceOrgId();
+        return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
     private Map<String, Object> toAuditPayload(PlatformAuditLogEntity item) {

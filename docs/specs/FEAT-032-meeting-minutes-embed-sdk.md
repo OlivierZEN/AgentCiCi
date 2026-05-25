@@ -2,8 +2,8 @@
 kind: feature-spec
 feature_id: FEAT-032
 title: Meeting Minutes Embed SDK
-status: implementation
-owner_role: fullstack-crm-embed
+status: in_implementation
+owner_role: shared
 task_ids: TASK-090, TASK-091, TASK-092, TASK-093, TASK-094, TASK-095, TASK-096
 related_decisions: FEAT-021, FEAT-029
 related_issues: none

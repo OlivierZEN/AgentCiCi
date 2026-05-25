@@ -53,7 +53,7 @@ status: active
 - Why this won:
   - Production and local runtime already use PostgreSQL, so tests should validate the real SQL dialect, Flyway behavior, indexes, and schema validation path.
   - PostgreSQL-specific migrations are allowed; agents should not rewrite migrations only to satisfy H2.
-  - Test configuration now points to `jdbc:postgresql://localhost:5432/cici_assistant_test` by default and may be overridden with `TEST_DATABASE_URL`, `TEST_DATABASE_USERNAME`, and `TEST_DATABASE_PASSWORD`.
+  - Test configuration now points to `jdbc:postgresql://localhost:5432/agentcici_test` by default and may be overridden with `TEST_DATABASE_URL`, `TEST_DATABASE_USERNAME`, and `TEST_DATABASE_PASSWORD`.
 - Implications:
   - H2 is removed from backend Maven dependencies.
   - Future verification notes must say PostgreSQL when PostgreSQL was actually used; H2 runs should not be used as acceptance evidence.
@@ -339,3 +339,16 @@ status: active
 - Alternatives considered:
   - Continue synchronous purge in the HTTP request: rejected because large DB/file/vector cleanup can exceed request time and gives no cancellable queued state.
   - Introduce RabbitMQ or an external worker now: deferred because the local monolith scheduler is enough for the first lifecycle control-plane implementation; production hardening can add distributed locks, dead-letter handling, and alerting.
+
+## DEC-026 Feature Work Does Not Add Mobile Compatibility By Default
+
+- Status: accepted
+- Date: 2026-05-21T15:47:23Z
+- Decision: feature design, implementation, and testing target desktop product quality by default. Do not add mobile compatibility implementation, mobile breakpoints, mobile-specific layouts, mobile screenshots, or mobile automated tests unless the user explicitly opens a separate mobile scope.
+- Why this won:
+  - Reduces context, implementation, and QA load for the current product-control-plane work.
+  - Keeps feature delivery focused on the desktop workflows used by administrators and platform operators.
+  - Prevents future specs and task cards from inheriting stale desktop/mobile screenshot gates.
+- Alternatives considered:
+  - Keep desktop and mobile as a universal quality gate: rejected because it adds recurring scope the user no longer wants.
+  - Remove all existing mobile code immediately: rejected because the request is about not adding new mobile compatibility work, not rolling back historical implementation.

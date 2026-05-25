@@ -1,23 +1,213 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-19T16:12:00Z
+updated_at: 2026-05-23T15:17:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-19T16:12:00Z
-last_run_status: success
+last_run_at: 2026-05-23T15:17:00Z
+last_run_status: passed
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`
-- 范围：TASK-112 Codeup MR !2 merge validation and closeout
-- 命令：`mvn -q -Dmaven.repo.local=/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.m2 -Dtest=AgentOpenApiIntegrationTest,AgentOpenApiCorsConfigTest test`, `npm run build`, `git diff --check HEAD^..HEAD`, `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /tmp/cc-agentcici-mr2-check/.claw`, Codeup API merge for change request !2
-- 环境：independent merge-check worktree plus Codeup main
+- 状态：`passed`
+- 范围：Google Fonts/network dependency localization on `codex/local-google-assets`
+- 命令：manager `dev-login.py`, `impeccable` context load, targeted Google URL search, font file validation, `npm run build`, local Vite browser/curl verification
+- 环境：local branch `codex/local-google-assets`, Vite dev server `http://127.0.0.1:5173/`
 
 ## Latest Verified Results
+
+- Google Fonts/network dependency localization (2026-05-23T15:17:00Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` with intended frontend/state files -> **allowed**.
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**, loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `search-before`: `rg` found Google network loading only in `frontend/index.html` for Google Fonts preconnect/CSS.
+    - `font-files`: downloaded and validated 10 local TrueType files under `frontend/public/fonts/` for Fraunces and Plus Jakarta Sans requested weights/styles -> **success**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `search-after`: targeted `rg` for `googleapis`, `gstatic`, `fonts.google`, `google.com`, `googletagmanager`, `google-analytics`, and `googleusercontent` excluding `frontend/node_modules/**` and `frontend/dist/**` -> **success**, no matches.
+    - `browser`: in-app browser opened `http://127.0.0.1:5173/`; page rendered, `document` links had no Google URLs, injected CSS contained local `/fonts/...` `@font-face` declarations -> **success**.
+    - `curl`: Vite served `/` without Google font links and served `/fonts/fraunces-400.ttf` plus `/fonts/plus-jakarta-sans-400.ttf` as `200 OK` `font/ttf` -> **success**.
+  - Notes:
+    - The app now keeps existing `Fraunces` and `Plus Jakarta Sans` font-family names while resolving them from local static assets instead of Google-hosted CSS or font files.
+
+- Codeup change/6 and change/7 post-merge validation (2026-05-22T13:25:28Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` -> **allowed**.
+    - `merge`: `change/6` fast-forwarded into `main`; `change/7` merged with a manual `.claw/test-report.md` evidence-only conflict resolution -> **success**.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `frontend-deps`: `npm ci` in `frontend/` -> **success**; npm reported 2 moderate audit findings.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `scripts-and-diff`: `bash -n scripts/release-acr.sh scripts/deploy-acr.sh && git diff --check` -> **success**.
+  - Notes:
+    - Focused `PlatformAuthIntegrationTest` still needs a later rerun when local Docker/Postgres is available; this limitation pre-existed the merge and is tracked in TASK-131.
+
+- Skill authoring generate/refine timeout hotfix (2026-05-22T12:02:40Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` with intended deploy/frontend/test-report files -> **allowed**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `diff`: `git diff --check` -> **success**.
+    - `config-inspection`: confirmed `location /skills/authoring/` appears before the broad `/skills` regex in both `deploy/nginx.cici.conf` and `deploy/nginx.cici.ssl.conf`, with `proxy_read_timeout 180s` and `proxy_send_timeout 180s`.
+  - Notes:
+    - Nginx syntax validation was attempted through Docker, but the Docker API socket was unavailable; local `nginx` was also not installed. `colima start --cpu 2 --memory 2` was started to enable the check, but it remained in disk-image download/startup and was stopped before changing project files.
+    - Frontend authoring generate/refine now use `safeFetchJson`, so HTML 504 responses fall back to `HTTP <status>` notices instead of throwing JSON parse errors.
+
+- Local uncommitted feature MR branch preparation (2026-05-22T10:45:33Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` on `codex/local-uncommitted-feature-mr` with all changed files -> **allowed**.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `diff`: `git diff --check` -> **success**.
+    - `scripts`: `bash -n scripts/release-acr.sh scripts/deploy-acr.sh` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**; generated `2.0.B3` without building, pushing, or tagging.
+    - `frontend`: `npm run build` in `frontend/` -> **success** after linking the existing local `node_modules` into the temporary checkout; existing Vite chunk-size warning remains.
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `codeup-mr`: direct Codeup OpenAPI create with `createFrom=WEB`, repository `6826857`, source/target project `6826857`, source branch `codex/local-uncommitted-feature-mr`, target `main` -> **success**, https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6.
+  - Notes:
+    - `PlatformAuthIntegrationTest` was not rerun in this MR-prep pass because the latest TASK-131 focused integration gate is still blocked by local Docker/Postgres availability; rerun once the local database is available.
+
+- TASK-133 Agent Builder no-model new-Agent feedback assignment (2026-05-22T10:32:57Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` -> **allowed**.
+    - `team-status`: `summarize-team-status.py .claw --write` -> **success**; `DEV-fengchu` now shows active `TASK-132` and `TASK-133`.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `diff`: targeted `git diff --check` for the updated/new `.claw` coordination files -> **success**.
+  - Notes:
+    - This was a manager assignment/update only. The implementation remains for `DEV-fengchu` after task-scoped login on `codex/TASK-133-agent-builder-new-agent-model-config-fix`.
+
+- TASK-132 Agent Builder focused-agent skill binding refresh bugfix assignment (2026-05-22T10:29:03Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended `.claw` assignment, task, board, status, team-status, and test-report files -> **allowed**.
+    - `assignment`: `check-assignment.py` for `DEV-fengchu` / `TASK-132` on `codex/TASK-132-agent-builder-skill-refresh-bugfix` with intended `frontend/src/assistant/AgentBuilderShell.tsx`, focused frontend test, task status, and baseline spec files -> **allowed**.
+    - `state`: `validate-state.py .claw --json` -> **success**.
+    - `team-status`: `summarize-team-status.py .claw --write` -> **success**; `DEV-fengchu` now shows active `TASK-132`.
+    - `diff`: targeted `git diff --check` for the new/updated `.claw` coordination files -> **success**.
+  - Notes:
+    - This was a manager assignment/update only. The implementation remains for `DEV-fengchu` after task-scoped login.
+
+- FEAT-053 platform account orgless auth context (2026-05-22T05:10:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-131` on `main` with intended backend/frontend/spec/state files -> **allowed**.
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**; loaded `PRODUCT.md` and `DESIGN.md`.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests test-compile` in `backend/` -> **success**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=PlatformAuthIntegrationTest test` in `backend/` -> **blocked**; Spring/Flyway could not connect to `localhost:5432`, and `docker ps` could not connect to the Docker API socket.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `browser`: Playwright desktop verification at `1365x900` with mocked platform token, `/auth/platform/me`, and `/api/platform/bootstrap` -> **success**; platform shell shows `平台账号`, overview table shows `账号体系 平台底层专属账号`, page text contains no `当前组织` or `demo-org`, `scrollWidth=clientWidth=1365`, and console errors are `0`. Screenshot: `output/playwright/feat053-platform-orgless-desktop.png`.
+    - `search`: targeted `rg` over `frontend/src/platform` for `当前组织` / `demo-org` -> **success**, no runtime UI matches.
+    - `diff`: `git diff --check` -> **success**.
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw --json` -> **success**.
+  - Notes:
+    - Implementation is ready for backend integration rerun once local Docker/Postgres is available; do not mark TASK-131 done until the focused backend integration gate is green.
+
+- FEAT-052 ACR release version governance (2026-05-22T04:42:10Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-130` on `main` with intended frontend/backend/deploy/script/docs/state files -> **allowed**。
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**，loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**，generated next version `2.0.B3` and printed backend/frontend image tags, optional `latest`, image inspect commands, Git tag commands, and deploy env values without building, pushing, or tagging.
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**。
+    - `scripts`: `bash -n scripts/release-acr.sh scripts/deploy-acr.sh` -> **success**。
+    - `browser`: Playwright desktop verification at 1365x900 with `VITE_CICI_APP_VERSION=2.0.B3` and mocked auth/API data -> **success**；`/` shows `2.0.B3`, `/admin/kb` and `/platform` show `版本 2.0.B3` in the left navigation bottom. Screenshots: `output/playwright/feat052-assistant-version.png`, `output/playwright/feat052-admin-version.png`, `output/playwright/feat052-platform-version.png`.
+    - `search`: targeted `rg` for legacy release runbook filename, old production host, legacy cert names, and stale ACR variable-name references in current release guidance and FEAT-052 files -> **success**，no matches.
+    - `diff`: `git diff --check` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw --json` -> **success**。
+  - Notes:
+    - The production release source of truth is `docs/production-release-runbook.md`; `scripts/release-acr.sh` is the canonical ACR push path and keeps ACR tags, Git tag, frontend badge, backend `/system/version`, and deploy env aligned.
+
+- Production release runbook rename and domain governance (2026-05-22T04:15:31Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --branch main --git-username OwenZheng-Cloud --files ... --no-cache --json` -> **allowed**。
+    - `search`: targeted `rg` for the legacy runbook filename, legacy production host, and legacy cert names across current guidance/runbook/devops/spec files -> **success**，current publication entry files no longer reference the old runbook name or legacy production host.
+    - `diff`: `git diff --check` over updated guidance, devops, task, assignment, runbook, and FEAT-021 spec files -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw --json` -> **success**。
+  - Notes:
+    - Canonical release runbook is now `docs/production-release-runbook.md`; `AGENTS.md` points production/ACR deployment agents to that long-term source of truth, and current public smoke targets use `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com`. FEAT-021 Open API examples now use `autoservice.agentcici.com`.
+
+- FEAT-051 no-new-mobile-compatibility scope rule (2026-05-21T15:47:23Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --json` -> **allowed** for `MANAGER-001`。
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**，loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `search`: targeted `rg` over top-level guidance, active task files, and active FEAT-037/038/046/051 specs -> **success**，remaining mobile mentions are now either the new no-new-mobile rule or historical FEAT-046 evidence.
+    - `design-json`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**。
+    - `diff`: targeted `git diff --check` for updated guidance/state/spec files -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw` -> **success**。
+  - Notes:
+    - Project rules now state that feature design, implementation, and testing do not add mobile compatibility implementation, mobile screenshots, or mobile automated tests by default. Active task cards for TASK-114/115/116/124 were aligned to desktop-only visual QA.
+
+- FEAT-047 top-level guidance document compression (2026-05-21T15:39:43Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --json` -> **allowed** for `MANAGER-001`。
+    - `design-json`: `node -e "JSON.parse(require('fs').readFileSync('DESIGN.json','utf8')); console.log('DESIGN.json ok')"` -> **success**。
+    - `diff`: `git diff --check -- AGENTS.md PRODUCT.md DESIGN.md README.md docs/specs/FEAT-047-guidance-doc-compression.md docs/specs/FEAT-048-design-factsource-zh.md .claw/current-status.md .claw/test-report.md` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py .claw` -> **success**。
+  - Notes:
+    - `AGENTS.md`, `PRODUCT.md`, and `DESIGN.md` are now compact source-of-truth entry files; README UI governance was also shortened so future agents do not reload the old repeated design rule stack.
+
+- TASK-129 admin login organization-selection alignment (2026-05-21T12:24:00Z):
+  - Commands:
+    - `identity-bootstrap`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --files .claw/current-status.md .claw/task-board.md .claw/assignments .claw/tasks docs/specs --no-cache --json` -> **allowed**。
+    - `identity-task`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-129` on `codex/TASK-124-feat-046-platform-tenant-provisioning` with intended admin frontend/spec/test-report files -> **allowed**。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check` -> **success**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+    - `browser-static`: Playwright screenshots `output/playwright/task129-admin-login-desktop.png` and `output/playwright/task129-admin-login-mobile.png` -> **success**；desktop/mobile `组织 ID` label count both `0`。
+    - `browser-org-choice`: Playwright mocked multi-org flow screenshots `output/playwright/task129-admin-login-org-choice-desktop.png` and `output/playwright/task129-admin-login-success-desktop.png` -> **success**；organization options `["销售运营团队Owner","交付支持中心组织管理员"]` rendered, `cici_admin_token` stored, final path `/admin/kb`。
+  - Notes:
+    - The admin login surface now matches the assistant's account-first entry model while still requiring `OWNER` / `ORG_ADMIN` before entering `/admin/*`.
+
+- TASK-118 final organization profile visual restore (2026-05-21T11:19:20Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-118` on `codex/TASK-124-feat-046-platform-tenant-provisioning` with intended frontend/state files -> **allowed**。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `diff`: `git diff --check` -> **success**。
+    - `browser`: Playwright CLI with mocked `/auth/me` and `/admin/organization/profile` APIs at 1058x773 -> **success**，screenshot `output/playwright/feat40-org-profile-restored-current-branch.png`; profile header `spanCount=0`; usage header text is only `使用情况汇总`; recent export block absent; old profile grid absent; profile columns `[3,3,3]`; usage section top border `1px`; page padding `18px 22px 20px`; `.admin-main` border `0px`; `mainScroll=false`; `documentElement.scrollWidth=clientWidth=1058`。
+    - `browser-console`: Playwright console error logs -> **success**，0 errors。
+  - Notes:
+    - This restore re-applied the user's final organization profile visual simplification changes that had been lost during current-branch integration.
+
+- TASK-127 local branch integration pass (2026-05-21T10:49:05Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-127` on `codex/TASK-124-feat-046-platform-tenant-provisioning` -> **allowed**。
+    - `stash-save`: `git stash push -u -m "TASK-127 pre-merge safeguard"` -> **success**。
+    - `merge-task118`: `git merge --no-ff codex/TASK-118-admin-organization-profile` -> **conflicts resolved**, then committed as `5c0fded`。
+    - `merge-task120`: `git merge --no-ff codex/TASK-120-platform-accountless-login` -> **already up to date**。
+    - `merge-task121`: `git merge --no-ff codex/TASK-121-db-rename-agentcici` -> **already up to date**。
+    - `merge-task122`: `git merge --no-ff codex/TASK-122-platform-console-production-polish` -> **already up to date**。
+    - `merge-task124`: `git merge --no-ff codex/TASK-124-platform-tenant-manual-provisioning` -> **already up to date**。
+    - `merge-recover`: `git merge --no-ff codex/recover-task119-122` -> **success**, merge commit `b3361de`。
+    - `stash-restore`: `git stash pop` -> **partial restore**；tracked files restored, same-name untracked task/spec files had to be reapplied manually from the stash snapshot.
+    - `branch-check`: `git branch --no-merged | wc -l` -> **success**, `0`。
+    - `diff`: `git diff --check` -> **success**。
+    - `frontend`: `npm run build` in `frontend/` -> **success**，保留既有 Vite chunk-size warning。
+    - `backend`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **no final result within observation window**。
+  - Notes:
+    - The safeguard stash was intentionally left in `git stash list` after manual same-name file recovery.
+    - The merge pass completed and the dirty worktree was restored, but backend compile evidence remains pending.
+
+- TASK-125 restore database rename to agentcici (2026-05-21T09:18:03Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-125` on `codex/TASK-124-feat-046-platform-tenant-provisioning` with intended config/script/state files -> **allowed**。
+    - `search`: `rg -n --hidden -S "cici_assistant" docker-compose.yml backend/src/main/resources backend/src/test/resources deploy/acr.env.example deploy/docker-compose.acr.yml scripts/run-full-demo.sh docs/release-local-to-cici-cloudcc-cn.md .claw/decisions.md` -> **success**，no matches。
+    - `db-list`: `docker exec cici-postgres psql -U cici -d postgres -Atc "select datname from pg_database where datname in ('cici_assistant','agentcici','cici_assistant_test','agentcici_test') order by datname;"` -> **success**，output `agentcici`, `agentcici_test`。
+    - `backend-health`: `GET http://127.0.0.1:8080/actuator/health` -> **success**，`{"status":"UP"}`。
+    - `db-ready`: `docker exec cici-postgres pg_isready -U cici -d agentcici` -> **success**，accepting connections。
+    - `db-activity`: `docker exec cici-postgres psql -U cici -d postgres -Atc "select datname, application_name, state, count(*) from pg_stat_activity where datname in ('agentcici','agentcici_test') group by datname, application_name, state order by datname, application_name, state;"` -> **success**，`agentcici|PostgreSQL JDBC Driver|idle|10`。
+    - `diff`: targeted `git diff --check` for TASK-125 files -> **success**。
+  - Notes:
+    - This restore intentionally touched only database-name defaults and related state/spec records.
+    - Unrelated historical identifiers such as `cici_assistant_token`, package paths, and container names remain unchanged by design.
+
+- `.claw` 4.1.0 state cleanup and history archive (2026-05-21T07:34:29Z):
+  - Commands:
+    - `identity`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --ssh-key /Users/owenmacbook/.ssh/id_ed25519_agentcici_pm --developer MANAGER-001 --git-username OwenZheng-Cloud --no-cache --json` -> **allowed**。
+    - `state`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/validate-state.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw` -> **success**。
+    - `team-status`: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/summarize-team-status.py /Volumes/AISpace/codehouse/cc-codeup-agentcici_PM/.claw --write` -> **success**。
+  - Notes:
+    - `current-status.md` was rewritten as a sub-60-line hot index.
+    - `task-board.md` now keeps only live tasks; historical cards were moved to `.claw/task-archive.md`.
+    - Task status files now carry valid `owner_role` values, and the referenced live specs/baseline were normalized to 4.1.0 front matter expectations.
 
 - TASK-112 Codeup MR !2 merge validation and closeout (2026-05-19T16:12:00Z):
   - Commands:
@@ -3939,3 +4129,52 @@ last_run_status: success
 - Add backend integration tests for the newly added delete/update management APIs.
 - Add frontend E2E checks for new model/tool/ops management flows.
 - Add end-to-end local verification for publish-document -> MQ task -> chunk indexing -> vector recall path with live RabbitMQ/Qdrant (`app.kb.vector-store=qdrant` in local profile).
+
+## 2026-05-21 TASK-118 Current-Branch Usage Metric Cards Restore
+
+- Frontend build:
+  - Command: `npm run build` in `frontend/`
+  - Result: success
+  - Notes: Vite still reports the existing large chunk warning after build.
+- Visual verification:
+  - Command: Playwright with mocked `/auth/me` and `/admin/organization/profile`, route `/admin/organization`, viewport 1440x900
+  - Result: success
+  - Evidence: screenshot `output/playwright/admin-organization-cards-current-branch.png`.
+  - Notes: usage summary outer panel has `0px none` border, transparent background, and `0px` radius; all six usage metrics render as standalone cards with `1px solid` border, warm ivory background, `14px` radius, 12px grid gap, and no horizontal overflow.
+
+## 2026-05-21 TASK-118 Usage Summary Data Restore
+
+- Backend compile:
+  - Command: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/`
+  - Result: success
+  - Notes: confirms the restored `usageSummary` API aggregation compiles.
+- Backend integration test:
+  - Command: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=AdminOrganizationProfileIntegrationTest test` in `backend/`
+  - Result: blocked before test assertions
+  - Notes: Spring context startup is blocked by existing duplicate Flyway migration version `58`: `V58__platform_account.sql` and `V58__agent_open_api_cloudcc_key_type.sql`.
+- Static diff check:
+  - Command: `git diff --check`
+  - Result: success
+
+## 2026-05-21 TASK-127 Integrated Branch Backend Verification Unblock
+
+- Authorization:
+  - Command: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --task TASK-127 --branch codex/TASK-124-feat-046-platform-tenant-provisioning --files backend/src/main/resources/db/migration/V58__platform_account.sql docs/specs/FEAT-041-platform-accountless-login.md --json`
+  - Result: success
+  - Notes: `MANAGER-001` passed SSH-key possession and task-scope authorization for the merge-follow-up migration/spec fix.
+- Migration collision fix:
+  - Change: renamed `backend/src/main/resources/db/migration/V58__platform_account.sql` to `backend/src/main/resources/db/migration/V59__platform_account.sql`
+  - Result: success
+  - Notes: also synced `docs/specs/FEAT-041-platform-accountless-login.md` so the documented migration version matches the integrated branch.
+- First rerun:
+  - Command: `mvn -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` in `backend/`
+  - Result: blocked by stale build output
+  - Notes: Flyway still saw deleted `backend/target/classes/db/migration/V58__platform_account.sql`; a clean rebuild was required.
+- Test-database reset:
+  - Command: `docker exec cici-postgres sh -lc "dropdb -U cici agentcici_test && createdb -U cici agentcici_test"`
+  - Result: success
+  - Notes: reset the local PostgreSQL integration database after Flyway reported a checksum mismatch for previously applied version `58`.
+- Focused backend integration gate:
+  - Command: `mvn clean -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` in `backend/`
+  - Result: success
+  - Notes: `AuthFlowIntegrationTest` 16/16 passed, `PlatformTenantLifecycleIntegrationTest` 6/6 passed, total 22/22 green on local `agentcici_test`.

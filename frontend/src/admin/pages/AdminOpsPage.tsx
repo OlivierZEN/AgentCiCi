@@ -33,7 +33,7 @@ export default function AdminOpsPage() {
           <h1>观测与运维</h1>
           <p className="subtle">智能体运行、成本用量与审计日志在这里统一排查。</p>
         </div>
-        <button type="button" className="dify-btn dify-btn--ghost admin-ops-refresh" onClick={() => void loadOps()}>
+        <button type="button" className="cici-btn cici-btn--ghost admin-ops-refresh" onClick={() => void loadOps()}>
           刷新运维数据
         </button>
       </header>

@@ -156,6 +156,93 @@ function formatTs(ts?: string): string {
   return d.toLocaleString();
 }
 
+function riskLabel(level: string): string {
+  switch (level) {
+    case "LOW":
+      return "低风险";
+    case "MEDIUM":
+      return "中风险";
+    case "HIGH":
+      return "高风险";
+    default:
+      return level || "未知";
+  }
+}
+
+function publishStatusLabel(status: string): string {
+  switch (status) {
+    case "PUBLISHED":
+      return "已发布";
+    case "DRAFT":
+      return "草稿";
+    case "ARCHIVED":
+      return "已归档";
+    case "SUPERSEDED":
+      return "已替换";
+    default:
+      return status || "未知";
+  }
+}
+
+function visibilityLabel(value: string): string {
+  switch (value) {
+    case "VISIBLE":
+      return "可见";
+    case "HIDDEN":
+      return "隐藏";
+    default:
+      return value || "未知";
+  }
+}
+
+function bindingPolicyLabel(value: string): string {
+  switch (value) {
+    case "OPTIONAL":
+      return "按需绑定";
+    case "DEFAULT_ON":
+      return "默认启用";
+    case "MANDATORY":
+      return "强制启用";
+    default:
+      return value || "未知";
+  }
+}
+
+function rolloutStageLabel(value?: string): string {
+  switch (value) {
+    case "LIVE":
+      return "线上生效";
+    case "READY":
+      return "可发布";
+    case "ROLLBACK":
+      return "可回滚";
+    case "DRAFT":
+      return "草稿";
+    case "DRAFT_PENDING":
+      return "待发布";
+    case "CURRENT_PUBLISHED":
+      return "当前生效";
+    case "CURRENT_DEFAULT":
+      return "当前生效";
+    case "ROLLBACK_TARGET":
+      return "可回滚";
+    default:
+      return value ? value : "待确认";
+  }
+}
+
+function isInternalNote(text?: string | null): boolean {
+  if (!text) return true;
+  return /(seed from builtin|manual regression|policy bundle|debug trace|runtime|snapshot|workflow|agent|rollback target|draft pending|current published|prompt fragment)/i.test(
+    text,
+  );
+}
+
+function displayVersionNote(text?: string | null, fallback = "已记录本版变更。"): string {
+  if (!text || isInternalNote(text)) return fallback;
+  return text;
+}
+
 function versionToDraft(version: PlatformSkillVersion): DraftForm {
   return {
     name: version.name ?? "",
@@ -444,12 +531,11 @@ export default function PlatformSkillsPage() {
     <div className="admin-page skills-catalog platform-page platform-skills-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
-          <p className="skills-catalog__kicker">Platform Skills</p>
           <h1 className="skills-catalog__title">平台标准技能</h1>
-          <p className="subtle skills-catalog__subtitle">模板版本、治理字段、发布/回滚与影响范围在这里收口。</p>
+          <p className="subtle skills-catalog__subtitle">统一管理标准技能模板、治理配置、发布回滚与影响范围。</p>
         </div>
         <div className="platform-page-head__aside">
-          <span className="platform-inline-stat">Skill {skills.length}</span>
+          <span className="platform-inline-stat">技能 {skills.length}</span>
           <span className="platform-inline-stat">版本 {versions.length}</span>
           <span className="platform-inline-stat">策略包 {policyBundle ? `v${policyBundle.versionNo}` : "—"}</span>
         </div>
@@ -464,13 +550,13 @@ export default function PlatformSkillsPage() {
             <div className="platform-console__stack">
               <div className="platform-console__section">
                 <p className="platform-section-label">核心策略</p>
-                <h3 className="platform-console__subheading">Core Policy Bundle</h3>
+                <h3 className="platform-console__subheading">当前核心策略</h3>
                 <p className="skills-data-table__summary">
-                  {policyBundle.bundleCode}@v{policyBundle.versionNo} · {policyBundle.publishStatus} · {policyBundle.versionCount} 个版本 · 最近更新时间 {formatTs(policyBundle.updatedAt)}
+                  当前生效版本 v{policyBundle.versionNo} · {publishStatusLabel(policyBundle.publishStatus)} · 共 {policyBundle.versionCount} 个版本 · 最近更新时间 {formatTs(policyBundle.updatedAt)}
                 </p>
                 <div className="platform-console__stats">
                   <article className="platform-console__stat">
-                    <span>运行中已发布 Agent</span>
+                    <span>覆盖已发布智能体</span>
                     <strong>{policyBundle.livePublishedAgentCount}</strong>
                   </article>
                   <article className="platform-console__stat">
@@ -486,21 +572,9 @@ export default function PlatformSkillsPage() {
                     <strong>{policyBundle.latestDraftVersionNo ?? "—"}</strong>
                   </article>
                 </div>
-                <div className="platform-console__badges">
-                  {policyBundle.sourceSkillCodes.map((skillCode) => (
-                    <span key={skillCode} className="skills-pill">{skillCode}</span>
-                  ))}
-                </div>
-                {policyBundle.sampleAgentIds.length > 0 ? (
-                  <div className="platform-console__badges platform-console__badges--compact">
-                    {policyBundle.sampleAgentIds.map((agentId) => (
-                      <span key={agentId} className="skills-pill">{agentId}</span>
-                    ))}
-                  </div>
-                ) : null}
                 <ul className="platform-console__summary-list">
-                  <li>{policyBundle.rolloutHint}</li>
-                  <li>{policyBundle.rollbackHint}</li>
+                  <li>发布前先确认影响范围，并完成小范围验证。</li>
+                  <li>回滚前先核对当前生效版本与待回退版本，避免误操作。</li>
                 </ul>
               </div>
 
@@ -516,7 +590,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label>
-                    Source Skill Codes
+                    来源技能范围
                     <input
                       value={policyDraft.sourceSkillCodes}
                       onChange={(e) => setPolicyDraft((prev) => ({ ...prev, sourceSkillCodes: e.target.value }))}
@@ -532,7 +606,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label className="platform-console__field--full">
-                    Prompt Fragment
+                    策略正文片段
                     <textarea
                       rows={6}
                       value={policyDraft.promptFragment}
@@ -540,7 +614,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label className="platform-console__field--full">
-                    Handoff Rules
+                    兜底移交规则
                     <textarea
                       rows={4}
                       value={policyDraft.handoffRules}
@@ -550,7 +624,7 @@ export default function PlatformSkillsPage() {
                   </label>
                 </div>
                 <div className="platform-console__actions">
-                  <button className="dify-btn dify-btn--primary" disabled={saving} onClick={() => void savePolicyDraft()}>
+                  <button className="platform-button platform-button--primary" disabled={saving} onClick={() => void savePolicyDraft()}>
                     {saving ? "处理中…" : "保存为新策略草稿"}
                   </button>
                 </div>
@@ -577,28 +651,25 @@ export default function PlatformSkillsPage() {
                         return (
                           <tr key={version.id}>
                             <td className="skills-data-table__mono">v{version.versionNo}</td>
-                            <td>{version.publishStatus}</td>
+                            <td>{publishStatusLabel(version.publishStatus)}</td>
                             <td className="skills-data-table__summary">
-                              <div>{version.description || "—"}</div>
-                              {version.impact?.summaryLines?.slice(0, 2).map((line) => (
-                                <div key={`${version.id}-${line}`} className="platform-console__inline-note">{line}</div>
-                              ))}
+                              <div>{displayVersionNote(version.description, "已记录策略版本说明。")}</div>
                             </td>
                             <td className="skills-data-table__mono">{formatTs(version.publishedAt || version.createdAt)}</td>
                             <td className="skills-data-table__actions">
                               <div className="platform-console__badges platform-console__badges--compact">
-                                <span className="skills-pill">{version.impact?.rolloutStage ?? "UNKNOWN"}</span>
-                                <span className="skills-pill">{version.impact?.livePublishedAgentCount ?? 0} 个 Agent</span>
+                                <span className="skills-pill">{rolloutStageLabel(version.impact?.rolloutStage)}</span>
+                                <span className="skills-pill">{version.impact?.livePublishedAgentCount ?? 0} 个智能体</span>
                               </div>
                               <button
-                                className="dify-btn dify-btn--ghost"
+                                className="platform-button platform-button--secondary"
                                 onClick={() => setPolicyDraft(policyVersionToDraft(version))}
                               >
                                 装载到编辑器
                               </button>
                               {!isCurrent ? (
                                 <button
-                                  className="dify-btn dify-btn--primary"
+                                  className="platform-button platform-button--primary"
                                   disabled={saving}
                                   onClick={() => void applyPolicyVersion(version.versionNo, action)}
                                 >
@@ -607,13 +678,6 @@ export default function PlatformSkillsPage() {
                               ) : (
                                 <span className="skills-pill">当前生效</span>
                               )}
-                              {version.impact?.sampleAgentIds?.length ? (
-                                <div className="platform-console__badges platform-console__badges--compact">
-                                  {version.impact.sampleAgentIds.map((agentId) => (
-                                    <span key={`${version.id}-${agentId}`} className="skills-pill">{agentId}</span>
-                                  ))}
-                                </div>
-                              ) : null}
                             </td>
                           </tr>
                         );
@@ -634,10 +698,10 @@ export default function PlatformSkillsPage() {
           <table className="skills-data-table">
             <thead>
               <tr>
-                <th>Skill</th>
+                <th>标准技能</th>
                 <th>当前模板</th>
                 <th>派生</th>
-                <th>绑定 Agent</th>
+                <th>绑定智能体</th>
                 <th>治理</th>
               </tr>
             </thead>
@@ -645,12 +709,12 @@ export default function PlatformSkillsPage() {
               {skills.map((skill) => (
                 <tr
                   key={skill.id}
-                  className={skill.id === selectedSkillId ? "platform-console__row--active" : ""}
+                  className={`platform-console__select-row${skill.id === selectedSkillId ? " platform-console__row--active" : ""}`}
                   onClick={() => setSelectedSkillId(skill.id)}
                 >
                   <td>
                     <div className="skills-data-table__skill-name">{skill.name}</div>
-                    <div className="skills-data-table__skill-code">{skill.skillCode}</div>
+                    {skill.description ? <div className="skills-data-table__summary">{skill.description}</div> : null}
                   </td>
                   <td className="skills-data-table__mono">
                     v{skill.currentTemplateVersionNo ?? 1}
@@ -661,9 +725,9 @@ export default function PlatformSkillsPage() {
                   <td>{skill.agentBindingCount}</td>
                   <td>
                     <div className="skills-data-table__flags">
-                      <span className="skills-pill">{skill.visibility}</span>
-                      <span className="skills-pill">{skill.bindingPolicy}</span>
-                      <span className="skills-pill">{skill.enabled ? "ENABLED" : "DISABLED"}</span>
+                      <span className="skills-pill">{visibilityLabel(skill.visibility)}</span>
+                      <span className="skills-pill">{bindingPolicyLabel(skill.bindingPolicy)}</span>
+                      <span className="skills-pill">{skill.enabled ? "已启用" : "已停用"}</span>
                     </div>
                   </td>
                 </tr>
@@ -686,12 +750,12 @@ export default function PlatformSkillsPage() {
                 <p className="platform-section-label">当前技能</p>
                 <h2 className="platform-console__heading">{selectedSkill.name}</h2>
                 <p className="skills-data-table__summary">
-                  模板 `{selectedSkill.templateCode}` · 当前版本 v{selectedSkill.currentTemplateVersionNo ?? 1} · 最近更新时间 {formatTs(selectedSkill.updatedAt)}
+                  当前版本 v{selectedSkill.currentTemplateVersionNo ?? 1} · 最近更新时间 {formatTs(selectedSkill.updatedAt)}
                 </p>
                 <div className="platform-console__badges">
-                  <span className="skills-pill">{selectedSkill.visibility}</span>
-                  <span className="skills-pill">{selectedSkill.bindingPolicy}</span>
-                  <span className="skills-pill">{selectedSkill.enabled ? "ENABLED" : "DISABLED"}</span>
+                  <span className="skills-pill">{visibilityLabel(selectedSkill.visibility)}</span>
+                  <span className="skills-pill">{bindingPolicyLabel(selectedSkill.bindingPolicy)}</span>
+                  <span className="skills-pill">{selectedSkill.enabled ? "已启用" : "已停用"}</span>
                 </div>
               </div>
 
@@ -705,8 +769,8 @@ export default function PlatformSkillsPage() {
                       value={governance.visibility}
                       onChange={(e) => setGovernance((prev) => ({ ...prev, visibility: e.target.value }))}
                     >
-                      <option value="VISIBLE">VISIBLE</option>
-                      <option value="HIDDEN">HIDDEN</option>
+                      <option value="VISIBLE">可见</option>
+                      <option value="HIDDEN">隐藏</option>
                     </select>
                   </label>
                   <label>
@@ -715,9 +779,9 @@ export default function PlatformSkillsPage() {
                       value={governance.bindingPolicy}
                       onChange={(e) => setGovernance((prev) => ({ ...prev, bindingPolicy: e.target.value }))}
                     >
-                      <option value="OPTIONAL">OPTIONAL</option>
-                      <option value="DEFAULT_ON">DEFAULT_ON</option>
-                      <option value="MANDATORY">MANDATORY</option>
+                      <option value="OPTIONAL">按需绑定</option>
+                      <option value="DEFAULT_ON">默认启用</option>
+                      <option value="MANDATORY">强制启用</option>
                     </select>
                   </label>
                   <label className="platform-console__checkbox">
@@ -737,11 +801,11 @@ export default function PlatformSkillsPage() {
                   <h3 className="platform-console__subheading">影响摘要</h3>
                   <div className="platform-console__stats">
                     <article className="platform-console__stat">
-                      <span>绑定 Agent</span>
+                      <span>绑定智能体</span>
                       <strong>{selectedSkill.impact.boundAgentCount}</strong>
                     </article>
                     <article className="platform-console__stat">
-                      <span>已发布 Workflow</span>
+                      <span>已发布工作流</span>
                       <strong>{selectedSkill.impact.publishedWorkflowCount}</strong>
                     </article>
                     <article className="platform-console__stat">
@@ -753,16 +817,9 @@ export default function PlatformSkillsPage() {
                       <strong>{selectedSkill.impact.historicalPinnedWorkflowCount}</strong>
                     </article>
                   </div>
-                  {selectedSkill.impact.sampleAgentIds.length > 0 ? (
-                    <div className="platform-console__badges">
-                      {selectedSkill.impact.sampleAgentIds.map((agentId) => (
-                        <span key={agentId} className="skills-pill">{agentId}</span>
-                      ))}
-                    </div>
-                  ) : null}
                   <ul className="platform-console__summary-list">
-                    <li>{selectedSkill.impact.rolloutHint}</li>
-                    <li>{selectedSkill.impact.rollbackHint}</li>
+                    <li>发布前先确认影响范围，再安排小范围验证。</li>
+                    <li>回滚时优先核对当前线上版本与目标版本，避免影响已发布配置。</li>
                   </ul>
                 </div>
               ) : null}
@@ -781,9 +838,9 @@ export default function PlatformSkillsPage() {
                       value={draft.riskLevel}
                       onChange={(e) => setDraft((prev) => ({ ...prev, riskLevel: e.target.value }))}
                     >
-                      <option value="LOW">LOW</option>
-                      <option value="MEDIUM">MEDIUM</option>
-                      <option value="HIGH">HIGH</option>
+                      <option value="LOW">低风险</option>
+                      <option value="MEDIUM">中风险</option>
+                      <option value="HIGH">高风险</option>
                     </select>
                   </label>
                   <label className="platform-console__field--full">
@@ -795,7 +852,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label className="platform-console__field--full">
-                    Prompt Fragment
+                    模板正文片段
                     <textarea
                       rows={8}
                       value={draft.promptFragment}
@@ -803,7 +860,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label>
-                    Tool Whitelist
+                    可调用工具
                     <input
                       value={draft.toolWhitelist}
                       onChange={(e) => setDraft((prev) => ({ ...prev, toolWhitelist: e.target.value }))}
@@ -811,7 +868,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label>
-                    KB Whitelist
+                    可引用知识库
                     <input
                       value={draft.kbWhitelist}
                       onChange={(e) => setDraft((prev) => ({ ...prev, kbWhitelist: e.target.value }))}
@@ -819,7 +876,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label className="platform-console__field--full">
-                    Handoff Rule
+                    兜底移交规则
                     <textarea
                       rows={2}
                       value={draft.handoffRule}
@@ -827,7 +884,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label className="platform-console__field--full">
-                    Output Contract
+                    输出约束
                     <textarea
                       rows={2}
                       value={draft.outputContract}
@@ -835,7 +892,7 @@ export default function PlatformSkillsPage() {
                     />
                   </label>
                   <label className="platform-console__field--full">
-                    Changelog
+                    本版说明
                     <textarea
                       rows={2}
                       value={draft.changelog}
@@ -844,7 +901,7 @@ export default function PlatformSkillsPage() {
                   </label>
                 </div>
                 <div className="platform-console__actions">
-                  <button className="dify-btn dify-btn--primary" disabled={saving} onClick={() => void saveDraft()}>
+                  <button className="platform-button platform-button--primary" disabled={saving} onClick={() => void saveDraft()}>
                     {saving ? "处理中…" : "保存为新草稿版本"}
                   </button>
                 </div>
@@ -871,28 +928,25 @@ export default function PlatformSkillsPage() {
                         return (
                           <tr key={version.id}>
                             <td className="skills-data-table__mono">v{version.versionNo}</td>
-                            <td>{version.publishStatus}</td>
+                            <td>{publishStatusLabel(version.publishStatus)}</td>
                             <td className="skills-data-table__summary">
-                              <div>{version.changelog || version.description || "—"}</div>
-                              {version.impact?.summaryLines?.slice(0, 2).map((line) => (
-                                <div key={`${version.id}-${line}`} className="platform-console__inline-note">{line}</div>
-                              ))}
+                              <div>{displayVersionNote(version.changelog || version.description)}</div>
                             </td>
                             <td className="skills-data-table__mono">{formatTs(version.publishedAt || version.createdAt)}</td>
                             <td className="skills-data-table__actions">
                               <div className="platform-console__badges platform-console__badges--compact">
-                                <span className="skills-pill">{version.impact?.rolloutStage ?? "UNKNOWN"}</span>
-                                <span className="skills-pill">{version.impact?.pinnedWorkflowCount ?? 0} 个 workflow</span>
+                                <span className="skills-pill">{rolloutStageLabel(version.impact?.rolloutStage)}</span>
+                                <span className="skills-pill">{version.impact?.pinnedWorkflowCount ?? 0} 个工作流</span>
                               </div>
                               <button
-                                className="dify-btn dify-btn--ghost"
+                                className="platform-button platform-button--secondary"
                                 onClick={() => setDraft(versionToDraft(version))}
                               >
                                 装载到编辑器
                               </button>
                               {!isCurrent ? (
                                 <button
-                                  className="dify-btn dify-btn--primary"
+                                  className="platform-button platform-button--primary"
                                   disabled={saving}
                                   onClick={() => void applyVersion(version.versionNo, action)}
                                 >
@@ -901,13 +955,6 @@ export default function PlatformSkillsPage() {
                               ) : (
                                 <span className="skills-pill">当前生效</span>
                               )}
-                              {version.impact?.sampleAgentIds?.length ? (
-                                <div className="platform-console__badges platform-console__badges--compact">
-                                  {version.impact.sampleAgentIds.map((agentId) => (
-                                    <span key={`${version.id}-${agentId}`} className="skills-pill">{agentId}</span>
-                                  ))}
-                                </div>
-                              ) : null}
                             </td>
                           </tr>
                         );

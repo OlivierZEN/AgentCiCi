@@ -1,0 +1,58 @@
+task_id: TASK-125
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-21T09:16:57Z
+expires_at: none
+spec_path: docs/specs/FEAT-043-database-rename-agentcici.md
+task_status_path: .claw/tasks/TASK-125.md
+branch: codex/TASK-124-feat-046-platform-tenant-provisioning
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/resources/**
+  - backend/src/test/resources/**
+  - deploy/**
+  - scripts/**
+  - docs/**
+  - .claw/**
+scope_files:
+  - docker-compose.yml
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - backend/src/test/resources/application.yml
+  - deploy/acr.env.example
+  - deploy/docker-compose.acr.yml
+  - scripts/run-full-demo.sh
+  - docs/production-release-runbook.md
+  - docs/specs/FEAT-043-database-rename-agentcici.md
+  - .claw/assignments/TASK-125.yaml
+  - .claw/tasks/TASK-125.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/decisions.md
+  - .claw/test-report.md
+  - .claw/team-status.md
+protected_paths:
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-043-database-rename-agentcici.md
+  - docs/specs/PROJECT-BASELINE.md
+task_boundary:
+  - "Restore the database-name rename so project defaults use agentcici instead of cici_assistant."
+  - "Only edit database-name-related config, deploy defaults, helper scripts, and state/spec files."
+  - "Do not alter FEAT-046 product behavior or unrelated cici_* technical identifiers."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T09:16:57Z; user requested restoring the database rename."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "TASK-125 is intentionally scoped to config/state restore on top of the current FEAT-046 branch."
+hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-125 on branch codex/TASK-124-feat-046-platform-tenant-provisioning before implementation edits."

@@ -1,7 +1,9 @@
 package com.codehouse.ciciassistant.auth.api;
 
-import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.auth.service.AuthService;
+import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
@@ -67,6 +69,10 @@ public class AuthController {
 
     @GetMapping("/me")
     public ApiResponse<Map<String, Object>> currentUser() {
+        if (TenantContext.getTokenType().filter("platform"::equals).isPresent()
+                || (TenantContext.getOrgId().isEmpty() && TenantContext.getRoles().stream().anyMatch(RoleCodes::isPlatformRole))) {
+            throw new ForbiddenException("平台账号不能访问组织用户信息");
+        }
         String orgId = TenantContext.requireOrgId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         return ApiResponse.ok(authService.currentUser(orgId, userId));

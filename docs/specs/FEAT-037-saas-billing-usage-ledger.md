@@ -1,10 +1,14 @@
 ---
-updated_at: 2026-05-18T23:20:36Z
-status: active
+kind: feature-spec
 feature_id: FEAT-037
-related_specs:
-  - docs/specs/FEAT-003-saas-billing-and-packaging.md
-  - docs/specs/FEAT-022-agent-workload-billing-model.md
+title: SaaS Billing Usage Ledger
+status: in_implementation
+owner_role: project-manager
+task_ids: TASK-114
+related_decisions: FEAT-003, FEAT-022
+related_issues: none
+updated_at: 2026-05-20T01:54:39Z
+updated_by: MANAGER-001
 ---
 
 # FEAT-037 SaaS Billing Usage Ledger
@@ -245,7 +249,7 @@ Any adjustment must require an explicit reason. Do not silently rewrite historic
 
 - Add `/admin/billing` route and navigation entry.
 - Add `/platform/billing` route and navigation entry.
-- Implement responsive desktop/mobile tables without horizontal overflow.
+- Implement stable desktop tables without horizontal overflow.
 - Use real APIs with clear loading, empty, and error states.
 
 ### Phase 3: Runtime Metering
@@ -275,7 +279,7 @@ Scope:
 - admin and platform billing APIs
 - `/admin/billing` and `/platform/billing` product UI
 - runtime metering hooks for chat, RAG, tool, workflow, KB indexing, and Open API where they do not collide with active TASK-112 work
-- focused backend tests, frontend build, and desktop/mobile screenshot QA
+- focused backend tests, frontend build, and desktop screenshot QA
 
 Notes:
 
@@ -291,7 +295,7 @@ Notes:
 - Platform operators can inspect plans, subscriptions, usage events, and ledger entries across organizations.
 - Demo and test data are deterministic.
 - Quota checks are designed before enforcement is enabled.
-- Product UI follows `DESIGN.md` product rules and has desktop/mobile screenshot verification before shipping.
+- Product UI follows `DESIGN.md` product rules and has desktop screenshot verification before shipping.
 - No private keys, API keys, bearer tokens, or reusable secrets are written to docs, logs, tests, or task status files.
 
 ## Verification Plan
@@ -299,5 +303,5 @@ Notes:
 - Backend focused tests for billing repositories/services/controllers.
 - Backend compile after migrations and entity wiring.
 - Frontend build.
-- Browser QA for `/admin/billing` and `/platform/billing` at desktop and 390px mobile.
+- Browser QA for `/admin/billing` and `/platform/billing` at desktop size only; mobile compatibility implementation and mobile tests are out of scope unless separately requested.
 - `.claw` state validation after task and assignment updates.

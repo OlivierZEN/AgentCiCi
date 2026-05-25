@@ -2,6 +2,9 @@ package com.codehouse.ciciassistant.platform.service;
 
 import com.codehouse.ciciassistant.auth.domain.OrgEntity;
 import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
+import com.codehouse.ciciassistant.auth.domain.UserEntity;
+import com.codehouse.ciciassistant.auth.service.OrganizationProvisioningService;
 import com.codehouse.ciciassistant.kb.service.VectorDeleteResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreAuditResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
@@ -209,6 +212,7 @@ public class PlatformTenantLifecycleService {
     );
 
     private final OrgRepository orgRepository;
+    private final OrganizationProvisioningService organizationProvisioningService;
     private final OrganizationRetentionPolicyRepository retentionPolicyRepository;
     private final OrganizationPurgeJobRepository purgeJobRepository;
     private final OrganizationExportJobRepository exportJobRepository;
@@ -223,6 +227,7 @@ public class PlatformTenantLifecycleService {
     private final long purgeWorkerLeaseMinutes;
 
     public PlatformTenantLifecycleService(OrgRepository orgRepository,
+                                          OrganizationProvisioningService organizationProvisioningService,
                                           OrganizationRetentionPolicyRepository retentionPolicyRepository,
                                           OrganizationPurgeJobRepository purgeJobRepository,
                                           OrganizationExportJobRepository exportJobRepository,
@@ -236,6 +241,7 @@ public class PlatformTenantLifecycleService {
                                           @Value("${app.lifecycle.purge-worker-id:}") String configuredPurgeWorkerId,
                                           @Value("${app.lifecycle.purge-worker-lease-minutes:60}") long purgeWorkerLeaseMinutes) {
         this.orgRepository = orgRepository;
+        this.organizationProvisioningService = organizationProvisioningService;
         this.retentionPolicyRepository = retentionPolicyRepository;
         this.purgeJobRepository = purgeJobRepository;
         this.exportJobRepository = exportJobRepository;
@@ -256,6 +262,51 @@ public class PlatformTenantLifecycleService {
         return orgRepository.findAllByOrderByIdAsc().stream()
                 .map(this::toTenantView)
                 .toList();
+    }
+
+    @Transactional
+    public TenantProvisionView createTenant(TenantProvisionCommand command, String actorId, String actorRole) {
+        String tenantName = requireText(command.tenantName(), "租户名称不能为空");
+        String ownerMobile = requireMobile(command.ownerMobile());
+        String ownerEmail = trimToNull(command.ownerEmail());
+        if (ownerEmail != null && !ownerEmail.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new IllegalArgumentException("邮箱格式不正确");
+        }
+
+        UserAccountEntity existingAccount = organizationProvisioningService.findMobileAccount(ownerMobile).orElse(null);
+        if (existingAccount == null) {
+            String initialPassword = requireText(command.initialPassword(), "首次 Owner 账号需要初始密码");
+            if (initialPassword.length() < 8) {
+                throw new IllegalArgumentException("初始密码至少需要 8 位");
+            }
+        }
+
+        OrgEntity org = organizationProvisioningService.createOrganization(tenantName);
+        UserAccountEntity account = existingAccount != null
+                ? existingAccount
+                : organizationProvisioningService.createMobileAccount(ownerMobile, command.ownerDisplayName(), ownerEmail);
+        if (existingAccount == null) {
+            organizationProvisioningService.assignPasswordCredential(account, command.initialPassword().trim());
+        }
+        UserEntity owner = organizationProvisioningService.createOwnerMembership(org, account, command.ownerDisplayName());
+        retentionPolicyRepository.findById(org.getId())
+                .orElseGet(() -> retentionPolicyRepository.save(new OrganizationRetentionPolicyEntity(org.getId())));
+        platformAuditService.log(
+                org.getId(),
+                actorId,
+                actorRole,
+                "platform.tenant.create",
+                "tenant",
+                org.getId(),
+                buildTenantCreateAuditDetail(account, existingAccount != null, command.provisionNote()));
+        return new TenantProvisionView(
+                org.getId(),
+                org.getName(),
+                org.getStatus(),
+                owner.getId(),
+                account.getId(),
+                existingAccount != null
+        );
     }
 
     @Transactional
@@ -1070,6 +1121,42 @@ public class PlatformTenantLifecycleService {
         return value == null ? 0L : value;
     }
 
+    private String buildTenantCreateAuditDetail(UserAccountEntity account, boolean reusedExistingAccount, String provisionNote) {
+        String note = trimToNull(provisionNote);
+        StringBuilder builder = new StringBuilder(reusedExistingAccount
+                ? "Provisioned tenant with reused existing owner account"
+                : "Provisioned tenant with new owner account");
+        builder.append(" (account=").append(account.getId()).append(")");
+        if (note != null) {
+            builder.append(" note=").append(note);
+        }
+        return builder.toString();
+    }
+
+    private String requireText(String value, String message) {
+        String trimmed = trimToNull(value);
+        if (trimmed == null) {
+            throw new IllegalArgumentException(message);
+        }
+        return trimmed;
+    }
+
+    private String requireMobile(String mobile) {
+        String normalized = trimToNull(mobile);
+        if (normalized == null || !normalized.matches("^1\\d{10}$")) {
+            throw new IllegalArgumentException("手机号必须是 11 位大陆手机号");
+        }
+        return normalized;
+    }
+
+    private String trimToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private OrgEntity requireOrg(String orgId) {
         if (orgId == null || orgId.isBlank()) {
             throw new IllegalArgumentException("Tenant not found");
@@ -1203,6 +1290,16 @@ public class PlatformTenantLifecycleService {
     public record PurgeJobRetryCommand(String confirmationText, String reason) {
     }
 
+    public record TenantProvisionCommand(
+            String tenantName,
+            String ownerMobile,
+            String ownerDisplayName,
+            String ownerEmail,
+            String initialPassword,
+            String provisionNote
+    ) {
+    }
+
     public record TenantLifecycleView(
             String orgId,
             String name,
@@ -1218,6 +1315,16 @@ public class PlatformTenantLifecycleService {
             RetentionPolicyView retention,
             List<PurgeJobView> jobs,
             List<ExportJobView> exportJobs
+    ) {
+    }
+
+    public record TenantProvisionView(
+            String orgId,
+            String orgName,
+            String status,
+            String ownerMemberId,
+            String ownerAccountId,
+            boolean reusedExistingAccount
     ) {
     }
 

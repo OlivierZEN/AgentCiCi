@@ -19,6 +19,8 @@ source "$ENV_FILE"
 set +a
 
 ACR_REGISTRY="${ACR_REGISTRY:-op-registry.cloudcc.cn}"
+CICI_APP_VERSION="${CICI_APP_VERSION:-${CICI_IMAGE_TAG:-latest}}"
+export CICI_APP_VERSION
 COMPOSE_ARGS=(-f "$COMPOSE_FILE")
 
 if [[ "${SSL_ENABLED:-false}" == "true" ]]; then
@@ -40,6 +42,7 @@ cat <<EOF
 
 CICI ACR deployment started.
 
+Version:  ${CICI_APP_VERSION}
 Frontend: http://127.0.0.1:${FRONTEND_PORT:-80}
 Backend:  http://127.0.0.1:${BACKEND_PORT:-8080}/actuator/health
 RabbitMQ: http://127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}
