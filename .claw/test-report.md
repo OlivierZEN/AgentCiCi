@@ -37,6 +37,19 @@ last_run_status: partial_success
   - Notes:
     - Real upload to 百炼 is verified on chunks; full-file upload can be retried on another network using `docs/specs/FEAT-054-bailian-real-audio-test-plan.md`.
 
+- Google Fonts/network dependency localization (2026-05-23T15:17:00Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` with intended frontend/state files -> **allowed**.
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**, loaded `PRODUCT.md` and `DESIGN.md` from repo root.
+    - `search-before`: `rg` found Google network loading only in `frontend/index.html` for Google Fonts preconnect/CSS.
+    - `font-files`: downloaded and validated 10 local TrueType files under `frontend/public/fonts/` for Fraunces and Plus Jakarta Sans requested weights/styles -> **success**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `search-after`: targeted `rg` for `googleapis`, `gstatic`, `fonts.google`, `google.com`, `googletagmanager`, `google-analytics`, and `googleusercontent` excluding `frontend/node_modules/**` and `frontend/dist/**` -> **success**, no matches.
+    - `browser`: in-app browser opened `http://127.0.0.1:5173/`; page rendered, `document` links had no Google URLs, injected CSS contained local `/fonts/...` `@font-face` declarations -> **success**.
+    - `curl`: Vite served `/` without Google font links and served `/fonts/fraunces-400.ttf` plus `/fonts/plus-jakarta-sans-400.ttf` as `200 OK` `font/ttf` -> **success**.
+  - Notes:
+    - The app now keeps existing `Fraunces` and `Plus Jakarta Sans` font-family names while resolving them from local static assets instead of Google-hosted CSS or font files.
+
 - Codeup change/6 and change/7 post-merge validation (2026-05-22T13:25:28Z):
   - Commands:
     - `identity`: manager `dev-login.py` for `MANAGER-001` using `/Users/owenmacbook/.ssh/id_ed25519_agentcici_pm` -> **allowed**.
