@@ -6394,6 +6394,60 @@
   font-weight: 700;
 }
 
+.cici-meeting-drawer__section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cici-meeting-drawer__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  clip-path: inset(50%);
+}
+
+.cici-meeting-drawer__text-action {
+  appearance: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #876223;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 700;
+  box-shadow: none;
+  transform: none;
+  cursor: pointer;
+}
+
+.cici-meeting-drawer__text-action:hover,
+.cici-meeting-drawer__text-action:focus,
+.cici-meeting-drawer__text-action:focus-visible {
+  background: transparent;
+  color: #876223;
+  box-shadow: none;
+  outline: none;
+  text-decoration: underline;
+  text-decoration-color: #b99652;
+  text-underline-offset: 3px;
+  transform: none;
+}
+
+.cici-meeting-drawer__text-action:disabled {
+  color: #7c6d59;
+  cursor: not-allowed;
+  text-decoration: none;
+  opacity: 0.62;
+}
+
 .cici-meeting-drawer__section-head span,
 .cici-meeting-drawer__status span,
 .cici-meeting-drawer__speaker span {
@@ -6444,10 +6498,12 @@
 }
 
 .cici-meeting-drawer__dot.is-recording,
+.cici-meeting-drawer__dot.is-transcribing,
 .cici-meeting-drawer__dot.is-summarizing {
   background: #a67c2f;
 }
 
+.cici-meeting-drawer__dot.is-transcribed,
 .cici-meeting-drawer__dot.is-done {
   background: #166534;
 }

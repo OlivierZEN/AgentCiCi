@@ -1,6 +1,10 @@
 spring:
   application:
     name: cc-cici-assistant-backend
+  servlet:
+    multipart:
+      max-file-size: 256MB
+      max-request-size: 256MB
   datasource:
     url: jdbc:postgresql://localhost:5432/agentcici
     username: cici

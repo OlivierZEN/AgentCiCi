@@ -1,0 +1,53 @@
+task_id: TASK-134
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-25T00:31:20Z
+expires_at: none
+spec_path: docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
+task_status_path: .claw/tasks/TASK-134.md
+branch: codex/TASK-134-ai-minutes-local-audio-upload
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/12
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/assistant/**
+  - frontend/src/meeting/**
+  - frontend/src/shared/**
+  - frontend/src/help/**
+  - docs/specs/**
+scope_files:
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/tasks/TASK-134.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
+task_boundary:
+  - "Add AI 听记 local audio/video upload and backend 百炼 ASR transcription with speaker diarization."
+  - "Keep the returned transcript compatible with existing speaker editing and summary generation."
+  - "Enforce the requested extension whitelist on frontend and backend."
+  - "Do not add persistence, object storage, migrations, production credential changes, or mobile compatibility scope."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-25T00:31:20Z; user requested AI 听记 local upload with 百炼 multi-speaker speech recognition."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-134 on branch codex/TASK-134-ai-minutes-local-audio-upload before implementation edits."
