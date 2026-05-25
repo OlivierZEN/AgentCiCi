@@ -1,10 +1,12 @@
-import { KeyboardEvent, RefObject } from "react";
+import { ChangeEvent, KeyboardEvent, RefObject, useRef } from "react";
 import ChatMarkdown from "../components/ChatMarkdown";
 
 export type MeetingPanelStatus =
   | "idle"
   | "permission"
   | "recording"
+  | "transcribing"
+  | "transcribed"
   | "stopping"
   | "summarizing"
   | "ready_to_writeback"
@@ -60,6 +62,9 @@ type Props = {
   primaryActionVisible?: boolean;
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
+  fileUploadAccept?: string;
+  fileUploadDisabled?: boolean;
+  onFileUpload?: (file: File) => void;
   onSpeakerEditStart: (lineId: string, speakerId: string, speakerName: string) => void;
   onSpeakerEditValueChange: (value: string) => void;
   onSpeakerEditCommit: () => void;
@@ -93,6 +98,9 @@ export function MeetingMinutesPanel({
   primaryActionVisible = true,
   secondaryActionLabel = "收起",
   onSecondaryAction,
+  fileUploadAccept,
+  fileUploadDisabled,
+  onFileUpload,
   onSpeakerEditStart,
   onSpeakerEditValueChange,
   onSpeakerEditCommit,
@@ -105,9 +113,17 @@ export function MeetingMinutesPanel({
   writebackResultMessage,
   hideHeader = false,
 }: Props) {
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const statusLabel = statusText(status);
   const showWritebackAction = Boolean(onConfirmWriteback && writebackItems.length);
   const showFooter = Boolean(onSecondaryAction || showWritebackAction || primaryActionVisible);
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (file) {
+      onFileUpload?.(file);
+    }
+  };
 
   return (
     <>
@@ -141,7 +157,29 @@ export function MeetingMinutesPanel({
         <section className="cici-meeting-drawer__section">
           <div className="cici-meeting-drawer__section-head">
             <h3>实时转写</h3>
-            <span>{transcript.length} 段</span>
+            <div className="cici-meeting-drawer__section-actions">
+              {onFileUpload ? (
+                <>
+                  <input
+                    ref={fileInputRef}
+                    className="cici-meeting-drawer__file-input"
+                    type="file"
+                    accept={fileUploadAccept}
+                    onChange={handleFileChange}
+                    hidden
+                  />
+                  <button
+                    type="button"
+                    className="cici-meeting-drawer__text-action"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={fileUploadDisabled}
+                  >
+                    导入录音
+                  </button>
+                </>
+              ) : null}
+              <span>{transcript.length} 段</span>
+            </div>
           </div>
           <div className="cici-meeting-drawer__transcript" ref={transcriptScrollRef}>
             {transcript.map((segment) => (
@@ -289,6 +327,8 @@ export function MeetingMinutesPanel({
 function statusText(status: MeetingPanelStatus): string {
   if (status === "permission") return "请求权限";
   if (status === "recording") return "录音中";
+  if (status === "transcribing") return "解析文件";
+  if (status === "transcribed") return "可生成纪要";
   if (status === "stopping") return "正在结束";
   if (status === "summarizing") return "生成纪要";
   if (status === "ready_to_writeback") return "待确认写回";

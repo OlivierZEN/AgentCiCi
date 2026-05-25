@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-22T13:25:28Z
+updated_at: 2026-05-25T12:24:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-134 - AI minutes local audio upload and speaker diarization
+
+- status: `review`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-054-ai-minutes-local-audio-upload.md`
+- task_status_path: `.claw/tasks/TASK-134.md`
+- assignment_path: `.claw/assignments/TASK-134.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-134 implementation; real 百炼 upload/ASR is proven on 60-second chunks, while whole-file upload remains blocked by local-network reset.
 
 ### TASK-133 - Agent Builder no-model new-Agent model-config redirect
 

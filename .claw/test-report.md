@@ -1,23 +1,41 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-22T13:25:28Z
+updated_at: 2026-05-25T12:24:00Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-22T13:25:28Z
-last_run_status: passed
+last_run_at: 2026-05-25T12:24:00Z
+last_run_status: partial_success
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`passed`
-- 范围：Codeup change/6 and change/7 post-merge validation on `main`
-- 命令：manager `dev-login.py`, `validate-state.py`, `npm ci`, `npm run build`, backend compile, script syntax, `git diff --check`
-- 环境：local `main` after merging `change/6` and `change/7`; frontend dependencies were installed with `npm ci` because `tsc` was initially unavailable in `frontend/node_modules`.
+- 状态：`partial_success`
+- 范围：TASK-134 AI 听记本地录音上传与百炼多发言人识别实现验证
+- 命令：task-scoped `dev-login.py`, backend focused tests, frontend build, browser desktop visual QA, local account login smoke, whole-file real audio smoke, 60-second real chunk upload/ASR smoke, focused backend rerun after result URL fix
+- 环境：local branch `codex/TASK-134-ai-minutes-local-audio-upload`; local Docker infra via Colima; backend `http://127.0.0.1:8080/`
 
 ## Latest Verified Results
+
+- TASK-134 AI 听记 local audio upload and speaker diarization (2026-05-25T12:24:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-134` on `codex/TASK-134-ai-minutes-local-audio-upload` with intended backend/frontend/spec/state files -> **allowed**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=AliyunAsrServiceTest,MeetingMinutesServiceTest test` in `backend/` -> **success**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `browser`: in-app browser desktop verification at `127.0.0.1:5173` -> **success**; AI 应用 / AI 听记 shows compact `导入录音` action, hidden file input no longer appears as an unnamed accessible control, and layout remains stable in the transcript/summary grid.
+    - `local-login-smoke`: provided local account login against `POST /auth/password/login` -> **success**, HTTP 200.
+    - `real-file-smoke`: provided 7.1MB `.m4a` upload against `POST /ai/meeting-minutes/transcribe-file` -> **partial**; first run hit default 1MB multipart limit and led to `spring.servlet.multipart` 256MB config; second run reached 百炼 temporary OSS upload and failed with a connection reset from the JDK multipart client; upload transport was changed to fixed-length `HttpURLConnection` multipart and backend focused tests still pass.
+    - `generated-silence-provider-smoke`: generated 1-second WAV upload through `POST /ai/meeting-minutes/transcribe-file` -> **provider reached**; response was HTTP 400 with 百炼 task failure `ASR_RESPONSE_HAVE_NO_WORDS`, expected for silent audio and evidence that the revised OSS upload/task submission path no longer resets.
+    - `confirmed-private-file-rerun`: after explicit user confirmation, provided 7.1MB `.m4a` upload still failed at 百炼 temporary OSS upload with `Connection reset`; no transcript was returned.
+    - `generated-7mb-control`: generated 7MB WAV upload via backend and direct curl to 百炼 temporary OSS both reproduced connection reset around the large-upload phase, indicating network/OSS path instability rather than private audio content.
+    - `chunk-prep`: `/opt/homebrew/bin/ffmpeg` split the provided audio into 15 chunks; most chunks are around 480KB.
+    - `chunk-smoke`: 60-second chunks proved real upload/ASR works. Successful chunks: `chunk-000` HTTP 200 with 7 segments / 5 speakers, `chunk-001` HTTP 200 with 11 / 8, `chunk-002` HTTP 200 with 5 / 3, `chunk-003` HTTP 200 with 10 / 4, and `chunk-005` rerun HTTP 200 with 5 / 2. No transcript text was recorded.
+    - `provider-url-fix`: first successful chunk exposed an OSS `SignatureDoesNotMatch` when downloading 百炼 `transcription_url`; `AliyunAsrService` now downloads the pre-signed OSS result URL verbatim and focused backend tests pass.
+    - `network-instability`: whole-file 7.1MB upload and `chunk-004` still hit intermittent local-network / 百炼 temporary OSS `Connection reset`; user accepted stopping after upload was proven by successful chunks.
+  - Notes:
+    - Real upload to 百炼 is verified on chunks; full-file upload can be retried on another network using `docs/specs/FEAT-054-bailian-real-audio-test-plan.md`.
 
 - Codeup change/6 and change/7 post-merge validation (2026-05-22T13:25:28Z):
   - Commands:

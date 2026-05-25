@@ -65,7 +65,7 @@ type FrontLoginMode = "login_mode1" | "login_mode2";
 type LoginMode2CubePhase = "brand" | "loading";
 type WorkbenchStateStatus = "处理中" | "检索中" | "等待确认" | "已完成" | "待命中";
 type LoginMode2CubeFace = { className: string; image: string; label?: string; fit?: "cover" | "contain" };
-type MeetingStatus = "idle" | "recording" | "stopping" | "summarizing" | "done" | "error";
+type MeetingStatus = "idle" | "recording" | "transcribing" | "transcribed" | "stopping" | "summarizing" | "done" | "error";
 type MeetingTranscriptSegment = {
   id: string;
   speakerId: string;
@@ -76,6 +76,42 @@ type MeetingTranscriptSegment = {
   endMs?: number;
 };
 type MeetingSpeakerEdit = { speakerId: string; lineId: string; value: string };
+type MeetingFileTranscriptSegment = {
+  speakerId?: string;
+  speakerName?: string;
+  text?: string;
+  startMs?: number;
+  endMs?: number;
+};
+type MeetingFileTranscriptionResponse = {
+  data?: {
+    transcript?: MeetingFileTranscriptSegment[];
+    file?: { name?: string; extension?: string; size?: number };
+    model?: { modelName?: string };
+  };
+  message?: string;
+};
+
+const MEETING_FILE_EXTENSIONS = [
+  "aac",
+  "amr",
+  "avi",
+  "flac",
+  "flv",
+  "m4a",
+  "mkv",
+  "mov",
+  "mp3",
+  "mp4",
+  "mpeg",
+  "ogg",
+  "opus",
+  "wav",
+  "webm",
+  "wma",
+  "wmv",
+];
+const MEETING_FILE_ACCEPT = MEETING_FILE_EXTENSIONS.map((item) => `.${item}`).join(",");
 
 type AgentWorkspace = {
   id: string;
@@ -577,6 +613,21 @@ function formatWorkbenchTime(date = new Date()) {
     minute: "2-digit",
     hour12: false,
   }).format(date);
+}
+
+function formatMeetingOffset(startMs: number, endMs?: number) {
+  const start = formatDuration(startMs);
+  if (endMs === undefined || endMs <= startMs) {
+    return start;
+  }
+  return `${start}-${formatDuration(endMs)}`;
+}
+
+function formatDuration(ms: number) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
 const WORKBENCH_DOCK_AGENTS: WorkbenchDockAgent[] = [
@@ -2463,7 +2514,7 @@ export default function AssistantApp() {
     });
   };
 
-  const buildMeetingSegment = (text: string, speakerId?: string, speakerName?: string): MeetingTranscriptSegment => {
+  const buildMeetingSegment = (text: string, speakerId?: string, speakerName?: string, startMs?: number, endMs?: number): MeetingTranscriptSegment => {
     const safeSpeakerId = speakerId?.trim() || "1";
     const safeSpeakerName = meetingSpeakerNamesRef.current[safeSpeakerId]?.trim() || speakerName?.trim() || speakerDisplayName(safeSpeakerId);
     return {
@@ -2471,7 +2522,9 @@ export default function AssistantApp() {
       speakerId: safeSpeakerId,
       speakerName: safeSpeakerName,
       text: text.trim(),
-      time: formatWorkbenchTime(),
+      time: startMs === undefined ? formatWorkbenchTime() : formatMeetingOffset(startMs, endMs),
+      startMs,
+      endMs,
     };
   };
 
@@ -2520,6 +2573,73 @@ export default function AssistantApp() {
     } catch (error) {
       setMeetingStatus("error");
       setMeetingNotice(`会议纪要生成失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const transcribeMeetingFile = async (file: File) => {
+    if (!auth?.token) {
+      setMeetingNotice("请先登录后再导入录音。");
+      return;
+    }
+    if (meetingStatus === "recording" || meetingStatus === "stopping") {
+      setMeetingNotice("实时听记进行中，请先结束录音后再导入文件。");
+      return;
+    }
+    const extension = file.name.split(".").pop()?.toLowerCase() || "";
+    if (!MEETING_FILE_EXTENSIONS.includes(extension)) {
+      setMeetingStatus("error");
+      setMeetingNotice(`暂不支持该文件格式。支持：${MEETING_FILE_EXTENSIONS.join(", ")}`);
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    setMeetingDrawerOpen(true);
+    setMeetingStatus("transcribing");
+    setMeetingNotice(`正在解析 ${file.name}，将按发言人整理转写...`);
+    setMeetingSummary("");
+    setMeetingPartial(null);
+    setMeetingSpeakerEdit(null);
+    setMeetingSpeakerNames({});
+    meetingSpeakerNamesRef.current = {};
+    meetingTranscriptRef.current = [];
+    setMeetingTranscript([]);
+    try {
+      const response = await fetch("/ai/meeting-minutes/transcribe-file", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${auth.token}`,
+        },
+        body: formData,
+      });
+      const body = await response.json().catch(() => null) as MeetingFileTranscriptionResponse | null;
+      if (!response.ok || !body?.data?.transcript?.length) {
+        throw new Error(body?.message || `HTTP ${response.status}`);
+      }
+      const nextSegments = body.data.transcript
+        .filter((segment) => segment.text?.trim())
+        .map((segment) => buildMeetingSegment(
+          segment.text || "",
+          segment.speakerId,
+          segment.speakerName,
+          segment.startMs,
+          segment.endMs,
+        ));
+      if (!nextSegments.length) {
+        throw new Error("未识别到可用语音内容");
+      }
+      const nextSpeakerNames = nextSegments.reduce<Record<string, string>>((acc, segment) => {
+        acc[segment.speakerId] = segment.speakerName;
+        return acc;
+      }, {});
+      meetingTranscriptRef.current = nextSegments;
+      meetingSpeakerNamesRef.current = nextSpeakerNames;
+      setMeetingTranscript(nextSegments);
+      setMeetingSpeakerNames(nextSpeakerNames);
+      setMeetingStatus("transcribed");
+      setMeetingNotice(`已解析 ${body.data.file?.name || file.name}，共 ${nextSegments.length} 段，可继续编辑发言人或生成纪要。`);
+    } catch (error) {
+      setMeetingStatus("error");
+      setMeetingNotice(`录音解析失败：${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -2645,7 +2765,7 @@ export default function AssistantApp() {
       stopAsrSession();
       return;
     }
-    if (meetingStatus === "error" && meetingTranscriptRef.current.length > 0) {
+    if ((meetingStatus === "transcribed" || meetingStatus === "error") && meetingTranscriptRef.current.length > 0) {
       meetingShouldSummarizeRef.current = false;
       void summarizeMeetingTranscript();
     }
@@ -3192,11 +3312,14 @@ export default function AssistantApp() {
     (meetingStatus === "error" && meetingTranscript.length === 0 && !meetingPartial);
   const aiMeetingPrimaryLabel = meetingStatus === "recording"
     ? "结束并生成纪要"
+    : meetingStatus === "transcribed"
+      ? "生成纪要"
     : aiMeetingCanStart
       ? meetingStatus === "done" ? "开始新听记" : "开始听记"
       : "生成纪要";
   const aiMeetingPrimaryDisabled =
     meetingStatus === "stopping" ||
+    meetingStatus === "transcribing" ||
     meetingStatus === "summarizing" ||
     ((listening || !speechSupported) && aiMeetingCanStart);
   const aiMeetingShowHeroAction = aiMeetingCanStart;
@@ -3908,7 +4031,7 @@ export default function AssistantApp() {
             >
               <MeetingMinutesPanel
                 status={meetingStatus}
-                notice={meetingNotice || "输入“开始会议纪要”后自动开始。"}
+                notice={meetingNotice || "输入“开始会议纪要”后自动开始，也可导入本地录音。"}
                 transcript={meetingTranscript}
                 partial={meetingPartial}
                 summary={meetingSummary}
@@ -3919,7 +4042,10 @@ export default function AssistantApp() {
                 onSecondaryAction={closeMeetingDrawer}
                 onPrimaryAction={stopMeetingAndSummarize}
                 primaryActionLabel={meetingStatus === "recording" ? "结束并生成纪要" : "生成纪要"}
-                primaryActionDisabled={meetingStatus === "idle" || meetingStatus === "stopping" || meetingStatus === "summarizing" || meetingStatus === "done"}
+                primaryActionDisabled={meetingStatus === "idle" || meetingStatus === "stopping" || meetingStatus === "transcribing" || meetingStatus === "summarizing" || meetingStatus === "done"}
+                fileUploadAccept={MEETING_FILE_ACCEPT}
+                fileUploadDisabled={meetingStatus === "recording" || meetingStatus === "stopping" || meetingStatus === "transcribing" || meetingStatus === "summarizing"}
+                onFileUpload={(file) => void transcribeMeetingFile(file)}
                 onSpeakerEditStart={startMeetingSpeakerEdit}
                 onSpeakerEditValueChange={(value) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value } : prev))}
                 onSpeakerEditCommit={commitMeetingSpeakerEdit}
@@ -4245,7 +4371,7 @@ export default function AssistantApp() {
                   title="AI 听记"
                   hideHeader
                   status={meetingStatus}
-                  notice={meetingNotice || "点击开始听记后自动请求麦克风权限。"}
+                  notice={meetingNotice || "点击开始听记后自动请求麦克风权限，也可导入本地录音。"}
                   transcript={meetingTranscript}
                   partial={meetingPartial}
                   summary={meetingSummary}
@@ -4256,6 +4382,9 @@ export default function AssistantApp() {
                   primaryActionLabel={aiMeetingPrimaryLabel}
                   primaryActionDisabled={aiMeetingPrimaryDisabled}
                   primaryActionVisible={aiMeetingShowPanelPrimary}
+                  fileUploadAccept={MEETING_FILE_ACCEPT}
+                  fileUploadDisabled={meetingStatus === "recording" || meetingStatus === "stopping" || meetingStatus === "transcribing" || meetingStatus === "summarizing"}
+                  onFileUpload={(file) => void transcribeMeetingFile(file)}
                   onSpeakerEditStart={startMeetingSpeakerEdit}
                   onSpeakerEditValueChange={(value) => setMeetingSpeakerEdit((prev) => (prev ? { ...prev, value } : prev))}
                   onSpeakerEditCommit={commitMeetingSpeakerEdit}
