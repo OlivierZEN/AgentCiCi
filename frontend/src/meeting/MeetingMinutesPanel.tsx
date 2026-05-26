@@ -60,6 +60,9 @@ type Props = {
   primaryActionLabel: string;
   primaryActionDisabled?: boolean;
   primaryActionVisible?: boolean;
+  onDownloadTranscript?: () => void;
+  downloadTranscriptLabel?: string;
+  downloadTranscriptDisabled?: boolean;
   secondaryActionLabel?: string;
   onSecondaryAction?: () => void;
   fileUploadAccept?: string;
@@ -96,6 +99,9 @@ export function MeetingMinutesPanel({
   primaryActionLabel,
   primaryActionDisabled,
   primaryActionVisible = true,
+  onDownloadTranscript,
+  downloadTranscriptLabel = "下载转写",
+  downloadTranscriptDisabled,
   secondaryActionLabel = "收起",
   onSecondaryAction,
   fileUploadAccept,
@@ -115,8 +121,9 @@ export function MeetingMinutesPanel({
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const statusLabel = statusText(status);
+  const showDownloadTranscriptAction = Boolean(onDownloadTranscript);
   const showWritebackAction = Boolean(onConfirmWriteback && writebackItems.length);
-  const showFooter = Boolean(onSecondaryAction || showWritebackAction || primaryActionVisible);
+  const showFooter = Boolean(onSecondaryAction || showDownloadTranscriptAction || showWritebackAction || primaryActionVisible);
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
@@ -305,6 +312,16 @@ export function MeetingMinutesPanel({
                 disabled={confirmWritebackDisabled}
               >
                 确认写回
+              </button>
+            ) : null}
+            {showDownloadTranscriptAction ? (
+              <button
+                type="button"
+                className="cici-meeting-drawer__btn cici-meeting-drawer__btn--secondary"
+                onClick={onDownloadTranscript}
+                disabled={downloadTranscriptDisabled}
+              >
+                {downloadTranscriptLabel}
               </button>
             ) : null}
             {primaryActionVisible ? (

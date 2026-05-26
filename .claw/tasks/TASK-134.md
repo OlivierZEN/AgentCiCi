@@ -7,10 +7,10 @@ status: review
 assignee: MANAGER-001
 owner_role: fullstack-agent
 branch: codex/TASK-134-ai-minutes-local-audio-upload
-pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/12
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/13
 spec_path: docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
 assignment_path: .claw/assignments/TASK-134.yaml
-updated_at: 2026-05-25T13:07:26Z
+updated_at: 2026-05-25T23:45:03Z
 updated_by: MANAGER-001
 ---
 
@@ -44,6 +44,8 @@ updated_by: MANAGER-001
 - 2026-05-25T01:50:00Z: User explicitly approved real private-recording upload; full 7.1MB file still failed at 百炼 temporary OSS upload with `Connection reset`, generated 7MB control file reproduced the same reset, and 60-second ffmpeg chunks were prepared. Testing is paused per user request; handoff plan is in `docs/specs/FEAT-054-bailian-real-audio-test-plan.md`.
 - 2026-05-25T12:24:00Z: Per user direction, stopped after proving upload works. Real 60-second chunks successfully uploaded to 百炼, completed Fun-ASR, and returned speaker diarization segments; whole-file upload still appears blocked by local network/temporary OSS reset. Also fixed 百炼 result JSON download to preserve pre-signed OSS URLs verbatim.
 - 2026-05-25T13:07:26Z: Created Codeup change request change/12 for TASK-134 and updated the branch with latest `origin/main`.
+- 2026-05-25T23:32:21Z: Added a post-transcription `下载转写` action beside the AI 听记 footer primary action. It exports the current edited speaker transcript to a local Markdown file.
+- 2026-05-26T07:45:03+08:00: Created Codeup change request change/13 for the transcript download update.
 
 ## Verification
 
@@ -59,3 +61,8 @@ updated_by: MANAGER-001
 - `ffmpeg` chunk preparation for the provided recording -> **success**; 15 chunks were generated under `/tmp`, most around 480KB.
 - Real 百炼 chunk smoke -> **partial success sufficient for upload proof**: chunks `000`, `001`, `002`, `003`, and `005` uploaded and returned HTTP 200 with Fun-ASR transcript segments and speaker metadata; `chunk-000` confirmed 7 segments / 5 speakers, `chunk-001` 11 / 8, `chunk-002` 5 / 3, `chunk-003` 10 / 4, and `chunk-005` 5 / 2. `chunk-004` hit intermittent 百炼 upload policy / temporary OSS connection reset on this local network.
 - Focused backend rerun after result URL fix: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=AliyunAsrServiceTest,MeetingMinutesServiceTest test` in `backend/` -> **success**.
+- Task-scoped `dev-login.py` for `MANAGER-001` / `TASK-134` with intended frontend/state files -> **allowed**.
+- Frontend rerun after transcript download optimization: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+- Local dev server reachability after UI change: `curl -sS -I http://127.0.0.1:5173/` -> **success**, HTTP 200.
+- Diff hygiene after UI change: `git diff --check` -> **success**.
+- Playwright desktop page-open after UI change -> **partial**; after network escalation the wrapper opened `http://127.0.0.1:5173/` and captured the login surface, but full AI 听记 screenshot QA was not completed because local backend/login was unavailable in this session.

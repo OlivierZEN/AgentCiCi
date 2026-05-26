@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-25T12:24:00Z
+updated_at: 2026-05-25T23:32:21Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-25T12:24:00Z
+last_run_at: 2026-05-25T23:32:21Z
 last_run_status: partial_success
 ---
 
@@ -13,11 +13,24 @@ last_run_status: partial_success
 ## Latest Run Summary
 
 - 状态：`partial_success`
-- 范围：TASK-134 AI 听记本地录音上传与百炼多发言人识别实现验证
-- 命令：task-scoped `dev-login.py`, backend focused tests, frontend build, browser desktop visual QA, local account login smoke, whole-file real audio smoke, 60-second real chunk upload/ASR smoke, focused backend rerun after result URL fix
-- 环境：local branch `codex/TASK-134-ai-minutes-local-audio-upload`; local Docker infra via Colima; backend `http://127.0.0.1:8080/`
+- 范围：TASK-134 AI 听记转写内容 Markdown 下载按钮优化
+- 命令：task-scoped `dev-login.py`, `npm run build`, Vite dev-server reachability, Playwright page-open, `git diff --check`; full AI 听记 screenshot was not completed because local backend/login was unavailable
+- 环境：local branch `codex/TASK-134-ai-minutes-local-audio-upload`; frontend dev server `http://127.0.0.1:5173/`
 
 ## Latest Verified Results
+
+- TASK-134 AI 听记 transcript Markdown download action (2026-05-25T23:32:21Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-134` on `codex/TASK-134-ai-minutes-local-audio-upload` with intended frontend/state files -> **allowed**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `dev-server`: `npm run dev -- --host 127.0.0.1` in `frontend/` -> **success**, served at `http://127.0.0.1:5173/`.
+    - `curl`: `curl -sS -I http://127.0.0.1:5173/` -> **success**, HTTP 200.
+    - `diff`: `git diff --check` -> **success**.
+    - `desktop-page-open`: Playwright CLI wrapper initially needed network access for `@playwright/cli`; after escalation it opened `http://127.0.0.1:5173/` -> **partial**, page title `AgentCiCi`, login surface rendered.
+    - `full-ai-meeting-screenshot`: not completed because local backend `127.0.0.1:8080` was not running, so the authenticated AI 听记 surface could not be reached in this session.
+  - Notes:
+    - The shared AI 听记 panel now accepts an optional transcript download action; the assistant workbench and AI 应用 surface show `下载转写` only after a transcript exists and recording/transcription/summarization is not active.
+    - The download creates `AI听记转写-YYYYMMDD-HHMM.md` with download time, segment count, speaker names, timestamps, and transcript text.
 
 - TASK-134 AI 听记 local audio upload and speaker diarization (2026-05-25T12:24:00Z):
   - Commands:

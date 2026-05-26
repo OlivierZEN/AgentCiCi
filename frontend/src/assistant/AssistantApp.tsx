@@ -630,6 +630,29 @@ function formatDuration(ms: number) {
   return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatDownloadTimestamp(date = new Date()) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}`;
+}
+
+function buildMeetingTranscriptMarkdown(segments: MeetingTranscriptSegment[]) {
+  return [
+    "# AI 听记转写",
+    "",
+    `- 下载时间: ${new Date().toLocaleString("zh-CN")}`,
+    `- 转写段数: ${segments.length}`,
+    "",
+    "---",
+    "",
+    ...segments.flatMap((segment, index) => [
+      `## ${index + 1}. ${segment.speakerName || speakerDisplayName(segment.speakerId)}${segment.time ? ` (${segment.time})` : ""}`,
+      "",
+      segment.text || "（空）",
+      "",
+    ]),
+  ].join("\n");
+}
+
 const WORKBENCH_DOCK_AGENTS: WorkbenchDockAgent[] = [
   {
     key: "cici-system",
@@ -2473,6 +2496,25 @@ export default function AssistantApp() {
     URL.revokeObjectURL(url);
   };
 
+  const downloadMeetingTranscript = () => {
+    const segments = meetingTranscriptRef.current.filter((segment) => segment.text.trim());
+    if (segments.length === 0) {
+      setMeetingNotice("没有可下载的转写内容。");
+      return;
+    }
+    const markdown = buildMeetingTranscriptMarkdown(segments);
+    const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `AI听记转写-${formatDownloadTimestamp()}.md`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    setMeetingNotice(`已下载 ${segments.length} 段转写内容。`);
+  };
+
   const deleteWorkbenchConversation = async (session: ConversationThread) => {
     if (!auth) {
       return;
@@ -3306,6 +3348,13 @@ export default function AssistantApp() {
   const systemAgents = agentWorkspaces.filter((item) => item.category === "system");
   const publishedAgents = agentWorkspaces.filter((item) => item.category === "published");
   const activeAiApplication = AI_APPLICATIONS.find((item) => item.code === activeAiAppCode) ?? AI_APPLICATIONS[0];
+  const meetingTranscriptReadyForDownload =
+    meetingTranscript.length > 0 &&
+    !meetingPartial &&
+    meetingStatus !== "recording" &&
+    meetingStatus !== "stopping" &&
+    meetingStatus !== "transcribing" &&
+    meetingStatus !== "summarizing";
   const aiMeetingCanStart =
     meetingStatus === "idle" ||
     meetingStatus === "done" ||
@@ -4043,6 +4092,7 @@ export default function AssistantApp() {
                 onPrimaryAction={stopMeetingAndSummarize}
                 primaryActionLabel={meetingStatus === "recording" ? "结束并生成纪要" : "生成纪要"}
                 primaryActionDisabled={meetingStatus === "idle" || meetingStatus === "stopping" || meetingStatus === "transcribing" || meetingStatus === "summarizing" || meetingStatus === "done"}
+                onDownloadTranscript={meetingTranscriptReadyForDownload ? downloadMeetingTranscript : undefined}
                 fileUploadAccept={MEETING_FILE_ACCEPT}
                 fileUploadDisabled={meetingStatus === "recording" || meetingStatus === "stopping" || meetingStatus === "transcribing" || meetingStatus === "summarizing"}
                 onFileUpload={(file) => void transcribeMeetingFile(file)}
@@ -4382,6 +4432,7 @@ export default function AssistantApp() {
                   primaryActionLabel={aiMeetingPrimaryLabel}
                   primaryActionDisabled={aiMeetingPrimaryDisabled}
                   primaryActionVisible={aiMeetingShowPanelPrimary}
+                  onDownloadTranscript={meetingTranscriptReadyForDownload ? downloadMeetingTranscript : undefined}
                   fileUploadAccept={MEETING_FILE_ACCEPT}
                   fileUploadDisabled={meetingStatus === "recording" || meetingStatus === "stopping" || meetingStatus === "transcribing" || meetingStatus === "summarizing"}
                   onFileUpload={(file) => void transcribeMeetingFile(file)}
