@@ -15,6 +15,7 @@ allowed_scopes:
   - "backend/src/test/java/com/codehouse/ciciassistant/**"
   - "backend/src/main/resources/**"
   - "backend/pom.xml"
+  - "services/local-asr/**"
   - "deploy/**"
   - "frontend/src/**"
   - "frontend/public/**"
@@ -26,4 +27,4 @@ allowed_scopes:
   - "PRODUCT.md"
   - ".claw/tasks/**"
 allowed_until: none
-notes: "Registered by MANAGER-001 on 2026-05-27. Broad-code ceiling is enabled for normal source, test, design-source, feature-spec, deploy, and per-task status paths, but every edit still requires an active .claw/assignments/TASK-xxx.yaml boundary plus local dev-login before implementation. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+notes: "Registered by MANAGER-001 on 2026-05-27. Broad-code ceiling is enabled for normal source, test, local ASR sidecar service, design-source, feature-spec, deploy, and per-task status paths, but every edit still requires an active .claw/assignments/TASK-xxx.yaml boundary plus local dev-login before implementation. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."

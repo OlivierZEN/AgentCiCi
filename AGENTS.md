@@ -28,6 +28,7 @@
 
 - `.claw/assignments/TASK-xxx.yaml` 中的 `allowed_write_roots` 必须写成可递归匹配的 glob，例如 `frontend/src/**`、`docs/specs/**`、`.claw/tasks/**`；不得只写裸目录如 `frontend/src`，避免身份门禁把子目录文件误判为越界。
 - PM 或执行分配的 agent 更新 assignment 后，必须用 `scripts/check-assignment.py` 或技能包自带 `check-assignment.py` 对任务预期会编辑的代表性文件做一次授权验证；验证失败时先修正 assignment，再让执行 agent 开始编码。
+- PM 或执行分配的 agent 完成任务分配、授权验证和任务状态更新后，必须立即把任务分配内容提交并推送到 `origin/main`，提交范围限于该次分配相关的 `docs/specs/`、`.claw/tasks/`、`.claw/assignments/`、`.claw/task-board.md`、`.claw/current-status.md`、必要的 `.claw/developers/` 授权变更和项目规则文档；不得把执行 agent 的未验证实现代码混入该提交。
 - 如果仓库未内置门禁脚本，仍按已加载的 `cc-aidev-guidelines-common` 技能包脚本执行同等检查，不能因为本地脚本缺失而跳过授权验证。
 
 ## 发布部署治理

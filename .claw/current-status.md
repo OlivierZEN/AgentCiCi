@@ -1,10 +1,10 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-27T08:05:30Z
+updated_at: 2026-05-27T09:30:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-132 / TASK-133 / TASK-137 in review; TASK-136 / TASK-138 / TASK-139 / TASK-140 ready"
+active_task: "TASK-132 / TASK-133 / TASK-137 in review; TASK-141 / TASK-136 / TASK-138 / TASK-139 / TASK-140 ready"
 next_action: "Developers update only .claw/tasks/TASK-xxx.md for progress; PM/integration owner syncs task-board.md and marks done after merge verification."
 read_next:
   goals: false
@@ -23,6 +23,7 @@ read_next:
 ## Snapshot
 
 - Focus: manager-gated task status and assignment authorization cleanup while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
+- Newly assigned: `TASK-141` to `DEV-houyi` for AI 听记 local FunASR / Paraformer-zh realtime ASR; realtime transcription is P0 and uses an isolated Python `services/local-asr/**` sidecar.
 - Status governance: task progress source is `.claw/tasks/TASK-xxx.md`; `.claw/task-board.md` is PM/integration-owned; `.claw/assignments/TASK-xxx.yaml` status tracks authorization lifecycle only.
 - Reauthorized: `TASK-136`, `TASK-139`, and `TASK-140` now use recursive `allowed_write_roots` globs and no longer grant developer write scope to `.claw/task-board.md`.
 - Normalized status: `TASK-132`, `TASK-133`, and `TASK-137` are `review`; `TASK-136`, `TASK-138`, `TASK-139`, and `TASK-140` remain `ready`.
@@ -45,6 +46,7 @@ read_next:
 - `.claw/tasks/TASK-140.md` - OpenAPI public route contract bug
 - `.claw/tasks/TASK-139.md` - Agent list OpenAPI badge bug
 - `.claw/tasks/TASK-136.md`, `.claw/tasks/TASK-138.md` - new feature tasks
+- `.claw/tasks/TASK-141.md`, `docs/specs/FEAT-059-ai-minutes-local-asr.md` - local FunASR realtime ASR implementation assignment
 - `docs/specs/FEAT-054-bailian-real-audio-test-plan.md` - optional another-network whole-file smoke handoff
 - `.claw/tasks/TASK-114.md`, `.claw/tasks/TASK-115.md`, `.claw/tasks/TASK-116.md` - existing active slices
 - `docs/specs/PROJECT-BASELINE.md` - only when legacy architecture or manager-gated coordination context matters
