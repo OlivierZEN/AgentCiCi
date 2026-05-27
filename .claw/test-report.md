@@ -4279,3 +4279,19 @@ last_run_status: success
 - Static diff check:
   - Command: `git diff --check`
   - Result: success
+
+## 2026-05-27 Assistant Root Auth Guard
+
+- Authorization:
+  - Command: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --json`
+  - Result: success
+  - Notes: `MANAGER-001` local identity verified before editing the assistant route auth behavior.
+- Frontend build:
+  - Command: `npm run build` in `frontend/`
+  - Result: success
+  - Notes: existing Vite large chunk warning remains.
+- Browser auth smoke:
+  - Command: Playwright route `/`, then set `localStorage.cici_assistant_token` to an invalid token and reload.
+  - Result: success
+  - Evidence: route rendered the assistant login form, displayed `登录状态已过期，请重新登录。`, and `localStorage` no longer contained `cici_assistant_token`.
+  - Notes: expected `401 Unauthorized` was observed for `/auth/me` during invalid-token validation.

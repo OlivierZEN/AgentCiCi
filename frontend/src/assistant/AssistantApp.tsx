@@ -1217,6 +1217,9 @@ export default function AssistantApp() {
       return null;
     }
   });
+  const [authStatus, setAuthStatus] = useState<"guest" | "checking" | "authenticated">(() =>
+    auth?.token ? "checking" : "guest",
+  );
   const [me, setMe] = useState<MeProfile | null>(null);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -1294,8 +1297,10 @@ export default function AssistantApp() {
   const persistAuth = (payload: AuthPayload | null) => {
     if (payload) {
       localStorage.setItem(LS_ASSISTANT_TOKEN, JSON.stringify(payload));
+      setAuthStatus("authenticated");
     } else {
       localStorage.removeItem(LS_ASSISTANT_TOKEN);
+      setAuthStatus("guest");
     }
     setAuth(payload);
   };
@@ -1331,15 +1336,17 @@ export default function AssistantApp() {
   const loadMe = async (tokenOverride?: string) => {
     const token = tokenOverride ?? auth?.token;
     if (!token) {
-      return;
+      return false;
     }
     try {
       const response = await fetch("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
       const { body } = await safeFetchJson<MeProfile>(response);
       if (response.ok && body?.success) {
         setMe(body.data as MeProfile | null);
+        return true;
       }
     } catch {}
+    return false;
   };
 
   const loadOrganizations = async (tokenOverride?: string) => {
@@ -1847,10 +1854,10 @@ export default function AssistantApp() {
   }, []);
 
   useEffect(() => {
-    if (auth) {
+    if (auth && authStatus === "authenticated") {
       void loadKbs();
     }
-  }, [auth?.token]);
+  }, [auth?.token, authStatus]);
 
   useEffect(() => {
     if (!auth && FRONT_LOGIN_USER_MODE_CONFIG === "agent" && FRONT_LOGIN_MODE_CONFIG === "login_mode2") {
@@ -1860,7 +1867,7 @@ export default function AssistantApp() {
   }, [auth]);
 
   useEffect(() => {
-    if (auth) {
+    if (auth && authStatus === "authenticated") {
       void loadWorkbenchAgents(auth.token);
       void loadWorkbenchStats(auth.token);
     } else {
@@ -1876,16 +1883,45 @@ export default function AssistantApp() {
       setAgentSkillBindingsFailedByAgent({});
       setActiveSkillCodeByAgent({});
     }
-  }, [auth?.token]);
+  }, [auth?.token, authStatus]);
 
   useEffect(() => {
     if (auth) {
-      void loadMe();
-      void loadOrganizations();
+      if (authStatus === "authenticated") {
+        void loadOrganizations();
+      }
     } else {
       setOrganizations([]);
       setOrganizationMenuOpen(false);
     }
+  }, [auth?.token, authStatus]);
+
+  useEffect(() => {
+    if (!auth?.token) {
+      setAuthStatus("guest");
+      return;
+    }
+    let cancelled = false;
+    setAuthStatus("checking");
+    (async () => {
+      const valid = await loadMe(auth.token);
+      if (cancelled) return;
+      if (valid) {
+        setAuthStatus("authenticated");
+        void loadOrganizations();
+        return;
+      }
+      localStorage.removeItem(LS_ASSISTANT_TOKEN);
+      setAuth(null);
+      setMe(null);
+      setAuthStatus("guest");
+      setNotice("登录状态已过期，请重新登录。");
+      setOrganizations([]);
+      setOrganizationMenuOpen(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [auth?.token]);
 
   useEffect(() => {
@@ -1906,7 +1942,7 @@ export default function AssistantApp() {
   }, [auth]);
 
   useEffect(() => {
-    if (auth) {
+    if (auth && authStatus === "authenticated") {
       void loadConversationThreads();
     } else {
       setConversationThreads([]);
@@ -1914,7 +1950,7 @@ export default function AssistantApp() {
       setConversationListNotice("");
       setActiveConversationId("");
     }
-  }, [auth?.token]);
+  }, [auth?.token, authStatus]);
 
   useEffect(() => {
     activeConversationIdRef.current = activeConversationId;
@@ -1932,7 +1968,7 @@ export default function AssistantApp() {
     workspaceTab !== "profile";
 
   useEffect(() => {
-    if (!auth || !sessionStreamActive) {
+    if (!auth || authStatus !== "authenticated" || !sessionStreamActive) {
       return;
     }
     let stopped = false;
@@ -2002,7 +2038,7 @@ export default function AssistantApp() {
       controller?.abort();
       window.clearInterval(timer);
     };
-  }, [auth?.token, sessionStreamActive]);
+  }, [auth?.token, authStatus, sessionStreamActive]);
 
   const conversationsByAgent = useMemo(() => {
     const map = new Map<string, ConversationThread[]>();
@@ -2048,12 +2084,13 @@ export default function AssistantApp() {
       workspaceTab === "settings" ||
       workspaceTab === "profile" ||
       !auth ||
+      authStatus !== "authenticated" ||
       !activeConversationId
     ) {
       return;
     }
     void loadConversationMessages(activeConversationId, true);
-  }, [activeConversationId, auth?.token, workspaceTab]);
+  }, [activeConversationId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab === "workbench" || workspaceTab === "monitor" || workspaceTab === "crm" || workspaceTab === "settings" || workspaceTab === "profile") {
@@ -2109,24 +2146,24 @@ export default function AssistantApp() {
   const visibleMessages = workspaceTab === "workbench" ? workbenchMessages : messages;
 
   useEffect(() => {
-    if (!auth?.token || workspaceTab !== "workbench") {
+    if (!auth?.token || authStatus !== "authenticated" || workspaceTab !== "workbench") {
       return;
     }
     if (activeWorkbenchSkillBindingsLoaded || activeWorkbenchSkillLoadFailed) {
       return;
     }
     void loadAgentSkillBindings(activeWorkbenchAgentId, auth.token);
-  }, [activeWorkbenchAgentId, activeWorkbenchSkillBindingsLoaded, activeWorkbenchSkillLoadFailed, auth?.token, workspaceTab]);
+  }, [activeWorkbenchAgentId, activeWorkbenchSkillBindingsLoaded, activeWorkbenchSkillLoadFailed, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
-    if (!auth?.token || workspaceTab !== "workbench" || !quickCommandMenuOpen) {
+    if (!auth?.token || authStatus !== "authenticated" || workspaceTab !== "workbench" || !quickCommandMenuOpen) {
       return;
     }
     if (quickCommandsByAgent[activeWorkbenchAgentId]) {
       return;
     }
     void loadQuickCommands(activeWorkbenchAgentId, auth.token);
-  }, [activeWorkbenchAgentId, auth?.token, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
+  }, [activeWorkbenchAgentId, auth?.token, authStatus, quickCommandMenuOpen, quickCommandsByAgent, workspaceTab]);
   const activeKbNames = kbs.filter((kb) => selectedKbIds.includes(kb.id)).map((kb) => kb.name).join(", ") || "未选择";
   const userInitial = getDisplayInitial(me?.displayName || me?.nickname || me?.mobile || "我", "我");
   const currentOrgName = me?.orgName || auth?.orgName || auth?.orgId || "当前组织";
@@ -2231,27 +2268,27 @@ export default function AssistantApp() {
   }, [activeMonitorAgentKey, activeMonitorLogId, monitorRows, monitorSelectedLog, workspaceTab]);
 
   useEffect(() => {
-    if (workspaceTab !== "monitor" || !auth?.token) {
+    if (workspaceTab !== "monitor" || !auth?.token || authStatus !== "authenticated") {
       return;
     }
     void loadWorkbenchAgents(auth.token);
     void loadWorkbenchStats(auth.token);
     void loadMonitorRunLogs(auth.token);
-  }, [auth?.token, workspaceTab]);
+  }, [auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
-    if (workspaceTab !== "monitor" || !auth?.token || !monitorSelectedLog?.traceId) {
+    if (workspaceTab !== "monitor" || !auth?.token || authStatus !== "authenticated" || !monitorSelectedLog?.traceId) {
       setMonitorTraceDetail(null);
       return;
     }
     void loadMonitorTraceDetail(monitorSelectedLog.traceId, auth.token);
-  }, [auth?.token, monitorSelectedLog?.traceId, workspaceTab]);
+  }, [auth?.token, authStatus, monitorSelectedLog?.traceId, workspaceTab]);
 
   useEffect(() => {
     if (workspaceTab !== "workbench") {
       return;
     }
-    if (auth) {
+    if (auth && authStatus === "authenticated") {
       void loadWorkbenchAgents(auth.token);
       void loadWorkbenchStats(auth.token);
       void loadWorkbenchMessages(activeWorkbenchKey, activeWorkbenchSessionId, true);
@@ -2267,7 +2304,7 @@ export default function AssistantApp() {
       setWorkbenchThoughtIndex((current) => current + 1);
     }, 1800);
     return () => window.clearInterval(timer);
-  }, [activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, workspaceTab]);
+  }, [activeWorkbenchKey, activeWorkbenchSessionId, auth?.token, authStatus, workspaceTab]);
 
   useEffect(() => {
     if (!openWorkbenchSessionMenuId) {
@@ -3461,6 +3498,14 @@ export default function AssistantApp() {
       </p>
     </>
   );
+
+  if (auth && authStatus === "checking") {
+    return (
+      <main className="login-root">
+        <p className="subtle">校验登录状态...</p>
+      </main>
+    );
+  }
 
   if (!auth) {
     if (FRONT_LOGIN_USER_MODE_CONFIG === "human") {
