@@ -27,7 +27,7 @@ function formatOrganizationRole(roleCode: string): string {
 
 export default function AdminLogin() {
   const nav = useNavigate();
-  const [identifier, setIdentifier] = useState("13900009999");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("组织管理员专用入口");
   const [pendingOrganizations, setPendingOrganizations] = useState<OrganizationOption[]>([]);

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-25T23:45:03Z
+updated_at: 2026-05-26T23:50:02Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -172,6 +172,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-135 - Clear default login account values
+
+- status: `done`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- task_status_path: `.claw/tasks/TASK-135.md`
+- assignment_path: `.claw/assignments/TASK-135.yaml`
+- blocked_by: `none`
+- next_action: `none`; assistant, admin, and platform login account inputs now start empty and passed static search, frontend build, and browser checks.
 
 ### TASK-131 - Platform account orgless auth context
 

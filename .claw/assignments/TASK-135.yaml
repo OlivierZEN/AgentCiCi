@@ -1,0 +1,44 @@
+task_id: TASK-135
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-26T23:50:02Z
+expires_at: none
+spec_path: docs/specs/PROJECT-BASELINE.md
+task_status_path: .claw/tasks/TASK-135.md
+branch: codex/TASK-135-login-default-account-cleanup
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots: []
+scope_files:
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/admin/AdminLogin.tsx
+  - .claw/tasks/TASK-135.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Inspect all frontend login surfaces and remove hard-coded default login account values from user-facing input state."
+  - "Keep login flows, endpoint payloads, placeholder copy, validation, localStorage keys, and visual language unchanged."
+  - "Do not alter demo lead forms, help copy, marketing pages, backend bootstrap accounts, or unrelated auth behavior."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-26T23:50:02Z; user requested clearing default login account values."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Small focused login hygiene fix. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-135 on branch codex/TASK-135-login-default-account-cleanup before implementation edits."

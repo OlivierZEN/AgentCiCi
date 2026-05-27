@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-25T23:45:03Z
+updated_at: 2026-05-26T23:50:02Z
 updated_by: MANAGER-001
 phase: maintenance
 active_task: "TASK-134 / TASK-133 / TASK-132 / TASK-114 / TASK-115 / TASK-116 / TASK-124"
-next_action: "Review Codeup change/13 for TASK-134 transcript download; AI 听记 now includes a post-transcription Markdown download action, and real 百炼 upload/ASR is proven on 60-second chunks."
+next_action: "Review Codeup change/13 for TASK-134 transcript download; TASK-135 login default account cleanup is complete."
 read_next:
   goals: false
   decisions: false
@@ -24,6 +24,7 @@ read_next:
 
 - Focus: review/update TASK-134 AI 听记 local audio upload and transcript usability refinements while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.0.
 - Mainline active work: `TASK-134`, `TASK-133`, `TASK-132`, `TASK-114`, `TASK-115`, `TASK-116`, `TASK-124`
+- Just completed: `TASK-135` cleared hard-coded default account values from assistant/admin login inputs and the read-only login showcase; static search, frontend build, and desktop browser checks passed.
 - `TASK-134` transcript download update is in Codeup review at change/13: AI 听记 now has local audio/video upload, backend 百炼 temporary OSS upload, Fun-ASR async transcription with speaker diarization, multi-speaker transcript normalization, frontend upload state handling, Spring 256MB multipart limits, a post-transcription `下载转写` Markdown export, and focused tests. Whole-file 7.1MB upload still resets on this local network, but 60-second chunks successfully upload to 百炼 and return Fun-ASR speaker transcript segments.
 - Latest verification: TASK-134 transcript download optimization passed task-scoped identity gate, `npm run build`, Vite HTTP 200 reachability, Playwright page-open to the login surface, and `git diff --check`; full AI 听记 desktop screenshot was not completed because local backend/login was unavailable. Earlier TASK-134 gates passed backend focused tests, frontend build, in-app browser desktop QA, local account login smoke, generated silence provider smoke, real 60-second chunk upload/ASR smoke, and focused rerun after preserving 百炼 result URLs verbatim.
 - Newly assigned: `TASK-133` gives `DEV-fengchu` the Agent Builder no-model new-Agent feedback; `TASK-132` remains assigned to `DEV-fengchu` for focused Agent detail reload.

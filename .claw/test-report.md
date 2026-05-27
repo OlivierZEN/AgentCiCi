@@ -1,23 +1,34 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-25T23:32:21Z
+updated_at: 2026-05-26T23:50:02Z
 updated_by: ai
 status: active
-last_run_at: 2026-05-25T23:32:21Z
-last_run_status: partial_success
+last_run_at: 2026-05-26T23:50:02Z
+last_run_status: success
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`partial_success`
-- 范围：TASK-134 AI 听记转写内容 Markdown 下载按钮优化
-- 命令：task-scoped `dev-login.py`, `npm run build`, Vite dev-server reachability, Playwright page-open, `git diff --check`; full AI 听记 screenshot was not completed because local backend/login was unavailable
-- 环境：local branch `codex/TASK-134-ai-minutes-local-audio-upload`; frontend dev server `http://127.0.0.1:5173/`
+- 状态：`success`
+- 范围：TASK-135 登录页默认账号清理
+- 命令：manager/bootstrap `dev-login.py`, task-scoped `dev-login.py`, targeted `rg`, `npm run build`, in-app browser desktop checks
+- 环境：local branch `codex/TASK-135-login-default-account-cleanup`; frontend dev servers `http://127.0.0.1:5173/` and isolated `http://127.0.0.1:5174/`
 
 ## Latest Verified Results
+
+- TASK-135 login default account cleanup (2026-05-26T23:50:02Z):
+  - Commands:
+    - `identity-bootstrap`: manager `dev-login.py` for TASK-135 state/assignment files -> **allowed**.
+    - `identity-task-scoped`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-135` on `codex/TASK-135-login-default-account-cleanup` with intended frontend/state files -> **allowed**.
+    - `search-defaults`: targeted `rg` for hard-coded default login account patterns and known values (`13900009999`, `zhengyan@cloudcc.com`) under `frontend/src` and `frontend/public` -> **success**, no matches.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `browser`: in-app browser desktop checks confirmed empty initial inputs on `/admin/login`, `/platform/login`, and isolated assistant `/` login -> **success**.
+  - Notes:
+    - Assistant login, admin login, and the alternate read-only login showcase no longer render a default account value.
+    - Platform login already started empty and was included in the browser regression check.
 
 - TASK-134 AI 听记 transcript Markdown download action (2026-05-25T23:32:21Z):
   - Commands:

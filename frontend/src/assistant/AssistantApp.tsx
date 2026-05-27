@@ -1123,7 +1123,7 @@ function HumanModeStaticLogin() {
                     <path d="M4 20C5.6 16.6 8.4 15 12 15C15.6 15 18.4 16.6 20 20" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                 </span>
-                <input value="zhengyan@cloudcc.com" readOnly aria-label="邮箱" />
+                <input value="" readOnly aria-label="邮箱" />
                 <span className="human-login__field-action" aria-hidden>
                   ×
                 </span>
@@ -1198,7 +1198,7 @@ function HumanModeStaticLogin() {
 }
 
 export default function AssistantApp() {
-  const [mobile, setMobile] = useState("13900009999");
+  const [mobile, setMobile] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
   const [registerMode, setRegisterMode] = useState(false);
