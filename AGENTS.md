@@ -18,6 +18,12 @@
 - 功能设计、实现和测试默认不新增移动端兼容实现、移动端布局适配、移动端截图或移动端自动化测试；除非用户明确单独要求，验收只做桌面端产品质量门。
 - 不回退用户或其他 agent 的改动；遇到无关脏工作区时只避开，遇到相关改动时先理解再协作。
 
+## 任务授权规范
+
+- `.claw/assignments/TASK-xxx.yaml` 中的 `allowed_write_roots` 必须写成可递归匹配的 glob，例如 `frontend/src/**`、`docs/specs/**`、`.claw/tasks/**`；不得只写裸目录如 `frontend/src`，避免身份门禁把子目录文件误判为越界。
+- PM 或执行分配的 agent 更新 assignment 后，必须用 `scripts/check-assignment.py` 或技能包自带 `check-assignment.py` 对任务预期会编辑的代表性文件做一次授权验证；验证失败时先修正 assignment，再让执行 agent 开始编码。
+- 如果仓库未内置门禁脚本，仍按已加载的 `cc-aidev-guidelines-common` 技能包脚本执行同等检查，不能因为本地脚本缺失而跳过授权验证。
+
 ## 发布部署治理
 
 - 生产发布、ACR 镜像推送、线上部署、回滚或发布验收必须以 `docs/production-release-runbook.md` 为长期事实源。
@@ -33,6 +39,7 @@
 
 ## 文档职责
 
+- 除非用户或任务说明明确要求使用其他语言，所有项目文档必须使用中文书写。
 - `AGENTS.md`：项目执行规则、PR 默认流程、命名卫生和设计事实源入口。
 - `PRODUCT.md`：产品定位、用户、首要场景、差异化和非目标。
 - `DESIGN.md`：认证后产品界面的人工可读设计摘要。

@@ -10,9 +10,9 @@ branch: codex/TASK-138-openapi-docs-copy-cleanup
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
-  - frontend/src
-  - docs/specs
-  - .claw/tasks
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
 scope_files:
   - .claw/tasks/TASK-138.md
   - docs/specs/FEAT-057-openapi-docs-copy-cleanup.md
@@ -40,5 +40,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T03:37:58Z; user a
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Focused frontend documentation cleanup. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
-hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-138 on branch codex/TASK-138-openapi-docs-copy-cleanup before implementation edits."
+notes: "Focused frontend documentation cleanup. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. allowed_write_roots updated to recursive globs on 2026-05-27 so task files under frontend/src, docs/specs, and .claw/tasks are recognized by the gate."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-138 on branch codex/TASK-138-openapi-docs-copy-cleanup before implementation edits. Recursive allowed_write_roots are authorized by MANAGER-001 for this task boundary."
