@@ -10494,7 +10494,9 @@
 }
 
 .cici-agent-card__select:hover,
-.cici-agent-card__select:focus-visible {
+.cici-agent-card__select:focus-visible,
+.cici-agent-card__select:hover:not(:disabled),
+.cici-agent-card__select:focus-visible:not(:disabled) {
   background: transparent;
   outline: none;
   box-shadow: none;
