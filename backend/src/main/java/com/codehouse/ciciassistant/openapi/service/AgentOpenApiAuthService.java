@@ -42,7 +42,7 @@ public class AgentOpenApiAuthService {
     }
 
     @Transactional
-    public AuthenticatedCredential authenticate(String agentId, HttpServletRequest request) {
+    public AuthenticatedCredential authenticate(HttpServletRequest request) {
         if (!properties.isEnabled()) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_open_api_disabled", "Agent Open API is disabled");
         }
@@ -60,10 +60,6 @@ public class AgentOpenApiAuthService {
                         HttpStatus.UNAUTHORIZED,
                         "agent_api_key_invalid",
                         "API key is invalid or revoked"));
-        String normalizedAgentId = normalizeAgentId(agentId);
-        if (!credential.getAgentId().equals(normalizedAgentId)) {
-            throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found for this API key");
-        }
         if (!AgentApiCredentialEntity.STATUS_ACTIVE.equals(credential.getStatus())) {
             throw new AgentOpenApiException(HttpStatus.UNAUTHORIZED, "agent_api_key_invalid", "API key is invalid or revoked");
         }
@@ -74,7 +70,7 @@ public class AgentOpenApiAuthService {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_api_ip_denied", "Client IP is not allowed");
         }
         AgentDefinitionEntity agent = agentDefinitionRepository
-                .findByOrgIdAndAgentId(credential.getOrgId(), normalizedAgentId)
+                .findByOrgIdAndAgentId(credential.getOrgId(), credential.getAgentId())
                 .orElseThrow(() -> new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found"));
         if (!agent.isEnabled()) {
             throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found");
@@ -84,7 +80,7 @@ public class AgentOpenApiAuthService {
         }
         if (!channelBindingRepository.existsByOrgIdAndAgentIdAndChannelIdAndEnabledTrue(
                 credential.getOrgId(),
-                normalizedAgentId,
+                credential.getAgentId(),
                 "api")) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_channel_disabled", "Agent API channel is disabled");
         }
@@ -135,14 +131,6 @@ public class AgentOpenApiAuthService {
             return realIp.trim();
         }
         return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
-    }
-
-    private String normalizeAgentId(String raw) {
-        String text = raw == null ? "" : raw.trim().toLowerCase();
-        if (!text.matches("^[a-z0-9][a-z0-9-]{1,63}$")) {
-            throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found");
-        }
-        return text;
     }
 
     public void requireScope(AuthenticatedCredential auth, String scope) {

@@ -60,16 +60,16 @@ export default function AgentOpenApiDocsDialog({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const titleId = "agent-open-api-docs-title";
-  const parametersPath = `/agents/${agentId || "{agentId}"}/parameters`;
-  const chatMessagesPath = `/agents/${agentId || "{agentId}"}/chat-messages`;
-  const stopTaskPath = `/agents/${agentId || "{agentId}"}/chat-messages/{taskId}/stop`;
-  const filesPath = `/agents/${agentId || "{agentId}"}/files/upload`;
-  const feedbacksPath = `/agents/${agentId || "{agentId}"}/messages/{messageId}/feedbacks`;
-  const suggestedPath = `/agents/${agentId || "{agentId}"}/messages/{messageId}/suggested`;
-  const messagesPath = `/agents/${agentId || "{agentId}"}/messages`;
-  const conversationsPath = `/agents/${agentId || "{agentId}"}/conversations`;
-  const conversationNamePath = `/agents/${agentId || "{agentId}"}/conversations/{conversationId}/name`;
-  const conversationDeletePath = `/agents/${agentId || "{agentId}"}/conversations/{conversationId}`;
+  const parametersPath = "/parameters";
+  const chatMessagesPath = "/chat-messages";
+  const stopTaskPath = "/chat-messages/{taskId}/stop";
+  const filesPath = "/files/upload";
+  const feedbacksPath = "/messages/{messageId}/feedbacks";
+  const suggestedPath = "/messages/{messageId}/suggested";
+  const messagesPath = "/messages";
+  const conversationsPath = "/conversations";
+  const conversationNamePath = "/conversations/{conversationId}/name";
+  const conversationDeletePath = "/conversations/{conversationId}";
   const status = published ? (apiChannelEnabled ? "运行中" : "未开放 API") : "未发布";
   const normalizedBaseUrl = useMemo(() => baseUrl.replace(/\/$/, ""), [baseUrl]);
 
