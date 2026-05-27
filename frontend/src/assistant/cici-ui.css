@@ -10459,8 +10459,9 @@
 }
 
 .cici-agent-card:hover {
-  border-color: #b99652;
-  box-shadow: 0 8px 20px rgba(43, 34, 23, 0.05);
+  border-color: #ded2bb;
+  box-shadow: none;
+  transform: none;
 }
 
 .cici-agent-card:focus-within {
