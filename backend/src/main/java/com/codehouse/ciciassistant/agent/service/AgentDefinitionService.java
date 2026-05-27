@@ -202,6 +202,28 @@ public class AgentDefinitionService {
         return agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId);
     }
 
+    public List<AgentListItem> listWithChannels(String orgId) {
+        List<AgentDefinitionEntity> definitions = list(orgId);
+        if (definitions.isEmpty()) {
+            return List.of();
+        }
+        Map<String, List<String>> channelsByAgentId = new LinkedHashMap<>();
+        for (AgentDefinitionEntity definition : definitions) {
+            channelsByAgentId.put(definition.getAgentId(), new ArrayList<>());
+        }
+        agentChannelBindingRepository
+                .findByOrgIdAndAgentIdInAndEnabledTrueOrderByIdAsc(orgId, new ArrayList<>(channelsByAgentId.keySet()))
+                .forEach(binding -> {
+                    List<String> channels = channelsByAgentId.get(binding.getAgentId());
+                    if (channels != null) {
+                        channels.add(binding.getChannelId());
+                    }
+                });
+        return definitions.stream()
+                .map(definition -> new AgentListItem(definition, List.copyOf(channelsByAgentId.getOrDefault(definition.getAgentId(), List.of()))))
+                .toList();
+    }
+
     public AgentDetail get(String orgId, String agentId) {
         ensureBuiltinAgents(orgId);
         AgentDefinitionEntity definition = getDefinition(orgId, normalizeAgentId(agentId));
@@ -593,6 +615,12 @@ public class AgentDefinitionService {
             List<String> toolIds,
             List<String> channels,
             Map<String, Object> publishConfigs
+    ) {
+    }
+
+    public record AgentListItem(
+            AgentDefinitionEntity definition,
+            List<String> channels
     ) {
     }
 

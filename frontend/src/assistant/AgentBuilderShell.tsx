@@ -1364,12 +1364,19 @@ export function resolveAgentAfterDelete<T extends { id: string }>(
   return { nextAgents, fallbackAgentId };
 }
 
+export function resolveAgentChannels(itemChannels: string[] | undefined, fallbackChannels: PublishChannelId[]): PublishChannelId[] {
+  if (!Array.isArray(itemChannels)) {
+    return fallbackChannels;
+  }
+  return itemChannels.filter((ch): ch is PublishChannelId =>
+    CHANNEL_OPTIONS.some((opt) => opt.id === ch),
+  );
+}
+
 function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: KnowledgeBase[]): AgentRecord {
   const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((kb) => kb.id));
   const model = item.model && item.model.trim() ? item.model : fallbackDraft.model;
-  const channels = (item.channels ?? []).filter((ch): ch is PublishChannelId =>
-    CHANNEL_OPTIONS.some((opt) => opt.id === ch),
-  );
+  const channels = resolveAgentChannels(item.channels, fallbackDraft.channels);
   const draft: AgentDraft = {
     name: item.name ?? fallbackDraft.name,
     avatarBase64: item.avatarBase64 ?? "",
@@ -1378,7 +1385,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
     model,
     systemPrompt: item.systemPrompt ?? fallbackDraft.systemPrompt,
     specText: item.specText ?? fallbackDraft.specText,
-    channels: channels.length > 0 ? channels : fallbackDraft.channels,
+    channels,
     knowledgeBaseIds: item.knowledgeBaseIds ?? fallbackDraft.knowledgeBaseIds,
     toolIds: item.toolIds ?? fallbackDraft.toolIds,
     handoffRule: item.handoffRule ?? fallbackDraft.handoffRule,
