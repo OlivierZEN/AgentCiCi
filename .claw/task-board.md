@@ -182,7 +182,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-135.md`
 - assignment_path: `.claw/assignments/TASK-135.yaml`
 - blocked_by: `none`
-- next_action: `none`; assistant, admin, and platform login account inputs now start empty and passed static search, frontend build, and browser checks.
+- next_action: `none`; Codeup change/14 is open. Assistant, admin, and platform login account inputs now start empty and passed static search, frontend build, and browser checks.
 
 ### TASK-131 - Platform account orgless auth context
 

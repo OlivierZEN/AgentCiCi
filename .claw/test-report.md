@@ -26,6 +26,7 @@ last_run_status: success
     - `search-defaults`: targeted `rg` for hard-coded default login account patterns and known values (`13900009999`, `zhengyan@cloudcc.com`) under `frontend/src` and `frontend/public` -> **success**, no matches.
     - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
     - `browser`: in-app browser desktop checks confirmed empty initial inputs on `/admin/login`, `/platform/login`, and isolated assistant `/` login -> **success**.
+    - `codeup-mr`: Codeup change request change/14 created from `codex/TASK-135-login-default-account-cleanup` to `main` -> **success**.
   - Notes:
     - Assistant login, admin login, and the alternate read-only login showcase no longer render a default account value.
     - Platform login already started empty and was included in the browser regression check.

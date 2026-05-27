@@ -8,6 +8,7 @@ assignee: MANAGER-001
 owner_role: project-manager
 assignment_path: .claw/assignments/TASK-135.yaml
 spec_path: docs/specs/PROJECT-BASELINE.md
+change_request_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/14
 ---
 
 # TASK-135 - Clear default login account values
@@ -22,6 +23,7 @@ spec_path: docs/specs/PROJECT-BASELINE.md
 - Found default account values in assistant login and admin login state.
 - Platform login already starts empty.
 - Removed the assistant login default mobile value, the admin login default identifier value, and the read-only showcase email value in the alternate login surface.
+- Created Codeup change request: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/14
 
 ## Verification
 

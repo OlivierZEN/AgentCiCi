@@ -7,7 +7,7 @@ expires_at: none
 spec_path: docs/specs/PROJECT-BASELINE.md
 task_status_path: .claw/tasks/TASK-135.md
 branch: codex/TASK-135-login-default-account-cleanup
-pr_url: n/a
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/14
 scope_mode: exact_files
 allowed_write_roots: []
 scope_files:
