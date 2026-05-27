@@ -10465,14 +10465,14 @@
 }
 
 .cici-agent-card:focus-within {
-  border-color: #b99652;
-  box-shadow: 0 0 0 2px rgba(185, 150, 82, 0.22);
+  border-color: #ded2bb;
+  box-shadow: none;
 }
 
 .cici-agent-card.is-active {
-  border-color: #b99652;
+  border-color: #ded2bb;
   background: #faf4e8;
-  box-shadow: inset 0 0 0 1px rgba(185, 150, 82, 0.28);
+  box-shadow: none;
 }
 
 .cici-agent-card__select {
