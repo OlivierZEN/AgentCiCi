@@ -14,6 +14,8 @@ import com.codehouse.ciciassistant.agent.domain.AgentToolBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentToolBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.common.error.ConflictException;
+import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -197,7 +199,7 @@ public class AgentDefinitionService {
 
     public List<AgentDefinitionEntity> list(String orgId) {
         ensureBuiltinAgents(orgId);
-        return agentDefinitionRepository.findByOrgIdOrderByBuiltinDescUpdatedAtDesc(orgId);
+        return agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId);
     }
 
     public AgentDetail get(String orgId, String agentId) {
@@ -282,6 +284,25 @@ public class AgentDefinitionService {
                 command.enabled() == null || command.enabled()
         );
         return definition;
+    }
+
+    @Transactional
+    public AgentDeleteResult deleteCustomAgent(String orgId, String requestedAgentId) {
+        ensureBuiltinAgents(orgId);
+        String agentId = normalizeAgentId(requestedAgentId);
+        AgentDefinitionEntity definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + agentId));
+        if (!definition.isEnabled()) {
+            throw new ResourceNotFoundException("Agent not found: " + agentId);
+        }
+        if (definition.isBuiltin()) {
+            throw new ConflictException("System built-in Agents cannot be deleted");
+        }
+        definition.markDeleted();
+        return new AgentDeleteResult(
+                definition.getAgentId(),
+                definition.getName(),
+                "Agent 已从构建列表隐藏；历史运行、审计、OpenAPI 调用和版本证据仍会保留。");
     }
 
     @Transactional
@@ -444,8 +465,8 @@ public class AgentDefinitionService {
     }
 
     private AgentDefinitionEntity getDefinition(String orgId, String agentId) {
-        return agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
-                .orElseThrow(() -> new IllegalArgumentException("Agent not found: " + agentId));
+        return agentDefinitionRepository.findByOrgIdAndAgentIdAndEnabledTrue(orgId, agentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + agentId));
     }
 
     private Map<String, Object> loadPublishConfigs(String orgId, String agentId) {
@@ -579,6 +600,13 @@ public class AgentDefinitionService {
             List<Long> knowledgeBaseIds,
             List<String> toolIds,
             List<String> channels
+    ) {
+    }
+
+    public record AgentDeleteResult(
+            String agentId,
+            String name,
+            String retentionMessage
     ) {
     }
 

@@ -189,6 +189,13 @@ type AgentApiRecord = {
   skillBindings?: AgentSkillBindingDraft[];
 };
 
+type AgentDeletePayload = {
+  agentId: string;
+  name: string;
+  deleted: boolean;
+  retentionMessage?: string;
+};
+
 type SkillCatalogItem = {
   id: number;
   skillCode: string;
@@ -1345,6 +1352,18 @@ export function applyAgentDetailToList(agents: AgentApiRecord[], detail: AgentAp
   return agents.map((item) => (item.agentId === detail.agentId ? detail : item));
 }
 
+export function resolveAgentAfterDelete<T extends { id: string }>(
+  agents: T[],
+  deletedAgentId: string,
+  selectedAgentId: string,
+): { nextAgents: T[]; fallbackAgentId: string } {
+  const nextAgents = agents.filter((item) => item.id !== deletedAgentId);
+  const fallbackAgentId = selectedAgentId && selectedAgentId !== deletedAgentId && nextAgents.some((item) => item.id === selectedAgentId)
+    ? selectedAgentId
+    : nextAgents[0]?.id ?? "";
+  return { nextAgents, fallbackAgentId };
+}
+
 function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: KnowledgeBase[]): AgentRecord {
   const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((kb) => kb.id));
   const model = item.model && item.model.trim() ? item.model : fallbackDraft.model;
@@ -1443,6 +1462,8 @@ export default function AgentBuilderShell({
   const [pickerSelection, setPickerSelection] = useState<string[]>([]);
   const [openApiDocsOpen, setOpenApiDocsOpen] = useState(false);
   const [openApiKeysOpen, setOpenApiKeysOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
+  const [isDeletingAgent, setIsDeletingAgent] = useState(false);
 
   const setNotice = (message: string) => {
     setNoticeText(message);
@@ -2184,6 +2205,82 @@ export default function AgentBuilderShell({
     }
   };
 
+  const resetEditorAfterDeletedLastAgent = () => {
+    const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((item) => item.id));
+    setSelectedAgentId("");
+    setDraft(fallbackDraft);
+    setPublishConfig(createPublishConfigDraft());
+    setLoadedAgentBaselineDigest(null);
+    setPersistedDraftDigest(null);
+    setLastSuccessfulBackendCompileDigest(null);
+    setPublishReadyFromCompile(false);
+    setTriggersCatalog(null);
+    setExecutionRecordsFromServer([]);
+    setVersionHistory([]);
+    setVersionHistoryError(null);
+    setRuntimeExecutionsError(null);
+    setRuntimeTriggersError(null);
+    setCompileArtifact(generateCompileArtifact(fallbackDraft, kbs, toolCatalog));
+    setActiveEditorTab("definition");
+    setActivePublishChannel("feishu");
+    setActiveCompileTab("preview");
+    setDebugTrace(null);
+  };
+
+  const deleteAgent = async () => {
+    if (!deleteTarget || deleteTarget.builtin) return;
+    setIsDeletingAgent(true);
+    try {
+      const response = await fetch(`/agents/${encodeURIComponent(deleteTarget.id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<AgentDeletePayload>(response);
+      if (!response.ok || !body?.success || !body.data?.deleted) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      const { nextAgents, fallbackAgentId } = resolveAgentAfterDelete(library, deleteTarget.id, selectedAgentId);
+      const fallbackAgent = nextAgents.find((item) => item.id === fallbackAgentId) ?? null;
+      setLibrary(nextAgents);
+      setDeleteTarget(null);
+      if (selectedAgentId === deleteTarget.id) {
+        if (fallbackAgent) {
+          setSelectedAgentId(fallbackAgent.id);
+          setDraft(cloneDraft(fallbackAgent.draft));
+          setPublishConfig(clonePublishConfigDraft(fallbackAgent.publishConfig));
+          setLoadedAgentBaselineDigest(compilePayloadDigest(fallbackAgent.draft, orgId));
+          setPersistedDraftDigest(persistPayloadDigest(fallbackAgent.draft, fallbackAgent.publishConfig, orgId));
+          setLastSuccessfulBackendCompileDigest(null);
+          setPublishReadyFromCompile(false);
+          setTriggersCatalog(null);
+          setExecutionRecordsFromServer([]);
+          setVersionHistory([]);
+          setVersionHistoryError(null);
+          setRuntimeExecutionsError(null);
+          setRuntimeTriggersError(null);
+          setCompileArtifact(generateCompileArtifact(fallbackAgent.draft, kbs, toolCatalog));
+          setActiveEditorTab("definition");
+          setActivePublishChannel(fallbackAgent.draft.channels.includes("feishu") ? "feishu" : fallbackAgent.draft.channels[0] ?? "feishu");
+          setActiveCompileTab("preview");
+          setDebugTrace(null);
+          if (pageMode === "editor" && onOpenAgent) {
+            onOpenAgent(fallbackAgent.id);
+          }
+        } else {
+          resetEditorAfterDeletedLastAgent();
+          if (pageMode === "editor" && onBackToList) {
+            onBackToList();
+          }
+        }
+      }
+      setNotice(`已删除「${deleteTarget.name}」。${body.data.retentionMessage ?? "历史证据仍会保留。"}`);
+    } catch (error) {
+      setNotice(`删除失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsDeletingAgent(false);
+    }
+  };
+
   const persistDraftToBackend = async (options?: { silentSuccessNotice?: boolean }) => {
     if (!selectedAgentId) return;
     const silentSuccessNotice = options?.silentSuccessNotice ?? false;
@@ -2716,25 +2813,37 @@ export default function AgentBuilderShell({
       </div>
       <div className={`cici-sessions__list cici-builder-sidebar__list${asPage ? " cici-builder-sidebar__list--grid" : ""}`}>
         {filteredLibrary.map((item) => (
-          <button
+          <article
             key={item.id}
-            type="button"
             className={`cici-agent-card${pageMode === "editor" && item.id === selectedAgentId ? " is-active" : ""}`}
-            onClick={() => void selectAgent(item.id)}
           >
-            <div className="cici-agent-card__top">
-              <span className="cici-agent-card__name">{item.name}</span>
-              <div className="cici-agent-card__badges">
-                {item.builtin ? <span className="cici-agent-card__builtin">系统内置</span> : null}
-                <span className={`cici-agent-card__status cici-agent-card__status--${item.status === "已发布" ? "published" : item.status === "待联调" ? "testing" : "draft"}`}>{item.status}</span>
+            <button type="button" className="cici-agent-card__select" onClick={() => void selectAgent(item.id)}>
+              <div className="cici-agent-card__top">
+                <span className="cici-agent-card__name">{item.name}</span>
+                <div className="cici-agent-card__badges">
+                  {item.builtin ? <span className="cici-agent-card__builtin">系统内置</span> : null}
+                  <span className={`cici-agent-card__status cici-agent-card__status--${item.status === "已发布" ? "published" : item.status === "待联调" ? "testing" : "draft"}`}>{item.status}</span>
+                </div>
               </div>
-            </div>
-            <p className="cici-agent-card__summary">{item.summary}</p>
-            <div className="cici-agent-card__meta">
-              <span>{item.lastEdited}</span>
-              <span>{item.channels.map((channel) => CHANNEL_OPTIONS.find((option) => option.id === channel)?.label ?? channel).join(" · ")}</span>
-            </div>
-          </button>
+              <p className="cici-agent-card__summary">{item.summary}</p>
+              <div className="cici-agent-card__meta">
+                <span>{item.lastEdited}</span>
+                <span>{item.channels.map((channel) => CHANNEL_OPTIONS.find((option) => option.id === channel)?.label ?? channel).join(" · ")}</span>
+              </div>
+            </button>
+            {!item.builtin ? (
+              <div className="cici-agent-card__actions">
+                <button
+                  type="button"
+                  className="cici-agent-card__delete"
+                  onClick={() => setDeleteTarget(item)}
+                  disabled={isDeletingAgent && deleteTarget?.id === item.id}
+                >
+                  删除
+                </button>
+              </div>
+            ) : null}
+          </article>
         ))}
         {filteredLibrary.length === 0 ? <div className="cici-agent-card cici-agent-card--empty">未找到匹配的 Agent 模板。</div> : null}
       </div>
@@ -3775,6 +3884,32 @@ export default function AgentBuilderShell({
               <button type="button" className="cici-btn" onClick={() => setPickerOpen(null)}>取消</button>
               <button type="button" className="cici-btn cici-btn--primary" onClick={confirmPicker}>
                 确认 ({pickerSelection.length})
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {deleteTarget ? (
+        <div className="cici-modal-backdrop" role="presentation">
+          <div
+            className="cici-modal cici-agent-delete-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cici-agent-delete-title"
+          >
+            <div className="cici-modal__header">
+              <h2 id="cici-agent-delete-title">删除「{deleteTarget.name}」？</h2>
+              <button type="button" className="cici-modal__close" onClick={() => setDeleteTarget(null)} aria-label="关闭">×</button>
+            </div>
+            <div className="cici-agent-delete-modal__body">
+              <p>删除后，这个自定义 Agent 会从构建列表中消失。</p>
+              <p>历史运行记录、审计证据、OpenAPI 调用日志和已产生的版本记录仍会保留，便于后续追溯。</p>
+            </div>
+            <div className="cici-modal__footer">
+              <button type="button" className="cici-btn" onClick={() => setDeleteTarget(null)} disabled={isDeletingAgent}>取消</button>
+              <button type="button" className="cici-btn cici-btn--danger" onClick={() => void deleteAgent()} disabled={isDeletingAgent}>
+                {isDeletingAgent ? "删除中..." : "确认删除"}
               </button>
             </div>
           </div>

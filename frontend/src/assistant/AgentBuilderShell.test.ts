@@ -3,6 +3,7 @@ import {
   applyAgentDetailToList,
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
+  resolveAgentAfterDelete,
   resolveAgentDetailTarget,
   type BaseModelOption,
 } from "./AgentBuilderShell";
@@ -72,5 +73,34 @@ describe("AgentBuilderShell focused agent loading", () => {
     expect(merged[0]).toBe(firstAgent);
     expect(merged[1]).toEqual(focusedDetail);
     expect(merged[1]?.skillBindings).toHaveLength(1);
+  });
+});
+
+describe("resolveAgentAfterDelete", () => {
+  const agents = [
+    { id: "agent-a", name: "A" },
+    { id: "agent-b", name: "B" },
+    { id: "agent-c", name: "C" },
+  ];
+
+  it("keeps the current selection when deleting another agent", () => {
+    const result = resolveAgentAfterDelete(agents, "agent-a", "agent-b");
+
+    expect(result.nextAgents.map((item) => item.id)).toEqual(["agent-b", "agent-c"]);
+    expect(result.fallbackAgentId).toBe("agent-b");
+  });
+
+  it("falls back to the next available agent when deleting the selected one", () => {
+    const result = resolveAgentAfterDelete(agents, "agent-a", "agent-a");
+
+    expect(result.nextAgents.map((item) => item.id)).toEqual(["agent-b", "agent-c"]);
+    expect(result.fallbackAgentId).toBe("agent-b");
+  });
+
+  it("returns an empty fallback when the last agent is deleted", () => {
+    const result = resolveAgentAfterDelete([{ id: "agent-a" }], "agent-a", "agent-a");
+
+    expect(result.nextAgents).toEqual([]);
+    expect(result.fallbackAgentId).toBe("");
   });
 });

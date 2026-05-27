@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -97,6 +98,18 @@ public class AgentDefinitionController {
                 request.enabled()
         ));
         return ApiResponse.ok(toDefinitionPayload(updated));
+    }
+
+    @DeleteMapping("/{agentId}")
+    public ApiResponse<Map<String, Object>> delete(@PathVariable String agentId) {
+        String orgId = TenantContext.requireOrgId();
+        AgentDefinitionService.AgentDeleteResult result = agentDefinitionService.deleteCustomAgent(orgId, agentId);
+        return ApiResponse.ok(Map.of(
+                "agentId", result.agentId(),
+                "name", result.name(),
+                "deleted", true,
+                "retentionMessage", result.retentionMessage()
+        ));
     }
 
     @PutMapping("/{agentId}/spec")
