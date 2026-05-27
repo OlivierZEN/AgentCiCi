@@ -1,7 +1,7 @@
 ---
 kind: team-status
 version: 3
-updated_at: 2026-05-27T05:07:10Z
+updated_at: 2026-05-27T08:05:16Z
 updated_by: summarize-team-status
 status: derived
 ---
@@ -26,12 +26,12 @@ status: derived
 
 | 指标 | 数量 |
 |------|------|
-| 开发者 | 5 |
-| 活跃开发者 | 5 |
+| 开发者 | 6 |
+| 活跃开发者 | 6 |
 | 授权任务 | 28 |
-| 已开始任务 | 19 |
+| 已开始任务 | 20 |
 | 等待 review | 3 |
-| 已集成任务 | 15 |
+| 已集成任务 | 17 |
 | 阻塞任务 | 0 |
 
 ## 成员状态
@@ -47,6 +47,18 @@ status: derived
 - contribution_status: `claimed, merged, review_requested`
 - validation_status: `unknown`
 - integration_status: `integrated, not_ready, waiting_review`
+
+### DEV-houyi
+
+- display_name: `后羿`
+- role: `fullstack-agent`
+- identity_status: `active`
+- assigned_tasks: `none`
+- active_tasks: `none`
+- latest_pr: `none`
+- contribution_status: `none`
+- validation_status: `none`
+- integration_status: `none`
 
 ### DEV-nezha
 
@@ -90,9 +102,9 @@ status: derived
 - role: `project-manager`
 - identity_status: `active`
 - assigned_tasks: `TASK-114, TASK-117, TASK-118, TASK-119, TASK-120, TASK-121, TASK-122, TASK-124, TASK-125, TASK-126, TASK-127, TASK-128, TASK-129, TASK-130, TASK-131, TASK-134, TASK-135, TASK-137`
-- active_tasks: `TASK-114, TASK-119, TASK-124, TASK-134, TASK-137`
+- active_tasks: `TASK-114, TASK-119, TASK-137`
 - latest_pr: `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/13`
-- contribution_status: `claimed, code_submitted, merged, review_requested`
+- contribution_status: `claimed, merged, review_requested`
 - validation_status: `unknown`
 - integration_status: `integrated, not_ready, waiting_review`
 
@@ -111,7 +123,7 @@ status: derived
 | `TASK-121` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-121-db-rename-agentcici` | `None` |
 | `TASK-122` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-122-platform-console-production-polish` | `None` |
 | `TASK-123` | unknown | `DEV-fengchu` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-123-openapi-cloudcc-token-override` | `n/a` |
-| `TASK-124` | FEAT-046 platform tenant manual provisioning and lifecycle split | `MANAGER-001` | `in_progress` | `code_submitted` | `unknown` | `waiting_review` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/5` |
+| `TASK-124` | FEAT-046 platform tenant manual provisioning and lifecycle split | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/5` |
 | `TASK-125` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `n/a` |
 | `TASK-126` | unknown | `MANAGER-001` | `unknown` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `n/a` |
 | `TASK-127` | Merge remaining local branches into the current branch | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `n/a` |
@@ -119,12 +131,12 @@ status: derived
 | `TASK-129` | Admin login organization-selection alignment | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/TASK-124-feat-046-platform-tenant-provisioning` | `None` |
 | `TASK-130` | ACR release version governance and app version badge | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/local-uncommitted-feature-mr` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6` |
 | `TASK-131` | Platform account orgless auth context | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/local-uncommitted-feature-mr` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/6` |
-| `TASK-132` | Agent Builder focused-agent skill binding refresh bugfix | `DEV-fengchu` | `ready` | `review_requested` | `unknown` | `waiting_review` | `codex/TASK-132-agent-builder-skill-refresh-bugfix` | `None` |
-| `TASK-133` | Agent Builder no-model new-Agent model-config redirect | `DEV-fengchu` | `ready` | `review_requested` | `unknown` | `waiting_review` | `codex/TASK-133-agent-builder-new-agent-model-config-fix` | `None` |
-| `TASK-134` | AI minutes local audio upload and speaker diarization | `MANAGER-001` | `review` | `review_requested` | `unknown` | `waiting_review` | `codex/TASK-134-ai-minutes-local-audio-upload` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/13` |
+| `TASK-132` | Agent Builder focused-agent skill binding refresh bugfix | `DEV-fengchu` | `review` | `review_requested` | `unknown` | `waiting_review` | `codex/TASK-132-agent-builder-skill-refresh-bugfix` | `None` |
+| `TASK-133` | Agent Builder no-model new-Agent model-config redirect | `DEV-fengchu` | `review` | `review_requested` | `unknown` | `waiting_review` | `codex/TASK-133-agent-builder-new-agent-model-config-fix` | `None` |
+| `TASK-134` | AI minutes local audio upload and speaker diarization | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `codex/TASK-134-ai-minutes-local-audio-upload` | `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/13` |
 | `TASK-135` | Clear default login account values | `MANAGER-001` | `done` | `merged` | `unknown` | `integrated` | `None` | `None` |
 | `TASK-136` | Frontend auth token sync across tabs | `DEV-fengchu` | `ready` | `claimed` | `unknown` | `not_ready` | `None` | `None` |
-| `TASK-137` | Custom Agent delete action | `MANAGER-001` | `ready` | `claimed` | `unknown` | `not_ready` | `None` | `None` |
+| `TASK-137` | Custom Agent delete action | `MANAGER-001` | `review` | `review_requested` | `unknown` | `waiting_review` | `None` | `None` |
 | `TASK-138` | OpenAPI docs copy cleanup | `DEV-fengchu` | `ready` | `claimed` | `unknown` | `not_ready` | `None` | `None` |
 | `TASK-139` | Agent list OpenAPI badge shows only first Agent | `DEV-fengchu` | `ready` | `claimed` | `unknown` | `not_ready` | `None` | `None` |
 | `TASK-140` | Remove Agent ID from public OpenAPI routes | `DEV-fengchu` | `ready` | `claimed` | `unknown` | `not_ready` | `None` | `None` |

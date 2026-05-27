@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-137
-status: completed
-updated_at: 2026-05-27T07:39:41Z
+status: review
+updated_at: 2026-05-27T08:04:14Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -49,3 +49,4 @@ spec_path: docs/specs/FEAT-056-custom-agent-delete.md
 - Implemented on branch `codex/TASK-137-custom-agent-delete`.
 - Backend adds `DELETE /agents/{agentId}` for custom non-built-in Agent soft delete (`enabled=false`), hides disabled Agents from normal `/agents` list/detail, rejects built-in deletion with 409, and preserves historical rows/evidence.
 - Frontend Agent Builder list now exposes delete only for custom Agents, confirms with an accessible modal naming the Agent, removes deleted Agents from local list state, and falls back to the next available Agent or list empty state.
+- 2026-05-27 manager status normalization: task state is `review` rather than nonstandard `completed`; final `done` waits for merge and integration verification. Assignment authorization remains separate from task progress.

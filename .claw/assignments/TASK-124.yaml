@@ -1,7 +1,7 @@
 task_id: TASK-124
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-05-21T08:48:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
@@ -51,5 +51,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-21T08:48:00Z; user r
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Deliver FEAT-046 end to end with product-register-compliant platform UI, shared organization provisioning logic, platform audit coverage, focused tests, and responsive visual QA. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+notes: "Completed 2026-05-27T07:23:58Z. Delivered FEAT-046 end to end with product-register-compliant platform UI, shared organization provisioning logic, platform audit coverage, focused tests, and desktop visual QA. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
 hard_gate_notes: "MANAGER-001 must run scripts/dev-login.py for TASK-124 on branch codex/TASK-124-feat-046-platform-tenant-provisioning before implementation edits."

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-26T23:50:02Z
-updated_by: ai
+updated_at: 2026-05-27T08:05:30Z
+updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-26T23:50:02Z
+last_run_at: 2026-05-27T08:05:30Z
 last_run_status: success
 ---
 
@@ -13,11 +13,40 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-135 登录页默认账号清理
-- 命令：manager/bootstrap `dev-login.py`, task-scoped `dev-login.py`, targeted `rg`, `npm run build`, in-app browser desktop checks
-- 环境：local branch `codex/TASK-135-login-default-account-cleanup`; frontend dev servers `http://127.0.0.1:5173/` and isolated `http://127.0.0.1:5174/`
+- 范围：任务状态治理与 `DEV-fengchu` assignment 重新授权
+- 命令：manager `dev-login.py`, `check-assignment.py` for `TASK-132/133/136/138/139/140`, negative `task-board.md` scope check, `summarize-team-status.py .claw --write`, `validate-state.py .claw`
+- 环境：local state/authorization update; no business-code verification run
 
 ## Latest Verified Results
+
+- Task status governance and DEV-fengchu reauthorization (2026-05-27T08:05:30Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` -> **allowed**.
+    - `assignment`: `check-assignment.py` for `DEV-fengchu` / `TASK-132`, `TASK-133`, `TASK-136`, `TASK-138`, `TASK-139`, and `TASK-140` with representative task files -> **allowed**.
+    - `negative-scope`: `check-assignment.py` for `DEV-fengchu` / `TASK-140` with `.claw/task-board.md` -> **blocked as expected** (`blocked_write_root_violation`).
+    - `team-status`: `summarize-team-status.py .claw --write` -> **success**.
+    - `state`: `validate-state.py .claw` -> **success**.
+  - Notes:
+    - Developer progress updates are authorized through `.claw/tasks/TASK-xxx.md`; `.claw/task-board.md` remains PM/integration-owned.
+    - `TASK-136`, `TASK-139`, and `TASK-140` assignment roots now use recursive globs.
+    - Nonstandard task status `completed` was removed from active task state; `TASK-137` is now `review`.
+
+- Team registry DEV-houyi (2026-05-27T07:40:58Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended developer/team/status/report files -> **allowed**.
+    - `team-status`: `summarize-team-status.py .claw --write` -> **success**; team summary now lists 6 active developers and includes `DEV-houyi` with no assigned tasks.
+    - `state`: `validate-state.py .claw` -> **partial**; existing unrelated state issues remain: `task-board.md` has `TASK-140` status `completed`, and `.claw/tasks/TASK-137.md` has task-status `completed`.
+  - Notes:
+    - Added active fullstack developer `DEV-houyi` / 后羿 with Codeup identity `zhengyan`.
+    - No business-code verification was needed for this manager-only state update.
+
+- TASK-134 / TASK-124 closeout (2026-05-27T07:23:58Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended task/state/assignment files -> **allowed**.
+    - `state-closeout`: task-board, task status files, assignment status, current-status, team-status, and this report updated to close TASK-134 and TASK-124 -> **success**.
+  - Notes:
+    - `TASK-134` is complete. The remaining whole-file 百炼 temporary OSS reset is confirmed as a local-network limitation; the online environment is normal.
+    - `TASK-124` is complete.
 
 - TASK-135 login default account cleanup (2026-05-26T23:50:02Z):
   - Commands:
@@ -4221,3 +4250,32 @@ last_run_status: success
   - Command: `mvn clean -Dtest=AuthFlowIntegrationTest,PlatformTenantLifecycleIntegrationTest test` in `backend/`
   - Result: success
   - Notes: `AuthFlowIntegrationTest` 16/16 passed, `PlatformTenantLifecycleIntegrationTest` 6/6 passed, total 22/22 green on local `agentcici_test`.
+
+## 2026-05-27 TASK-137 Custom Agent Delete
+
+- Authorization:
+  - Command: `python3 /Users/owenmacbook/.agents/skills/cloudcc-aidev-guidelines-common/scripts/dev-login.py .claw --developer MANAGER-001 --task TASK-137 --branch codex/TASK-137-custom-agent-delete --files ... --json`
+  - Result: success after assignment roots were corrected from bare directories to recursive globs.
+  - Notes: `check-assignment.py` also passed for implementation files and status/test-report files.
+- Frontend focused test:
+  - Command: `npm test -- AgentBuilderShell.test.ts` in `frontend/`
+  - Result: success
+  - Notes: 9 tests passed, including Agent delete fallback helper coverage.
+- Frontend build:
+  - Command: `npm run build` in `frontend/`
+  - Result: success
+  - Notes: existing Vite large chunk warning remains.
+- Backend compile:
+  - Command: `mvn -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/`
+  - Result: success
+- Backend focused integration test:
+  - Command: `mvn -Dmaven.repo.local=../.m2 -Dtest=AgentDefinitionDeleteIntegrationTest test` in `backend/`
+  - Result: blocked before assertions
+  - Notes: Spring context startup could not obtain a PostgreSQL connection (`SQLState 08001`), so the new integration tests compiled but did not execute assertions.
+- Desktop browser smoke:
+  - Command: Vite dev server + in-app browser route open for `/admin/agent-builder`
+  - Result: partial
+  - Notes: unauthenticated route rendered the admin login page; authenticated Agent Builder smoke was blocked because `/auth/me` requires the same unavailable backend database.
+- Static diff check:
+  - Command: `git diff --check`
+  - Result: success

@@ -3,12 +3,12 @@ kind: task-status
 task_id: TASK-124
 assignee: MANAGER-001
 owner_role: project-manager
-status: in_progress
+status: done
 branch: codex/TASK-124-feat-046-platform-tenant-provisioning
 pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/5
 spec_path: docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md
 assignment_path: .claw/assignments/TASK-124.yaml
-updated_at: 2026-05-21T15:47:23Z
+updated_at: 2026-05-27T07:23:58Z
 updated_by: MANAGER-001
 ---
 
@@ -53,6 +53,7 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 - Platform theme token regression is fixed: the tenant provisioning modal now resolves its opaque surface color again instead of falling back to a transparent dialog shell.
 - Backend FEAT-046 code paths are present in the current worktree: shared organization ID generation, shared provisioning service, `POST /platform/tenants`, and focused auth/platform integration-test coverage.
 - Codeup merge request created: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/5
+- 2026-05-27T07:23:58Z: Marked complete per user direction.
 
 ## Changed Files
 
@@ -87,3 +88,8 @@ Before editing, run task-scoped `dev-login.py` for `MANAGER-001` on branch `code
 ## Open Risk
 
 - No open backend verification blocker remains for the focused FEAT-046 auth/platform integration gate; remaining work is feature completion and any broader regression coverage outside this task's targeted scope.
+
+## Completion
+
+- Status: `done`.
+- Closeout rationale: FEAT-046 platform tenant list/detail split, manual provisioning UI, backend provisioning flow, focused test coverage, and desktop visual QA are complete.
