@@ -1,0 +1,44 @@
+task_id: TASK-139
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-27T03:37:58Z
+expires_at: none
+spec_path: docs/specs/PROJECT-BASELINE.md
+task_status_path: .claw/tasks/TASK-139.md
+branch: codex/TASK-139-agent-list-openapi-badge
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent
+  - backend/src/test/java/com/codehouse/ciciassistant
+  - frontend/src
+  - docs/specs
+  - .claw/tasks
+scope_files:
+  - .claw/tasks/TASK-139.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Fix the Agent Builder list OpenAPI badge bug described in TASK-139."
+  - "Prefer adding enabled channels to the /agents list payload and keep frontend list mapping accurate for every Agent."
+  - "Do not change unrelated Agent Builder behavior, OpenAPI public route shape, or mobile-specific layout/tests."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T03:37:58Z; user assigned TASK-139 to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Small bugfix, likely backend list payload plus frontend mapping/test coverage. Public identity material only; no secrets."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-139 on branch codex/TASK-139-agent-list-openapi-badge before implementation edits."

@@ -1,0 +1,45 @@
+task_id: TASK-137
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-27T03:37:58Z
+expires_at: none
+spec_path: docs/specs/FEAT-056-custom-agent-delete.md
+task_status_path: .claw/tasks/TASK-137.md
+branch: codex/TASK-137-custom-agent-delete
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant
+  - backend/src/test/java/com/codehouse/ciciassistant
+  - frontend/src
+  - docs/specs
+  - .claw/tasks
+scope_files:
+  - .claw/tasks/TASK-137.md
+  - docs/specs/FEAT-056-custom-agent-delete.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Implement custom non-built-in Agent deletion according to FEAT-056, including backend safety and frontend confirmation/list refresh."
+  - "Preserve historical audit, runtime, trace, and OpenAPI evidence; document any deletion-retention decision before risky data changes."
+  - "Do not allow built-in Agent deletion, cross-org deletion, bulk delete, restore UI, or mobile-specific layout/tests."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T03:37:58Z; user assigned TASK-137 to Owen / MANAGER-001."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Owen-owned fullstack task. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-137 on branch codex/TASK-137-custom-agent-delete before implementation edits."

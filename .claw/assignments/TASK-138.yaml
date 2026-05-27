@@ -1,0 +1,44 @@
+task_id: TASK-138
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-27T03:37:58Z
+expires_at: none
+spec_path: docs/specs/FEAT-057-openapi-docs-copy-cleanup.md
+task_status_path: .claw/tasks/TASK-138.md
+branch: codex/TASK-138-openapi-docs-copy-cleanup
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src
+  - docs/specs
+  - .claw/tasks
+scope_files:
+  - .claw/tasks/TASK-138.md
+  - docs/specs/FEAT-057-openapi-docs-copy-cleanup.md
+  - docs/specs/FEAT-058-openapi-agentless-endpoints.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Clean up OpenAPI docs copy according to FEAT-057, including CloudCC token/baseUrl wording and help links."
+  - "Coordinate examples with TASK-140 if the agentless public OpenAPI route task lands first."
+  - "Do not change backend OpenAPI behavior or make a broad docs redesign."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T03:37:58Z; user assigned TASK-138 to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Focused frontend documentation cleanup. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-138 on branch codex/TASK-138-openapi-docs-copy-cleanup before implementation edits."

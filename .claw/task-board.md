@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-26T23:50:02Z
+updated_at: 2026-05-27T03:37:58Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,61 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-140 - Remove Agent ID from public OpenAPI routes
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-058-openapi-agentless-endpoints.md`
+- task_status_path: `.claw/tasks/TASK-140.md`
+- assignment_path: `.claw/assignments/TASK-140.yaml`
+- blocked_by: `none`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-140-openapi-agentless-endpoints`, then removes Agent ID from public OpenAPI routes.
+
+### TASK-139 - Agent list OpenAPI badge shows only first Agent
+
+- status: `ready`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/PROJECT-BASELINE.md`
+- task_status_path: `.claw/tasks/TASK-139.md`
+- assignment_path: `.claw/assignments/TASK-139.yaml`
+- blocked_by: `none`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-139-agent-list-openapi-badge`, then fixes list channel data and badge rendering.
+
+### TASK-138 - OpenAPI docs copy cleanup
+
+- status: `ready`
+- priority: `medium`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-057-openapi-docs-copy-cleanup.md`
+- task_status_path: `.claw/tasks/TASK-138.md`
+- assignment_path: `.claw/assignments/TASK-138.yaml`
+- blocked_by: `TASK-140 may change the final route examples`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-138-openapi-docs-copy-cleanup`, then updates OpenAPI docs copy.
+
+### TASK-137 - Custom Agent delete action
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-056-custom-agent-delete.md`
+- task_status_path: `.claw/tasks/TASK-137.md`
+- assignment_path: `.claw/assignments/TASK-137.yaml`
+- blocked_by: `none`
+- next_action: `MANAGER-001` runs task-scoped `dev-login.py` on `codex/TASK-137-custom-agent-delete`, then implements custom Agent deletion.
+
+### TASK-136 - Frontend auth token sync across tabs
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-055-frontend-auth-token-sync.md`
+- task_status_path: `.claw/tasks/TASK-136.md`
+- assignment_path: `.claw/assignments/TASK-136.yaml`
+- blocked_by: `none`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-136-frontend-auth-token-sync`, then implements shared token sync.
 
 ### TASK-134 - AI minutes local audio upload and speaker diarization
 
@@ -182,7 +237,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-135.md`
 - assignment_path: `.claw/assignments/TASK-135.yaml`
 - blocked_by: `none`
-- next_action: `none`; Codeup change/14 is open. Assistant, admin, and platform login account inputs now start empty and passed static search, frontend build, and browser checks.
+- next_action: `none`; assistant, admin, and platform login account inputs now start empty and passed static search, frontend build, and browser checks.
 
 ### TASK-131 - Platform account orgless auth context
 
