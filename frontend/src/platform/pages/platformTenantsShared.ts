@@ -1,3 +1,4 @@
+import { authFetch, readAuthToken } from "../../auth/authStorage";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 import { safeFetchJson } from "../../utils/http";
 
@@ -113,13 +114,7 @@ export type TenantProvisionResult = {
 };
 
 export function readPlatformToken(): string {
-  const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
-  if (!raw) return "";
-  try {
-    return (JSON.parse(raw) as { token?: string }).token ?? "";
-  } catch {
-    return "";
-  }
+  return readAuthToken(LS_PLATFORM_TOKEN);
 }
 
 export function formatTs(ts?: string | null): string {
@@ -180,9 +175,7 @@ export function jobLabel(status?: string | null): string {
 }
 
 export async function fetchTenantList(token: string): Promise<Tenant[]> {
-  const response = await fetch(`${PLATFORM_API_BASE}/tenants`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants`);
   const { body } = await safeFetchJson<Tenant[]>(response);
   if (!response.ok || !body?.success) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
@@ -191,9 +184,7 @@ export async function fetchTenantList(token: string): Promise<Tenant[]> {
 }
 
 export async function fetchTenantDetail(token: string, orgId: string): Promise<TenantDetail> {
-  const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/retention`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/retention`);
   const { body } = await safeFetchJson<TenantDetail>(response);
   if (!response.ok || !body?.success || !body.data) {
     throw new Error(body?.message ?? `HTTP ${response.status}`);
@@ -202,10 +193,9 @@ export async function fetchTenantDetail(token: string, orgId: string): Promise<T
 }
 
 export async function createTenant(token: string, payload: TenantProvisionPayload): Promise<TenantProvisionResult> {
-  const response = await fetch(`${PLATFORM_API_BASE}/tenants`, {
+  const response = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/tenants`, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),

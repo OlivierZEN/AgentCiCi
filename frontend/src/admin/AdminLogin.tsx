@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { writeAuthPayload } from "../auth/authStorage";
 import { LS_ADMIN_TOKEN } from "../constants";
 import { safeFetchJson } from "../utils/http";
 
@@ -42,7 +43,7 @@ export default function AdminLogin() {
 
   const completeAdminLogin = (payload: AuthPayload, message = "登录成功。") => {
     setPendingOrganizations([]);
-    localStorage.setItem(LS_ADMIN_TOKEN, JSON.stringify(payload));
+    writeAuthPayload(LS_ADMIN_TOKEN, payload);
     setNotice(message);
     nav("/admin", { replace: true });
   };

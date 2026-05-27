@@ -1,3 +1,6 @@
+import { readAuthToken } from "../auth/authStorage";
+import { LS_ASSISTANT_TOKEN } from "../constants";
+
 export type StreamChatBody = {
   sessionId: string;
   question: string;
@@ -92,6 +95,27 @@ async function consumeEventStream(
   }
 }
 
+async function fetchAssistantStream(tokenFallback: string, input: RequestInfo | URL, init: RequestInit): Promise<Response> {
+  const headers = new Headers(init.headers);
+  const tokenUsed = readAuthToken(LS_ASSISTANT_TOKEN) || tokenFallback.trim();
+  headers.set("Authorization", `Bearer ${tokenUsed}`);
+  headers.set("Accept", "text/event-stream");
+
+  const firstResponse = await fetch(input, { ...init, headers });
+  if (firstResponse.status !== 401) {
+    return firstResponse;
+  }
+
+  const latestToken = readAuthToken(LS_ASSISTANT_TOKEN);
+  if (!latestToken || latestToken === tokenUsed) {
+    return firstResponse;
+  }
+  const retryHeaders = new Headers(init.headers);
+  retryHeaders.set("Authorization", `Bearer ${latestToken}`);
+  retryHeaders.set("Accept", "text/event-stream");
+  return fetch(input, { ...init, headers: retryHeaders });
+}
+
 /**
  * POST /ai/chat/stream (SSE). Invokes onDelta for each text fragment; resolves on `done` or rejects on `error` / HTTP failure.
  */
@@ -103,12 +127,10 @@ export async function streamAiChat(
   onToolCall?: (event: StreamToolCallEvent) => void,
   onPhase?: (event: StreamPhaseEvent) => void,
 ): Promise<void> {
-  const res = await fetch("/ai/chat/stream", {
+  const res = await fetchAssistantStream(token, "/ai/chat/stream", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
-      Accept: "text/event-stream",
     },
     body: JSON.stringify(body),
   });
@@ -219,12 +241,8 @@ export async function streamSessionUpdates(
   onUpdate: (event: SessionUpdateEvent) => Promise<void> | void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch("/ai/sessions/stream", {
+  const res = await fetchAssistantStream(token, "/ai/sessions/stream", {
     method: "GET",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "text/event-stream",
-    },
     signal,
   });
 

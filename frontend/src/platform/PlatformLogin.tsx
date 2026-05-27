@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { writeAuthPayload } from "../auth/authStorage";
 import { LS_PLATFORM_TOKEN } from "../constants";
 import { safeFetchJson } from "../utils/http";
 
@@ -43,7 +44,7 @@ export default function PlatformLogin() {
         setNotice("该账号当前没有平台角色，请先确认平台账号或手机号白名单配置。");
         return;
       }
-      localStorage.setItem(LS_PLATFORM_TOKEN, JSON.stringify(body.data));
+      writeAuthPayload(LS_PLATFORM_TOKEN, body.data);
       setNotice("登录成功。");
       nav("/platform", { replace: true });
     } catch (err) {

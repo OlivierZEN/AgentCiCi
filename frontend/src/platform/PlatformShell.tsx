@@ -1,4 +1,7 @@
+import { useState } from "react";
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
+import { clearAuthPayload, readAuthPayload } from "../auth/authStorage";
+import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_PLATFORM_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
 
@@ -11,13 +14,7 @@ type AuthPayload = {
 };
 
 function readAuth(): AuthPayload | null {
-  const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthPayload;
-  } catch {
-    return null;
-  }
+  return readAuthPayload<AuthPayload>(LS_PLATFORM_TOKEN);
 }
 
 function accountLabel(auth: AuthPayload): string {
@@ -25,8 +22,15 @@ function accountLabel(auth: AuthPayload): string {
 }
 
 export default function PlatformShell() {
-  const auth = readAuth();
+  const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
   const nav = useNavigate();
+
+  useAuthStorageSync<AuthPayload>(LS_PLATFORM_TOKEN, (payload) => {
+    setAuth(payload);
+    if (!payload?.token) {
+      nav("/platform/login", { replace: true });
+    }
+  });
 
   if (!auth) {
     return <Navigate to="/platform/login" replace />;
@@ -68,7 +72,8 @@ export default function PlatformShell() {
             type="button"
             className="secondary platform-nav__logout"
             onClick={() => {
-              localStorage.removeItem(LS_PLATFORM_TOKEN);
+              clearAuthPayload(LS_PLATFORM_TOKEN);
+              setAuth(null);
               nav("/platform/login", { replace: true });
             }}
           >

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { authFetch, readAuthToken } from "../../auth/authStorage";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
 type BootstrapPayload = {
@@ -30,13 +31,7 @@ function roleLabel(role: string): string {
 }
 
 function readToken(): string {
-  const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
-  if (!raw) return "";
-  try {
-    return (JSON.parse(raw) as { token?: string }).token ?? "";
-  } catch {
-    return "";
-  }
+  return readAuthToken(LS_PLATFORM_TOKEN);
 }
 
 export default function PlatformHomePage() {
@@ -47,7 +42,7 @@ export default function PlatformHomePage() {
   useEffect(() => {
     if (!token) return;
     void (async () => {
-      const res = await fetch(`${PLATFORM_API_BASE}/bootstrap`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await authFetch(LS_PLATFORM_TOKEN, `${PLATFORM_API_BASE}/bootstrap`);
       const json = await res.json();
       if (!res.ok || !json.success) {
         setNotice(json.message ?? `HTTP ${res.status}`);

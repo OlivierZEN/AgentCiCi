@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { authFetch, clearAuthPayload, readAuthPayload } from "../auth/authStorage";
+import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
 import { safeFetchJson } from "../utils/http";
 
@@ -10,13 +12,7 @@ function hasOrgAdminRole(roles: string[]): boolean {
 }
 
 function readAdminAuth(): AuthPayload | null {
-  const raw = localStorage.getItem(LS_ADMIN_TOKEN);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthPayload;
-  } catch {
-    return null;
-  }
+  return readAuthPayload<AuthPayload>(LS_ADMIN_TOKEN);
 }
 
 export default function AdminGuard() {
@@ -24,6 +20,12 @@ export default function AdminGuard() {
   const [state, setState] = useState<"loading" | "ok" | "denied">(() =>
     readAdminAuth()?.token ? "loading" : "denied",
   );
+  const [authVersion, setAuthVersion] = useState(0);
+
+  useAuthStorageSync<AuthPayload>(LS_ADMIN_TOKEN, (payload) => {
+    setState(payload?.token ? "loading" : "denied");
+    setAuthVersion((current) => current + 1);
+  });
 
   useEffect(() => {
     const auth = readAdminAuth();
@@ -34,7 +36,9 @@ export default function AdminGuard() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch("/auth/me", { headers: { Authorization: `Bearer ${auth.token}` } });
+        const r = await authFetch(LS_ADMIN_TOKEN, "/auth/me", {}, {
+          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+        });
         const { body } = await safeFetchJson<{ roles?: string[] }>(r);
         const roles = (body?.data?.roles ?? []) as string[];
         if (cancelled) return;
@@ -42,18 +46,18 @@ export default function AdminGuard() {
           setState("ok");
           return;
         }
-        localStorage.removeItem(LS_ADMIN_TOKEN);
+        clearAuthPayload(LS_ADMIN_TOKEN);
         setState("denied");
       } catch {
         if (cancelled) return;
-        localStorage.removeItem(LS_ADMIN_TOKEN);
+        clearAuthPayload(LS_ADMIN_TOKEN);
         setState("denied");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [loc.pathname]);
+  }, [loc.pathname, authVersion]);
 
   if (state === "denied") {
     return <Navigate to="/admin/login" replace state={{ from: loc.pathname }} />;

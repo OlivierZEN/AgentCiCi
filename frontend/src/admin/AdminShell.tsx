@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
+import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
 import type { AdminOutletContext } from "./useAdminToken";
@@ -38,19 +40,13 @@ function isNavPathActive(pathname: string, to: string) {
 }
 
 function readAuth(): AuthPayload | null {
-  const raw = localStorage.getItem(LS_ADMIN_TOKEN);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthPayload;
-  } catch {
-    return null;
-  }
+  return readAuthPayload<AuthPayload>(LS_ADMIN_TOKEN);
 }
 
 export default function AdminShell() {
   const nav = useNavigate();
   const location = useLocation();
-  const auth = readAuth();
+  const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
   const token = auth?.token ?? "";
   const [me, setMe] = useState<MePayload>({});
   const [organizationName, setOrganizationName] = useState(auth?.orgName || auth?.orgId || "");
@@ -58,11 +54,21 @@ export default function AdminShell() {
 
   const ctx = useMemo<AdminOutletContext>(() => ({ token }), [token]);
 
+  useAuthStorageSync<AuthPayload>(LS_ADMIN_TOKEN, (payload) => {
+    setAuth(payload);
+    setOrganizationName(payload?.orgName || payload?.orgId || "");
+    if (!payload?.token) {
+      nav("/admin/login", { replace: true });
+    }
+  });
+
   useEffect(() => {
     if (!token) return;
     void (async () => {
       try {
-        const res = await fetch("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await authFetch(LS_ADMIN_TOKEN, "/auth/me", {}, {
+          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+        });
         const json = await res.json();
         if (res.ok && json.success) {
           setMe((json.data ?? {}) as MePayload);
@@ -77,11 +83,15 @@ export default function AdminShell() {
     if (!token || !auth) return;
     void (async () => {
       try {
-        const res = await fetch("/admin/organization/profile", { headers: { Authorization: `Bearer ${token}` } });
+        const res = await authFetch(LS_ADMIN_TOKEN, "/admin/organization/profile", {}, {
+          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+        });
         const json = await res.json();
         if (res.ok && json.success && json.data?.name) {
           setOrganizationName(json.data.name);
-          localStorage.setItem(LS_ADMIN_TOKEN, JSON.stringify({ ...auth, orgName: json.data.name }));
+          const next = { ...auth, orgName: json.data.name };
+          writeAuthPayload(LS_ADMIN_TOKEN, next);
+          setAuth(next);
         }
       } catch {
         // keep token payload organization fallback
@@ -111,14 +121,17 @@ export default function AdminShell() {
       const detail = (evt as CustomEvent<OrganizationProfileUpdatedDetail>).detail;
       if (!detail || detail.orgId !== auth.orgId) return;
       setOrganizationName(detail.shortName || detail.name || auth.orgId);
-      localStorage.setItem(LS_ADMIN_TOKEN, JSON.stringify({ ...auth, orgName: detail.name }));
+      const next = { ...auth, orgName: detail.name };
+      writeAuthPayload(LS_ADMIN_TOKEN, next);
+      setAuth(next);
     };
     window.addEventListener("admin-organization-profile-updated", onOrganizationProfileUpdated);
     return () => window.removeEventListener("admin-organization-profile-updated", onOrganizationProfileUpdated);
   }, [auth]);
 
   const logout = () => {
-    localStorage.removeItem(LS_ADMIN_TOKEN);
+    clearAuthPayload(LS_ADMIN_TOKEN);
+    setAuth(null);
     nav("/admin/login", { replace: true });
   };
 

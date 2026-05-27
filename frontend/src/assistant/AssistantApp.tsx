@@ -9,6 +9,8 @@ import {
 import { BootLoginConversationDemo, BootLoginDataStream } from "../components/BootLoginEffects";
 import AvatarView from "../components/AvatarView";
 import ChatMarkdown from "../components/ChatMarkdown";
+import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
+import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ASSISTANT_TOKEN } from "../constants";
 import { MeetingMinutesPanel } from "../meeting/MeetingMinutesPanel";
 import AppVersionBadge from "../shared/AppVersionBadge";
@@ -1207,15 +1209,7 @@ export default function AssistantApp() {
   const [organizationMenuOpen, setOrganizationMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [auth, setAuth] = useState<AuthPayload | null>(() => {
-    const raw = localStorage.getItem(LS_ASSISTANT_TOKEN);
-    if (!raw) {
-      return null;
-    }
-    try {
-      return JSON.parse(raw) as AuthPayload;
-    } catch {
-      return null;
-    }
+    return readAuthPayload<AuthPayload>(LS_ASSISTANT_TOKEN);
   });
   const [me, setMe] = useState<MeProfile | null>(null);
   const [input, setInput] = useState("");
@@ -1293,12 +1287,25 @@ export default function AssistantApp() {
 
   const persistAuth = (payload: AuthPayload | null) => {
     if (payload) {
-      localStorage.setItem(LS_ASSISTANT_TOKEN, JSON.stringify(payload));
+      writeAuthPayload(LS_ASSISTANT_TOKEN, payload);
     } else {
-      localStorage.removeItem(LS_ASSISTANT_TOKEN);
+      clearAuthPayload(LS_ASSISTANT_TOKEN);
     }
     setAuth(payload);
   };
+
+  useAuthStorageSync<AuthPayload>(LS_ASSISTANT_TOKEN, (payload) => {
+    if (!payload?.token) {
+      abortAsrSession();
+      setMe(null);
+      setKbs([]);
+      setSelectedKbIds([]);
+      setApprovalDrawerOpen(false);
+      setApprovalPageHtml(null);
+      setSpeechNotice("");
+    }
+    setAuth(payload);
+  });
 
   const attachComposerTextareaRef = (element: HTMLTextAreaElement | null) => {
     composerInputRef.current = element;
@@ -1334,7 +1341,9 @@ export default function AssistantApp() {
       return;
     }
     try {
-      const response = await fetch("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/me", {}, {
+        onUnauthorized: () => persistAuth(null),
+      });
       const { body } = await safeFetchJson<MeProfile>(response);
       if (response.ok && body?.success) {
         setMe(body.data as MeProfile | null);
@@ -1349,7 +1358,9 @@ export default function AssistantApp() {
       return;
     }
     try {
-      const response = await fetch("/auth/organizations", { headers: { Authorization: `Bearer ${token}` } });
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/organizations", {}, {
+        onUnauthorized: () => persistAuth(null),
+      });
       const { body } = await safeFetchJson<{ organizations?: OrganizationOption[] }>(response);
       if (response.ok && body?.success) {
         setOrganizations(body.data?.organizations ?? []);
@@ -1364,7 +1375,9 @@ export default function AssistantApp() {
       return;
     }
     try {
-      const response = await fetch("/kb", { headers: { Authorization: `Bearer ${auth.token}` } });
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/kb", {}, {
+        onUnauthorized: () => persistAuth(null),
+      });
       const { body } = await safeFetchJson<KnowledgeBase[]>(response);
       setKbs((body?.data ?? []) as KnowledgeBase[]);
     } catch {
@@ -1381,8 +1394,8 @@ export default function AssistantApp() {
     setAgentSkillBindingsLoadingByAgent((prev) => ({ ...prev, [agentId]: true }));
     let keepLoadingForRetry = false;
     try {
-      const response = await fetch(`/me/agents/${encodeURIComponent(agentId)}/skills`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/${encodeURIComponent(agentId)}/skills`, {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<{ bindings?: AgentSkillBindingView[] }>(response);
       if (!response.ok || !body?.success) {
@@ -1431,8 +1444,8 @@ export default function AssistantApp() {
     }
     setQuickCommandsLoadingByAgent((prev) => ({ ...prev, [agentId]: true }));
     try {
-      const response = await fetch(`/me/agents/${encodeURIComponent(agentId)}/workflow/quick-commands`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/${encodeURIComponent(agentId)}/workflow/quick-commands`, {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<UserQuickCommand[]>(response);
       if (!response.ok || !body?.success) {
@@ -1458,13 +1471,14 @@ export default function AssistantApp() {
     }
     setQuickCommandSaving(true);
     try {
-      const response = await fetch(`/me/agents/${encodeURIComponent(activeWorkbenchAgentId)}/workflow/quick-commands`, {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/${encodeURIComponent(activeWorkbenchAgentId)}/workflow/quick-commands`, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${auth.token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ title, promptText }),
+      }, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<UserQuickCommand>(response);
       if (!response.ok || !body?.success || !body.data) {
@@ -1487,7 +1501,9 @@ export default function AssistantApp() {
 
   const loadWorkbenchAgents = async (token: string) => {
     try {
-      const res = await fetch("/agents", { headers: { Authorization: `Bearer ${token}` } });
+      const res = await authFetch(LS_ASSISTANT_TOKEN, "/agents", {}, {
+        onUnauthorized: () => persistAuth(null),
+      });
       const { body } = await safeFetchJson<PublishedAgentPayload[]>(res);
       if (!res.ok || !body?.success || !Array.isArray(body.data) || body.data.length === 0) return;
       const visible = (body.data as PublishedAgentPayload[]).filter(
@@ -1581,8 +1597,8 @@ export default function AssistantApp() {
 
   const loadWorkbenchStats = async (token: string) => {
     try {
-      const res = await fetch("/me/agents/cici-system/workflow/executions", {
-        headers: { Authorization: `Bearer ${token}` },
+      const res = await authFetch(LS_ASSISTANT_TOKEN, "/me/agents/cici-system/workflow/executions", {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<WorkflowExecutionPayload[]>(res);
       if (!res.ok || !body?.success || !Array.isArray(body.data)) return;
@@ -1643,8 +1659,8 @@ export default function AssistantApp() {
     setMonitorLogsLoading(true);
     try {
       const params = new URLSearchParams({ limit: "80" });
-      const response = await fetch(`/me/agents/run-logs?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/run-logs?${params.toString()}`, {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<{ items?: AgentRunLogPayload[] } | AgentRunLogPayload[]>(response);
       if (!response.ok || !body?.success) {
@@ -1668,8 +1684,8 @@ export default function AssistantApp() {
     }
     setMonitorTraceLoadingId(traceId);
     try {
-      const response = await fetch(`/me/agents/run-logs/${encodeURIComponent(traceId)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/me/agents/run-logs/${encodeURIComponent(traceId)}`, {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<AgentTraceDetailPayload>(response);
       if (!response.ok || !body?.success || !body.data) {
@@ -1691,8 +1707,8 @@ export default function AssistantApp() {
     }
     setConversationListLoading(true);
     try {
-      const response = await fetch("/ai/sessions", {
-        headers: { Authorization: `Bearer ${auth.token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/ai/sessions", {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<ConversationThreadPayload[]>(response);
       if (!response.ok || !body?.success) {
@@ -1734,8 +1750,8 @@ export default function AssistantApp() {
     }
     setConversationHistoryLoadingId(conversationId);
     try {
-      const response = await fetch(`/ai/sessions/${encodeURIComponent(conversationId)}/messages`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(conversationId)}/messages`, {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       if (response.status === 404) {
         setConversationMessages((prev) => {
@@ -1779,8 +1795,8 @@ export default function AssistantApp() {
       return;
     }
     try {
-      const response = await fetch(`/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {
-        headers: { Authorization: `Bearer ${auth.token}` },
+      const response = await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {}, {
+        onUnauthorized: () => persistAuth(null),
       });
       if (response.status === 404) {
         setConversationMessages((prev) => {
@@ -2393,10 +2409,12 @@ export default function AssistantApp() {
     }
     try {
       setNotice("正在切换组织...");
-      const response = await fetch("/auth/switch-organization", {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/auth/switch-organization", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.token}` },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orgId: targetOrgId }),
+      }, {
+        onUnauthorized: () => persistAuth(null),
       });
       const { body } = await safeFetchJson<AuthPayload>(response);
       if (!response.ok || !body?.success || !body.data?.token) {
@@ -2455,8 +2473,8 @@ export default function AssistantApp() {
     let items = conversationMessages[sessionId] ?? [];
     if (items.length === 0) {
       try {
-        const response = await fetch(`/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {
-          headers: { Authorization: `Bearer ${auth.token}` },
+        const response = await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(sessionId)}/messages`, {}, {
+          onUnauthorized: () => persistAuth(null),
         });
         if (response.ok) {
           const { body } = await safeFetchJson<ConversationMessagePayload[]>(response);
@@ -2527,9 +2545,10 @@ export default function AssistantApp() {
       return;
     }
     try {
-      await fetch(`/ai/sessions/${encodeURIComponent(session.id)}`, {
+      await authFetch(LS_ASSISTANT_TOKEN, `/ai/sessions/${encodeURIComponent(session.id)}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${auth.token}` },
+      }, {
+        onUnauthorized: () => persistAuth(null),
       });
     } catch {
       // ignore network errors, still remove local draft
@@ -2588,11 +2607,10 @@ export default function AssistantApp() {
     setMeetingStatus("summarizing");
     setMeetingNotice("正在调用 AI 听记技能生成会议纪要...");
     try {
-      const response = await fetch("/ai/meeting-minutes/summary", {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/ai/meeting-minutes/summary", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${auth.token}`,
         },
         body: JSON.stringify({
           title: "会议纪要",
@@ -2604,6 +2622,8 @@ export default function AssistantApp() {
             endMs: segment.endMs,
           })),
         }),
+      }, {
+        onUnauthorized: () => persistAuth(null),
       });
       const body = await response.json().catch(() => null) as { data?: { summary?: string; skillName?: string }; message?: string } | null;
       if (!response.ok || !body?.data?.summary) {
@@ -2646,12 +2666,11 @@ export default function AssistantApp() {
     meetingTranscriptRef.current = [];
     setMeetingTranscript([]);
     try {
-      const response = await fetch("/ai/meeting-minutes/transcribe-file", {
+      const response = await authFetch(LS_ASSISTANT_TOKEN, "/ai/meeting-minutes/transcribe-file", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${auth.token}`,
-        },
         body: formData,
+      }, {
+        onUnauthorized: () => persistAuth(null),
       });
       const body = await response.json().catch(() => null) as MeetingFileTranscriptionResponse | null;
       if (!response.ok || !body?.data?.transcript?.length) {

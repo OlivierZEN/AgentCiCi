@@ -1,18 +1,14 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { authFetch, clearAuthPayload, readAuthPayload } from "../auth/authStorage";
+import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_PLATFORM_TOKEN } from "../constants";
 import { safeFetchJson } from "../utils/http";
 
 type AuthPayload = { token: string; roles?: string[] };
 
 function readPlatformAuth(): AuthPayload | null {
-  const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as AuthPayload;
-  } catch {
-    return null;
-  }
+  return readAuthPayload<AuthPayload>(LS_PLATFORM_TOKEN);
 }
 
 function hasPlatformRole(roles: string[]): boolean {
@@ -24,6 +20,12 @@ export default function PlatformGuard() {
   const [state, setState] = useState<"loading" | "ok" | "denied">(() =>
     readPlatformAuth()?.token ? "loading" : "denied",
   );
+  const [authVersion, setAuthVersion] = useState(0);
+
+  useAuthStorageSync<AuthPayload>(LS_PLATFORM_TOKEN, (payload) => {
+    setState(payload?.token ? "loading" : "denied");
+    setAuthVersion((current) => current + 1);
+  });
 
   useEffect(() => {
     const auth = readPlatformAuth();
@@ -34,7 +36,9 @@ export default function PlatformGuard() {
     let cancelled = false;
     (async () => {
       try {
-        const r = await fetch("/auth/platform/me", { headers: { Authorization: `Bearer ${auth.token}` } });
+        const r = await authFetch(LS_PLATFORM_TOKEN, "/auth/platform/me", {}, {
+          onUnauthorized: () => clearAuthPayload(LS_PLATFORM_TOKEN),
+        });
         const { body } = await safeFetchJson<{ roles?: string[] }>(r);
         const roles = (body?.data?.roles ?? []) as string[];
         if (cancelled) return;
@@ -42,18 +46,18 @@ export default function PlatformGuard() {
           setState("ok");
           return;
         }
-        localStorage.removeItem(LS_PLATFORM_TOKEN);
+        clearAuthPayload(LS_PLATFORM_TOKEN);
         setState("denied");
       } catch {
         if (cancelled) return;
-        localStorage.removeItem(LS_PLATFORM_TOKEN);
+        clearAuthPayload(LS_PLATFORM_TOKEN);
         setState("denied");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [loc.pathname]);
+  }, [loc.pathname, authVersion]);
 
   if (state === "denied") {
     return <Navigate to="/platform/login" replace state={{ from: loc.pathname }} />;
