@@ -1540,10 +1540,18 @@
   padding: 10px 12px;
   gap: 6px;
   display: grid;
-  grid-template-rows: 24px minmax(0, 1fr) 16px;
+  grid-template-rows: minmax(0, 1fr) auto;
   align-items: stretch;
   overflow: hidden;
   box-sizing: border-box;
+}
+
+.cici-builder-sidebar__list--grid .cici-agent-card__select {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: 24px minmax(0, 1fr) 16px;
+  gap: 6px;
 }
 
 .cici-builder-sidebar__list--grid .cici-agent-card + .cici-agent-card {
@@ -10469,6 +10477,7 @@
 .cici-agent-card__select {
   display: flex;
   width: 100%;
+  min-height: 0;
   flex-direction: column;
   gap: 10px;
   padding: 0;
@@ -10478,6 +10487,7 @@
   color: inherit;
   text-align: left;
   box-shadow: none;
+  cursor: pointer;
   appearance: none;
   transform: none;
 }
@@ -10493,9 +10503,10 @@
 .cici-agent-card__actions {
   display: flex;
   justify-content: flex-end;
-  margin-top: -2px;
-  padding-top: 2px;
-  border-top: 1px solid rgba(222, 210, 187, 0.7);
+  align-items: flex-end;
+  margin-top: auto;
+  padding-top: 0;
+  border-top: 0;
 }
 
 .cici-agent-card__delete {
