@@ -73,9 +73,9 @@ public class AgentOpenApiConversationService {
         this.objectMapper = objectMapper;
     }
 
-    public Map<String, Object> parameters(String agentId, HttpServletRequest request) {
+    public Map<String, Object> parameters(HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("opening_statement", text(auth.agent().getGreeting()));
@@ -97,13 +97,12 @@ public class AgentOpenApiConversationService {
         return data;
     }
 
-    public Map<String, Object> chatMessages(String agentId,
-                                            String requestId,
+    public Map<String, Object> chatMessages(String requestId,
                                             String idempotencyKey,
                                             ChatMessageCommand requestBody,
                                             HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         ChatMessageInput input = normalize(requestBody);
         validateFiles(auth, input.files(), input.externalUserId(), input.conversationId());
@@ -167,8 +166,7 @@ public class AgentOpenApiConversationService {
         }
     }
 
-    public SseEmitter chatMessagesStream(String agentId,
-                                         String requestId,
+    public SseEmitter chatMessagesStream(String requestId,
                                          String idempotencyKey,
                                          ChatMessageCommand requestBody,
                                          HttpServletRequest request) {
@@ -176,7 +174,7 @@ public class AgentOpenApiConversationService {
         SseEmitter emitter = new SseEmitter(600_000L);
         CompletableFuture.runAsync(() -> {
             try {
-                Map<String, Object> data = chatMessages(agentId, requestId, idempotencyKey, requestBody, request);
+                Map<String, Object> data = chatMessages(requestId, idempotencyKey, requestBody, request);
                 String answer = text(data.get("answer"));
                 emitter.send(SseEmitter.event().name("agent_thought").data(Map.of(
                         "event", "agent_thought",
@@ -205,9 +203,9 @@ public class AgentOpenApiConversationService {
         return emitter;
     }
 
-    public Map<String, Object> stop(String agentId, String taskId, HttpServletRequest request) {
+    public Map<String, Object> stop(String taskId, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         AgentApiTaskEntity task = taskRepository
                 .findByTaskIdAndOrgIdAndCredentialIdAndAgentId(
@@ -221,9 +219,9 @@ public class AgentOpenApiConversationService {
         return Map.of("result", "cancel_requested", "task_id", task.getTaskId(), "status", task.getStatus());
     }
 
-    public List<Map<String, Object>> conversations(String agentId, String user, HttpServletRequest request) {
+    public List<Map<String, Object>> conversations(String user, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         String normalizedUser = text(user);
         return sessionMapRepository
@@ -237,12 +235,11 @@ public class AgentOpenApiConversationService {
                 .toList();
     }
 
-    public Map<String, Object> renameConversation(String agentId,
-                                                  String conversationId,
+    public Map<String, Object> renameConversation(String conversationId,
                                                   RenameConversationCommand command,
                                                   HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         AgentApiSessionMapEntity session = requireConversation(auth, conversationId);
         session.rename(clip(command == null ? "" : command.name(), 160));
@@ -250,9 +247,9 @@ public class AgentOpenApiConversationService {
         return conversationPayload(session);
     }
 
-    public Map<String, Object> deleteConversation(String agentId, String conversationId, HttpServletRequest request) {
+    public Map<String, Object> deleteConversation(String conversationId, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         AgentApiSessionMapEntity session = requireConversation(auth, conversationId);
         session.markDeleted();
@@ -260,14 +257,13 @@ public class AgentOpenApiConversationService {
         return Map.of("result", "deleted", "conversation_id", session.getExternalSessionId());
     }
 
-    public MessagePage messages(String agentId,
-                                String conversationId,
+    public MessagePage messages(String conversationId,
                                 String user,
                                 String firstId,
                                 Integer limit,
                                 HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         List<AgentApiMessageEntity> rows = text(conversationId).isBlank()
                 ? messageRepository.findTop100ByOrgIdAndCredentialIdAndAgentIdOrderByCreatedAtDesc(
@@ -293,12 +289,11 @@ public class AgentOpenApiConversationService {
         return new MessagePage(paged, start + paged.size() < candidates.size(), normalizedLimit);
     }
 
-    public Map<String, Object> feedback(String agentId,
-                                        String messageId,
+    public Map<String, Object> feedback(String messageId,
                                         FeedbackCommand command,
                                         HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "feedback");
         AgentApiMessageEntity message = requireMessage(auth, messageId);
         String rating = normalizeRating(command == null ? "" : command.rating());
@@ -316,9 +311,9 @@ public class AgentOpenApiConversationService {
                 "created_at", feedback.getCreatedAt().toString());
     }
 
-    public Map<String, Object> suggested(String agentId, String messageId, HttpServletRequest request) {
+    public Map<String, Object> suggested(String messageId, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "feedback");
         AgentApiMessageEntity message = requireMessage(auth, messageId);
         return Map.of(
@@ -326,13 +321,12 @@ public class AgentOpenApiConversationService {
                 "data", List.of("继续展开关键依据", "生成下一步行动清单", "用更短的话总结"));
     }
 
-    public Map<String, Object> uploadFile(String agentId,
-                                          MultipartFile file,
+    public Map<String, Object> uploadFile(MultipartFile file,
                                           String user,
                                           String conversationId,
                                           HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "files");
         if (file == null || file.isEmpty()) {
             throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "invalid_request", "file is required");
