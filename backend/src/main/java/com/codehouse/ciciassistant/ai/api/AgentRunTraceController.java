@@ -1,6 +1,8 @@
 package com.codehouse.ciciassistant.ai.api;
 
 import com.codehouse.ciciassistant.ai.service.AgentRunTraceService;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.time.Instant;
@@ -17,9 +19,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class AgentRunTraceController {
 
     private final AgentRunTraceService traceService;
+    private final AgentAccessControlService accessControlService;
 
-    public AgentRunTraceController(AgentRunTraceService traceService) {
+    public AgentRunTraceController(AgentRunTraceService traceService,
+                                   AgentAccessControlService accessControlService) {
         this.traceService = traceService;
+        this.accessControlService = accessControlService;
     }
 
     @GetMapping
@@ -33,6 +38,9 @@ public class AgentRunTraceController {
             @RequestParam(name = "limit", defaultValue = "50") int limit) {
         String orgId = TenantContext.requireOrgId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        if (agentId != null && !agentId.isBlank()) {
+            accessControlService.require(orgId, userId, TenantContext.getRoles(), agentId, AgentPermission.LOG_VIEW);
+        }
         return ApiResponse.ok(traceService.listRunLogs(orgId, userId, new AgentRunTraceService.RunLogQuery(
                 parseInstant(from),
                 parseInstant(to),

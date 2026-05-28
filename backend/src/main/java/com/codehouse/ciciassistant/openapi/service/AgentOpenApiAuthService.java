@@ -3,6 +3,8 @@ package com.codehouse.ciciassistant.openapi.service;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.openapi.config.AgentOpenApiProperties;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
@@ -26,19 +28,22 @@ public class AgentOpenApiAuthService {
     private final AgentOpenApiProperties properties;
     private final AgentApiKeyGenerator keyGenerator;
     private final AgentOpenApiCredentialService credentialService;
+    private final AgentAccessControlService accessControlService;
 
     public AgentOpenApiAuthService(AgentApiCredentialRepository credentialRepository,
                                    AgentDefinitionRepository agentDefinitionRepository,
                                    AgentChannelBindingRepository channelBindingRepository,
                                    AgentOpenApiProperties properties,
                                    AgentApiKeyGenerator keyGenerator,
-                                   AgentOpenApiCredentialService credentialService) {
+                                   AgentOpenApiCredentialService credentialService,
+                                   AgentAccessControlService accessControlService) {
         this.credentialRepository = credentialRepository;
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.channelBindingRepository = channelBindingRepository;
         this.properties = properties;
         this.keyGenerator = keyGenerator;
         this.credentialService = credentialService;
+        this.accessControlService = accessControlService;
     }
 
     @Transactional
@@ -83,6 +88,20 @@ public class AgentOpenApiAuthService {
                 credential.getAgentId(),
                 "api")) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_channel_disabled", "Agent API channel is disabled");
+        }
+        if (!accessControlService.can(
+                credential.getOrgId(),
+                credential.getRunAsUserId(),
+                List.of(),
+                credential.getAgentId(),
+                AgentPermission.RUN)) {
+            accessControlService.recordOpenApiRunAsDenied(
+                    credential.getOrgId(),
+                    credential.getAgentId(),
+                    credential.getRunAsUserId(),
+                    "run-as user lacks target Agent RUN permission",
+                    null);
+            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_run_as_denied", "Run-as user cannot run this Agent");
         }
         credential.markUsed();
         return new AuthenticatedCredential(

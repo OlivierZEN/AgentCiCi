@@ -67,9 +67,21 @@
       "compact": "980px",
       "stacked": "720px"
     },
+    "frontendDesignGovernance": {
+      "purpose": "Project-wide rule for applying the frontend-design skill while preserving AgentCiCi product style.",
+      "requiredSkill": "frontend-design",
+      "rules": [
+        "All frontend pages, components, modals, visualizations, and meaningful UI changes must use frontend-design before implementation.",
+        "Before coding UI, define the surface purpose, target user, tone, constraints, and one concrete visual direction.",
+        "The visual direction must remain within The Gilded Ledger product style: warm ivory canvas, ledger ink text, compact density, champagne-gold structural lines, and restrained enterprise-workbench tone.",
+        "Do not use frontend-design as permission to introduce route-level visual drift, marketing-page composition, purple gradients, default glassmorphism, large dark command centers, generic card grids, or decorative spectacle that conflicts with PRODUCT.md, DESIGN.md, or this DESIGN.json.",
+        "Distinctiveness should come from clearer hierarchy, stronger spacing rhythm, purposeful interaction states, refined typography, and task-specific composition inside the product register."
+      ]
+    },
     "pageImplementationWorkflow": {
       "purpose": "Required implementation and visual QA loop for new or materially changed product pages.",
       "principles": [
+        "Apply extensions.frontendDesignGovernance before implementation and keep the chosen visual direction inside The Gilded Ledger product register.",
         "Build a smallest runnable version first, covering core page structure, navigation path, state changes, and primary interaction logic before visual polish.",
         "The first runnable pass must be understandable and navigable by non-technical users without relying on explanatory placeholder copy.",
         "Run the relevant local app surface and verify the route in a real browser before judging the UI.",

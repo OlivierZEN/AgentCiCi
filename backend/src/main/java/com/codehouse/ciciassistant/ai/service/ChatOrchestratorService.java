@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.ai.service;
 
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
@@ -23,6 +25,7 @@ import com.codehouse.ciciassistant.skill.service.SkillResolverService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillRuntimeConfigService;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService.ResolvedSkillContext;
+import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -89,6 +92,7 @@ public class ChatOrchestratorService {
     private final AgentWorkflowRuntimeService agentWorkflowRuntimeService;
     private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService;
     private final AgentRunTraceService agentRunTraceService;
+    private final AgentAccessControlService agentAccessControlService;
     private final TransactionTemplate tx;
 
     public ChatOrchestratorService(ChatSessionRepository chatSessionRepository,
@@ -113,6 +117,7 @@ public class ChatOrchestratorService {
                                    AgentWorkflowRuntimeService agentWorkflowRuntimeService,
                                    AgentWorkflowExecutionLogService agentWorkflowExecutionLogService,
                                    AgentRunTraceService agentRunTraceService,
+                                   AgentAccessControlService agentAccessControlService,
                                    PlatformTransactionManager transactionManager) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -136,6 +141,7 @@ public class ChatOrchestratorService {
         this.agentWorkflowRuntimeService = agentWorkflowRuntimeService;
         this.agentWorkflowExecutionLogService = agentWorkflowExecutionLogService;
         this.agentRunTraceService = agentRunTraceService;
+        this.agentAccessControlService = agentAccessControlService;
         this.tx = new TransactionTemplate(transactionManager);
     }
 
@@ -149,6 +155,7 @@ public class ChatOrchestratorService {
         Instant skillStartedAt = Instant.now();
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+        agentAccessControlService.require(orgId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
         BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
                 builtinSkillDocumentService.resolveDocs(skillContext, question);
         stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
@@ -303,8 +310,9 @@ public class ChatOrchestratorService {
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces = new ArrayList<>();
             try {
                 Instant skillStartedAt = Instant.now();
-                ResolvedSkillContext skillContext = skillResolverService.resolve(
-                        orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+        ResolvedSkillContext skillContext = skillResolverService.resolve(
+                orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
+        agentAccessControlService.require(orgId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
                 BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
                         builtinSkillDocumentService.resolveDocs(skillContext, question);
                 stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
