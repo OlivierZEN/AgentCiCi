@@ -77,21 +77,30 @@ mvn -q -Dmaven.repo.local=.m2 -DskipTests compile
 - 后端运行版本：`CICI_APP_VERSION=<version>`
 - 线上部署变量：`CICI_IMAGE_TAG=<version>` 与 `CICI_APP_VERSION=<version>`
 
-默认版本 train 是 `2.0`，脚本会读取现有 Git tag 并递增 `B<n>`。例如当前已有 `2.0.B2` 时，下一版为 `2.0.B3`。
+发布版本分为生产版本和测试版本：
+
+- 生产版本由三段纯数字组成，不带字母，例如 `2.0.1`。
+- 生产版本由当前最新生产 Git tag 递增一个版本。每个数字段最大值为 `12`；第三段达到 `12` 后向第二段进位，并把第三段重置为 `1`。例如 `2.0.12` 的下一版是 `2.1.1`；`2.12.12` 的下一版是 `3.0.1`。
+- 测试版本以当前最新生产版本为基础追加 `-beta.<n>`。例如当前最新生产版本为 `2.0.1` 时，第一次测试发布是 `2.0.1-beta.1`，后续同一生产基线的测试发布依次为 `2.0.1-beta.2`、`2.0.1-beta.3`。
+- 如果没有任何生产 Git tag，脚本从 `2.0.1` 开始生成；可通过 `INITIAL_PRODUCTION_VERSION` 覆盖首个生产基线。
 
 ```bash
 export ACR_IMAGE_PREFIX=op-registry.cloudcc.cn/cloudcc-ai-native
 export SSH_KEY=/Volumes/workspace/datafiles/cc-cici-ecs.pem
 export REMOTE=root@47.97.119.160
 
-# 只查看下一版号和将执行的动作，不推送镜像、不创建 tag
+# 只查看下一版生产号和将执行的动作，不推送镜像、不创建 tag
 ./scripts/release-acr.sh --dry-run
+
+# 只查看下一版测试号
+./scripts/release-acr.sh --dry-run --channel test
 ```
 
 如需指定版本号，可以显式传入：
 
 ```bash
-./scripts/release-acr.sh --version 2.0.B3
+./scripts/release-acr.sh --version 2.0.7
+./scripts/release-acr.sh --version 2.0.6-beta.2
 ```
 
 建议同时推送 `<version>` 和 `latest`，线上 `deploy/acr.env` 必须使用 `CICI_IMAGE_TAG=<version>` 发布。这样回滚时可以直接切回上一版 tag。
@@ -118,7 +127,7 @@ ALLOW_DIRTY_RELEASE=true ./scripts/release-acr.sh --version <hotfix-version>
 只有在脚本不可用时才使用手动等价命令。手动流程也必须先确定同一个版本号：
 
 ```bash
-export RELEASE_VERSION=2.0.B3
+export RELEASE_VERSION=2.0.7
 export CICI_APP_VERSION="$RELEASE_VERSION"
 export GIT_COMMIT="$(git rev-parse --short=12 HEAD)"
 

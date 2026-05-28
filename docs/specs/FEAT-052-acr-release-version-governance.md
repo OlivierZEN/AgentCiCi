@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-130
 related_decisions: none
 related_issues: none
-updated_at: 2026-05-22T04:42:10Z
+updated_at: 2026-05-28T11:28:59Z
 updated_by: MANAGER-001
 ---
 
@@ -19,7 +19,10 @@ AgentCiCi already ships backend and frontend images to ACR, but the release vers
 
 ## Version Rule
 
-- Canonical release version: one Docker-compatible string, for example `2.0.B3`.
+- Canonical release version: one Docker-compatible string following the production or test-release rules below.
+- Production versions use three numeric segments with no letters, for example `2.0.1`.
+- Production auto-generation increments the latest production Git tag by one patch version. Each segment has a maximum value of `12`; when the third segment reaches `12`, the next version carries into the second segment and resets the third segment to `1`. For example `2.0.12` becomes `2.1.1`.
+- Test versions are based on the latest production version and append `-beta.<n>`, for example `2.0.1-beta.1`. Multiple test releases on the same production baseline increment only the beta counter.
 - Source at release time: `scripts/release-acr.sh` generates or accepts the canonical version before building anything.
 - Same value must be used for:
   - backend image tag: `cici-backend:<version>`
@@ -35,8 +38,9 @@ AgentCiCi already ships backend and frontend images to ACR, but the release vers
 1. Confirm the worktree and intended release scope.
 2. Generate the next version:
    - If `RELEASE_VERSION` or `CICI_RELEASE_VERSION` is supplied, use it.
-   - Otherwise read existing Git tags matching `<train>.B<n>` and increment the highest `n`.
-   - Default train is `2.0`, so the next version after `2.0.B2` is `2.0.B3`.
+   - Otherwise use production channel by default, read existing numeric production Git tags, and increment the latest version.
+   - Use `--channel test` or `--beta` to generate the next beta version from the latest production Git tag.
+   - If no production tag exists, the default initial production baseline is `2.0.1`.
 3. Build backend with `CICI_APP_VERSION` and `GIT_COMMIT` embedded.
 4. Build frontend with `VITE_CICI_APP_VERSION` embedded.
 5. Build and push ACR backend/frontend images using the canonical version and optional `latest` alias.

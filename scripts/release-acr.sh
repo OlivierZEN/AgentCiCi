@@ -7,8 +7,11 @@ DRY_RUN=false
 PUSH_LATEST="${PUSH_LATEST:-true}"
 PUSH_GIT_TAG="${PUSH_GIT_TAG:-true}"
 ALLOW_DIRTY_RELEASE="${ALLOW_DIRTY_RELEASE:-false}"
-RELEASE_TRAIN="${RELEASE_TRAIN:-2.0}"
+RELEASE_CHANNEL="${RELEASE_CHANNEL:-production}"
 CICI_RELEASE_VERSION="${CICI_RELEASE_VERSION:-${RELEASE_VERSION:-}}"
+EXPLICIT_VERSION=false
+CHANNEL_EXPLICIT=false
+INITIAL_PRODUCTION_VERSION="${INITIAL_PRODUCTION_VERSION:-2.0.1}"
 
 usage() {
   cat <<'EOF'
@@ -18,8 +21,10 @@ Build and push AgentCiCi backend/frontend ACR images with one canonical version.
 
 Options:
   --dry-run              Print the generated version and planned commands only.
-  --version <version>    Use an explicit version instead of generating the next train tag.
-  --train <train>        Release train for auto generation, default 2.0.
+  --version <version>    Use an explicit version instead of generating the next tag.
+  --channel <channel>    Version channel: production or test, default production.
+  --production           Generate the next production version.
+  --test, --beta         Generate the next test beta version.
   --no-latest            Do not push the latest alias.
   --no-git-tag           Do not create or push the Git tag.
   -h, --help             Show this help.
@@ -32,6 +37,9 @@ Environment:
   CICI_PLATFORM          Default linux/amd64
   RELEASE_VERSION        Explicit version alias for CICI_RELEASE_VERSION
   CICI_RELEASE_VERSION   Explicit canonical release version
+  RELEASE_CHANNEL        production|test, default production
+  INITIAL_PRODUCTION_VERSION
+                         First production version if no production tag exists, default 2.0.1
   PUSH_LATEST            true|false, default true
   PUSH_GIT_TAG           true|false, default true
   ALLOW_DIRTY_RELEASE    true|false, default false
@@ -46,11 +54,23 @@ while [[ $# -gt 0 ]]; do
       ;;
     --version)
       CICI_RELEASE_VERSION="${2:-}"
+      EXPLICIT_VERSION=true
       shift 2
       ;;
-    --train)
-      RELEASE_TRAIN="${2:-}"
+    --channel)
+      RELEASE_CHANNEL="${2:-}"
+      CHANNEL_EXPLICIT=true
       shift 2
+      ;;
+    --production)
+      RELEASE_CHANNEL=production
+      CHANNEL_EXPLICIT=true
+      shift
+      ;;
+    --test|--beta)
+      RELEASE_CHANNEL=test
+      CHANNEL_EXPLICIT=true
+      shift
       ;;
     --no-latest)
       PUSH_LATEST=false
@@ -83,6 +103,21 @@ ACR_IMAGE_PREFIX="${ACR_IMAGE_PREFIX:-op-registry.cloudcc.cn/cloudcc-ai-native}"
 ACR_REGISTRY="${ACR_REGISTRY:-${ACR_IMAGE_PREFIX%%/*}}"
 CICI_PLATFORM="${CICI_PLATFORM:-linux/amd64}"
 
+normalize_release_channel() {
+  case "$1" in
+    production|prod)
+      printf 'production'
+      ;;
+    test|beta)
+      printf 'test'
+      ;;
+    *)
+      echo "Invalid release channel: $1. Expected production or test." >&2
+      exit 2
+      ;;
+  esac
+}
+
 run() {
   printf '+'
   printf ' %q' "$@"
@@ -103,15 +138,94 @@ run_in_dir() {
   fi
 }
 
-next_release_version() {
+validate_production_version() {
+  local version="$1"
+  if [[ ! "$version" =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+    return 1
+  fi
+  local major="$((10#${BASH_REMATCH[1]}))"
+  local minor="$((10#${BASH_REMATCH[2]}))"
+  local patch="$((10#${BASH_REMATCH[3]}))"
+  [[ "$major" -ge 0 && "$major" -le 12 && "$minor" -ge 0 && "$minor" -le 12 && "$patch" -ge 1 && "$patch" -le 12 ]]
+}
+
+validate_release_version() {
+  local version="$1"
+  if [[ "$version" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-beta\.([0-9]+)$ ]]; then
+    local beta_number="$((10#${BASH_REMATCH[2]}))"
+    validate_production_version "${BASH_REMATCH[1]}" && [[ "$beta_number" -ge 1 ]]
+    return
+  fi
+  validate_production_version "$version"
+}
+
+release_channel_for_version() {
+  if [[ "$1" == *-beta.* ]]; then
+    printf 'test'
+  else
+    printf 'production'
+  fi
+}
+
+latest_production_version() {
+  git -C "$ROOT_DIR" tag --list |
+    awk -F. '
+      /^[0-9]+\.[0-9]+\.[0-9]+$/ {
+        printf "%04d.%04d.%04d %s\n", $1, $2, $3, $0
+      }
+    ' |
+    sort |
+    tail -1 |
+    awk '{print $2}'
+}
+
+increment_production_version() {
+  local version="$1"
+  IFS=. read -r major minor patch <<<"$version"
+  major="$((10#$major))"
+  minor="$((10#$minor))"
+  patch="$((10#$patch))"
+
+  if (( patch < 12 )); then
+    patch=$((patch + 1))
+  elif (( minor < 12 )); then
+    minor=$((minor + 1))
+    patch=1
+  elif (( major < 12 )); then
+    major=$((major + 1))
+    minor=0
+    patch=1
+  else
+    echo "Cannot increment production version $version: all numeric segments are already at 12." >&2
+    exit 1
+  fi
+
+  printf '%d.%d.%d' "$major" "$minor" "$patch"
+}
+
+next_production_version() {
   local latest
+  latest="$(latest_production_version)"
+  if [[ -z "$latest" ]]; then
+    printf '%s' "$INITIAL_PRODUCTION_VERSION"
+    return
+  fi
+  increment_production_version "$latest"
+}
+
+next_test_version() {
+  local production_version latest latest_beta
+  production_version="$(latest_production_version)"
+  if [[ -z "$production_version" ]]; then
+    production_version="$INITIAL_PRODUCTION_VERSION"
+  fi
   latest="$(
-    git -C "$ROOT_DIR" tag --list "${RELEASE_TRAIN}.B*" |
-      awk -v train="$RELEASE_TRAIN" '
-        index($0, train ".B") == 1 {
-          rest = substr($0, length(train) + 3)
-          if (match(rest, /^[0-9]+/)) {
-            print substr(rest, RSTART, RLENGTH)
+    git -C "$ROOT_DIR" tag --list "${production_version}-beta.*" |
+      awk -v base="$production_version" '
+        index($0, base "-beta.") == 1 {
+          rest = substr($0, length(base) + 7)
+          if (match(rest, /^[0-9]+$/)) {
+            print rest
           }
         }
       ' |
@@ -121,16 +235,40 @@ next_release_version() {
   if [[ -z "$latest" ]]; then
     latest=0
   fi
-  printf '%s.B%d' "$RELEASE_TRAIN" "$((latest + 1))"
+  latest_beta="$((latest + 1))"
+  printf '%s-beta.%d' "$production_version" "$latest_beta"
 }
+
+next_release_version() {
+  case "$RELEASE_CHANNEL" in
+    production)
+      next_production_version
+      ;;
+    test)
+      next_test_version
+      ;;
+  esac
+}
+
+RELEASE_CHANNEL="$(normalize_release_channel "$RELEASE_CHANNEL")"
 
 if [[ -z "$CICI_RELEASE_VERSION" ]]; then
   CICI_RELEASE_VERSION="$(next_release_version)"
 fi
 
-if [[ ! "$CICI_RELEASE_VERSION" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
-  echo "Invalid release version for Docker tag: $CICI_RELEASE_VERSION" >&2
+if ! validate_release_version "$CICI_RELEASE_VERSION"; then
+  echo "Invalid release version: $CICI_RELEASE_VERSION" >&2
+  echo "Expected production version N.N.N with numeric segments 0-12 and patch 1-12, or test version N.N.N-beta.N." >&2
   exit 2
+fi
+
+if [[ "$EXPLICIT_VERSION" == "true" ]]; then
+  explicit_channel="$(release_channel_for_version "$CICI_RELEASE_VERSION")"
+  if [[ "$CHANNEL_EXPLICIT" == "true" && "$explicit_channel" != "$RELEASE_CHANNEL" ]]; then
+    echo "Version $CICI_RELEASE_VERSION does not match requested channel $RELEASE_CHANNEL." >&2
+    exit 2
+  fi
+  RELEASE_CHANNEL="$explicit_channel"
 fi
 
 GIT_COMMIT="$(git -C "$ROOT_DIR" rev-parse --short=12 HEAD)"
@@ -160,6 +298,7 @@ fi
 cat <<EOF
 AgentCiCi release
   version:        $CICI_RELEASE_VERSION
+  channel:        $RELEASE_CHANNEL
   git commit:     $GIT_COMMIT
   image prefix:   $ACR_IMAGE_PREFIX
   platform:       $CICI_PLATFORM

@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-28T08:04:54Z
+updated_at: 2026-05-28T11:28:59Z
 updated_by: MANAGER-001
 phase: maintenance
 active_task: "TASK-143 / TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
@@ -35,7 +35,7 @@ read_next:
 - Just completed: `TASK-134` is closed because the remaining whole-file upload reset is a local-network limitation and the online environment is normal; `TASK-124` is also complete.
 - Static bug verification: `TASK-139` confirmed from `/agents` list/detail loading; `TASK-140` confirmed from backend route and docs path shape.
 - Existing mainline active work remains: `TASK-114`, `TASK-115`, `TASK-116`; billing platform configuration is split to `TASK-143`.
-- Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns canonical versions.
+- Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` now owns numeric production versions and production-based beta test versions.
 - Recently completed and archived: `TASK-127`, `TASK-126`, `TASK-123`, `TASK-118`, `TASK-117`, `TASK-112`
 ## Read Next
 

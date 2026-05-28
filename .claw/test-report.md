@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-28T04:27:41Z
+updated_at: 2026-05-28T11:28:59Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-28T04:27:41Z
+last_run_at: 2026-05-28T11:28:59Z
 last_run_status: success
 ---
 
@@ -13,11 +13,24 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-119 Agent access control completion
-- 命令：task-scoped `dev-login.py`, `check-assignment.py`, `mvn -q -DskipTests compile`, `mvn -q -Dtest=AgentAccessControlServiceTest test`, focused Spring integration tests with explicit IPv6 PostgreSQL URL, `npm run build`, `git diff --check`, `validate-state.py .claw`
-- 环境：local backend/frontend verification; Docker PostgreSQL reachable through `[::1]:5432` because host IPv4 `127.0.0.1:5432` is occupied by an SSH listener
+- 范围：生产/测试发布版本号规范调整
+- 命令：manager `dev-login.py`, `bash -n scripts/release-acr.sh`, `./scripts/release-acr.sh --dry-run`, `./scripts/release-acr.sh --dry-run --channel test`, invalid old-version check, temp Git tag fixture, `validate-state.py .claw`
+- 环境：local release-script dry-run; no image build, push, or Git tag creation
 
 ## Latest Verified Results
+
+- Release version naming governance (2026-05-28T11:28:59Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended release runbook/script/spec/status/report files -> **allowed**.
+    - `syntax`: `bash -n scripts/release-acr.sh` -> **success**.
+    - `release-dry-run-production`: `./scripts/release-acr.sh --dry-run` -> **success**; generated next production version `2.0.7` from existing numeric production tags without building, pushing, or tagging.
+    - `release-dry-run-test`: `./scripts/release-acr.sh --dry-run --channel test` -> **success**; generated next test version `2.0.6-beta.1` from latest production tag `2.0.6`.
+    - `invalid-old-format`: `./scripts/release-acr.sh --dry-run --version 2.0.B3` -> **blocked as expected**.
+    - `temp-tag-fixture`: copied `scripts/release-acr.sh` into a temporary Git repo with tags `2.0.12`, then `2.1.1-beta.1/2` -> **success**; generated `2.1.1` for carry and `2.1.1-beta.3` for beta increment.
+    - `state`: `validate-state.py .claw` -> **success** after normalizing `TASK-136.md` `updated_at` to UTC `Z` format.
+  - Notes:
+    - Production releases now use three numeric segments; test releases use the latest production version plus `-beta.<n>`.
+    - `docs/production-release-runbook.md` and `docs/specs/FEAT-052-acr-release-version-governance.md` were updated as release governance facts.
 
 - TASK-119 Agent access control completion (2026-05-28T04:27:41Z):
   - Commands:
