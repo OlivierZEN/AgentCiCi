@@ -1,9 +1,9 @@
 ---
 kind: task-status
 task_id: TASK-138
-status: ready
-updated_at: 2026-05-27T03:37:58Z
-updated_by: MANAGER-001
+status: review
+updated_at: 2026-05-27T07:33:11Z
+updated_by: DEV-fengchu
 assignee: DEV-fengchu
 owner_role: frontend-agent
 assignment_path: .claw/assignments/TASK-138.yaml
@@ -36,8 +36,20 @@ spec_path: docs/specs/FEAT-057-openapi-docs-copy-cleanup.md
 
 ## Verification
 
-- Pending implementation.
+- 2026-05-27: task-scoped identity gate passed for `DEV-fengchu` on `codex/TASK-138-openapi-docs-copy-cleanup`.
+- 2026-05-27: `npm run build` passed in `frontend/`; Vite reported the existing large chunk warning.
+- 2026-05-27: `rg -n "CLOUDCC_PAGE_TOKEN" frontend/src` returned no matches.
+- 2026-05-27: `rg -n "CLOUDCC_OPENAPI_TOKEN|CloudCC accessToken 获取方式|CloudCC baseUrl 联调说明|sdkcan-kao|apigai-lan" frontend/src/assistant/AgentOpenApiDocsDialog.tsx` confirmed the updated example and links.
+- 2026-05-27: `git diff --check` passed.
+- 2026-05-27: Desktop Chrome smoke was attempted with a local Vite server and smoke proxy, but the Codex Chrome Extension connection failed with `native pipe is closed` after initial connection. Chrome, the extension, and native host checks all passed; no built-in browser fallback was used.
+
+## Changed Files
+
+- `frontend/src/assistant/AgentOpenApiDocsDialog.tsx`
+- `frontend/src/assistant/cici-ui.css`
+- `.claw/tasks/TASK-138.md`
 
 ## Handoff
 
-- Assigned to `DEV-fengchu` on branch `codex/TASK-138-openapi-docs-copy-cleanup`. Coordinate with `TASK-140` if both are active.
+- OpenAPI docs copy is ready for review. TASK-140 has not landed in this branch, so route examples still use the current Agent ID route shape.
+- `.claw/test-report.md` was not updated because TASK-138 write authorization only includes `.claw/tasks/**`, `docs/specs/**`, and `frontend/src/**`.

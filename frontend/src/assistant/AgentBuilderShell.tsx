@@ -1376,12 +1376,19 @@ export function resolveAgentAfterDelete<T extends { id: string }>(
   return { nextAgents, fallbackAgentId };
 }
 
+export function resolveAgentChannels(itemChannels: string[] | undefined, fallbackChannels: PublishChannelId[]): PublishChannelId[] {
+  if (!Array.isArray(itemChannels)) {
+    return fallbackChannels;
+  }
+  return itemChannels.filter((ch): ch is PublishChannelId =>
+    CHANNEL_OPTIONS.some((opt) => opt.id === ch),
+  );
+}
+
 function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: KnowledgeBase[]): AgentRecord {
   const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((kb) => kb.id));
   const model = item.model && item.model.trim() ? item.model : fallbackDraft.model;
-  const channels = (item.channels ?? []).filter((ch): ch is PublishChannelId =>
-    CHANNEL_OPTIONS.some((opt) => opt.id === ch),
-  );
+  const channels = resolveAgentChannels(item.channels, fallbackDraft.channels);
   const draft: AgentDraft = {
     name: item.name ?? fallbackDraft.name,
     avatarBase64: item.avatarBase64 ?? "",
@@ -1390,7 +1397,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
     model,
     systemPrompt: item.systemPrompt ?? fallbackDraft.systemPrompt,
     specText: item.specText ?? fallbackDraft.specText,
-    channels: channels.length > 0 ? channels : fallbackDraft.channels,
+    channels,
     knowledgeBaseIds: item.knowledgeBaseIds ?? fallbackDraft.knowledgeBaseIds,
     toolIds: item.toolIds ?? fallbackDraft.toolIds,
     handoffRule: item.handoffRule ?? fallbackDraft.handoffRule,
@@ -2834,8 +2841,9 @@ export default function AgentBuilderShell({
           <article
             key={item.id}
             className={`cici-agent-card${pageMode === "editor" && item.id === selectedAgentId ? " is-active" : ""}`}
+            onClick={() => void selectAgent(item.id)}
           >
-            <button type="button" className="cici-agent-card__select" onClick={() => void selectAgent(item.id)}>
+            <button type="button" className="cici-agent-card__select">
               <div className="cici-agent-card__top">
                 <span className="cici-agent-card__name">{item.name}</span>
                 <div className="cici-agent-card__badges">
@@ -2854,7 +2862,10 @@ export default function AgentBuilderShell({
                 <button
                   type="button"
                   className="cici-agent-card__delete"
-                  onClick={() => setDeleteTarget(item)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDeleteTarget(item);
+                  }}
                   disabled={isDeletingAgent && deleteTarget?.id === item.id}
                 >
                   删除
@@ -3128,8 +3139,39 @@ export default function AgentBuilderShell({
     </div>
   );
 
+  const renderDeleteModal = () => deleteTarget ? (
+    <div className="cici-modal-backdrop" role="presentation">
+      <div
+        className="cici-modal cici-agent-delete-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cici-agent-delete-title"
+      >
+        <div className="cici-modal__header">
+          <h2 id="cici-agent-delete-title">删除「{deleteTarget.name}」？</h2>
+          <button type="button" className="cici-modal__close" onClick={() => setDeleteTarget(null)} aria-label="关闭">×</button>
+        </div>
+        <div className="cici-agent-delete-modal__body">
+          <p>删除后，这个自定义 Agent 会从构建列表中消失。</p>
+          <p>历史运行记录、审计证据、OpenAPI 调用日志和已产生的版本记录仍会保留，便于后续追溯。</p>
+        </div>
+        <div className="cici-modal__footer">
+          <button type="button" className="cici-btn" onClick={() => setDeleteTarget(null)} disabled={isDeletingAgent}>取消</button>
+          <button type="button" className="cici-btn cici-btn--danger" onClick={() => void deleteAgent()} disabled={isDeletingAgent}>
+            {isDeletingAgent ? "删除中..." : "确认删除"}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (pageMode === "list") {
-    return renderLibraryPanel(true);
+    return (
+      <>
+        {renderLibraryPanel(true)}
+        {renderDeleteModal()}
+      </>
+    );
   }
 
   return (
@@ -3925,31 +3967,7 @@ export default function AgentBuilderShell({
         </div>
       ) : null}
 
-      {deleteTarget ? (
-        <div className="cici-modal-backdrop" role="presentation">
-          <div
-            className="cici-modal cici-agent-delete-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cici-agent-delete-title"
-          >
-            <div className="cici-modal__header">
-              <h2 id="cici-agent-delete-title">删除「{deleteTarget.name}」？</h2>
-              <button type="button" className="cici-modal__close" onClick={() => setDeleteTarget(null)} aria-label="关闭">×</button>
-            </div>
-            <div className="cici-agent-delete-modal__body">
-              <p>删除后，这个自定义 Agent 会从构建列表中消失。</p>
-              <p>历史运行记录、审计证据、OpenAPI 调用日志和已产生的版本记录仍会保留，便于后续追溯。</p>
-            </div>
-            <div className="cici-modal__footer">
-              <button type="button" className="cici-btn" onClick={() => setDeleteTarget(null)} disabled={isDeletingAgent}>取消</button>
-              <button type="button" className="cici-btn cici-btn--danger" onClick={() => void deleteAgent()} disabled={isDeletingAgent}>
-                {isDeletingAgent ? "删除中..." : "确认删除"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {renderDeleteModal()}
 
       <AvatarCropperDialog
         open={Boolean(avatarCropSource)}

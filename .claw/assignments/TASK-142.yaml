@@ -1,0 +1,50 @@
+task_id: TASK-142
+assignee: DEV-fengchu
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-28T04:00:37Z
+expires_at: none
+spec_path: docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md
+task_status_path: .claw/tasks/TASK-142.md
+branch: codex/TASK-142-openapi-sse-streaming
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-142.md
+  - docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md
+  - docs/specs/FEAT-036-agent-open-api-dify-parity.md
+  - docs/specs/FEAT-058-openapi-agentless-endpoints.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Fix the OpenAPI chat-messages streaming bug described in B20260527-SSE01 and FEAT-060."
+  - "Implement against the canonical agentless public route /openapi/v1/chat-messages from TASK-140/FEAT-058."
+  - "Preserve blocking mode, API Key auth/scope semantics, message persistence, and task stop scoping."
+  - "Do not restore old /openapi/v1/agents/{agentId}/... public routes or bundle unrelated OpenAPI docs cleanup."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-28T04:00:37Z; user assigned B20260527-SSE01 / TASK-142 to DEV-fengchu."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "OpenAPI streaming bugfix from 飞书 BUG反馈. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-142 on branch codex/TASK-142-openapi-sse-streaming before implementation edits. Developer task progress is recorded in .claw/tasks/TASK-142.md; task-board.md remains PM/integration-owned."

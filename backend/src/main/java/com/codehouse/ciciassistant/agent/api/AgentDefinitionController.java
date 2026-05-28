@@ -52,11 +52,11 @@ public class AgentDefinitionController {
         String orgId = TenantContext.requireOrgId();
         String userId = requireUserId();
         List<String> roles = TenantContext.getRoles();
-        return ApiResponse.ok(agentDefinitionService.list(orgId)
+        return ApiResponse.ok(agentDefinitionService.listWithChannels(orgId)
                 .stream()
-                .filter(item -> accessControlService.can(orgId, userId, roles, item.getAgentId(), AgentPermission.VIEW)
-                        || accessControlService.can(orgId, userId, roles, item.getAgentId(), AgentPermission.RUN))
-                .map(item -> toDefinitionPayload(orgId, userId, roles, item))
+                .filter(item -> accessControlService.can(orgId, userId, roles, item.definition().getAgentId(), AgentPermission.VIEW)
+                        || accessControlService.can(orgId, userId, roles, item.definition().getAgentId(), AgentPermission.RUN))
+                .map(item -> toListPayload(orgId, userId, roles, item))
                 .toList());
     }
 
@@ -324,6 +324,15 @@ public class AgentDefinitionController {
         if (TenantContext.getRoles().stream().noneMatch(RoleCodes::isOrgAdminRole)) {
             throw new ForbiddenException("需要组织管理员权限");
         }
+    }
+
+    private Map<String, Object> toListPayload(String orgId,
+                                              String userId,
+                                              List<String> roles,
+                                              AgentDefinitionService.AgentListItem item) {
+        Map<String, Object> payload = toDefinitionPayload(orgId, userId, roles, item.definition());
+        payload.put("channels", item.channels());
+        return payload;
     }
 
     private Map<String, Object> toVersionPayload(AgentWorkflowVersionEntity item) {
