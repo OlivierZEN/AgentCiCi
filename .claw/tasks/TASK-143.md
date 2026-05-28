@@ -3,12 +3,12 @@ kind: task-status
 task_id: TASK-143
 assignee: MANAGER-001
 owner_role: fullstack-agent
-status: ready
+status: in_progress
 branch: codex/TASK-143-billing-edition-config
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-143.yaml
-updated_at: 2026-05-28T08:04:54Z
+updated_at: 2026-05-28T08:19:11Z
 updated_by: MANAGER-001
 ---
 
@@ -54,6 +54,12 @@ The platform operations console must become the source of truth for edition cont
 - Private deployment defaults do not double-charge customer-owned local model token usage.
 - SaaS editions can configure Work Credits allowances, top-up posture, and platform-paid resource policies.
 - All mutable platform billing configuration changes are auditable and require explicit reason text for high-risk changes.
+
+## Verification
+
+- 2026-05-28T08:19:11Z: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` on `codex/TASK-143-billing-edition-config` -> allowed.
+- 2026-05-28T08:19:11Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> success.
+- 2026-05-28T08:19:11Z: `npm test -- billingMode.test.ts` in `frontend/` -> success, 3 tests passed.
 
 ## Handoff
 

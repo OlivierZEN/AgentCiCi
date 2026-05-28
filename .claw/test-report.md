@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-28T04:27:41Z
+updated_at: 2026-05-28T08:19:11Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-28T04:27:41Z
+last_run_at: 2026-05-28T08:19:11Z
 last_run_status: success
 ---
 
@@ -13,11 +13,20 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-119 Agent access control completion
-- 命令：task-scoped `dev-login.py`, `check-assignment.py`, `mvn -q -DskipTests compile`, `mvn -q -Dtest=AgentAccessControlServiceTest test`, focused Spring integration tests with explicit IPv6 PostgreSQL URL, `npm run build`, `git diff --check`, `validate-state.py .claw`
-- 环境：local backend/frontend verification; Docker PostgreSQL reachable through `[::1]:5432` because host IPv4 `127.0.0.1:5432` is occupied by an SSH listener
+- 范围：TASK-143 billing deployment mode switch
+- 命令：task-scoped `dev-login.py`, `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test`, `npm test -- billingMode.test.ts`
+- 环境：local backend/frontend focused verification
 
 ## Latest Verified Results
+
+- TASK-143 billing deployment mode switch (2026-05-28T08:19:11Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` on `codex/TASK-143-billing-edition-config` -> **allowed**.
+    - `backend-focused`: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> **success**.
+    - `frontend-unit`: `npm test -- billingMode.test.ts` in `frontend/` -> **success**, 3 tests passed.
+  - Notes:
+    - Added backend billing deployment mode properties/API coverage and frontend billing mode normalization coverage.
+    - Default mode remains private deployment; SaaS aliases normalize to `saas`.
 
 - TASK-119 Agent access control completion (2026-05-28T04:27:41Z):
   - Commands:
