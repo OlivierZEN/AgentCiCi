@@ -17,6 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentAccessGrantRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
@@ -24,6 +25,11 @@ import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceEntity;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
+import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
+import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
+import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
@@ -91,6 +97,12 @@ class AgentOpenApiIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
+    private UserAccountRepository userAccountRepository;
+
+    @Autowired
+    private OrgRepository orgRepository;
+
+    @Autowired
     private AgentDefinitionRepository agentDefinitionRepository;
 
     @Autowired
@@ -98,6 +110,9 @@ class AgentOpenApiIntegrationTest {
 
     @Autowired
     private AgentChannelBindingRepository agentChannelBindingRepository;
+
+    @Autowired
+    private AgentAccessGrantRepository agentAccessGrantRepository;
 
     @Autowired
     private AgentApiCredentialRepository credentialRepository;
@@ -227,6 +242,26 @@ class AgentOpenApiIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("REVOKED"));
+    }
+
+    @Test
+    void shouldRejectApiKeyCreationWhenRunAsUserLacksAgentRunPermission() throws Exception {
+        String token = loginToken("13800138111");
+        String runAsUserId = ensureOrgUser("13900007777");
+        String agentId = "openapi-run-denied-agent";
+        preparePublishedApiAgent(agentId);
+
+        mockMvc.perform(post("/agents/{agentId}/api-keys", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "denied run-as",
+                                  "runAsUserId": "%s"
+                                }
+                                """.formatted(runAsUserId)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("runAsUserId must have target Agent RUN permission"));
     }
 
     @Test
@@ -901,6 +936,21 @@ class AgentOpenApiIntegrationTest {
                 .asText();
     }
 
+    private String ensureOrgUser(String mobile) {
+        return transactionTemplate.execute(status -> {
+            if (userRepository.findByOrgIdAndMobile("demo-org", mobile).isPresent()) {
+                return userRepository.findByOrgIdAndMobile("demo-org", mobile).orElseThrow().getId();
+            }
+            UserAccountEntity account = userAccountRepository.findByPrimaryMobile(mobile)
+                    .orElseGet(() -> userAccountRepository.save(new UserAccountEntity(mobile)));
+            UserEntity member = new UserEntity(
+                    orgRepository.findById("demo-org").orElseThrow(),
+                    account,
+                    RoleCodes.ORG_USER);
+            return userRepository.save(member).getId();
+        });
+    }
+
     private void preparePublishedApiAgent(String agentId) {
         preparePublishedAgent(agentId, true);
     }
@@ -909,6 +959,8 @@ class AgentOpenApiIntegrationTest {
         transactionTemplate.executeWithoutResult(status -> {
             credentialRepository.findByOrgIdAndAgentIdOrderByCreatedAtDesc("demo-org", agentId)
                     .forEach(credentialRepository::delete);
+            agentAccessGrantRepository.findByOrgIdAndAgentIdAndStatus("demo-org", agentId, "ACTIVE")
+                    .forEach(agentAccessGrantRepository::delete);
             agentChannelBindingRepository.deleteByOrgIdAndAgentId("demo-org", agentId);
             agentWorkflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc("demo-org", agentId)
                     .forEach(agentWorkflowVersionRepository::delete);

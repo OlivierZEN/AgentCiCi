@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.agent.service;
 
+import com.codehouse.ciciassistant.agent.domain.AgentAccessGrantEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentAccessGrantRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
@@ -161,6 +163,7 @@ public class AgentDefinitionService {
     private final AgentChannelBindingRepository agentChannelBindingRepository;
     private final AgentWorkflowVersionRepository agentWorkflowVersionRepository;
     private final AgentPublishConfigRepository agentPublishConfigRepository;
+    private final AgentAccessGrantRepository agentAccessGrantRepository;
     private final ObjectMapper objectMapper;
     private final AgentWorkflowExecutionLogService workflowExecutionLogService;
     private final AgentRuntimeScheduleSyncService runtimeScheduleSyncService;
@@ -173,6 +176,7 @@ public class AgentDefinitionService {
                                   AgentChannelBindingRepository agentChannelBindingRepository,
                                   AgentWorkflowVersionRepository agentWorkflowVersionRepository,
                                   AgentPublishConfigRepository agentPublishConfigRepository,
+                                  AgentAccessGrantRepository agentAccessGrantRepository,
                                   ObjectMapper objectMapper,
                                   AgentWorkflowExecutionLogService workflowExecutionLogService,
                                   AgentRuntimeScheduleSyncService runtimeScheduleSyncService,
@@ -184,6 +188,7 @@ public class AgentDefinitionService {
         this.agentChannelBindingRepository = agentChannelBindingRepository;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.agentPublishConfigRepository = agentPublishConfigRepository;
+        this.agentAccessGrantRepository = agentAccessGrantRepository;
         this.objectMapper = objectMapper;
         this.workflowExecutionLogService = workflowExecutionLogService;
         this.runtimeScheduleSyncService = runtimeScheduleSyncService;
@@ -247,6 +252,7 @@ public class AgentDefinitionService {
                 normalizeExecutionMode(command.executionMode()),
                 trimToNull(command.versionLabel()),
                 AvatarDataUrlValidator.normalizeNullableDataUrl(command.avatarBase64(), "avatarBase64"),
+                trimToNull(command.ownerUserId()),
                 command.builtin() != null && command.builtin(),
                 command.enabled() == null || command.enabled()
         );
@@ -452,15 +458,39 @@ public class AgentDefinitionService {
                             DEFAULT_HANDOFF_RULE,
                             "BALANCED",
                             seed.executionMode().toUpperCase(Locale.ROOT),
-                    "v0.1",
-                    null,
-                    seed.builtin(),
-                    true,
+                            "v0.1",
+                            null,
+                            null,
+                            seed.builtin(),
+                            true,
                             seed.specText(),
                             List.of(),
                             seed.toolIds(),
                             seed.channels(),
                             DEFAULT_PUBLISH_CONFIGS));
+            ensureOrgDefaultRunGrants(orgId, seed.agentId());
+        }
+    }
+
+    private void ensureOrgDefaultRunGrants(String orgId, String agentId) {
+        List<AgentAccessGrantEntity> existing = agentAccessGrantRepository.findByOrgIdAndAgentIdAndStatus(
+                orgId,
+                agentId,
+                AgentAccessGrantEntity.STATUS_ACTIVE);
+        for (String permission : List.of("VIEW", "RUN")) {
+            boolean present = existing.stream().anyMatch(item ->
+                    "ORG".equals(item.getPrincipalType()) && permission.equals(item.getPermission()));
+            if (!present) {
+                agentAccessGrantRepository.save(new AgentAccessGrantEntity(
+                        orgId,
+                        agentId,
+                        "ORG",
+                        orgId,
+                        permission,
+                        "DEFAULT_POLICY",
+                        null,
+                        null));
+            }
         }
     }
 
@@ -625,6 +655,7 @@ public class AgentDefinitionService {
             String executionMode,
             String versionLabel,
             String avatarBase64,
+            String ownerUserId,
             Boolean builtin,
             Boolean enabled,
             String specText,

@@ -7,6 +7,7 @@ import { safeFetchJson } from "../utils/http";
 import { buildCompileNotice, isCompileRequired, keepRecentVersionHistory } from "./compile-history";
 import AgentOpenApiDocsDialog from "./AgentOpenApiDocsDialog";
 import AgentOpenApiKeysDialog from "./AgentOpenApiKeysDialog";
+import AgentAccessManagementDialog from "./AgentAccessManagementDialog";
 
 type KnowledgeBase = {
   id: number;
@@ -68,6 +69,16 @@ type AgentRecord = {
   channels: PublishChannelId[];
   draft: AgentDraft;
   publishConfig: PublishConfigDraft;
+  access: AgentAccessSummary;
+};
+
+type AgentAccessSummary = {
+  permissions?: string[];
+  canManage?: boolean;
+  canEdit?: boolean;
+  canRun?: boolean;
+  canOpenApi?: boolean;
+  canViewLogs?: boolean;
 };
 
 type CompileArtifact = {
@@ -187,6 +198,7 @@ type AgentApiRecord = {
   channels?: string[];
   publishConfigs?: Record<string, unknown>;
   skillBindings?: AgentSkillBindingDraft[];
+  access?: AgentAccessSummary;
 };
 
 type AgentDeletePayload = {
@@ -1400,6 +1412,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
     channels: [...draft.channels],
     draft,
     publishConfig: toPublishConfig(item.publishConfigs),
+    access: item.access ?? {},
   };
 }
 
@@ -1462,6 +1475,7 @@ export default function AgentBuilderShell({
   const [pickerSelection, setPickerSelection] = useState<string[]>([]);
   const [openApiDocsOpen, setOpenApiDocsOpen] = useState(false);
   const [openApiKeysOpen, setOpenApiKeysOpen] = useState(false);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
   const [isDeletingAgent, setIsDeletingAgent] = useState(false);
 
@@ -1687,6 +1701,10 @@ export default function AgentBuilderShell({
   }, [library, searchText]);
 
   const selectedAgent = library.find((item) => item.id === selectedAgentId) ?? null;
+  const selectedAgentAccess = selectedAgent?.access ?? {};
+  const selectedAgentPermissions = selectedAgentAccess.permissions ?? [];
+  const canEditSelectedAgent = Boolean(selectedAgentAccess.canEdit);
+  const canPublishSelectedAgent = selectedAgentPermissions.includes("PUBLISH");
   const selectedModel = modelOptions.find((option) => option.value === draft.model);
   const openApiBaseUrl = `${window.location.origin}/openapi/v1`;
   const readinessCount = [draft.name, draft.specText, draft.channels.length > 0, draft.knowledgeBaseIds.length > 0, draft.toolIds.length > 0].filter(Boolean).length;
@@ -3158,12 +3176,22 @@ export default function AgentBuilderShell({
               >
                 开放API文档
               </button>
+              {selectedAgentAccess.canManage ? (
+                <button
+                  type="button"
+                  className="cici-builder__action cici-builder__action--ghost"
+                  onClick={() => setAccessDialogOpen(true)}
+                  disabled={!selectedAgentId}
+                >
+                  权限管理
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
                 onClick={() => void saveFramework()}
-                disabled={isSaving || !hasDraftChanges}
-                title={!hasDraftChanges ? "当前内容无变化，无需保存草稿。" : undefined}
+                disabled={isSaving || !hasDraftChanges || !canEditSelectedAgent}
+                title={!canEditSelectedAgent ? "当前账号没有编辑权限。" : !hasDraftChanges ? "当前内容无变化，无需保存草稿。" : undefined}
               >
                 {isSaving ? "保存中…" : "保存草稿"}
               </button>
@@ -3174,8 +3202,8 @@ export default function AgentBuilderShell({
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
                 onClick={() => void compileWorkflow()}
-                disabled={isCompiling}
-                title={!compileNeedsRebuild ? "当前编译输入无变化，编译后将提示无变化且不新增版本。" : undefined}
+                disabled={isCompiling || !canEditSelectedAgent}
+                title={!canEditSelectedAgent ? "当前账号没有编辑权限。" : !compileNeedsRebuild ? "当前编译输入无变化，编译后将提示无变化且不新增版本。" : undefined}
               >
                 {isCompiling ? "编译中…" : "智能体编译"}
               </button>
@@ -3183,8 +3211,8 @@ export default function AgentBuilderShell({
                 type="button"
                 className="cici-builder__action cici-builder__action--primary"
                 onClick={() => void publishLatestVersion()}
-                disabled={publishBlocked}
-                title={publishBlockedTitle}
+                disabled={publishBlocked || !canPublishSelectedAgent}
+                title={!canPublishSelectedAgent ? "当前账号没有发布权限。" : publishBlockedTitle}
               >
                 {isPublishing ? "处理中…" : "发布版本"}
               </button>
@@ -3734,7 +3762,7 @@ export default function AgentBuilderShell({
         published={publishedVersionNo != null}
         apiChannelEnabled={draft.channels.includes("api")}
         baseUrl={openApiBaseUrl}
-        keyManagementAvailable={Boolean(selectedAgentId && token)}
+        keyManagementAvailable={Boolean(selectedAgentId && token && selectedAgentAccess.canOpenApi)}
         onOpenKeyManagement={() => setOpenApiKeysOpen(true)}
         onClose={() => setOpenApiDocsOpen(false)}
       />
@@ -3745,6 +3773,13 @@ export default function AgentBuilderShell({
         agentName={draft.name}
         token={token}
         onClose={() => setOpenApiKeysOpen(false)}
+      />
+      <AgentAccessManagementDialog
+        open={accessDialogOpen}
+        token={token}
+        agentId={selectedAgentId}
+        agentName={draft.name}
+        onClose={() => setAccessDialogOpen(false)}
       />
 
       {pickerOpen ? (

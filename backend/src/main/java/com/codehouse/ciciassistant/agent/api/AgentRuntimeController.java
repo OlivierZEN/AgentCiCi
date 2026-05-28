@@ -1,9 +1,10 @@
 package com.codehouse.ciciassistant.agent.api;
 
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeCatalogService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeScheduleSyncService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
-import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.util.List;
@@ -19,19 +20,21 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/agents")
-@RequireOrgAdmin
 public class AgentRuntimeController {
 
     private final AgentWorkflowExecutionLogService executionLogService;
     private final AgentRuntimeCatalogService runtimeCatalogService;
     private final AgentRuntimeScheduleSyncService runtimeScheduleSyncService;
+    private final AgentAccessControlService accessControlService;
 
     public AgentRuntimeController(AgentWorkflowExecutionLogService executionLogService,
                                   AgentRuntimeCatalogService runtimeCatalogService,
-                                  AgentRuntimeScheduleSyncService runtimeScheduleSyncService) {
+                                  AgentRuntimeScheduleSyncService runtimeScheduleSyncService,
+                                  AgentAccessControlService accessControlService) {
         this.executionLogService = executionLogService;
         this.runtimeCatalogService = runtimeCatalogService;
         this.runtimeScheduleSyncService = runtimeScheduleSyncService;
+        this.accessControlService = accessControlService;
     }
 
     @GetMapping("/{agentId}/runtime/executions")
@@ -40,18 +43,21 @@ public class AgentRuntimeController {
             @RequestParam(name = "versionNo", required = false) Integer versionNo,
             @RequestParam(name = "limit", defaultValue = "50") int limit) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.DEBUG);
         return ApiResponse.ok(executionLogService.list(orgId, agentId, versionNo, limit));
     }
 
     @GetMapping("/{agentId}/runtime/triggers")
     public ApiResponse<Map<String, Object>> listTriggers(@PathVariable String agentId) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
         return ApiResponse.ok(runtimeCatalogService.buildTriggers(orgId, agentId));
     }
 
     @PostMapping("/{agentId}/runtime/schedules/sync")
     public ApiResponse<Map<String, Object>> syncSchedules(@PathVariable String agentId) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
         Long publishedVersionId = runtimeCatalogService.publishedVersionId(orgId, agentId);
         return ApiResponse.ok(runtimeScheduleSyncService.syncFromCompiledVersion(orgId, agentId, publishedVersionId));
     }
@@ -62,6 +68,7 @@ public class AgentRuntimeController {
             @PathVariable String triggerKey,
             @RequestBody UpdateScheduleRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
         boolean enabled = request != null && request.enabled != null && request.enabled;
         return ApiResponse.ok(runtimeScheduleSyncService.updateEnabled(orgId, agentId, triggerKey, enabled));
     }
@@ -71,6 +78,7 @@ public class AgentRuntimeController {
             @PathVariable String agentId,
             @RequestBody RunNowRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.RUN);
         if (request == null || request.triggerKey == null || request.triggerKey.isBlank()) {
             throw new IllegalArgumentException("triggerKey is required");
         }
@@ -83,5 +91,9 @@ public class AgentRuntimeController {
 
     public static final class RunNowRequest {
         public String triggerKey;
+    }
+
+    private String requireUserId() {
+        return TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
     }
 }

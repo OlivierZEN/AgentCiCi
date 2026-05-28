@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-27T08:05:30Z
+updated_at: 2026-05-28T04:27:41Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-27T08:05:30Z
+last_run_at: 2026-05-28T04:27:41Z
 last_run_status: success
 ---
 
@@ -13,11 +13,67 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：任务状态治理与 `DEV-fengchu` assignment 重新授权
-- 命令：manager `dev-login.py`, `check-assignment.py` for `TASK-132/133/136/138/139/140`, negative `task-board.md` scope check, `summarize-team-status.py .claw --write`, `validate-state.py .claw`
-- 环境：local state/authorization update; no business-code verification run
+- 范围：TASK-119 Agent access control completion
+- 命令：task-scoped `dev-login.py`, `check-assignment.py`, `mvn -q -DskipTests compile`, `mvn -q -Dtest=AgentAccessControlServiceTest test`, focused Spring integration tests with explicit IPv6 PostgreSQL URL, `npm run build`, `git diff --check`, `validate-state.py .claw`
+- 环境：local backend/frontend verification; Docker PostgreSQL reachable through `[::1]:5432` because host IPv4 `127.0.0.1:5432` is occupied by an SSH listener
 
 ## Latest Verified Results
+
+- TASK-119 Agent access control completion (2026-05-28T04:27:41Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-119` on `codex/TASK-119-agent-access-control` -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative V60/backend/frontend/spec/task files -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `backend-unit`: `mvn -q -Dtest=AgentAccessControlServiceTest test` in `backend/` -> **success**.
+    - `backend-integration`: `SPRING_DATASOURCE_URL=jdbc:postgresql://[::1]:5432/agentcici_test SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest=AgentDefinitionDeleteIntegrationTest,AgentOpenApiIntegrationTest test` in `backend/` -> **success**.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `diff`: `git diff --check` -> **success**.
+    - `state`: `validate-state.py .claw` -> **success**.
+  - Notes:
+    - Fixed ACL ordering so deleted or cross-org Agents preserve existing 404 behavior instead of returning 403.
+    - Tightened OpenAPI run-as validation to require an active org member with target Agent `RUN`, and added integration coverage for missing `RUN`.
+    - The previous integration-test blocker was local port routing, not a code failure: host IPv4 `127.0.0.1:5432` is occupied by an SSH listener, while Docker PostgreSQL is reachable through IPv6 `::1`.
+
+- Project frontend design governance (2026-05-28T00:11:21Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended project governance files -> **allowed**.
+    - `impeccable-context`: `node /Users/owenmacbook/.agents/skills/impeccable/scripts/load-context.mjs` -> **success**, loaded `PRODUCT.md` and `DESIGN.md`.
+    - `design-json`: `python3 -m json.tool DESIGN.json` -> **success**.
+    - `diff`: targeted `git diff --check -- AGENTS.md README.md DESIGN.md DESIGN.json .claw/test-report.md` -> **success**.
+    - `state`: `validate-state.py .claw` -> **success**.
+  - Notes:
+    - Added a project-level rule that all frontend pages, components, modals, visualizations, and meaningful UI changes must apply `frontend-design`.
+    - Clarified that `frontend-design` must stay inside the `鎏金账房` product register and cannot override `PRODUCT.md`, `DESIGN.md`, or `DESIGN.json`.
+
+- TASK-119 Agent access control (2026-05-27T23:55:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-119` on `codex/TASK-119-agent-access-control` -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative V60/backend/frontend/spec/task files -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `backend-unit`: `mvn -q -Dtest=AgentAccessControlServiceTest test` in `backend/` -> **success**.
+    - `local-runtime-migration`: current-source Spring Boot local run on `18080` -> **success**; Flyway migrated local PostgreSQL from version 59 to `V60__agent_access_control`.
+    - `acl-api-smoke`: current-source `GET /agents/approval-agent/access-grants` and `GET /agents` -> **success**; default `ORG VIEW/RUN` grants and effective `access` payload returned.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `browser`: desktop browser QA at `/admin/agent-builder/approval-agent` -> **success**; `权限管理` dialog opened, grant table loaded, layout was stable, console errors `0`; screenshot `output/playwright/task119-acl-dialog-desktop.png`.
+    - `frontend-redesign`: `npm run build` in `frontend/` after permissions dialog layout/style redesign -> **success**; existing Vite chunk-size warning remains.
+    - `browser-redesign`: Playwright desktop QA at `/admin/agent-builder/approval-agent` against current source -> **success**; redesigned dialog rendered without document overflow, permission matrix and grant table were visible, console errors `0`; screenshot `output/playwright/task119-acl-dialog-redesign-desktop.png`.
+    - `diff`: `git diff --check` -> **success**.
+    - `state`: `validate-state.py .claw` -> **success**.
+    - `backend-integration`: `mvn -q -Dtest=AgentDefinitionDeleteIntegrationTest,AgentOpenApiIntegrationTest test` -> **blocked**; the fork repeatedly logged `HikariDataSource - Starting...` while initializing the configured test database and was terminated after it did not progress.
+  - Notes:
+    - Added first-phase Agent ACL persistence, effective permission service, backend gates, OpenAPI run-as `RUN` validation, and Agent Builder permission management UI.
+    - Current-source runtime smoke and desktop browser verification are complete. The remaining focused Spring integration gate still needs a working `agentcici_test` database connection.
+
+- Browser tab favicon update (2026-05-27T13:00:29Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with intended favicon/index/report files -> **allowed**.
+    - `asset`: `sips -z 64 64 /Users/owenmacbook/Documents/CICI.png --out frontend/public/favicon.png` -> **success**; output is 64x64 PNG, 7.3KB.
+    - `frontend`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `dev-server`: `npm run dev -- --host 127.0.0.1` in `frontend/` -> **success**, served at `http://127.0.0.1:5173/`.
+    - `static-smoke`: `curl -I /` and `curl -I /favicon.png` against the local Vite server -> **success**, HTML contains the favicon link and `/favicon.png` returns `200 OK` with `Content-Type: image/png`.
+  - Notes:
+    - `frontend/index.html` now declares the compressed CICI favicon as a 64x64 PNG.
+    - The temporary local Vite server was stopped after verification.
 
 - Task status governance and DEV-fengchu reauthorization (2026-05-27T08:05:30Z):
   - Commands:

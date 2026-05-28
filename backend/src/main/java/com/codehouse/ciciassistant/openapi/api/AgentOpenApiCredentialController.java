@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.openapi.api;
 
-import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.openapi.service.AgentOpenApiCredentialService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
@@ -19,23 +20,27 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/agents/{agentId}/api-keys")
-@RequireOrgAdmin
 public class AgentOpenApiCredentialController {
 
     private final AgentOpenApiCredentialService credentialService;
+    private final AgentAccessControlService accessControlService;
 
-    public AgentOpenApiCredentialController(AgentOpenApiCredentialService credentialService) {
+    public AgentOpenApiCredentialController(AgentOpenApiCredentialService credentialService,
+                                            AgentAccessControlService accessControlService) {
         this.credentialService = credentialService;
+        this.accessControlService = accessControlService;
     }
 
     @GetMapping
     public ApiResponse<List<AgentOpenApiCredentialService.CredentialView>> list(@PathVariable String agentId) {
+        requireOpenApi(agentId);
         return ApiResponse.ok(credentialService.list(TenantContext.requireOrgId(), agentId));
     }
 
     @PostMapping
     public ApiResponse<Map<String, Object>> create(@PathVariable String agentId,
                                                    @Valid @RequestBody CreateCredentialRequest request) {
+        requireOpenApi(agentId);
         AgentOpenApiCredentialService.CredentialCreation created = credentialService.create(
                 TenantContext.requireOrgId(),
                 agentId,
@@ -62,6 +67,7 @@ public class AgentOpenApiCredentialController {
     public ApiResponse<AgentOpenApiCredentialService.CredentialView> update(@PathVariable String agentId,
                                                                             @PathVariable Long credentialId,
                                                                             @Valid @RequestBody UpdateCredentialRequest request) {
+        requireOpenApi(agentId);
         return ApiResponse.ok(credentialService.update(
                 TenantContext.requireOrgId(),
                 agentId,
@@ -83,6 +89,7 @@ public class AgentOpenApiCredentialController {
 
     @PostMapping("/{credentialId}/rotate")
     public ApiResponse<Map<String, Object>> rotate(@PathVariable String agentId, @PathVariable Long credentialId) {
+        requireOpenApi(agentId);
         AgentOpenApiCredentialService.CredentialCreation rotated = credentialService.rotate(
                 TenantContext.requireOrgId(),
                 agentId,
@@ -95,11 +102,21 @@ public class AgentOpenApiCredentialController {
     @PostMapping("/{credentialId}/revoke")
     public ApiResponse<AgentOpenApiCredentialService.CredentialView> revoke(@PathVariable String agentId,
                                                                             @PathVariable Long credentialId) {
+        requireOpenApi(agentId);
         return ApiResponse.ok(credentialService.revoke(
                 TenantContext.requireOrgId(),
                 agentId,
                 credentialId,
                 TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"))));
+    }
+
+    private void requireOpenApi(String agentId) {
+        accessControlService.require(
+                TenantContext.requireOrgId(),
+                TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
+                TenantContext.getRoles(),
+                agentId,
+                AgentPermission.OPENAPI);
     }
 
     public record CreateCredentialRequest(

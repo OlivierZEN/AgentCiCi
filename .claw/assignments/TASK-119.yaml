@@ -27,7 +27,13 @@ allowed_write_roots:
   - frontend/src/utils/**
   - docs/specs/**
 scope_files:
-  - backend/src/main/resources/db/migration/V57__agent_access_control.sql
+  - .claw/assignments/TASK-119.yaml
+  - .claw/test-report.md
+  - AGENTS.md
+  - README.md
+  - backend/src/main/resources/db/migration/V60__agent_access_control.sql
+  - frontend/index.html
+  - frontend/public/favicon.png
   - frontend/src/App.tsx
   - frontend/src/styles.css
   - docs/agent-skill-tool-permission-model.md
@@ -65,7 +71,7 @@ task_boundary:
   - "Gate agent list/detail/run/debug/publish/Open API/log APIs through backend authorization checks."
   - "Enforce Open API run-as user RUN permission for the target Agent."
   - "Keep Agent RUN permission separate from Skill/Tool runtime policy; do not expand Tool access through user Agent grants."
-  - "Reserve migration V57__agent_access_control.sql for this task; do not use V53, V54, V55, or V56."
+  - "Reserve migration V60__agent_access_control.sql for this task; do not use V53, V54, V55, V56, V57, V58, or V59."
   - "Avoid editing active TASK-112, TASK-114, TASK-115, TASK-116, and TASK-118 implementation files unless MANAGER-001 explicitly expands both assignments."
 change_manifest_required: true
 signature: "MANAGER-001 local ssh challenge allowed 2026-05-20T12:47:44Z; user requested assigning TASK-119 to Owen."
