@@ -1,7 +1,7 @@
 ---
 kind: task-archive
 version: 4
-updated_at: 2026-05-21T10:18:00Z
+updated_at: 2026-05-28T09:45:06Z
 updated_by: MANAGER-001
 archive_status: active
 ---
@@ -12,6 +12,7 @@ Historical task cards have been removed from the hot board. Keep details in task
 
 ## Archived Tasks
 
+- TASK-143 — done — Billing editions configurable in platform operations
 - TASK-126 — done — Recover missing FEAT-041 spec
 - TASK-125 — done — Restore database rename to agentcici
 - TASK-123 — done — OpenAPI CloudCC token override and key typing

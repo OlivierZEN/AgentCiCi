@@ -4,7 +4,7 @@ feature_id: FEAT-037
 title: SaaS Billing Usage Ledger
 status: in_design
 owner_role: project-manager
-task_ids: TASK-114
+task_ids: TASK-114, TASK-143
 related_decisions: FEAT-003, FEAT-022
 related_issues: none
 updated_at: 2026-05-28T09:35:00Z
@@ -20,6 +20,8 @@ updated_by: MANAGER-001
 2026-05-28 补充：私有化和本地部署版本的主收费口径调整为 `私有化年费许可 + 操作/构建席位 + 模块/容量包 + 实施运维服务费`。客户自有本地模型的 token、GPU 和推理成本由客户承担，AgentCiCi 不对本地模型 token 做二次强收费。`Work Credits` 在私有化首版中优先服务用量看板、成本归因、预算控制、合同额度和平台代付资源治理。
 
 实现开关：新增部署级 billing mode fact，默认 `private_deployment`，可通过 Spring 配置 `app.billing.deployment-mode=saas` 切换为 SaaS。后端通过 `BillingModeProperties` 归一化配置并由 `/billing/mode` 暴露只读视图；前端通过 `billingMode.ts` 使用同样的归一化规则。后续 rating、quota、billing UI 和 plan seed 必须读取这个事实源。
+
+2026-05-28 TASK-143 实现补充：平台运营侧新增 `billing_edition_config` 作为套餐和包配置事实源，覆盖 SaaS 套餐、私有化版本、容量包、模块包、服务包、SLA tier 和 credits policy。平台 API 暴露 `/platform/billing/plans` 的列表、草稿创建、草稿更新、发布和启停能力；所有变更必须提交 `changeReason` 并进入平台审计。`/platform/billing` 页面提供高密度表格、类型过滤、版本信息、控制指标表单、策略 JSON 和发布/启停操作。私有化默认 seed 继续保持 `billing_type_policy=customer_paid` 与 `localModelTokenDoubleCharge=false`，避免对客户自有本地模型 token 二次强收费。
 
 需要立即修正的设计点：
 

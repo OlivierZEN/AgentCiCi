@@ -24,6 +24,7 @@ import PlatformLogin from "./platform/PlatformLogin";
 import PlatformShell from "./platform/PlatformShell";
 import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
 import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoServiceDemoRequestsPage";
+import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
 import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
 import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
@@ -75,6 +76,7 @@ export default function App() {
             <Route index element={<PlatformHomePage />} />
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
+            <Route path="billing" element={<PlatformBillingPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
             <Route path="tenants/:orgId" element={<PlatformTenantDetailPage />} />
             <Route path="website-leads" element={<PlatformAutoServiceDemoRequestsPage />} />

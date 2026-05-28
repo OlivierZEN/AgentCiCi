@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-28T08:19:11Z
+updated_at: 2026-05-28T09:45:06Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-28T08:19:11Z
+last_run_at: 2026-05-28T09:45:06Z
 last_run_status: success
 ---
 
@@ -13,11 +13,27 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 billing deployment mode switch
-- 命令：task-scoped `dev-login.py`, `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test`, `npm test -- billingMode.test.ts`
-- 环境：local backend/frontend focused verification
+- 范围：TASK-143 platform billing edition configuration
+- 命令：task-scoped `dev-login.py`, `check-assignment.py`, backend focused tests, backend compile, frontend unit test, frontend build, local Spring Boot/Flyway smoke, browser desktop QA, `git diff --check`
+- 环境：local backend/frontend focused verification with PostgreSQL over `::1`
 
 ## Latest Verified Results
+
+- TASK-143 platform billing edition configuration (2026-05-28T09:45:06Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` and manager state `dev-login.py` for `MANAGER-001` on `codex/TASK-143-billing-edition-config` -> **allowed**.
+    - `assignment`: `check-assignment.py` for actual TASK-143 backend/frontend/spec/task files -> **allowed**.
+    - `backend-focused`: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> **success**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `frontend-unit`: `npm test -- PlatformBillingPage.test.tsx` in `frontend/` -> **success**, 2 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
+    - `runtime-smoke`: local Spring Boot on `18080` with `SPRING_DATASOURCE_URL=jdbc:postgresql://[::1]:5432/agentcici_test` -> **success**; Flyway applied `V61__billing_edition_configuration.sql`.
+    - `browser`: in-app browser desktop QA at `/platform/billing` after real platform login -> **success**; 12 billing config rows rendered, `scrollWidth=clientWidth=1280`, console errors `0`.
+    - `diff`: `git diff --check` -> **success**.
+  - Notes:
+    - Added platform-owned billing edition configuration for SaaS/private editions, add-on packs, SLA tiers, and credits policies.
+    - Platform API supports list, draft create/update, publish, and enable/disable with explicit reason audit.
+    - Private deployment seeds keep local model token double-charge disabled by default.
 
 - TASK-143 billing deployment mode switch (2026-05-28T08:19:11Z):
   - Commands:

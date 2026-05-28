@@ -15343,6 +15343,71 @@ td.skills-data-table__actions > * {
   grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
 }
 
+.platform-billing {
+  display: grid;
+  grid-template-columns: minmax(420px, 0.94fr) minmax(0, 1.06fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.platform-billing__stats {
+  margin-bottom: 14px;
+}
+
+.platform-billing__list,
+.platform-billing__detail {
+  min-width: 0;
+}
+
+.platform-billing__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.platform-billing__toolbar select {
+  max-width: 180px;
+}
+
+.platform-billing__table {
+  table-layout: fixed;
+}
+
+.platform-billing__table th:nth-child(1) {
+  width: 34%;
+}
+
+.platform-billing__table th:nth-child(2) {
+  width: 14%;
+}
+
+.platform-billing__table th:nth-child(3) {
+  width: 12%;
+}
+
+.platform-billing__table th:nth-child(4) {
+  width: 22%;
+}
+
+.platform-billing__table th:nth-child(5) {
+  width: 18%;
+}
+
+.platform-billing__table td {
+  overflow-wrap: anywhere;
+}
+
+.platform-billing__metric-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.platform-billing__actions {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .tenant-lifecycle {
   display: grid;
   grid-template-columns: minmax(360px, 0.86fr) minmax(0, 1.14fr);

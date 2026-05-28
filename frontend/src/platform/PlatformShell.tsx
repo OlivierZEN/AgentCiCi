@@ -53,6 +53,9 @@ export default function PlatformShell() {
           <NavLink to="/platform/tools" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>内置工具</span>
           </NavLink>
+          <NavLink to="/platform/billing" className={({ isActive }) => (isActive ? "active" : "")}>
+            <span>计费配置</span>
+          </NavLink>
           <NavLink to="/platform/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>租户生命周期</span>
           </NavLink>

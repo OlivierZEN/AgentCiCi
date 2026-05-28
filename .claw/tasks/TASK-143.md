@@ -3,12 +3,12 @@ kind: task-status
 task_id: TASK-143
 assignee: MANAGER-001
 owner_role: fullstack-agent
-status: in_progress
+status: done
 branch: codex/TASK-143-billing-edition-config
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-143.yaml
-updated_at: 2026-05-28T08:19:11Z
+updated_at: 2026-05-28T09:45:06Z
 updated_by: MANAGER-001
 ---
 
@@ -60,10 +60,24 @@ The platform operations console must become the source of truth for edition cont
 - 2026-05-28T08:19:11Z: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` on `codex/TASK-143-billing-edition-config` -> allowed.
 - 2026-05-28T08:19:11Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> success.
 - 2026-05-28T08:19:11Z: `npm test -- billingMode.test.ts` in `frontend/` -> success, 3 tests passed.
+- 2026-05-28T09:45:06Z: task-scoped `dev-login.py` and manager state `dev-login.py` for `MANAGER-001` on `codex/TASK-143-billing-edition-config` -> allowed.
+- 2026-05-28T09:45:06Z: `check-assignment.py` for actual TASK-143 backend/frontend/spec/task files -> allowed.
+- 2026-05-28T09:45:06Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> success.
+- 2026-05-28T09:45:06Z: `mvn -q -DskipTests compile` in `backend/` -> success.
+- 2026-05-28T09:45:06Z: `npm test -- PlatformBillingPage.test.tsx` in `frontend/` -> success, 2 tests passed.
+- 2026-05-28T09:45:06Z: `npm run build` in `frontend/` -> success; existing Vite chunk-size warning remains.
+- 2026-05-28T09:45:06Z: local Spring Boot run on `18080` with PostgreSQL over `::1` -> success; Flyway applied `V61__billing_edition_configuration.sql`.
+- 2026-05-28T09:45:06Z: in-app browser desktop QA at `/platform/billing` through real platform login and API -> success; page rendered 12 billing config rows, no horizontal overflow (`scrollWidth=clientWidth=1280`), console errors `0`.
+- 2026-05-28T09:45:06Z: `git diff --check` -> success.
+
+## Changed Files
+
+- Added `V61__billing_edition_configuration.sql` and `billing_edition_config` as the platform-owned configuration table for SaaS/private plans, capacity packs, module packs, service packs, SLA tiers, and credits policies.
+- Added backend billing configuration entity/repository/service and `/platform/billing/plans` APIs for list, draft creation, draft update, publish, and enable/disable with explicit change reason auditing.
+- Added `/platform/billing` UI under the platform console with dense table filtering, right-side edit panel, version draft actions, publish, enable/disable, and TASK-143 focused frontend helper tests.
+- Preserved private-deployment policy in seeds and UI/API fields: customer-owned local model token usage is `customer_paid` and `localModelTokenDoubleCharge=false` by default.
 
 ## Handoff
 
-- Assigned to Owen (`MANAGER-001`) on 2026-05-28.
-- Assigned branch: `codex/TASK-143-billing-edition-config`.
-- Run task-scoped `dev-login.py` before implementation edits.
-- Use `V61__billing_edition_configuration.sql` for the first migration unless mainline migration head advances before implementation begins.
+- Implementation is complete on `codex/TASK-143-billing-edition-config`.
+- Ready for PM/product acceptance and merge review.
