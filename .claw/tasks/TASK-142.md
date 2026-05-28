@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-142
 status: review
-updated_at: 2026-05-28T05:56:13Z
+updated_at: 2026-05-28T06:08:52Z
 updated_by: DEV-fengchu
 assignee: DEV-fengchu
 owner_role: fullstack-agent
@@ -46,6 +46,8 @@ spec_path: docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md
 - Passed: `mvn -Dtest=AgentOpenApiIntegrationTest test` in `backend/` after local Flyway state was repaired.
 - Passed: `npm run build` in `frontend/`; Vite large chunk warning unchanged.
 - Passed: `git diff --check`.
+- Passed: merged to `dev` and pushed as `e30421b` for test-environment integration.
+- Passed: Codeup change request to `main` created: `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/23`.
 - Note: first focused test run failed before assertions because the local test database had resolved migration `53` missing from `flyway_schema_history`; one repair run with `-Dspring.flyway.out-of-order=true` applied the already-present migration metadata, then the normal command passed.
 
 ## Progress
@@ -55,6 +57,7 @@ spec_path: docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md
 - Added an OpenAPI SSE bridge that maps internal `delta` events to incremental OpenAPI `message` events, then emits one terminal `message_end`.
 - Preserved blocking chat behavior, OpenAPI auth/scope/session/message persistence, idempotent replay, and stop task scoping.
 - Updated OpenAPI docs copy to clarify JSON request content type and `Accept: text/event-stream` for streaming responses.
+- Created Codeup change request `change/23` targeting `main`.
 
 ## Changed Files
 
@@ -70,4 +73,4 @@ spec_path: docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md
 - Assigned to `DEV-fengchu` on branch `codex/TASK-142-openapi-sse-streaming`.
 - Run task-scoped `dev-login.py` before implementation.
 - Coordinate with `TASK-140`; do not restore old `/openapi/v1/agents/{agentId}/...` public routes.
-- Implementation is ready for review/merge.
+- Implementation is under Codeup review: `https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/23`.
