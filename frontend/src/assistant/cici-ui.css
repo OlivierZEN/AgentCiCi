@@ -7448,6 +7448,19 @@
   line-height: 1.55;
 }
 
+.cici-openapi-docs__hint {
+  margin-top: 4px;
+  color: #8a744f;
+  font-size: 12px;
+}
+
+.cici-openapi-docs__hint a {
+  color: #876223;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .cici-openapi-docs__toc {
   display: flex;
   flex-direction: column;
