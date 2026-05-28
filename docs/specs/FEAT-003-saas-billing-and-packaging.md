@@ -7,8 +7,8 @@ owner_role: shared
 task_ids: TASK-007
 related_decisions: none
 related_issues: none
-updated_at: 2026-04-24T16:20:00Z
-updated_by: ai
+updated_at: 2026-05-28T09:35:00Z
+updated_by: MANAGER-001
 ---
 
 # FEAT-003 SaaS Billing And Packaging
@@ -54,6 +54,119 @@ updated_by: ai
 6. 对客户自带资源和平台代付资源做区分，避免错误计费。
 
 ## Recommended Billing Model
+
+### Two Supported Commercial Schemes
+
+AgentCiCi 同时支持两种商业方案，但二者的收费主轴不同：
+
+| 方案 | 主收费口径 | 适用客户 | 模型资源责任 | credits 角色 |
+| --- | --- | --- | --- | --- |
+| 私有化 / 本地部署 | 私有化年费许可 + 操作/构建席位 + 模块/容量包 + 实施运维服务费 | 本地部署、专属网络、客户自有模型和 GPU、强数据隔离 | 客户承担本地模型、GPU、推理和 token 成本 | 用量看板、成本归因、预算控制、合同额度、平台代付资源治理 |
+| SaaS / 云托管 | 平台订阅 + 操作/构建席位 + Work Credits + 企业增值模块 | 标准云服务、平台代付模型或托管连接器、弹性扩容 | 平台承担或代付模型、语音、搜索、托管连接器等资源 | 套餐额度、超额、预算控制和真实用量扣费 |
+
+部署级开关由 `app.billing.deployment-mode` 决定，支持 `private_deployment` 和 `saas`。当前代码默认 `private_deployment`，避免在未明确选择 SaaS 前误把客户自有本地模型 token 作为收费项。
+
+### Edition Lines
+
+需要定义版本，但不要把版本设计成所有客户都必须完全一致的价格表。版本用于产品包装、默认 plan seed、页面展示和销售报价锚点；具体合同仍可叠加容量包、服务包和定制条款。
+
+私有化版本线：
+
+| 版本 | 目标客户 | 主收费项 | 典型包含能力 | 可追加包 |
+| --- | --- | --- | --- | --- |
+| `部门版` | 单部门试点、本地知识问答、少量业务连接 | 年费许可 + 少量操作/构建席位 + 基础容量 | 单组织或少量组织、基础 Agent/Skill/知识库、基础连接器、基础审计、基础运行日志 | 文档容量、Agent 数、连接器实施、培训 |
+| `企业版` | 公司级推广、多部门协作、Open API 和运行观测 | 年费许可 + 席位包 + 模块/容量包 + 年度维护 | 多组织、更多 Agent/Skill/知识库、Open API、运行 trace、成本归因、会议听记、更多连接器 | 高并发 Open API、日志保留、会议听记并发、测试/灾备环境 |
+| `集团版` | 集团级治理、多实例/多环境、强审计与集成 | 定制年费许可 + 多实例/环境 + 专属服务 | 多实例、生产/测试/灾备、高级审计、SSO、数据保留、专属支持、定制集成 | 专属 SLA、驻场/专属支持、私有模型适配、集团数据隔离 |
+
+SaaS 版本线：
+
+| 版本 | 目标客户 | 主收费项 | 典型包含能力 | 超额/升级 |
+| --- | --- | --- | --- | --- |
+| `团队版` | 小团队试点、轻量知识问答和常用工具 | 平台订阅 + 少量操作/构建席位 + 基础 credits | 基础 Agent、基础知识库、基础工具、基础用量看板 | soft limit 或购买小额 credits 包 |
+| `商业版` | 部门级到公司级生产使用 | 平台订阅 + 席位包 + 中高 credits + 模块包 | 正式 Open API、更多 Agent/Skill/Workflow、运行 trace、成本归因、常用连接器 | 自动 top-up、容量包、更多连接器 |
+| `企业版` | 大客户、集团采购、严格治理和 SLA | 年度合同 + 定制 credits/容量 + 企业增值模块 | SSO、SLA、高级审计、专属资源池、数据保留、专属支持、定制连接器 | 合同级最低消费、阶梯单价、年度额度滚动 |
+
+命名建议：
+
+- 对外中文优先用 `团队版 / 商业版 / 企业版` 表达 SaaS。
+- 对外中文优先用 `部门版 / 企业版 / 集团版` 表达私有化。
+- 内部代码建议使用稳定 code：`saas_team`、`saas_business`、`saas_enterprise`、`private_department`、`private_enterprise`、`private_group`。
+- `trial` 只作为试用状态或试用 plan，不作为正式付费版本线。
+
+### Private Deployment Commercial Position
+
+私有化和本地部署版本的主报价口径应是：
+
+```text
+私有化年费许可 + 操作/构建席位 + 模块/容量包 + 实施运维服务费
+```
+
+不要把本地模型 token 作为第一阶段主收费项。客户本地部署并使用自己的本地模型时，GPU、推理、模型服务和 token 成本都在客户侧；AgentCiCi 再按 token 强收费会被理解为对客户自有资源二次收费。
+
+AgentCiCi 在私有化场景应收取平台价值：
+
+- 多组织治理、权限、登录、审计和数据保留。
+- 助手工作台、管理后台、模型配置和路由。
+- 知识库、Skill、Agent Builder、Workflow、Open API。
+- 工具连接、CRM / 企业微信 / 飞书 / CloudCC / Salesforce 等企业集成。
+- 运行观测、trace、成本归因、会议听记、部署运维和企业支持。
+
+私有化版本建议按规模分档：
+
+- `部门版`：单组织或少量组织，少量用户，基础 Agent、知识库和连接器。
+- `企业版`：多组织，更多用户，更多 Agent、知识库、连接器、Open API 和运行观测。
+- `集团版`：多实例、生产/测试/灾备环境、高级审计、SSO、数据保留、专属支持和定制集成。
+
+私有化容量包优先售卖客户可理解的软件能力，而不是 token 包：
+
+- Agent 数量、Skill 数量、Workflow 数量。
+- 知识库数量、文档数、文档容量、chunk 数。
+- Open API 并发、QPS、credential 数。
+- 连接器数量、MCP Server 数量、平台内置工具治理能力。
+- 审计日志和运行 trace 保留期。
+- 会议听记并发路数和转写任务容量。
+- 部署实例数和环境数：生产、测试、灾备。
+
+一次性交付费和年度维护费必须单列：
+
+- 部署实施费、环境适配费、模型接入适配费。
+- CRM、企业微信、飞书、CloudCC、Salesforce 等连接器实施费。
+- 数据迁移、知识库初始化、培训、验收支持。
+- 年度维护与升级服务费，可按授权费固定比例配置，例如 15%-25%，具体取决于 SLA。
+
+推荐报价话术：
+
+> 本地部署版按“平台授权 + 主动操作/构建席位 + 企业模块与容量 + 实施运维服务”计费；客户自有模型的 token 和推理成本由客户承担，AgentCiCi 不对本地模型 token 二次收费，只对平台治理、编排、观测、知识库、连接器和企业支持收费。
+
+### SaaS Commercial Position
+
+SaaS 和云托管版本仍可采用：
+
+```text
+平台订阅 + 操作/构建席位 + Work Credits + 企业增值模块
+```
+
+SaaS 方案适合由平台承担或代付模型、云端语音、第三方搜索、托管连接器、运行资源和弹性扩容的场景。此时 `Work Credits` 可以作为客户套餐额度、超额、预算控制和真实用量扣费口径，但仍不把 token 暴露为客户第一层购买单位。
+
+SaaS 版本默认售卖：
+
+- 平台基础订阅：组织空间、权限、审计、后台、基础运行环境。
+- 操作席位和构建席位。
+- Work Credits：覆盖模型推理、RAG、工具、工作流、Open API、索引和平台代付资源。
+- 企业增值模块：SSO、SLA、高级审计、成本归因、专属支持、专属资源池。
+
+SaaS 中 token 仍是底层成本和争议查账字段，不作为销售页、账单页和套餐页的一线收费语言。
+
+### Switching Rule
+
+`deployment-mode` 是部署级商业模式开关，不是普通租户管理员可随意切换的套餐字段：
+
+- `private_deployment`：默认不对 `customer_paid` 本地模型和本地连接器产生强扣费 ledger debit；展示授权、席位、模块、容量、服务和 credits 治理。
+- `saas`：允许 `platform_paid` 模型、云端语音、第三方服务和托管连接器进入 Work Credits 扣费；套餐和超额围绕 credits 展开。
+- 租户差异仍由 plan/subscription/capacity pack 表达，不能覆盖部署级资源责任边界。
+
+运行时、rating、quota 和 UI 都必须读取同一个 billing mode fact，不能各自硬编码“私有化”或“SaaS”判断。
+
 
 ### 1. Billing Layers
 
@@ -122,9 +235,11 @@ updated_by: ai
 
 建议规则：
 
-- token 是主要结算口径，请求数只作为辅助手段与运营报表维度。
+- 云托管、平台代付模型或平台统一模型网关场景中，token 可作为内部成本和用量折算依据；私有化本地模型场景中，token 不作为第一阶段客户主收费项。
 - 按模型档位区分价格，例如基础模型、增强模型、高阶推理模型分别计价。
 - 客户自带模型密钥时，可只收平台服务费，不收模型代付费。
+- 客户自有本地模型、本地工具和本地连接器应标记为 `customer_paid`，通常只做低倍率平台调度计量、成本归因或预算治理，不额外按 token 强收费。
+- 平台代付模型、第三方搜索、云端语音或托管连接器应标记为 `platform_paid`，可按 credits、容量包或实际用量收费。
 
 ### 4. Agent And Workflow Usage
 
@@ -190,42 +305,13 @@ updated_by: ai
 
 ## Suggested Packages
 
-### Standard
+正式包装以 `Edition Lines` 为准。旧的 Standard / Pro / Enterprise 命名容易同时混用 SaaS 和私有化语境，后续不再作为主事实源。
 
-- 适合小团队试点。
-- 包含：
-  - 基础订阅
-  - 少量协作席位
-  - 少量构建席位
-  - 基础聊天和知识库额度
-  - 基础工具与模型配置能力
-- 超额后：
-  - 聊天 token
-  - 知识库存储
-  - Agent 执行量
-  - 第三方工具调用量
+首版 plan seed 建议：
 
-### Pro
-
-- 适合部门级 AI 落地。
-- 在 Standard 基础上增强：
-  - 更多构建席位
-  - Agent Builder 发布与运行额度
-  - 更多知识库与文档额度
-  - 更多连接器/MCP 配置额度
-  - 更细的成本统计与审计
-
-### Enterprise
-
-- 适合组织级或集团级部署。
-- 在 Pro 基础上增强：
-  - SLA
-  - SSO
-  - 成本归因
-  - 专属支持
-  - 高级审计
-  - 专属资源池或私有化选项
-- 商务上可采用保底消费 + 超额按量，或包年定制价。
+- SaaS：`saas_team`、`saas_business`、`saas_enterprise`，另设 `trial` 作为试用状态。
+- 私有化：`private_department`、`private_enterprise`、`private_group`。
+- 容量包独立建模，不塞进版本名：`agent_pack`、`knowledge_capacity_pack`、`openapi_capacity_pack`、`meeting_minutes_pack`、`retention_pack`、`environment_pack`。
 
 ## Metering Model
 
@@ -340,6 +426,7 @@ updated_by: ai
 - 本设计不在本轮直接实现支付网关、开票系统或税务能力。
 - 本设计不处理面向个人 C 端订阅的 Apple/Google 内购模式。
 - 本设计不覆盖私有化部署的全部商务条款，仅定义产品侧可支持的计费抽象。
+- 本设计不要求私有化本地模型按 token 强制收费；本地模型 token 只作为内部观测、归因和后续合同治理依据。
 
 ## Acceptance
 
@@ -366,4 +453,5 @@ updated_by: ai
   - 将 `ops/metrics/cost` 升级为真实聚合口径
   - 管理端增加账单总览页
 - 不要一开始就接支付系统；应先做计量、套餐和阈值控制。
+- 私有化项目不要先卖 token 包；先落地年费授权、主动操作/构建席位、模块/容量包、实施费和年度维护费。
 - 如果后续进入正式开发，应再补一份实现计划，将后端数据模型、异步汇总任务和管理端页面拆成可执行任务。
