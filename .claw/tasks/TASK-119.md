@@ -5,7 +5,7 @@ assignee: MANAGER-001
 owner_role: project-manager
 status: review
 branch: codex/TASK-119-agent-access-control
-pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/22
+pr_url: https://codeup.aliyun.com/627b18115b46541dd2ff340e/cloudcc-aidev-projects/cc-agentcici/change/24
 spec_path: docs/specs/FEAT-042-agent-access-control.md
 assignment_path: .claw/assignments/TASK-119.yaml
 updated_at: 2026-05-28T04:27:41Z
