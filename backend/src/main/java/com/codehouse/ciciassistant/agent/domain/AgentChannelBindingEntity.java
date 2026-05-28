@@ -46,6 +46,10 @@ public class AgentChannelBindingEntity {
         return channelId;
     }
 
+    public String getAgentId() {
+        return agentId;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }

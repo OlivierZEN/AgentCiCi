@@ -45,7 +45,7 @@ public class AgentDefinitionController {
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
         String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(agentDefinitionService.list(orgId).stream().map(this::toDefinitionPayload).toList());
+        return ApiResponse.ok(agentDefinitionService.listWithChannels(orgId).stream().map(this::toListPayload).toList());
     }
 
     @PostMapping
@@ -249,6 +249,12 @@ public class AgentDefinitionController {
         payload.put("publishedVersionId", item.getPublishedVersionId());
         payload.put("createdAt", item.getCreatedAt().toString());
         payload.put("updatedAt", item.getUpdatedAt().toString());
+        return payload;
+    }
+
+    private Map<String, Object> toListPayload(AgentDefinitionService.AgentListItem item) {
+        Map<String, Object> payload = toDefinitionPayload(item.definition());
+        payload.put("channels", item.channels());
         return payload;
     }
 

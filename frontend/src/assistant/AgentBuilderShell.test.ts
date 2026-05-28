@@ -4,6 +4,7 @@ import {
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
   resolveAgentAfterDelete,
+  resolveAgentChannels,
   resolveAgentDetailTarget,
   type BaseModelOption,
 } from "./AgentBuilderShell";
@@ -102,5 +103,19 @@ describe("resolveAgentAfterDelete", () => {
 
     expect(result.nextAgents).toEqual([]);
     expect(result.fallbackAgentId).toBe("");
+  });
+});
+
+describe("resolveAgentChannels", () => {
+  it("preserves an empty channel list returned by the API", () => {
+    expect(resolveAgentChannels([], ["wechat", "dingtalk"])).toEqual([]);
+  });
+
+  it("uses fallback channels only when the API omits the channels field", () => {
+    expect(resolveAgentChannels(undefined, ["wechat", "dingtalk"])).toEqual(["wechat", "dingtalk"]);
+  });
+
+  it("keeps valid API channels and drops unknown values", () => {
+    expect(resolveAgentChannels(["api", "unknown", "web"], ["wechat"])).toEqual(["api", "web"]);
   });
 });
