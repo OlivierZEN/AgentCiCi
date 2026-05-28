@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-27T09:30:00Z
+updated_at: 2026-05-28T04:00:37Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-142 - OpenAPI chat-messages SSE streaming
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md`
+- task_status_path: `.claw/tasks/TASK-142.md`
+- assignment_path: `.claw/assignments/TASK-142.yaml`
+- blocked_by: `TASK-140 may change the final public route shape`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-142-openapi-sse-streaming`, then implements true SSE streaming for OpenAPI `chat-messages`.
 
 ### TASK-141 - AI 听记本地 FunASR 实时转写
 
@@ -28,14 +39,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-140 - Remove Agent ID from public OpenAPI routes
 
-- status: `ready`
+- status: `in_progress`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-058-openapi-agentless-endpoints.md`
 - task_status_path: `.claw/tasks/TASK-140.md`
 - assignment_path: `.claw/assignments/TASK-140.yaml`
 - blocked_by: `none`
-- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-140-openapi-agentless-endpoints`, then removes Agent ID from public OpenAPI routes.
+- next_action: `DEV-fengchu` completes review fixes / service validation for `codex/TASK-140-openapi-agentless-endpoints`; task status is the progress source.
 
 ### TASK-139 - Agent list OpenAPI badge shows only first Agent
 
