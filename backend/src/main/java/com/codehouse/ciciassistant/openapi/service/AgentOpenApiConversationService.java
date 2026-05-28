@@ -22,9 +22,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -73,9 +75,9 @@ public class AgentOpenApiConversationService {
         this.objectMapper = objectMapper;
     }
 
-    public Map<String, Object> parameters(String agentId, HttpServletRequest request) {
+    public Map<String, Object> parameters(HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("opening_statement", text(auth.agent().getGreeting()));
@@ -97,13 +99,12 @@ public class AgentOpenApiConversationService {
         return data;
     }
 
-    public Map<String, Object> chatMessages(String agentId,
-                                            String requestId,
+    public Map<String, Object> chatMessages(String requestId,
                                             String idempotencyKey,
                                             ChatMessageCommand requestBody,
                                             HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         ChatMessageInput input = normalize(requestBody);
         validateFiles(auth, input.files(), input.externalUserId(), input.conversationId());
@@ -167,47 +168,75 @@ public class AgentOpenApiConversationService {
         }
     }
 
-    public SseEmitter chatMessagesStream(String agentId,
-                                         String requestId,
+    public SseEmitter chatMessagesStream(String requestId,
                                          String idempotencyKey,
                                          ChatMessageCommand requestBody,
                                          HttpServletRequest request) {
         requireEnabled();
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
+        authService.requireScope(auth, "chat");
+        if (!auth.credentialView().allowStream()) {
+            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "streaming_not_allowed", "Streaming is not enabled for this API key");
+        }
+        ChatMessageInput input = normalize(requestBody);
+        validateFiles(auth, input.files(), input.externalUserId(), input.conversationId());
+        String normalizedIdempotency = normalizeIdempotency(idempotencyKey);
         SseEmitter emitter = new SseEmitter(600_000L);
-        CompletableFuture.runAsync(() -> {
-            try {
-                Map<String, Object> data = chatMessages(agentId, requestId, idempotencyKey, requestBody, request);
-                String answer = text(data.get("answer"));
-                emitter.send(SseEmitter.event().name("agent_thought").data(Map.of(
-                        "event", "agent_thought",
-                        "task_id", data.get("task_id"),
-                        "message_id", data.get("message_id"),
-                        "thought", "AgentCiCi runtime completed")));
-                emitter.send(SseEmitter.event().name("message").data(Map.of(
-                        "event", "message",
-                        "task_id", data.get("task_id"),
-                        "message_id", data.get("message_id"),
-                        "conversation_id", data.get("conversation_id"),
-                        "answer", answer)));
-                emitter.send(SseEmitter.event().name("message_end").data(Map.of(
-                        "event", "message_end",
-                        "task_id", data.get("task_id"),
-                        "message_id", data.get("message_id"),
-                        "conversation_id", data.get("conversation_id"),
-                        "metadata", data.get("metadata"))));
-                emitter.complete();
-            } catch (AgentOpenApiException ex) {
-                sendError(emitter, requestId, ex);
-            } catch (Exception ex) {
-                sendError(emitter, requestId, new AgentOpenApiException(HttpStatus.BAD_GATEWAY, "model_or_tool_failed", "Agent runtime failed"));
-            }
-        });
+        AgentApiMessageEntity existing = !normalizedIdempotency.isBlank()
+                ? messageRepository
+                .findFirstByCredentialIdAndIdempotencyKeyAndStatusOrderByCreatedAtDesc(
+                        auth.credential().getId(),
+                        normalizedIdempotency,
+                        AgentApiMessageEntity.STATUS_SUCCESS)
+                .orElse(null)
+                : null;
+        if (existing != null) {
+            sendReplayStream(emitter, messagePayload(existing, Map.of("idempotentReplay", true)));
+            return emitter;
+        }
+
+        String taskId = id("task");
+        String messageId = id("msg");
+        AgentApiTaskEntity task = taskRepository.save(new AgentApiTaskEntity(
+                taskId,
+                requestId,
+                auth.credential().getOrgId(),
+                auth.credential().getId(),
+                auth.credential().getAgentId(),
+                input.externalUserId(),
+                input.conversationId()));
+        AgentOpenApiRunService.ChatCommand command = new AgentOpenApiRunService.ChatCommand(
+                input.conversationId(),
+                input.query(),
+                input.externalUser(),
+                input.knowledgeBaseIds(),
+                input.activeSkillCode(),
+                input.metadata(),
+                input.cloudccContext());
+        try {
+            AgentOpenApiRunService.ChatStreamExecution execution = runService.prepareChatStreamWithAuth(
+                    auth,
+                    requestId,
+                    normalizedIdempotency,
+                    command,
+                    Instant.now());
+            OpenApiStreamBridge bridge = new OpenApiStreamBridge(emitter, task, messageId, execution, input, normalizedIdempotency);
+            runService.runChatStream(execution, command, bridge);
+        } catch (AgentOpenApiException ex) {
+            task.completeFailure();
+            taskRepository.save(task);
+            throw ex;
+        } catch (RuntimeException ex) {
+            task.completeFailure();
+            taskRepository.save(task);
+            throw new AgentOpenApiException(HttpStatus.BAD_GATEWAY, "model_or_tool_failed", "Agent runtime failed");
+        }
         return emitter;
     }
 
-    public Map<String, Object> stop(String agentId, String taskId, HttpServletRequest request) {
+    public Map<String, Object> stop(String taskId, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "chat");
         AgentApiTaskEntity task = taskRepository
                 .findByTaskIdAndOrgIdAndCredentialIdAndAgentId(
@@ -221,9 +250,9 @@ public class AgentOpenApiConversationService {
         return Map.of("result", "cancel_requested", "task_id", task.getTaskId(), "status", task.getStatus());
     }
 
-    public List<Map<String, Object>> conversations(String agentId, String user, HttpServletRequest request) {
+    public List<Map<String, Object>> conversations(String user, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         String normalizedUser = text(user);
         return sessionMapRepository
@@ -237,12 +266,11 @@ public class AgentOpenApiConversationService {
                 .toList();
     }
 
-    public Map<String, Object> renameConversation(String agentId,
-                                                  String conversationId,
+    public Map<String, Object> renameConversation(String conversationId,
                                                   RenameConversationCommand command,
                                                   HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         AgentApiSessionMapEntity session = requireConversation(auth, conversationId);
         session.rename(clip(command == null ? "" : command.name(), 160));
@@ -250,9 +278,9 @@ public class AgentOpenApiConversationService {
         return conversationPayload(session);
     }
 
-    public Map<String, Object> deleteConversation(String agentId, String conversationId, HttpServletRequest request) {
+    public Map<String, Object> deleteConversation(String conversationId, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         AgentApiSessionMapEntity session = requireConversation(auth, conversationId);
         session.markDeleted();
@@ -260,14 +288,13 @@ public class AgentOpenApiConversationService {
         return Map.of("result", "deleted", "conversation_id", session.getExternalSessionId());
     }
 
-    public MessagePage messages(String agentId,
-                                String conversationId,
+    public MessagePage messages(String conversationId,
                                 String user,
                                 String firstId,
                                 Integer limit,
                                 HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "history");
         List<AgentApiMessageEntity> rows = text(conversationId).isBlank()
                 ? messageRepository.findTop100ByOrgIdAndCredentialIdAndAgentIdOrderByCreatedAtDesc(
@@ -293,12 +320,11 @@ public class AgentOpenApiConversationService {
         return new MessagePage(paged, start + paged.size() < candidates.size(), normalizedLimit);
     }
 
-    public Map<String, Object> feedback(String agentId,
-                                        String messageId,
+    public Map<String, Object> feedback(String messageId,
                                         FeedbackCommand command,
                                         HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "feedback");
         AgentApiMessageEntity message = requireMessage(auth, messageId);
         String rating = normalizeRating(command == null ? "" : command.rating());
@@ -316,9 +342,9 @@ public class AgentOpenApiConversationService {
                 "created_at", feedback.getCreatedAt().toString());
     }
 
-    public Map<String, Object> suggested(String agentId, String messageId, HttpServletRequest request) {
+    public Map<String, Object> suggested(String messageId, HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "feedback");
         AgentApiMessageEntity message = requireMessage(auth, messageId);
         return Map.of(
@@ -326,13 +352,12 @@ public class AgentOpenApiConversationService {
                 "data", List.of("继续展开关键依据", "生成下一步行动清单", "用更短的话总结"));
     }
 
-    public Map<String, Object> uploadFile(String agentId,
-                                          MultipartFile file,
+    public Map<String, Object> uploadFile(MultipartFile file,
                                           String user,
                                           String conversationId,
                                           HttpServletRequest request) {
         requireEnabled();
-        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(agentId, request);
+        AgentOpenApiAuthService.AuthenticatedCredential auth = authService.authenticate(request);
         authService.requireScope(auth, "files");
         if (file == null || file.isEmpty()) {
             throw new AgentOpenApiException(HttpStatus.BAD_REQUEST, "invalid_request", "file is required");
@@ -474,6 +499,38 @@ public class AgentOpenApiConversationService {
                         "metadata", input.metadata()))));
     }
 
+    @Transactional
+    protected AgentApiMessageEntity saveStreamMessage(String messageId,
+                                                      String requestId,
+                                                      String taskId,
+                                                      AgentOpenApiRunService.ChatStreamExecution execution,
+                                                      ChatMessageInput input,
+                                                      String answer,
+                                                      String idempotencyKey,
+                                                      AgentOpenApiRunService.StreamCompletion completion) {
+        return messageRepository.save(new AgentApiMessageEntity(
+                messageId,
+                requestId,
+                taskId,
+                execution.auth().credential().getOrgId(),
+                execution.auth().credential().getId(),
+                execution.auth().credential().getAgentId(),
+                input.externalUserId(),
+                execution.session().externalSessionId(),
+                execution.session().internalSessionId(),
+                input.query(),
+                answer,
+                AgentApiMessageEntity.STATUS_SUCCESS,
+                "",
+                idempotencyKey.isBlank() ? null : idempotencyKey,
+                toJson(Map.of(
+                        "activeSkillCode", input.activeSkillCode(),
+                        "knowledgeBaseIds", input.knowledgeBaseIds(),
+                        "metadata", input.metadata(),
+                        "usage", usage(completion.elapsedMs()),
+                        "trace_id", completion.traceId()))));
+    }
+
     private AgentApiSessionMapEntity requireConversation(AgentOpenApiAuthService.AuthenticatedCredential auth, String conversationId) {
         return sessionMapRepository
                 .findByOrgIdAndCredentialIdAndAgentIdAndExternalSessionIdAndDeletedAtIsNull(
@@ -587,6 +644,210 @@ public class AgentOpenApiConversationService {
         } catch (IOException ignored) {
             emitter.completeWithError(ex);
         }
+    }
+
+    private void sendReplayStream(SseEmitter emitter, Map<String, Object> data) {
+        try {
+            emitter.send(SseEmitter.event().name("message").data(Map.of(
+                    "event", "message",
+                    "task_id", data.get("task_id"),
+                    "message_id", data.get("message_id"),
+                    "conversation_id", data.get("conversation_id"),
+                    "answer", data.get("answer"))));
+            emitter.send(SseEmitter.event().name("message_end").data(Map.of(
+                    "event", "message_end",
+                    "task_id", data.get("task_id"),
+                    "message_id", data.get("message_id"),
+                    "conversation_id", data.get("conversation_id"),
+                    "metadata", data.get("metadata"))));
+            emitter.complete();
+        } catch (IOException ex) {
+            emitter.completeWithError(ex);
+        }
+    }
+
+    private final class OpenApiStreamBridge extends SseEmitter {
+        private final SseEmitter clientEmitter;
+        private final AgentApiTaskEntity task;
+        private final String messageId;
+        private final AgentOpenApiRunService.ChatStreamExecution execution;
+        private final ChatMessageInput input;
+        private final String idempotencyKey;
+        private final StringBuilder answer = new StringBuilder();
+        private final AtomicBoolean finalized = new AtomicBoolean(false);
+
+        private OpenApiStreamBridge(SseEmitter clientEmitter,
+                                    AgentApiTaskEntity task,
+                                    String messageId,
+                                    AgentOpenApiRunService.ChatStreamExecution execution,
+                                    ChatMessageInput input,
+                                    String idempotencyKey) {
+            super(600_000L);
+            this.clientEmitter = clientEmitter;
+            this.task = task;
+            this.messageId = messageId;
+            this.execution = execution;
+            this.input = input;
+            this.idempotencyKey = idempotencyKey;
+        }
+
+        @Override
+        public synchronized void send(SseEventBuilder builder) throws IOException {
+            Set<ResponseBodyEmitter.DataWithMediaType> items = builder.build();
+            String eventName = eventName(items);
+            Object data = eventData(items);
+            if ("delta".equals(eventName)) {
+                String piece = deltaText(data);
+                if (!piece.isBlank()) {
+                    answer.append(piece);
+                    clientEmitter.send(SseEmitter.event().name("message").data(Map.of(
+                            "event", "message",
+                            "task_id", task.getTaskId(),
+                            "message_id", messageId,
+                            "conversation_id", execution.session().externalSessionId(),
+                            "answer", piece)));
+                }
+                return;
+            }
+            if ("done".equals(eventName)) {
+                finishSuccess();
+                return;
+            }
+            if ("error".equals(eventName)) {
+                finishFailure(new AgentOpenApiException(
+                        HttpStatus.BAD_GATEWAY,
+                        "model_or_tool_failed",
+                        errorMessage(data)));
+                return;
+            }
+            if (!eventName.isBlank()) {
+                clientEmitter.send(SseEmitter.event().name("agent_thought").data(Map.of(
+                        "event", "agent_thought",
+                        "task_id", task.getTaskId(),
+                        "message_id", messageId,
+                        "thought", eventName,
+                        "observation", data == null ? "" : data)));
+            }
+        }
+
+        @Override
+        public void complete() {
+            finishSuccess();
+        }
+
+        @Override
+        public void completeWithError(Throwable ex) {
+            if (ex instanceof AgentOpenApiException apiException) {
+                finishFailure(apiException);
+                return;
+            }
+            finishFailure(new AgentOpenApiException(
+                    HttpStatus.BAD_GATEWAY,
+                    "model_or_tool_failed",
+                    "Agent runtime failed"));
+        }
+
+        private void finishSuccess() {
+            if (!finalized.compareAndSet(false, true)) {
+                return;
+            }
+            try {
+                String finalAnswer = answer.toString();
+                AgentOpenApiRunService.StreamCompletion completion =
+                        runService.completeChatStreamSuccess(execution, finalAnswer);
+                AgentApiTaskEntity currentTask = taskRepository.findById(task.getTaskId()).orElse(task);
+                if (!currentTask.isCancelRequested()) {
+                    currentTask.completeSuccess();
+                    taskRepository.save(currentTask);
+                }
+                AgentApiMessageEntity message = saveStreamMessage(
+                        messageId,
+                        execution.requestId(),
+                        task.getTaskId(),
+                        execution,
+                        input,
+                        finalAnswer,
+                        idempotencyKey,
+                        completion);
+                clientEmitter.send(SseEmitter.event().name("message_end").data(Map.of(
+                        "event", "message_end",
+                        "task_id", task.getTaskId(),
+                        "message_id", messageId,
+                        "conversation_id", execution.session().externalSessionId(),
+                        "metadata", enrichMetadata(message, Map.of(
+                                "trace_id", completion.traceId(),
+                                "usage", usage(completion.elapsedMs()),
+                                "task_status", currentTask.getStatus()), Map.of()))));
+                clientEmitter.complete();
+            } catch (AgentOpenApiException ex) {
+                emitFailure(ex);
+            } catch (Exception ex) {
+                emitFailure(new AgentOpenApiException(
+                        HttpStatus.BAD_GATEWAY,
+                        "model_or_tool_failed",
+                        "Agent runtime failed"));
+            }
+        }
+
+        private void finishFailure(AgentOpenApiException ex) {
+            if (!finalized.compareAndSet(false, true)) {
+                return;
+            }
+            runService.completeChatStreamFailure(execution, ex);
+            AgentApiTaskEntity currentTask = taskRepository.findById(task.getTaskId()).orElse(task);
+            if (!currentTask.isCancelRequested()) {
+                currentTask.completeFailure();
+                taskRepository.save(currentTask);
+            }
+            sendError(clientEmitter, execution.requestId(), ex);
+        }
+
+        private void emitFailure(AgentOpenApiException ex) {
+            runService.completeChatStreamFailure(execution, ex);
+            AgentApiTaskEntity currentTask = taskRepository.findById(task.getTaskId()).orElse(task);
+            if (!currentTask.isCancelRequested()) {
+                currentTask.completeFailure();
+                taskRepository.save(currentTask);
+            }
+            sendError(clientEmitter, execution.requestId(), ex);
+        }
+    }
+
+    private String eventName(Set<ResponseBodyEmitter.DataWithMediaType> items) {
+        for (ResponseBodyEmitter.DataWithMediaType item : items) {
+            Object data = item.getData();
+            if (data instanceof String text && text.startsWith("event:")) {
+                String value = text.substring("event:".length());
+                int lineEnd = value.indexOf('\n');
+                return (lineEnd >= 0 ? value.substring(0, lineEnd) : value).trim();
+            }
+        }
+        return "";
+    }
+
+    private Object eventData(Set<ResponseBodyEmitter.DataWithMediaType> items) {
+        for (ResponseBodyEmitter.DataWithMediaType item : items) {
+            Object data = item.getData();
+            if (!(data instanceof String)) {
+                return data;
+            }
+        }
+        return null;
+    }
+
+    private String deltaText(Object data) {
+        if (data instanceof Map<?, ?> map) {
+            return text(map.get("text"));
+        }
+        return text(data);
+    }
+
+    private String errorMessage(Object data) {
+        if (data instanceof Map<?, ?> map) {
+            return text(map.get("message")).isBlank() ? "Agent runtime failed" : text(map.get("message"));
+        }
+        String message = text(data);
+        return message.isBlank() ? "Agent runtime failed" : message;
     }
 
     private String normalizeRating(String rating) {

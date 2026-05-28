@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-056
 title: Custom Agent delete
-status: approved
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-137
 related_decisions: none
 related_issues: R20260526-BV2U1
-updated_at: 2026-05-27T03:32:12Z
+updated_at: 2026-05-27T07:39:41Z
 updated_by: MANAGER-001
 ---
 
@@ -16,7 +16,7 @@ updated_by: MANAGER-001
 ## Metadata
 
 - source_feedback: `R20260526-BV2U1`
-- status: `ready-for-implementation`
+- status: `implemented`
 - owner_role: `fullstack-agent`
 - created_at: 2026-05-27
 - task: `TASK-137`
@@ -101,3 +101,5 @@ After success:
 
 - The nearest existing pattern is custom Skill delete: it checks impact, confirms with the user, hides from normal lists, and preserves historical context.
 - Keep any modal styling aligned with `DESIGN.md` and `DESIGN.json`.
+- Implementation uses soft delete through the existing `enabled=false` field; disabled Agents are hidden from admin list/detail while database rows, workflow versions, runtime traces, OpenAPI call logs, and audit evidence remain intact.
+- Verification passed frontend focused tests/build, backend compile, and whitespace diff check. Focused backend integration test class is present but local execution was blocked by unavailable PostgreSQL during Spring context startup.

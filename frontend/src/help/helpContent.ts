@@ -272,7 +272,7 @@ export const helpDocs: HelpDoc[] = [
     sections: [
       {
         title: "请求地址",
-        code: "POST /openapi/v1/agents/{agentCode}/chat\nPOST /openapi/v1/agents/{agentCode}/chat/stream\nGET  /openapi/v1/agents/{agentCode}/health",
+        code: "GET  /openapi/v1/parameters\nPOST /openapi/v1/chat-messages\nPOST /openapi/v1/files/upload",
       },
       {
         title: "鉴权",
@@ -280,7 +280,7 @@ export const helpDocs: HelpDoc[] = [
       },
       {
         title: "请求示例",
-        code: "curl -X POST https://autoservice.agentcici.com/openapi/v1/agents/after-sales-agent/chat \\\n  -H \"Authorization: Bearer <AGENTCICI_API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"X-Request-Id: demo-request-001\" \\\n  -d '{\"externalUser\":\"customer-001\",\"message\":\"保修政策是什么？\"}'",
+        code: "curl -X POST https://autoservice.agentcici.com/openapi/v1/chat-messages \\\n  -H \"Authorization: Bearer <AGENTCICI_API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Idempotency-Key: demo-request-001\" \\\n  -d '{\"user\":\"customer-001\",\"query\":\"保修政策是什么？\",\"responseMode\":\"blocking\"}'",
       },
       {
         title: "结果验证",

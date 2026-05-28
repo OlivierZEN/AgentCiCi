@@ -34,6 +34,7 @@ import java.util.concurrent.TimeoutException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class AgentOpenApiRunService {
@@ -141,6 +142,110 @@ public class AgentOpenApiRunService {
                     "model_or_tool_failed",
                     "Agent runtime failed");
         }
+    }
+
+    public ChatStreamExecution prepareChatStreamWithAuth(AgentOpenApiAuthService.AuthenticatedCredential auth,
+                                                         String requestId,
+                                                         String idempotencyKey,
+                                                         ChatCommand command,
+                                                         Instant startedAt) {
+        String externalUserId = command == null ? "" : externalUserId(command.externalUser());
+        validateCommand(command, auth);
+        CloudccAccessTokenService.CloudccSessionContext cloudccOverride = resolveCloudccContext(auth, command);
+        ensureChatRouteHasUsableModel(auth);
+        AgentOpenApiSessionService.SessionResolution session = sessionService.resolve(
+                auth,
+                command.sessionId(),
+                externalUserId,
+                requestId);
+        rateLimitService.reserve(auth);
+        callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
+        return new ChatStreamExecution(auth, session, requestId, externalUserId, startedAt, cloudccOverride);
+    }
+
+    public void runChatStream(ChatStreamExecution execution,
+                              ChatCommand command,
+                              SseEmitter emitter) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                if (execution.cloudccOverride() == null) {
+                    invokeChatStream(execution, command, emitter);
+                    return;
+                }
+                cloudccAccessTokenService.withSessionContextOverride(
+                        execution.auth().credential().getOrgId(),
+                        execution.auth().credential().getRunAsUserId(),
+                        execution.cloudccOverride(),
+                        () -> {
+                            invokeChatStream(execution, command, emitter);
+                            return null;
+                        });
+            } catch (RuntimeException ex) {
+                try {
+                    emitter.send(SseEmitter.event().name("error").data(Map.of(
+                            "message", sanitizeFailureMessage(ex.getMessage(), execution.cloudccOverride()))));
+                } catch (Exception ignored) {
+                }
+                emitter.completeWithError(ex);
+            }
+        });
+    }
+
+    public StreamCompletion completeChatStreamSuccess(ChatStreamExecution execution, String answer) {
+        String safeAnswer = stringValue(answer);
+        validateResponseSize(execution.auth(), safeAnswer);
+        AgentRunTraceEntity trace = annotateLatestTrace(
+                execution.auth(),
+                execution.session(),
+                execution.requestId(),
+                execution.externalUserId());
+        int elapsedMs = elapsedMs(execution.startedAt(), Instant.now());
+        callLogService.completeSuccess(
+                execution.auth().credential().getId(),
+                execution.requestId(),
+                trace == null ? "" : trace.getTraceId(),
+                safeAnswer,
+                elapsedMs);
+        rateLimitService.markSuccess(execution.auth(), elapsedMs);
+        return new StreamCompletion(trace == null ? "" : trace.getTraceId(), elapsedMs);
+    }
+
+    public void completeChatStreamFailure(ChatStreamExecution execution, AgentOpenApiException ex) {
+        int elapsedMs = elapsedMs(execution.startedAt(), Instant.now());
+        callLogService.completeFailure(
+                execution.auth().credential().getId(),
+                execution.requestId(),
+                ex.getStatus().value(),
+                ex.getCode(),
+                elapsedMs,
+                sanitizeFailureMessage(ex.getMessage(), execution.cloudccOverride()));
+        rateLimitService.markFailure(execution.auth(), elapsedMs);
+    }
+
+    public void completeChatStreamFailure(ChatStreamExecution execution, RuntimeException ex) {
+        int elapsedMs = elapsedMs(execution.startedAt(), Instant.now());
+        callLogService.completeFailure(
+                execution.auth().credential().getId(),
+                execution.requestId(),
+                HttpStatus.BAD_GATEWAY.value(),
+                "model_or_tool_failed",
+                elapsedMs,
+                sanitizeFailureMessage(ex.getMessage(), execution.cloudccOverride()));
+        rateLimitService.markFailure(execution.auth(), elapsedMs);
+    }
+
+    private void invokeChatStream(ChatStreamExecution execution,
+                                  ChatCommand command,
+                                  SseEmitter emitter) {
+        chatOrchestratorService.chatStreamBlocking(
+                execution.auth().credential().getOrgId(),
+                execution.auth().credential().getRunAsUserId(),
+                execution.session().internalSessionId(),
+                command.message().trim(),
+                command.knowledgeBaseIds(),
+                execution.auth().credential().getAgentId(),
+                command.activeSkillCode(),
+                emitter);
     }
 
     private Map<String, Object> invokeChatWithTimeout(AgentOpenApiAuthService.AuthenticatedCredential auth,
@@ -626,6 +731,19 @@ public class AgentOpenApiRunService {
             int elapsedMs,
             Map<String, Object> payload
     ) {
+    }
+
+    public record ChatStreamExecution(
+            AgentOpenApiAuthService.AuthenticatedCredential auth,
+            AgentOpenApiSessionService.SessionResolution session,
+            String requestId,
+            String externalUserId,
+            Instant startedAt,
+            CloudccAccessTokenService.CloudccSessionContext cloudccOverride
+    ) {
+    }
+
+    public record StreamCompletion(String traceId, int elapsedMs) {
     }
 
     private record ModelChoice(String providerCode, String modelName) {

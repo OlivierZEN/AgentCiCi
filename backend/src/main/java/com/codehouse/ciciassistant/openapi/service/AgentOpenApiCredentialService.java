@@ -2,7 +2,10 @@ package com.codehouse.ciciassistant.openapi.service;
 
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.openapi.config.AgentOpenApiProperties;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
@@ -29,19 +32,22 @@ public class AgentOpenApiCredentialService {
     private final AgentOpenApiProperties properties;
     private final AgentApiKeyGenerator keyGenerator;
     private final ObjectMapper objectMapper;
+    private final AgentAccessControlService accessControlService;
 
     public AgentOpenApiCredentialService(AgentApiCredentialRepository credentialRepository,
                                          AgentDefinitionRepository agentDefinitionRepository,
                                          UserRepository userRepository,
                                          AgentOpenApiProperties properties,
                                          AgentApiKeyGenerator keyGenerator,
-                                         ObjectMapper objectMapper) {
+                                         ObjectMapper objectMapper,
+                                         AgentAccessControlService accessControlService) {
         this.credentialRepository = credentialRepository;
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.userRepository = userRepository;
         this.properties = properties;
         this.keyGenerator = keyGenerator;
         this.objectMapper = objectMapper;
+        this.accessControlService = accessControlService;
     }
 
     public List<CredentialView> list(String orgId, String agentId) {
@@ -56,6 +62,7 @@ public class AgentOpenApiCredentialService {
     public CredentialCreation create(String orgId, String agentId, String actorUserId, CreateCredentialCommand command) {
         requireAgent(orgId, agentId);
         String runAsUserId = requireRunAsUser(orgId, command.runAsUserId());
+        requireRunAsPermission(orgId, agentId, runAsUserId);
         String keyType = normalizeKeyType(command.keyType());
         AgentApiKeyGenerator.GeneratedKey generated = generateUniqueKey();
         AgentApiCredentialEntity entity = credentialRepository.save(new AgentApiCredentialEntity(
@@ -87,6 +94,7 @@ public class AgentOpenApiCredentialService {
         String runAsUserId = command.runAsUserId() == null || command.runAsUserId().isBlank()
                 ? entity.getRunAsUserId()
                 : requireRunAsUser(orgId, command.runAsUserId());
+        requireRunAsPermission(orgId, agentId, runAsUserId);
         String status = normalizeStatus(command.status(), entity.getStatus());
         if (AgentApiCredentialEntity.STATUS_REVOKED.equals(entity.getStatus())
                 && !AgentApiCredentialEntity.STATUS_REVOKED.equals(status)) {
@@ -166,8 +174,17 @@ public class AgentOpenApiCredentialService {
     private String requireRunAsUser(String orgId, String runAsUserId) {
         String normalized = requireText(runAsUserId, "runAsUserId");
         userRepository.findByIdAndOrg_Id(normalized, orgId)
+                .filter(member -> UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus()))
                 .orElseThrow(() -> new IllegalArgumentException("runAsUserId must belong to the current org"));
         return normalized;
+    }
+
+    private void requireRunAsPermission(String orgId, String agentId, String runAsUserId) {
+        if (!accessControlService.can(orgId, runAsUserId, List.of(), agentId, AgentPermission.RUN)) {
+            accessControlService.recordOpenApiRunAsDenied(orgId, agentId, runAsUserId,
+                    "run-as user lacks target Agent RUN permission", null);
+            throw new IllegalArgumentException("runAsUserId must have target Agent RUN permission");
+        }
     }
 
     private AgentApiKeyGenerator.GeneratedKey generateUniqueKey() {

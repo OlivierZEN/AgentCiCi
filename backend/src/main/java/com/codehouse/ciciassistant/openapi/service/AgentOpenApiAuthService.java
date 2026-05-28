@@ -3,6 +3,8 @@ package com.codehouse.ciciassistant.openapi.service;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.openapi.config.AgentOpenApiProperties;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
@@ -26,23 +28,26 @@ public class AgentOpenApiAuthService {
     private final AgentOpenApiProperties properties;
     private final AgentApiKeyGenerator keyGenerator;
     private final AgentOpenApiCredentialService credentialService;
+    private final AgentAccessControlService accessControlService;
 
     public AgentOpenApiAuthService(AgentApiCredentialRepository credentialRepository,
                                    AgentDefinitionRepository agentDefinitionRepository,
                                    AgentChannelBindingRepository channelBindingRepository,
                                    AgentOpenApiProperties properties,
                                    AgentApiKeyGenerator keyGenerator,
-                                   AgentOpenApiCredentialService credentialService) {
+                                   AgentOpenApiCredentialService credentialService,
+                                   AgentAccessControlService accessControlService) {
         this.credentialRepository = credentialRepository;
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.channelBindingRepository = channelBindingRepository;
         this.properties = properties;
         this.keyGenerator = keyGenerator;
         this.credentialService = credentialService;
+        this.accessControlService = accessControlService;
     }
 
     @Transactional
-    public AuthenticatedCredential authenticate(String agentId, HttpServletRequest request) {
+    public AuthenticatedCredential authenticate(HttpServletRequest request) {
         if (!properties.isEnabled()) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_open_api_disabled", "Agent Open API is disabled");
         }
@@ -60,10 +65,6 @@ public class AgentOpenApiAuthService {
                         HttpStatus.UNAUTHORIZED,
                         "agent_api_key_invalid",
                         "API key is invalid or revoked"));
-        String normalizedAgentId = normalizeAgentId(agentId);
-        if (!credential.getAgentId().equals(normalizedAgentId)) {
-            throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found for this API key");
-        }
         if (!AgentApiCredentialEntity.STATUS_ACTIVE.equals(credential.getStatus())) {
             throw new AgentOpenApiException(HttpStatus.UNAUTHORIZED, "agent_api_key_invalid", "API key is invalid or revoked");
         }
@@ -74,7 +75,7 @@ public class AgentOpenApiAuthService {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_api_ip_denied", "Client IP is not allowed");
         }
         AgentDefinitionEntity agent = agentDefinitionRepository
-                .findByOrgIdAndAgentId(credential.getOrgId(), normalizedAgentId)
+                .findByOrgIdAndAgentId(credential.getOrgId(), credential.getAgentId())
                 .orElseThrow(() -> new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found"));
         if (!agent.isEnabled()) {
             throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found");
@@ -84,9 +85,23 @@ public class AgentOpenApiAuthService {
         }
         if (!channelBindingRepository.existsByOrgIdAndAgentIdAndChannelIdAndEnabledTrue(
                 credential.getOrgId(),
-                normalizedAgentId,
+                credential.getAgentId(),
                 "api")) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_channel_disabled", "Agent API channel is disabled");
+        }
+        if (!accessControlService.can(
+                credential.getOrgId(),
+                credential.getRunAsUserId(),
+                List.of(),
+                credential.getAgentId(),
+                AgentPermission.RUN)) {
+            accessControlService.recordOpenApiRunAsDenied(
+                    credential.getOrgId(),
+                    credential.getAgentId(),
+                    credential.getRunAsUserId(),
+                    "run-as user lacks target Agent RUN permission",
+                    null);
+            throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_run_as_denied", "Run-as user cannot run this Agent");
         }
         credential.markUsed();
         return new AuthenticatedCredential(
@@ -135,14 +150,6 @@ public class AgentOpenApiAuthService {
             return realIp.trim();
         }
         return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
-    }
-
-    private String normalizeAgentId(String raw) {
-        String text = raw == null ? "" : raw.trim().toLowerCase();
-        if (!text.matches("^[a-z0-9][a-z0-9-]{1,63}$")) {
-            throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found");
-        }
-        return text;
     }
 
     public void requireScope(AuthenticatedCredential auth, String scope) {

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-27T03:37:58Z
+updated_at: 2026-05-28T08:04:54Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,49 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-140 - Remove Agent ID from public OpenAPI routes
+### TASK-143 - Billing editions configurable in platform operations
 
 - status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-037-saas-billing-usage-ledger.md`
+- task_status_path: `.claw/tasks/TASK-143.md`
+- assignment_path: `.claw/assignments/TASK-143.yaml`
+- blocked_by: `none`
+- next_action: Owen (`MANAGER-001`) runs task-scoped `dev-login.py` on `codex/TASK-143-billing-edition-config`, then implements platform-configurable SaaS/private editions and billing packs.
+
+### TASK-142 - OpenAPI chat-messages SSE streaming
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md`
+- task_status_path: `.claw/tasks/TASK-142.md`
+- assignment_path: `.claw/assignments/TASK-142.yaml`
+- blocked_by: `TASK-140 may change the final public route shape`
+- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-142-openapi-sse-streaming`, then implements true SSE streaming for OpenAPI `chat-messages`.
+
+### TASK-141 - AI 听记本地 FunASR 实时转写
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-059-ai-minutes-local-asr.md`
+- task_status_path: `.claw/tasks/TASK-141.md`
+- assignment_path: `.claw/assignments/TASK-141.yaml`
+- blocked_by: `none`
+- next_action: `DEV-houyi` runs task-scoped `dev-login.py` on `codex/TASK-141-local-funasr-realtime-asr`, then implements the local FunASR realtime ASR sidecar and `/ws/asr?provider=local` integration.
+
+### TASK-140 - Remove Agent ID from public OpenAPI routes
+
+- status: `in_progress`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-058-openapi-agentless-endpoints.md`
 - task_status_path: `.claw/tasks/TASK-140.md`
 - assignment_path: `.claw/assignments/TASK-140.yaml`
 - blocked_by: `none`
-- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-140-openapi-agentless-endpoints`, then removes Agent ID from public OpenAPI routes.
+- next_action: `DEV-fengchu` completes review fixes / service validation for `codex/TASK-140-openapi-agentless-endpoints`; task status is the progress source.
 
 ### TASK-139 - Agent list OpenAPI badge shows only first Agent
 
@@ -50,14 +83,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-137 - Custom Agent delete action
 
-- status: `ready`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-056-custom-agent-delete.md`
 - task_status_path: `.claw/tasks/TASK-137.md`
 - assignment_path: `.claw/assignments/TASK-137.yaml`
 - blocked_by: `none`
-- next_action: `MANAGER-001` runs task-scoped `dev-login.py` on `codex/TASK-137-custom-agent-delete`, then implements custom Agent deletion.
+- next_action: code is complete on `codex/TASK-137-custom-agent-delete`; review/merge after backend integration rerun when local PostgreSQL is available.
 
 ### TASK-136 - Frontend auth token sync across tabs
 
@@ -70,49 +103,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-136-frontend-auth-token-sync`, then implements shared token sync.
 
-### TASK-134 - AI minutes local audio upload and speaker diarization
-
-- status: `review`
-- priority: `high`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-054-ai-minutes-local-audio-upload.md`
-- task_status_path: `.claw/tasks/TASK-134.md`
-- assignment_path: `.claw/assignments/TASK-134.yaml`
-- blocked_by: `none`
-- next_action: Review Codeup change/13 for TASK-134 transcript download; real 百炼 upload/ASR is proven on 60-second chunks, while whole-file upload remains blocked by local-network reset.
-
 ### TASK-133 - Agent Builder no-model new-Agent model-config redirect
 
-- status: `ready`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/PROJECT-BASELINE.md`
 - task_status_path: `.claw/tasks/TASK-133.md`
 - assignment_path: `.claw/assignments/TASK-133.yaml`
 - blocked_by: `none`
-- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-133-agent-builder-new-agent-model-config-fix`, then makes `+ 新建 Agent` redirect to `/admin/models` with `请先配置模型` when no base model is available.
+- next_action: PM/integration owner reviews and merges `codex/TASK-133-agent-builder-new-agent-model-config-fix`; mark `done` after merge verification.
 
 ### TASK-132 - Agent Builder focused-agent skill binding refresh bugfix
 
-- status: `ready`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/PROJECT-BASELINE.md`
 - task_status_path: `.claw/tasks/TASK-132.md`
 - assignment_path: `.claw/assignments/TASK-132.yaml`
 - blocked_by: `none`
-- next_action: `DEV-fengchu` runs task-scoped `dev-login.py` on `codex/TASK-132-agent-builder-skill-refresh-bugfix`, then fixes `AgentBuilderShell` to fetch the focused Agent detail and validates Skill bindings after refresh.
-
-### TASK-124 - FEAT-046 platform tenant manual provisioning and lifecycle split
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md`
-- task_status_path: `.claw/tasks/TASK-124.md`
-- assignment_path: `.claw/assignments/TASK-124.yaml`
-- blocked_by: `none`
-- next_action: `MANAGER-001` runs task-scoped `dev-login.py` on `codex/TASK-124-feat-046-platform-tenant-provisioning`, then lands backend provisioning, route split, modal flow, and visual QA.
+- next_action: PM/integration owner reviews and merges `codex/TASK-132-agent-builder-skill-refresh-bugfix`; mark `done` after merge verification.
 
 ### TASK-116 - Skill module completion and optimization
 
@@ -227,6 +238,28 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-134 - AI minutes local audio upload and speaker diarization
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-054-ai-minutes-local-audio-upload.md`
+- task_status_path: `.claw/tasks/TASK-134.md`
+- assignment_path: `.claw/assignments/TASK-134.yaml`
+- blocked_by: `none`
+- next_action: `none`; local upload, 百炼 Fun-ASR speaker diarization, transcript normalization, and Markdown `下载转写` are complete. The remaining whole-file reset was confirmed as a local-network limitation; online environment is normal.
+
+### TASK-124 - FEAT-046 platform tenant manual provisioning and lifecycle split
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-046-platform-tenant-manual-provisioning-and-lifecycle-entry.md`
+- task_status_path: `.claw/tasks/TASK-124.md`
+- assignment_path: `.claw/assignments/TASK-124.yaml`
+- blocked_by: `none`
+- next_action: `none`; platform tenant list/detail split, manual provisioning, backend provisioning path, focused tests, and desktop QA are complete.
 
 ### TASK-135 - Clear default login account values
 

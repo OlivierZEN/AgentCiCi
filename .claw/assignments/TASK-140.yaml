@@ -10,11 +10,11 @@ branch: codex/TASK-140-openapi-agentless-endpoints
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
-  - backend/src/main/java/com/codehouse/ciciassistant/openapi
-  - backend/src/test/java/com/codehouse/ciciassistant/openapi
-  - frontend/src
-  - docs/specs
-  - .claw/tasks
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
 scope_files:
   - .claw/tasks/TASK-140.md
   - docs/specs/FEAT-058-openapi-agentless-endpoints.md
@@ -43,5 +43,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T03:37:58Z; user a
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "API contract bugfix. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
-hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-140 on branch codex/TASK-140-openapi-agentless-endpoints before implementation edits."
+notes: "API contract bugfix. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Reauthorized by MANAGER-001 on 2026-05-27 with recursive allowed_write_roots and no task-board write scope."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-140 on branch codex/TASK-140-openapi-agentless-endpoints before implementation edits. Developer task progress is recorded in .claw/tasks/TASK-140.md; task-board.md remains PM/integration-owned."

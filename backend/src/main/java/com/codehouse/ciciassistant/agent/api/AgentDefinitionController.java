@@ -1,12 +1,15 @@
 package com.codehouse.ciciassistant.agent.api;
 
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
 import com.codehouse.ciciassistant.agent.domain.AgentSpecEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.AgentSkillBindingService;
-import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +19,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,30 +30,41 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/agents")
-@RequireOrgAdmin
 public class AgentDefinitionController {
 
     private final AgentDefinitionService agentDefinitionService;
     private final AgentSkillBindingService agentSkillBindingService;
+    private final AgentAccessControlService accessControlService;
     private final ObjectMapper objectMapper;
 
     public AgentDefinitionController(AgentDefinitionService agentDefinitionService,
                                      AgentSkillBindingService agentSkillBindingService,
+                                     AgentAccessControlService accessControlService,
                                      ObjectMapper objectMapper) {
         this.agentDefinitionService = agentDefinitionService;
         this.agentSkillBindingService = agentSkillBindingService;
+        this.accessControlService = accessControlService;
         this.objectMapper = objectMapper;
     }
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
         String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(agentDefinitionService.list(orgId).stream().map(this::toDefinitionPayload).toList());
+        String userId = requireUserId();
+        List<String> roles = TenantContext.getRoles();
+        return ApiResponse.ok(agentDefinitionService.listWithChannels(orgId)
+                .stream()
+                .filter(item -> accessControlService.can(orgId, userId, roles, item.definition().getAgentId(), AgentPermission.VIEW)
+                        || accessControlService.can(orgId, userId, roles, item.definition().getAgentId(), AgentPermission.RUN))
+                .map(item -> toListPayload(orgId, userId, roles, item))
+                .toList());
     }
 
     @PostMapping
     public ApiResponse<Map<String, Object>> create(@Valid @RequestBody CreateAgentRequest request) {
         String orgId = TenantContext.requireOrgId();
+        String userId = requireUserId();
+        requireOrgAdmin();
         AgentDefinitionService.AgentDetail detail = agentDefinitionService.create(orgId, new AgentDefinitionService.CreateCommand(
                 request.agentId(),
                 request.name(),
@@ -62,6 +77,7 @@ public class AgentDefinitionController {
                 request.executionMode(),
                 request.versionLabel(),
                 request.avatarBase64(),
+                userId,
                 request.builtin(),
                 request.enabled(),
                 request.specText(),
@@ -70,19 +86,26 @@ public class AgentDefinitionController {
                 request.channels(),
                 request.publishConfigs()
         ));
-        return ApiResponse.ok(toDetailPayload(orgId, detail));
+        return ApiResponse.ok(toDetailPayload(orgId, userId, TenantContext.getRoles(), detail));
     }
 
     @GetMapping("/{agentId}")
     public ApiResponse<Map<String, Object>> get(@PathVariable String agentId) {
         String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(toDetailPayload(orgId, agentDefinitionService.get(orgId, agentId)));
+        String userId = requireUserId();
+        List<String> roles = TenantContext.getRoles();
+        AgentDefinitionService.AgentDetail detail = agentDefinitionService.get(orgId, agentId);
+        accessControlService.require(orgId, userId, roles, agentId, AgentPermission.VIEW);
+        return ApiResponse.ok(toDetailPayload(orgId, userId, roles, detail));
     }
 
     @PutMapping("/{agentId}")
     public ApiResponse<Map<String, Object>> updateDefinition(@PathVariable String agentId,
                                                               @Valid @RequestBody UpdateDefinitionRequest request) {
         String orgId = TenantContext.requireOrgId();
+        String userId = requireUserId();
+        List<String> roles = TenantContext.getRoles();
+        accessControlService.require(orgId, userId, roles, agentId, AgentPermission.EDIT);
         AgentDefinitionEntity updated = agentDefinitionService.updateDefinition(orgId, agentId, new AgentDefinitionService.UpsertDefinitionCommand(
                 request.name(),
                 request.summary(),
@@ -96,13 +119,28 @@ public class AgentDefinitionController {
                 request.avatarBase64(),
                 request.enabled()
         ));
-        return ApiResponse.ok(toDefinitionPayload(updated));
+        return ApiResponse.ok(toDefinitionPayload(orgId, userId, roles, updated));
+    }
+
+    @DeleteMapping("/{agentId}")
+    public ApiResponse<Map<String, Object>> delete(@PathVariable String agentId) {
+        String orgId = TenantContext.requireOrgId();
+        agentDefinitionService.get(orgId, agentId);
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.MANAGE);
+        AgentDefinitionService.AgentDeleteResult result = agentDefinitionService.deleteCustomAgent(orgId, agentId);
+        return ApiResponse.ok(Map.of(
+                "agentId", result.agentId(),
+                "name", result.name(),
+                "deleted", true,
+                "retentionMessage", result.retentionMessage()
+        ));
     }
 
     @PutMapping("/{agentId}/spec")
     public ApiResponse<Map<String, Object>> updateSpec(@PathVariable String agentId,
                                                         @Valid @RequestBody UpdateSpecRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
         AgentSpecEntity updated = agentDefinitionService.updateSpec(orgId, agentId, request.specText());
         return ApiResponse.ok(Map.of(
                 "agentId", updated.getAgentId(),
@@ -114,6 +152,7 @@ public class AgentDefinitionController {
     @GetMapping("/{agentId}/bindings")
     public ApiResponse<Map<String, Object>> getBindings(@PathVariable String agentId) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
         AgentDefinitionService.AgentDetail detail = agentDefinitionService.get(orgId, agentId);
         return ApiResponse.ok(Map.of(
                 "agentId", detail.definition().getAgentId(),
@@ -126,6 +165,7 @@ public class AgentDefinitionController {
     @GetMapping("/{agentId}/skills")
     public ApiResponse<Map<String, Object>> listSkillBindings(@PathVariable String agentId) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
         return ApiResponse.ok(Map.of(
                 "bindings", agentSkillBindingService.listBindings(orgId, agentId)
         ));
@@ -135,6 +175,7 @@ public class AgentDefinitionController {
     public ApiResponse<Map<String, Object>> replaceSkillBindings(@PathVariable String agentId,
                                                                  @Valid @RequestBody ReplaceSkillBindingsRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
         List<AgentSkillBindingService.AgentSkillBindingView> saved = agentSkillBindingService.replaceBindings(
                 orgId,
                 agentId,
@@ -155,6 +196,7 @@ public class AgentDefinitionController {
     public ApiResponse<Map<String, Object>> replaceBindings(@PathVariable String agentId,
                                                              @Valid @RequestBody ReplaceBindingsRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
         AgentDefinitionService.AgentBindings bindings = agentDefinitionService.replaceBindings(
                 orgId,
                 agentId,
@@ -176,6 +218,7 @@ public class AgentDefinitionController {
     public ApiResponse<Map<String, Object>> replacePublishConfigs(@PathVariable String agentId,
                                                                    @Valid @RequestBody ReplacePublishConfigsRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
         Map<String, Object> saved = agentDefinitionService.replacePublishConfigs(orgId, agentId, request.publishConfigs());
         return ApiResponse.ok(Map.of(
                 "agentId", agentId,
@@ -186,6 +229,7 @@ public class AgentDefinitionController {
     @GetMapping("/{agentId}/versions")
     public ApiResponse<List<Map<String, Object>>> listVersions(@PathVariable String agentId) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
         return ApiResponse.ok(agentDefinitionService.listVersions(orgId, agentId).stream().map(this::toVersionPayload).toList());
     }
 
@@ -193,6 +237,7 @@ public class AgentDefinitionController {
     public ApiResponse<Map<String, Object>> publish(@PathVariable String agentId,
                                                      @Valid @RequestBody VersionActionRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
         AgentWorkflowVersionEntity version = agentDefinitionService.publishVersion(orgId, agentId, request.versionNo());
         return ApiResponse.ok(toVersionPayload(version));
     }
@@ -201,13 +246,43 @@ public class AgentDefinitionController {
     public ApiResponse<Map<String, Object>> rollback(@PathVariable String agentId,
                                                       @Valid @RequestBody VersionActionRequest request) {
         String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
         AgentWorkflowVersionEntity version = agentDefinitionService.rollbackVersion(orgId, agentId, request.versionNo());
         return ApiResponse.ok(toVersionPayload(version));
     }
 
-    private Map<String, Object> toDetailPayload(String orgId, AgentDefinitionService.AgentDetail detail) {
+    @GetMapping("/{agentId}/access-grants")
+    public ApiResponse<Map<String, Object>> listAccessGrants(@PathVariable String agentId) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.MANAGE);
+        return ApiResponse.ok(Map.of(
+                "agentId", agentId,
+                "grants", accessControlService.listGrants(orgId, agentId)
+        ));
+    }
+
+    @PutMapping("/{agentId}/access-grants")
+    public ApiResponse<Map<String, Object>> replaceAccessGrants(@PathVariable String agentId,
+                                                                @Valid @RequestBody ReplaceAccessGrantsRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = requireUserId();
+        accessControlService.require(orgId, userId, TenantContext.getRoles(), agentId, AgentPermission.MANAGE);
+        return ApiResponse.ok(Map.of(
+                "agentId", agentId,
+                "grants", accessControlService.replaceGrants(
+                        orgId,
+                        agentId,
+                        userId,
+                        new AgentAccessControlService.ReplaceGrantsCommand(request.grants()))
+        ));
+    }
+
+    private Map<String, Object> toDetailPayload(String orgId,
+                                                String userId,
+                                                List<String> roles,
+                                                AgentDefinitionService.AgentDetail detail) {
         Map<String, Object> payload = new LinkedHashMap<>();
-        payload.putAll(toDefinitionPayload(detail.definition()));
+        payload.putAll(toDefinitionPayload(orgId, userId, roles, detail.definition()));
         payload.put("specText", detail.specText());
         payload.put("knowledgeBaseIds", detail.knowledgeBaseIds());
         payload.put("toolIds", detail.toolIds());
@@ -217,7 +292,7 @@ public class AgentDefinitionController {
         return payload;
     }
 
-    private Map<String, Object> toDefinitionPayload(AgentDefinitionEntity item) {
+    private Map<String, Object> toDefinitionPayload(String orgId, String userId, List<String> roles, AgentDefinitionEntity item) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
         payload.put("agentId", item.getAgentId());
@@ -231,11 +306,32 @@ public class AgentDefinitionController {
         payload.put("executionMode", item.getExecutionMode());
         payload.put("versionLabel", item.getVersionLabel());
         payload.put("avatarBase64", item.getAvatarBase64());
+        payload.put("ownerUserId", item.getOwnerUserId() == null ? "" : item.getOwnerUserId());
         payload.put("builtin", item.isBuiltin());
         payload.put("enabled", item.isEnabled());
         payload.put("publishedVersionId", item.getPublishedVersionId());
         payload.put("createdAt", item.getCreatedAt().toString());
         payload.put("updatedAt", item.getUpdatedAt().toString());
+        payload.put("access", accessControlService.permissionPayload(orgId, userId, roles, item.getAgentId()));
+        return payload;
+    }
+
+    private String requireUserId() {
+        return TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+    }
+
+    private void requireOrgAdmin() {
+        if (TenantContext.getRoles().stream().noneMatch(RoleCodes::isOrgAdminRole)) {
+            throw new ForbiddenException("需要组织管理员权限");
+        }
+    }
+
+    private Map<String, Object> toListPayload(String orgId,
+                                              String userId,
+                                              List<String> roles,
+                                              AgentDefinitionService.AgentListItem item) {
+        Map<String, Object> payload = toDefinitionPayload(orgId, userId, roles, item.definition());
+        payload.put("channels", item.channels());
         return payload;
     }
 
@@ -335,5 +431,8 @@ public class AgentDefinitionController {
     }
 
     public record VersionActionRequest(Integer versionNo) {
+    }
+
+    public record ReplaceAccessGrantsRequest(List<AgentAccessControlService.GrantInput> grants) {
     }
 }

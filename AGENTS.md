@@ -23,11 +23,13 @@
 - 处理 `功能需求` 或 `BUG反馈` 条目并准备分配 task 前，必须先检查反馈内容是否明确给出设计文档、需求文档、方案文档或其他可作为设计依据的链接。
 - 如果反馈内容明确给出设计文档链接，必须先读取该设计文档，并把其中的目标、范围、流程、界面/API/数据设计、验收标准、约束和例外直接转写进对应 `docs/specs/` 文档；`spec` 可保留原始链接作为来源，但不得只放链接而缺少转写后的设计内容。
 - 如果反馈内容没有明确设计文档链接，PM 或执行分配的 agent 必须先完成必要设计，并把设计内容补充到对应 `docs/specs/` 文档后，再创建或更新 `.claw/task-board.md`、`.claw/tasks/TASK-xxx.md` 与 `.claw/assignments/TASK-xxx.yaml` 进行任务分配。
+- `功能需求` 或 `BUG反馈` 条目分配完成后，必须立即回写对应飞书文档：把原条目状态更新为 `已分配`，并在同一条记录中补充关联 `TASK-xxx`、`docs/specs/FEAT-xxx-*.md`、执行人/assignee；不得只更新本地 `.claw/` 而让飞书原始反馈停留在 `待分配`。
 
 ## 任务授权规范
 
 - `.claw/assignments/TASK-xxx.yaml` 中的 `allowed_write_roots` 必须写成可递归匹配的 glob，例如 `frontend/src/**`、`docs/specs/**`、`.claw/tasks/**`；不得只写裸目录如 `frontend/src`，避免身份门禁把子目录文件误判为越界。
 - PM 或执行分配的 agent 更新 assignment 后，必须用 `scripts/check-assignment.py` 或技能包自带 `check-assignment.py` 对任务预期会编辑的代表性文件做一次授权验证；验证失败时先修正 assignment，再让执行 agent 开始编码。
+- PM 或执行分配的 agent 完成任务分配、授权验证和任务状态更新后，必须立即把任务分配内容提交并推送到 `origin/main`，提交范围限于该次分配相关的 `docs/specs/`、`.claw/tasks/`、`.claw/assignments/`、`.claw/task-board.md`、`.claw/current-status.md`、必要的 `.claw/developers/` 授权变更和项目规则文档；不得把执行 agent 的未验证实现代码混入该提交。
 - 如果仓库未内置门禁脚本，仍按已加载的 `cc-aidev-guidelines-common` 技能包脚本执行同等检查，不能因为本地脚本缺失而跳过授权验证。
 
 ## 发布部署治理
@@ -63,6 +65,8 @@
 ## 设计治理入口
 
 - 页面分析、设计、改版、评审、润色或 UI 实现必须使用 `impeccable` 工作流。
+- 所有前端页面、组件、弹窗和可视化 UI 的设计与实现必须同时遵循 `frontend-design` 技能要求：先明确用途、用户、语气、约束和差异化视觉方向，再落实到生产级布局、层级、动效、状态和细节。
+- `frontend-design` 不覆盖项目品牌事实源：认证后产品页必须保留 `鎏金账房` 的暖象牙底、墨色文字、紧凑密度、香槟金结构线和克制企业工作台语气；不得引入与该风格冲突的紫色渐变、默认玻璃拟态、大面积深色命令中心或营销页式 hero。
 - 编辑页面结构、样式、token 或组件视觉前，先读取 `PRODUCT.md` 与 `DESIGN.md`；需要细则时读取 `DESIGN.json`。
 - `/`、`/admin/*`、`/platform/*` 默认都是 `product` register，继承 `鎏金账房`：暖象牙底、墨色文字、紧凑密度、香槟金结构线。
 - 页面实现完成前必须按设计事实源完成本地运行、桌面端截图检查、交互状态检查和必要复测；阻塞项要写进交接。

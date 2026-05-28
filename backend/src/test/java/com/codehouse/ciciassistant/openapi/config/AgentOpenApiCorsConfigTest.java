@@ -48,7 +48,7 @@ class AgentOpenApiCorsConfigTest {
         MockHttpServletRequest request = preflight(
                 "https://another.example",
                 "DELETE",
-                "/openapi/v1/agents/agent-1/conversations/conversation-1");
+                "/openapi/v1/conversations/conversation-1");
         MockHttpServletResponse response = new MockHttpServletResponse();
 
         filter.doFilter(request, response, new MockFilterChain());
@@ -67,7 +67,7 @@ class AgentOpenApiCorsConfigTest {
     }
 
     private MockHttpServletRequest preflight(String origin) {
-        return preflight(origin, "POST", "/openapi/v1/agents/agent-1/chat-messages");
+        return preflight(origin, "POST", "/openapi/v1/chat-messages");
     }
 
     private MockHttpServletRequest preflight(String origin, String method, String path) {

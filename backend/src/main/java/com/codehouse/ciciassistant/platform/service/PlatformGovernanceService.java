@@ -667,7 +667,7 @@ public class PlatformGovernanceService {
     }
 
     private PublishedAgentUsage summarizePublishedAgentUsage(String orgId) {
-        List<AgentDefinitionEntity> publishedAgents = agentDefinitionRepository.findByOrgIdOrderByBuiltinDescUpdatedAtDesc(orgId)
+        List<AgentDefinitionEntity> publishedAgents = agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId)
                 .stream()
                 .filter(item -> item.getPublishedVersionId() != null)
                 .toList();

@@ -1,0 +1,30 @@
+developer_id: DEV-houyi
+display_name: 后羿
+role: fullstack-agent
+public_key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK9M8rnKEplZBJOcwRFYrIFy9LmDf+PZpXZIeInU2Pw9 houyi-agentcici-dev"
+public_key_path: "/Users/owenmacbook/.ssh/id_ed25519_agentcici_houyi.pub"
+git_platform: codeup
+git_username: zhengyan
+verified_identity: "codeup:zhengyan"
+ssh_signing_key_fingerprint: "SHA256:QQ70awoaIL6CgUDdMButygzD5R2fH78DL5czGOSwPas"
+status: active
+managed_by: MANAGER-001
+allowed_scopes:
+  - "assignment-scoped"
+  - "backend/src/main/java/com/codehouse/ciciassistant/**"
+  - "backend/src/test/java/com/codehouse/ciciassistant/**"
+  - "backend/src/main/resources/**"
+  - "backend/pom.xml"
+  - "services/local-asr/**"
+  - "deploy/**"
+  - "frontend/src/**"
+  - "frontend/public/**"
+  - "frontend/vite.config.ts"
+  - "frontend/vite.config.js"
+  - "docs/specs/**"
+  - "DESIGN.md"
+  - "DESIGN.json"
+  - "PRODUCT.md"
+  - ".claw/tasks/**"
+allowed_until: none
+notes: "Registered by MANAGER-001 on 2026-05-27. Broad-code ceiling is enabled for normal source, test, local ASR sidecar service, design-source, feature-spec, deploy, and per-task status paths, but every edit still requires an active .claw/assignments/TASK-xxx.yaml boundary plus local dev-login before implementation. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."

@@ -1,0 +1,55 @@
+task_id: TASK-141
+assignee: DEV-houyi
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-27T09:30:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-059-ai-minutes-local-asr.md
+task_status_path: .claw/tasks/TASK-141.md
+branch: codex/TASK-141-local-funasr-realtime-asr
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - services/local-asr/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/**
+  - backend/pom.xml
+  - frontend/src/**
+  - deploy/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-141.md
+  - docs/specs/FEAT-059-ai-minutes-local-asr.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - docker-compose.yml
+  - deploy/docker-compose.acr.ssl.yml
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Implement FEAT-059 local FunASR / Paraformer-zh realtime ASR provider for AI 听记."
+  - "Realtime transcription is P0 and must emit partial/final transcript events during recording; file upload transcription is secondary reuse work."
+  - "Add an isolated Python local-asr sidecar under services/local-asr/** and connect Spring Boot /ws/asr provider=local to it."
+  - "Do not send local-ASR audio to cloud providers unless a later explicit fallback configuration is approved."
+  - "Do not modify protected root deployment/release scripts or database migrations without PM scope expansion."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T09:30:00Z; user approved FEAT-059 and assigned TASK-141 to DEV-houyi."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "DEV-houyi must run task-scoped dev-login.py on branch codex/TASK-141-local-funasr-realtime-asr before implementation edits. Assignment uses recursive allowed_write_roots and keeps task-board/current-status/test-report PM-owned unless scope is expanded."
+hard_gate_notes: "Representative files were checked with check-assignment.py after assignment creation. Developer task progress is recorded in .claw/tasks/TASK-141.md; task-board.md remains PM/integration-owned."

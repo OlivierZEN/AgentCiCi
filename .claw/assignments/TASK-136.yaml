@@ -10,10 +10,10 @@ branch: codex/TASK-136-frontend-auth-token-sync
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
-  - frontend/src
-  - frontend/public
-  - docs/specs
-  - .claw/tasks
+  - frontend/src/**
+  - frontend/public/**
+  - docs/specs/**
+  - .claw/tasks/**
 scope_files:
   - .claw/tasks/TASK-136.md
   - docs/specs/FEAT-055-frontend-auth-token-sync.md
@@ -40,5 +40,5 @@ signature: "MANAGER-001 local ssh challenge allowed 2026-05-27T03:37:58Z; user a
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "Cross-cutting frontend auth reliability task. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
-hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-136 on branch codex/TASK-136-frontend-auth-token-sync before implementation edits."
+notes: "Cross-cutting frontend auth reliability task. Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets. Reauthorized by MANAGER-001 on 2026-05-27 with recursive allowed_write_roots and no task-board write scope."
+hard_gate_notes: "DEV-fengchu must run task-scoped dev-login.py for TASK-136 on branch codex/TASK-136-frontend-auth-token-sync before implementation edits. Developer task progress is recorded in .claw/tasks/TASK-136.md; task-board.md remains PM/integration-owned."

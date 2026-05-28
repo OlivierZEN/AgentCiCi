@@ -31,6 +31,9 @@ const SECTIONS = [
   { id: "security", label: "安全建议" },
 ];
 
+const CLOUDCC_ACCESS_TOKEN_HELP_URL = "https://help.cloudcc.cn/product03/sdkcan-kao/#getopenapitoken";
+const CLOUDCC_BASE_URL_HELP_URL = "https://help.cloudcc.cn/product03/apigai-lan/#1接口联调说明";
+
 function methodLine(method: string, path: string) {
   return `${method} ${path}`;
 }
@@ -60,16 +63,16 @@ export default function AgentOpenApiDocsDialog({
   const titleRef = useRef<HTMLHeadingElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const titleId = "agent-open-api-docs-title";
-  const parametersPath = `/agents/${agentId || "{agentId}"}/parameters`;
-  const chatMessagesPath = `/agents/${agentId || "{agentId}"}/chat-messages`;
-  const stopTaskPath = `/agents/${agentId || "{agentId}"}/chat-messages/{taskId}/stop`;
-  const filesPath = `/agents/${agentId || "{agentId}"}/files/upload`;
-  const feedbacksPath = `/agents/${agentId || "{agentId}"}/messages/{messageId}/feedbacks`;
-  const suggestedPath = `/agents/${agentId || "{agentId}"}/messages/{messageId}/suggested`;
-  const messagesPath = `/agents/${agentId || "{agentId}"}/messages`;
-  const conversationsPath = `/agents/${agentId || "{agentId}"}/conversations`;
-  const conversationNamePath = `/agents/${agentId || "{agentId}"}/conversations/{conversationId}/name`;
-  const conversationDeletePath = `/agents/${agentId || "{agentId}"}/conversations/{conversationId}`;
+  const parametersPath = "/parameters";
+  const chatMessagesPath = "/chat-messages";
+  const stopTaskPath = "/chat-messages/{taskId}/stop";
+  const filesPath = "/files/upload";
+  const feedbacksPath = "/messages/{messageId}/feedbacks";
+  const suggestedPath = "/messages/{messageId}/suggested";
+  const messagesPath = "/messages";
+  const conversationsPath = "/conversations";
+  const conversationNamePath = "/conversations/{conversationId}/name";
+  const conversationDeletePath = "/conversations/{conversationId}";
   const status = published ? (apiChannelEnabled ? "运行中" : "未开放 API") : "未发布";
   const normalizedBaseUrl = useMemo(() => baseUrl.replace(/\/$/, ""), [baseUrl]);
 
@@ -127,8 +130,6 @@ ${normalizedBaseUrl}
 
 服务端保存 API Key，调用时任选一种 Header。不要把 Key 放进浏览器、移动端包或前端源码。
 
-API Key 类型分为 \`standard\` 与 \`cloudcc\`。\`standard\` 保持默认 run-as 行为；\`cloudcc\` 用于 CloudCC 嵌入页，发送消息时必须传入当前 CloudCC 用户的 \`cloudccContext.accessToken\`。
-
 \`\`\`http
 Authorization: Bearer {API_KEY}
 X-Cici-Api-Key: {API_KEY}
@@ -162,13 +163,16 @@ curl -X POST "${normalizedBaseUrl}${chatMessagesPath}" \\
       "source": "crm"
     },
     "cloudccContext": {
-      "accessToken": "{CLOUDCC_PAGE_TOKEN}",
+      "accessToken": "{CLOUDCC_OPENAPI_TOKEN}",
       "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi"
     }
   }'
 \`\`\`
 
-会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。仅 \`cloudcc\` Key 可以使用 \`cloudccContext\`，且 token 不会写入调用日志或 trace。
+会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。请求体始终使用 JSON；流式调用额外设置 \`Accept: text/event-stream\`。仅 \`cloudcc\` Key 可以使用 \`cloudccContext\`，发送消息时必须传入当前 CloudCC 用户的 \`cloudccContext.accessToken\`，且 token 不会写入调用日志或 trace。
+
+CloudCC \`accessToken\` 获取方式：${CLOUDCC_ACCESS_TOKEN_HELP_URL}
+CloudCC \`baseUrl\` 联调说明：${CLOUDCC_BASE_URL_HELP_URL}
 
 ## 停止生成
 
@@ -427,7 +431,6 @@ curl -X DELETE "${normalizedBaseUrl}${conversationDeletePath}" \\
           <section id="auth" className="cici-openapi-docs__section">
             <h3>鉴权</h3>
             <p>服务端保存 API Key，调用时任选一种 Header。不要把 Key 放进浏览器、移动端包或前端源码。</p>
-            <p>`standard` Key 保持默认 run-as 行为；`cloudcc` Key 用于 CloudCC 嵌入页，发送消息时必须传入当前 CloudCC 用户的 `cloudccContext.accessToken`。</p>
             {renderCodeBlock("authCurl", `Authorization: Bearer {API_KEY}
 X-Cici-Api-Key: {API_KEY}`)}
           </section>
@@ -457,7 +460,7 @@ X-Cici-Api-Key: {API_KEY}`)}
       "source": "crm"
     },
     "cloudccContext": {
-      "accessToken": "{CLOUDCC_PAGE_TOKEN}",
+      "accessToken": "{CLOUDCC_OPENAPI_TOKEN}",
       "baseUrl": "https://szyd.apis.cloudcc.cn/lightningapi"
     }
   }'`)}
@@ -466,8 +469,18 @@ X-Cici-Api-Key: {API_KEY}`)}
                 <tr><th>query</th><td>用户本轮问题；也支持 `message` 作为别名。</td></tr>
                 <tr><th>user</th><td>终端用户标识；也支持 `externalUser.id`，两者同时传入时必须一致。</td></tr>
                 <tr><th>conversationId</th><td>外部业务会话 ID；也支持 `conversation_id` 和 `sessionId`。</td></tr>
-                <tr><th>responseMode</th><td>`blocking` 返回 JSON，`streaming` 返回 SSE `message / agent_thought / message_end / error`。</td></tr>
-                <tr><th>cloudccContext</th><td>仅 `cloudcc` Key 可用；`accessToken` 必填，`baseUrl` 可传 CloudCC 组织 API 网关。</td></tr>
+                <tr><th>responseMode</th><td>`blocking` 返回 JSON；`streaming` 返回 SSE `message / agent_thought / message_end / error`，请求体仍是 JSON，并建议设置 `Accept: text/event-stream`。</td></tr>
+                <tr>
+                  <th>cloudccContext</th>
+                  <td>
+                    仅 `cloudcc` Key 可用；`accessToken` 必填，`baseUrl` 可传 CloudCC 组织 API 网关。
+                    <div className="cici-openapi-docs__hint">
+                      <a href={CLOUDCC_ACCESS_TOKEN_HELP_URL} target="_blank" rel="noreferrer">CloudCC accessToken 获取方式</a>
+                      <span> · </span>
+                      <a href={CLOUDCC_BASE_URL_HELP_URL} target="_blank" rel="noreferrer">CloudCC baseUrl 联调说明</a>
+                    </div>
+                  </td>
+                </tr>
                 <tr><th>Idempotency-Key</th><td>同一 Key 下成功请求会按消息级幂等回放。</td></tr>
               </tbody>
             </table>

@@ -1,5 +1,5 @@
 ---
-updated_at: 2026-05-07T12:44:19Z
+updated_at: 2026-05-28T09:35:00Z
 status: draft
 feature_id: FEAT-022
 related_specs:
@@ -40,6 +40,37 @@ AgentCiCi 的商业包装应采用：
 - `付费操作席位` 覆盖主动创建、指挥、审核、配置和发布 AI 工作的人。
 - `智能体工作量 credits` 覆盖真正产生 AI 推理、检索、工具、工作流、Open API、索引和自动化成本的动作。
 - `企业增值模块` 覆盖 SSO、SLA、专属实例、高级审计、成本归因、私有化和专属支持。
+
+系统必须同时支持两种 deployment billing mode：
+
+- `private_deployment`：私有化年费许可、操作/构建席位、模块/容量包、实施运维服务费为主；credits 做治理和平台代付资源口径。
+- `saas`：平台订阅、操作/构建席位、Work Credits、企业增值模块为主；credits 可进入套餐额度和超额扣费。
+
+这个模式由部署配置决定，不由租户普通管理员在页面上切换。
+
+### Private Deployment Position
+
+私有化和本地部署场景不应把 `Work Credits` 作为第一阶段主收费项。更稳的商业口径是：
+
+```text
+私有化年费许可 + 操作/构建席位 + 模块/容量包 + 实施运维服务费
+```
+
+原因：客户使用本地模型和自有 GPU 时，模型算力、推理成本和 token 成本都由客户承担。AgentCiCi 不应对本地模型 token 二次收费。此时 credits 的定位应是：
+
+- 用量看板和运行解释。
+- 成本归因、部门分摊和预算控制。
+- 大客户合同额度、容量治理和超额预警。
+- 后续云托管版本、平台代付模型或第三方代付服务的统一计费口径。
+
+首版必须区分资源付款责任：
+
+- `customer_paid`：客户自有模型、本地工具、本地连接器和客户自付第三方服务。通常只做低倍率平台调度计量、归因、预算和容量治理，不作为额外强收费。
+- `platform_paid`：平台代付模型、云端语音、第三方搜索、托管连接器和平台统一资源池。可以按 credits、容量包或实际用量收费。
+- `included`：授权或模块包内已包含的基础能力。
+- `non_billable`：只读查看、通知接收、平台错误、无业务结果的失败、内部运维动作。
+
+因此，`usage_meter_event` 和真实 token usage 仍然要做，但它们在私有化场景首先服务治理、审计和未来合同扩展，而不是立即把本地模型调用包装成强按量收费。
 
 ## Naming
 
@@ -107,6 +138,8 @@ AgentCiCi 的商业包装应采用：
 
 一个 `work_credit` 表示一次标准强度的智能体工作量。它不是固定 token 数，也不是固定请求数，而是由底层计量事件折算出来的客户可理解单位。
 
+在私有化本地模型场景，`work_credit` 默认是治理和归因单位，不是对客户自有 token 的直接收费单位。只有 `platform_paid` 资源或合同明确约定的超大规模额度，才进入强账单扣减。
+
 内部计算采用：
 
 ```text
@@ -127,7 +160,7 @@ work_credits =
 包含：对话生成、知识检索、2 次工具调用、1 次业务写入
 ```
 
-底层 token、embedding、Qdrant、第三方 API 费用只进入明细展开和平台成本报表。
+底层 token、embedding、Qdrant、第三方 API 费用只进入明细展开和平台成本报表。本地模型 token、客户自有 embedding 服务和客户自有向量库成本进入客户侧成本归因，不进入 AgentCiCi 的默认收费明细。
 
 ### Billable Domains
 
@@ -147,7 +180,7 @@ work_credits =
 
 ## Credit Rate Card
 
-以下是产品设计口径，不是最终财务价格表。正式价格应由成本、毛利目标和销售策略校准。
+以下是产品设计口径，不是最终财务价格表。正式价格应由成本、毛利目标和销售策略校准。私有化本地模型场景下，以下 credits 建议默认作为治理折算表，而不是立即出账价格表；平台代付或云托管场景可复用同一折算表进入真实扣费。
 
 | Action | Suggested credits | Notes |
 | --- | ---: | --- |
@@ -165,6 +198,13 @@ work_credits =
 
 ## Plan Packaging
 
+版本线按 deployment mode 拆分：
+
+- SaaS：`团队版`、`商业版`、`企业版`，内部 code 为 `saas_team`、`saas_business`、`saas_enterprise`。
+- 私有化：`部门版`、`企业版`、`集团版`，内部 code 为 `private_department`、`private_enterprise`、`private_group`。
+- `trial` 是试用状态或试用 plan，不作为正式收费版本。
+- 容量包和服务包独立叠加，不写死在版本名里。
+
 ### Trial
 
 - 目标：让客户完成一个真实智能体试点。
@@ -180,7 +220,7 @@ work_credits =
 
 ### Team
 
-- 目标：一个部门开始使用 AgentCiCi 做知识问答和轻量业务流程。
+- 目标：一个团队或部门开始使用 AgentCiCi 做知识问答和轻量业务流程；对应 SaaS `团队版`。
 - 包含：
   - 操作席位包
   - 构建席位包
@@ -192,7 +232,7 @@ work_credits =
 
 ### Business
 
-- 目标：部门级到公司级的 AI 工作流落地。
+- 目标：部门级到公司级的 AI 工作流落地；对应 SaaS `商业版`。
 - 包含：
   - 更高 work credits
   - Open API 正式额度
@@ -203,7 +243,7 @@ work_credits =
 
 ### Enterprise
 
-- 目标：组织级治理、私有化、集团采购。
+- 目标：组织级治理、大客户年度合同和高等级 SLA；对应 SaaS `企业版` 或私有化 `企业版/集团版`。
 - 包含：
   - 定制 credits 包和超额单价
   - SSO、SLA、专属实例或私有化部署
@@ -261,6 +301,7 @@ FEAT-003 的 `usage_meter_event` 需要升级为可支撑 credits 的事实源�
 - `model_name`
 - `model_tier`
 - `is_platform_paid`
+- `billing_type`
 - `source_type`
 - `source_id`
 - `session_id`
@@ -308,7 +349,7 @@ FEAT-003 的 `usage_meter_event` 需要升级为可支撑 credits 的事实源�
 - `RagService.retrieveContext()` 需要发射检索事件。
 - `ToolOrchestratorService` 需要发射工具事件并带工具 billing type。
 - `KbIndexWorker` 需要在索引成功、失败、重建时发射事件。
-- MCP Server / Tool Definition 需要标记 `billing_type`：`included`、`platform_paid`、`customer_paid`、`non_billable`。
+- MCP Server / Tool Definition / Model Provider 需要标记 `billing_type`：`included`、`platform_paid`、`customer_paid`、`non_billable`。
 
 ## Quota Enforcement
 
@@ -363,9 +404,10 @@ FEAT-003 的 `usage_meter_event` 需要升级为可支撑 credits 的事实源�
 
 推荐文案：
 
+- “本地部署版按平台授权、主动席位、模块容量和实施运维服务计费，不对客户自有模型 token 二次收费。”
 - “按智能体完成的工作量计费。”
 - “通知和查看不占席位，主动指挥、审核和构建才计入席位。”
-- “credits 可用于对话、知识检索、工具调用、工作流和 Open API。”
+- “credits 可用于对话、知识检索、工具调用、工作流和 Open API 的用量解释、预算治理和平台代付资源计费。”
 - “token 作为底层成本明细保留，不作为客户的一线使用门槛。”
 
 ## Implementation Phases
@@ -412,7 +454,6 @@ FEAT-003 的 `usage_meter_event` 需要升级为可支撑 credits 的事实源�
 ## Open Questions
 
 - credits 是否允许跨年度滚动，还是只对企业年付客户开放。
-- 客户自带模型 key 时，是否只收平台调度 credits，还是仍按低倍率收取工作量 credits。
 - Open API 的 quota 应按 credential、Agent、组织分别配置到什么粒度。
 - 免费 viewer 的范围是否允许包含只读导出和审计查看。
 - 第三方平台代付工具的毛利目标和最低扣费单位需要商务确认。
@@ -424,6 +465,7 @@ FEAT-003 的 `usage_meter_event` 需要升级为可支撑 credits 的事实源�
 - 能覆盖助手对话、RAG、工具、Agent run、Workflow、知识库、Open API、定时任务和第三方连接器。
 - 能指导后续开发拆出计量事件、credits 账本、quota enforcement、账单中心和套餐运营。
 - 能保留客户友好的外部口径，同时保留底层成本和争议查账所需的技术明细。
+- 能清楚区分私有化本地模型、客户自付资源和平台代付资源，避免对客户自有 token 二次收费。
 
 ## Handoff Notes
 
@@ -431,3 +473,4 @@ FEAT-003 的 `usage_meter_event` 需要升级为可支撑 credits 的事实源�
 - `agent_api_usage_daily` 只能作为 Open API quota 原型，后续应统一汇入 credits ledger。
 - 首版 credits 价格表可以配置化，不应写死在业务代码。
 - 页面展示必须把 credits 解释为“工作量”，避免让用户觉得系统在神秘扣点。
+- 私有化首版报价应优先采用年费授权、主动操作/构建席位、模块/容量包、实施运维服务费；credits 先服务治理、看板、预算和平台代付资源。

@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.agent.service;
 
+import com.codehouse.ciciassistant.agent.domain.AgentAccessGrantEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentAccessGrantRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentChannelBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
@@ -14,6 +16,8 @@ import com.codehouse.ciciassistant.agent.domain.AgentToolBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentToolBindingRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.common.error.ConflictException;
+import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.common.util.AvatarDataUrlValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -159,6 +163,7 @@ public class AgentDefinitionService {
     private final AgentChannelBindingRepository agentChannelBindingRepository;
     private final AgentWorkflowVersionRepository agentWorkflowVersionRepository;
     private final AgentPublishConfigRepository agentPublishConfigRepository;
+    private final AgentAccessGrantRepository agentAccessGrantRepository;
     private final ObjectMapper objectMapper;
     private final AgentWorkflowExecutionLogService workflowExecutionLogService;
     private final AgentRuntimeScheduleSyncService runtimeScheduleSyncService;
@@ -171,6 +176,7 @@ public class AgentDefinitionService {
                                   AgentChannelBindingRepository agentChannelBindingRepository,
                                   AgentWorkflowVersionRepository agentWorkflowVersionRepository,
                                   AgentPublishConfigRepository agentPublishConfigRepository,
+                                  AgentAccessGrantRepository agentAccessGrantRepository,
                                   ObjectMapper objectMapper,
                                   AgentWorkflowExecutionLogService workflowExecutionLogService,
                                   AgentRuntimeScheduleSyncService runtimeScheduleSyncService,
@@ -182,6 +188,7 @@ public class AgentDefinitionService {
         this.agentChannelBindingRepository = agentChannelBindingRepository;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.agentPublishConfigRepository = agentPublishConfigRepository;
+        this.agentAccessGrantRepository = agentAccessGrantRepository;
         this.objectMapper = objectMapper;
         this.workflowExecutionLogService = workflowExecutionLogService;
         this.runtimeScheduleSyncService = runtimeScheduleSyncService;
@@ -197,7 +204,29 @@ public class AgentDefinitionService {
 
     public List<AgentDefinitionEntity> list(String orgId) {
         ensureBuiltinAgents(orgId);
-        return agentDefinitionRepository.findByOrgIdOrderByBuiltinDescUpdatedAtDesc(orgId);
+        return agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId);
+    }
+
+    public List<AgentListItem> listWithChannels(String orgId) {
+        List<AgentDefinitionEntity> definitions = list(orgId);
+        if (definitions.isEmpty()) {
+            return List.of();
+        }
+        Map<String, List<String>> channelsByAgentId = new LinkedHashMap<>();
+        for (AgentDefinitionEntity definition : definitions) {
+            channelsByAgentId.put(definition.getAgentId(), new ArrayList<>());
+        }
+        agentChannelBindingRepository
+                .findByOrgIdAndAgentIdInAndEnabledTrueOrderByIdAsc(orgId, new ArrayList<>(channelsByAgentId.keySet()))
+                .forEach(binding -> {
+                    List<String> channels = channelsByAgentId.get(binding.getAgentId());
+                    if (channels != null) {
+                        channels.add(binding.getChannelId());
+                    }
+                });
+        return definitions.stream()
+                .map(definition -> new AgentListItem(definition, List.copyOf(channelsByAgentId.getOrDefault(definition.getAgentId(), List.of()))))
+                .toList();
     }
 
     public AgentDetail get(String orgId, String agentId) {
@@ -245,6 +274,7 @@ public class AgentDefinitionService {
                 normalizeExecutionMode(command.executionMode()),
                 trimToNull(command.versionLabel()),
                 AvatarDataUrlValidator.normalizeNullableDataUrl(command.avatarBase64(), "avatarBase64"),
+                trimToNull(command.ownerUserId()),
                 command.builtin() != null && command.builtin(),
                 command.enabled() == null || command.enabled()
         );
@@ -282,6 +312,25 @@ public class AgentDefinitionService {
                 command.enabled() == null || command.enabled()
         );
         return definition;
+    }
+
+    @Transactional
+    public AgentDeleteResult deleteCustomAgent(String orgId, String requestedAgentId) {
+        ensureBuiltinAgents(orgId);
+        String agentId = normalizeAgentId(requestedAgentId);
+        AgentDefinitionEntity definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + agentId));
+        if (!definition.isEnabled()) {
+            throw new ResourceNotFoundException("Agent not found: " + agentId);
+        }
+        if (definition.isBuiltin()) {
+            throw new ConflictException("System built-in Agents cannot be deleted");
+        }
+        definition.markDeleted();
+        return new AgentDeleteResult(
+                definition.getAgentId(),
+                definition.getName(),
+                "Agent 已从构建列表隐藏；历史运行、审计、OpenAPI 调用和版本证据仍会保留。");
     }
 
     @Transactional
@@ -431,21 +480,45 @@ public class AgentDefinitionService {
                             DEFAULT_HANDOFF_RULE,
                             "BALANCED",
                             seed.executionMode().toUpperCase(Locale.ROOT),
-                    "v0.1",
-                    null,
-                    seed.builtin(),
-                    true,
+                            "v0.1",
+                            null,
+                            null,
+                            seed.builtin(),
+                            true,
                             seed.specText(),
                             List.of(),
                             seed.toolIds(),
                             seed.channels(),
                             DEFAULT_PUBLISH_CONFIGS));
+            ensureOrgDefaultRunGrants(orgId, seed.agentId());
+        }
+    }
+
+    private void ensureOrgDefaultRunGrants(String orgId, String agentId) {
+        List<AgentAccessGrantEntity> existing = agentAccessGrantRepository.findByOrgIdAndAgentIdAndStatus(
+                orgId,
+                agentId,
+                AgentAccessGrantEntity.STATUS_ACTIVE);
+        for (String permission : List.of("VIEW", "RUN")) {
+            boolean present = existing.stream().anyMatch(item ->
+                    "ORG".equals(item.getPrincipalType()) && permission.equals(item.getPermission()));
+            if (!present) {
+                agentAccessGrantRepository.save(new AgentAccessGrantEntity(
+                        orgId,
+                        agentId,
+                        "ORG",
+                        orgId,
+                        permission,
+                        "DEFAULT_POLICY",
+                        null,
+                        null));
+            }
         }
     }
 
     private AgentDefinitionEntity getDefinition(String orgId, String agentId) {
-        return agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId)
-                .orElseThrow(() -> new IllegalArgumentException("Agent not found: " + agentId));
+        return agentDefinitionRepository.findByOrgIdAndAgentIdAndEnabledTrue(orgId, agentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + agentId));
     }
 
     private Map<String, Object> loadPublishConfigs(String orgId, String agentId) {
@@ -575,10 +648,23 @@ public class AgentDefinitionService {
     ) {
     }
 
+    public record AgentListItem(
+            AgentDefinitionEntity definition,
+            List<String> channels
+    ) {
+    }
+
     public record AgentBindings(
             List<Long> knowledgeBaseIds,
             List<String> toolIds,
             List<String> channels
+    ) {
+    }
+
+    public record AgentDeleteResult(
+            String agentId,
+            String name,
+            String retentionMessage
     ) {
     }
 
@@ -597,6 +683,7 @@ public class AgentDefinitionService {
             String executionMode,
             String versionLabel,
             String avatarBase64,
+            String ownerUserId,
             Boolean builtin,
             Boolean enabled,
             String specText,

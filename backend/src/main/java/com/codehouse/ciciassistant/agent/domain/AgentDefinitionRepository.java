@@ -6,11 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentDefinitionRepository extends JpaRepository<AgentDefinitionEntity, Long> {
 
-    List<AgentDefinitionEntity> findByOrgIdOrderByBuiltinDescUpdatedAtDesc(String orgId);
+    List<AgentDefinitionEntity> findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String orgId);
 
     List<AgentDefinitionEntity> findTop24ByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(String orgId);
 
     Optional<AgentDefinitionEntity> findByOrgIdAndAgentId(String orgId, String agentId);
+
+    Optional<AgentDefinitionEntity> findByOrgIdAndAgentIdAndEnabledTrue(String orgId, String agentId);
 
     boolean existsByOrgIdAndAgentId(String orgId, String agentId);
 }

@@ -52,6 +52,9 @@ public class AgentDefinitionEntity {
     @Column(name = "avatar_base64", columnDefinition = "TEXT")
     private String avatarBase64;
 
+    @Column(name = "owner_user_id", length = 64)
+    private String ownerUserId;
+
     @Column(name = "builtin", nullable = false)
     private boolean builtin;
 
@@ -84,6 +87,25 @@ public class AgentDefinitionEntity {
                                  String avatarBase64,
                                  boolean builtin,
                                  boolean enabled) {
+        this(orgId, agentId, name, summary, greeting, model, systemPrompt, handoffRule, safetyLevel, executionMode,
+                versionLabel, avatarBase64, null, builtin, enabled);
+    }
+
+    public AgentDefinitionEntity(String orgId,
+                                 String agentId,
+                                 String name,
+                                 String summary,
+                                 String greeting,
+                                 String model,
+                                 String systemPrompt,
+                                 String handoffRule,
+                                 String safetyLevel,
+                                 String executionMode,
+                                 String versionLabel,
+                                 String avatarBase64,
+                                 String ownerUserId,
+                                 boolean builtin,
+                                 boolean enabled) {
         this.orgId = orgId;
         this.agentId = agentId;
         this.name = name;
@@ -96,6 +118,7 @@ public class AgentDefinitionEntity {
         this.executionMode = executionMode;
         this.versionLabel = versionLabel;
         this.avatarBase64 = avatarBase64;
+        this.ownerUserId = ownerUserId;
         this.builtin = builtin;
         this.enabled = enabled;
         this.createdAt = Instant.now();
@@ -158,6 +181,10 @@ public class AgentDefinitionEntity {
         return avatarBase64;
     }
 
+    public String getOwnerUserId() {
+        return ownerUserId;
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
@@ -176,6 +203,11 @@ public class AgentDefinitionEntity {
 
     public void setPublishedVersionId(Long publishedVersionId) {
         this.publishedVersionId = publishedVersionId;
+        this.updatedAt = Instant.now();
+    }
+
+    public void markDeleted() {
+        this.enabled = false;
         this.updatedAt = Instant.now();
     }
 

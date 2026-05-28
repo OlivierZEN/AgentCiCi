@@ -10,13 +10,16 @@ branch: codex/TASK-137-custom-agent-delete
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
-  - backend/src/main/java/com/codehouse/ciciassistant
-  - backend/src/test/java/com/codehouse/ciciassistant
-  - frontend/src
-  - docs/specs
-  - .claw/tasks
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
 scope_files:
   - .claw/tasks/TASK-137.md
+  - .claw/test-report.md
+  - .claw/task-board.md
+  - .claw/current-status.md
   - docs/specs/FEAT-056-custom-agent-delete.md
 protected_paths:
   - .claw/assignments/**

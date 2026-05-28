@@ -31,9 +31,9 @@ AgentCiCi 当前已经支持组织内用户通过助手工作台调用 Agent，�
 
 - 新增 Agent API Key 数据模型、管理接口和只返回一次的明文 Key。
 - 新增外部调用入口：
-  - `POST /openapi/v1/agents/{agentId}/chat`
-  - `POST /openapi/v1/agents/{agentId}/chat/stream`
-  - `GET /openapi/v1/agents/{agentId}/health`
+  - `POST /openapi/v1/chat-messages`
+  - `POST /openapi/v1/chat-messages` with `responseMode=streaming`
+  - `GET /openapi/v1/parameters`
 - 支持 Key 级别的 Agent 绑定、run-as 用户、状态、过期时间、IP allowlist、每分钟限流和日配额。
 - 支持外部 `sessionId` 到内部 `chat_session.id` 的稳定映射，保证多轮上下文可恢复且不同 Key 不串线。
 - 支持外部用户元数据 `externalUser`，写入调用日志和 trace detail。
@@ -77,7 +77,7 @@ AgentCiCi 当前已经支持组织内用户通过助手工作台调用 Agent，�
 
 ### Inferred Requirements
 
-- API Key 应绑定到一个真实组织和一个 Agent，不能只靠请求里的 `agentId` 决定权限。
+- API Key 应绑定到一个真实组织和一个 Agent，公开调用必须从 Key 解析目标 Agent。
 - 需要一个 `runAsUserId` 来承接运行时中依赖用户身份的能力，例如用户记忆、CloudCC 用户 token、个人邮箱等。
 - 外部终端用户身份应作为 metadata 保存，不应伪造成系统内 `app_user`。
 - 外部 API 的错误模型要比内部 `ApiResponse` 更稳定，需要固定 `error.code` 和 `requestId`，方便第三方系统排障。
@@ -100,7 +100,7 @@ AgentCiCi 当前已经支持组织内用户通过助手工作台调用 Agent，�
   ↓
 系统生成 cici_ak_live_... 明文 key，仅返回一次
   ↓
-外部系统携带 key 调用 /openapi/v1/agents/{agentId}/chat
+外部系统携带 key 调用 /openapi/v1/chat-messages
   ↓
 AgentOpenApiAuthService 校验 key、Agent、状态、过期、IP、配额
   ↓
@@ -213,7 +213,7 @@ X-Cici-Api-Key: cici_ak_live_xxx
 #### Non-stream Chat
 
 ```http
-POST /openapi/v1/agents/{agentId}/chat
+POST /openapi/v1/chat-messages
 Authorization: Bearer cici_ak_live_xxx
 Content-Type: application/json
 Idempotency-Key: optional-client-key
@@ -270,7 +270,7 @@ Response:
 #### Stream Chat
 
 ```http
-POST /openapi/v1/agents/{agentId}/chat/stream
+POST /openapi/v1/chat-messages (`responseMode=streaming`)
 Authorization: Bearer cici_ak_live_xxx
 Accept: text/event-stream
 ```
@@ -290,7 +290,7 @@ Accept: text/event-stream
 #### Health
 
 ```http
-GET /openapi/v1/agents/{agentId}/health
+GET /openapi/v1/parameters
 Authorization: Bearer cici_ak_live_xxx
 ```
 
@@ -427,9 +427,9 @@ Method + Path
 |---|---|
 | 基础 URL | `https://autoservice.agentcici.com/openapi/v1`，支持复制 |
 | 鉴权 | `Authorization: Bearer {API_KEY}` 和 `X-Cici-Api-Key: {API_KEY}` 两种方式，强调后端保存 Key |
-| 发送对话消息 | `POST /agents/{agentId}/chat`，说明 `sessionId`、`message`、`externalUser`、`knowledgeBaseIds`、`activeSkillCode`、`metadata` |
-| 流式对话 | `POST /agents/{agentId}/chat/stream`，说明 SSE 的 `meta`、`phase`、`delta`、`done`、`error` |
-| 健康检查 | `GET /agents/{agentId}/health`，说明可用于上线前探测 Key 与 Agent 状态 |
+| 发送对话消息 | `POST /chat-messages`，说明 `sessionId`、`message`、`externalUser`、`knowledgeBaseIds`、`activeSkillCode`、`metadata` |
+| 流式对话 | `POST /chat-messages` with `responseMode=streaming`，说明 SSE 的 `meta`、`phase`、`delta`、`done`、`error` |
+| 参数发现 | `GET /parameters`，说明可用于上线前探测 Key、Agent 状态与能力参数 |
 | 会话与终端用户 | 说明 external session 映射、多 Key 隔离、externalUser 只做 metadata |
 | 错误码 | 展示首版固定错误码和排查建议 |
 | 安全建议 | 不把 Key 放在浏览器、移动端或前端源码；泄露后立刻撤销或轮换 |
@@ -488,7 +488,7 @@ Open API 使用稳定错误码。为了兼容现有响应习惯，外层仍可�
 
 Open API 请求中的可变项必须被约束：
 
-- `agentId` 必须和 Key 绑定 Agent 一致。
+- 公开调用路径不携带 `agentId`，目标 Agent 必须从 API Key 绑定关系解析。
 - `knowledgeBaseIds` 必须是当前 Agent 已启用绑定知识库的子集。
 - `activeSkillCode` 必须是当前 Agent 已启用绑定 Skill 的子集。
 - `message` 默认最大 8000 字符，超过直接拒绝。
@@ -738,7 +738,7 @@ frontend/src/assistant/
 
 ### TASK-062D - Chat / Stream wrapper
 
-- 新增 `/openapi/v1/agents/{agentId}/chat` 和 `/chat/stream`。
+- 新增 `/openapi/v1/chat-messages`，并通过 `responseMode=blocking|streaming` 区分返回模式。
 - 实现 external session 映射、run-as 用户调用、请求字段校验、Idempotency-Key。
 - stream 事件补 `meta` 和 `done.traceId`。
 - 修改 `ChatOrchestratorService` 返回 traceId 和外部 metadata。
@@ -770,14 +770,14 @@ frontend/src/assistant/
 - 外部系统可以用 API Key 调用 non-stream chat 并拿到 answer、requestId、sessionId、traceId。
 - 外部系统可以用 API Key 调用 stream chat，并收到 `meta`、`phase`、`delta`、`done` 或 `error` 事件。
 - 同一个 external session 多次调用能保留上下文，不同 Key 的同名 session 不串线。
-- Key 绑定 Agent 之外的 `agentId` 调用会被拒绝。
+- API Key 绑定 Agent 之外的资源调用会被拒绝，公开调用路径不接受 `agentId` 覆盖。
 - 未启用、未发布、未开放 `api` channel 的 Agent 不能被外部调用。
 - 请求中的 `knowledgeBaseIds` / `activeSkillCode` 不能越过 Agent 绑定范围。
 - 撤销、过期、IP 拒绝、限流和日配额耗尽均返回稳定错误码。
 - 每次调用都写入 call log；聊天完成后可通过 trace 看到 `channel=api` 和外部 request metadata。
-- 智能体构建页有 `开放API文档` 按钮；点击后弹出符合项目 modal 规范的 API 文档页，内容覆盖基础 URL、鉴权、发送对话、流式对话、健康检查、会话、错误码和安全建议。
+- 智能体构建页有 `开放API文档` 按钮；点击后弹出符合项目 modal 规范的 API 文档页，内容覆盖基础 URL、鉴权、发送对话、流式对话、参数发现、会话、错误码和安全建议。
 - API 文档弹窗的 `API 服务器`、鉴权 Header 和代码示例支持复制；示例不展示真实 API Key。
-- 公网部署后 `https://autoservice.agentcici.com/openapi/v1/agents/{agentId}/health` 能被 Nginx 正确代理到后端。
+- 公网部署后 `https://autoservice.agentcici.com/openapi/v1/parameters` 能被 Nginx 正确代理到后端。
 - 内部 `/ai/chat`、`/ai/chat/stream`、`/me/agents/run-logs` 的现有行为保持兼容。
 
 ## 风险与回滚
@@ -804,8 +804,8 @@ frontend/src/assistant/
 - 已实现 `TASK-062A` 数据模型初版：新增 `V41__agent_open_api.sql`，落地 Credential、SessionMap、CallLog、UsageDaily 实体与 repository，新增 `app.agent-open-api.*` 配置。
 - 已实现 `TASK-062B` API Key 管理初版：组织管理员可列表、创建、更新、轮换、撤销 Key；明文只在创建/轮换响应中返回一次，数据库仅保存 HMAC hash 与 prefix。
 - 已实现 `TASK-062C` 的核心鉴权入口：Open API 支持 `Authorization: Bearer cici_ak_live_...` 与 `X-Cici-Api-Key`，并校验总开关、Key 状态、过期时间、绑定 Agent、来源 IP、发布态和 `api` channel。
-- 已实现 `TASK-062D` 的 non-stream chat 首版：`POST /openapi/v1/agents/{agentId}/chat` 会完成 external session 映射、run-as 调用 `ChatOrchestratorService.chat(...)`、稳定响应 `answer/requestId/sessionId/internalSessionId/traceId/runtime/elapsedMs`。
-- 已实现 `TASK-062D` 的 stream chat wrapper：`POST /openapi/v1/agents/{agentId}/chat/stream` 会完成鉴权、external session 映射、run-as 调用 `ChatOrchestratorService.chatStream(...)`，Open API 层补 `meta`，透传内部 `phase/tool/delta`，并在完成事件补 `requestId`、`traceId`、`elapsedMs` 与 runtime 摘要。
+- 已实现 `TASK-062D` 的 non-stream chat 首版：`POST /openapi/v1/chat-messages` 会完成 external session 映射、run-as 调用 `ChatOrchestratorService.chat(...)`、稳定响应 `answer/requestId/sessionId/internalSessionId/traceId/runtime/elapsedMs`。
+- 已实现 `TASK-062D` 的 stream chat wrapper：`POST /openapi/v1/chat-messages` with `responseMode=streaming` 会完成鉴权、external session 映射、run-as 调用 `ChatOrchestratorService.chatStream(...)`，Open API 层补 `meta`，透传内部 `phase/tool/delta`，并在完成事件补 `requestId`、`traceId`、`elapsedMs` 与 runtime 摘要。
 - 已实现 `TASK-062E` 的首版调用记录：non-stream 和 stream chat 写入 `agent_api_call_log`、`agent_api_usage_daily`，并将最新 trace 标记为 `channel=api`、`sourceType=open_api`、`requestId`、`credentialId`、`externalUserId`。
 - 已新增 `GET /agents/{agentId}/api-calls` 供管理端查询 Open API 调用日志。
 - 已修复 Key 格式细节：`publicId` 不再生成 `_` 或 `-`，避免与明文 Key 的 `_` 分隔符冲突导致 Key 无法反查。

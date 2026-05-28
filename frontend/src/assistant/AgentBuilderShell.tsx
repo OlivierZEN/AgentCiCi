@@ -7,6 +7,7 @@ import { safeFetchJson } from "../utils/http";
 import { buildCompileNotice, isCompileRequired, keepRecentVersionHistory } from "./compile-history";
 import AgentOpenApiDocsDialog from "./AgentOpenApiDocsDialog";
 import AgentOpenApiKeysDialog from "./AgentOpenApiKeysDialog";
+import AgentAccessManagementDialog from "./AgentAccessManagementDialog";
 
 type KnowledgeBase = {
   id: number;
@@ -68,6 +69,16 @@ type AgentRecord = {
   channels: PublishChannelId[];
   draft: AgentDraft;
   publishConfig: PublishConfigDraft;
+  access: AgentAccessSummary;
+};
+
+type AgentAccessSummary = {
+  permissions?: string[];
+  canManage?: boolean;
+  canEdit?: boolean;
+  canRun?: boolean;
+  canOpenApi?: boolean;
+  canViewLogs?: boolean;
 };
 
 type CompileArtifact = {
@@ -187,6 +198,14 @@ type AgentApiRecord = {
   channels?: string[];
   publishConfigs?: Record<string, unknown>;
   skillBindings?: AgentSkillBindingDraft[];
+  access?: AgentAccessSummary;
+};
+
+type AgentDeletePayload = {
+  agentId: string;
+  name: string;
+  deleted: boolean;
+  retentionMessage?: string;
 };
 
 type SkillCatalogItem = {
@@ -1345,12 +1364,31 @@ export function applyAgentDetailToList(agents: AgentApiRecord[], detail: AgentAp
   return agents.map((item) => (item.agentId === detail.agentId ? detail : item));
 }
 
+export function resolveAgentAfterDelete<T extends { id: string }>(
+  agents: T[],
+  deletedAgentId: string,
+  selectedAgentId: string,
+): { nextAgents: T[]; fallbackAgentId: string } {
+  const nextAgents = agents.filter((item) => item.id !== deletedAgentId);
+  const fallbackAgentId = selectedAgentId && selectedAgentId !== deletedAgentId && nextAgents.some((item) => item.id === selectedAgentId)
+    ? selectedAgentId
+    : nextAgents[0]?.id ?? "";
+  return { nextAgents, fallbackAgentId };
+}
+
+export function resolveAgentChannels(itemChannels: string[] | undefined, fallbackChannels: PublishChannelId[]): PublishChannelId[] {
+  if (!Array.isArray(itemChannels)) {
+    return fallbackChannels;
+  }
+  return itemChannels.filter((ch): ch is PublishChannelId =>
+    CHANNEL_OPTIONS.some((opt) => opt.id === ch),
+  );
+}
+
 function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: KnowledgeBase[]): AgentRecord {
   const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((kb) => kb.id));
   const model = item.model && item.model.trim() ? item.model : fallbackDraft.model;
-  const channels = (item.channels ?? []).filter((ch): ch is PublishChannelId =>
-    CHANNEL_OPTIONS.some((opt) => opt.id === ch),
-  );
+  const channels = resolveAgentChannels(item.channels, fallbackDraft.channels);
   const draft: AgentDraft = {
     name: item.name ?? fallbackDraft.name,
     avatarBase64: item.avatarBase64 ?? "",
@@ -1359,7 +1397,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
     model,
     systemPrompt: item.systemPrompt ?? fallbackDraft.systemPrompt,
     specText: item.specText ?? fallbackDraft.specText,
-    channels: channels.length > 0 ? channels : fallbackDraft.channels,
+    channels,
     knowledgeBaseIds: item.knowledgeBaseIds ?? fallbackDraft.knowledgeBaseIds,
     toolIds: item.toolIds ?? fallbackDraft.toolIds,
     handoffRule: item.handoffRule ?? fallbackDraft.handoffRule,
@@ -1381,6 +1419,7 @@ function toAgentRecordFromApi(item: AgentApiRecord, orgId: string, kbs: Knowledg
     channels: [...draft.channels],
     draft,
     publishConfig: toPublishConfig(item.publishConfigs),
+    access: item.access ?? {},
   };
 }
 
@@ -1443,6 +1482,9 @@ export default function AgentBuilderShell({
   const [pickerSelection, setPickerSelection] = useState<string[]>([]);
   const [openApiDocsOpen, setOpenApiDocsOpen] = useState(false);
   const [openApiKeysOpen, setOpenApiKeysOpen] = useState(false);
+  const [accessDialogOpen, setAccessDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
+  const [isDeletingAgent, setIsDeletingAgent] = useState(false);
 
   const setNotice = (message: string) => {
     setNoticeText(message);
@@ -1666,6 +1708,10 @@ export default function AgentBuilderShell({
   }, [library, searchText]);
 
   const selectedAgent = library.find((item) => item.id === selectedAgentId) ?? null;
+  const selectedAgentAccess = selectedAgent?.access ?? {};
+  const selectedAgentPermissions = selectedAgentAccess.permissions ?? [];
+  const canEditSelectedAgent = Boolean(selectedAgentAccess.canEdit);
+  const canPublishSelectedAgent = selectedAgentPermissions.includes("PUBLISH");
   const selectedModel = modelOptions.find((option) => option.value === draft.model);
   const openApiBaseUrl = `${window.location.origin}/openapi/v1`;
   const readinessCount = [draft.name, draft.specText, draft.channels.length > 0, draft.knowledgeBaseIds.length > 0, draft.toolIds.length > 0].filter(Boolean).length;
@@ -2181,6 +2227,82 @@ export default function AgentBuilderShell({
       return;
     } catch (error) {
       setNotice(`创建失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  const resetEditorAfterDeletedLastAgent = () => {
+    const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((item) => item.id));
+    setSelectedAgentId("");
+    setDraft(fallbackDraft);
+    setPublishConfig(createPublishConfigDraft());
+    setLoadedAgentBaselineDigest(null);
+    setPersistedDraftDigest(null);
+    setLastSuccessfulBackendCompileDigest(null);
+    setPublishReadyFromCompile(false);
+    setTriggersCatalog(null);
+    setExecutionRecordsFromServer([]);
+    setVersionHistory([]);
+    setVersionHistoryError(null);
+    setRuntimeExecutionsError(null);
+    setRuntimeTriggersError(null);
+    setCompileArtifact(generateCompileArtifact(fallbackDraft, kbs, toolCatalog));
+    setActiveEditorTab("definition");
+    setActivePublishChannel("feishu");
+    setActiveCompileTab("preview");
+    setDebugTrace(null);
+  };
+
+  const deleteAgent = async () => {
+    if (!deleteTarget || deleteTarget.builtin) return;
+    setIsDeletingAgent(true);
+    try {
+      const response = await fetch(`/agents/${encodeURIComponent(deleteTarget.id)}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<AgentDeletePayload>(response);
+      if (!response.ok || !body?.success || !body.data?.deleted) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      const { nextAgents, fallbackAgentId } = resolveAgentAfterDelete(library, deleteTarget.id, selectedAgentId);
+      const fallbackAgent = nextAgents.find((item) => item.id === fallbackAgentId) ?? null;
+      setLibrary(nextAgents);
+      setDeleteTarget(null);
+      if (selectedAgentId === deleteTarget.id) {
+        if (fallbackAgent) {
+          setSelectedAgentId(fallbackAgent.id);
+          setDraft(cloneDraft(fallbackAgent.draft));
+          setPublishConfig(clonePublishConfigDraft(fallbackAgent.publishConfig));
+          setLoadedAgentBaselineDigest(compilePayloadDigest(fallbackAgent.draft, orgId));
+          setPersistedDraftDigest(persistPayloadDigest(fallbackAgent.draft, fallbackAgent.publishConfig, orgId));
+          setLastSuccessfulBackendCompileDigest(null);
+          setPublishReadyFromCompile(false);
+          setTriggersCatalog(null);
+          setExecutionRecordsFromServer([]);
+          setVersionHistory([]);
+          setVersionHistoryError(null);
+          setRuntimeExecutionsError(null);
+          setRuntimeTriggersError(null);
+          setCompileArtifact(generateCompileArtifact(fallbackAgent.draft, kbs, toolCatalog));
+          setActiveEditorTab("definition");
+          setActivePublishChannel(fallbackAgent.draft.channels.includes("feishu") ? "feishu" : fallbackAgent.draft.channels[0] ?? "feishu");
+          setActiveCompileTab("preview");
+          setDebugTrace(null);
+          if (pageMode === "editor" && onOpenAgent) {
+            onOpenAgent(fallbackAgent.id);
+          }
+        } else {
+          resetEditorAfterDeletedLastAgent();
+          if (pageMode === "editor" && onBackToList) {
+            onBackToList();
+          }
+        }
+      }
+      setNotice(`已删除「${deleteTarget.name}」。${body.data.retentionMessage ?? "历史证据仍会保留。"}`);
+    } catch (error) {
+      setNotice(`删除失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsDeletingAgent(false);
     }
   };
 
@@ -2716,25 +2838,41 @@ export default function AgentBuilderShell({
       </div>
       <div className={`cici-sessions__list cici-builder-sidebar__list${asPage ? " cici-builder-sidebar__list--grid" : ""}`}>
         {filteredLibrary.map((item) => (
-          <button
+          <article
             key={item.id}
-            type="button"
             className={`cici-agent-card${pageMode === "editor" && item.id === selectedAgentId ? " is-active" : ""}`}
             onClick={() => void selectAgent(item.id)}
           >
-            <div className="cici-agent-card__top">
-              <span className="cici-agent-card__name">{item.name}</span>
-              <div className="cici-agent-card__badges">
-                {item.builtin ? <span className="cici-agent-card__builtin">系统内置</span> : null}
-                <span className={`cici-agent-card__status cici-agent-card__status--${item.status === "已发布" ? "published" : item.status === "待联调" ? "testing" : "draft"}`}>{item.status}</span>
+            <button type="button" className="cici-agent-card__select">
+              <div className="cici-agent-card__top">
+                <span className="cici-agent-card__name">{item.name}</span>
+                <div className="cici-agent-card__badges">
+                  {item.builtin ? <span className="cici-agent-card__builtin">系统内置</span> : null}
+                  <span className={`cici-agent-card__status cici-agent-card__status--${item.status === "已发布" ? "published" : item.status === "待联调" ? "testing" : "draft"}`}>{item.status}</span>
+                </div>
               </div>
-            </div>
-            <p className="cici-agent-card__summary">{item.summary}</p>
-            <div className="cici-agent-card__meta">
-              <span>{item.lastEdited}</span>
-              <span>{item.channels.map((channel) => CHANNEL_OPTIONS.find((option) => option.id === channel)?.label ?? channel).join(" · ")}</span>
-            </div>
-          </button>
+              <p className="cici-agent-card__summary">{item.summary}</p>
+              <div className="cici-agent-card__meta">
+                <span>{item.lastEdited}</span>
+                <span>{item.channels.map((channel) => CHANNEL_OPTIONS.find((option) => option.id === channel)?.label ?? channel).join(" · ")}</span>
+              </div>
+            </button>
+            {!item.builtin ? (
+              <div className="cici-agent-card__actions">
+                <button
+                  type="button"
+                  className="cici-agent-card__delete"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setDeleteTarget(item);
+                  }}
+                  disabled={isDeletingAgent && deleteTarget?.id === item.id}
+                >
+                  删除
+                </button>
+              </div>
+            ) : null}
+          </article>
         ))}
         {filteredLibrary.length === 0 ? <div className="cici-agent-card cici-agent-card--empty">未找到匹配的 Agent 模板。</div> : null}
       </div>
@@ -3001,8 +3139,39 @@ export default function AgentBuilderShell({
     </div>
   );
 
+  const renderDeleteModal = () => deleteTarget ? (
+    <div className="cici-modal-backdrop" role="presentation">
+      <div
+        className="cici-modal cici-agent-delete-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cici-agent-delete-title"
+      >
+        <div className="cici-modal__header">
+          <h2 id="cici-agent-delete-title">删除「{deleteTarget.name}」？</h2>
+          <button type="button" className="cici-modal__close" onClick={() => setDeleteTarget(null)} aria-label="关闭">×</button>
+        </div>
+        <div className="cici-agent-delete-modal__body">
+          <p>删除后，这个自定义 Agent 会从构建列表中消失。</p>
+          <p>历史运行记录、审计证据、OpenAPI 调用日志和已产生的版本记录仍会保留，便于后续追溯。</p>
+        </div>
+        <div className="cici-modal__footer">
+          <button type="button" className="cici-btn" onClick={() => setDeleteTarget(null)} disabled={isDeletingAgent}>取消</button>
+          <button type="button" className="cici-btn cici-btn--danger" onClick={() => void deleteAgent()} disabled={isDeletingAgent}>
+            {isDeletingAgent ? "删除中..." : "确认删除"}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (pageMode === "list") {
-    return renderLibraryPanel(true);
+    return (
+      <>
+        {renderLibraryPanel(true)}
+        {renderDeleteModal()}
+      </>
+    );
   }
 
   return (
@@ -3049,12 +3218,22 @@ export default function AgentBuilderShell({
               >
                 开放API文档
               </button>
+              {selectedAgentAccess.canManage ? (
+                <button
+                  type="button"
+                  className="cici-builder__action cici-builder__action--ghost"
+                  onClick={() => setAccessDialogOpen(true)}
+                  disabled={!selectedAgentId}
+                >
+                  权限管理
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
                 onClick={() => void saveFramework()}
-                disabled={isSaving || !hasDraftChanges}
-                title={!hasDraftChanges ? "当前内容无变化，无需保存草稿。" : undefined}
+                disabled={isSaving || !hasDraftChanges || !canEditSelectedAgent}
+                title={!canEditSelectedAgent ? "当前账号没有编辑权限。" : !hasDraftChanges ? "当前内容无变化，无需保存草稿。" : undefined}
               >
                 {isSaving ? "保存中…" : "保存草稿"}
               </button>
@@ -3065,8 +3244,8 @@ export default function AgentBuilderShell({
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
                 onClick={() => void compileWorkflow()}
-                disabled={isCompiling}
-                title={!compileNeedsRebuild ? "当前编译输入无变化，编译后将提示无变化且不新增版本。" : undefined}
+                disabled={isCompiling || !canEditSelectedAgent}
+                title={!canEditSelectedAgent ? "当前账号没有编辑权限。" : !compileNeedsRebuild ? "当前编译输入无变化，编译后将提示无变化且不新增版本。" : undefined}
               >
                 {isCompiling ? "编译中…" : "智能体编译"}
               </button>
@@ -3074,8 +3253,8 @@ export default function AgentBuilderShell({
                 type="button"
                 className="cici-builder__action cici-builder__action--primary"
                 onClick={() => void publishLatestVersion()}
-                disabled={publishBlocked}
-                title={publishBlockedTitle}
+                disabled={publishBlocked || !canPublishSelectedAgent}
+                title={!canPublishSelectedAgent ? "当前账号没有发布权限。" : publishBlockedTitle}
               >
                 {isPublishing ? "处理中…" : "发布版本"}
               </button>
@@ -3625,7 +3804,7 @@ export default function AgentBuilderShell({
         published={publishedVersionNo != null}
         apiChannelEnabled={draft.channels.includes("api")}
         baseUrl={openApiBaseUrl}
-        keyManagementAvailable={Boolean(selectedAgentId && token)}
+        keyManagementAvailable={Boolean(selectedAgentId && token && selectedAgentAccess.canOpenApi)}
         onOpenKeyManagement={() => setOpenApiKeysOpen(true)}
         onClose={() => setOpenApiDocsOpen(false)}
       />
@@ -3636,6 +3815,13 @@ export default function AgentBuilderShell({
         agentName={draft.name}
         token={token}
         onClose={() => setOpenApiKeysOpen(false)}
+      />
+      <AgentAccessManagementDialog
+        open={accessDialogOpen}
+        token={token}
+        agentId={selectedAgentId}
+        agentName={draft.name}
+        onClose={() => setAccessDialogOpen(false)}
       />
 
       {pickerOpen ? (
@@ -3780,6 +3966,8 @@ export default function AgentBuilderShell({
           </div>
         </div>
       ) : null}
+
+      {renderDeleteModal()}
 
       <AvatarCropperDialog
         open={Boolean(avatarCropSource)}

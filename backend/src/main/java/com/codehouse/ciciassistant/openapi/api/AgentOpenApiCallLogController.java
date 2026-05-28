@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.openapi.api;
 
-import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
+import com.codehouse.ciciassistant.agent.domain.AgentPermission;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.openapi.service.AgentOpenApiCallLogService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
@@ -15,13 +16,15 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/agents/{agentId}/api-calls")
-@RequireOrgAdmin
 public class AgentOpenApiCallLogController {
 
     private final AgentOpenApiCallLogService callLogService;
+    private final AgentAccessControlService accessControlService;
 
-    public AgentOpenApiCallLogController(AgentOpenApiCallLogService callLogService) {
+    public AgentOpenApiCallLogController(AgentOpenApiCallLogService callLogService,
+                                         AgentAccessControlService accessControlService) {
         this.callLogService = callLogService;
+        this.accessControlService = accessControlService;
     }
 
     @GetMapping
@@ -32,6 +35,12 @@ public class AgentOpenApiCallLogController {
             @RequestParam(required = false) Long credentialId,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String q) {
+        accessControlService.require(
+                TenantContext.requireOrgId(),
+                TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
+                TenantContext.getRoles(),
+                agentId,
+                AgentPermission.LOG_VIEW);
         return ApiResponse.ok(callLogService.list(
                 TenantContext.requireOrgId(),
                 agentId,

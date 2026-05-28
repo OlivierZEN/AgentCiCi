@@ -1,9 +1,9 @@
 ---
 kind: task-status
 task_id: TASK-139
-status: ready
-updated_at: 2026-05-27T03:37:58Z
-updated_by: MANAGER-001
+status: review
+updated_at: 2026-05-27T10:03:59Z
+updated_by: DEV-fengchu
 assignee: DEV-fengchu
 owner_role: frontend-agent
 assignment_path: .claw/assignments/TASK-139.yaml
@@ -42,8 +42,17 @@ spec_path: docs/specs/PROJECT-BASELINE.md
 
 ## Verification
 
-- Pending implementation.
+- `git diff --check`: passed.
+- `npm run test -- AgentBuilderShell` in `frontend/`: not completed because this new worktree has no local `vitest` binary.
+- `mvn -Dtest=AgentDefinitionListIntegrationTest test` in `backend/`: not completed because local PostgreSQL database `agentcici_test` does not exist.
+- Per user instruction on 2026-05-27, no further tests were run.
+- After the card-click/delete-placement follow-up, `git diff --check` passed again.
 
 ## Handoff
 
-- Assigned to `DEV-fengchu` on branch `codex/TASK-139-agent-list-openapi-badge`. This is a small bugfix but likely touches both backend list payload and frontend mapping tests.
+- Created branch/worktree `codex/TASK-139-agent-list-openapi-badge` at `/Users/xuhm/Documents/cc-agentcici-task139`.
+- `/agents` list payload now includes each Agent's enabled `channels`.
+- Frontend Agent mapping now preserves an empty `channels` array from the API instead of replacing it with default channels.
+- Agent Builder grid cards now make the card body click target fill the whole card area above the delete action, and custom-Agent delete stays at the lower-right corner.
+- Added focused backend list coverage and frontend channel-normalization coverage, but full test execution is pending a prepared frontend dependency install and local test database.
+- Ready for merge to `dev` per user request.
