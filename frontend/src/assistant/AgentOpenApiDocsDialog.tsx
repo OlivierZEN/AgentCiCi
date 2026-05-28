@@ -169,7 +169,7 @@ curl -X POST "${normalizedBaseUrl}${chatMessagesPath}" \\
   }'
 \`\`\`
 
-会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。仅 \`cloudcc\` Key 可以使用 \`cloudccContext\`，发送消息时必须传入当前 CloudCC 用户的 \`cloudccContext.accessToken\`，且 token 不会写入调用日志或 trace。
+会话服务字段说明：\`query\` 是用户本轮问题，\`user\` 是终端用户标识，\`conversationId\` 是外部业务会话 ID，\`responseMode=streaming\` 返回 SSE \`message / agent_thought / message_end / error\`。请求体始终使用 JSON；流式调用额外设置 \`Accept: text/event-stream\`。仅 \`cloudcc\` Key 可以使用 \`cloudccContext\`，发送消息时必须传入当前 CloudCC 用户的 \`cloudccContext.accessToken\`，且 token 不会写入调用日志或 trace。
 
 CloudCC \`accessToken\` 获取方式：${CLOUDCC_ACCESS_TOKEN_HELP_URL}
 CloudCC \`baseUrl\` 联调说明：${CLOUDCC_BASE_URL_HELP_URL}
@@ -469,7 +469,7 @@ X-Cici-Api-Key: {API_KEY}`)}
                 <tr><th>query</th><td>用户本轮问题；也支持 `message` 作为别名。</td></tr>
                 <tr><th>user</th><td>终端用户标识；也支持 `externalUser.id`，两者同时传入时必须一致。</td></tr>
                 <tr><th>conversationId</th><td>外部业务会话 ID；也支持 `conversation_id` 和 `sessionId`。</td></tr>
-                <tr><th>responseMode</th><td>`blocking` 返回 JSON，`streaming` 返回 SSE `message / agent_thought / message_end / error`。</td></tr>
+                <tr><th>responseMode</th><td>`blocking` 返回 JSON；`streaming` 返回 SSE `message / agent_thought / message_end / error`，请求体仍是 JSON，并建议设置 `Accept: text/event-stream`。</td></tr>
                 <tr>
                   <th>cloudccContext</th>
                   <td>

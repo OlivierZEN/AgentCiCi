@@ -67,9 +67,11 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -638,11 +640,15 @@ class AgentOpenApiIntegrationTest {
                                 """))
                 .andExpect(request().asyncStarted())
                 .andReturn();
-        mockMvc.perform(asyncDispatch(streamResult))
+        String streamContent = mockMvc.perform(asyncDispatch(streamResult))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("event:agent_thought")))
                 .andExpect(content().string(containsString("event:message")))
-                .andExpect(content().string(containsString("event:message_end")));
+                .andExpect(content().string(containsString("event:message_end")))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(StandardCharsets.UTF_8);
+        assertThat(countOccurrences(streamContent, "event:message\n")).isGreaterThanOrEqualTo(2);
+        assertThat(streamContent.indexOf("event:message\n")).isLessThan(streamContent.indexOf("event:message_end\n"));
 
         mockMvc.perform(post("/openapi/v1/messages/{messageId}/feedbacks", messageId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + plainKey)
@@ -1049,6 +1055,57 @@ class AgentOpenApiIntegrationTest {
                             "effectiveToolNames", List.of(),
                             "agentId", agentId);
                 });
+        stubChatStreamRuntime(agentId, runAsUserId, answer);
+    }
+
+    private void stubChatStreamRuntime(String agentId, String runAsUserId, String answer) {
+        doAnswer(invocation -> {
+            String sessionId = invocation.getArgument(2);
+            String question = invocation.getArgument(3);
+            SseEmitter emitter = invocation.getArgument(7);
+            String first = answer.length() <= 1 ? answer : answer.substring(0, answer.length() / 2);
+            String second = answer.length() <= 1 ? "" : answer.substring(answer.length() / 2);
+            emitter.send(SseEmitter.event().name("delta").data(Map.of("text", first)));
+            if (!second.isBlank()) {
+                emitter.send(SseEmitter.event().name("delta").data(Map.of("text", second)));
+            }
+            String traceId = "trace-" + UUID.randomUUID().toString().replace("-", "").substring(0, 24);
+            Instant started = Instant.now().minusMillis(20);
+            traceRepository.save(new AgentRunTraceEntity(
+                    traceId,
+                    "demo-org",
+                    runAsUserId,
+                    sessionId,
+                    agentId,
+                    "api",
+                    "COMPLETED",
+                    question,
+                    answer,
+                    "mock-model",
+                    "",
+                    started,
+                    Instant.now(),
+                    20,
+                    1,
+                    0,
+                    0,
+                    "[]",
+                    "[]",
+                    "[]",
+                    "{}",
+                    Instant.now()));
+            emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true)));
+            emitter.complete();
+            return null;
+        }).when(chatOrchestratorService).chatStreamBlocking(
+                eq("demo-org"),
+                eq(runAsUserId),
+                anyString(),
+                anyString(),
+                any(),
+                eq(agentId),
+                any(),
+                any(SseEmitter.class));
     }
 
     private void stubChatRuntimeWithCloudccContext(String agentId,
@@ -1112,6 +1169,19 @@ class AgentOpenApiIntegrationTest {
         String payload = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(("{\"exp\":" + expiresAt.getEpochSecond() + "}").getBytes(StandardCharsets.UTF_8));
         return header + "." + payload + ".signature";
+    }
+
+    private int countOccurrences(String value, String needle) {
+        int count = 0;
+        int from = 0;
+        while (true) {
+            int index = value.indexOf(needle, from);
+            if (index < 0) {
+                return count;
+            }
+            count++;
+            from = index + needle.length();
+        }
     }
 
     private String plainKeyPublicId(String plainKey) {

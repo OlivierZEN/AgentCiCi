@@ -187,7 +187,7 @@ FEAT-021 已经让外部系统可以通过 API Key 调用已发布 Agent，具�
 ## 验收标准
 
 - `GET /openapi/v1/parameters` 返回 opening statement、suggested questions、file upload、TTS/STT、retriever resource、user input form 和 system parameters 的 AgentCiCi 等价结构。
-- `POST /openapi/v1/chat-messages` 支持 `response_mode=blocking|streaming`，并返回/发送 `task_id`、`message_id`、`conversation_id`、`answer`、usage、retriever resources、agent thoughts。
+- `POST /openapi/v1/chat-messages` 支持 `response_mode=blocking|streaming`，并返回/发送 `task_id`、`message_id`、`conversation_id`、`answer`、usage、retriever resources、agent thoughts；JSON 请求体始终使用 `Content-Type: application/json`，streaming 客户端通过 `Accept: text/event-stream` 表达 SSE 响应期望。
 - `POST /chat-messages/{taskId}/stop` 对可停止任务生效；如底层暂不支持真实取消，必须可观测地标记 cancel requested 并返回稳定错误/状态。
 - `GET /conversations`、`GET /messages`、rename/delete conversation 可按 API Key、Agent、external user 隔离访问。
 - `POST /files/upload` 可上传允许类型文件，返回 file id；chat-messages 可引用本 Key/Agent/user 下的文件；越权引用被拒绝。

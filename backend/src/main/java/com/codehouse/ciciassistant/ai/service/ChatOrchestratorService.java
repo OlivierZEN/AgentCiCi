@@ -290,6 +290,13 @@ public class ChatOrchestratorService {
                            String question, List<String> kbIds, String requestedAgentId,
                            String activeSkillCode, SseEmitter emitter) {
         CompletableFuture.runAsync(() -> {
+            chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, emitter);
+        });
+    }
+
+    public void chatStreamBlocking(String orgId, String userId, String sessionId,
+                                   String question, List<String> kbIds, String requestedAgentId,
+                                   String activeSkillCode, SseEmitter emitter) {
             Instant runStartedAt = Instant.now();
             List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
             List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -500,7 +507,6 @@ public class ChatOrchestratorService {
                 } catch (IOException ignored) {}
                 emitter.completeWithError(e);
             }
-        });
     }
 
     // ── Function calling loop ──
