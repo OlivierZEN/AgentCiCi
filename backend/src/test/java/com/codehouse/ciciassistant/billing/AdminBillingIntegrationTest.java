@@ -30,7 +30,7 @@ class AdminBillingIntegrationTest {
 
     @Test
     void organizationAdminCanReadOwnBillingChain() throws Exception {
-        String token = registerAdminToken("13902414301");
+        String token = registerAdminToken();
 
         MvcResult overviewResult = mockMvc.perform(get("/admin/billing/overview")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -69,7 +69,8 @@ class AdminBillingIntegrationTest {
                 .andExpect(jsonPath("$.data[0].code").value("credits"));
     }
 
-    private String registerAdminToken(String mobile) throws Exception {
+    private String registerAdminToken() throws Exception {
+        String mobile = "139" + String.format("%08d", Math.floorMod(System.nanoTime(), 100_000_000L));
         MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""

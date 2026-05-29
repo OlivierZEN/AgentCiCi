@@ -42,7 +42,7 @@ class PlatformBillingConfigurationIntegrationTest {
         JsonNode privateDepartment = findByField(privateCatalog.path("editions"), "editionCode", "private_department");
         assertThat(privateDepartment).isNotNull();
         assertThat(privateDepartment.path("billingTypePolicy").asText()).isEqualTo("customer_paid");
-        assertThat(privateDepartment.path("localModelTokenPolicy").asText()).contains("默认不二次收费");
+        assertThat(privateDepartment.path("localModelTokenPolicy").asText()).contains("不二次收费");
         assertThat(privateCatalog.path("packages")).extracting(node -> node.path("packageType").asText())
                 .contains("capacity", "module", "service");
 

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-29T13:02:05Z
+updated_at: 2026-05-29T13:17:31Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-29T13:02:05Z
+last_run_at: 2026-05-29T13:17:31Z
 last_run_status: success
 ---
 
@@ -13,11 +13,22 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 billing integration tests
-- 命令：reset `agentcici_test` public schema, then `SPRING_DATASOURCE_URL='jdbc:postgresql://[::1]:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test`
+- 范围：TASK-143 billing integration tests after local PostgreSQL listener cleanup
+- 命令：`SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test`
 - 环境：`/private/tmp/task143-verify` mirror against local Docker PostgreSQL `cici-postgres`
 
 ## Latest Verified Results
+
+- TASK-143 local PostgreSQL cleanup and billing integration rerun (2026-05-29T13:17:31Z):
+  - Commands:
+    - `cleanup`: stopped and deleted stale Colima `default` and Lima `cici-docker` instances -> **success**.
+    - `port-check`: `lsof -nP -iTCP:5432 -sTCP:LISTEN` -> **success**, only Docker Desktop forwarding for current `cici-postgres` remains.
+    - `runtime-check`: `colima list` and `limactl list` -> **success**, no remaining Colima/Lima instances.
+    - `backend-integration`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in `/private/tmp/task143-verify/backend` -> **success**, 3 integration tests passed.
+  - Notes:
+    - Current AgentCiCi containers were preserved: `cici-postgres`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant`.
+    - Integration tests were stabilized for reruns by generating a fresh admin mobile and asserting durable billing-policy wording.
+    - `127.0.0.1:5432` now reaches the current Docker PostgreSQL container instead of stale IPv4 forwarding state.
 
 - TASK-143 billing integration tests (2026-05-29T13:02:05Z):
   - Commands:

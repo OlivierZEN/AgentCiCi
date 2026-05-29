@@ -8,7 +8,7 @@ branch: codex/TASK-143-billing-edition-config
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-143.yaml
-updated_at: 2026-05-29T13:02:05Z
+updated_at: 2026-05-29T13:17:31Z
 updated_by: MANAGER-001
 ---
 
@@ -85,6 +85,11 @@ The platform operations console must become the source of truth for edition cont
   - Docker PostgreSQL was reachable through IPv6 `jdbc:postgresql://[::1]:5432/agentcici_test`; the `agentcici_test` public schema was reset and Flyway migrated cleanly to v61.
 - 2026-05-29T13:02:05Z: made `AdminBillingIntegrationTest` self-contained by registering a fresh organization administrator instead of relying on pre-existing local account `13900009999`.
 - 2026-05-29T13:02:05Z: `SPRING_DATASOURCE_URL='jdbc:postgresql://[::1]:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in mirrored `backend/` -> success, 3 integration tests passed.
+- 2026-05-29T13:17:31Z: cleaned stale local PostgreSQL port users by stopping and deleting Colima `default` and Lima `cici-docker`; `colima list` and `limactl list` are now empty, and `lsof -nP -iTCP:5432 -sTCP:LISTEN` shows only Docker Desktop forwarding for current `cici-postgres`.
+- 2026-05-29T13:17:31Z: stabilized integration reruns:
+  - `AdminBillingIntegrationTest` now generates a fresh 11-digit mobile number for each run.
+  - `PlatformBillingConfigurationIntegrationTest` asserts the durable local-token billing policy semantics instead of one exact seed phrase.
+- 2026-05-29T13:17:31Z: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in mirrored `backend/` -> success, 3 integration tests passed against current Docker PostgreSQL after stale listeners were removed.
 
 ## Changed Files
 
@@ -103,4 +108,4 @@ The platform operations console must become the source of truth for edition cont
 
 - Assigned to Owen (`MANAGER-001`) on 2026-05-28.
 - Assigned branch: `codex/TASK-143-billing-edition-config`.
-- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build/integration checks. Use IPv6 PostgreSQL URL `jdbc:postgresql://[::1]:5432/agentcici_test` for local billing integration tests because `127.0.0.1:5432` can hit a stale IPv4 listener/forwarder on this machine.
+- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build/integration checks. Stale Colima/Lima PostgreSQL forwarders have been removed; local billing integration tests now pass through `jdbc:postgresql://127.0.0.1:5432/agentcici_test` against the current Docker Desktop `cici-postgres` container.

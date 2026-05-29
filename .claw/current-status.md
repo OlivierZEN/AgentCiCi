@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-29T13:02:05Z
+updated_at: 2026-05-29T13:17:31Z
 updated_by: MANAGER-001
 phase: maintenance
 active_task: "TASK-143 implemented with integration tests passing; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
-next_action: "Review and integrate TASK-143 billing changes; use jdbc:postgresql://[::1]:5432/agentcici_test for local billing integration tests on this machine."
+next_action: "Review and integrate TASK-143 billing changes; local 127.0.0.1:5432 now points to current Docker PostgreSQL after stale Colima/Lima listeners were removed."
 read_next:
   goals: false
   decisions: false
@@ -24,6 +24,7 @@ read_next:
 
 - Focus: manager-gated task delivery while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
 - TASK-143 implemented and integration-verified: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, and ledger details.
+- Local PostgreSQL cleanup complete: stale Colima `default` and Lima `cici-docker` listeners were removed; TASK-143 billing integration tests now pass through `jdbc:postgresql://127.0.0.1:5432/agentcici_test`.
 - Newly assigned from 飞书 BUG反馈: `TASK-142` to `DEV-fengchu` for OpenAPI `chat-messages` true SSE streaming (`B20260527-SSE01`).
 - Newly assigned: `TASK-141` to `DEV-houyi` for AI 听记 local FunASR / Paraformer-zh realtime ASR; realtime transcription is P0 and uses an isolated Python `services/local-asr/**` sidecar.
 - Status governance: task progress source is `.claw/tasks/TASK-xxx.md`; `.claw/task-board.md` is PM/integration-owned; `.claw/assignments/TASK-xxx.yaml` status tracks authorization lifecycle only.
