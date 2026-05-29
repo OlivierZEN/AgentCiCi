@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-28T09:45:06Z
+updated_at: 2026-05-29T01:40:22Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-143 done; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
-next_action: "Owen reviews TASK-143 for acceptance/merge; DEV-fengchu can start TASK-142; developers update only .claw/tasks/TASK-xxx.md for progress."
+active_task: "TASK-143 implemented and awaiting integration review; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
+next_action: "Review and integrate TASK-143 billing changes after resolving the staged/untracked worktree state and rerunning Spring billing integration tests when local PostgreSQL accepts JDBC connections."
 read_next:
   goals: false
   decisions: false
@@ -22,8 +22,8 @@ read_next:
 
 ## Snapshot
 
-- Focus: manager-gated task status and assignment authorization cleanup while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
-- Just completed: `TASK-143` adds platform-configurable SaaS/private editions, capacity packs, module packs, service packs, SLA tiers, credits policies, platform APIs, `/platform/billing` UI, audit reasons, V61 migration, and focused verification.
+- Focus: manager-gated task delivery while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
+- TASK-143 implemented: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, and ledger details.
 - Newly assigned from 飞书 BUG反馈: `TASK-142` to `DEV-fengchu` for OpenAPI `chat-messages` true SSE streaming (`B20260527-SSE01`).
 - Newly assigned: `TASK-141` to `DEV-houyi` for AI 听记 local FunASR / Paraformer-zh realtime ASR; realtime transcription is P0 and uses an isolated Python `services/local-asr/**` sidecar.
 - Status governance: task progress source is `.claw/tasks/TASK-xxx.md`; `.claw/task-board.md` is PM/integration-owned; `.claw/assignments/TASK-xxx.yaml` status tracks authorization lifecycle only.

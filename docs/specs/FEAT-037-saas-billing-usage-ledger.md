@@ -4,7 +4,7 @@ feature_id: FEAT-037
 title: SaaS Billing Usage Ledger
 status: in_design
 owner_role: project-manager
-task_ids: TASK-114, TASK-143
+task_ids: TASK-114
 related_decisions: FEAT-003, FEAT-022
 related_issues: none
 updated_at: 2026-05-28T09:35:00Z
@@ -21,8 +21,6 @@ updated_by: MANAGER-001
 
 实现开关：新增部署级 billing mode fact，默认 `private_deployment`，可通过 Spring 配置 `app.billing.deployment-mode=saas` 切换为 SaaS。后端通过 `BillingModeProperties` 归一化配置并由 `/billing/mode` 暴露只读视图；前端通过 `billingMode.ts` 使用同样的归一化规则。后续 rating、quota、billing UI 和 plan seed 必须读取这个事实源。
 
-2026-05-28 TASK-143 实现补充：平台运营侧新增 `billing_edition_config` 作为套餐和包配置事实源，覆盖 SaaS 套餐、私有化版本、容量包、模块包、服务包、SLA tier 和 credits policy。平台 API 暴露 `/platform/billing/plans` 的列表、草稿创建、草稿更新、发布和启停能力；所有变更必须提交 `changeReason` 并进入平台审计。`/platform/billing` 页面提供高密度表格、类型过滤、版本信息、控制指标表单、策略 JSON 和发布/启停操作。私有化默认 seed 继续保持 `billing_type_policy=customer_paid` 与 `localModelTokenDoubleCharge=false`，避免对客户自有本地模型 token 二次强收费。
-
 需要立即修正的设计点：
 
 - 首版优先级从套餐/页面前置改为 `usage_meter_event`、真实模型 usage、rating 规则、credit ledger 最小闭环前置。
@@ -33,6 +31,18 @@ updated_by: MANAGER-001
 - TASK-114 已从 `DEV-nezha` 改为 `MANAGER-001`，本规格以 `.claw/tasks/TASK-114.md` 和 `.claw/assignments/TASK-114.yaml` 的当前授权为准。
 
 首版成功标准不是“能收费”，而是“未来收费不会乱”：同一业务事实只进一个计量事件，事件可幂等去重，rating 可版本化复算，ledger 只追加不改写，页面能解释 credits 从哪里来。
+
+## 2026-05-29 Organization Admin Billing Confirmation
+
+组织管理员必须能在 `/admin/billing` 查看本组织的当前版本、订阅状态、席位和容量权益、包含 credits、剩余 credits、消耗比例、quota 状态、按域消耗分布、最近 usage meter events 和 credits ledger 明细。
+
+可见性边界：
+
+- 组织管理员只能查看当前组织，不支持跨组织查询。
+- 普通成员可在后续运行详情中查看单次运行 credits 解释，但不默认开放组织级余额、ledger、top-up 或合同额度。
+- 平台运营继续通过 `/platform/billing` 管理版本、套餐、容量包、服务包、SLA、credits 策略，并保留跨组织查看和人工调整能力。
+
+首版实现可以先用 deterministic seed 补足默认订阅、usage events 和 ledger，保证组织管理员侧形成完整可用链路；后续 runtime metering 接入后，这些读视图保持不变，事实来源从 seed 过渡为真实事件。
 
 ## Goal
 
@@ -374,13 +384,15 @@ Scope:
 - platform-configurable edition definitions for `saas_team`, `saas_business`, `saas_enterprise`, `private_department`, `private_enterprise`, and `private_group`
 - configurable capacity packs, module packs, service packs, SLA tiers, and credits policies
 - platform APIs and UI for editing billing edition indicators with audit reason capture
-- read models that later feed admin billing overview, rating, quota, and tenant subscription views
+- organization-admin read APIs and `/admin/billing` view for current edition, credits balance, usage events, ledger, and quota status
+- read models that later feed rating, quota enforcement, and tenant subscription views
 
 Notes:
 
 - This task should not hard-code edition limits in frontend copy or backend constants.
 - Capacity and service add-ons remain separate from edition names.
 - Private deployment mode must not default to charging customer-owned local model token usage.
+- Organization-admin billing data is current-organization scoped only; cross-organization inspection remains a platform operation.
 
 ## Acceptance Criteria
 

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-28T09:45:06Z
+updated_at: 2026-05-29T01:40:22Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-28T09:45:06Z
+last_run_at: 2026-05-29T01:40:22Z
 last_run_status: success
 ---
 
@@ -13,27 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 platform billing edition configuration
-- 命令：task-scoped `dev-login.py`, `check-assignment.py`, backend focused tests, backend compile, frontend unit test, frontend build, local Spring Boot/Flyway smoke, browser desktop QA, `git diff --check`
-- 环境：local backend/frontend focused verification with PostgreSQL over `::1`
+- 范围：TASK-143 organization-admin billing chain
+- 命令：task-scoped `dev-login.py`, mirrored `mvn -q -DskipTests compile`, mirrored `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test`, mirrored `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts`, mirrored `npm run build`, `git diff --check`
+- 环境：`/private/tmp/task143-verify` mirror for build output because active `/Users/...` worktree cannot write build artifacts under sandbox
 
 ## Latest Verified Results
 
-- TASK-143 platform billing edition configuration (2026-05-28T09:45:06Z):
+- TASK-143 organization-admin billing chain (2026-05-29T01:10:28Z):
   - Commands:
-    - `identity`: task-scoped `dev-login.py` and manager state `dev-login.py` for `MANAGER-001` on `codex/TASK-143-billing-edition-config` -> **allowed**.
-    - `assignment`: `check-assignment.py` for actual TASK-143 backend/frontend/spec/task files -> **allowed**.
-    - `backend-focused`: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> **success**.
-    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
-    - `frontend-unit`: `npm test -- PlatformBillingPage.test.tsx` in `frontend/` -> **success**, 2 tests passed.
-    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite chunk-size warning remains.
-    - `runtime-smoke`: local Spring Boot on `18080` with `SPRING_DATASOURCE_URL=jdbc:postgresql://[::1]:5432/agentcici_test` -> **success**; Flyway applied `V61__billing_edition_configuration.sql`.
-    - `browser`: in-app browser desktop QA at `/platform/billing` after real platform login -> **success**; 12 billing config rows rendered, `scrollWidth=clientWidth=1280`, console errors `0`.
-    - `diff`: `git diff --check` -> **success**.
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` with backend billing, frontend, spec, task, and `V61__billing_edition_configuration.sql` paths -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `/private/tmp/task143-verify/backend` -> **success**.
+    - `backend-unit`: `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in `/private/tmp/task143-verify/backend` -> **success**.
+    - `frontend-unit`: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `/private/tmp/task143-verify/frontend` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` in `/private/tmp/task143-verify/frontend` -> **success**; existing Vite large chunk warning remains.
+    - `diff`: `git diff --check` in TASK-143 worktree -> **success**.
+    - `permission-regression`: after adding `@RequireOrgAdmin`, `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in `/private/tmp/task143-verify/backend` -> **success**.
   - Notes:
-    - Added platform-owned billing edition configuration for SaaS/private editions, add-on packs, SLA tiers, and credits policies.
-    - Platform API supports list, draft create/update, publish, and enable/disable with explicit reason audit.
-    - Private deployment seeds keep local model token double-charge disabled by default.
+    - Added organization-admin billing APIs and `/admin/billing` surface for current edition, subscription status, credits balance, consumption, quota warnings, usage distribution, usage events, and credit ledger details.
+    - Organization-level billing APIs now use the same organization-admin permission annotation as other admin organization controllers.
+    - Spring billing integration tests were attempted with both `127.0.0.1` and `[::1]` PostgreSQL datasource forms, but the fork could not obtain a JDBC connection in this session; no integration-test assertions ran.
 
 - TASK-143 billing deployment mode switch (2026-05-28T08:19:11Z):
   - Commands:

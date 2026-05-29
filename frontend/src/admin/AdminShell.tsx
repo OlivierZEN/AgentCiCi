@@ -31,6 +31,7 @@ const adminNavItems: AdminNavItem[] = [
   { kind: "link", to: "/admin/embed-apps", label: "嵌入式智能应用" },
   { kind: "link", to: "/admin/channels/wechat-kf", label: "微信客服" },
   { kind: "link", to: "/admin/ops", label: "观测运维" },
+  { kind: "link", to: "/admin/billing", label: "计费用量" },
 ];
 
 function isNavPathActive(pathname: string, to: string) {

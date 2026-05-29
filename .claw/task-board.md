@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-28T09:45:06Z
+updated_at: 2026-05-28T08:04:54Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-143 - Billing editions configurable in platform operations
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-037-saas-billing-usage-ledger.md`
+- task_status_path: `.claw/tasks/TASK-143.md`
+- assignment_path: `.claw/assignments/TASK-143.yaml`
+- blocked_by: `none`
+- next_action: Owen (`MANAGER-001`) runs task-scoped `dev-login.py` on `codex/TASK-143-billing-edition-config`, then implements platform-configurable SaaS/private editions and billing packs.
 
 ### TASK-142 - OpenAPI chat-messages SSE streaming
 

@@ -3,12 +3,12 @@ kind: task-status
 task_id: TASK-143
 assignee: MANAGER-001
 owner_role: fullstack-agent
-status: done
+status: in_progress
 branch: codex/TASK-143-billing-edition-config
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-143.yaml
-updated_at: 2026-05-28T09:45:06Z
+updated_at: 2026-05-29T01:40:22Z
 updated_by: MANAGER-001
 ---
 
@@ -32,6 +32,7 @@ The platform operations console must become the source of truth for edition cont
 - Platform UI under `/platform/billing` or equivalent platform navigation entry for dense table/form management.
 - Read APIs suitable for future admin billing overview and runtime quota/rating usage.
 - Focused backend tests and frontend build/unit coverage for mode-aware edition configuration.
+- 2026-05-29 scope confirmation: organization administrators must be able to view their own organization's current edition, credits balance, credits consumption, quota status, usage events, and credit ledger details. Platform operators keep cross-organization configuration and adjustment authority.
 
 ## Out Of Scope
 
@@ -60,24 +61,40 @@ The platform operations console must become the source of truth for edition cont
 - 2026-05-28T08:19:11Z: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` on `codex/TASK-143-billing-edition-config` -> allowed.
 - 2026-05-28T08:19:11Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> success.
 - 2026-05-28T08:19:11Z: `npm test -- billingMode.test.ts` in `frontend/` -> success, 3 tests passed.
-- 2026-05-28T09:45:06Z: task-scoped `dev-login.py` and manager state `dev-login.py` for `MANAGER-001` on `codex/TASK-143-billing-edition-config` -> allowed.
-- 2026-05-28T09:45:06Z: `check-assignment.py` for actual TASK-143 backend/frontend/spec/task files -> allowed.
-- 2026-05-28T09:45:06Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> success.
-- 2026-05-28T09:45:06Z: `mvn -q -DskipTests compile` in `backend/` -> success.
-- 2026-05-28T09:45:06Z: `npm test -- PlatformBillingPage.test.tsx` in `frontend/` -> success, 2 tests passed.
-- 2026-05-28T09:45:06Z: `npm run build` in `frontend/` -> success; existing Vite chunk-size warning remains.
-- 2026-05-28T09:45:06Z: local Spring Boot run on `18080` with PostgreSQL over `::1` -> success; Flyway applied `V61__billing_edition_configuration.sql`.
-- 2026-05-28T09:45:06Z: in-app browser desktop QA at `/platform/billing` through real platform login and API -> success; page rendered 12 billing config rows, no horizontal overflow (`scrollWidth=clientWidth=1280`), console errors `0`.
-- 2026-05-28T09:45:06Z: `git diff --check` -> success.
+- 2026-05-28T08:34:00Z: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` with backend billing, frontend, spec, task, and `V61__billing_edition_configuration.sql` paths -> allowed.
+- 2026-05-28T08:36:00Z: `mvn -q -DskipTests test` in `backend/` -> success, backend main/test code compiles.
+- 2026-05-28T08:36:00Z: `mvn -q -Dtest='BillingModePropertiesTest,BillingModeControllerTest' test` in `backend/` -> success.
+- 2026-05-28T08:36:00Z: `npm test -- PlatformBillingPage.test.ts billingMode.test.ts` in `frontend/` -> success, 5 tests passed.
+- 2026-05-28T08:36:00Z: `npm run build` in `frontend/` -> success, Vite reported existing chunk-size warning only.
+- 2026-05-28T08:48:00Z: created missing host-reachable local PostgreSQL database `agentcici_test`; Java/JDBC connectivity to `jdbc:postgresql://127.0.0.1:5432/agentcici_test` verified.
+- 2026-05-28T08:49:00Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/agentcici_test -Dspring.datasource.username=cici -Dspring.datasource.password=cici123 test` in `backend/` -> success, 6 tests passed and Flyway validated schema at v61.
+- 2026-05-28T08:38:00Z: `git diff --check` -> success.
+- 2026-05-29T01:10:28Z: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` with backend billing, frontend, spec, task, and `V61__billing_edition_configuration.sql` paths -> allowed.
+- 2026-05-29T01:10:28Z: verified in `/private/tmp/task143-verify` mirror because the active worktree under `/Users/...` cannot write build output under sandbox.
+- 2026-05-29T01:10:28Z: `mvn -q -DskipTests compile` in mirrored `backend/` -> success.
+- 2026-05-29T01:10:28Z: `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in mirrored `backend/` -> success.
+- 2026-05-29T01:10:28Z: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in mirrored `frontend/` -> success, 7 tests passed.
+- 2026-05-29T01:10:28Z: `npm run build` in mirrored `frontend/` -> success; existing Vite large chunk warning remains.
+- 2026-05-29T01:10:28Z: `git diff --check` in TASK-143 worktree -> success.
+- 2026-05-29T01:40:22Z: added `@RequireOrgAdmin` to organization-admin billing APIs so ordinary organization members do not receive org-level billing balance and ledger access by default.
+- 2026-05-29T01:40:22Z: `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in mirrored `backend/` -> success.
+- 2026-05-29T01:40:22Z: `git diff --check` in TASK-143 worktree -> success.
+- Blocked: billing Spring integration tests could not obtain a local PostgreSQL connection in this session even with `127.0.0.1` and `[::1]` datasource attempts; no code assertions ran in those integration tests.
 
 ## Changed Files
 
-- Added `V61__billing_edition_configuration.sql` and `billing_edition_config` as the platform-owned configuration table for SaaS/private plans, capacity packs, module packs, service packs, SLA tiers, and credits policies.
-- Added backend billing configuration entity/repository/service and `/platform/billing/plans` APIs for list, draft creation, draft update, publish, and enable/disable with explicit change reason auditing.
-- Added `/platform/billing` UI under the platform console with dense table filtering, right-side edit panel, version draft actions, publish, enable/disable, and TASK-143 focused frontend helper tests.
-- Preserved private-deployment policy in seeds and UI/API fields: customer-owned local model token usage is `customer_paid` and `localModelTokenDoubleCharge=false` by default.
+- `backend/src/main/resources/db/migration/V61__billing_edition_configuration.sql` creates configurable edition, package, change-log, organization subscription, usage event, and credits ledger tables.
+- `backend/src/main/java/com/codehouse/ciciassistant/billing/**` adds edition/package entities, organization subscription and ledger entities, repositories, seed bootstrap, platform APIs, organization admin read APIs, update services, versioning, reason capture, and platform audit logging.
+- `backend/src/test/java/com/codehouse/ciciassistant/billing/api/AdminBillingControllerTest.java` covers current-organization billing overview delegation and the organization-admin permission annotation.
+- `backend/src/test/java/com/codehouse/ciciassistant/billing/PlatformBillingConfigurationIntegrationTest.java` covers catalog defaults, private/SaaS semantics, package update, reason validation, and audit expectations.
+- `frontend/src/admin/pages/AdminBillingPage.tsx` adds `/admin/billing` with current edition, credits summary, quota status, usage distribution, ledger, and usage event details.
+- `frontend/src/platform/pages/PlatformBillingPage.tsx` adds `/platform/billing` with deployment filter, edition table, dense indicator form, package table/form, and reason-required saves.
+- `frontend/src/App.tsx`, `frontend/src/admin/AdminShell.tsx`, `frontend/src/platform/PlatformShell.tsx`, and `frontend/src/styles.css` wire the route, navigation entries, and billing styles.
+- `frontend/src/admin/pages/AdminBillingPage.test.ts` covers organization billing labels for credits, limits, ledger, and warning semantics.
+- `frontend/src/platform/pages/PlatformBillingPage.test.ts` covers private/SaaS label semantics and add-on package labels.
 
 ## Handoff
 
-- Implementation is complete on `codex/TASK-143-billing-edition-config`.
-- Ready for PM/product acceptance and merge review.
+- Assigned to Owen (`MANAGER-001`) on 2026-05-28.
+- Assigned branch: `codex/TASK-143-billing-edition-config`.
+- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build checks. Final review prep still needs cleanup of the current staged/untracked worktree state and a rerun of Spring billing integration tests once local PostgreSQL is reachable.

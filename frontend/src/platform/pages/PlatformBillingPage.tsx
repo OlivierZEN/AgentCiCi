@@ -1,99 +1,70 @@
 import { useEffect, useMemo, useState } from "react";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
-export type BillingConfigItem = {
-  id: number;
-  itemType: string;
-  itemCode: string;
-  displayName: string;
+type BillingEdition = {
+  editionCode: string;
   deploymentMode: string;
-  versionNo: number;
-  publishStatus: string;
+  displayName: string;
+  description: string;
   enabled: boolean;
-  billingTypePolicy: string;
+  operationSeatLimit: number | null;
+  builderSeatLimit: number | null;
+  agentLimit: number | null;
+  skillLimit: number | null;
+  workflowLimit: number | null;
+  knowledgeBaseLimit: number | null;
+  documentLimit: number | null;
+  chunkLimit: number | null;
+  knowledgeStorageMb: number | null;
+  openApiQps: number | null;
+  openApiConcurrency: number | null;
+  openApiCredentialLimit: number | null;
+  connectorLimit: number | null;
+  meetingMinutesConcurrency: number | null;
+  traceRetentionDays: number | null;
+  auditRetentionDays: number | null;
+  environmentLimit: number | null;
   includedCredits: number;
-  operationSeatLimit?: number | null;
-  builderSeatLimit?: number | null;
-  agentLimit?: number | null;
-  skillWorkflowLimit?: number | null;
-  knowledgeCapacityGb?: number | null;
-  openApiQps?: number | null;
-  openApiConcurrency?: number | null;
-  openApiCredentialLimit?: number | null;
-  connectorLimit?: number | null;
-  meetingConcurrency?: number | null;
-  traceRetentionDays?: number | null;
-  auditRetentionDays?: number | null;
-  environmentLimit?: number | null;
   overageMode: string;
-  slaTierCode?: string | null;
-  addonCategory?: string | null;
-  pricingUnit?: string | null;
-  policyJson?: string | null;
-  changeReason: string;
-  updatedAt: string;
-  publishedAt?: string | null;
-  latestVersionNo: number;
-  publishedVersionNo?: number | null;
-  versionCount: number;
-};
-
-type BillingConfigForm = {
-  itemType: string;
-  itemCode: string;
-  displayName: string;
-  deploymentMode: string;
-  enabled: boolean;
   billingTypePolicy: string;
-  includedCredits: string;
-  operationSeatLimit: string;
-  builderSeatLimit: string;
-  agentLimit: string;
-  skillWorkflowLimit: string;
-  knowledgeCapacityGb: string;
-  openApiQps: string;
-  openApiConcurrency: string;
-  openApiCredentialLimit: string;
-  connectorLimit: string;
-  meetingConcurrency: string;
-  traceRetentionDays: string;
-  auditRetentionDays: string;
-  environmentLimit: string;
-  overageMode: string;
   slaTierCode: string;
-  addonCategory: string;
-  pricingUnit: string;
-  policyJson: string;
+  topUpPolicy: string;
+  localModelTokenPolicy: string;
+  platformPaidResourcePolicy: string;
+  packageCodes: string[];
+  versionNo: number;
   changeReason: string;
+  updatedBy: string;
+  updatedAt: string;
 };
 
-const defaultForm: BillingConfigForm = {
-  itemType: "PLAN",
-  itemCode: "",
-  displayName: "",
-  deploymentMode: "saas",
-  enabled: true,
-  billingTypePolicy: "platform_paid",
-  includedCredits: "0",
-  operationSeatLimit: "",
-  builderSeatLimit: "",
-  agentLimit: "",
-  skillWorkflowLimit: "",
-  knowledgeCapacityGb: "",
-  openApiQps: "",
-  openApiConcurrency: "",
-  openApiCredentialLimit: "",
-  connectorLimit: "",
-  meetingConcurrency: "",
-  traceRetentionDays: "",
-  auditRetentionDays: "",
-  environmentLimit: "",
-  overageMode: "soft_limit",
-  slaTierCode: "",
-  addonCategory: "",
-  pricingUnit: "",
-  policyJson: "{}",
-  changeReason: "TASK-143 平台计费配置调整",
+type BillingPackage = {
+  packageCode: string;
+  deploymentMode: string;
+  packageType: string;
+  displayName: string;
+  description: string;
+  enabled: boolean;
+  configJson: string;
+  versionNo: number;
+  changeReason: string;
+  updatedBy: string;
+  updatedAt: string;
+};
+
+type BillingCatalog = {
+  currentDeploymentMode: string;
+  currentDeploymentModeLabel: string;
+  editions: BillingEdition[];
+  packages: BillingPackage[];
+  overageModes: string[];
+  billingTypes: string[];
+  packageTypes: string[];
+};
+
+type EditionForm = Omit<BillingEdition, "versionNo" | "changeReason" | "updatedBy" | "updatedAt" | "deploymentMode" | "editionCode"> & {
+  reason: string;
+  packageCodesText: string;
 };
 
 function readToken(): string {
@@ -106,189 +77,189 @@ function readToken(): string {
   }
 }
 
-function numeric(value: string): number | null {
-  const cleaned = value.trim();
-  if (!cleaned) return null;
-  const parsed = Number(cleaned);
-  return Number.isFinite(parsed) ? parsed : null;
-}
-
-export function itemTypeLabel(type: string): string {
-  switch (type) {
-    case "PLAN":
-      return "版本套餐";
-    case "CAPACITY_PACK":
-      return "容量包";
-    case "MODULE_PACK":
-      return "模块包";
-    case "SERVICE_PACK":
-      return "服务包";
-    case "SLA_TIER":
-      return "SLA";
-    case "CREDITS_POLICY":
-      return "Credits 策略";
-    default:
-      return type || "未知";
-  }
-}
-
-export function deploymentModeLabel(mode: string): string {
+function deploymentLabel(mode: string): string {
   switch (mode) {
     case "saas":
       return "SaaS";
     case "private_deployment":
       return "私有化";
-    case "all":
-      return "通用";
     default:
       return mode || "未知";
   }
 }
 
-export function publishStatusLabel(status: string): string {
-  switch (status) {
-    case "PUBLISHED":
-      return "已发布";
-    case "DRAFT":
-      return "草稿";
-    case "SUPERSEDED":
-      return "已替换";
-    default:
-      return status || "未知";
-  }
-}
-
-export function formFromItem(item: BillingConfigItem): BillingConfigForm {
-  return {
-    itemType: item.itemType,
-    itemCode: item.itemCode,
-    displayName: item.displayName,
-    deploymentMode: item.deploymentMode,
-    enabled: item.enabled,
-    billingTypePolicy: item.billingTypePolicy,
-    includedCredits: String(item.includedCredits ?? 0),
-    operationSeatLimit: item.operationSeatLimit == null ? "" : String(item.operationSeatLimit),
-    builderSeatLimit: item.builderSeatLimit == null ? "" : String(item.builderSeatLimit),
-    agentLimit: item.agentLimit == null ? "" : String(item.agentLimit),
-    skillWorkflowLimit: item.skillWorkflowLimit == null ? "" : String(item.skillWorkflowLimit),
-    knowledgeCapacityGb: item.knowledgeCapacityGb == null ? "" : String(item.knowledgeCapacityGb),
-    openApiQps: item.openApiQps == null ? "" : String(item.openApiQps),
-    openApiConcurrency: item.openApiConcurrency == null ? "" : String(item.openApiConcurrency),
-    openApiCredentialLimit: item.openApiCredentialLimit == null ? "" : String(item.openApiCredentialLimit),
-    connectorLimit: item.connectorLimit == null ? "" : String(item.connectorLimit),
-    meetingConcurrency: item.meetingConcurrency == null ? "" : String(item.meetingConcurrency),
-    traceRetentionDays: item.traceRetentionDays == null ? "" : String(item.traceRetentionDays),
-    auditRetentionDays: item.auditRetentionDays == null ? "" : String(item.auditRetentionDays),
-    environmentLimit: item.environmentLimit == null ? "" : String(item.environmentLimit),
-    overageMode: item.overageMode,
-    slaTierCode: item.slaTierCode ?? "",
-    addonCategory: item.addonCategory ?? "",
-    pricingUnit: item.pricingUnit ?? "",
-    policyJson: item.policyJson ?? "{}",
-    changeReason: item.changeReason || defaultForm.changeReason,
-  };
-}
-
-export function buildBillingPayload(form: BillingConfigForm) {
-  return {
-    itemType: form.itemType,
-    itemCode: form.itemCode.trim(),
-    displayName: form.displayName.trim(),
-    deploymentMode: form.deploymentMode,
-    enabled: form.enabled,
-    billingTypePolicy: form.billingTypePolicy,
-    includedCredits: numeric(form.includedCredits) ?? 0,
-    operationSeatLimit: numeric(form.operationSeatLimit),
-    builderSeatLimit: numeric(form.builderSeatLimit),
-    agentLimit: numeric(form.agentLimit),
-    skillWorkflowLimit: numeric(form.skillWorkflowLimit),
-    knowledgeCapacityGb: numeric(form.knowledgeCapacityGb),
-    openApiQps: numeric(form.openApiQps),
-    openApiConcurrency: numeric(form.openApiConcurrency),
-    openApiCredentialLimit: numeric(form.openApiCredentialLimit),
-    connectorLimit: numeric(form.connectorLimit),
-    meetingConcurrency: numeric(form.meetingConcurrency),
-    traceRetentionDays: numeric(form.traceRetentionDays),
-    auditRetentionDays: numeric(form.auditRetentionDays),
-    environmentLimit: numeric(form.environmentLimit),
-    overageMode: form.overageMode,
-    slaTierCode: form.slaTierCode.trim() || null,
-    addonCategory: form.addonCategory.trim() || null,
-    pricingUnit: form.pricingUnit.trim() || null,
-    policyJson: form.policyJson.trim() || "{}",
-    changeReason: form.changeReason.trim(),
-  };
-}
-
-function formatTs(ts?: string | null): string {
-  if (!ts) return "未发布";
-  const d = new Date(ts);
-  if (Number.isNaN(d.getTime())) return ts;
-  return d.toLocaleString();
-}
-
-function billingTypeLabel(value: string): string {
-  switch (value) {
-    case "platform_paid":
-      return "平台代付资源";
-    case "customer_paid":
-      return "客户自担资源";
-    case "included":
-      return "套餐内权益";
-    case "non_billable":
-      return "不计费";
-    default:
-      return value || "未知";
-  }
-}
-
-function overageLabel(value: string): string {
-  switch (value) {
+function overageLabel(mode: string): string {
+  switch (mode) {
     case "auto_charge":
       return "自动超额";
     case "soft_limit":
       return "软限制";
     case "hard_limit":
       return "硬限制";
+    case "contract_only":
+      return "合同额度";
     default:
-      return value || "未知";
+      return mode || "未配置";
   }
 }
 
+function billingTypeLabel(type: string): string {
+  switch (type) {
+    case "customer_paid":
+      return "客户侧成本";
+    case "platform_paid":
+      return "平台代付";
+    case "included":
+      return "套餐内";
+    case "non_billable":
+      return "不计费";
+    default:
+      return type || "未配置";
+  }
+}
+
+function packageTypeLabel(type: string): string {
+  switch (type) {
+    case "capacity":
+      return "容量包";
+    case "module":
+      return "模块包";
+    case "service":
+      return "服务包";
+    case "sla":
+      return "SLA";
+    case "credits":
+      return "Credits";
+    default:
+      return type || "未分类";
+  }
+}
+
+function formatLimit(value: number | null | undefined): string {
+  return value == null ? "合同约定" : value.toLocaleString("zh-CN");
+}
+
+function formatDateTime(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value || "—";
+  return new Intl.DateTimeFormat("zh-CN", {
+    timeZone: "Asia/Shanghai",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
+function toNumberOrNull(value: string): number | null {
+  if (value.trim() === "") return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function editionToForm(edition: BillingEdition): EditionForm {
+  return {
+    displayName: edition.displayName,
+    description: edition.description,
+    enabled: edition.enabled,
+    operationSeatLimit: edition.operationSeatLimit,
+    builderSeatLimit: edition.builderSeatLimit,
+    agentLimit: edition.agentLimit,
+    skillLimit: edition.skillLimit,
+    workflowLimit: edition.workflowLimit,
+    knowledgeBaseLimit: edition.knowledgeBaseLimit,
+    documentLimit: edition.documentLimit,
+    chunkLimit: edition.chunkLimit,
+    knowledgeStorageMb: edition.knowledgeStorageMb,
+    openApiQps: edition.openApiQps,
+    openApiConcurrency: edition.openApiConcurrency,
+    openApiCredentialLimit: edition.openApiCredentialLimit,
+    connectorLimit: edition.connectorLimit,
+    meetingMinutesConcurrency: edition.meetingMinutesConcurrency,
+    traceRetentionDays: edition.traceRetentionDays,
+    auditRetentionDays: edition.auditRetentionDays,
+    environmentLimit: edition.environmentLimit,
+    includedCredits: edition.includedCredits,
+    overageMode: edition.overageMode,
+    billingTypePolicy: edition.billingTypePolicy,
+    slaTierCode: edition.slaTierCode,
+    topUpPolicy: edition.topUpPolicy,
+    localModelTokenPolicy: edition.localModelTokenPolicy,
+    platformPaidResourcePolicy: edition.platformPaidResourcePolicy,
+    packageCodes: edition.packageCodes,
+    packageCodesText: edition.packageCodes.join(", "),
+    reason: "",
+  };
+}
+
+function numericInput(value: number | null, onChange: (value: number | null) => void) {
+  return (
+    <input
+      value={value ?? ""}
+      placeholder="合同约定"
+      inputMode="numeric"
+      onChange={(event) => onChange(toNumberOrNull(event.target.value))}
+    />
+  );
+}
+
+export const platformBillingLabels = {
+  deploymentLabel,
+  overageLabel,
+  billingTypeLabel,
+  packageTypeLabel,
+  formatLimit,
+};
+
 export default function PlatformBillingPage() {
   const token = readToken();
-  const [items, setItems] = useState<BillingConfigItem[]>([]);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [form, setForm] = useState<BillingConfigForm>(defaultForm);
-  const [filter, setFilter] = useState("ALL");
+  const [catalog, setCatalog] = useState<BillingCatalog | null>(null);
+  const [modeFilter, setModeFilter] = useState("private_deployment");
+  const [selectedEditionCode, setSelectedEditionCode] = useState("");
+  const [selectedPackageCode, setSelectedPackageCode] = useState("");
+  const [editionForm, setEditionForm] = useState<EditionForm | null>(null);
+  const [packageForm, setPackageForm] = useState({ displayName: "", description: "", packageType: "capacity", enabled: true, configJson: "{}", reason: "" });
   const [saving, setSaving] = useState(false);
-  const [notice, setNotice] = useState("");
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const selected = useMemo(() => items.find((item) => item.id === selectedId) ?? null, [items, selectedId]);
-  const visibleItems = useMemo(
-    () => (filter === "ALL" ? items : items.filter((item) => item.itemType === filter)),
-    [filter, items],
+  const selectedEdition = useMemo(
+    () => catalog?.editions.find((item) => item.editionCode === selectedEditionCode) ?? null,
+    [catalog, selectedEditionCode],
   );
-  const publishedCount = items.filter((item) => item.publishStatus === "PUBLISHED").length;
-  const draftCount = items.filter((item) => item.publishStatus === "DRAFT").length;
+  const selectedPackage = useMemo(
+    () => catalog?.packages.find((item) => item.packageCode === selectedPackageCode) ?? null,
+    [catalog, selectedPackageCode],
+  );
 
-  async function loadItems(preferredId?: number | null) {
+  async function loadCatalog(preferredEdition?: string, preferredPackage?: string) {
     if (!token) return;
     setError("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/billing/plans`, {
+      const res = await fetch(`${PLATFORM_API_BASE}/billing/catalog?deploymentMode=${encodeURIComponent(modeFilter)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.message || "加载计费配置失败");
-      const rows = (json.data ?? []) as BillingConfigItem[];
-      setItems(rows);
-      const nextId = preferredId ?? selectedId ?? rows[0]?.id ?? null;
-      setSelectedId(nextId);
-      const next = rows.find((item) => item.id === nextId) ?? rows[0] ?? null;
-      if (next) {
-        setForm(formFromItem(next));
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "加载计费配置失败");
+      const nextCatalog = json.data as BillingCatalog;
+      setCatalog(nextCatalog);
+      const nextEditionCode = preferredEdition || selectedEditionCode || nextCatalog.editions[0]?.editionCode || "";
+      setSelectedEditionCode(nextEditionCode);
+      const nextEdition = nextCatalog.editions.find((item) => item.editionCode === nextEditionCode) ?? nextCatalog.editions[0] ?? null;
+      setEditionForm(nextEdition ? editionToForm(nextEdition) : null);
+      const nextPackageCode = preferredPackage || selectedPackageCode || nextCatalog.packages[0]?.packageCode || "";
+      setSelectedPackageCode(nextPackageCode);
+      const nextPackage = nextCatalog.packages.find((item) => item.packageCode === nextPackageCode) ?? nextCatalog.packages[0] ?? null;
+      if (nextPackage) {
+        setPackageForm({
+          displayName: nextPackage.displayName,
+          description: nextPackage.description,
+          packageType: nextPackage.packageType,
+          enabled: nextPackage.enabled,
+          configJson: nextPackage.configJson,
+          reason: "",
+        });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载计费配置失败");
@@ -296,73 +267,73 @@ export default function PlatformBillingPage() {
   }
 
   useEffect(() => {
-    void loadItems();
+    void loadCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, modeFilter]);
 
   useEffect(() => {
-    if (!selected) return;
-    setForm(formFromItem(selected));
-  }, [selected]);
+    if (selectedEdition) setEditionForm(editionToForm(selectedEdition));
+  }, [selectedEdition]);
 
-  function updateField<K extends keyof BillingConfigForm>(key: K, value: BillingConfigForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
+  useEffect(() => {
+    if (!selectedPackage) return;
+    setPackageForm({
+      displayName: selectedPackage.displayName,
+      description: selectedPackage.description,
+      packageType: selectedPackage.packageType,
+      enabled: selectedPackage.enabled,
+      configJson: selectedPackage.configJson,
+      reason: "",
+    });
+  }, [selectedPackage]);
 
-  async function submitDraft(createNew: boolean) {
+  async function saveEdition() {
+    if (!selectedEdition || !editionForm) return;
     setSaving(true);
     setError("");
-    setNotice("");
+    setMessage("");
     try {
-      const response = await fetch(
-        createNew || !selected ? `${PLATFORM_API_BASE}/billing/plans` : `${PLATFORM_API_BASE}/billing/plans/${selected.id}`,
-        {
-          method: createNew || !selected ? "POST" : "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(buildBillingPayload(form)),
+      const packageCodes = editionForm.packageCodesText.split(",").map((item) => item.trim()).filter(Boolean);
+      const res = await fetch(`${PLATFORM_API_BASE}/billing/editions/${selectedEdition.editionCode}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-      );
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.message || "保存计费配置失败");
-      const saved = json.data as BillingConfigItem;
-      setNotice(`已保存 ${saved.displayName} v${saved.versionNo} 草稿。`);
-      await loadItems(saved.id);
+        body: JSON.stringify({ ...editionForm, packageCodes }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "保存版本配置失败");
+      setMessage(`已保存 ${selectedEdition.displayName}，新版本 v${json.data.versionNo}。`);
+      await loadCatalog(selectedEdition.editionCode, selectedPackageCode);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存计费配置失败");
+      setError(err instanceof Error ? err.message : "保存版本配置失败");
     } finally {
       setSaving(false);
     }
   }
 
-  async function runAction(action: "publish" | "enabled", enabled?: boolean) {
-    if (!selected) return;
+  async function savePackage() {
+    if (!selectedPackage) return;
     setSaving(true);
     setError("");
-    setNotice("");
+    setMessage("");
     try {
-      const response = await fetch(
-        action === "publish"
-          ? `${PLATFORM_API_BASE}/billing/plans/${selected.id}/publish`
-          : `${PLATFORM_API_BASE}/billing/plans/${selected.id}/enabled`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(action === "publish" ? { changeReason: form.changeReason } : { enabled, changeReason: form.changeReason }),
+      JSON.parse(packageForm.configJson);
+      const res = await fetch(`${PLATFORM_API_BASE}/billing/packages/${selectedPackage.packageCode}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-      );
-      const json = await response.json();
-      if (!response.ok || !json.success) throw new Error(json.message || "执行计费配置动作失败");
-      const saved = json.data as BillingConfigItem;
-      setNotice(action === "publish" ? `已发布 ${saved.displayName} v${saved.versionNo}。` : `已更新 ${saved.displayName} 启停状态。`);
-      await loadItems(saved.id);
+        body: JSON.stringify(packageForm),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "保存包配置失败");
+      setMessage(`已保存 ${selectedPackage.displayName}，新版本 v${json.data.versionNo}。`);
+      await loadCatalog(selectedEditionCode, selectedPackage.packageCode);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "执行计费配置动作失败");
+      setError(err instanceof Error ? err.message : "保存包配置失败");
     } finally {
       setSaving(false);
     }
@@ -373,223 +344,271 @@ export default function PlatformBillingPage() {
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
           <h1 className="skills-catalog__title">计费版本配置</h1>
-          <p className="subtle skills-catalog__subtitle">维护 SaaS、私有化版本、容量包、服务包、SLA 与 Credits 策略，所有高风险变更必须留下原因。</p>
+          <p className="subtle skills-catalog__subtitle">维护 SaaS 与私有化版本、容量包、模块包、服务包和 Credits 策略。</p>
         </div>
         <div className="platform-page-head__aside">
-          <span className="platform-inline-stat">配置 {items.length}</span>
-          <span className="platform-inline-stat">已发布 {publishedCount}</span>
-          <span className="platform-inline-stat">草稿 {draftCount}</span>
+          <span className="platform-inline-stat">当前模式 {deploymentLabel(catalog?.currentDeploymentMode ?? "")}</span>
+          <span className="platform-inline-stat">版本 {catalog?.editions.length ?? 0}</span>
+          <span className="platform-inline-stat">包 {catalog?.packages.length ?? 0}</span>
         </div>
       </header>
 
+      <div className="platform-billing__toolbar" role="group" aria-label="部署模式">
+        <button type="button" className={modeFilter === "private_deployment" ? "active" : ""} onClick={() => setModeFilter("private_deployment")}>
+          私有化
+        </button>
+        <button type="button" className={modeFilter === "saas" ? "active" : ""} onClick={() => setModeFilter("saas")}>
+          SaaS
+        </button>
+      </div>
+
       {error ? <div className="platform-console__banner platform-console__banner--error">{error}</div> : null}
-      {notice ? <div className="platform-console__banner platform-console__banner--success">{notice}</div> : null}
+      {message ? <div className="platform-console__banner platform-console__banner--success">{message}</div> : null}
 
-      <section className="platform-console__stats platform-billing__stats">
-        <article className="platform-console__stat">
-          <span>SaaS 版本</span>
-          <strong>{items.filter((item) => item.deploymentMode === "saas" && item.itemType === "PLAN").length}</strong>
-        </article>
-        <article className="platform-console__stat">
-          <span>私有化版本</span>
-          <strong>{items.filter((item) => item.deploymentMode === "private_deployment" && item.itemType === "PLAN").length}</strong>
-        </article>
-        <article className="platform-console__stat">
-          <span>扩展包</span>
-          <strong>{items.filter((item) => item.itemType !== "PLAN").length}</strong>
-        </article>
-        <article className="platform-console__stat">
-          <span>启用项</span>
-          <strong>{items.filter((item) => item.enabled).length}</strong>
-        </article>
-      </section>
-
-      <div className="platform-billing">
-        <section className="platform-console__panel skills-table-wrap platform-billing__list">
-          <div className="platform-billing__toolbar">
-            <select value={filter} onChange={(event) => setFilter(event.target.value)}>
-              <option value="ALL">全部类型</option>
-              <option value="PLAN">版本套餐</option>
-              <option value="CAPACITY_PACK">容量包</option>
-              <option value="MODULE_PACK">模块包</option>
-              <option value="SERVICE_PACK">服务包</option>
-              <option value="SLA_TIER">SLA</option>
-              <option value="CREDITS_POLICY">Credits 策略</option>
-            </select>
-            <button
-              type="button"
-              className="platform-button platform-button--secondary"
-              onClick={() => {
-                setSelectedId(null);
-                setForm(defaultForm);
-              }}
-            >
-              新建
-            </button>
-          </div>
-          <table className="skills-data-table platform-billing__table">
+      <div className="platform-console__grid platform-billing__grid">
+        <section className="platform-console__panel skills-table-wrap">
+          <table className="skills-data-table platform-billing__edition-table">
             <thead>
               <tr>
-                <th>配置项</th>
-                <th>模式</th>
                 <th>版本</th>
-                <th>状态</th>
-                <th>策略</th>
+                <th>席位</th>
+                <th>容量</th>
+                <th>计费策略</th>
+                <th>版本号</th>
               </tr>
             </thead>
             <tbody>
-              {visibleItems.map((item) => (
+              {(catalog?.editions ?? []).map((edition) => (
                 <tr
-                  key={item.id}
-                  className={`platform-console__select-row${item.id === selectedId ? " platform-console__row--active" : ""}`}
-                  onClick={() => setSelectedId(item.id)}
-                  tabIndex={0}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") setSelectedId(item.id);
-                  }}
+                  key={edition.editionCode}
+                  className={`platform-console__select-row${edition.editionCode === selectedEditionCode ? " platform-console__row--active" : ""}`}
+                  onClick={() => setSelectedEditionCode(edition.editionCode)}
                 >
                   <td>
-                    <div className="skills-data-table__skill-name">{item.displayName}</div>
-                    <div className="skills-data-table__skill-code">{itemTypeLabel(item.itemType)} · {item.itemCode}</div>
+                    <div className="skills-data-table__skill-name">{edition.displayName}</div>
+                    <div className="skills-data-table__sub">{deploymentLabel(edition.deploymentMode)} · {edition.enabled ? "启用" : "停用"}</div>
                   </td>
-                  <td>{deploymentModeLabel(item.deploymentMode)}</td>
-                  <td>v{item.versionNo}</td>
-                  <td>{publishStatusLabel(item.publishStatus)} · {item.enabled ? "启用" : "停用"}</td>
-                  <td>{billingTypeLabel(item.billingTypePolicy)}</td>
+                  <td>{formatLimit(edition.operationSeatLimit)} / {formatLimit(edition.builderSeatLimit)}</td>
+                  <td>{formatLimit(edition.agentLimit)} Agent · {formatLimit(edition.knowledgeStorageMb)} MB</td>
+                  <td>{billingTypeLabel(edition.billingTypePolicy)} · {overageLabel(edition.overageMode)}</td>
+                  <td className="skills-data-table__mono">v{edition.versionNo}</td>
                 </tr>
               ))}
+              {!catalog?.editions.length ? (
+                <tr>
+                  <td colSpan={5} className="skills-data-table__summary">当前部署模式还没有计费版本。</td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </section>
 
-        <section className="platform-console__panel platform-billing__detail">
-          <div className="platform-console__section">
-            <p className="platform-section-label">当前配置</p>
-            <h2 className="platform-console__heading">{selected ? selected.displayName : "新建计费配置"}</h2>
-            <p className="skills-data-table__summary">
-              {selected
-                ? `${itemTypeLabel(selected.itemType)} · v${selected.versionNo} · ${publishStatusLabel(selected.publishStatus)} · 更新于 ${formatTs(selected.updatedAt)}`
-                : "创建新的套餐、扩展包或策略项。"}
-            </p>
-            {selected ? (
-              <div className="platform-console__badges">
-                <span className="skills-pill">{deploymentModeLabel(selected.deploymentMode)}</span>
-                <span className="skills-pill">{overageLabel(selected.overageMode)}</span>
-                <span className="skills-pill">已发布 v{selected.publishedVersionNo ?? "—"}</span>
-                <span className="skills-pill">共 {selected.versionCount} 版</span>
+        <section className="platform-console__panel">
+          {selectedEdition && editionForm ? (
+            <div className="platform-console__stack">
+              <div className="platform-console__section">
+                <p className="platform-section-label">版本配置</p>
+                <h2 className="platform-console__heading">{selectedEdition.displayName}</h2>
+                <p className="skills-data-table__summary">
+                  {selectedEdition.editionCode} · v{selectedEdition.versionNo} · {formatDateTime(selectedEdition.updatedAt)}
+                </p>
+              </div>
+              <div className="platform-billing__form-grid">
+                <label>
+                  展示名
+                  <input value={editionForm.displayName} onChange={(e) => setEditionForm((prev) => prev && { ...prev, displayName: e.target.value })} />
+                </label>
+                <label className="platform-console__checkbox">
+                  <input type="checkbox" checked={editionForm.enabled} onChange={(e) => setEditionForm((prev) => prev && { ...prev, enabled: e.target.checked })} />
+                  平台启用
+                </label>
+                <label>
+                  操作席位
+                  {numericInput(editionForm.operationSeatLimit, (value) => setEditionForm((prev) => prev && { ...prev, operationSeatLimit: value }))}
+                </label>
+                <label>
+                  构建席位
+                  {numericInput(editionForm.builderSeatLimit, (value) => setEditionForm((prev) => prev && { ...prev, builderSeatLimit: value }))}
+                </label>
+                <label>
+                  Agent 数量
+                  {numericInput(editionForm.agentLimit, (value) => setEditionForm((prev) => prev && { ...prev, agentLimit: value }))}
+                </label>
+                <label>
+                  Skill 数量
+                  {numericInput(editionForm.skillLimit, (value) => setEditionForm((prev) => prev && { ...prev, skillLimit: value }))}
+                </label>
+                <label>
+                  Workflow 数量
+                  {numericInput(editionForm.workflowLimit, (value) => setEditionForm((prev) => prev && { ...prev, workflowLimit: value }))}
+                </label>
+                <label>
+                  知识库数量
+                  {numericInput(editionForm.knowledgeBaseLimit, (value) => setEditionForm((prev) => prev && { ...prev, knowledgeBaseLimit: value }))}
+                </label>
+                <label>
+                  文档数
+                  {numericInput(editionForm.documentLimit, (value) => setEditionForm((prev) => prev && { ...prev, documentLimit: value }))}
+                </label>
+                <label>
+                  Chunk 数
+                  {numericInput(editionForm.chunkLimit, (value) => setEditionForm((prev) => prev && { ...prev, chunkLimit: value }))}
+                </label>
+                <label>
+                  知识容量 MB
+                  {numericInput(editionForm.knowledgeStorageMb, (value) => setEditionForm((prev) => prev && { ...prev, knowledgeStorageMb: value }))}
+                </label>
+                <label>
+                  Open API QPS
+                  {numericInput(editionForm.openApiQps, (value) => setEditionForm((prev) => prev && { ...prev, openApiQps: value }))}
+                </label>
+                <label>
+                  API 并发
+                  {numericInput(editionForm.openApiConcurrency, (value) => setEditionForm((prev) => prev && { ...prev, openApiConcurrency: value }))}
+                </label>
+                <label>
+                  API 凭证数
+                  {numericInput(editionForm.openApiCredentialLimit, (value) => setEditionForm((prev) => prev && { ...prev, openApiCredentialLimit: value }))}
+                </label>
+                <label>
+                  连接器数
+                  {numericInput(editionForm.connectorLimit, (value) => setEditionForm((prev) => prev && { ...prev, connectorLimit: value }))}
+                </label>
+                <label>
+                  听记并发
+                  {numericInput(editionForm.meetingMinutesConcurrency, (value) => setEditionForm((prev) => prev && { ...prev, meetingMinutesConcurrency: value }))}
+                </label>
+                <label>
+                  Trace 保留天数
+                  {numericInput(editionForm.traceRetentionDays, (value) => setEditionForm((prev) => prev && { ...prev, traceRetentionDays: value }))}
+                </label>
+                <label>
+                  审计保留天数
+                  {numericInput(editionForm.auditRetentionDays, (value) => setEditionForm((prev) => prev && { ...prev, auditRetentionDays: value }))}
+                </label>
+                <label>
+                  环境数
+                  {numericInput(editionForm.environmentLimit, (value) => setEditionForm((prev) => prev && { ...prev, environmentLimit: value }))}
+                </label>
+                <label>
+                  包含 Credits
+                  <input value={editionForm.includedCredits ?? 0} inputMode="decimal" onChange={(e) => setEditionForm((prev) => prev && { ...prev, includedCredits: Number(e.target.value) || 0 })} />
+                </label>
+                <label>
+                  超额模式
+                  <select value={editionForm.overageMode} onChange={(e) => setEditionForm((prev) => prev && { ...prev, overageMode: e.target.value })}>
+                    {catalog?.overageModes.map((mode) => <option key={mode} value={mode}>{overageLabel(mode)}</option>)}
+                  </select>
+                </label>
+                <label>
+                  计费类型
+                  <select value={editionForm.billingTypePolicy} onChange={(e) => setEditionForm((prev) => prev && { ...prev, billingTypePolicy: e.target.value })}>
+                    {catalog?.billingTypes.map((type) => <option key={type} value={type}>{billingTypeLabel(type)}</option>)}
+                  </select>
+                </label>
+                <label>
+                  SLA 层级
+                  <input value={editionForm.slaTierCode} onChange={(e) => setEditionForm((prev) => prev && { ...prev, slaTierCode: e.target.value })} />
+                </label>
+                <label>
+                  加购策略
+                  <input value={editionForm.topUpPolicy} onChange={(e) => setEditionForm((prev) => prev && { ...prev, topUpPolicy: e.target.value })} />
+                </label>
+                <label className="platform-console__field--full">
+                  关联包编码
+                  <input value={editionForm.packageCodesText} onChange={(e) => setEditionForm((prev) => prev && { ...prev, packageCodesText: e.target.value })} />
+                </label>
+                <label className="platform-console__field--full">
+                  本地模型 token 策略
+                  <textarea rows={3} value={editionForm.localModelTokenPolicy} onChange={(e) => setEditionForm((prev) => prev && { ...prev, localModelTokenPolicy: e.target.value })} />
+                </label>
+                <label className="platform-console__field--full">
+                  平台代付资源策略
+                  <textarea rows={3} value={editionForm.platformPaidResourcePolicy} onChange={(e) => setEditionForm((prev) => prev && { ...prev, platformPaidResourcePolicy: e.target.value })} />
+                </label>
+                <label className="platform-console__field--full">
+                  说明
+                  <textarea rows={3} value={editionForm.description} onChange={(e) => setEditionForm((prev) => prev && { ...prev, description: e.target.value })} />
+                </label>
+                <label className="platform-console__field--full">
+                  变更原因
+                  <textarea rows={3} value={editionForm.reason} onChange={(e) => setEditionForm((prev) => prev && { ...prev, reason: e.target.value })} />
+                </label>
+              </div>
+              <div className="platform-console__actions">
+                <button type="button" className="primary" disabled={saving || !editionForm.reason.trim()} onClick={saveEdition}>保存版本</button>
+              </div>
+            </div>
+          ) : (
+            <p className="skills-data-table__summary">请选择一个版本。</p>
+          )}
+        </section>
+
+        <section className="platform-console__panel platform-console__panel--full">
+          <div className="platform-billing__package-layout">
+            <div className="skills-table-wrap">
+              <table className="skills-data-table">
+                <thead>
+                  <tr>
+                    <th>包</th>
+                    <th>类型</th>
+                    <th>状态</th>
+                    <th>版本</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(catalog?.packages ?? []).map((item) => (
+                    <tr
+                      key={item.packageCode}
+                      className={`platform-console__select-row${item.packageCode === selectedPackageCode ? " platform-console__row--active" : ""}`}
+                      onClick={() => setSelectedPackageCode(item.packageCode)}
+                    >
+                      <td>
+                        <div className="skills-data-table__skill-name">{item.displayName}</div>
+                        <div className="skills-data-table__sub">{item.packageCode}</div>
+                      </td>
+                      <td>{packageTypeLabel(item.packageType)}</td>
+                      <td>{item.enabled ? "启用" : "停用"}</td>
+                      <td className="skills-data-table__mono">v{item.versionNo}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {selectedPackage ? (
+              <div className="platform-billing__package-form">
+                <h3 className="platform-console__subheading">{selectedPackage.displayName}</h3>
+                <label>
+                  展示名
+                  <input value={packageForm.displayName} onChange={(e) => setPackageForm((prev) => ({ ...prev, displayName: e.target.value }))} />
+                </label>
+                <label>
+                  类型
+                  <select value={packageForm.packageType} onChange={(e) => setPackageForm((prev) => ({ ...prev, packageType: e.target.value }))}>
+                    {catalog?.packageTypes.map((type) => <option key={type} value={type}>{packageTypeLabel(type)}</option>)}
+                  </select>
+                </label>
+                <label className="platform-console__checkbox">
+                  <input type="checkbox" checked={packageForm.enabled} onChange={(e) => setPackageForm((prev) => ({ ...prev, enabled: e.target.checked }))} />
+                  平台启用
+                </label>
+                <label>
+                  说明
+                  <textarea rows={3} value={packageForm.description} onChange={(e) => setPackageForm((prev) => ({ ...prev, description: e.target.value }))} />
+                </label>
+                <label>
+                  配置 JSON
+                  <textarea rows={7} value={packageForm.configJson} onChange={(e) => setPackageForm((prev) => ({ ...prev, configJson: e.target.value }))} />
+                </label>
+                <label>
+                  变更原因
+                  <textarea rows={3} value={packageForm.reason} onChange={(e) => setPackageForm((prev) => ({ ...prev, reason: e.target.value }))} />
+                </label>
+                <div className="platform-console__actions">
+                  <button type="button" className="primary" disabled={saving || !packageForm.reason.trim()} onClick={savePackage}>保存包</button>
+                </div>
               </div>
             ) : null}
-          </div>
-
-          <div className="platform-console__section">
-            <h3 className="platform-console__subheading">基础信息</h3>
-            <div className="platform-console__form-grid">
-              <label>
-                类型
-                <select value={form.itemType} onChange={(event) => updateField("itemType", event.target.value)}>
-                  <option value="PLAN">版本套餐</option>
-                  <option value="CAPACITY_PACK">容量包</option>
-                  <option value="MODULE_PACK">模块包</option>
-                  <option value="SERVICE_PACK">服务包</option>
-                  <option value="SLA_TIER">SLA</option>
-                  <option value="CREDITS_POLICY">Credits 策略</option>
-                </select>
-              </label>
-              <label>
-                内部代码
-                <input value={form.itemCode} onChange={(event) => updateField("itemCode", event.target.value)} />
-              </label>
-              <label>
-                中文名称
-                <input value={form.displayName} onChange={(event) => updateField("displayName", event.target.value)} />
-              </label>
-              <label>
-                部署模式
-                <select value={form.deploymentMode} onChange={(event) => updateField("deploymentMode", event.target.value)}>
-                  <option value="saas">SaaS</option>
-                  <option value="private_deployment">私有化</option>
-                  <option value="all">通用</option>
-                </select>
-              </label>
-              <label>
-                计费策略
-                <select value={form.billingTypePolicy} onChange={(event) => updateField("billingTypePolicy", event.target.value)}>
-                  <option value="platform_paid">平台代付资源</option>
-                  <option value="customer_paid">客户自担资源</option>
-                  <option value="included">套餐内权益</option>
-                  <option value="non_billable">不计费</option>
-                </select>
-              </label>
-              <label>
-                超额模式
-                <select value={form.overageMode} onChange={(event) => updateField("overageMode", event.target.value)}>
-                  <option value="auto_charge">自动超额</option>
-                  <option value="soft_limit">软限制</option>
-                  <option value="hard_limit">硬限制</option>
-                </select>
-              </label>
-              <label className="platform-console__checkbox">
-                <input type="checkbox" checked={form.enabled} onChange={(event) => updateField("enabled", event.target.checked)} />
-                平台启用
-              </label>
-            </div>
-          </div>
-
-          <div className="platform-console__section">
-            <h3 className="platform-console__subheading">控制指标</h3>
-            <div className="platform-console__form-grid platform-billing__metric-grid">
-              <label>Work Credits<input value={form.includedCredits} onChange={(event) => updateField("includedCredits", event.target.value)} /></label>
-              <label>操作席位<input value={form.operationSeatLimit} onChange={(event) => updateField("operationSeatLimit", event.target.value)} /></label>
-              <label>构建席位<input value={form.builderSeatLimit} onChange={(event) => updateField("builderSeatLimit", event.target.value)} /></label>
-              <label>Agent 数<input value={form.agentLimit} onChange={(event) => updateField("agentLimit", event.target.value)} /></label>
-              <label>Skill/Workflow<input value={form.skillWorkflowLimit} onChange={(event) => updateField("skillWorkflowLimit", event.target.value)} /></label>
-              <label>知识容量 GB<input value={form.knowledgeCapacityGb} onChange={(event) => updateField("knowledgeCapacityGb", event.target.value)} /></label>
-              <label>Open API QPS<input value={form.openApiQps} onChange={(event) => updateField("openApiQps", event.target.value)} /></label>
-              <label>Open API 并发<input value={form.openApiConcurrency} onChange={(event) => updateField("openApiConcurrency", event.target.value)} /></label>
-              <label>凭证数<input value={form.openApiCredentialLimit} onChange={(event) => updateField("openApiCredentialLimit", event.target.value)} /></label>
-              <label>连接器<input value={form.connectorLimit} onChange={(event) => updateField("connectorLimit", event.target.value)} /></label>
-              <label>听记并发<input value={form.meetingConcurrency} onChange={(event) => updateField("meetingConcurrency", event.target.value)} /></label>
-              <label>环境数<input value={form.environmentLimit} onChange={(event) => updateField("environmentLimit", event.target.value)} /></label>
-              <label>Trace 保留天<input value={form.traceRetentionDays} onChange={(event) => updateField("traceRetentionDays", event.target.value)} /></label>
-              <label>审计保留天<input value={form.auditRetentionDays} onChange={(event) => updateField("auditRetentionDays", event.target.value)} /></label>
-              <label>SLA 代码<input value={form.slaTierCode} onChange={(event) => updateField("slaTierCode", event.target.value)} /></label>
-              <label>定价单位<input value={form.pricingUnit} onChange={(event) => updateField("pricingUnit", event.target.value)} /></label>
-              <label>包分类<input value={form.addonCategory} onChange={(event) => updateField("addonCategory", event.target.value)} /></label>
-            </div>
-          </div>
-
-          <div className="platform-console__section">
-            <h3 className="platform-console__subheading">策略与审计</h3>
-            <div className="platform-console__form-grid">
-              <label className="platform-console__field--full">
-                策略 JSON
-                <textarea rows={5} value={form.policyJson} onChange={(event) => updateField("policyJson", event.target.value)} />
-              </label>
-              <label className="platform-console__field--full">
-                变更原因
-                <textarea rows={3} value={form.changeReason} onChange={(event) => updateField("changeReason", event.target.value)} />
-              </label>
-            </div>
-          </div>
-
-          <div className="platform-console__actions platform-billing__actions">
-            <button type="button" className="platform-button platform-button--secondary" disabled={saving} onClick={() => void submitDraft(true)}>
-              另存新草稿
-            </button>
-            <button type="button" className="platform-button platform-button--primary" disabled={saving} onClick={() => void submitDraft(false)}>
-              保存草稿
-            </button>
-            <button type="button" className="platform-button platform-button--secondary" disabled={saving || !selected} onClick={() => void runAction("publish")}>
-              发布版本
-            </button>
-            <button
-              type="button"
-              className="platform-button platform-button--secondary"
-              disabled={saving || !selected}
-              onClick={() => void runAction("enabled", !selected?.enabled)}
-            >
-              {selected?.enabled ? "停用" : "启用"}
-            </button>
           </div>
         </section>
       </div>

@@ -1,20 +1,25 @@
 package com.codehouse.ciciassistant.billing.api;
 
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
-import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
-import com.codehouse.ciciassistant.billing.service.BillingEditionConfigService;
-import com.codehouse.ciciassistant.billing.service.BillingEditionConfigService.BillingEditionConfigCommand;
-import com.codehouse.ciciassistant.billing.service.BillingEditionConfigService.BillingEditionConfigView;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.BillingCatalogView;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.BillingChangeLogView;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.BillingEditionView;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.BillingPackageView;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.EditionUpdateCommand;
+import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.PackageUpdateCommand;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,111 +27,130 @@ import org.springframework.web.bind.annotation.RestController;
 @RequirePlatformRole
 public class PlatformBillingController {
 
-    private final BillingEditionConfigService billingEditionConfigService;
-    private final PlatformAccountProperties platformAccountProperties;
+    private final BillingEditionConfigurationService billingEditionConfigurationService;
 
-    public PlatformBillingController(BillingEditionConfigService billingEditionConfigService,
-                                     PlatformAccountProperties platformAccountProperties) {
-        this.billingEditionConfigService = billingEditionConfigService;
-        this.platformAccountProperties = platformAccountProperties;
+    public PlatformBillingController(BillingEditionConfigurationService billingEditionConfigurationService) {
+        this.billingEditionConfigurationService = billingEditionConfigurationService;
     }
 
-    @GetMapping("/plans")
-    public ApiResponse<List<BillingEditionConfigView>> listBillingPlans() {
-        return ApiResponse.ok(billingEditionConfigService.list(platformScopeId()));
+    @GetMapping("/catalog")
+    public ApiResponse<BillingCatalogView> catalog(@RequestParam(required = false) String deploymentMode,
+                                                   @RequestParam(required = false) String packageType) {
+        return ApiResponse.ok(billingEditionConfigurationService.catalog(deploymentMode, packageType));
     }
 
-    @PostMapping("/plans")
-    public ApiResponse<BillingEditionConfigView> createBillingPlanDraft(@Valid @RequestBody BillingConfigRequest request) {
-        return ApiResponse.ok(billingEditionConfigService.createDraft(platformScopeId(), request.toCommand()));
+    @PutMapping("/editions/{editionCode}")
+    public ApiResponse<BillingEditionView> updateEdition(@PathVariable String editionCode,
+                                                         @Valid @RequestBody EditionUpdateRequest request) {
+        return ApiResponse.ok(billingEditionConfigurationService.updateEdition(editionCode,
+                new EditionUpdateCommand(
+                        request.displayName(),
+                        request.description(),
+                        request.enabled(),
+                        request.operationSeatLimit(),
+                        request.builderSeatLimit(),
+                        request.agentLimit(),
+                        request.skillLimit(),
+                        request.workflowLimit(),
+                        request.knowledgeBaseLimit(),
+                        request.documentLimit(),
+                        request.chunkLimit(),
+                        request.knowledgeStorageMb(),
+                        request.openApiQps(),
+                        request.openApiConcurrency(),
+                        request.openApiCredentialLimit(),
+                        request.connectorLimit(),
+                        request.meetingMinutesConcurrency(),
+                        request.traceRetentionDays(),
+                        request.auditRetentionDays(),
+                        request.environmentLimit(),
+                        request.includedCredits(),
+                        request.overageMode(),
+                        request.billingTypePolicy(),
+                        request.slaTierCode(),
+                        request.topUpPolicy(),
+                        request.localModelTokenPolicy(),
+                        request.platformPaidResourcePolicy(),
+                        request.packageCodes(),
+                        request.reason()
+                ),
+                actorId(),
+                actorRole()));
     }
 
-    @PutMapping("/plans/{id}")
-    public ApiResponse<BillingEditionConfigView> updateBillingPlanDraft(@PathVariable Long id,
-                                                                        @Valid @RequestBody BillingConfigRequest request) {
-        return ApiResponse.ok(billingEditionConfigService.updateAsDraft(platformScopeId(), id, request.toCommand()));
+    @PutMapping("/packages/{packageCode}")
+    public ApiResponse<BillingPackageView> updatePackage(@PathVariable String packageCode,
+                                                         @Valid @RequestBody PackageUpdateRequest request) {
+        return ApiResponse.ok(billingEditionConfigurationService.updatePackage(packageCode,
+                new PackageUpdateCommand(
+                        request.displayName(),
+                        request.description(),
+                        request.enabled(),
+                        request.packageType(),
+                        request.configJson(),
+                        request.reason()
+                ),
+                actorId(),
+                actorRole()));
     }
 
-    @PostMapping("/plans/{id}/publish")
-    public ApiResponse<BillingEditionConfigView> publishBillingPlan(@PathVariable Long id,
-                                                                    @Valid @RequestBody BillingActionRequest request) {
-        return ApiResponse.ok(billingEditionConfigService.publish(platformScopeId(), id, request.changeReason()));
+    @GetMapping("/history/{configType}/{configCode}")
+    public ApiResponse<List<BillingChangeLogView>> history(@PathVariable String configType,
+                                                           @PathVariable String configCode) {
+        return ApiResponse.ok(billingEditionConfigurationService.history(configType, configCode));
     }
 
-    @PostMapping("/plans/{id}/enabled")
-    public ApiResponse<BillingEditionConfigView> setBillingPlanEnabled(@PathVariable Long id,
-                                                                       @Valid @RequestBody BillingEnabledRequest request) {
-        return ApiResponse.ok(billingEditionConfigService.setEnabled(platformScopeId(), id, request.enabled(), request.changeReason()));
+    private String actorId() {
+        return TenantContext.getUserId().orElse("platform");
     }
 
-    private String platformScopeId() {
-        String configured = platformAccountProperties.getGovernanceOrgId();
-        return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
+    private String actorRole() {
+        return TenantContext.getRoles().stream()
+                .filter(role -> role.startsWith("PLATFORM_"))
+                .findFirst()
+                .orElse("PLATFORM");
     }
 
-    public record BillingConfigRequest(
-            @NotBlank String itemType,
-            @NotBlank String itemCode,
+    public record EditionUpdateRequest(
             @NotBlank String displayName,
-            @NotBlank String deploymentMode,
+            String description,
             Boolean enabled,
-            @NotBlank String billingTypePolicy,
-            Integer includedCredits,
             Integer operationSeatLimit,
             Integer builderSeatLimit,
             Integer agentLimit,
-            Integer skillWorkflowLimit,
-            Integer knowledgeCapacityGb,
+            Integer skillLimit,
+            Integer workflowLimit,
+            Integer knowledgeBaseLimit,
+            Integer documentLimit,
+            Integer chunkLimit,
+            Integer knowledgeStorageMb,
             Integer openApiQps,
             Integer openApiConcurrency,
             Integer openApiCredentialLimit,
             Integer connectorLimit,
-            Integer meetingConcurrency,
+            Integer meetingMinutesConcurrency,
             Integer traceRetentionDays,
             Integer auditRetentionDays,
             Integer environmentLimit,
+            BigDecimal includedCredits,
             @NotBlank String overageMode,
-            String slaTierCode,
-            String addonCategory,
-            String pricingUnit,
-            String policyJson,
-            @NotBlank String changeReason
+            @NotBlank String billingTypePolicy,
+            @NotBlank String slaTierCode,
+            @NotBlank String topUpPolicy,
+            @NotBlank String localModelTokenPolicy,
+            String platformPaidResourcePolicy,
+            List<String> packageCodes,
+            @NotBlank String reason
     ) {
-        BillingEditionConfigCommand toCommand() {
-            return new BillingEditionConfigCommand(
-                    itemType,
-                    itemCode,
-                    displayName,
-                    deploymentMode,
-                    enabled,
-                    billingTypePolicy,
-                    includedCredits,
-                    operationSeatLimit,
-                    builderSeatLimit,
-                    agentLimit,
-                    skillWorkflowLimit,
-                    knowledgeCapacityGb,
-                    openApiQps,
-                    openApiConcurrency,
-                    openApiCredentialLimit,
-                    connectorLimit,
-                    meetingConcurrency,
-                    traceRetentionDays,
-                    auditRetentionDays,
-                    environmentLimit,
-                    overageMode,
-                    slaTierCode,
-                    addonCategory,
-                    pricingUnit,
-                    policyJson,
-                    changeReason
-            );
-        }
     }
 
-    public record BillingActionRequest(@NotBlank String changeReason) {
-    }
-
-    public record BillingEnabledRequest(boolean enabled, @NotBlank String changeReason) {
+    public record PackageUpdateRequest(
+            @NotBlank String displayName,
+            String description,
+            Boolean enabled,
+            @NotBlank String packageType,
+            @NotBlank String configJson,
+            @NotBlank String reason
+    ) {
     }
 }
