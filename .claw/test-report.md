@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-29T13:24:50Z
+updated_at: 2026-05-29T14:17:31Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-29T13:24:50Z
+last_run_at: 2026-05-29T14:17:31Z
 last_run_status: success
 ---
 
@@ -13,11 +13,23 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 merged into latest `origin/main` on integration branch
-- 命令：backend focused billing tests, frontend billing tests, and frontend production build
+- 范围：TASK-143 admin billing page visual polish on integration branch
+- 命令：authorization gate, Vite route/API smoke checks, frontend production build, Playwright desktop visual checks
 - 环境：`codex/integrate-TASK-143-main` against local Docker PostgreSQL `cici-postgres`
 
 ## Latest Verified Results
+
+- TASK-143 admin billing page visual polish (2026-05-29T14:17:31Z):
+  - Commands:
+    - `authorization`: `dev-login.py .claw --developer MANAGER-001 --branch codex/integrate-TASK-143-main --files frontend/src/styles.css frontend/vite.config.ts frontend/vite.config.js .claw/test-report.md --no-cache --json` -> **success**.
+    - `page-route`: `curl -sS -D - http://127.0.0.1:5173/admin/billing` -> **success**, returned `200 OK` HTML from Vite.
+    - `api-proxy`: `curl -sS -D - http://127.0.0.1:5173/admin/billing/overview` without token -> **success**, returned backend JSON `403` organization-admin permission response.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `browser-visual`: Playwright screenshot checks for `/admin/billing` top and scrolled main content -> **success**.
+  - Notes:
+    - Adjusted admin billing spacing so entitlement/quota panels, progress block, summary cards, and billing tables no longer render content against borders.
+    - Narrowed Vite billing proxy to API subpaths so the SPA route `/admin/billing` continues to return frontend HTML while `/admin/billing/*` API endpoints still proxy to the backend.
 
 - TASK-143 integration branch with latest main (2026-05-29T13:24:50Z):
   - Commands:

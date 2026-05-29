@@ -16661,12 +16661,13 @@ td.skills-data-table__actions > * {
 
 .admin-billing-page {
   display: grid;
-  gap: 14px;
+  gap: 16px;
   color: #2b2217;
 }
 
 .admin-billing-header {
   align-items: flex-start;
+  gap: 14px;
 }
 
 .admin-billing-summary {
@@ -16708,7 +16709,8 @@ td.skills-data-table__actions > * {
   display: grid;
   align-content: center;
   gap: 6px;
-  padding: 16px;
+  min-width: 0;
+  padding: 18px 22px;
   border-right: 1px solid #d8c7a6;
 }
 
@@ -16728,14 +16730,16 @@ td.skills-data-table__actions > * {
   color: #2b2217;
   font-size: 20px;
   font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .admin-billing-progress {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   border: 1px solid #ded2bb;
   background: #fffdf8;
-  padding: 12px;
+  padding: 14px 20px 16px;
 }
 
 .admin-billing-progress__bar {
@@ -16759,7 +16763,7 @@ td.skills-data-table__actions > * {
 .admin-billing-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(320px, 0.85fr);
-  gap: 14px;
+  gap: 16px;
 }
 
 .admin-billing-grid--tables {
@@ -16781,7 +16785,8 @@ td.skills-data-table__actions > * {
 .admin-billing-entitlements div {
   display: grid;
   gap: 5px;
-  padding: 11px 0;
+  min-width: 0;
+  padding: 14px 18px;
   border-bottom: 1px solid #ded2bb;
 }
 
@@ -16790,20 +16795,25 @@ td.skills-data-table__actions > * {
   color: #2b2217;
   font-size: 13px;
   font-weight: 750;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .admin-billing-note {
-  margin: 12px 0 0;
+  margin: 0;
+  padding: 14px 18px 0;
   color: #5f523f;
   font-size: 12px;
   line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .admin-billing-packages {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
+  margin-top: 0;
+  padding: 10px 18px 18px;
 }
 
 .admin-billing-packages span {
@@ -16826,7 +16836,8 @@ td.skills-data-table__actions > * {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   align-items: center;
-  padding: 10px 0;
+  min-width: 0;
+  padding: 14px 18px;
   border-bottom: 1px solid #ded2bb;
 }
 
@@ -16834,12 +16845,15 @@ td.skills-data-table__actions > * {
 .admin-billing-domain-row span {
   color: #2b2217;
   font-size: 13px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .admin-billing-quota span {
   color: #8b6f2d;
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .admin-billing-quota--critical span {
@@ -16860,11 +16874,41 @@ td.skills-data-table__actions > * {
 .admin-billing-domain-row strong {
   color: #2b2217;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .admin-billing-domain-row small {
   color: #7c6d59;
   font-size: 11px;
+  white-space: nowrap;
+}
+
+.admin-billing-table {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.admin-billing-table th,
+.admin-billing-table td {
+  min-width: 0 !important;
+  padding: 11px 14px;
+  vertical-align: top;
+}
+
+.admin-billing-table th:nth-child(1),
+.admin-billing-table td:nth-child(1) {
+  width: 96px;
+}
+
+.admin-billing-table th:nth-child(3),
+.admin-billing-table td:nth-child(3),
+.admin-billing-table th:nth-child(4),
+.admin-billing-table td:nth-child(4) {
+  width: 86px;
+}
+
+.admin-billing-table td {
+  overflow-wrap: anywhere;
 }
 
 .admin-billing-table td small,
@@ -16887,6 +16931,12 @@ td.skills-data-table__actions > * {
 .admin-billing-negative {
   color: #8f4a32;
   font-weight: 800;
+}
+
+.admin-billing-panel:not(:has(.admin-ops-panel__head)) {
+  padding: 18px;
+  color: #6f604a;
+  font-size: 13px;
 }
 
 @media (max-width: 1080px) {
