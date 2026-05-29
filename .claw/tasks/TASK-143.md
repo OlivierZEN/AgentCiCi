@@ -8,7 +8,7 @@ branch: codex/TASK-143-billing-edition-config
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-143.yaml
-updated_at: 2026-05-29T01:40:22Z
+updated_at: 2026-05-29T13:02:05Z
 updated_by: MANAGER-001
 ---
 
@@ -79,12 +79,18 @@ The platform operations console must become the source of truth for edition cont
 - 2026-05-29T01:40:22Z: added `@RequireOrgAdmin` to organization-admin billing APIs so ordinary organization members do not receive org-level billing balance and ledger access by default.
 - 2026-05-29T01:40:22Z: `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in mirrored `backend/` -> success.
 - 2026-05-29T01:40:22Z: `git diff --check` in TASK-143 worktree -> success.
-- Blocked: billing Spring integration tests could not obtain a local PostgreSQL connection in this session even with `127.0.0.1` and `[::1]` datasource attempts; no code assertions ran in those integration tests.
+- 2026-05-29T13:02:05Z: diagnosed previous PostgreSQL failures:
+  - Earlier surefire root cause was `java.net.SocketException: Operation not permitted`, caused by the previous execution sandbox blocking Java TCP connections.
+  - After network permission was restored, `127.0.0.1:5432` reached an IPv4 listener/old forwarded database state and failed Flyway validation with V61 checksum mismatch.
+  - Docker PostgreSQL was reachable through IPv6 `jdbc:postgresql://[::1]:5432/agentcici_test`; the `agentcici_test` public schema was reset and Flyway migrated cleanly to v61.
+- 2026-05-29T13:02:05Z: made `AdminBillingIntegrationTest` self-contained by registering a fresh organization administrator instead of relying on pre-existing local account `13900009999`.
+- 2026-05-29T13:02:05Z: `SPRING_DATASOURCE_URL='jdbc:postgresql://[::1]:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in mirrored `backend/` -> success, 3 integration tests passed.
 
 ## Changed Files
 
 - `backend/src/main/resources/db/migration/V61__billing_edition_configuration.sql` creates configurable edition, package, change-log, organization subscription, usage event, and credits ledger tables.
 - `backend/src/main/java/com/codehouse/ciciassistant/billing/**` adds edition/package entities, organization subscription and ledger entities, repositories, seed bootstrap, platform APIs, organization admin read APIs, update services, versioning, reason capture, and platform audit logging.
+- `backend/src/test/java/com/codehouse/ciciassistant/billing/AdminBillingIntegrationTest.java` covers the organization-admin billing API chain from registered admin token through overview, subscription, usage events, ledger, and quota.
 - `backend/src/test/java/com/codehouse/ciciassistant/billing/api/AdminBillingControllerTest.java` covers current-organization billing overview delegation and the organization-admin permission annotation.
 - `backend/src/test/java/com/codehouse/ciciassistant/billing/PlatformBillingConfigurationIntegrationTest.java` covers catalog defaults, private/SaaS semantics, package update, reason validation, and audit expectations.
 - `frontend/src/admin/pages/AdminBillingPage.tsx` adds `/admin/billing` with current edition, credits summary, quota status, usage distribution, ledger, and usage event details.
@@ -97,4 +103,4 @@ The platform operations console must become the source of truth for edition cont
 
 - Assigned to Owen (`MANAGER-001`) on 2026-05-28.
 - Assigned branch: `codex/TASK-143-billing-edition-config`.
-- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build checks. Final review prep still needs cleanup of the current staged/untracked worktree state and a rerun of Spring billing integration tests once local PostgreSQL is reachable.
+- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build/integration checks. Use IPv6 PostgreSQL URL `jdbc:postgresql://[::1]:5432/agentcici_test` for local billing integration tests because `127.0.0.1:5432` can hit a stale IPv4 listener/forwarder on this machine.

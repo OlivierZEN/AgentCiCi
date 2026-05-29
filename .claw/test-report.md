@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-29T01:40:22Z
+updated_at: 2026-05-29T13:02:05Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-29T01:40:22Z
+last_run_at: 2026-05-29T13:02:05Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 organization-admin billing chain
-- 命令：task-scoped `dev-login.py`, mirrored `mvn -q -DskipTests compile`, mirrored `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test`, mirrored `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts`, mirrored `npm run build`, `git diff --check`
-- 环境：`/private/tmp/task143-verify` mirror for build output because active `/Users/...` worktree cannot write build artifacts under sandbox
+- 范围：TASK-143 billing integration tests
+- 命令：reset `agentcici_test` public schema, then `SPRING_DATASOURCE_URL='jdbc:postgresql://[::1]:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test`
+- 环境：`/private/tmp/task143-verify` mirror against local Docker PostgreSQL `cici-postgres`
 
 ## Latest Verified Results
+
+- TASK-143 billing integration tests (2026-05-29T13:02:05Z):
+  - Commands:
+    - `db-internal`: `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> **success**, database accepting connections.
+    - `db-reset`: reset `agentcici_test` `public` schema before the final run because the local test DB had an older applied V61 checksum -> **success**.
+    - `backend-integration`: `SPRING_DATASOURCE_URL='jdbc:postgresql://[::1]:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in `/private/tmp/task143-verify/backend` -> **success**, 3 integration tests passed and Flyway migrated a clean schema to v61.
+  - Notes:
+    - Previous connection failures were not caused by TASK-143 code. Earlier surefire showed `java.net.SocketException: Operation not permitted` from the execution sandbox blocking Java TCP.
+    - After network access was restored, `127.0.0.1:5432` reached stale IPv4 listener/forwarder state and produced V61 checksum mismatch. The working local route is `jdbc:postgresql://[::1]:5432/agentcici_test`.
+    - `AdminBillingIntegrationTest` now registers its own organization administrator instead of relying on pre-existing local account data.
 
 - TASK-143 organization-admin billing chain (2026-05-29T01:10:28Z):
   - Commands:

@@ -30,7 +30,7 @@ class AdminBillingIntegrationTest {
 
     @Test
     void organizationAdminCanReadOwnBillingChain() throws Exception {
-        String token = adminToken("13900009999");
+        String token = registerAdminToken("13902414301");
 
         MvcResult overviewResult = mockMvc.perform(get("/admin/billing/overview")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
@@ -69,20 +69,20 @@ class AdminBillingIntegrationTest {
                 .andExpect(jsonPath("$.data[0].code").value("credits"));
     }
 
-    private String adminToken(String mobile) throws Exception {
-        MvcResult loginResult = mockMvc.perform(post("/auth/password/login")
+    private String registerAdminToken(String mobile) throws Exception {
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "identifierType": "mobile",
-                                  "identifierValue": "%s",
-                                  "password": "szyd1234"
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "TASK-143 计费验证组织"
                                 }
                                 """.formatted(mobile)))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        return readJson(loginResult).path("data").path("token").asText();
+        return readJson(registerResult).path("data").path("token").asText();
     }
 
     private JsonNode readJson(MvcResult result) throws Exception {
