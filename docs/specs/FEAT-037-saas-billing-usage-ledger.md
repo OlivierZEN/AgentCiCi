@@ -32,6 +32,18 @@ updated_by: MANAGER-001
 
 首版成功标准不是“能收费”，而是“未来收费不会乱”：同一业务事实只进一个计量事件，事件可幂等去重，rating 可版本化复算，ledger 只追加不改写，页面能解释 credits 从哪里来。
 
+## 2026-05-29 Organization Admin Billing Confirmation
+
+组织管理员必须能在 `/admin/billing` 查看本组织的当前版本、订阅状态、席位和容量权益、包含 credits、剩余 credits、消耗比例、quota 状态、按域消耗分布、最近 usage meter events 和 credits ledger 明细。
+
+可见性边界：
+
+- 组织管理员只能查看当前组织，不支持跨组织查询。
+- 普通成员可在后续运行详情中查看单次运行 credits 解释，但不默认开放组织级余额、ledger、top-up 或合同额度。
+- 平台运营继续通过 `/platform/billing` 管理版本、套餐、容量包、服务包、SLA、credits 策略，并保留跨组织查看和人工调整能力。
+
+首版实现可以先用 deterministic seed 补足默认订阅、usage events 和 ledger，保证组织管理员侧形成完整可用链路；后续 runtime metering 接入后，这些读视图保持不变，事实来源从 seed 过渡为真实事件。
+
 ## Goal
 
 Implement the first production-shaped SaaS billing foundation for AgentCiCi:
@@ -372,13 +384,15 @@ Scope:
 - platform-configurable edition definitions for `saas_team`, `saas_business`, `saas_enterprise`, `private_department`, `private_enterprise`, and `private_group`
 - configurable capacity packs, module packs, service packs, SLA tiers, and credits policies
 - platform APIs and UI for editing billing edition indicators with audit reason capture
-- read models that later feed admin billing overview, rating, quota, and tenant subscription views
+- organization-admin read APIs and `/admin/billing` view for current edition, credits balance, usage events, ledger, and quota status
+- read models that later feed rating, quota enforcement, and tenant subscription views
 
 Notes:
 
 - This task should not hard-code edition limits in frontend copy or backend constants.
 - Capacity and service add-ons remain separate from edition names.
 - Private deployment mode must not default to charging customer-owned local model token usage.
+- Organization-admin billing data is current-organization scoped only; cross-organization inspection remains a platform operation.
 
 ## Acceptance Criteria
 

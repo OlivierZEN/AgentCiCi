@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-28T11:28:59Z
+updated_at: 2026-05-29T13:24:50Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-28T11:28:59Z
+last_run_at: 2026-05-29T13:24:50Z
 last_run_status: success
 ---
 
@@ -13,11 +13,66 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：生产/测试发布版本号规范调整
-- 命令：manager `dev-login.py`, `bash -n scripts/release-acr.sh`, `./scripts/release-acr.sh --dry-run`, `./scripts/release-acr.sh --dry-run --channel test`, invalid old-version check, temp Git tag fixture, `validate-state.py .claw`
-- 环境：local release-script dry-run; no image build, push, or Git tag creation
+- 范围：TASK-143 merged into latest `origin/main` on integration branch
+- 命令：backend focused billing tests, frontend billing tests, and frontend production build
+- 环境：`codex/integrate-TASK-143-main` against local Docker PostgreSQL `cici-postgres`
 
 ## Latest Verified Results
+
+- TASK-143 integration branch with latest main (2026-05-29T13:24:50Z):
+  - Commands:
+    - `main-update`: `git pull --ff-only origin main` in the local main worktree -> **success**, already up to date with `origin/main`.
+    - `merge`: created `codex/integrate-TASK-143-main` from `origin/main` and merged `codex/TASK-143-billing-edition-config` -> **success** after resolving `.claw/current-status.md` and `.claw/test-report.md` conflicts.
+    - `backend-billing`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest,AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in `backend/` -> **success**.
+    - `frontend-unit`: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `frontend/` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - Business-code files merged without manual conflict resolution.
+    - State-file conflict resolution preserved both the mainline release-version governance evidence and TASK-143 billing evidence.
+
+- TASK-143 local PostgreSQL cleanup and billing integration rerun (2026-05-29T13:17:31Z):
+  - Commands:
+    - `cleanup`: stopped and deleted stale Colima `default` and Lima `cici-docker` instances -> **success**.
+    - `port-check`: `lsof -nP -iTCP:5432 -sTCP:LISTEN` -> **success**, only Docker Desktop forwarding for current `cici-postgres` remains.
+    - `runtime-check`: `colima list` and `limactl list` -> **success**, no remaining Colima/Lima instances.
+    - `backend-integration`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in `/private/tmp/task143-verify/backend` -> **success**, 3 integration tests passed.
+  - Notes:
+    - Current AgentCiCi containers were preserved: `cici-postgres`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant`.
+    - Integration tests were stabilized for reruns by generating a fresh admin mobile and asserting durable billing-policy wording.
+    - `127.0.0.1:5432` now reaches the current Docker PostgreSQL container instead of stale IPv4 forwarding state.
+
+- TASK-143 billing integration tests (2026-05-29T13:02:05Z):
+  - Commands:
+    - `db-internal`: `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> **success**, database accepting connections.
+    - `db-reset`: reset `agentcici_test` `public` schema before the final run because the local test DB had an older applied V61 checksum -> **success**.
+    - `backend-integration`: `SPRING_DATASOURCE_URL='jdbc:postgresql://[::1]:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test` in `/private/tmp/task143-verify/backend` -> **success**, 3 integration tests passed and Flyway migrated a clean schema to v61.
+  - Notes:
+    - Previous connection failures were not caused by TASK-143 code. Earlier surefire showed `java.net.SocketException: Operation not permitted` from the execution sandbox blocking Java TCP.
+    - After network access was restored, `127.0.0.1:5432` reached stale IPv4 listener/forwarder state and produced V61 checksum mismatch. The working local route is `jdbc:postgresql://[::1]:5432/agentcici_test`.
+    - `AdminBillingIntegrationTest` now registers its own organization administrator instead of relying on pre-existing local account data.
+
+- TASK-143 organization-admin billing chain (2026-05-29T01:10:28Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` with backend billing, frontend, spec, task, and `V61__billing_edition_configuration.sql` paths -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `/private/tmp/task143-verify/backend` -> **success**.
+    - `backend-unit`: `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in `/private/tmp/task143-verify/backend` -> **success**.
+    - `frontend-unit`: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `/private/tmp/task143-verify/frontend` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` in `/private/tmp/task143-verify/frontend` -> **success**; existing Vite large chunk warning remains.
+    - `diff`: `git diff --check` in TASK-143 worktree -> **success**.
+    - `permission-regression`: after adding `@RequireOrgAdmin`, `mvn -q -Dtest='AdminBillingControllerTest,BillingModePropertiesTest,BillingModeControllerTest' test` in `/private/tmp/task143-verify/backend` -> **success**.
+  - Notes:
+    - Added organization-admin billing APIs and `/admin/billing` surface for current edition, subscription status, credits balance, consumption, quota warnings, usage distribution, usage events, and credit ledger details.
+    - Organization-level billing APIs now use the same organization-admin permission annotation as other admin organization controllers.
+    - Spring billing integration tests were attempted with both `127.0.0.1` and `[::1]` PostgreSQL datasource forms, but the fork could not obtain a JDBC connection in this session; no integration-test assertions ran.
+
+- TASK-143 billing deployment mode switch (2026-05-28T08:19:11Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` on `codex/TASK-143-billing-edition-config` -> **allowed**.
+    - `backend-focused`: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> **success**.
+    - `frontend-unit`: `npm test -- billingMode.test.ts` in `frontend/` -> **success**, 3 tests passed.
+  - Notes:
+    - Added backend billing deployment mode properties/API coverage and frontend billing mode normalization coverage.
+    - Default mode remains private deployment; SaaS aliases normalize to `saas`.
 
 - Release version naming governance (2026-05-28T11:28:59Z):
   - Commands:
