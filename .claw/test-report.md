@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-29T14:17:31Z
+updated_at: 2026-05-30T11:32:30Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-29T14:17:31Z
+last_run_at: 2026-05-30T11:32:30Z
 last_run_status: success
 ---
 
@@ -13,11 +13,28 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 admin billing page visual polish on integration branch
-- 命令：authorization gate, Vite route/API smoke checks, frontend production build, Playwright desktop visual checks
-- 环境：`codex/integrate-TASK-143-main` against local Docker PostgreSQL `cici-postgres`
+- 范围：TASK-114 SaaS runtime billing, real credits debit, official pricing item visibility, and admin billing desktop QA
+- 命令：`SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test`
+- 环境：`/private/tmp/task114-billing-live` isolated worktree against local Docker PostgreSQL `cici-postgres`
 
 ## Latest Verified Results
+
+- TASK-114 SaaS runtime billing and credits deduction (2026-05-30T11:32:30Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-114` on `codex/TASK-114-feat-037-billing-ledger` -> **allowed**.
+    - `design-preflight`: `impeccable` context load plus `frontend-design` product/design fact-source review for the admin billing UI adjustment -> **success**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `/private/tmp/task114-billing-live/backend` -> **success**.
+    - `backend-billing-tests`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` -> **success**.
+    - `frontend-unit`: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `/private/tmp/task114-billing-live/frontend` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` in `/private/tmp/task114-billing-live/frontend` -> **success**; existing Vite large chunk warning remains.
+    - `saas-metering-debit`: billable chat metering integration trace through `BillingUsageMeteringService`, then `/admin/billing/overview`, `/usage-events`, and `/ledger` -> **success**. Initial credits were 50,000; one billable trace produced `conversation_credit=1`, `model_token_credit=0.5`, and `workflow_credit=0.2`; consumed credits became 1.7, remaining credits became 49,998.3, duplicate replay did not double-charge, and all usage events exposed `officialPricingItem=Credits 包`.
+    - `saas-api-smoke`: SaaS backend on `127.0.0.1:18080`, new org registration, real `/ai/chat`, then `/admin/billing/overview`, `/usage-events`, and `/ledger` -> **success**. Local Aliyun API key is not configured, so the real chat produced `non_billable` `conversation_credit` and `workflow_credit` usage facts with 0 credits; consumed credits remained 0 and ledger had no `usage_debit`, matching the platform-error-not-billable rule.
+    - `vite-proxy-smoke`: `GET /admin/billing` through Vite returned HTML while `GET /admin/billing/overview` returned JSON -> **success** after narrowing proxy to billing API subpaths.
+    - `browser`: Playwright desktop QA for `/admin/billing` -> **success**. Page showed 49,998.8 remaining credits, usage debit ledger rows, consumption rows with `官网报价条目 · Credits 包`, normal default quota state `1 / 20` and `0 / 1`, and console errors `0`; screenshot `.playwright-cli/page-2026-05-30T11-32-09-874Z.png`.
+  - Notes:
+    - Runtime billing now writes real usage meter events from chat execution and writes append-only `usage_debit` ledger entries only for billable successful runs.
+    - SaaS edition credits and add-on package seed values were aligned to the public Pricing fact source used by the website: team 50,000, business 250,000, enterprise 1,000,000 plus Credits, knowledge capacity, document processing, concurrency/builder, and launch service packages.
+    - Fixed issues found during production-style QA: cross-org idempotency collision, ledger balance ordering under same-second events, missing `officialPricingItem` in org-admin DTO/UI, missing billing API Vite proxy, over-broad billing page proxy, and demo default seat overuse on new organizations.
 
 - TASK-143 admin billing page visual polish (2026-05-29T14:17:31Z):
   - Commands:

@@ -37,6 +37,7 @@ public class AdminBillingService {
     private final UsageMeterEventRepository usageMeterEventRepository;
     private final BillingCreditLedgerRepository creditLedgerRepository;
     private final BillingEditionConfigurationService configurationService;
+    private final BillingUsageMeteringService usageMeteringService;
     private final BillingModeProperties billingModeProperties;
     private final ObjectMapper objectMapper;
 
@@ -46,6 +47,7 @@ public class AdminBillingService {
                                UsageMeterEventRepository usageMeterEventRepository,
                                BillingCreditLedgerRepository creditLedgerRepository,
                                BillingEditionConfigurationService configurationService,
+                               BillingUsageMeteringService usageMeteringService,
                                BillingModeProperties billingModeProperties,
                                ObjectMapper objectMapper) {
         this.subscriptionRepository = subscriptionRepository;
@@ -54,6 +56,7 @@ public class AdminBillingService {
         this.usageMeterEventRepository = usageMeterEventRepository;
         this.creditLedgerRepository = creditLedgerRepository;
         this.configurationService = configurationService;
+        this.usageMeteringService = usageMeteringService;
         this.billingModeProperties = billingModeProperties;
         this.objectMapper = objectMapper;
     }
@@ -64,7 +67,7 @@ public class AdminBillingService {
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode())
                 .orElseThrow();
         List<UsageMeterEventEntity> events = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(orgId);
-        List<BillingCreditLedgerEntity> ledger = creditLedgerRepository.findTop50ByOrgIdOrderByOccurredAtDesc(orgId);
+        List<BillingCreditLedgerEntity> ledger = creditLedgerRepository.findTop50ByOrgIdOrderByIdDesc(orgId);
         return new AdminBillingOverviewView(
                 toSubscriptionView(subscription, edition),
                 toCreditSummary(subscription),
@@ -94,7 +97,7 @@ public class AdminBillingService {
     @Transactional
     public List<LedgerEntryView> ledger(String orgId) {
         ensureBillingState(orgId);
-        return creditLedgerRepository.findTop50ByOrgIdOrderByOccurredAtDesc(orgId).stream()
+        return creditLedgerRepository.findTop50ByOrgIdOrderByIdDesc(orgId).stream()
                 .map(this::toLedgerView)
                 .toList();
     }
@@ -108,13 +111,7 @@ public class AdminBillingService {
     }
 
     private BillingSubscriptionEntity ensureBillingState(String orgId) {
-        configurationService.ensureDefaultCatalog();
-        BillingSubscriptionEntity subscription = subscriptionRepository.findByOrgId(orgId)
-                .orElseGet(() -> createDefaultSubscription(orgId));
-        if (!usageMeterEventRepository.existsByOrgId(orgId)) {
-            seedUsageAndLedger(subscription);
-        }
-        return refreshSubscriptionBalance(subscription);
+        return usageMeteringService.ensureBillingState(orgId);
     }
 
     private BillingSubscriptionEntity createDefaultSubscription(String orgId) {
@@ -128,8 +125,8 @@ public class AdminBillingService {
         BigDecimal included = effectiveIncludedCredits(edition);
         subscription.setIncludedCredits(included);
         subscription.setRemainingCredits(included);
-        subscription.setOperationSeatsUsed(7);
-        subscription.setBuilderSeatsUsed(2);
+        subscription.setOperationSeatsUsed(1);
+        subscription.setBuilderSeatsUsed(0);
         subscription.setPackageCodes(edition.getPackageCodes());
         subscription.setUpdatedAt(now);
         return subscriptionRepository.save(subscription);
@@ -200,8 +197,10 @@ public class AdminBillingService {
     }
 
     private BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
-        BigDecimal consumed = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(subscription.getOrgId()).stream()
-                .map(UsageMeterEventEntity::getWorkCreditQuantity)
+        BigDecimal consumed = creditLedgerRepository.findByOrgIdOrderByOccurredAtAsc(subscription.getOrgId()).stream()
+                .filter(item -> "usage_debit".equals(item.getEntryType()))
+                .map(BillingCreditLedgerEntity::getCreditsDelta)
+                .map(BigDecimal::abs)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
         subscription.setConsumedCredits(consumed);
@@ -304,7 +303,8 @@ public class AdminBillingService {
     private UsageEventView toUsageEventView(UsageMeterEventEntity item) {
         return new UsageEventView(item.getId(), item.getBillableDomain(), domainLabel(item.getBillableDomain()),
                 item.getBillableItemCode(), item.getDescription(), item.getAgentId(), item.getQuantity(), item.getUnit(),
-                item.getWorkCreditQuantity(), item.getBillingType(), item.getStatus(), item.getOccurredAt().toString());
+                item.getWorkCreditQuantity(), item.getBillingType(), readOfficialPricingItem(item.getMetadataJson()),
+                item.getStatus(), item.getOccurredAt().toString());
     }
 
     private String deploymentLabel(String mode) {
@@ -333,6 +333,20 @@ public class AdminBillingService {
             });
         } catch (JsonProcessingException ex) {
             return List.of();
+        }
+    }
+
+    private String readOfficialPricingItem(String json) {
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, Object> metadata = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
+            });
+            Object value = metadata.get("officialPricingItem");
+            return value == null ? null : String.valueOf(value);
+        } catch (JsonProcessingException ex) {
+            return null;
         }
     }
 
@@ -411,6 +425,7 @@ public class AdminBillingService {
                                  String unit,
                                  BigDecimal credits,
                                  String billingType,
+                                 String officialPricingItem,
                                  String status,
                                  String occurredAt) {
     }

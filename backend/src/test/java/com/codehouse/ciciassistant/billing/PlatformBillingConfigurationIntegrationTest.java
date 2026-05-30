@@ -95,7 +95,13 @@ class PlatformBillingConfigurationIntegrationTest {
         JsonNode saasBusiness = findByField(saasCatalog.path("editions"), "editionCode", "saas_business");
         assertThat(saasBusiness).isNotNull();
         assertThat(saasBusiness.path("billingTypePolicy").asText()).isEqualTo("platform_paid");
-        assertThat(saasBusiness.path("includedCredits").decimalValue()).isPositive();
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_team").path("includedCredits").decimalValue())
+                .isEqualByComparingTo("50000");
+        assertThat(saasBusiness.path("includedCredits").decimalValue()).isEqualByComparingTo("250000");
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_enterprise").path("includedCredits").decimalValue())
+                .isEqualByComparingTo("1000000");
+        assertThat(saasCatalog.path("packages")).extracting(node -> node.path("displayName").asText())
+                .contains("SaaS Credits 加购包", "知识库容量包", "文档处理包", "并发与构建扩展", "上线服务包");
 
         mockMvc.perform(put("/platform/billing/packages/{packageCode}", "private_capacity_pack")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)

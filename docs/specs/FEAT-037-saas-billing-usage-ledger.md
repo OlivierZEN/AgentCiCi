@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-037
 title: SaaS Billing Usage Ledger
-status: in_design
+status: implemented
 owner_role: project-manager
 task_ids: TASK-114
 related_decisions: FEAT-003, FEAT-022
 related_issues: none
-updated_at: 2026-05-28T09:35:00Z
+updated_at: 2026-05-30T11:32:30Z
 updated_by: MANAGER-001
 ---
 
@@ -43,6 +43,37 @@ updated_by: MANAGER-001
 - 平台运营继续通过 `/platform/billing` 管理版本、套餐、容量包、服务包、SLA、credits 策略，并保留跨组织查看和人工调整能力。
 
 首版实现可以先用 deterministic seed 补足默认订阅、usage events 和 ledger，保证组织管理员侧形成完整可用链路；后续 runtime metering 接入后，这些读视图保持不变，事实来源从 seed 过渡为真实事件。
+
+## 2026-05-30 Runtime Billing Completion
+
+本次完成真实运行时计费闭环，组织管理员账单不再依赖演示用量 seed。`ChatOrchestratorService` 在同步和流式聊天路径完成运行后调用 `BillingUsageMeteringService`，把同一次用户聊天拆成可审计的 usage meter events，并按 SaaS 计费策略写入 append-only credits ledger。计费写入失败不得打断用户对话；错误只影响计费事件补偿，不影响聊天响应。
+
+运行时首批扣费项目：
+
+| 计费域 | item code | 官网报价条目 | 首版费率 | 说明 |
+| --- | --- | --- | --- | --- |
+| `assistant_chat` | `conversation_credit` | `Credits 包` | 1.00 credit / turn | 每个用户有效对话轮次基础扣减 |
+| `model_usage` | `model_token_credit` | `Credits 包` | input 0.10 / 1k tokens，output 0.30 / 1k tokens | 基于 model trace token usage；无真实 token 时不产生正向扣减 |
+| `rag_retrieval` | `retrieval_credit` | `Credits 包` | 0.20 / chunk | 按返回上下文 chunk 数扣减 |
+| `tool_call` | `tool_call_credit` | `Credits 包` | 0.50 / call | 按已调度工具调用数扣减 |
+| `workflow_run` | `workflow_credit` | `Credits 包` | 0.20 / run | 对有耗时的运行治理链路计入基础运行成本 |
+
+幂等规则使用 `orgId:sessionId:domain` 作为首版 source id。这样同一组织内同一会话重复提交不会重复扣费，不同组织即使 session id 相同也不会互相抵消。账本余额以 ledger id 顺序取最后余额，避免同秒多事件按时间排序导致余额反读。
+
+SaaS 默认版本和官网 Pricing 事实源对齐：
+
+- `saas_team` / 团队版：50,000 Credits，本期默认操作席位 1，构建席位 0；权益上限为操作席位 20、构建席位 1、Agent 1、文档 5,000 页、知识库 10GB、Open API QPS 20、并发 2、Trace 7 天。
+- `saas_business` / 商业版：250,000 Credits；权益上限为操作席位 100、构建席位 3、Agent 3、文档 50,000 页、知识库 100GB、并发 10、Trace 30 天。
+- `saas_enterprise` / 企业版：1,000,000 Credits；权益上限为操作席位 300、构建席位 8、Agent 10、文档 300,000 页、知识库 1TB、并发 50、Trace 90 天。
+- SaaS 加购包补齐官网报价条目：`SaaS Credits 加购包`、`知识库容量包`、`文档处理包`、`并发与构建扩展`、`上线服务包`。
+
+读视图要求：
+
+- `/admin/billing/overview`、`/usage-events`、`/ledger` 必须展示真实 ledger 推导的 consumed / remaining credits；`customer_paid` 和 `non_billable` 事件可以进入用量事实，但不得消耗 credits。
+- 用量明细必须同时显示内部 `itemCode`、中文说明、`billingType` 和 `officialPricingItem`，确保客户能把系统扣减项映射回官网 Pricing 条目。
+- 平台配置错误、空响应、模型失败等无有效业务结果的聊天必须记录为 `non_billable` 用量事实，不得扣减 conversation/workflow credits；有真实成功回答或测试构造的 billable trace 才能写入 `usage_debit`。
+- 本地开发代理必须只转发 `/admin/billing/overview|subscription|usage-events|ledger|quota` API 子路径，不能转发 `/admin/billing` 页面路由，否则 React 页面会被后端 404 抢走。
+- 新 SaaS 组织默认 quota 状态必须全部正常，不得沿用演示席位用量造成刚创建即超限。
 
 ## Goal
 

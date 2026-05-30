@@ -62,6 +62,7 @@ type UsageEvent = {
   unit: string;
   credits: number;
   billingType: string;
+  officialPricingItem?: string | null;
   status: string;
   occurredAt: string;
 };
@@ -371,7 +372,8 @@ export default function AdminBillingPage() {
                       <td>{formatDateTime(item.occurredAt)}</td>
                       <td>
                         <strong>{item.domainLabel}</strong>
-                        <small>{item.description}</small>
+                        <small>{item.itemCode} · {item.description}</small>
+                        {item.officialPricingItem ? <small>官网报价条目 · {item.officialPricingItem}</small> : null}
                       </td>
                       <td>{item.agentId || "-"} · {billingTypeLabel(item.billingType)}</td>
                       <td>{formatCredits(item.credits)}</td>

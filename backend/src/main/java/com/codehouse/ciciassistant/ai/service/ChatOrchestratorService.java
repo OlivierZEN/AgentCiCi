@@ -16,6 +16,7 @@ import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
 import com.codehouse.ciciassistant.ai.service.RuntimeContextPromptService.RuntimeContext;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
+import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -93,6 +94,7 @@ public class ChatOrchestratorService {
     private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService;
     private final AgentRunTraceService agentRunTraceService;
     private final AgentAccessControlService agentAccessControlService;
+    private final BillingUsageMeteringService billingUsageMeteringService;
     private final TransactionTemplate tx;
 
     public ChatOrchestratorService(ChatSessionRepository chatSessionRepository,
@@ -118,6 +120,7 @@ public class ChatOrchestratorService {
                                    AgentWorkflowExecutionLogService agentWorkflowExecutionLogService,
                                    AgentRunTraceService agentRunTraceService,
                                    AgentAccessControlService agentAccessControlService,
+                                   BillingUsageMeteringService billingUsageMeteringService,
                                    PlatformTransactionManager transactionManager) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -142,6 +145,7 @@ public class ChatOrchestratorService {
         this.agentWorkflowExecutionLogService = agentWorkflowExecutionLogService;
         this.agentRunTraceService = agentRunTraceService;
         this.agentAccessControlService = agentAccessControlService;
+        this.billingUsageMeteringService = billingUsageMeteringService;
         this.tx = new TransactionTemplate(transactionManager);
     }
 
@@ -249,6 +253,8 @@ public class ChatOrchestratorService {
                 wfMs,
                 runStartedAt,
                 Instant.now());
+        recordBillingUsageSafely(orgId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
+                modelCallTraces, toolCallTraces, wfMs, isBillableAssistantAnswer(answer));
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("orgId", orgId);
         payload.put("sessionId", sessionId);
@@ -506,6 +512,8 @@ public class ChatOrchestratorService {
                         wfMs,
                         runStartedAt,
                         Instant.now());
+                recordBillingUsageSafely(orgId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
+                        modelCallTraces, toolCallTraces, wfMs, isBillableAssistantAnswer(finalText));
                 emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true)));
                 emitter.complete();
             } catch (Exception e) {
@@ -886,6 +894,34 @@ public class ChatOrchestratorService {
         } catch (RuntimeException ex) {
             log.warn("agent run trace persistence failed: session={} err={}", sessionId, ex.getMessage());
         }
+    }
+
+    private void recordBillingUsageSafely(String orgId,
+                                          String userId,
+                                          String sessionId,
+                                          String modelName,
+                                          String agentId,
+                                          RagService.RetrievalResult ragResult,
+                                          List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces,
+                                          List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                                          int workflowElapsedMs,
+                                          boolean billable) {
+        billingUsageMeteringService.recordChatRunSafely(new BillingUsageMeteringService.ChatRunMeteringInput(
+                orgId,
+                userId,
+                agentId,
+                sessionId,
+                modelName,
+                modelCallTraces,
+                toolCallTraces,
+                ragResult,
+                workflowElapsedMs,
+                billable,
+                Instant.now()));
+    }
+
+    private static boolean isBillableAssistantAnswer(String content) {
+        return isUsableToolLimitAnswer(content);
     }
 
     private static AgentRunTraceService.StageTraceInput stageTrace(String type,
