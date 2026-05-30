@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-30T11:32:30Z
+updated_at: 2026-05-30T14:02:13Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-30T11:32:30Z
+last_run_at: 2026-05-30T14:02:13Z
 last_run_status: success
 ---
 
@@ -13,11 +13,51 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-114 SaaS runtime billing, real credits debit, official pricing item visibility, and admin billing desktop QA
-- 命令：`SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test`
-- 环境：`/private/tmp/task114-billing-live` isolated worktree against local Docker PostgreSQL `cici-postgres`
+- 范围：local `main` integration for TASK-114 runtime billing, TASK-144 public website restructure, and TASK-145 platform model-provider governance.
+- 命令：backend TASK-145 focused integration, backend billing package tests, frontend billing unit tests, frontend production build, and static diff check.
+- 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Local main integration gate (2026-05-30T14:02:13Z):
+  - Commands:
+    - `identity`: `dev-login.py .claw --developer MANAGER-001 --branch main --json` -> **allowed**.
+    - `conflict-check`: conflict marker scan across resolved state and billing files -> **success**, no markers found.
+    - `static-check`: `git diff --check` -> **success**.
+    - `backend-models`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest,ManagementConsoleIntegrationTest' test` in `backend/` -> **success**.
+    - `backend-billing`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> **success**.
+    - `frontend-unit`: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `frontend/` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - Fixed integration-only compile conflicts by deduplicating `UsageMeterEventRepository.findBySourceTypeAndSourceId` and preserving package-private billing state refresh methods used by `BillingMeteringService`.
+    - `AdminBillingService` conflict resolution preserves the TASK-114 real usage-metering path and TASK-145 model-provider governance changes on local `main`.
+
+- TASK-145 local run smoke (2026-05-30T09:31:34Z):
+  - Commands:
+    - `frontend-dev`: `npm run dev -- --host 127.0.0.1` in `frontend/` -> **success**, Vite served `http://127.0.0.1:5173/`.
+    - `docker`: Docker Desktop was started; existing `cici-postgres`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` containers were started -> **success**.
+    - `backend-dev`: `mvn spring-boot:run -Dspring-boot.run.profiles=local` in `backend/` -> **success**, Spring Boot started on `8080`.
+    - `frontend-smoke`: `curl -I http://127.0.0.1:5173/` -> **success**, HTTP 200.
+    - `backend-health`: `curl http://127.0.0.1:8080/actuator/health` -> **success**, `{"status":"UP"}`.
+    - `platform-login`: `POST /auth/platform/password/login` with local platform admin credentials -> **success**.
+    - `platform-models-api`: `GET /platform/models/providers` with platform token -> **success**, 6 providers returned.
+    - `backend-focused-integration`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest,ManagementConsoleIntegrationTest' test` in `backend/` -> **success**.
+    - `post-test-smoke`: `curl -I http://127.0.0.1:5173/` and `curl http://127.0.0.1:8080/actuator/health` -> **success**, frontend HTTP 200 and backend `UP`.
+  - Notes:
+    - Services were left running for manual local verification in the TASK-145 worktree.
+
+- TASK-145 platform model-provider governance (2026-05-30T09:21:24Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with TASK-145 files -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative backend/frontend TASK-145 paths -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `diff`: `git diff --check` -> **success**.
+    - `backend-integration`: previously blocked before Docker Desktop was available; rerun succeeded in the later local run smoke above.
+  - Notes:
+    - Organization model-provider configuration routes now reject writes/reads for provider setup and redirect the organization UI to billing.
+    - Platform operations now owns `/platform/models` provider governance APIs and UI.
+    - Runtime credentials, Agent base-model options, and knowledge embedding options resolve from the platform governance scope.
 
 - TASK-114 SaaS runtime billing and credits deduction (2026-05-30T11:32:30Z):
   - Commands:

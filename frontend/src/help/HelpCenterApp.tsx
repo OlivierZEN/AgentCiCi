@@ -183,7 +183,7 @@ function HelpHome() {
           {[
             ["登录 AgentCiCi", "确认你使用的是员工端、管理端还是平台端。", "getting-started/accounts-roles"],
             ["选择知识库并提问", "让已发布文档参与员工工作台回答。", "user-workbench/knowledge-selection"],
-            ["配置模型供应商", "为组织对话和智能体运行选择可用模型。", "admin/models/providers"],
+            ["治理模型供应商", "由平台统一控制模型厂商和可用模型。", "platform/models/providers"],
             ["创建 Open API Key", "让外部系统安全调用已发布智能体。", "openapi/api-keys"],
           ].map(([title, summary, slug]) => (
             <Link key={slug} to={toDocPath(slug)}>

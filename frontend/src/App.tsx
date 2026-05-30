@@ -5,7 +5,6 @@ import AdminGuard from "./admin/AdminGuard";
 import AdminLogin from "./admin/AdminLogin";
 import AdminShell from "./admin/AdminShell";
 import AdminKnowledgePage from "./admin/pages/AdminKnowledgePage";
-import AdminModelsPage from "./admin/pages/AdminModelsPage";
 import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
@@ -26,6 +25,7 @@ import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
 import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoServiceDemoRequestsPage";
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
 import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
+import PlatformModelsPage from "./platform/pages/PlatformModelsPage";
 import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
 import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
@@ -56,7 +56,7 @@ export default function App() {
           <Route element={<AdminShell />}>
             <Route index element={<Navigate to="kb" replace />} />
             <Route path="kb" element={<AdminKnowledgePage />} />
-            <Route path="models" element={<AdminModelsPage />} />
+            <Route path="models" element={<Navigate to="billing" replace />} />
             <Route path="tools" element={<AdminToolsPage />} />
             <Route path="skills" element={<AdminSkillsListPage />} />
             <Route path="skills/new" element={<AdminSkillComposePage />} />
@@ -78,6 +78,7 @@ export default function App() {
         <Route path="/platform" element={<PlatformGuard />}>
           <Route element={<PlatformShell />}>
             <Route index element={<PlatformHomePage />} />
+            <Route path="models" element={<PlatformModelsPage />} />
             <Route path="billing" element={<PlatformBillingPage />} />
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />

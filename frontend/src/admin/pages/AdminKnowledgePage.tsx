@@ -1462,7 +1462,7 @@ export default function AdminKnowledgePage() {
                     ))}
                   </select>
                   <span className="subtle">
-                    {embeddingOptions.length === 0 ? "请先在模型配置中启用可提供 embedding 的模型厂商。" : "当前列表来自管理端已启用的模型厂商。"}
+                    {embeddingOptions.length === 0 ? "请联系平台运营启用可提供 embedding 的模型厂商。" : "当前列表来自运营平台统一启用的模型厂商。"}
                   </span>
                 </label>
                 <label className="cici-field">

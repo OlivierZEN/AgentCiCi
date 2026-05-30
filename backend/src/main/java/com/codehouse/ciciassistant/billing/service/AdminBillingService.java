@@ -110,7 +110,7 @@ public class AdminBillingService {
         return quotaWarnings(subscription, edition);
     }
 
-    private BillingSubscriptionEntity ensureBillingState(String orgId) {
+    BillingSubscriptionEntity ensureBillingState(String orgId) {
         return usageMeteringService.ensureBillingState(orgId);
     }
 
@@ -196,7 +196,7 @@ public class AdminBillingService {
                 writeJson(metadata));
     }
 
-    private BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
+    BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
         BigDecimal consumed = creditLedgerRepository.findByOrgIdOrderByOccurredAtAsc(subscription.getOrgId()).stream()
                 .filter(item -> "usage_debit".equals(item.getEntryType()))
                 .map(BillingCreditLedgerEntity::getCreditsDelta)

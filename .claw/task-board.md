@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-29T23:19:35Z
+updated_at: 2026-05-30T13:58:51Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-145 - Platform model provider governance
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-062-platform-model-provider-governance.md`
+- task_status_path: `.claw/tasks/TASK-145.md`
+- assignment_path: `.claw/assignments/TASK-145.yaml`
+- blocked_by: `none`
+- next_action: Included in the local `main` integration merge; run focused backend/frontend integration gates before marking done.
+
 ### TASK-144 - AgentCiCi public website restructure
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-061-agentcici-public-website-restructure.md`
 - task_status_path: `.claw/tasks/TASK-144.md`
 - assignment_path: `.claw/assignments/TASK-144.yaml`
 - blocked_by: `none`
-- next_action: Review local screenshots and build result, then integrate the bilingual public website restructure.
+- next_action: Included in the local `main` integration merge; rerun frontend build and desktop smoke before marking done.
 
 ### TASK-143 - Billing editions configurable in platform operations
 

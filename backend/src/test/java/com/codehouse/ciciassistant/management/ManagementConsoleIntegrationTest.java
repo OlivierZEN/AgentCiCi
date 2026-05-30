@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -32,6 +33,7 @@ class ManagementConsoleIntegrationTest {
     @Test
     void shouldManageKbModelAndToolLifecycle() throws Exception {
         String token = loginToken("13800138111");
+        String toolName = "calendar.read." + UUID.randomUUID().toString().substring(0, 8);
 
         MvcResult createdKb = mockMvc.perform(post("/kb")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -84,29 +86,29 @@ class ManagementConsoleIntegrationTest {
                                   "modelName": "qwen3.5-plus"
                                 }
                                 """))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.sceneCode").value("qa"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("模型厂商和模型路由由运营平台统一配置，组织后台只开放计费用量查看。"));
 
         mockMvc.perform(delete("/models")
                         .queryParam("sceneCode", "qa")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.status").value("DELETED"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").value("模型厂商和模型路由由运营平台统一配置，组织后台只开放计费用量查看。"));
 
         mockMvc.perform(post("/tools")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "toolName": "calendar.read",
+                                  "toolName": "%s",
                                   "description": "read schedules",
                                   "riskLevel": "LOW"
                                 }
-                                """))
+                                """.formatted(toolName)))
                 .andExpect(status().isOk());
 
         mockMvc.perform(delete("/tools")
-                        .queryParam("toolName", "calendar.read")
+                        .queryParam("toolName", toolName)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.enabled").value(false));

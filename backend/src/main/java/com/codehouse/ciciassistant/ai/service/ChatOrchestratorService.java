@@ -1059,7 +1059,7 @@ public class ChatOrchestratorService {
         try {
             Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, providerCode.trim());
             if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-                throw new IllegalArgumentException("当前模型厂商已停用，请先在管理后台启用模型配置。");
+                throw new IllegalArgumentException("当前模型厂商已停用，请联系平台运营启用模型厂商。");
             }
             return new ModelCallCredentials(
                     providerCode.trim(),
@@ -2079,17 +2079,7 @@ public class ChatOrchestratorService {
                 """.trim();
     }
 
-    /**
-     * Use the agent's preferred qwen model only when the routed provider is Aliyun Bailian.
-     * Local OpenAI-compatible providers can expose qwen-family names with different IDs, so
-     * they must use the org-level routed model exactly as configured.
-     */
     private static String resolveModelName(String agentModel, String routedProvider, String routedModelName) {
-        if ("aliyun-bailian".equals(routedProvider)
-                && agentModel != null && !agentModel.isBlank()
-                && agentModel.toLowerCase(Locale.ROOT).startsWith("qwen")) {
-            return agentModel;
-        }
         return routedModelName;
     }
 
