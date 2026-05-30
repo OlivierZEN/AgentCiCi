@@ -49,6 +49,12 @@ type SiteCopy = {
   shared: {
     homeHref: string;
     eyebrow: string;
+    loginLabel: string;
+    loginHref: string;
+    adminLoginLabel: string;
+    adminLoginHref: string;
+    platformLoginLabel: string;
+    platformLoginHref: string;
     footerLine: string;
     demoTitle: string;
     demoIntro: string;
@@ -145,6 +151,12 @@ const COPY: Record<Locale, SiteCopy> = {
     shared: {
       homeHref: "/",
       eyebrow: "AgentCiCi Platform",
+      loginLabel: "登录",
+      loginHref: "/login",
+      adminLoginLabel: "管理后台",
+      adminLoginHref: "/admin/login",
+      platformLoginLabel: "运营平台",
+      platformLoginHref: "/platform/login",
       footerLine: "AgentCiCi 将企业业务系统、知识、渠道和智能体运行治理连接成可执行闭环。",
       demoTitle: "预约一次企业智能体平台演示。",
       demoIntro: "告诉我们你的业务系统、首个场景和部署偏好，我们会按 Solutions、SkillsHub、Pricing 和治理链路准备演示。",
@@ -369,6 +381,12 @@ const COPY: Record<Locale, SiteCopy> = {
     shared: {
       homeHref: "/global",
       eyebrow: "AgentCiCi Platform",
+      loginLabel: "Sign in",
+      loginHref: "/login",
+      adminLoginLabel: "Admin",
+      adminLoginHref: "/admin/login",
+      platformLoginLabel: "Platform",
+      platformLoginHref: "/platform/login",
       footerLine: "AgentCiCi connects business systems, knowledge, channels, and governed agent runtime into executable loops.",
       demoTitle: "Book an enterprise agent platform demo.",
       demoIntro: "Tell us your systems, first workflow, and deployment preference. We will shape a walkthrough across Solutions, SkillsHub, Pricing, and governance.",
@@ -605,6 +623,9 @@ export default function AgentCiciWebsite() {
           <a className="acw-language" href={copy.languageHref}>
             {copy.languageLabel}
           </a>
+          <a className="acw-button acw-button--secondary acw-button--login" href={copy.shared.loginHref}>
+            {copy.shared.loginLabel}
+          </a>
           <a className="acw-button acw-button--primary" href="#demo">
             {copy.demoCta}
           </a>
@@ -622,6 +643,11 @@ export default function AgentCiciWebsite() {
           </a>
         ))}
         <a href={copy.languageHref}>{copy.languageLabel}</a>
+        <a className="acw-mobile-menu__login" href={copy.shared.loginHref}>
+          {copy.shared.loginLabel}
+        </a>
+        <a href={copy.shared.adminLoginHref}>{copy.shared.adminLoginLabel}</a>
+        <a href={copy.shared.platformLoginHref}>{copy.shared.platformLoginLabel}</a>
       </div>
 
       {page === "solutions" ? <SolutionsPage copy={copy} /> : null}
@@ -647,6 +673,9 @@ export default function AgentCiciWebsite() {
               {item.label}
             </a>
           ))}
+          <a href={copy.shared.loginHref}>{copy.shared.loginLabel}</a>
+          <a href={copy.shared.adminLoginHref}>{copy.shared.adminLoginLabel}</a>
+          <a href={copy.shared.platformLoginHref}>{copy.shared.platformLoginLabel}</a>
         </div>
       </footer>
     </main>
@@ -666,6 +695,9 @@ function SolutionsPage({ copy }: { copy: SiteCopy }) {
             </a>
             <a className="acw-button acw-button--secondary" href={copy.nav[1].href}>
               SkillsHub
+            </a>
+            <a className="acw-button acw-button--secondary acw-button--login" href={copy.shared.loginHref}>
+              {copy.shared.loginLabel}
             </a>
           </div>
           <div className="acw-proof">

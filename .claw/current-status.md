@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-30T14:02:13Z
+updated_at: 2026-05-30T14:31:46Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-114, TASK-143, TASK-144, and TASK-145 integrated on local main; focused backend/frontend integration gates pass; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
-next_action: "Commit the local main integration result, then push or continue broader integration testing as needed."
+active_task: "Production website login entry hotfix prepared on local main after TASK-114/143/144/145 integration; focused verification passes; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
+next_action: "Commit and publish the production login-entry hotfix branch/MR, then redeploy production."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- Focus: billing runtime, public website restructure, and platform model-provider governance are integrated on local `main`.
+- Focus: production website login entry hotfix after billing runtime, public website restructure, and platform model-provider governance integration.
+- Hotfix prepared: public website header/mobile/footer now expose login access again, and `/login` plus `/app` route to the employee workbench/login surface.
 - TASK-114 runtime billing is ready for review: billable traces write ledger debits, platform config errors stay non-billable, and org-admin billing shows `官网报价条目 · Credits 包`.
 - TASK-144 implemented locally: public website now uses AgentCiCi enterprise agent platform IA with bilingual `Solutions`, `SkillsHub`, `Pricing`, `Docs`, and `Community`; old `/suite/*`, `/pricing/global`, and `/autoservice/*` public routes redirect to the new structure.
 - TASK-145 integrated locally: model provider configuration moved from organization administration to platform operations; runtime model credentials, Agent base-model options, and embedding options resolve from platform governance scope.

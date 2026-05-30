@@ -41,6 +41,8 @@ export default function App() {
         <Route path="/pricing" element={<AgentCiciWebsite />} />
         <Route path="/docs" element={<AgentCiciWebsite />} />
         <Route path="/community" element={<AgentCiciWebsite />} />
+        <Route path="/login" element={<AssistantApp />} />
+        <Route path="/app" element={<AssistantApp />} />
         <Route path="/global" element={<AgentCiciWebsite />} />
         <Route path="/global/solutions" element={<AgentCiciWebsite />} />
         <Route path="/global/skill-hub" element={<AgentCiciWebsite />} />

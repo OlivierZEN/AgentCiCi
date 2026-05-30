@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-30T14:02:13Z
+updated_at: 2026-05-30T14:31:46Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-30T14:02:13Z
+last_run_at: 2026-05-30T14:31:46Z
 last_run_status: success
 ---
 
@@ -13,11 +13,23 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：local `main` integration for TASK-114 runtime billing, TASK-144 public website restructure, and TASK-145 platform model-provider governance.
-- 命令：backend TASK-145 focused integration, backend billing package tests, frontend billing unit tests, frontend production build, and static diff check.
+- 范围：production website login entry hotfix.
+- 命令：frontend production build, local Vite route smoke, and Chromium browser DOM check for `/` and `/login`.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Production website login entry hotfix (2026-05-30T14:31:46Z):
+  - Commands:
+    - `identity`: `dev-login.py .claw --developer MANAGER-001 --branch main --json` -> **allowed**.
+    - `production-check`: `curl -L -s https://agentcici.com/` with login-entry search -> **confirmed issue**, no login/admin/platform entry text found in current production HTML.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `vite-local`: `npm run dev -- --host 127.0.0.1` in `frontend/` -> **success**, Vite served `http://127.0.0.1:5174/`.
+    - `route-smoke`: `curl -I http://127.0.0.1:5174/login` -> **success**, returned `200 OK` SPA HTML.
+    - `browser-dom`: Chromium opened `http://127.0.0.1:5174/` and `/login` -> **success**. Homepage includes visible `登录`, footer access links include `管理后台` and `运营平台`, `/login` renders the employee login form, and console errors were `0`.
+  - Notes:
+    - Restored employee login/workbench reachability by mounting `AssistantApp` at `/login` and `/app`.
+    - Restored public website access affordances in desktop header, mobile menu, hero actions, and footer.
 
 - Local main integration gate (2026-05-30T14:02:13Z):
   - Commands:
