@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.model.api;
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.ai.service.ChatThinkingConfigService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -54,24 +55,12 @@ public class ModelConfigController {
 
     @PostMapping
     public ApiResponse<Map<String, Object>> upsert(@Valid @RequestBody UpsertModelRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        OrgModelConfigEntity entity = repository.findByOrgIdAndSceneCode(orgId, request.sceneCode())
-                .orElse(new OrgModelConfigEntity(orgId, request.sceneCode(), request.provider(), request.modelName()));
-        entity.update(request.provider(), request.modelName());
-        repository.save(entity);
-        return ApiResponse.ok(Map.of(
-                "orgId", orgId,
-                "sceneCode", request.sceneCode(),
-                "provider", request.provider(),
-                "modelName", request.modelName()
-        ));
+        throw platformManagedModelConfig();
     }
 
     @DeleteMapping
     public ApiResponse<Map<String, Object>> delete(@RequestParam("sceneCode") String sceneCode) {
-        String orgId = TenantContext.requireOrgId();
-        repository.deleteByOrgIdAndSceneCode(orgId, sceneCode);
-        return ApiResponse.ok(Map.of("orgId", orgId, "sceneCode", sceneCode, "status", "DELETED"));
+        throw platformManagedModelConfig();
     }
 
     @GetMapping("/settings/thinking")
@@ -99,48 +88,36 @@ public class ModelConfigController {
 
     @GetMapping("/providers")
     public ApiResponse<List<Map<String, Object>>> listProviders() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.listProviders(orgId));
+        throw platformManagedModelConfig();
     }
 
     @PutMapping("/providers/{providerCode}")
     public ApiResponse<Map<String, Object>> updateProvider(
             @PathVariable String providerCode,
             @Valid @RequestBody UpdateProviderRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.updateProvider(
-                orgId,
-                providerCode,
-                request.enabled(),
-                request.apiBaseUrl(),
-                request.apiKey()
-        ));
+        throw platformManagedModelConfig();
     }
 
     @PostMapping("/providers/{providerCode}/check")
     public ApiResponse<Map<String, Object>> checkProvider(@PathVariable String providerCode) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.checkProvider(orgId, providerCode));
+        throw platformManagedModelConfig();
     }
 
     @GetMapping("/providers/{providerCode}/models")
     public ApiResponse<Map<String, Object>> providerModels(@PathVariable String providerCode) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.providerModels(orgId, providerCode));
+        throw platformManagedModelConfig();
     }
 
     @PostMapping("/providers/{providerCode}/models/fetch")
     public ApiResponse<Map<String, Object>> fetchProviderModels(@PathVariable String providerCode) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.fetchProviderModels(orgId, providerCode));
+        throw platformManagedModelConfig();
     }
 
     @PutMapping("/providers/{providerCode}/selected-models")
     public ApiResponse<Map<String, Object>> updateSelectedModels(
             @PathVariable String providerCode,
             @Valid @RequestBody UpdateSelectedModelsRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(modelProviderService.updateSelectedModels(orgId, providerCode, request.selectedModels()));
+        throw platformManagedModelConfig();
     }
 
     @GetMapping("/agent/base-models")
@@ -163,5 +140,9 @@ public class ModelConfigController {
     }
 
     public record UpdateProviderRequest(Boolean enabled, String apiBaseUrl, String apiKey) {
+    }
+
+    private ForbiddenException platformManagedModelConfig() {
+        return new ForbiddenException("模型厂商和模型路由由运营平台统一配置，组织后台只开放计费用量查看。");
     }
 }

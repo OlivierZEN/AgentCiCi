@@ -50,6 +50,9 @@ export default function PlatformShell() {
           <NavLink to="/platform/skills" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>标准技能</span>
           </NavLink>
+          <NavLink to="/platform/models" className={({ isActive }) => (isActive ? "active" : "")}>
+            <span>模型厂商</span>
+          </NavLink>
           <NavLink to="/platform/tools" className={({ isActive }) => (isActive ? "active" : "")}>
             <span>内置工具</span>
           </NavLink>

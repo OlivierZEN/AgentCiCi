@@ -94,7 +94,7 @@ public class MeetingMinutesService {
         String modelName = routedModel.get("modelName");
         Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, provider);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
-            throw new IllegalArgumentException("当前模型厂商已停用，请先在管理后台启用模型配置。");
+            throw new IllegalArgumentException("当前模型厂商已停用，请联系平台运营启用模型厂商。");
         }
         var result = aliyunBailianClient.chatCompletionWithCredentials(modelName, List.of(
                 Map.of("role", "system", "content", systemPrompt),

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-28T08:04:54Z
+updated_at: 2026-05-30T09:21:24Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-145 - Platform model provider governance
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-062-platform-model-provider-governance.md`
+- task_status_path: `.claw/tasks/TASK-145.md`
+- assignment_path: `.claw/assignments/TASK-145.yaml`
+- blocked_by: `none`
+- next_action: Review `codex/TASK-145-platform-model-provider-governance`; backend compile, frontend build, and diff check pass, with focused backend integration tests waiting on local PostgreSQL/Docker.
 
 ### TASK-143 - Billing editions configurable in platform operations
 

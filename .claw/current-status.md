@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-29T13:17:31Z
+updated_at: 2026-05-30T09:21:24Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-143 implemented with integration tests passing; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
-next_action: "Review and integrate TASK-143 billing changes; local 127.0.0.1:5432 now points to current Docker PostgreSQL after stale Colima/Lima listeners were removed."
+active_task: "TASK-145 implemented and ready for review; TASK-143 implemented with integration tests passing; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
+next_action: "Review TASK-145 in isolated worktree `/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM_TASK145`; rerun focused backend integration tests after local PostgreSQL/Docker is restored."
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,10 @@ read_next:
 
 ## Snapshot
 
-- Focus: manager-gated task delivery while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
+- Focus: platform model-provider governance plus manager-gated task delivery while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
+- TASK-145 implemented and ready for review: model provider configuration moved from organization administration to platform operations so credits, provider credentials, model catalog, and resource responsibility are centrally controlled.
+- TASK-145 verification: backend compile, frontend build, assignment check, and diff check pass; focused backend integration tests are blocked because local PostgreSQL/Docker is unavailable in this session.
 - TASK-143 implemented and integration-verified: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, and ledger details.
-- Local PostgreSQL cleanup complete: stale Colima `default` and Lima `cici-docker` listeners were removed; TASK-143 billing integration tests now pass through `jdbc:postgresql://127.0.0.1:5432/agentcici_test`.
 - Newly assigned from 飞书 BUG反馈: `TASK-142` to `DEV-fengchu` for OpenAPI `chat-messages` true SSE streaming (`B20260527-SSE01`).
 - Newly assigned: `TASK-141` to `DEV-houyi` for AI 听记 local FunASR / Paraformer-zh realtime ASR; realtime transcription is P0 and uses an isolated Python `services/local-asr/**` sidecar.
 - Status governance: task progress source is `.claw/tasks/TASK-xxx.md`; `.claw/task-board.md` is PM/integration-owned; `.claw/assignments/TASK-xxx.yaml` status tracks authorization lifecycle only.
@@ -41,6 +42,7 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks only
+- `.claw/tasks/TASK-145.md`, `docs/specs/FEAT-062-platform-model-provider-governance.md` - platform model-provider governance
 - `.claw/tasks/TASK-143.md`, `docs/specs/FEAT-037-saas-billing-usage-ledger.md` - billing edition configuration task
 - `.claw/tasks/TASK-142.md`, `docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md` - OpenAPI SSE streaming bug assignment
 - `.claw/tasks/TASK-132.md`, `.claw/tasks/TASK-133.md`, `.claw/tasks/TASK-137.md` - tasks waiting review/merge
@@ -55,5 +57,3 @@ read_next:
 - Keep this file under 60 lines.
 - Keep historical progress out of this file.
 - Put task progress, verification, changed files, and handoff notes in `.claw/tasks/TASK-xxx.md`.
-- Put feature requirements, design, and acceptance criteria in `docs/specs/`.
-- Put real verification evidence in `.claw/test-report.md`.

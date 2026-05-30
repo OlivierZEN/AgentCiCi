@@ -3373,7 +3373,7 @@ export default function AgentBuilderShell({
                       disabled={modelOptions.length === 0}
                     >
                       {modelOptions.length === 0 ? (
-                        <option value="">暂无可用模型（请先在管理端配置模型厂商）</option>
+                        <option value="">暂无可用模型（请联系平台运营启用模型厂商）</option>
                       ) : null}
                       {modelOptions.map((option) => (
                         <option key={option.value} value={option.value}>{option.label}</option>

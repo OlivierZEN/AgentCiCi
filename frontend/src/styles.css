@@ -7835,7 +7835,7 @@ button:hover:not(:disabled),
   }
 }
 
-/* ---------------- Model provider center (admin/models) ---------------- */
+/* ---------------- Model provider center (platform/models) ---------------- */
 .model-center {
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
@@ -7914,9 +7914,9 @@ button:hover:not(:disabled),
 }
 
 .model-provider-item.is-active {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  color: #1e3a5f;
+  border-color: var(--admin-accent, #c8a45d);
+  background: var(--admin-accent-soft, #fbf4e3);
+  color: var(--admin-accent-strong, #876223);
   font-weight: 600;
 }
 
@@ -8448,8 +8448,8 @@ button:hover:not(:disabled),
 }
 
 .all-models-item:hover {
-  border-color: #aac9ff;
-  background: #f4f8ff;
+  border-color: var(--admin-accent, #c8a45d);
+  background: var(--admin-accent-soft, #fbf4e3);
 }
 
 .all-models-item__name {

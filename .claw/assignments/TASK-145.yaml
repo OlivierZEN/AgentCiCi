@@ -1,0 +1,62 @@
+task_id: TASK-145
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-30T00:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
+task_status_path: .claw/tasks/TASK-145.md
+branch: codex/TASK-145-platform-model-provider-governance
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/main/java/com/codehouse/ciciassistant/model/**
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/test/java/com/codehouse/ciciassistant/model/**
+  - backend/src/test/java/com/codehouse/ciciassistant/management/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-062-platform-model-provider-governance.md
+  - .claw/tasks/TASK-145.md
+  - frontend/src/App.tsx
+  - frontend/src/admin/AdminShell.tsx
+  - frontend/src/platform/PlatformShell.tsx
+  - frontend/src/help/helpContent.ts
+  - frontend/src/styles.css
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-003-saas-billing-and-packaging.md
+  - docs/specs/FEAT-022-agent-workload-billing-model.md
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Move model provider configuration from organization administration to platform operations."
+  - "Organization administrators should not configure model providers, API keys, provider base URLs, or selected model catalog."
+  - "Organization administrators should continue to see current credits usage through admin billing."
+  - "Runtime model provider credentials and model candidate lists must resolve from platform governance scope."
+  - "Do not implement payment, final rating, model price table, mobile-specific layout, or database migrations in this task."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-30; user requested central platform model-provider governance based on billing credit policy."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."

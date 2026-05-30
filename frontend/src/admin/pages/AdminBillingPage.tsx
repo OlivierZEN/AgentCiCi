@@ -82,6 +82,25 @@ type BillingOverview = {
   quotaWarnings: QuotaWarning[];
 };
 
+type ApiEnvelope<T> = {
+  success?: boolean;
+  data?: T;
+  message?: string;
+};
+
+async function parseOverviewResponse(res: Response): Promise<ApiEnvelope<BillingOverview>> {
+  const contentType = res.headers.get("content-type") ?? "";
+  const bodyText = await res.text();
+  if (contentType.includes("text/html") || bodyText.trimStart().startsWith("<")) {
+    throw new Error("计费用量接口返回了页面内容，请检查本地 API 代理或后端服务。");
+  }
+  try {
+    return JSON.parse(bodyText) as ApiEnvelope<BillingOverview>;
+  } catch {
+    throw new Error("计费用量接口返回格式异常。");
+  }
+}
+
 function formatCredits(value: number | null | undefined): string {
   const amount = Number(value ?? 0);
   return amount.toLocaleString("zh-CN", { maximumFractionDigits: 2 });
@@ -181,9 +200,10 @@ export default function AdminBillingPage() {
       const res = await fetch("/admin/billing/overview", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      const json = await res.json();
+      const json = await parseOverviewResponse(res);
       if (!res.ok || !json.success) throw new Error(json.message || "加载计费用量失败");
-      setOverview(json.data as BillingOverview);
+      if (!json.data) throw new Error("计费用量接口未返回数据。");
+      setOverview(json.data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载计费用量失败");
     } finally {

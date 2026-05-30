@@ -66,7 +66,7 @@ export default function AdminAgentBuilderPage() {
       focusAgentId={agentId}
       onOpenAgent={(id) => nav(`/admin/agent-builder/${encodeURIComponent(id)}`)}
       onBackToList={() => nav("/admin/agent-builder")}
-      onRequireModelConfig={(message) => nav("/admin/models", { state: { notice: message } })}
+      onRequireModelConfig={(message) => nav("/admin/billing", { state: { notice: `${message} 请联系平台运营在模型厂商治理中启用可用模型。` } })}
     />
   );
 }

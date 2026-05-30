@@ -107,7 +107,7 @@ public class AdminBillingService {
         return quotaWarnings(subscription, edition);
     }
 
-    private BillingSubscriptionEntity ensureBillingState(String orgId) {
+    BillingSubscriptionEntity ensureBillingState(String orgId) {
         configurationService.ensureDefaultCatalog();
         BillingSubscriptionEntity subscription = subscriptionRepository.findByOrgId(orgId)
                 .orElseGet(() -> createDefaultSubscription(orgId));
@@ -199,7 +199,7 @@ public class AdminBillingService {
                 writeJson(metadata));
     }
 
-    private BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
+    BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
         BigDecimal consumed = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(subscription.getOrgId()).stream()
                 .map(UsageMeterEventEntity::getWorkCreditQuantity)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)

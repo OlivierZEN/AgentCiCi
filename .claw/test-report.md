@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-29T13:17:31Z
+updated_at: 2026-05-30T09:32:23Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-29T13:17:31Z
+last_run_at: 2026-05-30T09:32:23Z
 last_run_status: success
 ---
 
@@ -13,11 +13,38 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-143 billing integration tests after local PostgreSQL listener cleanup
-- 命令：`SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='AdminBillingIntegrationTest,PlatformBillingConfigurationIntegrationTest' test`
-- 环境：`/private/tmp/task143-verify` mirror against local Docker PostgreSQL `cici-postgres`
+- 范围：TASK-145 local run smoke
+- 命令：Docker Desktop startup; existing `cici-*` containers start; backend `mvn spring-boot:run -Dspring-boot.run.profiles=local`; frontend `npm run dev -- --host 127.0.0.1`; HTTP smoke checks; focused backend integration tests
+- 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM_TASK145`
 
 ## Latest Verified Results
+
+- TASK-145 local run smoke (2026-05-30T09:31:34Z):
+  - Commands:
+    - `frontend-dev`: `npm run dev -- --host 127.0.0.1` in `frontend/` -> **success**, Vite served `http://127.0.0.1:5173/`.
+    - `docker`: Docker Desktop was started; existing `cici-postgres`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` containers were started -> **success**.
+    - `backend-dev`: `mvn spring-boot:run -Dspring-boot.run.profiles=local` in `backend/` -> **success**, Spring Boot started on `8080`.
+    - `frontend-smoke`: `curl -I http://127.0.0.1:5173/` -> **success**, HTTP 200.
+    - `backend-health`: `curl http://127.0.0.1:8080/actuator/health` -> **success**, `{"status":"UP"}`.
+    - `platform-login`: `POST /auth/platform/password/login` with local platform admin credentials -> **success**.
+    - `platform-models-api`: `GET /platform/models/providers` with platform token -> **success**, 6 providers returned.
+    - `backend-focused-integration`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest,ManagementConsoleIntegrationTest' test` in `backend/` -> **success**.
+    - `post-test-smoke`: `curl -I http://127.0.0.1:5173/` and `curl http://127.0.0.1:8080/actuator/health` -> **success**, frontend HTTP 200 and backend `UP`.
+  - Notes:
+    - Services are left running for manual local verification.
+
+- TASK-145 platform model-provider governance (2026-05-30T09:21:24Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` with TASK-145 files -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative backend/frontend TASK-145 paths -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `diff`: `git diff --check` -> **success**.
+    - `backend-integration`: previously blocked before Docker Desktop was available; rerun succeeded in the later local run smoke above.
+  - Notes:
+    - Organization model-provider configuration routes now reject writes/reads for provider setup and redirect the organization UI to billing.
+    - Platform operations now owns `/platform/models` provider governance APIs and UI.
+    - Runtime credentials, Agent base-model options, and knowledge embedding options resolve from the platform governance scope.
 
 - TASK-143 local PostgreSQL cleanup and billing integration rerun (2026-05-29T13:17:31Z):
   - Commands:
