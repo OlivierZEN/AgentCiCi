@@ -1,0 +1,49 @@
+task_id: TASK-144
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-29T23:19:35Z
+expires_at: none
+spec_path: docs/specs/FEAT-061-agentcici-public-website-restructure.md
+task_status_path: .claw/tasks/TASK-144.md
+branch: codex/TASK-144-agentcici-public-website-restructure
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/**
+  - frontend/public/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-061-agentcici-public-website-restructure.md
+  - .claw/tasks/TASK-144.md
+  - frontend/src/App.tsx
+  - frontend/src/suite/**
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Restructure the public AgentCiCi website into bilingual Solutions, SkillsHub, Pricing, Docs, and Community pages."
+  - "Make Solutions the homepage and focus the narrative on AgentCiCi enterprise agent platform."
+  - "Remove old public website narratives for SalesMost AI Suite, AutoReachAI / FollowUpAI matrix, and the old standalone AutoService public route."
+  - "Preserve demo booking CTA."
+  - "Do not modify authenticated product routes, backend logic, database migrations, or mobile-specific implementation."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-30; user confirmed public website restructure shape."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."

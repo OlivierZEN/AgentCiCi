@@ -59,6 +59,19 @@ last_run_status: success
     - Business-code files merged without manual conflict resolution.
     - State-file conflict resolution preserved both the mainline release-version governance evidence and TASK-143 billing evidence.
 
+- TASK-144 AgentCiCi public website restructure (2026-05-29T23:19:35Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-144` with public website files, spec, and task status paths -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `browser-zh-home`: Playwright CLI opened `http://127.0.0.1:5178/` at 1440x1100 -> **success**, title `AgentCiCi | 企业级智能体平台`, screenshot `output/playwright/task144-solutions-zh.png`.
+    - `browser-en-home`: Playwright CLI opened `http://127.0.0.1:5178/global` at 1440x1100 -> **success**, title `AgentCiCi | Enterprise Agent Platform`, screenshot `output/playwright/task144-solutions-en.png`.
+    - `browser-pricing`: Playwright CLI opened `http://127.0.0.1:5178/pricing` -> **success**, title `Pricing | AgentCiCi 计价与报价模式`, screenshot `output/playwright/task144-pricing-zh.png`.
+    - `browser-route-smoke`: Playwright CLI opened `http://127.0.0.1:5178/skill-hub` and `http://127.0.0.1:5178/global/pricing` -> **success**, console errors `0`.
+  - Notes:
+    - The public website now uses `Solutions`, `SkillsHub`, `Pricing`, `Docs`, and `Community` IA with Chinese and English routes.
+    - `SkillsHub` uses `/skill-hub` and `/global/skill-hub` because existing local Vite proxy reserves `/skills*` for backend API calls.
+    - Old public `/suite/*`, `/pricing/global`, and `/autoservice/*` routes redirect to the new structure.
+
 - TASK-143 local PostgreSQL cleanup and billing integration rerun (2026-05-29T13:17:31Z):
   - Commands:
     - `cleanup`: stopped and deleted stale Colima `default` and Lima `cici-docker` instances -> **success**.

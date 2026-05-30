@@ -1,7 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import AssistantApp from "./assistant/AssistantApp";
-import AutoServiceLanding from "./autoservice/AutoServiceLanding";
-import SuiteLanding from "./suite/SuiteLanding";
+import AgentCiciWebsite from "./suite/AgentCiciWebsite";
 import AdminGuard from "./admin/AdminGuard";
 import AdminLogin from "./admin/AdminLogin";
 import AdminShell from "./admin/AdminShell";
@@ -33,21 +32,24 @@ import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 
 export default function App() {
-  const isSuiteWebsiteHost =
-    typeof window !== "undefined" && (window.location.hostname === "agentcici.com" || window.location.hostname === "www.agentcici.com");
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={isSuiteWebsiteHost ? <SuiteLanding siteOverride="china" /> : <AssistantApp />} />
-        <Route path="/suite" element={<Navigate to="/suite/cn" replace />} />
-        <Route path="/suite/cn" element={<SuiteLanding siteOverride="china" />} />
-        <Route path="/suite/global" element={<SuiteLanding siteOverride="global" />} />
-        <Route path="/autoservice" element={<Navigate to="/autoservice/global" replace />} />
-        <Route path="/autoservice/global" element={<AutoServiceLanding />} />
-        <Route path="/autoservice/cn" element={<AutoServiceLanding />} />
-        <Route path="/autoservice/en" element={<Navigate to="/autoservice/global" replace />} />
-        <Route path="/autoservice/zh" element={<Navigate to="/autoservice/cn" replace />} />
+        <Route path="/" element={<AgentCiciWebsite />} />
+        <Route path="/solutions" element={<AgentCiciWebsite />} />
+        <Route path="/skill-hub" element={<AgentCiciWebsite />} />
+        <Route path="/pricing" element={<AgentCiciWebsite />} />
+        <Route path="/docs" element={<AgentCiciWebsite />} />
+        <Route path="/community" element={<AgentCiciWebsite />} />
+        <Route path="/global" element={<AgentCiciWebsite />} />
+        <Route path="/global/solutions" element={<AgentCiciWebsite />} />
+        <Route path="/global/skill-hub" element={<AgentCiciWebsite />} />
+        <Route path="/global/pricing" element={<AgentCiciWebsite />} />
+        <Route path="/global/docs" element={<AgentCiciWebsite />} />
+        <Route path="/global/community" element={<AgentCiciWebsite />} />
+        <Route path="/suite/*" element={<Navigate to="/solutions" replace />} />
+        <Route path="/pricing/global" element={<Navigate to="/global/pricing" replace />} />
+        <Route path="/autoservice/*" element={<Navigate to="/solutions" replace />} />
         <Route path="/embed/meeting-minutes" element={<EmbedMeetingMinutesPage />} />
         <Route path="/admin/login" element={<AdminLogin />} />
         <Route path="/admin" element={<AdminGuard />}>
