@@ -11,6 +11,7 @@ import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
 import AdminOrganizationPage from "./admin/pages/AdminOrganizationPage";
+import AdminBillingPage from "./admin/pages/AdminBillingPage";
 import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
 import AdminEmbedAppsPage from "./admin/pages/AdminEmbedAppsPage";
 import AdminWecomKfAccountsPage from "./admin/pages/AdminWecomKfAccountsPage";
@@ -25,6 +26,7 @@ import PlatformShell from "./platform/PlatformShell";
 import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
 import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoServiceDemoRequestsPage";
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
+import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
 import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
 import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
@@ -65,6 +67,7 @@ export default function App() {
             <Route path="embed-apps/:appCode" element={<AdminEmbedAppsPage />} />
             <Route path="channels/wechat-kf" element={<AdminWecomKfAccountsPage />} />
             <Route path="ops" element={<AdminOpsPage />} />
+            <Route path="billing" element={<AdminBillingPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="organization" element={<AdminOrganizationPage />} />
           </Route>
@@ -73,6 +76,7 @@ export default function App() {
         <Route path="/platform" element={<PlatformGuard />}>
           <Route element={<PlatformShell />}>
             <Route index element={<PlatformHomePage />} />
+            <Route path="billing" element={<PlatformBillingPage />} />
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
