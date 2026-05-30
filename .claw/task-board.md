@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-28T08:04:54Z
+updated_at: 2026-05-29T23:19:35Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-144 - AgentCiCi public website restructure
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-061-agentcici-public-website-restructure.md`
+- task_status_path: `.claw/tasks/TASK-144.md`
+- assignment_path: `.claw/assignments/TASK-144.yaml`
+- blocked_by: `none`
+- next_action: Review local screenshots and build result, then integrate the bilingual public website restructure.
 
 ### TASK-143 - Billing editions configurable in platform operations
 

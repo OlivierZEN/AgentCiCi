@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-29T13:17:31Z
+updated_at: 2026-05-29T23:19:35Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-143 implemented with integration tests passing; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
-next_action: "Review and integrate TASK-143 billing changes; local 127.0.0.1:5432 now points to current Docker PostgreSQL after stale Colima/Lima listeners were removed."
+active_task: "TASK-144 public website restructure implemented locally; TASK-143 implemented with integration tests passing; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
+next_action: "Review TASK-144 public website restructure screenshots/build, then integrate with TASK-143 billing work as appropriate."
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Snapshot
 
-- Focus: manager-gated task delivery while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
+- Focus: public website restructure plus manager-gated task delivery while keeping `.claw/` aligned with `cc-aidev-guidelines-common` 4.1.2.
+- TASK-144 implemented locally: public website now uses AgentCiCi enterprise agent platform IA with bilingual `Solutions`, `SkillsHub`, `Pricing`, `Docs`, and `Community`; old `/suite/*`, `/pricing/global`, and `/autoservice/*` public routes redirect to the new structure.
 - TASK-143 implemented and integration-verified: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, and ledger details.
-- Local PostgreSQL cleanup complete: stale Colima `default` and Lima `cici-docker` listeners were removed; TASK-143 billing integration tests now pass through `jdbc:postgresql://127.0.0.1:5432/agentcici_test`.
 - Newly assigned from 飞书 BUG反馈: `TASK-142` to `DEV-fengchu` for OpenAPI `chat-messages` true SSE streaming (`B20260527-SSE01`).
 - Newly assigned: `TASK-141` to `DEV-houyi` for AI 听记 local FunASR / Paraformer-zh realtime ASR; realtime transcription is P0 and uses an isolated Python `services/local-asr/**` sidecar.
 - Status governance: task progress source is `.claw/tasks/TASK-xxx.md`; `.claw/task-board.md` is PM/integration-owned; `.claw/assignments/TASK-xxx.yaml` status tracks authorization lifecycle only.
@@ -37,10 +37,10 @@ read_next:
 - Static bug verification: `TASK-139` confirmed from `/agents` list/detail loading; `TASK-140` confirmed from backend route and docs path shape.
 - Existing mainline active work remains: `TASK-114`, `TASK-115`, `TASK-116`; billing platform configuration is split to `TASK-143`.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns canonical versions.
-- Recently completed and archived: `TASK-127`, `TASK-126`, `TASK-123`, `TASK-118`, `TASK-117`, `TASK-112`
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks only
+- `.claw/tasks/TASK-144.md`, `docs/specs/FEAT-061-agentcici-public-website-restructure.md` - public AgentCiCi website restructure
 - `.claw/tasks/TASK-143.md`, `docs/specs/FEAT-037-saas-billing-usage-ledger.md` - billing edition configuration task
 - `.claw/tasks/TASK-142.md`, `docs/specs/FEAT-060-openapi-chat-messages-sse-streaming.md` - OpenAPI SSE streaming bug assignment
 - `.claw/tasks/TASK-132.md`, `.claw/tasks/TASK-133.md`, `.claw/tasks/TASK-137.md` - tasks waiting review/merge
