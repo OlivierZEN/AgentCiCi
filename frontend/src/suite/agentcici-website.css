@@ -831,7 +831,7 @@
 
 .acw-plan-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -840,7 +840,7 @@
   grid-template-rows: auto auto auto 1fr auto;
   gap: 18px;
   min-height: 760px;
-  padding: 24px;
+  padding: 22px;
   border-radius: 8px;
   background:
     radial-gradient(circle at 88% 0%, oklch(90% 0.048 245 / 46%), transparent 34%),
@@ -868,7 +868,7 @@
 }
 
 .acw-plan-card h2 {
-  font-size: 25px;
+  font-size: 24px;
 }
 
 .acw-plan-card__price {
@@ -881,7 +881,7 @@
 
 .acw-plan-card__price strong {
   color: var(--acw-ink);
-  font-size: 42px;
+  font-size: 39px;
   line-height: 1;
   font-weight: 850;
   letter-spacing: 0;

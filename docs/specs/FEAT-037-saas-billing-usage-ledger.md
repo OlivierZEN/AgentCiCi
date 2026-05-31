@@ -53,7 +53,7 @@ updated_by: MANAGER-001
 | 计费域 | item code | 官网报价条目 | 首版费率 | 说明 |
 | --- | --- | --- | --- | --- |
 | `assistant_chat` | `conversation_credit` | `Credits 包` | 1.00 credit / turn | 每个用户有效对话轮次基础扣减 |
-| `model_usage` | `model_token_credit` | `Credits 包` | input 0.10 / 1k tokens，output 0.30 / 1k tokens | 基于 model trace token usage；无真实 token 时不产生正向扣减 |
+| `model_usage` | `model_token_credit` | `Credits 包` | qwen3.6-plus 0-256K: input 0.10 / 1k tokens，output 0.50 / 1k tokens；256K-1M 长上下文需按 4 倍倍率进入后续 rate-card 配置 | 基于 model trace token usage；无真实 token 时不产生正向扣减 |
 | `rag_retrieval` | `retrieval_credit` | `Credits 包` | 0.20 / chunk | 按返回上下文 chunk 数扣减 |
 | `tool_call` | `tool_call_credit` | `Credits 包` | 0.50 / call | 按已调度工具调用数扣减 |
 | `workflow_run` | `workflow_credit` | `Credits 包` | 0.20 / run | 对有耗时的运行治理链路计入基础运行成本 |
@@ -62,14 +62,16 @@ updated_by: MANAGER-001
 
 SaaS 默认版本和官网 Pricing 事实源对齐：
 
-- `saas_team` / 团队版：50,000 Credits，本期默认操作席位 1，构建席位 0；权益上限为操作席位 20、构建席位 1、Agent 1、文档 5,000 页、知识库 10GB、Open API QPS 20、并发 2、Trace 7 天。
-- `saas_business` / 商业版：250,000 Credits；权益上限为操作席位 100、构建席位 3、Agent 3、文档 50,000 页、知识库 100GB、并发 10、Trace 30 天。
-- `saas_enterprise` / 企业版：1,000,000 Credits；权益上限为操作席位 300、构建席位 8、Agent 10、文档 300,000 页、知识库 1TB、并发 50、Trace 90 天。
-- SaaS 加购包补齐官网报价条目：`SaaS Credits 加购包`、`知识库容量包`、`文档处理包`、`并发与构建扩展`、`上线服务包`。
+- `saas_team` / 标准版：8,000 Credits，本期默认操作席位 1，构建席位 0；权益上限为操作席位 20、构建席位 1、Agent 3、知识库 5GB、Open API QPS 10、并发 2、Trace 7 天。
+- `saas_business` / 专业版：35,000 Credits；权益上限为操作席位 100、构建席位 2、Agent 10、知识库 30GB、并发 10、Trace 30 天。新建和本地重置组织默认使用该版本。
+- `saas_enterprise` / 企业版：100,000 Credits 起；权益上限为操作席位 500 起、构建席位 5、Agent 50、知识库 100GB 起、并发 50 起、Trace 90 天。
+- `saas_custom` / Custom 定制版：超大规模、本地化部署和专属治理，配额、并发、Credits、容量、SLA 按合同配置。
+- SaaS 加购包按 FEAT-063 收敛为少数官网条目：`SaaS Credits 加购包`、`知识库容量包`、`并发与构建扩展`、`上线服务包`。文档处理、OCR、扫描件、高级检索和 rerank 不再作为官网一线加购包，统一通过内部 rate card 折算为 Credits。
 
 读视图要求：
 
 - `/admin/billing/overview`、`/usage-events`、`/ledger` 必须展示真实 ledger 推导的 consumed / remaining credits；`customer_paid` 和 `non_billable` 事件可以进入用量事实，但不得消耗 credits。
+- 本地和新组织默认初始化为 SaaS 专业版（`saas_business`），与官网专业版配额保持一致：35,000 Credits / 月、30 GB 知识库容量、2 个构建席位、最多 100 个团队成员、10 路并发智能体运行。
 - 用量明细必须同时显示内部 `itemCode`、中文说明、`billingType` 和 `officialPricingItem`，确保客户能把系统扣减项映射回官网 Pricing 条目。
 - 平台配置错误、空响应、模型失败等无有效业务结果的聊天必须记录为 `non_billable` 用量事实，不得扣减 conversation/workflow credits；有真实成功回答或测试构造的 billable trace 才能写入 `usage_debit`。
 - 本地开发代理必须只转发 `/admin/billing/overview|subscription|usage-events|ledger|quota` API 子路径，不能转发 `/admin/billing` 页面路由，否则 React 页面会被后端 404 抢走。
@@ -231,9 +233,10 @@ First-phase plan codes:
 | Deployment mode | Plan code | Display name | First release behavior |
 | --- | --- | --- | --- |
 | `saas` | `trial` | 试用 | low credits, restricted Open API, one real pilot |
-| `saas` | `saas_team` | 团队版 | small team usage, basic knowledge, common tools, limited credits |
-| `saas` | `saas_business` | 商业版 | production usage, Open API, billing views, trace and attribution |
-| `saas` | `saas_enterprise` | 企业版 | annual contract, SSO/SLA, custom credits, enterprise add-ons |
+| `saas` | `saas_team` | 标准版 | starter plan, 8,000 Credits, 20 users, 3 agents, 2 concurrent runs |
+| `saas` | `saas_business` | 专业版 | default organization edition, 35,000 Credits, 100 users, 10 agents, 10 concurrent runs |
+| `saas` | `saas_enterprise` | 企业版 | large companies, 100,000+ Credits, 500+ users, 50 agents, 50+ concurrent runs |
+| `saas` | `saas_custom` | Custom 定制版 | ultra-scale, localized deployment, dedicated governance and contract quotas |
 | `private_deployment` | `private_department` | 部门版 | annual license, one or few orgs, basic Agent/KB/connectors |
 | `private_deployment` | `private_enterprise` | 企业版 | annual license, multi-org, Open API, observability, capacity packs |
 | `private_deployment` | `private_group` | 集团版 | multi-instance, prod/test/DR environments, SSO/SLA, advanced audit |

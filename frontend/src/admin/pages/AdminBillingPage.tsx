@@ -57,6 +57,8 @@ type UsageEvent = {
   domainLabel: string;
   itemCode: string;
   description: string;
+  explanation: string;
+  quantityLabel: string;
   agentId: string | null;
   quantity: number;
   unit: string;
@@ -270,7 +272,6 @@ export default function AdminBillingPage() {
             <section className="admin-ops-panel admin-billing-panel" aria-label="权益和额度">
               <header className="admin-ops-panel__head">
                 <h2>权益与额度</h2>
-                <span>{overview.subscription.packageNames.length} 个附加包</span>
               </header>
               <dl className="admin-billing-entitlements">
                 <div>
@@ -298,12 +299,6 @@ export default function AdminBillingPage() {
                   <dd>{billingTypeLabel(overview.subscription.billingTypePolicy)}</dd>
                 </div>
               </dl>
-              <p className="admin-billing-note">{overview.subscription.localModelTokenPolicy}</p>
-              {overview.subscription.packageNames.length ? (
-                <div className="admin-billing-packages">
-                  {overview.subscription.packageNames.map((name) => <span key={name}>{name}</span>)}
-                </div>
-              ) : null}
             </section>
 
             <section className="admin-ops-panel admin-billing-panel" aria-label="额度状态">
@@ -392,7 +387,8 @@ export default function AdminBillingPage() {
                       <td>{formatDateTime(item.occurredAt)}</td>
                       <td>
                         <strong>{item.domainLabel}</strong>
-                        <small>{item.itemCode} · {item.description}</small>
+                        <small>{item.explanation}</small>
+                        <small>{item.quantityLabel} · {item.itemCode} · {item.description}</small>
                         {item.officialPricingItem ? <small>官网报价条目 · {item.officialPricingItem}</small> : null}
                       </td>
                       <td>{item.agentId || "-"} · {billingTypeLabel(item.billingType)}</td>

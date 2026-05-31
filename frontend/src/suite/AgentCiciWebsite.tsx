@@ -29,7 +29,6 @@ type PricingPlan = {
   description: string;
   credits: string;
   knowledgeStorage: string;
-  documentProcessing: string;
   builderSeats: string;
   teamAccess: string;
   concurrency: string;
@@ -241,24 +240,23 @@ const COPY: Record<Locale, SiteCopy> = {
     pricing: {
       title: "选择适合当前阶段的 AgentCiCi 版本。",
       lead:
-        "所有版本都包含平台运行、基础治理、按月发放的 Credits、知识库存储和文档处理量。Credits 覆盖智能体运行时工作量；知识库容量覆盖长期存储和索引资源；文档处理量覆盖解析、切分、清洗和向量化。",
-      creditNote: "Credits 和文档处理量按自然月发放，当月有效。知识库容量包含原文、向量索引、元数据和日志保留，超出后可购买容量包或处理包。",
+        "所有版本都包含平台运行、基础治理、按月发放的 Credits 和知识库存储。对话、检索、文档解析、OCR、向量化、转写、摘要、工具调用和洞察任务统一折算为 Credits。",
+      creditNote: "Credits 按自然月发放，当月有效，超额后购买 Credits 包。知识库容量包含原文、向量索引、元数据和日志保留，容量超出后购买容量包；文档处理不再单独作为处理包计费。",
       plans: [
         {
           name: "标准版",
-          badge: "适合试点",
+          badge: "起步版本",
           price: "¥1,999",
           period: "/ 月",
           description: "适合售后或会议场景的首个智能体上线。",
-          credits: "50,000 Credits / 月",
-          knowledgeStorage: "10 GB 知识库容量",
-          documentProcessing: "5,000 页文档处理 / 月",
+          credits: "8,000 Credits / 月",
+          knowledgeStorage: "5 GB 知识库容量",
           builderSeats: "1 个构建席位",
           teamAccess: "最多 20 个团队成员",
           concurrency: "2 路并发智能体运行",
           cta: "预约演示",
           features: [
-            "1 个生产智能体，含 AutoService 基础能力",
+            "3 个生产智能体，含 AutoService 基础能力",
             "知识库问答与基础文档导入",
             "AI 听记轻量使用，支持上传音频生成摘要",
             "SkillsHub 技能导入与企业内复用",
@@ -272,16 +270,15 @@ const COPY: Record<Locale, SiteCopy> = {
           price: "¥6,999",
           period: "/ 月",
           description: "适合客服、销售、运营多部门共同使用。",
-          credits: "250,000 Credits / 月",
-          knowledgeStorage: "100 GB 知识库容量",
-          documentProcessing: "50,000 页文档处理 / 月",
-          builderSeats: "3 个构建席位",
+          credits: "35,000 Credits / 月",
+          knowledgeStorage: "30 GB 知识库容量",
+          builderSeats: "2 个构建席位",
           teamAccess: "最多 100 个团队成员",
           concurrency: "10 路并发智能体运行",
           cta: "预约演示",
           highlighted: true,
           features: [
-            "3 个生产智能体，覆盖 AutoService、AI 听记、客户洞察",
+            "10 个生产智能体，覆盖 AutoService、AI 听记、客户洞察",
             "CRM、工单、知识库和协作渠道连接",
             "Open API、Webhook 和基础自动流程",
             "SkillsHub 审核、版本和回滚",
@@ -294,16 +291,15 @@ const COPY: Record<Locale, SiteCopy> = {
           badge: "规模化",
           price: "¥18,800",
           period: "/ 月起",
-          description: "适合集团采购、严格治理和大用量场景。",
-          credits: "1,000,000 Credits / 月",
-          knowledgeStorage: "1 TB 起知识库容量",
-          documentProcessing: "300,000 页文档处理 / 月起",
-          builderSeats: "8 个构建席位",
-          teamAccess: "团队成员按合同配置",
+          description: "适合大型公司、严格治理和大用量场景。",
+          credits: "100,000 Credits / 月起",
+          knowledgeStorage: "100 GB 起知识库容量",
+          builderSeats: "5 个构建席位",
+          teamAccess: "最多 500 个团队成员起",
           concurrency: "50 路并发智能体运行起",
           cta: "联系销售",
           features: [
-            "10 个生产智能体，可按组织和业务线隔离",
+            "50 个生产智能体，可按组织和业务线隔离",
             "高级客户洞察、发布评测和高风险动作确认",
             "SSO、细粒度权限、审计导出和日志保留",
             "专属连接器配额、Open API 并发和回写治理",
@@ -311,11 +307,31 @@ const COPY: Record<Locale, SiteCopy> = {
             "专属客户成功、上线陪跑和 SLA",
           ],
         },
+        {
+          name: "Custom 定制版",
+          badge: "超大规模",
+          price: "Custom",
+          period: "",
+          description: "适合超大规模、本地化部署和专属治理场景。",
+          credits: "按合同配置",
+          knowledgeStorage: "专属容量与本地化存储",
+          builderSeats: "按项目配置",
+          teamAccess: "按组织规模配置",
+          concurrency: "专属并发与资源池",
+          cta: "联系销售",
+          features: [
+            "生产智能体、Credits 和并发按业务规模定制",
+            "本地化部署、专属网络、数据驻留和安全审查",
+            "专属模型、向量库、连接器和业务系统集成",
+            "集团级权限、审计、发布治理和合规报表",
+            "专属上线项目组、迁移计划和验收流程",
+            "企业级 SLA、专属支持和年度成功复盘",
+          ],
+        },
       ],
       addOns: [
-        { title: "Credits 包", copy: "超出套餐后按 10,000 Credits 起购，可用于对话、检索、工具调用、转写、摘要和洞察任务。" },
-        { title: "知识库容量包", copy: "用于原文存储、向量索引、元数据、日志和备份保留，扩容从 ¥99 / 100 GB / 月起。" },
-        { title: "文档处理包", copy: "用于文档解析、切分、清洗、向量化和重建索引，处理包从 ¥199 / 10,000 页起。" },
+        { title: "Credits 包", copy: "超出套餐后按 ¥999 / 10,000 Credits 起购，覆盖对话、检索、文档处理、OCR、转写、摘要、工具调用和洞察任务。" },
+        { title: "知识库容量包", copy: "用于原文存储、向量索引、元数据、日志和备份保留，扩容从 ¥299 / 100 GB / 月起。" },
         { title: "并发与构建扩展", copy: "可增加并发运行数、构建席位和团队成员上限，适合更多业务团队参与配置和运营。" },
         { title: "上线服务", copy: "包含场景梳理、知识库初始化、连接器配置、技能整理、培训和验收支持。" },
       ],
@@ -471,24 +487,23 @@ const COPY: Record<Locale, SiteCopy> = {
     pricing: {
       title: "Choose the AgentCiCi plan for your current stage.",
       lead:
-        "Every plan includes platform runtime, baseline governance, monthly Credits, knowledge storage, and document processing. Credits cover runtime workload; knowledge capacity covers persistent storage and index resources; document processing covers parsing, chunking, cleanup, and vectorization.",
-      creditNote: "Credits and document processing are issued monthly and valid for the current month. Knowledge capacity includes original files, vector indexes, metadata, and retention. Overage can be expanded with capacity or processing packs.",
+        "Every plan includes platform runtime, baseline governance, monthly Credits, and knowledge storage. Conversations, retrieval, document parsing, OCR, vectorization, transcription, summaries, tool calls, and insight tasks are unified into Credits.",
+      creditNote: "Credits are issued monthly and valid for the current month. Buy Credits packs for overage. Knowledge capacity covers original files, vector indexes, metadata, and retention; buy capacity packs only when storage grows beyond the plan. There is no separate document-processing pack.",
       plans: [
         {
           name: "Starter",
-          badge: "Pilot teams",
+          badge: "Entry plan",
           price: "¥1,999",
           period: "/ mo",
           description: "For launching the first service or meeting agent.",
-          credits: "50,000 Credits / mo",
-          knowledgeStorage: "10 GB knowledge capacity",
-          documentProcessing: "5,000 document pages / mo",
+          credits: "8,000 Credits / mo",
+          knowledgeStorage: "5 GB knowledge capacity",
           builderSeats: "1 builder seat",
           teamAccess: "Up to 20 team members",
           concurrency: "2 concurrent agent runs",
           cta: "Book demo",
           features: [
-            "1 production agent with AutoService basics",
+            "3 production agents with AutoService basics",
             "Knowledge Q&A and basic document import",
             "Light AI Minutes usage with uploaded audio summaries",
             "SkillsHub import and internal reuse",
@@ -502,16 +517,15 @@ const COPY: Record<Locale, SiteCopy> = {
           price: "¥6,999",
           period: "/ mo",
           description: "For service, sales, and operations teams running together.",
-          credits: "250,000 Credits / mo",
-          knowledgeStorage: "100 GB knowledge capacity",
-          documentProcessing: "50,000 document pages / mo",
-          builderSeats: "3 builder seats",
+          credits: "35,000 Credits / mo",
+          knowledgeStorage: "30 GB knowledge capacity",
+          builderSeats: "2 builder seats",
           teamAccess: "Up to 100 team members",
           concurrency: "10 concurrent agent runs",
           cta: "Book demo",
           highlighted: true,
           features: [
-            "3 production agents across AutoService, AI Minutes, and Customer Insight",
+            "10 production agents across AutoService, AI Minutes, and Customer Insight",
             "CRM, ticketing, knowledge, and collaboration connectors",
             "Open API, Webhook, and basic workflows",
             "SkillsHub review, versioning, and rollback",
@@ -524,16 +538,15 @@ const COPY: Record<Locale, SiteCopy> = {
           badge: "Scale",
           price: "¥18,800",
           period: "/ mo+",
-          description: "For group rollout, strict governance, and higher volume.",
-          credits: "1,000,000 Credits / mo",
-          knowledgeStorage: "1 TB+ knowledge capacity",
-          documentProcessing: "300,000+ document pages / mo",
-          builderSeats: "8 builder seats",
-          teamAccess: "Team members by contract",
+          description: "For large companies, strict governance, and higher volume.",
+          credits: "100,000+ Credits / mo",
+          knowledgeStorage: "100 GB+ knowledge capacity",
+          builderSeats: "5 builder seats",
+          teamAccess: "500+ team members",
           concurrency: "50+ concurrent agent runs",
           cta: "Contact sales",
           features: [
-            "10 production agents with org and business-line separation",
+            "50 production agents with org and business-line separation",
             "Advanced customer insight, release evaluation, and high-risk approval",
             "SSO, granular permissions, audit export, and log retention",
             "Dedicated connector quota, Open API concurrency, and writeback governance",
@@ -541,11 +554,31 @@ const COPY: Record<Locale, SiteCopy> = {
             "Named customer success, launch enablement, and SLA",
           ],
         },
+        {
+          name: "Custom",
+          badge: "Ultra scale",
+          price: "Custom",
+          period: "",
+          description: "For ultra-scale, localized deployment, and dedicated governance.",
+          credits: "Contract allocation",
+          knowledgeStorage: "Dedicated local capacity",
+          builderSeats: "Project allocation",
+          teamAccess: "Configured by org scale",
+          concurrency: "Dedicated resource pool",
+          cta: "Contact sales",
+          features: [
+            "Production agents, Credits, and concurrency sized to your rollout",
+            "Localized deployment, private network, data residency, and security review",
+            "Dedicated models, vector stores, connectors, and business integrations",
+            "Group-level permissions, audit, release governance, and compliance reports",
+            "Dedicated launch team, migration plan, and acceptance process",
+            "Enterprise SLA, dedicated support, and annual success review",
+          ],
+        },
       ],
       addOns: [
-        { title: "Credits packs", copy: "Buy from 10,000 Credits for conversations, retrieval, tool calls, transcription, summaries, and insight tasks." },
-        { title: "Knowledge capacity packs", copy: "For original files, vector indexes, metadata, logs, and backup retention. Expansion starts from ¥99 / 100 GB / mo." },
-        { title: "Document processing packs", copy: "For parsing, chunking, cleanup, vectorization, and index rebuilds. Packs start from ¥199 / 10,000 pages." },
+        { title: "Credits packs", copy: "Buy from ¥999 / 10,000 Credits for conversations, retrieval, document processing, OCR, transcription, summaries, tool calls, and insight tasks." },
+        { title: "Knowledge capacity packs", copy: "For original files, vector indexes, metadata, logs, and backup retention. Expansion starts from ¥299 / 100 GB / mo." },
         { title: "Concurrency and builder expansion", copy: "Add concurrency, builder seats, and team-member capacity when more business teams join configuration and operations." },
         { title: "Launch services", copy: "Workflow discovery, knowledge initialization, connector setup, skill cleanup, training, and acceptance support." },
       ],
@@ -940,10 +973,6 @@ function PricingPlans({ plans }: { plans: PricingPlan[] }) {
               <div>
                 <dt>{plan.knowledgeStorage.includes("knowledge") ? "Knowledge" : "知识库"}</dt>
                 <dd>{plan.knowledgeStorage}</dd>
-              </div>
-              <div>
-                <dt>{plan.documentProcessing.includes("document") ? "Processing" : "文档处理"}</dt>
-                <dd>{plan.documentProcessing}</dd>
               </div>
               <div>
                 <dt>{plan.builderSeats.includes("builder") ? "Builders" : "构建"}</dt>

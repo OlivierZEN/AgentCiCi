@@ -29,9 +29,9 @@ public class BillingEditionConfigurationService {
     private static final List<String> OVERAGE_MODES = List.of("auto_charge", "soft_limit", "hard_limit", "contract_only");
     private static final List<String> BILLING_TYPES = List.of("customer_paid", "platform_paid", "included", "non_billable");
     private static final List<String> PACKAGE_TYPES = List.of("capacity", "module", "service", "sla", "credits");
-    private static final BigDecimal WEBSITE_STANDARD_CREDITS = new BigDecimal("50000");
-    private static final BigDecimal WEBSITE_PROFESSIONAL_CREDITS = new BigDecimal("250000");
-    private static final BigDecimal WEBSITE_ENTERPRISE_CREDITS = new BigDecimal("1000000");
+    private static final BigDecimal WEBSITE_STANDARD_CREDITS = new BigDecimal("8000");
+    private static final BigDecimal WEBSITE_PROFESSIONAL_CREDITS = new BigDecimal("35000");
+    private static final BigDecimal WEBSITE_ENTERPRISE_CREDITS = new BigDecimal("100000");
 
     private final BillingEditionRepository editionRepository;
     private final BillingPackageRepository packageRepository;
@@ -86,23 +86,23 @@ public class BillingEditionConfigurationService {
         seedEdition(defaultSaasTeam());
         seedEdition(defaultSaasBusiness());
         seedEdition(defaultSaasEnterprise());
+        seedEdition(defaultSaasCustom());
         seedEdition(defaultPrivateDepartment());
         seedEdition(defaultPrivateEnterprise());
         seedEdition(defaultPrivateGroup());
 
         seedPackage(defaultPackage("saas", "saas_credits_topup", "credits", "SaaS Credits 加购包", 10,
-                "对应官网 Pricing 的 Credits 包，10,000 Credits 起购，用于对话、检索、工具调用、转写、摘要和洞察任务。",
-                mapOf("credits", 10000, "billingType", "platform_paid", "officialPricingItem", "Credits 包")));
+                "对应官网 Pricing 的 Credits 包，¥999 / 10,000 Credits 起购，年度预购底价不低于 ¥799 / 10,000 Credits。",
+                mapOf("credits", 10000, "priceLabel", "¥999 / 10,000 Credits 起", "annualFloorPriceLabel", "¥799 / 10,000 Credits 起", "billingType", "platform_paid", "officialPricingItem", "Credits 包")));
         seedPackage(defaultPackage("saas", "saas_knowledge_capacity_pack", "capacity", "知识库容量包", 11,
                 "对应官网 Pricing 的知识库容量包，扩展原文、向量索引、元数据、日志和备份保留。",
-                mapOf("knowledgeStorageMb", 102400, "priceLabel", "¥99 / 100 GB / 月起", "officialPricingItem", "知识库容量包")));
-        seedPackage(defaultPackage("saas", "saas_document_processing_pack", "capacity", "文档处理包", 12,
-                "对应官网 Pricing 的文档处理包，覆盖解析、切分、清洗、向量化和重建索引。",
-                mapOf("documentPages", 10000, "priceLabel", "¥199 / 10,000 页起", "officialPricingItem", "文档处理包")));
-        seedPackage(defaultPackage("saas", "saas_concurrency_builder_pack", "capacity", "并发与构建扩展", 13,
+                mapOf("knowledgeStorageMb", 102400, "priceLabel", "¥299 / 100 GB / 月起", "officialPricingItem", "知识库容量包")));
+        retireSystemPackage("saas_document_processing_pack", "已并入 Credits 包：普通文本、OCR 和扫描件处理按内部 rate card 消耗 Credits。");
+        retireSystemPackage("saas_retrieval_rcu_pack", "已并入 Credits 包：高级检索、rerank 和候选切片按内部 rate card 消耗 Credits。");
+        seedPackage(defaultPackage("saas", "saas_concurrency_builder_pack", "capacity", "并发与构建扩展", 14,
                 "对应官网 Pricing 的并发与构建扩展，可增加并发运行数、构建席位和团队成员上限。",
                 mapOf("openApiConcurrency", 5, "builderSeats", 1, "officialPricingItem", "并发与构建扩展")));
-        seedPackage(defaultPackage("saas", "saas_launch_service_pack", "service", "上线服务包", 14,
+        seedPackage(defaultPackage("saas", "saas_launch_service_pack", "service", "上线服务包", 15,
                 "对应官网 Pricing 的上线服务，包含场景梳理、知识库初始化、连接器配置、技能整理、培训和验收支持。",
                 mapOf("implementation", true, "training", true, "officialPricingItem", "上线服务")));
         seedPackage(defaultPackage("saas", "saas_enterprise_sla", "sla", "SaaS 企业 SLA", 20,
@@ -226,6 +226,27 @@ public class BillingEditionConfigurationService {
                 });
     }
 
+    private void retireSystemPackage(String packageCode, String description) {
+        packageRepository.findByPackageCode(packageCode)
+                .filter(this::isSystemSeed)
+                .filter(BillingPackageEntity::isEnabled)
+                .ifPresent(existing -> {
+                    existing.setEnabled(false);
+                    existing.setDescription(description);
+                    existing.setConfigJson(writeJson(Map.of(
+                            "retired", true,
+                            "replacementOfficialPricingItem", "Credits 包",
+                            "reason", "执行型资源统一折算为 Credits")));
+                    existing.setVersionNo(existing.getVersionNo() + 1);
+                    existing.setChangeReason("initial seed aligned with unified credits billing");
+                    existing.setUpdatedBy("system");
+                    existing.setUpdatedAt(Instant.now());
+                    BillingPackageEntity saved = packageRepository.save(existing);
+                    writeChange("package", saved.getPackageCode(), saved.getVersionNo(), false, saved.getChangeReason(), "system",
+                            "SYSTEM", toPackageSnapshot(saved));
+                });
+    }
+
     private boolean isSystemSeed(BillingEditionEntity entity) {
         return "system".equals(entity.getUpdatedBy()) && entity.getChangeReason() != null
                 && entity.getChangeReason().startsWith("initial seed");
@@ -287,32 +308,42 @@ public class BillingEditionConfigurationService {
     }
 
     private BillingEditionEntity defaultSaasTeam() {
-        BillingEditionEntity entity = new BillingEditionEntity("saas", "saas_team", "团队版", 110);
-        applyDefaults(entity, "对应官网标准版：首个售后或会议智能体试点，按月发放 50,000 Credits。",
-                20, 1, 1, 30, 10, 5, 5000, 50000, 10240, 20, 2, 5, 5, 1, 7, 180, 1,
+        BillingEditionEntity entity = new BillingEditionEntity("saas", "saas_team", "标准版", 110);
+        applyDefaults(entity, "对应官网标准版：首个售后或会议智能体上线，按月发放 8,000 Credits。",
+                20, 1, 3, 30, 10, 1, 1000, 10000, 5120, 10, 2, 3, 3, 1, 7, 180, 1,
                 WEBSITE_STANDARD_CREDITS, "soft_limit", "platform_paid", "standard", "manual_top_up",
                 "SaaS 由平台承担模型与托管连接器成本，按 credits 归集。",
-                "平台代付资源进入 credits 额度或加购包。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_document_processing_pack", "saas_launch_service_pack"));
+                "平台代付资源进入 credits 额度或加购包。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_launch_service_pack"));
         return entity;
     }
 
     private BillingEditionEntity defaultSaasBusiness() {
-        BillingEditionEntity entity = new BillingEditionEntity("saas", "saas_business", "商业版", 120);
-        applyDefaults(entity, "对应官网专业版：客服、销售、运营多部门共同使用，按月发放 250,000 Credits。",
-                100, 3, 3, 150, 50, 20, 50000, 500000, 102400, 100, 10, 20, 20, 3, 30, 365, 2,
+        BillingEditionEntity entity = new BillingEditionEntity("saas", "saas_business", "专业版", 120);
+        applyDefaults(entity, "对应官网专业版：客服、销售、运营多部门共同使用，按月发放 35,000 Credits。",
+                100, 2, 10, 100, 30, 3, 8000, 80000, 30720, 50, 10, 10, 10, 2, 30, 365, 2,
                 WEBSITE_PROFESSIONAL_CREDITS, "auto_charge", "platform_paid", "business", "enabled",
                 "SaaS 平台代付成本进入 Work Credits 和超额策略。",
-                "平台代付模型、云端语音、第三方搜索和托管连接器可扣减 credits。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_document_processing_pack", "saas_concurrency_builder_pack", "saas_launch_service_pack"));
+                "平台代付模型、云端语音、第三方搜索和托管连接器可扣减 credits。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_concurrency_builder_pack", "saas_launch_service_pack"));
         return entity;
     }
 
     private BillingEditionEntity defaultSaasEnterprise() {
         BillingEditionEntity entity = new BillingEditionEntity("saas", "saas_enterprise", "企业版", 130);
-        applyDefaults(entity, "对应官网企业版：集团采购、严格治理和大用量场景，按月 1,000,000 Credits 起。",
-                null, 8, 10, null, null, null, 300000, 3000000, 1048576, 500, 50, null, null, null, 90, 730, null,
+        applyDefaults(entity, "对应官网企业版：大型公司、严格治理和大用量场景，按月 100,000 Credits 起。",
+                500, 5, 50, 300, 100, 10, 25000, 250000, 102400, 100, 50, 20, 20, 5, 90, 730, 3,
                 WEBSITE_ENTERPRISE_CREDITS, "contract_only", "platform_paid", "enterprise", "contract_top_up",
                 "SaaS 企业合同可约定 credits、超额、平台代付资源和 SLA。",
-                "按合同启用平台代付资源和超额额度。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_document_processing_pack", "saas_concurrency_builder_pack", "saas_launch_service_pack", "saas_enterprise_sla"));
+                "按合同启用平台代付资源和超额额度。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_concurrency_builder_pack", "saas_launch_service_pack", "saas_enterprise_sla"));
+        return entity;
+    }
+
+    private BillingEditionEntity defaultSaasCustom() {
+        BillingEditionEntity entity = new BillingEditionEntity("saas", "saas_custom", "Custom 定制版", 140);
+        applyDefaults(entity, "对应官网 Custom 定制版：超大规模、本地化部署和专属治理场景。",
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, 365, 1095, null,
+                BigDecimal.ZERO, "contract_only", "platform_paid", "enterprise", "contract_top_up",
+                "按合同配置平台代付、客户自有资源和本地化资源边界。",
+                "专属模型、向量库、连接器、并发资源池和 SLA 按合同配置。", List.of("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_concurrency_builder_pack", "saas_launch_service_pack", "saas_enterprise_sla"));
         return entity;
     }
 

@@ -94,14 +94,34 @@ class PlatformBillingConfigurationIntegrationTest {
         JsonNode saasCatalog = readJson(saasCatalogResult).path("data");
         JsonNode saasBusiness = findByField(saasCatalog.path("editions"), "editionCode", "saas_business");
         assertThat(saasBusiness).isNotNull();
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_team").path("displayName").asText())
+                .isEqualTo("标准版");
+        assertThat(saasBusiness.path("displayName").asText()).isEqualTo("专业版");
         assertThat(saasBusiness.path("billingTypePolicy").asText()).isEqualTo("platform_paid");
         assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_team").path("includedCredits").decimalValue())
-                .isEqualByComparingTo("50000");
-        assertThat(saasBusiness.path("includedCredits").decimalValue()).isEqualByComparingTo("250000");
+                .isEqualByComparingTo("8000");
+        assertThat(saasBusiness.path("includedCredits").decimalValue()).isEqualByComparingTo("35000");
         assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_enterprise").path("includedCredits").decimalValue())
-                .isEqualByComparingTo("1000000");
-        assertThat(saasCatalog.path("packages")).extracting(node -> node.path("displayName").asText())
-                .contains("SaaS Credits 加购包", "知识库容量包", "文档处理包", "并发与构建扩展", "上线服务包");
+                .isEqualByComparingTo("100000");
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_team").path("operationSeatLimit").asInt())
+                .isEqualTo(20);
+        assertThat(saasBusiness.path("operationSeatLimit").asInt()).isEqualTo(100);
+        assertThat(saasBusiness.path("agentLimit").asInt()).isEqualTo(10);
+        assertThat(saasBusiness.path("openApiConcurrency").asInt()).isEqualTo(10);
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_enterprise").path("operationSeatLimit").asInt())
+                .isEqualTo(500);
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_enterprise").path("openApiConcurrency").asInt())
+                .isEqualTo(50);
+        assertThat(findByField(saasCatalog.path("editions"), "editionCode", "saas_custom").path("displayName").asText())
+                .isEqualTo("Custom 定制版");
+        assertThat(saasBusiness.path("packageCodes")).extracting(JsonNode::asText)
+                .contains("saas_credits_topup", "saas_knowledge_capacity_pack", "saas_concurrency_builder_pack", "saas_launch_service_pack")
+                .doesNotContain("saas_document_processing_pack", "saas_retrieval_rcu_pack");
+        assertThat(saasCatalog.path("packages"))
+                .filteredOn(node -> node.path("enabled").asBoolean())
+                .extracting(node -> node.path("displayName").asText())
+                .contains("SaaS Credits 加购包", "知识库容量包", "并发与构建扩展", "上线服务包")
+                .doesNotContain("文档处理包", "高级检索 RCU 包");
 
         mockMvc.perform(put("/platform/billing/packages/{packageCode}", "private_capacity_pack")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)

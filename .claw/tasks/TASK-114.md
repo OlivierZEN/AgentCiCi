@@ -67,7 +67,7 @@ Before implementation creates the migration, update `.claw/assignments/TASK-114.
 - 已在隔离 worktree `/private/tmp/task114-billing-live` 完成运行时真实计费闭环，分支 `codex/TASK-114-feat-037-billing-ledger`。
 - 新增 `BillingUsageMeteringService`，同步和流式聊天完成后记录 usage meter events，并在 SaaS `platform_paid/included` 且回答有效时写入 `usage_debit` ledger；私有化、客户自付资源或平台配置错误继续记录事实但不二次扣减 credits。
 - 首批真实扣费项为 `conversation_credit`、`model_token_credit`、`retrieval_credit`、`tool_call_credit`、`workflow_credit`，均映射到官网 Pricing 的 `Credits 包`；管理端消耗明细已经显示 `官网报价条目`。
-- SaaS 版本内含 credits 和权益对齐官网报价：团队版 50,000、商业版 250,000、企业版 1,000,000，并补齐 `SaaS Credits 加购包`、`知识库容量包`、`文档处理包`、`并发与构建扩展`、`上线服务包`。
+- SaaS 版本内含 credits 后续按毛利重算官网报价调整：团队版 8,000、商业版 35,000、企业版 100,000 起，并按 FEAT-063 收敛为 `SaaS Credits 加购包`、`知识库容量包`、`并发与构建扩展`、`上线服务包`；文档处理、OCR、扫描件、高级检索和 rerank 统一折算为 Credits。
 - 修复幂等 source id 只按 session/domain 导致跨组织同 session 互相抵消的问题，改为 `orgId:sessionId:domain`。
 - 修复同秒多 ledger 事件余额读取不稳定的问题，余额读取改按 ledger id 顺序。
 - 修复新 SaaS 组织默认席位使用量沿用演示数据的问题，默认操作席位为 1，构建席位为 0。
@@ -79,8 +79,8 @@ Before implementation creates the migration, update `.claw/assignments/TASK-114.
 - `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` -> success。
 - `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `/private/tmp/task114-billing-live/frontend` -> success，7 tests passed。
 - `npm run build` in `/private/tmp/task114-billing-live/frontend` -> success；仍有既有 Vite chunk size warning。
-- SaaS 扣费集成验证：billable chat metering trace 生成 `conversation_credit=1`、`model_token_credit=0.5` 与 `workflow_credit=0.2`，余额从 `50000` 变为 `49998.3`，重复记录同一 session/domain 不重复扣费。
-- SaaS 真实 API 验证：本地无 Aliyun API key 时真实 `/ai/chat` 返回配置错误，生成 `conversation_credit` 与 `workflow_credit` 的 `non_billable` 用量事实，credits 保持 `50000`，ledger 不产生 `usage_debit`，符合平台错误不计费规则。
+- SaaS 扣费集成验证原始记录：billable chat metering trace 生成 `conversation_credit=1`、`model_token_credit=0.5` 与 `workflow_credit=0.2`，余额从 `50000` 变为 `49998.3`，重复记录同一 session/domain 不重复扣费；后续官网毛利重算已将新默认额度与输出 token 费率上调，最新测试以 TASK-143 记录为准。
+- SaaS 真实 API 验证原始记录：本地无 Aliyun API key 时真实 `/ai/chat` 返回配置错误，生成 `conversation_credit` 与 `workflow_credit` 的 `non_billable` 用量事实，credits 保持 `50000`，ledger 不产生 `usage_debit`，符合平台错误不计费规则；新默认团队版额度为 8,000。
 - 桌面 Playwright 验证 `/admin/billing`：页面显示账本、消耗明细、`官网报价条目 · Credits 包`，控制台 error 为 0，截图 `.playwright-cli/page-2026-05-30T11-32-09-874Z.png`。
 
 ## Assignment History

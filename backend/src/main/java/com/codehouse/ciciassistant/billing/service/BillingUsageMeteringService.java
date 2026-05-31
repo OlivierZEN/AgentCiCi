@@ -2,7 +2,6 @@ package com.codehouse.ciciassistant.billing.service;
 
 import com.codehouse.ciciassistant.ai.service.AgentRunTraceService;
 import com.codehouse.ciciassistant.ai.service.RagService;
-import com.codehouse.ciciassistant.billing.config.BillingModeProperties;
 import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerEntity;
 import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerRepository;
 import com.codehouse.ciciassistant.billing.domain.BillingEditionEntity;
@@ -30,7 +29,7 @@ public class BillingUsageMeteringService {
     private static final BigDecimal PRIVATE_CONTRACT_CREDITS = new BigDecimal("50000.00");
     private static final BigDecimal CHAT_TURN_CREDITS = new BigDecimal("1.00");
     private static final BigDecimal MODEL_INPUT_CREDITS_PER_1K = new BigDecimal("0.10");
-    private static final BigDecimal MODEL_OUTPUT_CREDITS_PER_1K = new BigDecimal("0.30");
+    private static final BigDecimal MODEL_OUTPUT_CREDITS_PER_1K = new BigDecimal("0.50");
     private static final BigDecimal RAG_RETRIEVAL_CREDITS = new BigDecimal("0.20");
     private static final BigDecimal TOOL_CALL_CREDITS = new BigDecimal("0.50");
     private static final BigDecimal WORKFLOW_RUN_CREDITS = new BigDecimal("0.20");
@@ -40,7 +39,6 @@ public class BillingUsageMeteringService {
     private final UsageMeterEventRepository usageMeterEventRepository;
     private final BillingCreditLedgerRepository creditLedgerRepository;
     private final BillingEditionConfigurationService configurationService;
-    private final BillingModeProperties billingModeProperties;
     private final ObjectMapper objectMapper;
 
     public BillingUsageMeteringService(BillingSubscriptionRepository subscriptionRepository,
@@ -48,14 +46,12 @@ public class BillingUsageMeteringService {
                                        UsageMeterEventRepository usageMeterEventRepository,
                                        BillingCreditLedgerRepository creditLedgerRepository,
                                        BillingEditionConfigurationService configurationService,
-                                       BillingModeProperties billingModeProperties,
                                        ObjectMapper objectMapper) {
         this.subscriptionRepository = subscriptionRepository;
         this.editionRepository = editionRepository;
         this.usageMeterEventRepository = usageMeterEventRepository;
         this.creditLedgerRepository = creditLedgerRepository;
         this.configurationService = configurationService;
-        this.billingModeProperties = billingModeProperties;
         this.objectMapper = objectMapper;
     }
 
@@ -202,9 +198,8 @@ public class BillingUsageMeteringService {
     }
 
     private BillingSubscriptionEntity createDefaultSubscription(String orgId) {
-        String deploymentMode = billingModeProperties.toView().deploymentMode();
-        BillingEditionEntity edition = editionRepository.findFirstByDeploymentModeAndEnabledTrueOrderBySortOrderAscEditionCodeAsc(deploymentMode)
-                .orElseGet(() -> editionRepository.findFirstByDeploymentModeAndEnabledTrueOrderBySortOrderAscEditionCodeAsc("private_deployment")
+        BillingEditionEntity edition = editionRepository.findByEditionCode("saas_business")
+                .orElseGet(() -> editionRepository.findFirstByDeploymentModeAndEnabledTrueOrderBySortOrderAscEditionCodeAsc("saas")
                         .orElseThrow());
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
         BillingSubscriptionEntity subscription = new BillingSubscriptionEntity(orgId, edition.getDeploymentMode(), edition.getEditionCode(),

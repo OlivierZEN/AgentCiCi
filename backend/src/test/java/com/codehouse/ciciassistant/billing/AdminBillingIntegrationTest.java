@@ -44,13 +44,15 @@ class AdminBillingIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.subscription.orgId").isNotEmpty())
                 .andExpect(jsonPath("$.data.subscription.editionName").isNotEmpty())
-                .andExpect(jsonPath("$.data.subscription.includedCredits").value(50000))
+                .andExpect(jsonPath("$.data.subscription.editionCode").value("saas_business"))
+                .andExpect(jsonPath("$.data.subscription.editionName").value("专业版"))
+                .andExpect(jsonPath("$.data.subscription.includedCredits").value(35000))
                 .andExpect(jsonPath("$.data.subscription.operationSeatsUsed").value(1))
                 .andExpect(jsonPath("$.data.subscription.builderSeatsUsed").value(0))
                 .andExpect(jsonPath("$.data.creditSummary.includedCredits").isNumber())
                 .andExpect(jsonPath("$.data.creditSummary.consumedCredits").isNumber())
-                .andExpect(jsonPath("$.data.quotaWarnings[1].message").value("1 / 20"))
-                .andExpect(jsonPath("$.data.quotaWarnings[2].message").value("0 / 1"))
+                .andExpect(jsonPath("$.data.quotaWarnings[1].message").value("1 / 100"))
+                .andExpect(jsonPath("$.data.quotaWarnings[2].message").value("0 / 2"))
                 .andReturn();
 
         JsonNode overview = readJson(overviewResult).path("data");
@@ -109,8 +111,8 @@ class AdminBillingIntegrationTest {
         MvcResult debitedOverviewResult = mockMvc.perform(get("/admin/billing/overview")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.creditSummary.consumedCredits").value(1.7))
-                .andExpect(jsonPath("$.data.creditSummary.remainingCredits").value(49998.3))
+                .andExpect(jsonPath("$.data.creditSummary.consumedCredits").value(1.9))
+                .andExpect(jsonPath("$.data.creditSummary.remainingCredits").value(34998.1))
                 .andExpect(jsonPath("$.data.usageByDomain[0].credits").isNumber())
                 .andExpect(jsonPath("$.data.recentLedger[0].entryType").value("usage_debit"))
                 .andReturn();
@@ -121,8 +123,12 @@ class AdminBillingIntegrationTest {
                 .containsExactlyInAnyOrder("conversation_credit", "model_token_credit", "workflow_credit");
         assertThat(debitedOverview.path("recentUsageEvents"))
                 .allMatch(node -> "Credits 包".equals(node.path("officialPricingItem").asText()));
+        assertThat(debitedOverview.path("recentUsageEvents"))
+                .allMatch(node -> node.path("explanation").asText().contains("Credits"));
+        assertThat(debitedOverview.path("recentUsageEvents"))
+                .allMatch(node -> !node.path("quantityLabel").asText().isBlank());
         assertThat(debitedOverview.path("recentLedger").get(0).path("balanceAfter").decimalValue())
-                .isEqualByComparingTo("49998.30");
+                .isEqualByComparingTo("34998.10");
 
         mockMvc.perform(get("/admin/billing/subscription")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))

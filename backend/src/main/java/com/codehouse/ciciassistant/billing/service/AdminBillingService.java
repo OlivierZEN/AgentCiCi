@@ -301,9 +301,11 @@ public class AdminBillingService {
     }
 
     private UsageEventView toUsageEventView(UsageMeterEventEntity item) {
+        Map<String, Object> metadata = readMetadata(item.getMetadataJson());
         return new UsageEventView(item.getId(), item.getBillableDomain(), domainLabel(item.getBillableDomain()),
-                item.getBillableItemCode(), item.getDescription(), item.getAgentId(), item.getQuantity(), item.getUnit(),
-                item.getWorkCreditQuantity(), item.getBillingType(), readOfficialPricingItem(item.getMetadataJson()),
+                item.getBillableItemCode(), item.getDescription(), usageExplanation(item, metadata), quantityLabel(item),
+                item.getAgentId(), item.getQuantity(), item.getUnit(), item.getWorkCreditQuantity(), item.getBillingType(),
+                readOfficialPricingItem(metadata),
                 item.getStatus(), item.getOccurredAt().toString());
     }
 
@@ -336,18 +338,57 @@ public class AdminBillingService {
         }
     }
 
-    private String readOfficialPricingItem(String json) {
+    private Map<String, Object> readMetadata(String json) {
         if (json == null || json.isBlank()) {
-            return null;
+            return Map.of();
         }
         try {
-            Map<String, Object> metadata = objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
+            return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {
             });
-            Object value = metadata.get("officialPricingItem");
-            return value == null ? null : String.valueOf(value);
         } catch (JsonProcessingException ex) {
-            return null;
+            return Map.of();
         }
+    }
+
+    private String readOfficialPricingItem(Map<String, Object> metadata) {
+        Object value = metadata.get("officialPricingItem");
+        return value == null ? null : String.valueOf(value);
+    }
+
+    private String quantityLabel(UsageMeterEventEntity item) {
+        return formatDecimal(item.getQuantity()) + " " + item.getUnit();
+    }
+
+    private String usageExplanation(UsageMeterEventEntity item, Map<String, Object> metadata) {
+        String credits = formatDecimal(item.getWorkCreditQuantity());
+        return switch (item.getBillableDomain()) {
+            case "assistant_chat" -> "智能体对话：" + quantityLabel(item) + "，消耗 " + credits + " Credits";
+            case "model_usage" -> modelUsageExplanation(item, metadata, credits);
+            case "rag_retrieval" -> "知识库检索：" + quantityLabel(item) + "，消耗 " + credits + " Credits";
+            case "tool_call" -> "工具调用：" + quantityLabel(item) + "，消耗 " + credits + " Credits";
+            case "workflow_run" -> "运行治理：" + quantityLabel(item) + "，消耗 " + credits + " Credits";
+            case "kb_indexing" -> "文档处理：" + quantityLabel(item) + "，消耗 " + credits + " Credits";
+            default -> item.getDescription() + "：" + quantityLabel(item) + "，消耗 " + credits + " Credits";
+        };
+    }
+
+    private String modelUsageExplanation(UsageMeterEventEntity item, Map<String, Object> metadata, String credits) {
+        String modelName = stringValue(metadata.get("modelName"), "模型");
+        String inputTokens = stringValue(metadata.get("inputTokens"), "0");
+        String outputTokens = stringValue(metadata.get("outputTokens"), "0");
+        return "模型推理：" + modelName + " 输入 " + inputTokens + " tokens、输出 " + outputTokens
+                + " tokens，消耗 " + credits + " Credits";
+    }
+
+    private String stringValue(Object value, String fallback) {
+        return value == null ? fallback : String.valueOf(value);
+    }
+
+    private String formatDecimal(BigDecimal value) {
+        if (value == null) {
+            return "0";
+        }
+        return value.stripTrailingZeros().toPlainString();
     }
 
     private String writeJson(Object value) {
@@ -420,6 +461,8 @@ public class AdminBillingService {
                                  String domainLabel,
                                  String itemCode,
                                  String description,
+                                 String explanation,
+                                 String quantityLabel,
                                  String agentId,
                                  BigDecimal quantity,
                                  String unit,
