@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-30T14:31:46Z
+updated_at: 2026-05-31T00:55:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Production website login entry hotfix prepared on local main after TASK-114/143/144/145 integration; focused verification passes; TASK-142 / TASK-141 / TASK-136 / TASK-138 / TASK-139 ready; TASK-132 / TASK-133 / TASK-137 in review; TASK-140 in progress"
-next_action: "Commit and publish the production login-entry hotfix branch/MR, then redeploy production."
+active_task: "Local main includes production billing proxy hotfix and unified Credits billing presentation; local MR validation passes; ready to publish/update remote Codeup MR."
+next_action: "Push local main integration head to the remote integration branch, confirm Codeup MR state, then redeploy production after merge."
 read_next:
   goals: false
   decisions: false
@@ -22,12 +22,13 @@ read_next:
 
 ## Snapshot
 
-- Focus: production website login entry hotfix after billing runtime, public website restructure, and platform model-provider governance integration.
-- Hotfix prepared: public website header/mobile/footer now expose login access again, and `/login` plus `/app` route to the employee workbench/login surface.
+- Focus: local `main` integration validation for production billing display recovery and unified Credits billing presentation.
+- Local `main` now contains `e83aa11` production Nginx proxy repair for `/admin/billing/*` API subpaths and `fa8df0e` unified Credits billing presentation.
+- Local MR validation passed on 2026-05-31: billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
 - TASK-114 runtime billing is ready for review: billable traces write ledger debits, platform config errors stay non-billable, and org-admin billing shows `官网报价条目 · Credits 包`.
 - TASK-144 implemented locally: public website now uses AgentCiCi enterprise agent platform IA with bilingual `Solutions`, `SkillsHub`, `Pricing`, `Docs`, and `Community`; old `/suite/*`, `/pricing/global`, and `/autoservice/*` public routes redirect to the new structure.
 - TASK-145 integrated locally: model provider configuration moved from organization administration to platform operations; runtime model credentials, Agent base-model options, and embedding options resolve from platform governance scope.
-- TASK-143 implemented and integration-verified: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, and ledger details.
+- TASK-143 implemented and integration-verified: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, ledger details, and readable Credits consumption explanations.
 - Local integration gates pass: TASK-145 focused backend integration tests, billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
 - Newly assigned from 飞书 BUG反馈: `TASK-142` to `DEV-fengchu` for OpenAPI `chat-messages` true SSE streaming (`B20260527-SSE01`).
 - Newly assigned: `TASK-141` to `DEV-houyi` for AI 听记 local FunASR / Paraformer-zh realtime ASR; realtime transcription is P0 and uses an isolated Python `services/local-asr/**` sidecar.

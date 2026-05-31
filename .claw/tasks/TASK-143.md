@@ -3,12 +3,12 @@ kind: task-status
 task_id: TASK-143
 assignee: MANAGER-001
 owner_role: fullstack-agent
-status: in_progress
+status: review
 branch: codex/TASK-143-billing-edition-config
 pr_url: n/a
 spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
 assignment_path: .claw/assignments/TASK-143.yaml
-updated_at: 2026-05-29T13:24:50Z
+updated_at: 2026-05-31T00:55:00Z
 updated_by: MANAGER-001
 ---
 
@@ -61,6 +61,7 @@ The platform operations console must become the source of truth for edition cont
 - 2026-05-30T15:05:00Z: user requested gross-margin-based official pricing reset; updated public Pricing defaults and billing catalog seed to lower included credits (`saas_team` 8,000, `saas_business` 35,000, `saas_enterprise` 100,000 起), tighter knowledge/document/concurrency allowances, `SaaS Credits 加购包` at `¥999 / 10,000 Credits` with annual floor `¥799 / 10,000 Credits`, knowledge capacity at `¥299 / 100 GB / 月起`, document processing at `¥399 / 10,000 页起` and OCR at `¥999 / 10,000 页起`, plus new `高级检索 RCU 包` at `¥499 / RCU / 月起`. Runtime qwen3.6-plus standard output token rating was raised from `0.30` to `0.50` credit / 1k tokens.
 - 2026-05-31T00:00:00+08:00: added `docs/specs/FEAT-063-unified-credits-billing-design.md` to make unified Credits the customer-facing billing model:官网只展示套餐、Credits、知识库容量、并发/构建扩展和服务项；高级检索、文档处理、OCR、模型、工具、转写、摘要和洞察等执行型资源在系统内部通过 rate card 折算为 Credits，并在 `/admin/billing` 展示可追溯消耗明细。
 - 2026-05-31T00:20:00+08:00: implemented FEAT-063 first slice: public Pricing removes separate document-processing and advanced-retrieval RCU add-ons; SaaS billing catalog retires system-seeded `saas_document_processing_pack` and `saas_retrieval_rcu_pack` and removes them from edition package codes; `/admin/billing` usage event views now include `explanation` and `quantityLabel` so Credits debits are readable without exposing low-level SKU choices.
+- 2026-05-31T08:55:00+08:00: fast-forwarded local `main` to `fa8df0e` and completed local MR validation: `git diff --check`, billing backend tests, billing frontend unit tests, and frontend production build all passed. Existing Vite large chunk warning remains.
 - 2026-05-28T08:19:11Z: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-143` on `codex/TASK-143-billing-edition-config` -> allowed.
 - 2026-05-28T08:19:11Z: `mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> success.
 - 2026-05-28T08:19:11Z: `npm test -- billingMode.test.ts` in `frontend/` -> success, 3 tests passed.
@@ -115,4 +116,4 @@ The platform operations console must become the source of truth for edition cont
 
 - Assigned to Owen (`MANAGER-001`) on 2026-05-28.
 - Assigned branch: `codex/TASK-143-billing-edition-config`.
-- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build/integration checks. Stale Colima/Lima PostgreSQL forwarders have been removed; local billing integration tests now pass through `jdbc:postgresql://127.0.0.1:5432/agentcici_test` against the current Docker Desktop `cici-postgres` container. Latest `origin/main` plus TASK-143 integration branch validation passed on 2026-05-29.
+- Organization-admin billing chain is implemented with organization-admin permission protection and passes compile/unit/frontend build/integration checks. Stale Colima/Lima PostgreSQL forwarders have been removed; local billing integration tests now pass through `jdbc:postgresql://127.0.0.1:5432/agentcici_test` against the current Docker Desktop `cici-postgres` container. Latest local `main` validation passed on 2026-05-31 and the task is ready for remote MR review.

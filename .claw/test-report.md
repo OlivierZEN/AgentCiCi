@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-30T14:31:46Z
+updated_at: 2026-05-31T00:55:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-30T14:31:46Z
+last_run_at: 2026-05-31T00:55:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,23 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：production website login entry hotfix.
-- 命令：frontend production build, local Vite route smoke, and Chromium browser DOM check for `/` and `/login`.
+- 范围：local `main` MR validation for production billing proxy repair and unified Credits billing presentation.
+- 命令：billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Local main MR validation for billing recovery and Credits presentation (2026-05-31T00:55:00Z):
+  - Commands:
+    - `merge`: `git checkout main && git merge --ff-only codex/TASK-143-billing-edition-config` -> **success**, local `main` fast-forwarded to `fa8df0e`.
+    - `identity`: `dev-login.py .claw --developer MANAGER-001 --branch main --files .claw/current-status.md .claw/test-report.md .claw/tasks/TASK-143.md .claw/task-board.md --json` -> **allowed**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `backend-billing`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dtest='com.codehouse.ciciassistant.billing.**.*Test' test` in `backend/` -> **success**.
+    - `frontend-unit`: `npm test -- AdminBillingPage.test.ts PlatformBillingPage.test.ts billingMode.test.ts` in `frontend/` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - Local `main` is ahead of `origin/main` with `e83aa11` production Nginx billing API proxy repair and `fa8df0e` unified Credits billing presentation.
+    - `/admin/billing` usage events now expose customer-readable Credits explanations and quantity labels, while public Pricing no longer sells low-level document processing or advanced retrieval RCU as separate customer-facing add-ons.
 
 - Production website login entry hotfix (2026-05-30T14:31:46Z):
   - Commands:
