@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-31T00:55:00Z
+updated_at: 2026-05-31T08:06:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-31T00:55:00Z
+last_run_at: 2026-05-31T08:05:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：local `main` MR validation for production billing proxy repair and unified Credits billing presentation.
-- 命令：billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
+- 范围：production `/admin/billing` Nginx API proxy hotfix after syncing `main` with `origin/main`.
+- 命令：release dry-run, ECS Nginx config backup/sync/reload, public route/API curl smoke, and authenticated billing overview API smoke.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Production billing API proxy hotfix (2026-05-31T08:05:00Z):
+  - Commands:
+    - `main-sync`: `git fetch origin main && git pull --ff-only origin main` -> **success**, local `main` fast-forwarded to `7ee3db6` and matches `origin/main`.
+    - `origin-check`: verified `e83aa11`, `fa8df0e`, and `7fe89a8` are ancestors of `origin/main` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version would be `2.0.12`; no build, push, or tag was created.
+    - `production-backup`: copied `/opt/cici/deploy/nginx.cici.conf` and `/opt/cici/deploy/nginx.cici.ssl.conf` to `/opt/cici/backups/20260531-155826-before-billing-nginx-hotfix` -> **success**.
+    - `production-config-sync`: `scp deploy/nginx.cici.conf deploy/nginx.cici.ssl.conf root@47.97.119.160:/opt/cici/deploy/` -> **success**.
+    - `nginx-test-reload`: `docker exec cici-frontend nginx -t` and `docker exec cici-frontend nginx -s reload` -> **success**; `cici-frontend` and `cici-backend` remained healthy on image tag `2.0.11`.
+    - `public-api-smoke`: `curl https://agentcici.com/admin/billing/overview` without token -> **success**, returned `HTTP 403` `content-type: application/json` with `需要组织管理员权限`, proving the request now reaches the backend instead of SPA HTML.
+    - `public-route-smoke`: `curl https://agentcici.com/admin/billing` -> **success**, returned `HTTP 200` SPA HTML for the page route.
+    - `authenticated-api-smoke`: production organization-admin password login followed by `GET /admin/billing/overview` -> **success**, returned `HTTP 200` `application/json` with `subscription`, `creditSummary`, `recentLedger`, `recentUsageEvents`, and `quotaWarnings`.
+  - Notes:
+    - Root cause of the screenshot error was production Nginx serving SPA `index.html` for `/admin/billing/overview`; the deployed config now includes the billing API subpath proxy rule from `e83aa11`.
+    - This was a config hotfix only; no database migration, image rebuild, image tag update, or business data overwrite was performed.
 
 - Local main MR validation for billing recovery and Credits presentation (2026-05-31T00:55:00Z):
   - Commands:
