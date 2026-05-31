@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-31T08:31:00Z
+updated_at: 2026-05-31T13:47:59Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Production billing reset complete: all ACTIVE organizations are on 专业版 with 35,000 Credits, zero consumed credits, and fresh included-grant ledger rows."
-next_action: "Monitor /admin/billing after user refresh; continue normal review/merge flow for remaining tasks."
+active_task: "TASK-146 implemented locally: /admin/ops now has organization-level runtime snapshots, trace error reasons, and redacted/filterable audit logs."
+next_action: "Review TASK-146 changes, then run integration/build gates again after merging with the current mainline; state validation remains blocked by pre-existing TASK-143 hot-file length."
 read_next:
   goals: false
   decisions: false
@@ -23,13 +23,13 @@ read_next:
 ## Snapshot
 
 - Focus: production billing display recovery and unified Credits billing presentation.
+- TASK-146 implemented on `codex/TASK-146-ops-observability-audit`: added `/admin/agents/runtime-snapshots`, trace/list `errorReason`, tool `status/errorMessage`, `/ops/audit/logs` filtering and redaction, and production-grade `/admin/ops` audit UI.
+- TASK-146 validation passed: `mvn -q -Dtest=AgentRunTraceIntegrationTest test`, `npm run build`, `git diff --check`, and desktop browser smoke for `/admin/ops` with screenshots under `output/playwright/`.
+- `.claw` state validation is still blocked by an existing out-of-scope issue: `.claw/tasks/TASK-143.md` has 121 lines, over the 120-line budget.
 - Local `main` is synced with `origin/main` at `7ee3db6`; `origin/main` contains `e83aa11` production Nginx proxy repair for `/admin/billing/*` API subpaths and `fa8df0e` unified Credits billing presentation.
 - Production hotfix deployed on 2026-05-31: synced `deploy/nginx.cici.conf` and `deploy/nginx.cici.ssl.conf` to `/opt/cici/deploy/`, reloaded `cici-frontend` Nginx, and verified `/admin/billing/overview` returns backend JSON instead of SPA HTML.
 - Production billing data reset on 2026-05-31: backed up PostgreSQL to `/opt/cici/backups/20260531-162707-before-billing-professional-reset/postgres.dump`, set all 5 ACTIVE organizations to `saas_business` 专业版, reset consumed credits to `0`, remaining credits to `35,000`, rebuilt 5 included-grant ledger rows, and cleared usage events.
-- Local MR validation passed on 2026-05-31: billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
 - TASK-114 runtime billing is ready for review: billable traces write ledger debits, platform config errors stay non-billable, and org-admin billing shows `官网报价条目 · Credits 包`.
-- TASK-144 implemented locally: public website now uses AgentCiCi enterprise agent platform IA with bilingual `Solutions`, `SkillsHub`, `Pricing`, `Docs`, and `Community`; old `/suite/*`, `/pricing/global`, and `/autoservice/*` public routes redirect to the new structure.
-- TASK-145 integrated locally: model provider configuration moved from organization administration to platform operations; runtime model credentials, Agent base-model options, and embedding options resolve from platform governance scope.
 - TASK-143 implemented and integration-verified: platform-configurable SaaS/private editions plus protected organization-admin `/admin/billing` read chain for current edition, credits balance, consumption, quota warnings, usage events, ledger details, and readable Credits consumption explanations.
 - Local integration gates pass: TASK-145 focused backend integration tests, billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
 - Newly assigned from 飞书 BUG反馈: `TASK-142` to `DEV-fengchu` for OpenAPI `chat-messages` true SSE streaming (`B20260527-SSE01`).
@@ -43,6 +43,7 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks only
+- `.claw/tasks/TASK-146.md`, `docs/specs/FEAT-019-agent-observability-monitoring.md` - 观测与运维生产就绪收口
 - `.claw/tasks/TASK-145.md`, `docs/specs/FEAT-062-platform-model-provider-governance.md` - platform model-provider governance
 - `.claw/tasks/TASK-144.md`, `docs/specs/FEAT-061-agentcici-public-website-restructure.md` - public AgentCiCi website restructure
 - `.claw/tasks/TASK-114.md`, `.claw/tasks/TASK-143.md`, `docs/specs/FEAT-037-saas-billing-usage-ledger.md` - billing runtime ledger and edition configuration tasks

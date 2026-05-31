@@ -2,12 +2,14 @@ package com.codehouse.ciciassistant.ops.api;
 
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
-import com.codehouse.ciciassistant.ops.domain.AuditLogEntity;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -22,9 +24,20 @@ public class OpsController {
     }
 
     @GetMapping("/audit/logs")
-    public ApiResponse<Object> logs() {
+    public ApiResponse<Map<String, Object>> logs(
+            @RequestParam(name = "from", required = false) String from,
+            @RequestParam(name = "to", required = false) String to,
+            @RequestParam(name = "eventType", required = false) String eventType,
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "limit", defaultValue = "50") int limit) {
         String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(auditService.latest(orgId));
+        return ApiResponse.ok(auditService.query(orgId, new AuditService.AuditLogQuery(
+                parseInstant(from),
+                parseInstant(to),
+                blankToNull(eventType),
+                blankToNull(q),
+                limit
+        )));
     }
 
     @GetMapping("/metrics/cost")
@@ -36,5 +49,20 @@ public class OpsController {
                 "callCount", calls,
                 "estimatedCostCny", String.format("%.2f", calls * 0.02)
         ));
+    }
+
+    private Instant parseInstant(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Invalid instant: " + value);
+        }
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 }

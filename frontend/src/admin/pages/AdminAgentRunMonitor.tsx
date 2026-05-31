@@ -3,13 +3,21 @@ import AvatarView from "../../components/AvatarView";
 import { getDisplayInitial } from "../../shared/avatar";
 import { safeFetchJson } from "../../utils/http";
 
-type PublishedAgentPayload = {
+type AgentRuntimeSnapshotPayload = {
   agentId: string;
-  name?: string | null;
+  agentName?: string | null;
   avatarBase64?: string | null;
-  summary?: string | null;
-  builtin?: boolean;
-  publishedVersionId?: number | null;
+  status?: string;
+  currentTask?: string;
+  activeSessionCount?: number;
+  sevenDaySessionCount?: number;
+  sevenDayFailureCount?: number;
+  avgLatencyMs?: number;
+  lastActiveAt?: string;
+  lastTraceId?: string;
+  lastRunStatus?: string;
+  lastChannel?: string;
+  lastElapsedMs?: number;
 };
 
 type AgentRunLogPayload = {
@@ -31,6 +39,7 @@ type AgentRunLogPayload = {
   boundSkillCodes?: string[];
   knowledgeBaseNames?: string[];
   summary?: string;
+  errorReason?: string;
   source?: string;
 };
 
@@ -63,13 +72,14 @@ type AgentTraceDetailPayload = {
   tools?: Array<Record<string, unknown>>;
   skills?: Record<string, unknown>;
   detail?: Record<string, unknown>;
+  errorReason?: string;
 };
 
 type Props = {
   token: string;
 };
 
-type MonitorStatusFilter = "all" | "RUNNING" | "FAILED" | "WAITING_CONFIRMATION";
+type MonitorStatusFilter = "all" | "RUNNING" | "FAILED" | "WAITING_CONFIRMATION" | "tool" | "knowledge";
 
 function formatMonitorDateTime(value?: string) {
   if (!value) return "—";
@@ -100,6 +110,8 @@ function monitorStatusLabel(status?: string) {
       return "异常";
     case "COMPLETED":
       return "已完成";
+    case "IDLE":
+      return "待命中";
     default:
       return status || "未知";
   }
@@ -172,7 +184,9 @@ function monitorToolTraceSummary(trace?: AgentTraceDetailPayload | null) {
     .map((tool) => {
       const name = compactUnknownValue(tool.name, "tool");
       const elapsed = typeof tool.elapsedMs === "number" ? formatMonitorElapsed(tool.elapsedMs) : "—";
-      return `${name} ${elapsed}`;
+      const failed = tool.success === false || String(tool.status ?? "").toUpperCase() === "FAILED";
+      const reason = compactUnknownValue(tool.errorMessage ?? tool.result, "");
+      return failed ? `${name} ${elapsed} · 失败：${reason || "未提供错误详情"}` : `${name} ${elapsed}`;
     })
     .join("；");
 }
@@ -203,7 +217,7 @@ function traceStepTokenSummary(node: AgentTraceNodePayload) {
 }
 
 export default function AdminAgentRunMonitor({ token }: Props) {
-  const [agents, setAgents] = useState<PublishedAgentPayload[]>([]);
+  const [runtimeSnapshots, setRuntimeSnapshots] = useState<AgentRuntimeSnapshotPayload[]>([]);
   const [runLogs, setRunLogs] = useState<AgentRunLogPayload[]>([]);
   const [traceDetail, setTraceDetail] = useState<AgentTraceDetailPayload | null>(null);
   const [logsLoading, setLogsLoading] = useState(false);
@@ -213,16 +227,16 @@ export default function AdminAgentRunMonitor({ token }: Props) {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<MonitorStatusFilter>("all");
 
-  const loadAgents = async () => {
+  const loadRuntimeSnapshots = async () => {
     try {
-      const response = await fetch("/agents", { headers: { Authorization: `Bearer ${token}` } });
-      const { body } = await safeFetchJson<PublishedAgentPayload[]>(response);
-      if (!response.ok || !body?.success || !Array.isArray(body.data)) {
+      const response = await fetch("/admin/agents/runtime-snapshots", { headers: { Authorization: `Bearer ${token}` } });
+      const { body } = await safeFetchJson<{ items?: AgentRuntimeSnapshotPayload[] }>(response);
+      if (!response.ok || !body?.success || !Array.isArray(body.data?.items)) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
-      setAgents(body.data as PublishedAgentPayload[]);
+      setRuntimeSnapshots(body.data.items.filter((item) => item.agentId));
     } catch {
-      setAgents([]);
+      setRuntimeSnapshots([]);
     }
   };
 
@@ -270,7 +284,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
   };
 
   useEffect(() => {
-    void loadAgents();
+    void loadRuntimeSnapshots();
     void loadRunLogs();
   }, [token]);
 
@@ -298,32 +312,32 @@ export default function AdminAgentRunMonitor({ token }: Props) {
       chain: chainParts.length ? chainParts.join(" · ") : "消息链路",
       latency: formatMonitorElapsed(item.elapsedMs),
       summary: item.summary ?? "",
+      errorReason: item.errorReason ?? "",
       source: item.source ?? "trace",
     };
   }), [runLogs]);
 
   const agentRows = useMemo(() => {
-    const rows = agents.map((agent) => {
+    const rows = runtimeSnapshots.map((agent) => {
       const agentId = agent.agentId;
-      const logs = logRows.filter((item) => item.agentId === agentId);
-      const latest = logs[0];
-      const failedCount = logs.filter((item) => item.rawStatus === "FAILED" || item.rawStatus === "WAITING_CONFIRMATION").length;
-      const severity = latest?.rawStatus === "RUNNING"
+      const status = (agent.status ?? "").toUpperCase();
+      const severity = status === "RUNNING"
         ? "busy"
-        : latest?.rawStatus === "FAILED" || latest?.rawStatus === "WAITING_CONFIRMATION"
+        : status === "FAILED" || status === "WAITING_CONFIRMATION"
           ? "warn"
-          : latest
+          : agent.sevenDaySessionCount
             ? "ok"
             : "idle";
       return {
         key: agentId,
-        name: agent.name?.trim() || latest?.agentName || agentId,
-        short: getDisplayInitial(agent.name?.trim() || latest?.agentName || agentId, "A").slice(0, 1),
+        name: agent.agentName?.trim() || agentId,
+        short: getDisplayInitial(agent.agentName?.trim() || agentId, "A").slice(0, 1),
         avatarBase64: (agent.avatarBase64 ?? "").trim(),
-        status: latest ? monitorStatusLabel(latest.rawStatus) : "待命中",
-        currentTask: latest?.summary || latest?.title || agent.summary || "暂无运行记录",
-        logCount: logs.length,
-        failedCount,
+        status: monitorStatusLabel(agent.status),
+        currentTask: agent.currentTask || "暂无运行记录",
+        logCount: agent.sevenDaySessionCount ?? 0,
+        failedCount: agent.sevenDayFailureCount ?? 0,
+        avgLatencyMs: agent.avgLatencyMs ?? 0,
         severity,
       };
     });
@@ -339,16 +353,19 @@ export default function AdminAgentRunMonitor({ token }: Props) {
         currentTask: log.summary || log.title,
         logCount: logRows.filter((item) => item.agentId === log.agentId).length,
         failedCount: logRows.filter((item) => item.agentId === log.agentId && (item.rawStatus === "FAILED" || item.rawStatus === "WAITING_CONFIRMATION")).length,
+        avgLatencyMs: 0,
         severity: log.rawStatus === "FAILED" || log.rawStatus === "WAITING_CONFIRMATION" ? "warn" : "ok",
       });
     }
     return rows;
-  }, [agents, logRows]);
+  }, [runtimeSnapshots, logRows]);
 
   const searchQuery = searchText.trim().toLowerCase();
   const filteredLogs = logRows.filter((item) => {
     if (activeAgentId && item.agentId !== activeAgentId) return false;
-    if (statusFilter !== "all" && item.rawStatus !== statusFilter) return false;
+    if (statusFilter === "tool" && !item.chain.includes("工具")) return false;
+    if (statusFilter === "knowledge" && !item.chain.includes("知识")) return false;
+    if (!["all", "tool", "knowledge"].includes(statusFilter) && item.rawStatus !== statusFilter) return false;
     if (!searchQuery) return true;
     return [
       item.recordId,
@@ -362,8 +379,8 @@ export default function AdminAgentRunMonitor({ token }: Props) {
 
   const selectedLog = filteredLogs.find((item) => item.id === activeLogId) ?? filteredLogs[0] ?? logRows[0];
   const selectedTrace = traceDetail && selectedLog && traceDetail.traceId === selectedLog.traceId ? traceDetail : null;
-  const busyCount = logRows.filter((row) => row.rawStatus === "RUNNING").length;
-  const warningCount = logRows.filter((row) => row.rawStatus === "FAILED" || row.rawStatus === "WAITING_CONFIRMATION").length;
+  const busyCount = runtimeSnapshots.filter((row) => row.status === "RUNNING").length;
+  const warningCount = runtimeSnapshots.filter((row) => row.status === "FAILED" || row.status === "WAITING_CONFIRMATION").length;
 
   useEffect(() => {
     if (selectedLog && activeLogId !== selectedLog.id) {
@@ -393,7 +410,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
         <section className="cici-monitor__metrics" aria-label="监控指标">
           <article>
             <span>组织智能体</span>
-            <strong>{agentRows.length || "—"}</strong>
+            <strong>{agentRows.length}</strong>
           </article>
           <article>
             <span>运行中</span>
@@ -440,7 +457,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
           type="button"
           className="cici-monitor__refresh"
           onClick={() => {
-            void loadAgents();
+            void loadRuntimeSnapshots();
             void loadRunLogs();
           }}
         >
@@ -474,6 +491,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                 <span className="cici-monitor-agent__body">
                   <strong>{row.name}</strong>
                   <span>{row.logCount ? `7 天 ${row.logCount} 次 · 异常 ${row.failedCount}` : row.currentTask}</span>
+                  {row.avgLatencyMs ? <span>平均耗时 {formatMonitorElapsed(row.avgLatencyMs)}</span> : null}
                 </span>
                 <span className={`cici-monitor-status ${statusClass(row.severity)}`}>{row.status}</span>
               </button>
@@ -495,6 +513,8 @@ export default function AdminAgentRunMonitor({ token }: Props) {
               ["RUNNING", "运行中"],
               ["FAILED", "异常"],
               ["WAITING_CONFIRMATION", "待确认"],
+              ["tool", "工具调用"],
+              ["knowledge", "知识库检索"],
             ].map(([value, label]) => (
               <button
                 key={value}
@@ -519,7 +539,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
               >
                 <span className="cici-monitor-log__title">
                   <strong>{log.title}</strong>
-                  <span>执行记录 {log.recordId} · {log.detail}</span>
+                  <span>{log.errorReason ? `报错：${log.errorReason}` : `执行记录 ${log.recordId} · ${log.detail}`}</span>
                 </span>
                 <span className={`cici-monitor-status is-${log.severity}`}>{log.status}</span>
                 <span className="cici-monitor-log__agent">
@@ -635,7 +655,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                 </article>
                 <article>
                   <h3>摘要</h3>
-                  <p>{selectedTrace?.summary || selectedLog.summary || selectedLog.title}</p>
+                  <p>{selectedTrace?.errorReason || selectedTrace?.summary || selectedLog.errorReason || selectedLog.summary || selectedLog.title}</p>
                 </article>
               </section>
             </>

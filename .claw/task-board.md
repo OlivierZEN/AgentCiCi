@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-146 - 观测与运维生产就绪收口
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-019-agent-observability-monitoring.md`
+- task_status_path: `.claw/tasks/TASK-146.md`
+- assignment_path: `.claw/assignments/TASK-146.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-146 local changes; merge after normal integration gates. State validation has an existing TASK-143 line-budget blocker outside this task.
+
 ### TASK-145 - Platform model provider governance
 
 - status: `review`

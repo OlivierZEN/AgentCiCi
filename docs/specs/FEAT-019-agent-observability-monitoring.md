@@ -2,13 +2,13 @@
 kind: feature-spec
 feature_id: FEAT-019
 title: Agent Observability Monitoring
-status: trace_timing_hardened
+status: in_implementation
 owner_role: frontend-backend-observability
-task_ids: TASK-057
+task_ids: TASK-057,TASK-146
 related_decisions: none
 related_issues: none
-updated_at: 2026-05-07T16:10:00+08:00
-updated_by: ai
+updated_at: 2026-05-31T09:10:00Z
+updated_by: MANAGER-001
 ---
 
 # FEAT-019 - 智能体监控与运行链路追踪
@@ -329,6 +329,26 @@ type AgentTraceDetail = {
 - 已按用户最严格 UI 反馈移除内部背景框和框套框：搜索框内部、tab、日志行、选中态、状态文字、链路详情分组、空态均改为透明背景和最小必要线条。
 - 已同步项目 UI 规范到 `DESIGN.md` / `DESIGN.json` / `AGENTS.md` / `README.md`，明确产品面板内部不得再加背景框。
 - 本轮验证通过：`backend mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 成功；`frontend npm run build` 成功，保留既有 Vite chunk-size warning；`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRunTraceIntegrationTest test` 成功；`backend mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` 成功；`git diff --check` 成功。
+
+## 生产就绪缺口复盘 2026-05-31
+
+当前观测与运维已经有 `agent_run_trace`、`/me/agents/run-logs`、`/admin/agents/run-logs` 和 `/admin/ops` 页面雏形，但距离上线仍有以下缺口：
+
+- 组织级智能体状态缺少后端事实源：管理端只能从 `/agents` 和最近日志前端推断运行状态，无法稳定给出最近活动、失败数、平均耗时、在线/待命/异常分布。
+- 审计日志接口直接返回 JPA 实体，字段没有明确 DTO、筛选、分页、时间范围或脱敏契约；前端只能把 JSON 原样输出，无法给管理员做排障扫描。
+- `/ops/metrics/cost` 用审计日志数量估算成本，不是生产级成本事实源；在本轮不再把它当作 `/admin/ops` 的核心可上线能力，成本用量以 billing 模块为准。
+- 运行日志查询虽然支持 7 天范围、状态和类型筛选，但管理端 UI 只做本地过滤，缺少工具调用和知识库检索等日志类型入口。
+- 工具调用失败、模型失败和工作流失败尚未作为列表级 `errorReason` 输出；管理员必须点开节点并读原始摘要才能判断错误原因，不满足生产排障效率。
+- 脱敏策略已有 trace 工具参数处理，但审计日志 detail 尚未统一遮蔽 `Authorization`、token、api key、secret、password、cookie、手机号等敏感内容。
+- 运维验收缺少专门测试覆盖：组织管理员读取全组织 trace、运行快照、审计日志筛选、审计 detail 脱敏和权限边界。
+
+TASK-146 的收口目标：
+
+- 新增组织级 `GET /admin/agents/runtime-snapshots`，返回每个可见智能体最近 7 天的状态、会话数、失败数、平均耗时和最后活动。
+- 运行日志和详情统一输出 `errorReason`，优先提炼工具失败原因、工作流失败输出和失败节点摘要；工具 payload 明确包含 `status` 与 `errorMessage`。
+- 强化 `/ops/audit/logs`：支持 `from`、`to`、`eventType`、`q`、`limit`，只允许最近 7 天查询，返回稳定 DTO，并统一脱敏。
+- 管理端 `/admin/ops` 使用运行快照和审计 DTO，提供可扫描的审计列表、筛选、空态、刷新和错误容错。
+- 后端测试覆盖运行快照、审计日志筛选/脱敏和组织管理员权限；前端完成生产构建和桌面端视觉/交互检查。
 
 ## 交接说明
 

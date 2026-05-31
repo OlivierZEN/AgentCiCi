@@ -6,8 +6,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codehouse.ciciassistant.ai.domain.AgentRunTraceEntity;
+import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
+import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -28,6 +32,12 @@ class AgentRunTraceIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private AuditService auditService;
+
+    @Autowired
+    private AgentRunTraceRepository traceRepository;
 
     @Test
     void shouldExposeChatSessionAsAgentRunLogAndTraceDetail() throws Exception {
@@ -95,6 +105,86 @@ class AgentRunTraceIntegrationTest {
                 .andExpect(jsonPath("$.data.traceId").value(traceId))
                 .andExpect(jsonPath("$.data.sessionId").value(sessionId))
                 .andExpect(jsonPath("$.data.nodes").isArray());
+
+        mockMvc.perform(get("/admin/agents/runtime-snapshots")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[?(@.agentId == 'cici-system')].sevenDaySessionCount").exists())
+                .andExpect(jsonPath("$.data.summary.agentCount").exists())
+                .andExpect(jsonPath("$.data.summary.sevenDaySessionCount").exists());
+
+        String failedTraceId = "tool-failure-trace-1";
+        Instant now = Instant.now();
+        traceRepository.save(new AgentRunTraceEntity(
+                failedTraceId,
+                "demo-org",
+                "u-runtime-failure",
+                "s-runtime-failure",
+                "cici-system",
+                "web",
+                "FAILED",
+                "工具调用失败验证",
+                "外部工具调用失败",
+                "qwen-plus",
+                "",
+                now.minusSeconds(2),
+                now,
+                2000,
+                1,
+                1,
+                0,
+                "[]",
+                "[]",
+                """
+                        [{"id":"tool-failed","type":"TOOL","title":"CRM 查询","status":"FAILED","startedAt":"%s","endedAt":"%s","elapsedMs":2000,"summary":"HTTP 502 upstream timeout","metadata":{}}]
+                        """.formatted(now.minusSeconds(2), now),
+                """
+                        {"tools":[{"id":"tool-failed","name":"crm.lookup","success":false,"result":"HTTP 502 upstream timeout","errorMessage":"HTTP 502 upstream timeout","elapsedMs":2000}],"model":{},"rag":{},"skills":{}}
+                        """,
+                now));
+        mockMvc.perform(get("/admin/agents/run-logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .param("q", "upstream timeout"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].traceId").value(failedTraceId))
+                .andExpect(jsonPath("$.data.items[0].errorReason").value("crm.lookup 调用失败：HTTP 502 upstream timeout"));
+
+        mockMvc.perform(get("/admin/agents/run-logs/{traceId}", failedTraceId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.errorReason").value("crm.lookup 调用失败：HTTP 502 upstream timeout"))
+                .andExpect(jsonPath("$.data.tools[0].errorMessage").value("HTTP 502 upstream timeout"));
+    }
+
+    @Test
+    void shouldExposeFilteredRedactedAuditLogsToOrgAdminOnly() throws Exception {
+        auditService.log(
+                "demo-org",
+                "u-admin-audit",
+                "ops.audit.redaction",
+                "Authorization=Bearer raw-token apiKey=abc123 password=szyd1234 mobile=13800138000");
+        String adminToken = loginToken("13800138111");
+        MvcResult logsResult = mockMvc.perform(get("/ops/audit/logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
+                        .param("eventType", "ops.audit.redaction")
+                        .param("q", "u-admin-audit")
+                        .param("limit", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].eventType").value("ops.audit.redaction"))
+                .andExpect(jsonPath("$.data.items[0].userId").value("u-admin-audit"))
+                .andReturn();
+
+        String body = logsResult.getResponse().getContentAsString();
+        assertThat(body).contains("[redacted]");
+        assertThat(body).contains("138****8000");
+        assertThat(body).doesNotContain("raw-token");
+        assertThat(body).doesNotContain("abc123");
+        assertThat(body).doesNotContain("szyd1234");
+
+        String userToken = loginToken("13800138017");
+        mockMvc.perform(get("/ops/audit/logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + userToken))
+                .andExpect(status().isForbidden());
     }
 
     private String loginToken(String mobile) throws Exception {

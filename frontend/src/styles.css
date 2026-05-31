@@ -13169,6 +13169,82 @@ td.skills-data-table__actions > * {
   line-height: 1.5;
 }
 
+.admin-ops-audit-toolbar {
+  border-bottom: 1px solid #ded2bb;
+  padding: 10px 14px;
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(160px, 220px) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-ops-audit-search {
+  height: 34px;
+}
+
+.admin-ops-audit-filter {
+  min-width: 0;
+  height: 34px;
+  border: 0;
+  border-bottom: 1px solid #ded2bb;
+  border-radius: 0;
+  padding: 0 4px;
+  background: transparent;
+  color: #2b2217;
+  font: inherit;
+  font-size: 13px;
+  box-shadow: none;
+  outline: none;
+}
+
+.admin-ops-audit-filter:focus {
+  border-bottom-color: #b99652;
+}
+
+.admin-ops-audit-filter::placeholder {
+  color: #7c6d59;
+}
+
+.admin-ops-audit-list {
+  display: grid;
+}
+
+.admin-ops-audit-row {
+  min-width: 0;
+  border-bottom: 1px solid rgba(222, 210, 187, 0.72);
+  padding: 11px 14px;
+  display: grid;
+  grid-template-columns: 112px minmax(180px, 0.8fr) minmax(120px, 0.6fr) minmax(280px, 1.4fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.admin-ops-audit-row time,
+.admin-ops-audit-row span {
+  color: #7c6d59;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.admin-ops-audit-row strong {
+  min-width: 0;
+  color: #2b2217;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.admin-ops-audit-row p {
+  min-width: 0;
+  margin: 0;
+  color: #5f523f;
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
 .admin-organization-page {
   height: 100%;
   min-height: 0;

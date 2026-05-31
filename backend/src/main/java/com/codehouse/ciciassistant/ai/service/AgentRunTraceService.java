@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.ai.service;
 
+import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
@@ -291,6 +292,73 @@ public class AgentRunTraceService {
         );
     }
 
+    public Map<String, Object> listOrgRuntimeSnapshots(String orgId) {
+        Instant to = Instant.now();
+        Instant from = to.minus(Duration.ofDays(7));
+        Map<String, Map<String, Object>> byAgent = new LinkedHashMap<>();
+        for (AgentDefinitionEntity agent : agentDefinitionRepository.findByOrgIdAndEnabledTrueOrderByBuiltinDescUpdatedAtDesc(orgId)) {
+            byAgent.put(agent.getAgentId(), newRuntimeSnapshot(
+                    agent.getAgentId(),
+                    agent.getName(),
+                    agent.getAvatarBase64(),
+                    agent.getSummary()));
+        }
+        Map<String, AgentRunTraceRepository.AgentRuntimeStatsProjection> statsByAgent = new LinkedHashMap<>();
+        for (AgentRunTraceRepository.AgentRuntimeStatsProjection stats : traceRepository.summarizeOrgRuntime(orgId, from, to)) {
+            statsByAgent.put(stats.getAgentId(), stats);
+            byAgent.putIfAbsent(stats.getAgentId(), newRuntimeSnapshot(
+                    stats.getAgentId(),
+                    agentName(orgId, stats.getAgentId()),
+                    "",
+                    ""));
+        }
+        for (Map.Entry<String, AgentRunTraceRepository.AgentRuntimeStatsProjection> entry : statsByAgent.entrySet()) {
+            Map<String, Object> snapshot = byAgent.get(entry.getKey());
+            AgentRunTraceRepository.AgentRuntimeStatsProjection stats = entry.getValue();
+            snapshot.put("activeSessionCount", stats.getActiveSessionCount());
+            snapshot.put("sevenDaySessionCount", stats.getSevenDaySessionCount());
+            snapshot.put("sevenDayFailureCount", stats.getSevenDayFailureCount());
+            snapshot.put("avgLatencyMs", stats.getAvgLatencyMs() == null ? 0 : Math.round(stats.getAvgLatencyMs()));
+            snapshot.put("lastActiveAt", stats.getLastActiveAt() == null ? "" : stats.getLastActiveAt().toString());
+        }
+        LinkedHashSet<String> latestSeen = new LinkedHashSet<>();
+        for (AgentRunTraceEntity trace : traceRepository.findTop500ByOrgIdAndStartedAtBetweenOrderByStartedAtDesc(orgId, from, to)) {
+            if (!latestSeen.add(trace.getAgentId())) {
+                continue;
+            }
+            byAgent.putIfAbsent(trace.getAgentId(), newRuntimeSnapshot(
+                    trace.getAgentId(),
+                    agentName(orgId, trace.getAgentId()),
+                    "",
+                    ""));
+            Map<String, Object> snapshot = byAgent.get(trace.getAgentId());
+            snapshot.put("status", runtimeStatus(trace.getStatus()));
+            snapshot.put("currentTask", emptyToDefault(trace.getSummary(), trace.getTitle()));
+            snapshot.put("lastTraceId", trace.getTraceId());
+            snapshot.put("lastRunStatus", trace.getStatus());
+            snapshot.put("lastChannel", trace.getChannel());
+            snapshot.put("lastElapsedMs", trace.getElapsedMs());
+        }
+        List<Map<String, Object>> items = byAgent.values().stream()
+                .sorted((left, right) -> String.valueOf(right.getOrDefault("lastActiveAt", ""))
+                        .compareTo(String.valueOf(left.getOrDefault("lastActiveAt", ""))))
+                .toList();
+        long running = items.stream().filter(item -> "RUNNING".equals(item.get("status"))).count();
+        long warning = items.stream().filter(item -> "FAILED".equals(item.get("status"))
+                || "WAITING_CONFIRMATION".equals(item.get("status"))).count();
+        return Map.of(
+                "items", items,
+                "from", from.toString(),
+                "to", to.toString(),
+                "summary", Map.of(
+                        "agentCount", items.size(),
+                        "runningCount", running,
+                        "warningCount", warning,
+                        "sevenDaySessionCount", items.stream().mapToLong(item -> number(item.get("sevenDaySessionCount"))).sum()
+                )
+        );
+    }
+
     public Map<String, Object> traceDetail(String orgId, String userId, String traceId) {
         if (traceId != null && traceId.startsWith("legacy-")) {
             return legacyDetail(orgId, userId, decodeLegacySessionId(traceId));
@@ -312,6 +380,7 @@ public class AgentRunTraceService {
 
     private Map<String, Object> tracePayload(String orgId, AgentRunTraceEntity entity) {
         Map<String, Object> detail = readMap(entity.getDetailJson());
+        List<Object> nodes = readList(entity.getNodesJson());
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("traceId", entity.getTraceId());
         payload.put("requestId", emptyToBlank(entity.getRequestId()));
@@ -327,13 +396,43 @@ public class AgentRunTraceService {
         payload.put("source", emptyToDefault(entity.getSourceType(), "trace"));
         payload.put("credentialId", entity.getCredentialId() == null ? "" : entity.getCredentialId().toString());
         payload.put("externalUserId", emptyToBlank(entity.getExternalUserId()));
-        payload.put("nodes", readList(entity.getNodesJson()));
+        payload.put("nodes", nodes);
+        payload.put("errorReason", errorReason(detail, nodes));
         payload.put("detail", detail);
         payload.put("model", detail.getOrDefault("model", Map.of()));
         payload.put("tools", detail.getOrDefault("tools", List.of()));
         payload.put("skills", detail.getOrDefault("skills", Map.of()));
         payload.put("rag", detail.getOrDefault("rag", Map.of()));
         return payload;
+    }
+
+    private Map<String, Object> newRuntimeSnapshot(String agentId, String agentName, String avatarBase64, String summary) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("agentId", agentId);
+        payload.put("agentName", emptyToDefault(agentName, agentId));
+        payload.put("avatarBase64", emptyToBlank(avatarBase64));
+        payload.put("status", "IDLE");
+        payload.put("currentTask", emptyToDefault(summary, "暂无运行记录"));
+        payload.put("activeSessionCount", 0L);
+        payload.put("sevenDaySessionCount", 0L);
+        payload.put("sevenDayFailureCount", 0L);
+        payload.put("avgLatencyMs", 0L);
+        payload.put("lastActiveAt", "");
+        payload.put("lastTraceId", "");
+        payload.put("lastRunStatus", "");
+        payload.put("lastChannel", "");
+        payload.put("lastElapsedMs", 0);
+        return payload;
+    }
+
+    private String runtimeStatus(String rawStatus) {
+        return switch (emptyToBlank(rawStatus).toUpperCase(Locale.ROOT)) {
+            case "RUNNING" -> "RUNNING";
+            case "WAITING_CONFIRMATION" -> "WAITING_CONFIRMATION";
+            case "FAILED", "FAILED_COMPLETION", "ERROR" -> "FAILED";
+            case "COMPLETED", "SUCCESS" -> "COMPLETED";
+            default -> "IDLE";
+        };
     }
 
     private List<Map<String, Object>> buildNodes(ChatRunTraceInput input,
@@ -629,6 +728,7 @@ public class AgentRunTraceService {
 
     private Map<String, Object> toListPayload(String orgId, AgentRunTraceEntity item) {
         Map<String, Object> detail = readMap(item.getDetailJson());
+        List<Object> nodes = readList(item.getNodesJson());
         Map<String, Object> skills = detail.get("skills") instanceof Map<?, ?> skillMap
                 ? normalizeMap(skillMap)
                 : Map.of();
@@ -652,6 +752,7 @@ public class AgentRunTraceService {
         payload.put("boundSkillCodes", skills.getOrDefault("boundSkillCodes", List.of()));
         payload.put("knowledgeBaseNames", readList(item.getKnowledgeBaseNamesJson()));
         payload.put("summary", item.getSummary());
+        payload.put("errorReason", errorReason(detail, nodes));
         payload.put("source", emptyToDefault(item.getSourceType(), "trace"));
         payload.put("credentialId", item.getCredentialId() == null ? "" : item.getCredentialId().toString());
         payload.put("externalUserId", emptyToBlank(item.getExternalUserId()));
@@ -716,6 +817,7 @@ public class AgentRunTraceService {
         detail.put("endedAt", session.getUpdatedAt().toString());
         detail.put("elapsedMs", 0);
         detail.put("summary", "历史会话消息记录，未包含运行时 trace 明细。");
+        detail.put("errorReason", "");
         detail.put("nodes", nodes);
         detail.put("model", Map.of());
         detail.put("tools", List.of());
@@ -790,10 +892,46 @@ public class AgentRunTraceService {
                     String.valueOf(payload.get("sessionId")),
                     String.valueOf(payload.get("agentName")),
                     String.valueOf(payload.get("title")),
-                    String.valueOf(payload.get("summary"))).toLowerCase(Locale.ROOT);
+                    String.valueOf(payload.get("summary")),
+                    String.valueOf(payload.get("errorReason"))).toLowerCase(Locale.ROOT);
             return haystack.contains(q);
         }
         return true;
+    }
+
+    private String errorReason(Map<String, Object> detail, List<Object> nodes) {
+        Object tools = detail.get("tools");
+        if (tools instanceof List<?> toolList) {
+            for (Object tool : toolList) {
+                if (tool instanceof Map<?, ?> raw) {
+                    Map<String, Object> item = normalizeMap(raw);
+                    Object success = item.get("success");
+                    if (Boolean.FALSE.equals(success) || "false".equalsIgnoreCase(String.valueOf(success))) {
+                        String name = emptyToDefault(asText(item.get("name")), "tool");
+                        String reason = emptyToDefault(asText(item.get("errorMessage")), asText(item.get("result")));
+                        return clip(name + " 调用失败：" + reason, 300);
+                    }
+                }
+            }
+        }
+        Object runtime = detail.get("runtimeExecution");
+        if (runtime instanceof Map<?, ?> rawRuntime) {
+            Map<String, Object> item = normalizeMap(rawRuntime);
+            String status = String.valueOf(item.getOrDefault("status", ""));
+            if (AgentWorkflowExecutionLogService.STATUS_FAILED.equalsIgnoreCase(status) || "FAILED".equalsIgnoreCase(status)) {
+                return clip("技能运行失败：" + asText(item.get("output")), 300);
+            }
+        }
+        for (Object node : nodes == null ? List.of() : nodes) {
+            if (node instanceof Map<?, ?> rawNode) {
+                Map<String, Object> item = normalizeMap(rawNode);
+                if ("FAILED".equalsIgnoreCase(String.valueOf(item.getOrDefault("status", "")))) {
+                    return clip(emptyToDefault(asText(item.get("title")), "链路节点")
+                            + "：" + asText(item.get("summary")), 300);
+                }
+            }
+        }
+        return "";
     }
 
     private String agentName(String orgId, String agentId) {
@@ -888,6 +1026,10 @@ public class AgentRunTraceService {
 
     private static String emptyToBlank(String value) {
         return value == null ? "" : value;
+    }
+
+    private static String asText(Object value) {
+        return value == null ? "" : String.valueOf(value);
     }
 
     private static String emptyToDefault(String value, String fallback) {
@@ -1006,20 +1148,32 @@ public class AgentRunTraceService {
         }
 
         String summary() {
+            if (!success) {
+                return "工具失败：" + errorMessage();
+            }
             return result == null || result.isBlank() ? "工具已调用。" : clip(result, 220);
         }
 
+        String errorMessage() {
+            if (result == null || result.isBlank()) {
+                return "工具返回失败状态，但未提供错误详情。";
+            }
+            return clip(result, 260);
+        }
+
         Map<String, Object> toPayload() {
-            return Map.of(
-                    "id", id,
-                    "name", name,
-                    "arguments", clip(arguments, 800),
-                    "result", clip(result, 1200),
-                    "success", success,
-                    "startedAt", startedAt == null ? "" : startedAt.toString(),
-                    "endedAt", endedAt == null ? "" : endedAt.toString(),
-                    "elapsedMs", elapsedMs == null ? 0L : Math.max(0L, elapsedMs)
-            );
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("id", id);
+            payload.put("name", name);
+            payload.put("arguments", clip(arguments, 800));
+            payload.put("result", clip(result, 1200));
+            payload.put("success", success);
+            payload.put("status", success ? "SUCCESS" : "FAILED");
+            payload.put("errorMessage", success ? "" : errorMessage());
+            payload.put("startedAt", startedAt == null ? "" : startedAt.toString());
+            payload.put("endedAt", endedAt == null ? "" : endedAt.toString());
+            payload.put("elapsedMs", elapsedMs == null ? 0L : Math.max(0L, elapsedMs));
+            return payload;
         }
     }
 }

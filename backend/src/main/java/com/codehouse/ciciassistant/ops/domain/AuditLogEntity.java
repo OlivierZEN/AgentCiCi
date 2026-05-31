@@ -41,4 +41,28 @@ public class AuditLogEntity {
         this.detail = detail;
         this.createdAt = Instant.now();
     }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getOrgId() {
+        return orgId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getDetail() {
+        return detail;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
 }

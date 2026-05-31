@@ -9,6 +9,15 @@ import org.springframework.data.repository.query.Param;
 
 public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEntity, String> {
 
+    interface AgentRuntimeStatsProjection {
+        String getAgentId();
+        long getSevenDaySessionCount();
+        long getSevenDayFailureCount();
+        long getActiveSessionCount();
+        Double getAvgLatencyMs();
+        Instant getLastActiveAt();
+    }
+
     Optional<AgentRunTraceEntity> findByTraceIdAndOrgId(String traceId, String orgId);
 
     Optional<AgentRunTraceEntity> findFirstByOrgIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
@@ -20,6 +29,28 @@ public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEnti
             String orgId,
             Instant from,
             Instant to);
+
+    List<AgentRunTraceEntity> findTop500ByOrgIdAndStartedAtBetweenOrderByStartedAtDesc(
+            String orgId,
+            Instant from,
+            Instant to);
+
+    @Query("""
+            select t.agentId as agentId,
+                   count(t) as sevenDaySessionCount,
+                   sum(case when t.status in ('FAILED', 'WAITING_CONFIRMATION') then 1 else 0 end) as sevenDayFailureCount,
+                   sum(case when t.status = 'RUNNING' then 1 else 0 end) as activeSessionCount,
+                   avg(t.elapsedMs) as avgLatencyMs,
+                   max(t.startedAt) as lastActiveAt
+            from AgentRunTraceEntity t
+            where t.orgId = :orgId
+              and t.startedAt between :from and :to
+            group by t.agentId
+            """)
+    List<AgentRuntimeStatsProjection> summarizeOrgRuntime(
+            @Param("orgId") String orgId,
+            @Param("from") Instant from,
+            @Param("to") Instant to);
 
     @Query("""
             select t from AgentRunTraceEntity t

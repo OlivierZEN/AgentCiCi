@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-31T08:31:00Z
+updated_at: 2026-05-31T13:47:59Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-31T08:30:00Z
+last_run_at: 2026-05-31T13:47:59Z
 last_run_status: success
 ---
 
@@ -13,11 +13,24 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：production billing subscription and credits reset for all ACTIVE organizations.
-- 命令：production PostgreSQL backup, transactional billing reset SQL, SQL verification, and authenticated billing overview API smoke.
+- 范围：TASK-146 观测与运维生产就绪收口，本地后端集成、前端构建、桌面浏览器烟测和静态检查。
+- 命令：`AgentRunTraceIntegrationTest`、`npm run build`、`git diff --check`、Browser desktop smoke for `/admin/ops`。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-146 observability and operations production readiness (2026-05-31T13:47:59Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-146` on `codex/TASK-146-ops-observability-audit` -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative backend/frontend/spec/task files -> **allowed**.
+    - `backend-integration`: `mvn -q -Dtest=AgentRunTraceIntegrationTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `browser-desktop`: in-app browser opened `http://127.0.0.1:5173/admin/ops` after local admin login -> **success** for page structure, tabs, audit filter UI, and screenshots `output/playwright/task146-admin-ops-agents.png` / `output/playwright/task146-admin-ops-audit.png`.
+    - `state`: `validate-state.py .claw` -> **blocked by existing out-of-scope issue**: `.claw/tasks/TASK-143.md` has 121 lines, over the 120-line task hot-file budget.
+  - Notes:
+    - Added organization-level runtime snapshots, trace/list `errorReason`, tool `status/errorMessage`, and redacted/filterable audit log DTOs.
+    - Audit frontend accepts both new `{items}` and legacy array payloads to tolerate rolling deploy order.
 
 - Production billing professional reset (2026-05-31T08:30:00Z):
   - Commands:

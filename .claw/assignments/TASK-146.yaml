@@ -1,0 +1,52 @@
+task_id: TASK-146
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-05-31T09:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-019-agent-observability-monitoring.md
+task_status_path: .claw/tasks/TASK-146.md
+branch: codex/TASK-146-ops-observability-audit
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ops/**
+  - frontend/src/admin/**
+  - frontend/src/utils/**
+  - frontend/src/styles.css
+scope_files:
+  - docs/specs/FEAT-019-agent-observability-monitoring.md
+  - .claw/tasks/TASK-146.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-019-agent-observability-monitoring.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Close the production-readiness gap for organization-level observability and operations in /admin/ops."
+  - "Implement agent runtime snapshots and audit log querying/redaction without changing unrelated billing, OpenAPI, skill, or platform-governance behavior."
+  - "Keep authenticated product UI within the existing 鎏金账房 design register."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-05-31T09:10:00Z for TASK-146 setup."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; no private keys, passwords, bearer tokens, or reusable secrets."
