@@ -168,12 +168,15 @@ release_channel_for_version() {
 }
 
 latest_production_version() {
-  git -C "$ROOT_DIR" tag --list |
-    awk -F. '
-      /^[0-9]+\.[0-9]+\.[0-9]+$/ {
-        printf "%04d.%04d.%04d %s\n", $1, $2, $3, $0
+  git -C "$ROOT_DIR" ls-remote --tags origin |
+    awk -F'\t' '{
+      ref = $2
+      sub(/^refs\/tags\//, "", ref)
+      if (ref !~ /\^{}$/ && ref ~ /^[0-9]+\.[0-9]+\.[0-9]+$/) {
+        split(ref, v, ".")
+        printf "%04d.%04d.%04d %s\n", v[1], v[2], v[3], ref
       }
-    ' |
+    }' |
     sort |
     tail -1 |
     awk '{print $2}'
