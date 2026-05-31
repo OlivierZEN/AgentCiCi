@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-31T08:06:00Z
+updated_at: 2026-05-31T08:31:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-31T08:05:00Z
+last_run_at: 2026-05-31T08:30:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,22 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：production `/admin/billing` Nginx API proxy hotfix after syncing `main` with `origin/main`.
-- 命令：release dry-run, ECS Nginx config backup/sync/reload, public route/API curl smoke, and authenticated billing overview API smoke.
+- 范围：production billing subscription and credits reset for all ACTIVE organizations.
+- 命令：production PostgreSQL backup, transactional billing reset SQL, SQL verification, and authenticated billing overview API smoke.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Production billing professional reset (2026-05-31T08:30:00Z):
+  - Commands:
+    - `production-readonly-precheck`: queried production `org`, `billing_subscription`, `billing_credit_ledger`, and `usage_meter_event` through `cici-database` -> **success**. There were 5 ACTIVE organizations, 1 existing billing subscription, 1 ledger row, and 0 usage events.
+    - `production-backup`: `pg_dump -Fc` to `/opt/cici/backups/20260531-162707-before-billing-professional-reset/postgres.dump` plus `acr.env` copy -> **success**.
+    - `billing-reset-transaction`: locked billing tables, deleted old billing ledger/usage rows, upserted all ACTIVE orgs to `saas_business`, reset period to `2026-05-31T08:28:48Z` through `2026-06-30T08:28:48Z`, set included credits to `35,000`, consumed credits to `0`, remaining credits to `35,000`, and inserted 5 `included_grant` ledger rows -> **success**.
+    - `sql-postcheck`: production SQL returned 5 `saas_business` subscriptions, grant total `175,000`, 5 ledger rows, and 0 usage events -> **success**.
+    - `authenticated-api-smoke`: production organization-admin password login followed by `GET /admin/billing/overview` -> **success**, returned `专业版`, included credits `35,000`, consumed credits `0`, remaining credits `35,000`, 1 recent ledger row, and 0 recent usage events.
+  - Notes:
+    - The reset was data-only inside PostgreSQL; no image rebuild, container restart, schema migration, or app config change was performed.
+    - Backup path for rollback/audit: `/opt/cici/backups/20260531-162707-before-billing-professional-reset/postgres.dump`.
 
 - Production billing API proxy hotfix (2026-05-31T08:05:00Z):
   - Commands:

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-05-31T08:06:00Z
+updated_at: 2026-05-31T08:31:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Production /admin/billing API proxy hotfix is on origin/main and deployed to the ECS Nginx config; billing overview API returns backend JSON again."
-next_action: "Monitor /admin/billing with an organization-admin account after user refresh; continue normal review/merge flow for remaining tasks."
+active_task: "Production billing reset complete: all ACTIVE organizations are on 专业版 with 35,000 Credits, zero consumed credits, and fresh included-grant ledger rows."
+next_action: "Monitor /admin/billing after user refresh; continue normal review/merge flow for remaining tasks."
 read_next:
   goals: false
   decisions: false
@@ -25,6 +25,7 @@ read_next:
 - Focus: production billing display recovery and unified Credits billing presentation.
 - Local `main` is synced with `origin/main` at `7ee3db6`; `origin/main` contains `e83aa11` production Nginx proxy repair for `/admin/billing/*` API subpaths and `fa8df0e` unified Credits billing presentation.
 - Production hotfix deployed on 2026-05-31: synced `deploy/nginx.cici.conf` and `deploy/nginx.cici.ssl.conf` to `/opt/cici/deploy/`, reloaded `cici-frontend` Nginx, and verified `/admin/billing/overview` returns backend JSON instead of SPA HTML.
+- Production billing data reset on 2026-05-31: backed up PostgreSQL to `/opt/cici/backups/20260531-162707-before-billing-professional-reset/postgres.dump`, set all 5 ACTIVE organizations to `saas_business` 专业版, reset consumed credits to `0`, remaining credits to `35,000`, rebuilt 5 included-grant ledger rows, and cleared usage events.
 - Local MR validation passed on 2026-05-31: billing backend tests, billing frontend unit tests, frontend production build, and `git diff --check`.
 - TASK-114 runtime billing is ready for review: billable traces write ledger debits, platform config errors stay non-billable, and org-admin billing shows `官网报价条目 · Credits 包`.
 - TASK-144 implemented locally: public website now uses AgentCiCi enterprise agent platform IA with bilingual `Solutions`, `SkillsHub`, `Pricing`, `Docs`, and `Community`; old `/suite/*`, `/pricing/global`, and `/autoservice/*` public routes redirect to the new structure.
