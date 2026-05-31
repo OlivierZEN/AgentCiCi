@@ -2,6 +2,8 @@ package com.codehouse.ciciassistant.billing.service;
 
 import com.codehouse.ciciassistant.ai.service.AgentRunTraceService;
 import com.codehouse.ciciassistant.ai.service.RagService;
+import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerEntity;
 import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerRepository;
 import com.codehouse.ciciassistant.billing.domain.BillingEditionEntity;
@@ -12,6 +14,7 @@ import com.codehouse.ciciassistant.billing.domain.UsageMeterEventEntity;
 import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
@@ -39,6 +42,7 @@ public class BillingUsageMeteringService {
     private final UsageMeterEventRepository usageMeterEventRepository;
     private final BillingCreditLedgerRepository creditLedgerRepository;
     private final BillingEditionConfigurationService configurationService;
+    private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
 
     public BillingUsageMeteringService(BillingSubscriptionRepository subscriptionRepository,
@@ -46,12 +50,14 @@ public class BillingUsageMeteringService {
                                        UsageMeterEventRepository usageMeterEventRepository,
                                        BillingCreditLedgerRepository creditLedgerRepository,
                                        BillingEditionConfigurationService configurationService,
+                                       EntityManager entityManager,
                                        ObjectMapper objectMapper) {
         this.subscriptionRepository = subscriptionRepository;
         this.editionRepository = editionRepository;
         this.usageMeterEventRepository = usageMeterEventRepository;
         this.creditLedgerRepository = creditLedgerRepository;
         this.configurationService = configurationService;
+        this.entityManager = entityManager;
         this.objectMapper = objectMapper;
     }
 
@@ -208,7 +214,7 @@ public class BillingUsageMeteringService {
         subscription.setIncludedCredits(included);
         subscription.setRemainingCredits(included);
         subscription.setOperationSeatsUsed(1);
-        subscription.setBuilderSeatsUsed(0);
+        subscription.setBuilderSeatsUsed(activeBuilderSeatUsers(orgId));
         subscription.setPackageCodes(edition.getPackageCodes());
         subscription.setUpdatedAt(now);
         return subscriptionRepository.save(subscription);
@@ -223,8 +229,24 @@ public class BillingUsageMeteringService {
                 .setScale(2, RoundingMode.HALF_UP);
         subscription.setConsumedCredits(consumed);
         subscription.setRemainingCredits(subscription.getIncludedCredits().subtract(consumed).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
+        subscription.setBuilderSeatsUsed(activeBuilderSeatUsers(subscription.getOrgId()));
         subscription.setUpdatedAt(Instant.now());
         return subscriptionRepository.save(subscription);
+    }
+
+    private int activeBuilderSeatUsers(String orgId) {
+        Long count = entityManager.createQuery("""
+                        select count(member)
+                        from UserEntity member
+                        where member.org.id = :orgId
+                          and member.memberStatus = :memberStatus
+                          and member.roleCode in :builderRoles
+                        """, Long.class)
+                .setParameter("orgId", orgId)
+                .setParameter("memberStatus", UserEntity.STATUS_ACTIVE)
+                .setParameter("builderRoles", List.of(RoleCodes.OWNER, RoleCodes.ORG_ADMIN))
+                .getSingleResult();
+        return Math.toIntExact(count);
     }
 
     private BigDecimal currentBalance(BillingSubscriptionEntity subscription) {

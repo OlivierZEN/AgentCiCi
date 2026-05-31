@@ -62,8 +62,8 @@ updated_by: MANAGER-001
 
 SaaS 默认版本和官网 Pricing 事实源对齐：
 
-- `saas_team` / 标准版：8,000 Credits，本期默认操作席位 1，构建席位 0；权益上限为操作席位 20、构建席位 1、Agent 3、知识库 5GB、Open API QPS 10、并发 2、Trace 7 天。
-- `saas_business` / 专业版：35,000 Credits；权益上限为操作席位 100、构建席位 2、Agent 10、知识库 30GB、并发 10、Trace 30 天。新建和本地重置组织默认使用该版本。
+- `saas_team` / 标准版：8,000 Credits，本期默认操作席位 1；构建席位按 active `OWNER` / `ORG_ADMIN` 统计；权益上限为操作席位 20、构建席位 1、Agent 3、知识库 5GB、Open API QPS 10、并发 2、Trace 7 天。
+- `saas_business` / 专业版：35,000 Credits；权益上限为操作席位 100、构建席位 2、Agent 10、知识库 30GB、并发 10、Trace 30 天。新建和本地重置组织默认使用该版本；`OWNER` 和 `ORG_ADMIN` 因拥有管理、构建和发布权限，默认占用构建席位。
 - `saas_enterprise` / 企业版：100,000 Credits 起；权益上限为操作席位 500 起、构建席位 5、Agent 50、知识库 100GB 起、并发 50 起、Trace 90 天。
 - `saas_custom` / Custom 定制版：超大规模、本地化部署和专属治理，配额、并发、Credits、容量、SLA 按合同配置。
 - SaaS 加购包按 FEAT-063 收敛为少数官网条目：`SaaS Credits 加购包`、`知识库容量包`、`并发与构建扩展`、`上线服务包`。文档处理、OCR、扫描件、高级检索和 rerank 不再作为官网一线加购包，统一通过内部 rate card 折算为 Credits。

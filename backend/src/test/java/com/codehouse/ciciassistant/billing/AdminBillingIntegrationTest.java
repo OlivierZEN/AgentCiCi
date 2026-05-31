@@ -48,11 +48,11 @@ class AdminBillingIntegrationTest {
                 .andExpect(jsonPath("$.data.subscription.editionName").value("专业版"))
                 .andExpect(jsonPath("$.data.subscription.includedCredits").value(35000))
                 .andExpect(jsonPath("$.data.subscription.operationSeatsUsed").value(1))
-                .andExpect(jsonPath("$.data.subscription.builderSeatsUsed").value(0))
+                .andExpect(jsonPath("$.data.subscription.builderSeatsUsed").value(1))
                 .andExpect(jsonPath("$.data.creditSummary.includedCredits").isNumber())
                 .andExpect(jsonPath("$.data.creditSummary.consumedCredits").isNumber())
                 .andExpect(jsonPath("$.data.quotaWarnings[1].message").value("1 / 100"))
-                .andExpect(jsonPath("$.data.quotaWarnings[2].message").value("0 / 2"))
+                .andExpect(jsonPath("$.data.quotaWarnings[2].message").value("1 / 2"))
                 .andReturn();
 
         JsonNode overview = readJson(overviewResult).path("data");

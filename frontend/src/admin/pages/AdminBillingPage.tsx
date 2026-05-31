@@ -161,7 +161,7 @@ function billingTypeLabel(type: string): string {
     case "customer_paid":
       return "客户侧成本";
     case "platform_paid":
-      return "平台代付";
+      return "订阅";
     case "included":
       return "套餐内";
     case "non_billable":
@@ -182,11 +182,45 @@ function warningLabel(level: string): string {
   }
 }
 
+function formatSeatEntitlement(used: number, limit: number | null | undefined, usedLabel: string): string {
+  if (limit == null) return `${usedLabel} ${formatLimit(used)} / 合同约定`;
+  return `${usedLabel} ${formatLimit(used)} / 含 ${formatLimit(limit)}`;
+}
+
+function splitQuotaMessage(message: string): { used: string; limit: string } | null {
+  const parts = message.split("/").map((part) => part.trim()).filter(Boolean);
+  if (parts.length !== 2) return null;
+  return { used: parts[0], limit: parts[1] };
+}
+
+function quotaDisplay(item: QuotaWarning): { label: string; message: string } {
+  const seatQuota = splitQuotaMessage(item.message);
+  if (item.code === "operation_seats" && seatQuota) {
+    return {
+      label: "团队成员",
+      message: seatQuota.limit === "合同约定"
+        ? `已占用 ${seatQuota.used} 个，额度按合同约定`
+        : `已占用 ${seatQuota.used} 个，套餐含 ${seatQuota.limit} 个`,
+    };
+  }
+  if (item.code === "builder_seats" && seatQuota) {
+    return {
+      label: "构建者席位",
+      message: seatQuota.limit === "合同约定"
+        ? `已启用 ${seatQuota.used} 个，额度按合同约定`
+        : `已启用 ${seatQuota.used} 个，套餐含 ${seatQuota.limit} 个`,
+    };
+  }
+  return { label: item.label, message: item.message };
+}
+
 export const adminBillingLabels = {
   formatCredits,
   formatLimit,
+  formatSeatEntitlement,
   ledgerTypeLabel,
   billingTypeLabel,
+  quotaDisplay,
   warningLabel,
 };
 
@@ -241,9 +275,6 @@ export default function AdminBillingPage() {
             <div className="admin-billing-summary__primary">
               <p className="platform-section-label">当前版本</p>
               <h2>{overview.subscription.editionName}</h2>
-              <p>
-                {overview.subscription.deploymentModeLabel} · {overview.subscription.status} · {overview.subscription.editionCode}
-              </p>
             </div>
             <dl className="admin-billing-metrics">
               <div>
@@ -275,12 +306,12 @@ export default function AdminBillingPage() {
               </header>
               <dl className="admin-billing-entitlements">
                 <div>
-                  <dt>操作席位</dt>
-                  <dd>{overview.subscription.operationSeatsUsed} / {formatLimit(overview.subscription.operationSeatLimit)}</dd>
+                  <dt>团队成员</dt>
+                  <dd>{formatSeatEntitlement(overview.subscription.operationSeatsUsed, overview.subscription.operationSeatLimit, "已占用")}</dd>
                 </div>
                 <div>
-                  <dt>构建席位</dt>
-                  <dd>{overview.subscription.builderSeatsUsed} / {formatLimit(overview.subscription.builderSeatLimit)}</dd>
+                  <dt>构建者席位</dt>
+                  <dd>{formatSeatEntitlement(overview.subscription.builderSeatsUsed, overview.subscription.builderSeatLimit, "已启用")}</dd>
                 </div>
                 <div>
                   <dt>Agent 数</dt>
@@ -303,17 +334,20 @@ export default function AdminBillingPage() {
 
             <section className="admin-ops-panel admin-billing-panel" aria-label="额度状态">
               <header className="admin-ops-panel__head">
-                <h2>Quota 状态</h2>
+                <h2>额度状态</h2>
                 <span>{overview.quotaWarnings.length} 项</span>
               </header>
               <div className="admin-billing-quota-list">
-                {overview.quotaWarnings.map((item) => (
-                  <div key={item.code} className={`admin-billing-quota admin-billing-quota--${item.level}`}>
-                    <strong>{item.label}</strong>
-                    <span>{warningLabel(item.level)}</span>
-                    <p>{item.message}</p>
-                  </div>
-                ))}
+                {overview.quotaWarnings.map((item) => {
+                  const display = quotaDisplay(item);
+                  return (
+                    <div key={item.code} className={`admin-billing-quota admin-billing-quota--${item.level}`}>
+                      <strong>{display.label}</strong>
+                      <span>{warningLabel(item.level)}</span>
+                      <p>{display.message}</p>
+                    </div>
+                  );
+                })}
               </div>
             </section>
           </div>
