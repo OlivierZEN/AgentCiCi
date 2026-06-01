@@ -170,7 +170,7 @@ public class ChatOrchestratorService {
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                 clipForTrace(question, 220), Map.of("sessionId", sessionId)));
 
-        Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
+        Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
         ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
         boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
@@ -329,7 +329,7 @@ public class ChatOrchestratorService {
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                         clipForTrace(question, 220), Map.of("sessionId", sessionId)));
 
-                Map<String, String> routedModel = modelRouterService.route(orgId, "chat");
+                Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
                 ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
                 boolean showThinking = chatThinkingConfigService.isEnabled(orgId);

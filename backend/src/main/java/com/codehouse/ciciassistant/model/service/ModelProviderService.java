@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.model.service;
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigEntity;
 import com.codehouse.ciciassistant.model.domain.ModelProviderConfigRepository;
+import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -36,6 +37,12 @@ public class ModelProviderService {
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
     private static final String FETCH_OLLAMA = "ollama";
     private static final String FETCH_ANTHROPIC = "anthropic";
+    private static final List<SceneRouteDef> SCENE_ROUTES = List.of(
+            new SceneRouteDef("chat", "智能体对话", "员工工作台、渠道消息和 OpenAPI chat 默认模型。"),
+            new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。"),
+            new SceneRouteDef("meeting-minutes", "AI 听记", "会议纪要、行动项和拜访记录生成模型。"),
+            new SceneRouteDef("customer-insight", "客户洞察", "客户洞察摘要、一客一策和客户经营分析模型。")
+    );
 
     private final ModelProviderConfigRepository providerRepository;
     private final OrgModelConfigRepository modelConfigRepository;
@@ -246,6 +253,62 @@ public class ModelProviderService {
             }
         }
         return out;
+    }
+
+    @Transactional
+    public Map<String, Object> platformModelRouteSettings() {
+        List<Map<String, Object>> candidates = agentBaseModels(platformScopeId());
+        return Map.of(
+                "routes", SCENE_ROUTES.stream().map(scene -> routeView(scene, candidates)).toList(),
+                "modelCandidates", candidates
+        );
+    }
+
+    @Transactional
+    public Map<String, Object> updatePlatformModelRoute(String sceneCode, String providerCode, String modelName) {
+        SceneRouteDef scene = requireSceneRoute(sceneCode);
+        ModelChoice choice = requirePlatformModelChoice(providerCode, modelName);
+        String scopeId = platformScopeId();
+        OrgModelConfigEntity entity = modelConfigRepository.findByOrgIdAndSceneCode(scopeId, scene.sceneCode())
+                .orElse(new OrgModelConfigEntity(scopeId, scene.sceneCode(), choice.providerCode(), choice.modelName()));
+        entity.update(choice.providerCode(), choice.modelName());
+        modelConfigRepository.save(entity);
+        return routeView(scene, agentBaseModels(scopeId));
+    }
+
+    @Transactional
+    public Map<String, Object> deletePlatformModelRoute(String sceneCode) {
+        SceneRouteDef scene = requireSceneRoute(sceneCode);
+        modelConfigRepository.deleteByOrgIdAndSceneCode(platformScopeId(), scene.sceneCode());
+        return routeView(scene, agentBaseModels(platformScopeId()));
+    }
+
+    @Transactional
+    public Map<String, String> resolveRuntimeModelRoute(String orgId, String sceneCode, String preferredModelName) {
+        List<ModelChoice> candidates = agentBaseModels(orgId).stream()
+                .map(this::toModelChoice)
+                .filter(choice -> choice != null)
+                .toList();
+        if (candidates.isEmpty()) {
+            throw new IllegalStateException("暂无平台可用模型，请联系平台运营启用模型厂商。");
+        }
+
+        OrgModelConfigEntity configured = modelConfigRepository
+                .findByOrgIdAndSceneCode(platformScopeId(), normalizeSceneCode(sceneCode))
+                .orElse(null);
+        ModelChoice sceneChoice = configured == null
+                ? null
+                : findCandidate(candidates, configured.getProvider(), configured.getModelName());
+        if (sceneChoice != null) {
+            return routePayload(sceneChoice, "platform_scene");
+        }
+
+        ModelChoice preferred = findPreferredCandidate(candidates, preferredModelName);
+        if (preferred != null) {
+            return routePayload(preferred, "agent_preferred");
+        }
+
+        return routePayload(candidates.getFirst(), "platform_default");
     }
 
     @Transactional
@@ -679,6 +742,101 @@ public class ModelProviderService {
         return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
+    private Map<String, Object> routeView(SceneRouteDef scene, List<Map<String, Object>> candidates) {
+        List<ModelChoice> choices = candidates.stream().map(this::toModelChoice).filter(choice -> choice != null).toList();
+        OrgModelConfigEntity configured = modelConfigRepository
+                .findByOrgIdAndSceneCode(platformScopeId(), scene.sceneCode())
+                .orElse(null);
+        ModelChoice choice = configured == null
+                ? null
+                : findCandidate(choices, configured.getProvider(), configured.getModelName());
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("sceneCode", scene.sceneCode());
+        out.put("displayName", scene.displayName());
+        out.put("description", scene.description());
+        out.put("providerCode", configured == null ? "" : configured.getProvider());
+        out.put("modelName", configured == null ? "" : configured.getModelName());
+        out.put("configured", configured != null);
+        out.put("available", choice != null);
+        out.put("providerName", choice == null ? "" : choice.providerName());
+        return out;
+    }
+
+    private SceneRouteDef requireSceneRoute(String sceneCode) {
+        String normalized = normalizeSceneCode(sceneCode);
+        return SCENE_ROUTES.stream()
+                .filter(scene -> scene.sceneCode().equals(normalized))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("不支持的模型场景：" + sceneCode));
+    }
+
+    private String normalizeSceneCode(String sceneCode) {
+        return sceneCode == null ? "" : sceneCode.trim().toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private ModelChoice requirePlatformModelChoice(String providerCode, String modelName) {
+        ModelChoice choice = findCandidate(
+                agentBaseModels(platformScopeId()).stream().map(this::toModelChoice).filter(item -> item != null).toList(),
+                providerCode,
+                modelName);
+        if (choice == null) {
+            throw new IllegalArgumentException("模型必须先加入平台已选模型目录。");
+        }
+        return choice;
+    }
+
+    private ModelChoice findPreferredCandidate(List<ModelChoice> candidates, String preferredModelName) {
+        String preferred = nullableToBlank(preferredModelName).trim();
+        if (preferred.isBlank()) {
+            return null;
+        }
+        int sep = preferred.indexOf("::");
+        if (sep > 0 && sep < preferred.length() - 2) {
+            return findCandidate(candidates, preferred.substring(0, sep), preferred.substring(sep + 2));
+        }
+        for (ModelChoice candidate : candidates) {
+            if (preferred.equalsIgnoreCase(candidate.modelName())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private ModelChoice findCandidate(List<ModelChoice> candidates, String providerCode, String modelName) {
+        String provider = nullableToBlank(providerCode).trim();
+        String model = nullableToBlank(modelName).trim();
+        if (provider.isBlank() || model.isBlank()) {
+            return null;
+        }
+        for (ModelChoice candidate : candidates) {
+            if (provider.equalsIgnoreCase(candidate.providerCode())
+                    && model.equalsIgnoreCase(candidate.modelName())) {
+                return candidate;
+            }
+        }
+        return null;
+    }
+
+    private ModelChoice toModelChoice(Map<String, Object> row) {
+        if (row == null) {
+            return null;
+        }
+        String providerCode = nullableToBlank(String.valueOf(row.getOrDefault("providerCode", ""))).trim();
+        String providerName = nullableToBlank(String.valueOf(row.getOrDefault("providerName", ""))).trim();
+        String modelName = nullableToBlank(String.valueOf(row.getOrDefault("modelName", ""))).trim();
+        return providerCode.isBlank() || modelName.isBlank()
+                ? null
+                : new ModelChoice(providerCode, providerName, modelName);
+    }
+
+    private Map<String, String> routePayload(ModelChoice choice, String source) {
+        return Map.of(
+                "provider", choice.providerCode(),
+                "modelName", choice.modelName(),
+                "routeSource", source
+        );
+    }
+
     private Map<String, Object> toView(ModelProviderConfigEntity e) {
         ProviderDef def = requireDef(e.getProviderCode());
         Map<String, Object> config = readJsonToMap(e.getConfigJson());
@@ -761,6 +919,12 @@ public class ModelProviderService {
             boolean apiKeyRequired,
             List<String> defaultModels
     ) {
+    }
+
+    private record SceneRouteDef(String sceneCode, String displayName, String description) {
+    }
+
+    private record ModelChoice(String providerCode, String providerName, String modelName) {
     }
 
     private record ModelDetail(

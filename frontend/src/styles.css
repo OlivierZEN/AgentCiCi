@@ -8009,6 +8009,13 @@ button:hover:not(:disabled),
   padding: 10px;
 }
 
+.model-section--routes {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fffdf8;
+  padding: 10px;
+}
+
 .model-section__head {
   display: flex;
   align-items: center;
@@ -8033,6 +8040,62 @@ button:hover:not(:disabled),
   border-radius: 10px;
   background: #f7f7f7;
   overflow: hidden;
+}
+
+.model-route-board {
+  border: 1px solid #e3d5b9;
+  border-radius: 10px;
+  background: #fffaf0;
+  overflow: hidden;
+}
+
+.model-route-row {
+  min-height: 58px;
+  border-bottom: 1px solid #eadfc8;
+  padding: 9px 12px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
+  align-items: center;
+  gap: 14px;
+}
+
+.model-route-row:last-child {
+  border-bottom: none;
+}
+
+.model-route-row__main {
+  min-width: 0;
+}
+
+.model-route-row__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2a2418;
+}
+
+.model-route-row__desc {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #786a52;
+  line-height: 1.45;
+}
+
+.model-route-row__warning {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #a54c1a;
+}
+
+.model-route-row__controls {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.model-route-select {
+  width: 100%;
 }
 
 .provider-model-group {

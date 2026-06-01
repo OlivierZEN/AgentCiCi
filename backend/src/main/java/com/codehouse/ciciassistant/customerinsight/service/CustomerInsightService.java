@@ -456,7 +456,7 @@ public class CustomerInsightService {
     }
 
     private ModelChoice resolveModel(String orgId) {
-        Map<String, String> routed = modelRouterService.route(orgId, "chat");
+        Map<String, String> routed = modelRouterService.route(orgId, "customer-insight");
         String provider = routed.getOrDefault("provider", "mock");
         String modelName = routed.getOrDefault("modelName", "cici-default");
         if ("mock".equalsIgnoreCase(provider)) {

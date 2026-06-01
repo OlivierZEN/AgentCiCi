@@ -24,6 +24,7 @@ updated_by: MANAGER-001
 - 关闭组织后台的模型厂商配置入口。
 - 组织管理员默认只通过 `/admin/billing` 查看当前 credits 消耗、余额、quota 和 ledger。
 - 平台运营在 `/platform/models` 统一管理模型厂商启停、API 地址、API Key、可用模型和模型目录。
+- 平台运营在同一页面维护场景级模型路由，保留“不同场景使用不同模型”的运行时能力。
 - 运行时模型、Agent Builder 基础模型候选和知识库 embedding 模型候选均来自平台统一模型厂商配置。
 - 组织用户和组织管理员不能通过组织 API 修改模型厂商配置。
 
@@ -44,6 +45,7 @@ updated_by: MANAGER-001
 - 平台后台：
   - 新增 `/platform/models` 页面。
   - 新增 `/platform/models/providers`、`/platform/models/providers/{providerCode}`、检测、拉取模型和已选模型接口。
+  - 新增 `/platform/models/routes` 和 `/platform/models/routes/{sceneCode}`，由平台角色维护场景模型路由。
   - 所有接口必须使用 `@RequirePlatformRole`。
 
 ## 运行时规则
@@ -51,13 +53,19 @@ updated_by: MANAGER-001
 - `ModelProviderService.credentialsForProvider(orgId, providerCode)` 改为读取平台统一厂商配置，不读取组织自己的 provider 配置。
 - `agentBaseModels(orgId)` 和 `embeddingModelOptions(orgId)` 改为读取平台统一可用模型。
 - `providerCode`、`modelName` 仍可作为 Agent 或知识库配置字段保存，但候选列表由平台控制。
+- 运行时模型选择顺序：
+  1. 先读取平台治理作用域下的场景路由，当前首批场景为 `chat`、`skill-authoring`、`meeting-minutes`、`customer-insight`。
+  2. 场景路由存在且模型仍在平台已选模型目录中时直接使用该路由。
+  3. 场景路由缺失或失效时，若 Agent 自身模型偏好仍在平台已选模型目录中，则使用 Agent 偏好。
+  4. 仍未命中时，退回平台已选模型目录中的第一个模型。
+- 组织侧历史 `org_model_config` 不再作为运行时事实源；平台场景路由复用该表结构但写入平台治理组织。
 - 私有化部署下，平台可配置本地模型或客户自有模型作为 `customer_paid` 资源；本任务只建立治理入口，不做强扣费。
 
 ## UI 设计
 
 本次属于产品 register 的平台治理页面。视觉延续 `鎏金账房`：暖象牙底、墨色文字、紧凑密度、香槟金结构线；不引入新品牌视觉、深色命令中心或营销页式 hero。
 
-平台模型页面采用左侧厂商列表 + 右侧配置面板 + 已选模型列表的结构，保持与现有平台工具治理页一致的扫描节奏。组织后台不提供替代配置说明页，避免给组织管理员造成“仍可配置”的暗示。
+平台模型页面采用左侧厂商列表 + 右侧配置面板 + 场景模型路由 + 已选模型列表的结构，保持与现有平台工具治理页一致的扫描节奏。组织后台不提供替代配置说明页，避免给组织管理员造成“仍可配置”的暗示。
 
 ## 验收标准
 
@@ -65,5 +73,6 @@ updated_by: MANAGER-001
 - 访问 `/admin/models` 会进入 `/admin/billing`。
 - 组织 token 调用 `/models/providers/{providerCode}`、`/models/providers/{providerCode}/check`、`/models/providers/{providerCode}/models/fetch`、`/models/providers/{providerCode}/selected-models` 均被拒绝。
 - 平台 token 可以在 `/platform/models` 查看、更新、检测、拉取并维护已选模型。
+- 平台 token 可以配置 `chat` 等场景路由；运行时优先使用有效场景路由，而不是无条件取平台已选模型的第一个。
 - Agent Builder 和知识库 embedding 候选模型来自平台统一配置。
 - 后端 focused tests 和前端 build/unit checks 通过。

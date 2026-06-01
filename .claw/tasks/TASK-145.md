@@ -8,7 +8,7 @@ branch: codex/TASK-145-platform-model-provider-governance
 pr_url: n/a
 spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
 assignment_path: .claw/assignments/TASK-145.yaml
-updated_at: 2026-05-30T09:32:23Z
+updated_at: 2026-06-01T00:00:00Z
 updated_by: MANAGER-001
 ---
 
@@ -30,6 +30,7 @@ Move model provider configuration from organization administration to platform o
 
 ## Verification
 
+- 2026-06-01 follow-up: restored platform-managed scene model routing after trace review showed runtime had regressed to first selected model.
 - `python3 .../scripts/dev-login.py .claw --developer MANAGER-001 ... --files ... --json` -> success, manager identity allowed.
 - `python3 .../scripts/check-assignment.py .claw --developer MANAGER-001 --task TASK-145 ... --files ... --json` -> success, representative backend/frontend writes allowed after assignment expansion.
 - `mvn -q -DskipTests compile` in `backend/` -> success.
@@ -49,8 +50,10 @@ Move model provider configuration from organization administration to platform o
 - `backend/src/main/java/com/codehouse/ciciassistant/model/api/PlatformModelProviderController.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/model/api/ModelConfigController.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/model/service/ModelProviderService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ModelRouterService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/ai/service/MeetingMinutesService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/customerinsight/service/CustomerInsightService.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/model/PlatformModelProviderIntegrationTest.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/model/ModelProviderServiceIntegrationTest.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/management/ManagementConsoleIntegrationTest.java`

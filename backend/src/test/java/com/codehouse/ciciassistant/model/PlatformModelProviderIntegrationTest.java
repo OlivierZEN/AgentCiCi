@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.model;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -61,6 +62,33 @@ class PlatformModelProviderIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.selectedModels[0]").value("deepseek-chat"));
+
+        mockMvc.perform(put("/platform/models/routes/{sceneCode}", "chat")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "providerCode": "deepseek",
+                                  "modelName": "deepseek-chat"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sceneCode").value("chat"))
+                .andExpect(jsonPath("$.data.providerCode").value("deepseek"))
+                .andExpect(jsonPath("$.data.modelName").value("deepseek-chat"))
+                .andExpect(jsonPath("$.data.available").value(true));
+
+        mockMvc.perform(get("/platform/models/routes")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.routes[?(@.sceneCode == 'chat' && @.modelName == 'deepseek-chat')]").exists())
+                .andExpect(jsonPath("$.data.modelCandidates[?(@.modelName == 'deepseek-chat')]").exists());
+
+        mockMvc.perform(delete("/platform/models/routes/{sceneCode}", "chat")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sceneCode").value("chat"))
+                .andExpect(jsonPath("$.data.configured").value(false));
 
         mockMvc.perform(put("/models/providers/{providerCode}", "deepseek")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + orgToken)

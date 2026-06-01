@@ -26,6 +26,24 @@ type FetchModelDetailPayload = {
   capabilities?: string[];
 };
 
+type ModelCandidate = {
+  providerCode: string;
+  providerName: string;
+  modelName: string;
+  displayLabel?: string;
+};
+
+type ModelRoute = {
+  sceneCode: string;
+  displayName: string;
+  description: string;
+  providerCode: string;
+  providerName: string;
+  modelName: string;
+  configured: boolean;
+  available: boolean;
+};
+
 type CapabilityKey = "text" | "tool" | "search" | "reasoning" | "vision";
 
 const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "anthropic", "openai"];
@@ -98,6 +116,8 @@ export default function PlatformModelsPage() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [providerModels, setProviderModels] = useState<string[]>([]);
+  const [modelRoutes, setModelRoutes] = useState<ModelRoute[]>([]);
+  const [modelCandidates, setModelCandidates] = useState<ModelCandidate[]>([]);
   const [capabilityMap, setCapabilityMap] = useState<Record<string, CapabilityKey[]>>({});
   const [allModelsOpen, setAllModelsOpen] = useState(false);
   const [allModelsLoading, setAllModelsLoading] = useState(false);
@@ -128,6 +148,7 @@ export default function PlatformModelsPage() {
     if (!kw) return providerModels;
     return providerModels.filter((name) => name.toLowerCase().includes(kw));
   }, [allModelsSearch, providerModels]);
+  const configuredRouteCount = useMemo(() => modelRoutes.filter((route) => route.configured).length, [modelRoutes]);
 
   function setSelectedModelsForProvider(providerCode: string, modelNames: string[]) {
     const nextNames = dedupeModels(modelNames);
@@ -186,6 +207,19 @@ export default function PlatformModelsPage() {
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载模型列表失败");
+    }
+  }
+
+  async function loadModelRoutes() {
+    if (!token) return;
+    try {
+      const res = await fetch(`${PLATFORM_API_BASE}/models/routes`, { headers: authHeaders });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "加载场景模型路由失败");
+      setModelRoutes((json.data?.routes ?? []) as ModelRoute[]);
+      setModelCandidates((json.data?.modelCandidates ?? []) as ModelCandidate[]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "加载场景模型路由失败");
     }
   }
 
@@ -289,6 +323,55 @@ export default function PlatformModelsPage() {
     if (!res.ok || !json.success) throw new Error(json.message || "保存已选模型失败");
     setSelectedModelsForProvider(providerCode, nextNames);
     setNotice("已选模型已更新。");
+    await loadModelRoutes();
+  }
+
+  async function saveModelRoute(sceneCode: string, value: string) {
+    if (!value) {
+      await clearModelRoute(sceneCode);
+      return;
+    }
+    const [providerCode, ...rest] = value.split("::");
+    const modelName = rest.join("::");
+    if (!providerCode || !modelName) return;
+    setBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const res = await fetch(`${PLATFORM_API_BASE}/models/routes/${encodeURIComponent(sceneCode)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ providerCode, modelName }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "保存场景模型路由失败");
+      setNotice("场景模型路由已更新。");
+      await loadModelRoutes();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存场景模型路由失败");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearModelRoute(sceneCode: string) {
+    setBusy(true);
+    setNotice("");
+    setError("");
+    try {
+      const res = await fetch(`${PLATFORM_API_BASE}/models/routes/${encodeURIComponent(sceneCode)}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "清除场景模型路由失败");
+      setNotice("场景模型路由已清除。");
+      await loadModelRoutes();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "清除场景模型路由失败");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function toggleSelectedModel(modelName: string) {
@@ -305,6 +388,7 @@ export default function PlatformModelsPage() {
 
   useEffect(() => {
     void loadProviders();
+    void loadModelRoutes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
@@ -328,6 +412,7 @@ export default function PlatformModelsPage() {
           <span className="platform-inline-stat">厂商 {providers.length}</span>
           <span className="platform-inline-stat">已启用 {providers.filter((provider) => provider.enabled).length}</span>
           <span className="platform-inline-stat">已选模型 {selectedModelsForCurrentProvider.length}</span>
+          <span className="platform-inline-stat">路由 {configuredRouteCount}</span>
         </div>
       </header>
 
@@ -430,6 +515,58 @@ export default function PlatformModelsPage() {
                     </button>
                   </div>
                 </div>
+              </div>
+
+              <div className="model-section model-section--routes">
+                <div className="model-section__head">
+                  <h4>场景模型路由</h4>
+                  <span className="model-count-badge">已配置 {configuredRouteCount} 个</span>
+                </div>
+                {modelCandidates.length === 0 ? (
+                  <p className="subtle">暂无可用于路由的模型。先把模型加入平台已选模型目录。</p>
+                ) : (
+                  <div className="model-route-board">
+                    {modelRoutes.map((route) => {
+                      const value = route.providerCode && route.modelName
+                        ? selectedModelKey(route.providerCode, route.modelName)
+                        : "";
+                      return (
+                        <div className="model-route-row" key={route.sceneCode}>
+                          <div className="model-route-row__main">
+                            <div className="model-route-row__title">{route.displayName}</div>
+                            <div className="model-route-row__desc">{route.description}</div>
+                            {route.configured && !route.available ? (
+                              <div className="model-route-row__warning">当前配置的模型已不在平台已选模型目录中。</div>
+                            ) : null}
+                          </div>
+                          <div className="model-route-row__controls">
+                            <select
+                              className="cici-field__input model-route-select"
+                              value={route.available ? value : ""}
+                              disabled={busy}
+                              onChange={(event) => void saveModelRoute(route.sceneCode, event.target.value)}
+                            >
+                              <option value="">使用平台默认模型</option>
+                              {modelCandidates.map((candidate) => (
+                                <option
+                                  key={`${route.sceneCode}-${candidate.providerCode}-${candidate.modelName}`}
+                                  value={selectedModelKey(candidate.providerCode, candidate.modelName)}
+                                >
+                                  {candidate.displayLabel || `${candidate.modelName} · ${candidate.providerName}`}
+                                </option>
+                              ))}
+                            </select>
+                            {route.configured ? (
+                              <button type="button" className="cici-btn cici-btn--ghost" disabled={busy} onClick={() => void clearModelRoute(route.sceneCode)}>
+                                清除
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="model-section model-section--target">

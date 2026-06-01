@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-05-31T13:47:59Z
+updated_at: 2026-06-01T06:49:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-05-31T13:47:59Z
+last_run_at: 2026-06-01T06:49:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,23 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-146 观测与运维生产就绪收口，本地后端集成、前端构建、桌面浏览器烟测和静态检查。
-- 命令：`AgentRunTraceIntegrationTest`、`npm run build`、`git diff --check`、Browser desktop smoke for `/admin/ops`。
+- 范围：TASK-145 模型治理追踪修复，多场景模型路由恢复，平台路由 API/UI 与相关集成测试。
+- 命令：`mvn -q -DskipTests compile`、`mvn -q -Dtest=ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest test`、`npm run build`、`git diff --check`。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-145 platform-managed scene model routing follow-up (2026-06-01T06:49:00Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` on `codex/TASK-146-ops-observability-audit` with model routing/backend/frontend/spec/task files -> **allowed**.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `backend-integration`: `mvn -q -Dtest=ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest test` in `backend/` -> **success** after rerun with local PostgreSQL access.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Reintroduced platform-managed scene model routes for chat, skill authoring, AI meeting minutes, and customer insight.
+    - Runtime route priority is now platform scene route, then valid agent preferred model, then first platform selected model.
+    - Platform model settings now expose route list/read/update/delete APIs and a route configuration panel in the platform UI.
 
 - TASK-146 observability and operations production readiness (2026-05-31T13:47:59Z):
   - Commands:

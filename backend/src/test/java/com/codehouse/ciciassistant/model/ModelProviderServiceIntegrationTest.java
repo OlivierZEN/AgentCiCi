@@ -111,5 +111,35 @@ class ModelProviderServiceIntegrationTest {
 
         assertThat(route.get("provider")).isEqualTo(ModelProviderService.PROVIDER_ALIYUN);
         assertThat(route.get("modelName")).isEqualTo("platform-chat-model");
+        assertThat(route.get("routeSource")).isEqualTo("platform_default");
+    }
+
+    @Test
+    void runtimeRouteUsesPlatformManagedSceneBeforeAgentPreference() {
+        String orgId = "runtime-scene-route-" + UUID.randomUUID();
+        modelProviderService.listProviders(orgId);
+        modelProviderService.updatePlatformProvider(
+                ModelProviderService.PROVIDER_ALIYUN,
+                true,
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                "platform-secret");
+        modelProviderService.updatePlatformSelectedModels(
+                ModelProviderService.PROVIDER_ALIYUN,
+                List.of("qwen3.6-plus", "qwen3.5-omni-flash"));
+        modelProviderService.updatePlatformModelRoute(
+                "chat",
+                ModelProviderService.PROVIDER_ALIYUN,
+                "qwen3.6-plus");
+
+        Map<String, String> sceneRoute = modelRouterService.route(orgId, "chat", "qwen3.5-omni-flash");
+
+        assertThat(sceneRoute.get("provider")).isEqualTo(ModelProviderService.PROVIDER_ALIYUN);
+        assertThat(sceneRoute.get("modelName")).isEqualTo("qwen3.6-plus");
+        assertThat(sceneRoute.get("routeSource")).isEqualTo("platform_scene");
+
+        modelProviderService.deletePlatformModelRoute("chat");
+        Map<String, String> preferredRoute = modelRouterService.route(orgId, "chat", "qwen3.5-omni-flash");
+        assertThat(preferredRoute.get("modelName")).isEqualTo("qwen3.5-omni-flash");
+        assertThat(preferredRoute.get("routeSource")).isEqualTo("agent_preferred");
     }
 }
