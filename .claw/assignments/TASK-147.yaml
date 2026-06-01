@@ -1,0 +1,54 @@
+task_id: TASK-147
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-01T06:55:50Z
+expires_at: none
+spec_path: docs/specs/FEAT-023-ai-native-after-sales-agent.md
+task_status_path: .claw/tasks/TASK-147.md
+branch: codex/TASK-147-wecom-kf-connection-test
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/wecom/**
+  - backend/src/test/java/com/codehouse/ciciassistant/wecom/**
+  - frontend/src/admin/**
+  - frontend/src/styles.css
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/test-report.md
+scope_files:
+  - .claw/tasks/TASK-147.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-023-ai-native-after-sales-agent.md
+  - frontend/src/admin/pages/AdminWecomKfAccountsPage.tsx
+  - frontend/src/styles.css
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-023-ai-native-after-sales-agent.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Continue FEAT-023 WeCom customer-service readiness by adding an admin connection test for stored CorpID/Secret credentials."
+  - "Do not add high-risk customer-service write actions, ticket schema, or CRM/OMS field mappings in this task."
+  - "Do not expose WeCom secrets or access tokens in API responses, logs, UI state, screenshots, or task documents."
+  - "If real WeCom credentials are unavailable, validate with focused mocks and document the remaining live-smoke step."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-01T06:55:50Z; user requested continuing the enterprise WeCom customer-service feature."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Small continuation slice for WeCom customer-service operational readiness. Keep the UI within the existing product register and the 鎏金账房 admin visual language."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-147 on branch codex/TASK-147-wecom-kf-connection-test before implementation edits."

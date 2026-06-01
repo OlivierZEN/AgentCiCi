@@ -583,10 +583,12 @@ wecom-kf:{corpId12}:{openKfId12}:{hash20(externalUserId)}
   - 已实现企业微信 `wecom-kf:*` 会话知识库优先运行策略：有默认知识库时默认触发 RAG，且不加载 CRM/CloudCC/邮件/外部搜索等业务工具定义，避免微信客服客户消息触发业务系统操作。
   - 已新增组织管理 API `/admin/wecom/kf-accounts`，支持写入企业微信微信客服 CorpID、Secret、Token、EncodingAESKey、`open_kfid`、`agent_id`、`run_as_user_id`，其中 Secret 与 EncodingAESKey 加密落库，响应不回显密钥。
   - 已新增企业微信「微信客服」可视化管理端配置页面 `/admin/channels/wechat-kf`：组织管理员可查看账号列表、创建/更新客服配置、启停账号、选择售后 Agent 与 run-as 服务用户，并复制企业微信后台需要填写的回调 URL。页面路由避开 `/admin/wecom` API 代理前缀。
+  - 已完成 `TASK-147` 企业微信微信客服连接测试：组织管理员可在 `/admin/channels/wechat-kf` 对已保存账号点击“测试连接”，后端通过 `/admin/wecom/kf-accounts/{id}/connection-test` 使用已加密保存的 CorpID/Secret 强制刷新 WeCom access token，只返回连接状态、测试时间和 token 过期时间，不回显 Secret、EncodingAESKey 或 access token。
 - 未完成项：
   - 尚未封装售后只读 Skill API。
   - 尚未做真实 CloudCC/CRM 售后对象映射。
   - 尚未执行企业微信真实回调 smoke 或 Open API 售后调用 smoke。
+  - 尚未验证真实 `sync_msg` 拉取、真实 `send_msg` 下发和真实客户 48 小时 / 5 条发送窗口。
 
 ## 交接说明
 

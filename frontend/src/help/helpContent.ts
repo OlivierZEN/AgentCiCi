@@ -280,7 +280,7 @@ export const helpDocs: HelpDoc[] = [
       },
       {
         title: "请求示例",
-        code: "curl -X POST https://autoservice.agentcici.com/openapi/v1/chat-messages \\\n  -H \"Authorization: Bearer <AGENTCICI_API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Idempotency-Key: demo-request-001\" \\\n  -d '{\"user\":\"customer-001\",\"query\":\"保修政策是什么？\",\"responseMode\":\"blocking\"}'",
+        code: "curl -X POST https://onechat.agentcici.com/openapi/v1/chat-messages \\\n  -H \"Authorization: Bearer <AGENTCICI_API_KEY>\" \\\n  -H \"Content-Type: application/json\" \\\n  -H \"Idempotency-Key: demo-request-001\" \\\n  -d '{\"user\":\"customer-001\",\"query\":\"保修政策是什么？\",\"responseMode\":\"blocking\"}'",
       },
       {
         title: "结果验证",

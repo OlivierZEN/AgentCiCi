@@ -15,6 +15,13 @@ type WecomKfAccount = {
   callbackPath?: string;
 };
 
+type WecomKfConnectionTest = {
+  status: string;
+  checkedAt: string;
+  accessTokenExpiresAt?: string;
+  apiBaseUrl?: string;
+};
+
 type AgentOption = {
   agentId: string;
   name?: string | null;
@@ -111,6 +118,8 @@ export default function AdminWecomKfAccountsPage() {
   const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionTest, setConnectionTest] = useState<WecomKfConnectionTest | null>(null);
 
   const selectedAccount = useMemo(
     () => (selectedId === "new" ? null : accounts.find((account) => account.id === selectedId) ?? null),
@@ -185,8 +194,10 @@ export default function AdminWecomKfAccountsPage() {
   useEffect(() => {
     if (selectedAccount) {
       setForm(formFromAccount(selectedAccount));
+      setConnectionTest(null);
       return;
     }
+    setConnectionTest(null);
     setForm((current) => ({ ...emptyForm(), runAsUserId: current.runAsUserId || users[0]?.id || "" }));
   }, [selectedAccount?.id, users]);
 
@@ -270,6 +281,32 @@ export default function AdminWecomKfAccountsPage() {
     }
   };
 
+  const testConnection = async () => {
+    if (!selectedAccount) return;
+    setTestingConnection(true);
+    setNotice("");
+    setConnectionTest(null);
+    try {
+      const response = await fetch(`/admin/wecom/kf-accounts/${selectedAccount.id}/connection-test`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      const { body } = await safeFetchJson<WecomKfConnectionTest>(response);
+      if (!response.ok || !body?.success) {
+        setNotice(body?.message ?? "连接测试失败");
+        return;
+      }
+      const result = body.data as WecomKfConnectionTest;
+      await loadAccounts();
+      setConnectionTest(result);
+      setNotice("企业微信连接测试通过");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "连接测试失败");
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
   return (
     <div className="admin-page wecom-kf-page">
       <header className="wecom-kf-header">
@@ -319,9 +356,14 @@ export default function AdminWecomKfAccountsPage() {
               <p className="subtle">{selectedAccount ? "Secret 与 EncodingAESKey 留空时保持原密文不变。" : "保存后会生成可复制到企业微信后台的回调地址。"}</p>
             </div>
             {selectedAccount ? (
-              <button type="button" className="wecom-kf-text-action" onClick={() => void setEnabled(selectedAccount, !selectedAccount.enabled)}>
-                {selectedAccount.enabled ? "停用" : "启用"}
-              </button>
+              <div className="wecom-kf-head-actions">
+                <button type="button" className="wecom-kf-text-action" disabled={testingConnection} onClick={() => void testConnection()}>
+                  {testingConnection ? "测试中..." : "测试连接"}
+                </button>
+                <button type="button" className="wecom-kf-text-action" onClick={() => void setEnabled(selectedAccount, !selectedAccount.enabled)}>
+                  {selectedAccount.enabled ? "停用" : "启用"}
+                </button>
+              </div>
             ) : null}
           </div>
 
@@ -428,6 +470,10 @@ export default function AdminWecomKfAccountsPage() {
 
           {selectedAccount ? (
             <dl className="wecom-kf-meta">
+              <div>
+                <dt>连接测试</dt>
+                <dd>{connectionTest ? `已通过 · ${formatDateTime(connectionTest.checkedAt)}` : "尚未测试"}</dd>
+              </div>
               <div>
                 <dt>消息游标</dt>
                 <dd>{selectedAccount.syncCursorPresent ? "已记录" : "未记录"}</dd>

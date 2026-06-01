@@ -6,7 +6,7 @@
 
 - 产品品牌：AgentCiCi
 - 品牌域名：`agentcici.com`
-- 当前公网地址：`https://agentcici.com`、`https://www.agentcici.com`、`https://autoservice.agentcici.com`
+- 当前公网地址：`https://onechat.agentcici.com`、`https://x.agentcici.com`
 - 服务器：`root@47.97.119.160`
 - 线上目录：`/opt/cici`
 - 部署方式：Docker Compose + 阿里云 ACR 镜像
@@ -179,6 +179,12 @@ rsync -av -e "ssh -i $SSH_KEY" \
 - `/opt/cici/deploy/certs/agentcici.com.pem`
 - `/opt/cici/deploy/certs/agentcici.com.key`
 
+域名切换要求：
+
+- `onechat.agentcici.com` 与 `x.agentcici.com` 已解析到生产 ECS 或公网入口。
+- 上述证书文件必须包含 `onechat.agentcici.com` 与 `x.agentcici.com` 的 SAN，或使用覆盖这两个子域的 `*.agentcici.com` 证书。
+- `agentcici.com`、`www.agentcici.com`、`autoservice.agentcici.com` 已从生产 Nginx `server_name` 移除，不再作为当前线上入口。
+
 ## 6. 线上备份
 
 发布前在服务器执行一次快照备份：
@@ -323,10 +329,9 @@ docker logs --tail=100 cici-frontend
 ### 8.2 公网 smoke
 
 ```bash
-curl -I http://agentcici.com/
-curl -I https://agentcici.com/
-curl -I https://www.agentcici.com/
-curl -I https://autoservice.agentcici.com/
+curl -I http://onechat.agentcici.com/
+curl -I https://onechat.agentcici.com/
+curl -I https://x.agentcici.com/
 ```
 
 期望：
@@ -340,7 +345,7 @@ curl -I https://autoservice.agentcici.com/
 使用发布负责人掌握的测试账号执行：
 
 ```bash
-curl -sS https://autoservice.agentcici.com/auth/password/login \
+curl -sS https://onechat.agentcici.com/auth/password/login \
   -H 'Content-Type: application/json' \
   -d '{"orgId":"demo-org","mobile":"<mobile>","password":"<password>"}'
 ```
@@ -350,33 +355,33 @@ curl -sS https://autoservice.agentcici.com/auth/password/login \
 ```bash
 export TOKEN='<jwt>'
 
-curl -fsS https://autoservice.agentcici.com/auth/me \
+curl -fsS https://onechat.agentcici.com/auth/me \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://autoservice.agentcici.com/agents \
+curl -fsS https://onechat.agentcici.com/agents \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://autoservice.agentcici.com/skills \
+curl -fsS https://onechat.agentcici.com/skills \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://autoservice.agentcici.com/me/agents/run-logs \
+curl -fsS https://onechat.agentcici.com/me/agents/run-logs \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 如果本次涉及管理端或开放 API，还需要补充：
 
 ```bash
-curl -fsS https://autoservice.agentcici.com/admin/agents/run-logs?limit=10 \
+curl -fsS https://onechat.agentcici.com/admin/agents/run-logs?limit=10 \
   -H "Authorization: Bearer $TOKEN"
 
-curl -fsS https://autoservice.agentcici.com/api/platform/skills \
+curl -fsS https://onechat.agentcici.com/api/platform/skills \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 Open API 需要使用真实 API Key 验证：
 
 ```bash
-curl -fsS https://autoservice.agentcici.com/openapi/v1/agents/<agentId>/health \
+curl -fsS https://onechat.agentcici.com/openapi/v1/agents/<agentId>/health \
   -H "Authorization: Bearer <api-key>"
 ```
 
@@ -388,7 +393,7 @@ curl -fsS https://autoservice.agentcici.com/openapi/v1/agents/<agentId>/health \
 - Git annotated tag、backend/frontend 镜像 tag、`/system/version` 和登录后左下角程序版本一致。
 - 线上备份目录已生成，包含 `postgres.dump`、`acr.env.before-release`、`kb-files.tgz`、`qdrant.tgz`。
 - 六个容器状态正常。
-- `https://agentcici.com/`、`https://www.agentcici.com/` 和 `https://autoservice.agentcici.com/` 返回 `200`。
+- `https://onechat.agentcici.com/` 和 `https://x.agentcici.com/` 返回 `200`。
 - 登录、`/auth/me`、核心列表接口、管理端接口按本次发布范围通过 smoke。
 - 本次涉及的重点用户路径已在浏览器人工点验。
 - 发布 tag、镜像 digest、备份目录、验收结果已记录到发布记录。

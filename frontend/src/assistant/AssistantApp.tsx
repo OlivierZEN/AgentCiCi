@@ -3514,7 +3514,7 @@ export default function AssistantApp() {
       ) : null}
       {notice ? <p className="boot-login__notice">{notice}</p> : null}
       <p className="boot-login__footer-link">
-        还没有账户？<a href="https://agentcici.com/#demo" className="boot-login__link">立即预约</a>
+        还没有账户？<a href="https://onechat.agentcici.com/#demo" className="boot-login__link">立即预约</a>
       </p>
     </>
   );
