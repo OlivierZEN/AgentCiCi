@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.codehouse.ciciassistant.wecom.domain.WecomKfAccountEntity;
+import com.codehouse.ciciassistant.wecom.service.WecomKfClient;
 import com.codehouse.ciciassistant.wecom.service.WecomKfConfigService;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminWecomKfAccountController {
 
     private final WecomKfConfigService configService;
+    private final WecomKfClient client;
 
-    public AdminWecomKfAccountController(WecomKfConfigService configService) {
+    public AdminWecomKfAccountController(WecomKfConfigService configService, WecomKfClient client) {
         this.configService = configService;
+        this.client = client;
     }
 
     @GetMapping
@@ -60,6 +63,11 @@ public class AdminWecomKfAccountController {
     @PostMapping("/{id}/disable")
     public ApiResponse<Map<String, Object>> disable(@PathVariable Long id) {
         return ApiResponse.ok(configService.toPayload(configService.setEnabled(TenantContext.requireOrgId(), id, false)));
+    }
+
+    @PostMapping("/{id}/connection-test")
+    public ApiResponse<WecomKfClient.ConnectionTestResult> testConnection(@PathVariable Long id) {
+        return ApiResponse.ok(client.testConnection(configService.resolveAccount(TenantContext.requireOrgId(), id)));
     }
 
     private WecomKfConfigService.UpsertCommand toCommand(UpsertRequest request) {

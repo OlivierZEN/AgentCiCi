@@ -129,6 +129,10 @@ public class WecomKfConfigService {
                 .orElseThrow(() -> new IllegalArgumentException("WeCom customer service account not found: " + id));
     }
 
+    public ResolvedAccount resolveAccount(String orgId, Long id) {
+        return resolve(requireAccount(orgId, id));
+    }
+
     public Map<String, Object> toPayload(WecomKfAccountEntity account) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", account.getId());

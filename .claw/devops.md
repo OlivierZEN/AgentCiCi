@@ -17,6 +17,14 @@ status: active
 
 ## Latest Release
 
+- Production domain cutover on 2026-06-01:
+  - Scope: stopped the application HTTPS vhost for `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com`; enabled production service on `onechat.agentcici.com` and `x.agentcici.com`.
+  - Changed file deployed to ECS: `/opt/cici/deploy/nginx.cici.ssl.conf`.
+  - Backup directory: `/opt/cici/backups/20260601-153012-before-domain-cutover`, containing `nginx.cici.ssl.conf.before-domain-cutover`.
+  - Deploy command used on ECS: copy updated `deploy/nginx.cici.ssl.conf`, then `docker exec cici-frontend nginx -t` and `docker exec cici-frontend nginx -s reload`.
+  - Verified after deploy: `cici-frontend` remained healthy; `https://onechat.agentcici.com/` and `https://x.agentcici.com/` returned HTTP 200; both new hosts proxied `/auth/me` to backend JSON; backend health returned `UP`.
+  - Retired host verification: `https://agentcici.com/` and `https://autoservice.agentcici.com/` returned empty replies from the default HTTPS server; `https://www.agentcici.com/` did not resolve from this workstation.
+
 - 2.0.B1 customer insight / Open API online test release on 2026-05-15:
   - Git commit: `0c291df` on `origin/main`.
   - Release tag in `/opt/cici/deploy/acr.env`: `2.0.B1-customer-insight-20260515-161832`.

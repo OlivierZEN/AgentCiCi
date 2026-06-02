@@ -5987,6 +5987,14 @@ select {
   color: #2b2217;
 }
 
+.wecom-kf-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .wecom-kf-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -6077,7 +6085,7 @@ select {
 
 .wecom-kf-meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px 16px;
   margin: 14px 0 0;
   padding: 0 0 14px;
@@ -6142,6 +6150,12 @@ select {
   box-shadow: none !important;
   transform: none !important;
   outline: none;
+}
+
+.wecom-kf-text-action:disabled,
+.admin-main .admin-page .wecom-kf-text-action:disabled {
+  color: #a69a88;
+  cursor: progress;
 }
 
 @media (max-width: 920px) {

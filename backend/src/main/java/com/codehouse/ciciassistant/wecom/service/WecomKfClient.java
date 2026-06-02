@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,15 +27,26 @@ public class WecomKfClient {
     private final WecomKfConfigService configService;
     private final SecretCipherService secretCipherService;
     private final WecomKfProperties properties;
+    private final JsonTransport transport;
 
+    @Autowired
     public WecomKfClient(ObjectMapper objectMapper,
                          WecomKfConfigService configService,
                          SecretCipherService secretCipherService,
                          WecomKfProperties properties) {
+        this(objectMapper, configService, secretCipherService, properties, null);
+    }
+
+    WecomKfClient(ObjectMapper objectMapper,
+                  WecomKfConfigService configService,
+                  SecretCipherService secretCipherService,
+                  WecomKfProperties properties,
+                  JsonTransport transport) {
         this.objectMapper = objectMapper;
         this.configService = configService;
         this.secretCipherService = secretCipherService;
         this.properties = properties;
+        this.transport = transport == null ? this::requestJson : transport;
     }
 
     public SyncResult syncMessages(WecomKfConfigService.ResolvedAccount resolved, String token, String cursor) {
@@ -74,6 +86,16 @@ public class WecomKfClient {
         postJson("/cgi-bin/kf/send_msg?access_token=" + accessToken, payload);
     }
 
+    public ConnectionTestResult testConnection(WecomKfConfigService.ResolvedAccount resolved) {
+        Instant checkedAt = Instant.now();
+        fetchAndCacheAccessToken(resolved);
+        return new ConnectionTestResult(
+                "connected",
+                checkedAt,
+                resolved.account().getAccessTokenExpiresAt(),
+                root());
+    }
+
     @Transactional
     protected String accessToken(WecomKfConfigService.ResolvedAccount resolved) {
         WecomKfAccountEntity account = resolved.account();
@@ -83,6 +105,11 @@ public class WecomKfClient {
                 && account.getAccessTokenExpiresAt().isAfter(Instant.now().plusSeconds(60))) {
             return secretCipherService.decryptUtf8(account.getAccessTokenCipher(), account.getAccessTokenIv());
         }
+        return fetchAndCacheAccessToken(resolved);
+    }
+
+    private String fetchAndCacheAccessToken(WecomKfConfigService.ResolvedAccount resolved) {
+        WecomKfAccountEntity account = resolved.account();
         String path = "/cgi-bin/gettoken?corpid=" + encode(account.getCorpId()) + "&corpsecret=" + encode(resolved.secret());
         JsonNode body = getJson(path);
         String token = body.path("access_token").asText("");
@@ -98,13 +125,7 @@ public class WecomKfClient {
 
     private JsonNode getJson(String path) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(root() + path))
-                    .timeout(Duration.ofSeconds(12))
-                    .GET()
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return parseResponse(response);
+            return transport.request("GET", path, Map.of());
         } catch (Exception ex) {
             throw new IllegalStateException("WeCom GET failed", ex);
         }
@@ -112,17 +133,27 @@ public class WecomKfClient {
 
     private JsonNode postJson(String path, Map<String, Object> payload) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(root() + path))
-                    .timeout(Duration.ofSeconds(20))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload), StandardCharsets.UTF_8))
-                    .build();
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            return parseResponse(response);
+            return transport.request("POST", path, payload);
         } catch (Exception ex) {
             throw new IllegalStateException("WeCom POST failed", ex);
         }
+    }
+
+    private JsonNode requestJson(String method, String path, Map<String, Object> payload) throws Exception {
+        HttpRequest.Builder builder = HttpRequest.newBuilder()
+                .uri(URI.create(root() + path))
+                .timeout("GET".equals(method) ? Duration.ofSeconds(12) : Duration.ofSeconds(20));
+        HttpRequest request;
+        if ("GET".equals(method)) {
+            request = builder.GET().build();
+        } else {
+            request = builder
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload), StandardCharsets.UTF_8))
+                    .build();
+        }
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        return parseResponse(response);
     }
 
     private JsonNode parseResponse(HttpResponse<String> response) throws Exception {
@@ -150,11 +181,21 @@ public class WecomKfClient {
     public record SyncResult(List<SyncedMessage> messages, String nextCursor, boolean hasMore) {
     }
 
+    public record ConnectionTestResult(String status,
+                                       Instant checkedAt,
+                                       Instant accessTokenExpiresAt,
+                                       String apiBaseUrl) {
+    }
+
     public record SyncedMessage(String msgId,
                                 String openKfId,
                                 String externalUserId,
                                 String msgType,
                                 String content,
                                 long sendTime) {
+    }
+
+    interface JsonTransport {
+        JsonNode request(String method, String path, Map<String, Object> payload) throws Exception;
     }
 }

@@ -65,4 +65,38 @@ class WecomKfConfigServiceTest {
         assertThat(service.toPayload(saved)).doesNotContainKeys("secret", "encodingAesKey");
         verify(agentDefinitionService).warmupBuiltinAgents("org-1");
     }
+
+    @Test
+    void shouldResolveAccountWithoutExposingSecretsInPayload() {
+        WecomKfAccountRepository accountRepository = mock(WecomKfAccountRepository.class);
+        AgentDefinitionService agentDefinitionService = mock(AgentDefinitionService.class);
+        AgentDefinitionRepository agentDefinitionRepository = mock(AgentDefinitionRepository.class);
+        SecretCipherService cipherService = new SecretCipherService("");
+        SecretCipherService.EncryptedSecret secret = cipherService.encryptUtf8("kf-secret");
+        SecretCipherService.EncryptedSecret aesKey = cipherService.encryptUtf8("abcdefghijklmnopqrstuvwxyzABCDEFG1234567890");
+        WecomKfAccountEntity account = new WecomKfAccountEntity(
+                "org-1",
+                "ww-demo",
+                "wk-demo",
+                "售后客服",
+                secret.cipherBase64(),
+                secret.ivBase64(),
+                "callback-token",
+                aesKey.cipherBase64(),
+                aesKey.ivBase64(),
+                "after-sales-agent",
+                "user-1");
+        WecomKfConfigService service = new WecomKfConfigService(
+                accountRepository,
+                cipherService,
+                agentDefinitionService,
+                agentDefinitionRepository);
+        when(accountRepository.findByIdAndOrgId(7L, "org-1")).thenReturn(Optional.of(account));
+
+        WecomKfConfigService.ResolvedAccount resolved = service.resolveAccount("org-1", 7L);
+
+        assertThat(resolved.secret()).isEqualTo("kf-secret");
+        assertThat(resolved.encodingAesKey()).isEqualTo("abcdefghijklmnopqrstuvwxyzABCDEFG1234567890");
+        assertThat(service.toPayload(resolved.account())).doesNotContainKeys("secret", "encodingAesKey", "accessToken");
+    }
 }

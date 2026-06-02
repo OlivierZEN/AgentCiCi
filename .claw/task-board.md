@@ -26,6 +26,28 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: Review TASK-146 local changes; merge after normal integration gates. State validation has an existing TASK-143 line-budget blocker outside this task.
 
+### TASK-148 - Production domain cutover
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-063-production-domain-cutover.md`
+- task_status_path: `.claw/tasks/TASK-148.md`
+- assignment_path: `.claw/assignments/TASK-148.yaml`
+- blocked_by: `none`
+- next_action: Monitor production traffic and update any external integrations still using retired hostnames.
+
+### TASK-147 - WeCom customer-service connection test
+
+- status: `review`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-023-ai-native-after-sales-agent.md`
+- task_status_path: `.claw/tasks/TASK-147.md`
+- assignment_path: `.claw/assignments/TASK-147.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-147 changes, then run live WeCom callback smoke once real account details and filed callback domain are available.
+
 ### TASK-145 - Platform model provider governance
 
 - status: `review`

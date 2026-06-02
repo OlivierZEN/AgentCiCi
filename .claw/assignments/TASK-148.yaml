@@ -1,0 +1,58 @@
+task_id: TASK-148
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-01T09:05:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-063-production-domain-cutover.md
+task_status_path: .claw/tasks/TASK-148.md
+branch: codex/TASK-147-wecom-kf-connection-test
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - deploy/**
+  - docs/**
+  - frontend/src/help/**
+  - frontend/src/assistant/**
+  - .claw/tasks/**
+  - .claw/test-report.md
+scope_files:
+  - .claw/assignments/TASK-148.yaml
+  - .claw/tasks/TASK-148.md
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - docs/specs/FEAT-063-production-domain-cutover.md
+  - docs/production-release-runbook.md
+  - docs/deploy-runbook.md
+  - deploy/nginx.cici.ssl.conf
+  - frontend/src/help/helpContent.ts
+  - frontend/src/assistant/AssistantApp.tsx
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: shared_docs_and_deploy_config
+shared_contracts:
+  - docs/production-release-runbook.md
+  - .claw/devops.md
+task_boundary:
+  - "Cut production public hostnames from agentcici.com, www.agentcici.com, and autoservice.agentcici.com to onechat.agentcici.com and x.agentcici.com."
+  - "Keep both new hostnames serving the same frontend and backend proxy surface unless a later spec separates them."
+  - "Do not change database schema, application auth semantics, or DNS provider records in repository code."
+  - "Document certificate and DNS prerequisites before production reload."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-01T09:05:00Z; user requested immediate production domain replacement."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production deployment-domain cutover. User confirmed the retired autoservice hostname is `autoservice.agentcici.com`."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-148 before implementation edits."
