@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-01T15:18:00Z
+updated_at: 2026-06-02T04:11:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-01T15:18:00Z
+last_run_at: 2026-06-02T04:11:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,23 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-148 add `agentaicc.com` HTTP-only Enterprise WeChat trusted-domain verification.
-- 命令：task authorization, production Nginx backup/sync/test/reload, and public verification-file smoke.
+- 范围：TASK-148 restore `agentcici.salesforchina.com` HTTP WeCom callback routing.
+- 命令：task authorization, production Nginx backup/sync/test/reload, callback route smoke, and simulated WeCom GET verification.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-148 restore `agentcici.salesforchina.com` HTTP WeCom callback routing (2026-06-02T04:11:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-148` with `deploy/nginx.cici.ssl.conf` and status/report files -> **allowed**.
+    - `pre-smoke`: `http://agentcici.salesforchina.com/wecom/kf/callback?...` returned **HTTP 204** from the default Nginx server before the fix, proving the request did not reach backend.
+    - `production-backup`: copied `/opt/cici/deploy/nginx.cici.ssl.conf` to `/opt/cici/backups/20260602-120702-before-salesforchina-http-wecom-callback/nginx.cici.ssl.conf.before-salesforchina-http-wecom-callback` -> **success**.
+    - `production-nginx`: added `agentcici.salesforchina.com` to the HTTP vhost only; `docker exec cici-frontend nginx -t` and reload -> **success**.
+    - `wecom-file-smoke`: `http://agentcici.salesforchina.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` -> **HTTP 200**, body `fWLFCmXQ3JU36hfZ`.
+    - `callback-route-smoke`: `http://agentcici.salesforchina.com/wecom/kf/callback?orgId=org5nszpgj99jaysxv6y&openKfId=wkQu2AcgAAH9kcfMLHpg-wI6vD2QgD-g` now reaches backend and returns backend JSON instead of Nginx 204.
+    - `simulated-wecom-get`: generated encrypted `echostr` using configured Token and EncodingAESKey for `org5nszpgj99jaysxv6y` / `wkQu2AcgAAH9kcfMLHpg-wI6vD2QgD-g`; callback returned **HTTP 200**, body `wecom-verify-ok`.
+  - Notes:
+    - Token and EncodingAESKey were visible in the user's screenshot during troubleshooting; rotate them after Enterprise WeChat callback verification if needed.
 
 - TASK-148 add `agentaicc.com` HTTP-only WeCom trusted-domain verification (2026-06-01T15:18:00Z):
   - Commands:

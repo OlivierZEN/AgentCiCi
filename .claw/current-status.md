@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-01T15:18:00Z
+updated_at: 2026-06-02T04:11:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-148 production vhost updated: agentaicc.com now serves WeCom verification files over HTTP only."
-next_action: "Finish Enterprise WeChat trusted-domain save using agentaicc.com or agentcici.com as needed; TASK-147 WeCom connection-test changes remain ready for review."
+active_task: "TASK-148 production vhost updated: agentcici.salesforchina.com now routes HTTP WeCom callback requests to backend."
+next_action: "Retry Enterprise WeChat callback save using agentcici.salesforchina.com; rotate screenshot-exposed Token/EncodingAESKey after verification if needed."
 read_next:
   goals: false
   decisions: false
@@ -27,6 +27,7 @@ read_next:
 - Current production vhost serves `agentcici.com`, `onechat.agentcici.com`, and `x.agentcici.com`; `http://agentcici.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` and HTTPS with production IP resolution both return `fWLFCmXQ3JU36hfZ`.
 - New WeCom verification file deployed directly to production static root on 2026-06-01: `http://agentcici.com/WW_verify_k3ew8Iachbzg5pIw.txt` and HTTPS both return `k3ew8Iachbzg5pIw`; HTTP Nginx now serves `WW_verify_*.txt` files directly.
 - `agentaicc.com` added to the production HTTP-only vhost on 2026-06-01; DNS resolves to `47.97.119.160`, and `http://agentaicc.com/WW_verify_fWLFCmXQ3JU36hfZ.txt` plus `http://agentaicc.com/WW_verify_k3ew8Iachbzg5pIw.txt` both return the expected bodies. HTTPS vhost was not changed.
+- `agentcici.salesforchina.com` restored to the production HTTP vhost on 2026-06-02 for WeCom callback configuration; the raw callback URL now reaches backend, and a simulated WeCom GET verification returned `HTTP 200` with body `wecom-verify-ok`.
 - TASK-147 implemented locally: backend `POST /admin/wecom/kf-accounts/{id}/connection-test` force-refreshes the WeCom access token from stored CorpID/Secret without exposing secrets/tokens; `/admin/channels/wechat-kf` now has `测试连接` and a connection-test metadata row.
 - TASK-147 validation passed: WeCom backend focused tests, frontend production build, `git diff --check`, and Playwright desktop smoke with mocked admin/WeCom APIs; screenshot `output/playwright/task-147-wecom-kf-connection-test.png`.
 - Local `main` is synced with `origin/main` at `7ee3db6`; `origin/main` contains `e83aa11` production Nginx proxy repair for `/admin/billing/*` API subpaths and `fa8df0e` unified Credits billing presentation.
