@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-02T04:11:00Z
+updated_at: 2026-06-02T23:20:41Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-02T04:11:00Z
+last_run_at: 2026-06-02T23:20:41Z
 last_run_status: success
 ---
 
@@ -13,11 +13,46 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-146 ops observability and TASK-147/TASK-148 WeCom/domain local main integration.
-- 命令：pre-merge task validations plus production Nginx backup/sync/test/reload, callback route smoke, and simulated WeCom GET verification.
+- 范围：TASK-150 Knowledge Base production-readiness closure.
+- 命令：frontend production build, backend compile gate, mocked desktop browser smoke, focused KB lifecycle integration rerun, and assignment scope check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-150 Knowledge Base production readiness (2026-06-02T23:20:41Z):
+  - Commands:
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile gate passed.
+    - `postgres-env`: Docker Desktop was not running, so `localhost:5432` had no listener; started Docker Desktop and `docker compose up -d postgres`, then confirmed `cici-postgres` healthy on `5432`.
+    - `backend-kb`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**; Flyway connected to `jdbc:postgresql://localhost:5432/agentcici_test`, validated 58 migrations, and reported schema up to date.
+    - `qdrant-smoke`: `./scripts/verify-qdrant-stack.sh` -> **success** after starting `cici-qdrant`; smoke collection create/upsert/filter-search passed.
+    - `browser-desktop`: Vite `http://127.0.0.1:4179/admin/kb` with mocked admin/KB APIs and local Chrome/Playwright -> **success**; upload policy, runtime status panel, vector audit result, and console error checks passed. Screenshot: `/tmp/cici-kb-admin-settings-smoke-final.png`.
+    - `assignment`: skill-package `check-assignment.py` for representative TASK-150 backend/frontend/spec/state files -> **allowed**.
+  - Notes:
+    - First backend KB rerun exposed and fixed a test-only generic assertion compile issue before the PostgreSQL environment failure.
+    - The PostgreSQL blocker root cause was local infrastructure not running, not a code or migration failure.
+    - TASK-150 added backend tests for upload policy/PDF rejection, vector audit, structured RAG sources, and runtime metadata filtering.
+
+- TASK-149 / FEAT-008 Knowledge Base gap review refresh (2026-06-02T08:01:02Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for Owen (`MANAGER-001`) / `TASK-149` with `docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md`, task, status, and report files -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative FEAT-008/task/status/report files -> **allowed**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `untracked-task-check`: `git diff --check --no-index /dev/null .claw/tasks/TASK-149.md` -> **success**, no whitespace output; command exits `1` because no-index found normal file differences.
+    - `state-budget`: `wc -l .claw/tasks/TASK-149.md` -> **success**, 57 lines.
+  - Notes:
+    - Added `2026-06-02 知识库缺口复盘` to FEAT-008, separating closed lifecycle/docx capabilities from remaining upload/Qdrant/UI/runtime retrieval gaps.
+    - Updated FEAT-008 task pointers from early `TASK-020` planning slices to current `TASK-115` / `TASK-149` maintenance and review entry points.
+
+- TASK-149 Knowledge Base DOCX upload parser (2026-06-02T07:51:58Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for Owen (`MANAGER-001`) / `TASK-149` on `codex/TASK-149-kb-docx-upload-parser` with KB service, test, task, report, and spec files -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative TASK-149 files -> **allowed**.
+    - `backend-kb`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**, 9 tests passed after an initial failing run exposed ZIP/XML entry handling.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - `.docx` uploads now use JDK-only Word OpenXML text extraction for `word/document.xml` plus header/footer/footnote/endnote parts.
+    - Unsupported-file rejection remains explicit for formats outside the current P0 parser set.
 
 - TASK-145 platform-managed scene model routing follow-up (2026-06-01T06:49:00Z):
   - Commands:

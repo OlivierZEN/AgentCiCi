@@ -82,6 +82,20 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.listEmbeddingModelOptions(orgId));
     }
 
+    @GetMapping("/upload-policy")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> uploadPolicy() {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.uploadPolicy(orgId));
+    }
+
+    @GetMapping("/vector-store/audit")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> auditVectorStore() {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.auditVectorStore(orgId));
+    }
+
     @DeleteMapping("/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> deleteKnowledgeBase(@PathVariable Long id) {

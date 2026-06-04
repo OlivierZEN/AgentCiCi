@@ -16,6 +16,8 @@ import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -24,12 +26,21 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLStreamConstants;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamReader;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -60,6 +71,9 @@ public class KnowledgeBaseService {
     private final String defaultEmbeddingProvider;
     private final String defaultEmbeddingModel;
     private final Integer defaultEmbeddingDimension;
+    private final long maxUploadFileSizeBytes;
+    private final Set<String> allowedUploadExtensions;
+    private final Set<String> allowedUploadContentTypes;
     private final Path storageRoot;
 
     public KnowledgeBaseService(KnowledgeBaseRepository kbRepository,
@@ -78,7 +92,10 @@ public class KnowledgeBaseService {
                                 @Value("${app.kb.indexing.mode:local}") String indexingMode,
                                 @Value("${app.kb.embedding.provider:local}") String defaultEmbeddingProvider,
                                 @Value("${app.kb.embedding.model:local-hash}") String defaultEmbeddingModel,
-                                @Value("${app.kb.embedding.dimension:1024}") Integer defaultEmbeddingDimension) {
+                                @Value("${app.kb.embedding.dimension:1024}") Integer defaultEmbeddingDimension,
+                                @Value("${app.kb.upload.max-file-size-bytes:26214400}") Long maxUploadFileSizeBytes,
+                                @Value("${app.kb.upload.allowed-extensions:txt,md,markdown,csv,json,docx}") String allowedUploadExtensions,
+                                @Value("${app.kb.upload.allowed-content-types:text/plain,text/markdown,text/csv,application/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document}") String allowedUploadContentTypes) {
         this.kbRepository = kbRepository;
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
@@ -95,6 +112,9 @@ public class KnowledgeBaseService {
         this.defaultEmbeddingProvider = normalizeEmbeddingProvider(defaultEmbeddingProvider);
         this.defaultEmbeddingModel = normalizeEmbeddingModel(defaultEmbeddingModel);
         this.defaultEmbeddingDimension = sanitizeEmbeddingDimension(defaultEmbeddingDimension);
+        this.maxUploadFileSizeBytes = Math.max(1L, maxUploadFileSizeBytes == null ? 26_214_400L : maxUploadFileSizeBytes);
+        this.allowedUploadExtensions = normalizeCsvSet(allowedUploadExtensions);
+        this.allowedUploadContentTypes = normalizeCsvSet(allowedUploadContentTypes);
         this.storageRoot = Path.of(storageDir).toAbsolutePath().normalize();
     }
 
@@ -162,6 +182,30 @@ public class KnowledgeBaseService {
         return modelProviderService.embeddingModelOptions(orgId);
     }
 
+    public Map<String, Object> uploadPolicy(String orgId) {
+        HashMap<String, Object> payload = new HashMap<>();
+        payload.put("maxFileSizeBytes", maxUploadFileSizeBytes);
+        payload.put("maxFilesPerUpload", 1);
+        payload.put("allowedExtensions", allowedUploadExtensions.stream().sorted().toList());
+        payload.put("allowedContentTypes", allowedUploadContentTypes.stream().sorted().toList());
+        payload.put("supportedParserLabels", List.of("TXT", "Markdown", "CSV", "JSON", "DOCX"));
+        payload.put("unsupportedParserLabels", List.of("PDF"));
+        payload.put("pdfPolicy", "PDF parsing is not enabled in this build. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+        payload.put("sourceTypes", List.of(
+                Map.of("code", "LOCAL_FILE", "status", "available"),
+                Map.of("code", "EMPTY", "status", "available_via_manual_chunks"),
+                Map.of("code", "WEB", "status", "planned"),
+                Map.of("code", "NOTION", "status", "planned"),
+                Map.of("code", "EXTERNAL_API", "status", "planned")
+        ));
+        payload.put("serviceApi", Map.of(
+                "status", "planned",
+                "apiAccessEnabled", false,
+                "message", "Knowledge Service API keys are not issued in this build; use authenticated admin APIs."
+        ));
+        return payload;
+    }
+
     public List<Map<String, Object>> listKnowledgeBases(String orgId) {
         ArrayList<Map<String, Object>> out = new ArrayList<>();
         for (KnowledgeBaseEntity item : kbRepository.findByOrgIdAndStatusNotOrderByIdDesc(orgId, "DELETED")) {
@@ -181,20 +225,18 @@ public class KnowledgeBaseService {
     public Map<String, Object> uploadDocument(String orgId, Long kbId, MultipartFile file) {
         KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
-        if (file.isEmpty()) {
-            throw new IllegalArgumentException("Uploaded file is empty");
-        }
+        UploadAdmission admission = validateUploadAdmission(file);
         try {
             Files.createDirectories(storageRoot.resolve(orgId).resolve(String.valueOf(kbId)));
-            String safeName = UUID.randomUUID() + "-" + file.getOriginalFilename();
+            String safeName = UUID.randomUUID() + "-" + admission.safeFilename();
             Path path = storageRoot.resolve(orgId).resolve(String.valueOf(kbId)).resolve(safeName);
             Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 
             KbDocumentEntity doc = documentRepository.save(new KbDocumentEntity(
                     orgId,
                     kb.getId(),
-                    file.getOriginalFilename() == null ? safeName : file.getOriginalFilename(),
-                    file.getContentType(),
+                    admission.originalFilename(),
+                    admission.contentType(),
                     path.toString(),
                     file.getSize()
             ));
@@ -591,6 +633,25 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
+    public Map<String, Object> auditVectorStore(String orgId) {
+        List<String> registeredVectorIds = chunkRepository.findByOrgIdAndStatusNot(orgId, "DELETED").stream()
+                .map(KbChunkEntity::getVectorId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        VectorStoreAuditResult audit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
+        HashMap<String, Object> payload = new HashMap<>();
+        payload.put("success", audit.success());
+        payload.put("scannedCount", audit.scannedCount());
+        payload.put("registeredCount", audit.registeredCount());
+        payload.put("orphanCount", audit.orphanCount());
+        payload.put("orphanVectorIds", audit.orphanVectorIds());
+        payload.put("message", audit.message());
+        payload.put("status", audit.success() && audit.orphanCount() == 0 ? "OK" : audit.success() ? "NEEDS_CLEANUP" : "FAILED");
+        return payload;
+    }
+
+    @Transactional
     public Map<String, Object> publishDocument(String orgId, Long documentId) {
         KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
@@ -896,6 +957,13 @@ public class KnowledgeBaseService {
     private String readSupportedText(KbDocumentEntity doc) throws IOException {
         String contentType = doc.getContentType() == null ? "" : doc.getContentType().toLowerCase();
         String name = doc.getName() == null ? "" : doc.getName().toLowerCase();
+        Path path = Path.of(doc.getStoragePath());
+        if (isDocxFile(contentType, name)) {
+            return readDocxText(path);
+        }
+        if (isPdfFile(contentType, name)) {
+            throw new IllegalArgumentException("PDF parsing is not enabled. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+        }
         boolean supported = contentType.startsWith("text/")
                 || "application/json".equals(contentType)
                 || name.endsWith(".txt")
@@ -904,9 +972,78 @@ public class KnowledgeBaseService {
                 || name.endsWith(".csv")
                 || name.endsWith(".json");
         if (!supported) {
-            throw new IllegalArgumentException("Unsupported file type. P0 indexing supports txt, md, csv and json text files only.");
+            throw new IllegalArgumentException("Unsupported file type. P0 indexing supports txt, md, csv, json and docx files only.");
         }
-        return Files.readString(Path.of(doc.getStoragePath()), StandardCharsets.UTF_8);
+        return Files.readString(path, StandardCharsets.UTF_8);
+    }
+
+    private boolean isDocxFile(String contentType, String name) {
+        return name.endsWith(".docx") || contentType.contains("wordprocessingml.document");
+    }
+
+    private boolean isPdfFile(String contentType, String name) {
+        return name.endsWith(".pdf") || contentType.contains("application/pdf");
+    }
+
+    private String readDocxText(Path path) throws IOException {
+        StringBuilder text = new StringBuilder();
+        try (InputStream input = Files.newInputStream(path);
+             ZipInputStream zip = new ZipInputStream(input)) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                String entryName = entry.getName();
+                if (!entry.isDirectory() && isDocxTextPart(entryName)) {
+                    appendDocxXmlText(zip.readAllBytes(), text);
+                }
+                zip.closeEntry();
+            }
+        }
+        String normalized = text.toString().replaceAll("[\\t ]+\\n", "\n").trim();
+        if (normalized.isBlank()) {
+            throw new IllegalArgumentException("DOCX file does not contain readable text.");
+        }
+        return normalized;
+    }
+
+    private boolean isDocxTextPart(String entryName) {
+        return "word/document.xml".equals(entryName)
+                || entryName.matches("word/(header|footer|footnotes|endnotes)\\d*\\.xml");
+    }
+
+    private void appendDocxXmlText(byte[] xmlBytes, StringBuilder out) throws IOException {
+        XMLInputFactory factory = XMLInputFactory.newFactory();
+        disableXmlExternalAccess(factory);
+        try (InputStream xmlInput = new ByteArrayInputStream(xmlBytes)) {
+            XMLStreamReader reader = factory.createXMLStreamReader(xmlInput, StandardCharsets.UTF_8.name());
+            while (reader.hasNext()) {
+                int event = reader.next();
+                if (event == XMLStreamConstants.CHARACTERS || event == XMLStreamConstants.CDATA) {
+                    out.append(reader.getText());
+                } else if (event == XMLStreamConstants.START_ELEMENT && "tab".equals(reader.getLocalName())) {
+                    out.append('\t');
+                } else if (event == XMLStreamConstants.START_ELEMENT && ("br".equals(reader.getLocalName()) || "cr".equals(reader.getLocalName()))) {
+                    out.append('\n');
+                } else if (event == XMLStreamConstants.END_ELEMENT && "p".equals(reader.getLocalName())) {
+                    out.append('\n');
+                }
+            }
+            reader.close();
+        } catch (XMLStreamException ex) {
+            throw new IOException("Failed to parse DOCX content: " + ex.getMessage(), ex);
+        }
+    }
+
+    private void disableXmlExternalAccess(XMLInputFactory factory) {
+        try {
+            factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+        } catch (IllegalArgumentException ignored) {
+            // Some XMLInputFactory implementations do not expose this property.
+        }
+        try {
+            factory.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
+        } catch (IllegalArgumentException ignored) {
+            // Some XMLInputFactory implementations do not expose this property.
+        }
     }
 
     private Map<String, Object> kbPayload(KnowledgeBaseEntity kb) {
@@ -951,6 +1088,67 @@ public class KnowledgeBaseService {
                 doc.getOrgId(), doc.getId(), "ACTIVE"));
         row.put("errorMessage", doc.getErrorMessage() == null ? "" : doc.getErrorMessage());
         return row;
+    }
+
+    private UploadAdmission validateUploadAdmission(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Uploaded file is empty");
+        }
+        if (file.getSize() > maxUploadFileSizeBytes) {
+            throw new IllegalArgumentException("File is too large. Maximum supported size is " + maxUploadFileSizeBytes + " bytes.");
+        }
+        String original = sanitizeOriginalFilename(file.getOriginalFilename());
+        String extension = fileExtension(original);
+        String contentType = file.getContentType() == null ? "" : file.getContentType().trim().toLowerCase();
+        if ("pdf".equals(extension) || "application/pdf".equals(contentType)) {
+            throw new IllegalArgumentException("PDF parsing is not enabled. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+        }
+        boolean extensionAllowed = allowedUploadExtensions.contains(extension);
+        boolean contentAllowed = contentType.isBlank() || contentType.startsWith("text/") || allowedUploadContentTypes.contains(contentType);
+        if (!extensionAllowed || !contentAllowed) {
+            throw new IllegalArgumentException("Unsupported file type. Upload txt, md, csv, json, or docx files only.");
+        }
+        return new UploadAdmission(original, original, contentType.isBlank() ? contentTypeForExtension(extension) : contentType);
+    }
+
+    private String sanitizeOriginalFilename(String value) {
+        String name = value == null || value.isBlank() ? "document.txt" : value.trim();
+        name = name.replace('\\', '/');
+        int idx = name.lastIndexOf('/');
+        if (idx >= 0) {
+            name = name.substring(idx + 1);
+        }
+        name = name.replaceAll("[\\r\\n\\t]", " ").replaceAll("[^\\p{L}\\p{N}._ -]", "_").trim();
+        if (name.isBlank() || ".".equals(name) || "..".equals(name)) {
+            return "document.txt";
+        }
+        return name.length() > 160 ? name.substring(name.length() - 160) : name;
+    }
+
+    private String fileExtension(String filename) {
+        String name = filename == null ? "" : filename.toLowerCase();
+        int idx = name.lastIndexOf('.');
+        return idx < 0 ? "" : name.substring(idx + 1);
+    }
+
+    private String contentTypeForExtension(String extension) {
+        return switch (extension == null ? "" : extension) {
+            case "json" -> "application/json";
+            case "csv" -> "text/csv";
+            case "md", "markdown" -> "text/markdown";
+            case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            default -> "text/plain";
+        };
+    }
+
+    private Set<String> normalizeCsvSet(String value) {
+        if (value == null || value.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(value.split(","))
+                .map(item -> item == null ? "" : item.trim().toLowerCase())
+                .filter(item -> !item.isBlank())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
     }
 
     private Map<String, Object> kbSettingsPayload(KnowledgeBaseEntity kb) {
@@ -1384,5 +1582,8 @@ public class KnowledgeBaseService {
             String fieldName,
             String valueType
     ) {
+    }
+
+    private record UploadAdmission(String originalFilename, String safeFilename, String contentType) {
     }
 }

@@ -152,6 +152,12 @@ public class ChatOrchestratorService {
     public Map<String, Object> chat(String orgId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode) {
+        return chat(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of());
+    }
+
+    public Map<String, Object> chat(String orgId, String userId, String sessionId,
+                                     String question, List<String> kbIds, String requestedAgentId,
+                                     String activeSkillCode, Map<String, String> metadataFilters) {
         Instant runStartedAt = Instant.now();
         List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
         List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -180,7 +186,7 @@ public class ChatOrchestratorService {
                 question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
-                ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question)
+                ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question, metadataFilters)
                 : emptyRagRetrievalResult();
         stageTraces.add(stageTrace("RAG", useKnowledgeRetrieval ? "知识库检索" : "知识库检索未触发",
                 useKnowledgeRetrieval ? "SUCCESS" : "SKIPPED", ragStartedAt, Instant.now(),
@@ -302,14 +308,26 @@ public class ChatOrchestratorService {
     public void chatStream(String orgId, String userId, String sessionId,
                            String question, List<String> kbIds, String requestedAgentId,
                            String activeSkillCode, SseEmitter emitter) {
+        chatStream(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of(), emitter);
+    }
+
+    public void chatStream(String orgId, String userId, String sessionId,
+                           String question, List<String> kbIds, String requestedAgentId,
+                           String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
         CompletableFuture.runAsync(() -> {
-            chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, emitter);
+            chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, emitter);
         });
     }
 
     public void chatStreamBlocking(String orgId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, SseEmitter emitter) {
+        chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, Map.of(), emitter);
+    }
+
+    public void chatStreamBlocking(String orgId, String userId, String sessionId,
+                                   String question, List<String> kbIds, String requestedAgentId,
+                                   String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
             Instant runStartedAt = Instant.now();
             List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
             List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -345,7 +363,7 @@ public class ChatOrchestratorService {
                 }
                 Instant ragStartedAt = Instant.now();
                 RagService.RetrievalResult ragResult = useKnowledgeRetrieval
-                        ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question)
+                        ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question, metadataFilters)
                         : emptyRagRetrievalResult();
                 stageTraces.add(stageTrace("RAG", useKnowledgeRetrieval ? "知识库检索" : "知识库检索未触发",
                         useKnowledgeRetrieval ? "SUCCESS" : "SKIPPED", ragStartedAt, Instant.now(),
@@ -985,6 +1003,8 @@ public class ChatOrchestratorService {
         metadata.put("triggered", !ragResult.context().isEmpty() || !ragResult.knowledgeBases().isEmpty());
         metadata.put("contextCount", ragResult.context().size());
         metadata.put("knowledgeBases", ragResult.knowledgeBases().stream().map(RagService.RetrievedKnowledgeBase::name).toList());
+        metadata.put("sources", ragResult.sources().stream().map(RagService.RetrievedSource::toPayload).toList());
+        metadata.put("metadataFilters", ragResult.metadataFilters());
         metadata.put("timingsMs", ragResult.timingsMs());
         metadata.put("fallbackUsed", ragResult.fallbackUsed());
         return metadata;
@@ -1504,6 +1524,8 @@ public class ChatOrchestratorService {
         payload.put("knowledgeBaseIds", result.knowledgeBases().stream().map(RagService.RetrievedKnowledgeBase::id).toList());
         payload.put("knowledgeBaseNames", result.knowledgeBases().stream().map(RagService.RetrievedKnowledgeBase::name).toList());
         payload.put("contextCount", result.context().size());
+        payload.put("sources", result.sources().stream().map(RagService.RetrievedSource::toPayload).toList());
+        payload.put("metadataFilters", result.metadataFilters());
         payload.put("elapsedMs", result.timingsMs().getOrDefault("total", 0L));
         payload.put("timingsMs", result.timingsMs());
         payload.put("fallbackUsed", result.fallbackUsed());
@@ -2161,7 +2183,7 @@ public class ChatOrchestratorService {
     }
 
     private static RagService.RetrievalResult emptyRagRetrievalResult() {
-        return new RagService.RetrievalResult(List.of(), List.of(), Map.of("total", 0L), false);
+        return new RagService.RetrievalResult(List.of(), List.of(), List.of(), Map.of("total", 0L), false, Map.of());
     }
 
     private record ModelCallCredentials(String providerCode, String apiBaseUrl, String apiKey, boolean apiKeyRequired) {

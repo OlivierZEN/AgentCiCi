@@ -62,6 +62,38 @@ type BatchFeedback = {
   detail: string;
 };
 
+type UploadPolicy = {
+  maxFileSizeBytes: number;
+  maxFilesPerUpload: number;
+  allowedExtensions: string[];
+  allowedContentTypes?: string[];
+  supportedParserLabels: string[];
+  unsupportedParserLabels: string[];
+  pdfPolicy: string;
+};
+
+type VectorAudit = {
+  status: string;
+  success: boolean;
+  scannedCount: number;
+  registeredCount: number;
+  orphanCount: number;
+  message?: string;
+};
+
+type KbDialog = {
+  title: string;
+  description?: string;
+  confirmLabel: string;
+  cancelLabel?: string;
+  tone?: "default" | "danger";
+  inputKind?: "text" | "textarea";
+  inputLabel?: string;
+  allowBlank?: boolean;
+  value?: string;
+  action: (value: string) => void | false | Promise<void | false>;
+};
+
 type EmbeddingModelOption = {
   providerCode: string;
   providerName: string;
@@ -86,8 +118,9 @@ const STATUS_LABEL: Record<string, string> = {
 const FILE_ICON: Record<string, string> = {
   "text/markdown": "📝",
   "text/plain": "📄",
-  "application/pdf": "📕",
   "text/csv": "📊",
+  "application/json": "{}",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "W",
   default: "📎",
 };
 
@@ -143,6 +176,10 @@ export default function AdminKnowledgePage() {
   const [docBatchFeedback, setDocBatchFeedback] = useState<BatchFeedback | null>(null);
   const [chunkBatchFeedback, setChunkBatchFeedback] = useState<BatchFeedback | null>(null);
   const [openDocActionMenuId, setOpenDocActionMenuId] = useState<number | null>(null);
+  const [uploadPolicy, setUploadPolicy] = useState<UploadPolicy | null>(null);
+  const [vectorAudit, setVectorAudit] = useState<VectorAudit | null>(null);
+  const [kbDialog, setKbDialog] = useState<KbDialog | null>(null);
+  const [dialogValue, setDialogValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const flash = (msg: string) => {
@@ -154,6 +191,23 @@ export default function AdminKnowledgePage() {
     () => ({ Authorization: `Bearer ${token}` }),
     [token],
   );
+
+  const openDialog = (dialog: KbDialog) => {
+    setDialogValue(dialog.value ?? "");
+    setKbDialog(dialog);
+  };
+
+  const closeDialog = () => {
+    setKbDialog(null);
+    setDialogValue("");
+  };
+
+  const confirmDialog = async () => {
+    if (!kbDialog) return;
+    const result = await kbDialog.action(kbDialog.inputKind ? dialogValue : "");
+    if (result === false) return;
+    closeDialog();
+  };
 
   const listKnowledgeBases = useCallback(async () => {
     const res = await fetch("/kb", { headers: headers() });
@@ -196,6 +250,25 @@ export default function AdminKnowledgePage() {
     if (!json.success) return;
     setEmbeddingOptions((json.data ?? []) as EmbeddingModelOption[]);
   }, [headers]);
+
+  const loadUploadPolicy = useCallback(async () => {
+    const res = await fetch("/kb/upload-policy", { headers: headers() });
+    const json = await res.json();
+    if (!json.success) return;
+    setUploadPolicy(json.data as UploadPolicy);
+  }, [headers]);
+
+  const runVectorAudit = async () => {
+    const res = await fetch("/kb/vector-store/audit", { headers: headers() });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`向量审计失败：${json.message}`);
+      return;
+    }
+    const data = json.data as VectorAudit;
+    setVectorAudit(data);
+    flash(data.status === "OK" ? "向量审计通过" : `向量审计完成：${data.status}`);
+  };
 
   const createOrUpdateKb = async () => {
     if (!kbName.trim()) return;
@@ -423,24 +496,47 @@ export default function AdminKnowledgePage() {
   };
 
   const deleteKnowledgeBase = async (id: number) => {
-    if (!window.confirm("确认删除该知识库？系统会同步清理文档、切片、向量索引和 Agent 绑定。")) return;
-    const res = await fetch(`/kb/${id}`, { method: "DELETE", headers: headers() });
-    const json = await res.json();
-    if (json.success) {
-      flash("知识库已删除");
-      if (selectedKb?.id === id) {
-        setSelectedKb(null);
-        setViewMode("grid");
-        setDocs([]);
-      }
-      await listKnowledgeBases();
-    } else {
-      flash(`删除失败：${json.message}`);
-    }
+    const target = kbs.find((kb) => kb.id === id);
+    openDialog({
+      title: `删除知识库${target ? `「${target.name}」` : ""}`,
+      description: "系统会同步清理文档、切片、向量索引和 Agent 绑定。该操作不可恢复。",
+      confirmLabel: "删除知识库",
+      tone: "danger",
+      action: async () => {
+        const res = await fetch(`/kb/${id}`, { method: "DELETE", headers: headers() });
+        const json = await res.json();
+        if (json.success) {
+          flash("知识库已删除");
+          if (selectedKb?.id === id) {
+            setSelectedKb(null);
+            setViewMode("grid");
+            setDocs([]);
+          }
+          await listKnowledgeBases();
+        } else {
+          flash(`删除失败：${json.message}`);
+        }
+      },
+    });
   };
 
   const uploadDocument = async (file: File) => {
     if (!selectedKb) return;
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    if (uploadPolicy) {
+      if (file.size > uploadPolicy.maxFileSizeBytes) {
+        flash(`上传失败：文件超过 ${Math.round(uploadPolicy.maxFileSizeBytes / 1024 / 1024)} MB 限制`);
+        return;
+      }
+      if (ext === "pdf") {
+        flash(uploadPolicy.pdfPolicy || "PDF 暂不支持索引，请先提取文本后上传。");
+        return;
+      }
+      if (!uploadPolicy.allowedExtensions.includes(ext)) {
+        flash(`上传失败：仅支持 ${uploadPolicy.allowedExtensions.join(" / ")}`);
+        return;
+      }
+    }
     const form = new FormData();
     form.append("knowledgeBaseId", String(selectedKb.id));
     form.append("file", file);
@@ -512,20 +608,28 @@ export default function AdminKnowledgePage() {
 
   const renameDocument = async (doc: KbDocument) => {
     if (!selectedKb) return;
-    const name = window.prompt("输入新的文档名称", doc.name);
-    if (!name || !name.trim()) return;
-    const res = await fetch(`/kb/documents/${doc.id}/rename`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...headers() },
-      body: JSON.stringify({ name: name.trim() }),
+    openDialog({
+      title: "重命名文档",
+      inputKind: "text",
+      inputLabel: "文档名称",
+      value: doc.name,
+      confirmLabel: "保存名称",
+      action: async (name) => {
+        if (!name.trim()) return false;
+        const res = await fetch(`/kb/documents/${doc.id}/rename`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...headers() },
+          body: JSON.stringify({ name: name.trim() }),
+        });
+        const json = await res.json();
+        if (!json.success) {
+          flash(`重命名失败：${json.message}`);
+          return false;
+        }
+        flash("文档已重命名");
+        await listDocuments(selectedKb.id);
+      },
     });
-    const json = await res.json();
-    if (!json.success) {
-      flash(`重命名失败：${json.message}`);
-      return;
-    }
-    flash("文档已重命名");
-    await listDocuments(selectedKb.id);
   };
 
   const setDocumentEnabled = async (doc: KbDocument, enabled: boolean) => {
@@ -605,33 +709,49 @@ export default function AdminKnowledgePage() {
   };
 
   const editChunkContent = async (chunk: KbChunk) => {
-    const content = window.prompt("编辑切片内容", chunk.content);
-    if (!content || !content.trim()) return;
-    const res = await fetch(`/kb/chunks/${chunk.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...headers() },
-      body: JSON.stringify({ content: content.trim() }),
+    openDialog({
+      title: "编辑切片内容",
+      description: "保存后会重新生成向量索引。",
+      inputKind: "textarea",
+      inputLabel: "切片内容",
+      value: chunk.content,
+      confirmLabel: "保存切片",
+      action: async (content) => {
+        if (!content.trim()) return false;
+        const res = await fetch(`/kb/chunks/${chunk.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...headers() },
+          body: JSON.stringify({ content: content.trim() }),
+        });
+        const json = await res.json();
+        if (!json.success) {
+          flash(`更新切片失败：${json.message}`);
+          return false;
+        }
+        await refreshChunkPanel();
+      },
     });
-    const json = await res.json();
-    if (!json.success) {
-      flash(`更新切片失败：${json.message}`);
-      return;
-    }
-    await refreshChunkPanel();
   };
 
   const deleteChunk = async (chunk: KbChunk) => {
-    if (!window.confirm("确认删除这个切片？")) return;
-    const res = await fetch(`/kb/chunks/${chunk.id}`, {
-      method: "DELETE",
-      headers: headers(),
+    openDialog({
+      title: "删除切片",
+      description: "系统会同步删除该切片对应的向量索引。",
+      confirmLabel: "删除切片",
+      tone: "danger",
+      action: async () => {
+        const res = await fetch(`/kb/chunks/${chunk.id}`, {
+          method: "DELETE",
+          headers: headers(),
+        });
+        const json = await res.json();
+        if (!json.success) {
+          flash(`删除切片失败：${json.message}`);
+          return;
+        }
+        await refreshChunkPanel();
+      },
     });
-    const json = await res.json();
-    if (!json.success) {
-      flash(`删除切片失败：${json.message}`);
-      return;
-    }
-    await refreshChunkPanel();
   };
 
   const updateDocumentMetadata = async (doc: KbDocument) => {
@@ -640,35 +760,42 @@ export default function AdminKnowledgePage() {
     const existingJson = await existingRes.json();
     const existing = (existingJson.data ?? []) as Array<{ fieldKey: string; value: string }>;
     const defaults = existing.map((x) => `${x.fieldKey}=${x.value}`).join(", ");
-    const input = window.prompt("输入文档元数据，格式 key=value,key2=value2", defaults);
-    if (input === null) return;
-    const parsed = parseMetadataFilters(input);
-    if (parsed.invalidParts.length > 0) {
-      flash(`元数据格式错误：${parsed.invalidParts.join("，")}（格式：key=value）`);
-      return;
-    }
-    const metadataKeys = Object.keys(parsed.filters);
-    if (metadataKeys.length > 0) {
-      const allowedKeys = new Set(metadataFields.map((field) => field.fieldKey));
-      const unknownKeys = metadataKeys.filter((key) => !allowedKeys.has(key));
-      if (unknownKeys.length > 0) {
-        flash(
-          `存在未定义字段：${unknownKeys.join("，")}。请先在「Metadata 字段」中创建后再保存。`,
-        );
-        return;
-      }
-    }
-    const res = await fetch(`/kb/documents/${doc.id}/metadata`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", ...headers() },
-      body: JSON.stringify(parsed.filters),
+    openDialog({
+      title: "编辑文档 Metadata",
+      description: `格式：key=value,key2=value2。可用字段：${metadataFields.length === 0 ? "暂无" : metadataFields.map((field) => field.fieldKey).join("，")}`,
+      inputKind: "textarea",
+      inputLabel: "Metadata",
+      allowBlank: true,
+      value: defaults,
+      confirmLabel: "保存 Metadata",
+      action: async (input) => {
+        const parsed = parseMetadataFilters(input);
+        if (parsed.invalidParts.length > 0) {
+          flash(`元数据格式错误：${parsed.invalidParts.join("，")}（格式：key=value）`);
+          return false;
+        }
+        const metadataKeys = Object.keys(parsed.filters);
+        if (metadataKeys.length > 0) {
+          const allowedKeys = new Set(metadataFields.map((field) => field.fieldKey));
+          const unknownKeys = metadataKeys.filter((key) => !allowedKeys.has(key));
+          if (unknownKeys.length > 0) {
+            flash(`存在未定义字段：${unknownKeys.join("，")}。请先在「Metadata 字段」中创建后再保存。`);
+            return false;
+          }
+        }
+        const res = await fetch(`/kb/documents/${doc.id}/metadata`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", ...headers() },
+          body: JSON.stringify(parsed.filters),
+        });
+        const json = await res.json();
+        if (!json.success) {
+          flash(`保存元数据失败：${json.message}`);
+          return false;
+        }
+        flash("文档元数据已更新");
+      },
     });
-    const json = await res.json();
-    if (!json.success) {
-      flash(`保存元数据失败：${json.message}`);
-      return;
-    }
-    flash("文档元数据已更新");
   };
 
   const runDocumentBatchAction = async (
@@ -681,7 +808,25 @@ export default function AdminKnowledgePage() {
       flash("请先选择文档");
       return;
     }
-    if (action === "delete" && !window.confirm(`确认批量删除 ${ids.length} 个文档？`)) return;
+    if (action === "delete") {
+      openDialog({
+        title: `批量删除 ${ids.length} 个文档`,
+        description: "系统会同步删除这些文档对应的切片和向量索引。",
+        confirmLabel: "批量删除",
+        tone: "danger",
+        action: async () => runDocumentBatchRequest(action, label, ids),
+      });
+      return;
+    }
+    await runDocumentBatchRequest(action, label, ids);
+  };
+
+  const runDocumentBatchRequest = async (
+    action: "enable" | "disable" | "archive" | "unarchive" | "delete",
+    label: string,
+    ids: number[],
+  ) => {
+    if (!selectedKb) return;
     const res = await fetch(`/kb/documents/batch/${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers() },
@@ -713,7 +858,24 @@ export default function AdminKnowledgePage() {
       flash("请先选择切片");
       return;
     }
-    if (action === "delete" && !window.confirm(`确认批量删除 ${ids.length} 个切片？`)) return;
+    if (action === "delete") {
+      openDialog({
+        title: `批量删除 ${ids.length} 个切片`,
+        description: "系统会同步删除这些切片对应的向量索引。",
+        confirmLabel: "批量删除",
+        tone: "danger",
+        action: async () => runChunkBatchRequest(action, label, ids),
+      });
+      return;
+    }
+    await runChunkBatchRequest(action, label, ids);
+  };
+
+  const runChunkBatchRequest = async (
+    action: "enable" | "disable" | "delete",
+    label: string,
+    ids: number[],
+  ) => {
     const res = await fetch(`/kb/chunks/batch/${action}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...headers() },
@@ -740,19 +902,27 @@ export default function AdminKnowledgePage() {
 
   const deleteDocument = async (id: number) => {
     if (!selectedKb) return;
-    if (!window.confirm("确认删除该文档？系统会同步删除对应切片和向量索引。")) return;
-    const res = await fetch(`/kb/documents/${id}`, {
-      method: "DELETE",
-      headers: headers(),
+    const target = docs.find((doc) => doc.id === id);
+    openDialog({
+      title: `删除文档${target ? `「${target.name}」` : ""}`,
+      description: "系统会同步删除对应切片和向量索引。该操作不可恢复。",
+      confirmLabel: "删除文档",
+      tone: "danger",
+      action: async () => {
+        const res = await fetch(`/kb/documents/${id}`, {
+          method: "DELETE",
+          headers: headers(),
+        });
+        const json = await res.json();
+        if (json.success) {
+          flash(json.data?.cleanupStatus === "COMPLETED" ? "文档已删除并清理索引" : "文档删除清理失败");
+          await listDocuments(selectedKb.id);
+          await listKnowledgeBases();
+        } else {
+          flash(`删除失败：${json.message}`);
+        }
+      },
     });
-    const json = await res.json();
-    if (json.success) {
-      flash(json.data?.cleanupStatus === "COMPLETED" ? "文档已删除并清理索引" : "文档删除清理失败");
-      await listDocuments(selectedKb.id);
-      await listKnowledgeBases();
-    } else {
-      flash(`删除失败：${json.message}`);
-    }
   };
 
   const toggleDocStatus = async (doc: KbDocument) => {
@@ -777,14 +947,17 @@ export default function AdminKnowledgePage() {
     void listDocuments(kb.id);
     void loadKbSettings(kb.id);
     void loadEmbeddingOptions();
+    void loadUploadPolicy();
     void loadRetrievalLogs(kb.id);
     void loadMetadataFields(kb.id);
+    setVectorAudit(null);
   };
 
   useEffect(() => {
     void listKnowledgeBases();
     void loadEmbeddingOptions();
-  }, [listKnowledgeBases, loadEmbeddingOptions]);
+    void loadUploadPolicy();
+  }, [listKnowledgeBases, loadEmbeddingOptions, loadUploadPolicy]);
 
   useEffect(() => {
     if (!selectedKb) return;
@@ -818,6 +991,15 @@ export default function AdminKnowledgePage() {
       document.removeEventListener("keydown", closeOnEscape);
     };
   }, []);
+
+  useEffect(() => {
+    if (!kbDialog) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeDialog();
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [kbDialog]);
 
   useEffect(() => {
     setPreviewExecuted(false);
@@ -859,6 +1041,69 @@ export default function AdminKnowledgePage() {
   const embeddingDimensionChoices = selectedEmbeddingOption?.dimensionChoices?.length
     ? selectedEmbeddingOption.dimensionChoices
     : [embeddingDimension];
+  const uploadAccept = uploadPolicy?.allowedExtensions?.length
+    ? uploadPolicy.allowedExtensions.map((ext) => `.${ext}`).join(",")
+    : ".txt,.md,.markdown,.csv,.json,.docx";
+  const uploadLimitLabel = uploadPolicy
+    ? `${Math.round(uploadPolicy.maxFileSizeBytes / 1024 / 1024)} MB`
+    : "25 MB";
+  const kbActionDialog = kbDialog ? (
+    <div className="cici-modal-overlay" onClick={closeDialog}>
+      <div
+        className={`cici-modal cici-modal--kb-action ${kbDialog.tone === "danger" ? "cici-modal--danger" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="kb-action-dialog-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="cici-modal__head">
+          <h2 className="cici-modal__title" id="kb-action-dialog-title">
+            {kbDialog.title}
+          </h2>
+          <button type="button" className="cici-modal__close" aria-label="关闭" onClick={closeDialog}>
+            ×
+          </button>
+        </div>
+        <div className="cici-modal__body">
+          {kbDialog.description && <p className="cici-modal__description">{kbDialog.description}</p>}
+          {kbDialog.inputKind && (
+            <label className="cici-field">
+              {kbDialog.inputLabel && <span className="cici-field__label">{kbDialog.inputLabel}</span>}
+              {kbDialog.inputKind === "textarea" ? (
+                <textarea
+                  className="cici-field__textarea"
+                  rows={5}
+                  value={dialogValue}
+                  onChange={(e) => setDialogValue(e.target.value)}
+                  autoFocus
+                />
+              ) : (
+                <input
+                  className="cici-field__input"
+                  value={dialogValue}
+                  onChange={(e) => setDialogValue(e.target.value)}
+                  autoFocus
+                />
+              )}
+            </label>
+          )}
+        </div>
+        <div className="cici-modal__actions">
+          <button type="button" className="cici-btn cici-btn--ghost" onClick={closeDialog}>
+            {kbDialog.cancelLabel ?? "取消"}
+          </button>
+          <button
+            type="button"
+            className={`cici-btn ${kbDialog.tone === "danger" ? "cici-btn--danger" : "cici-btn--primary"}`}
+            disabled={Boolean(kbDialog.inputKind && !kbDialog.allowBlank && !dialogValue.trim())}
+            onClick={() => void confirmDialog()}
+          >
+            {kbDialog.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  ) : null;
 
   /* ─── KB Grid View ─── */
   if (viewMode === "grid") {
@@ -922,9 +1167,7 @@ export default function AdminKnowledgePage() {
                   className="cici-kb-card__menu"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm(`删除知识库「${kb.name}」？`)) {
-                      void deleteKnowledgeBase(kb.id);
-                    }
+                    void deleteKnowledgeBase(kb.id);
                   }}
                   title="删除"
                 >
@@ -1003,6 +1246,7 @@ export default function AdminKnowledgePage() {
             </div>
           </div>
         )}
+        {kbActionDialog}
       </div>
     );
   }
@@ -1093,6 +1337,7 @@ export default function AdminKnowledgePage() {
                   <input
                     ref={fileInputRef}
                     type="file"
+                    accept={uploadAccept}
                     hidden
                     onChange={(e) => {
                       const f = e.target.files?.[0];
@@ -1108,6 +1353,11 @@ export default function AdminKnowledgePage() {
                     + 添加文件
                   </button>
                 </div>
+              </div>
+              <div className="cici-kb-upload-policy">
+                <span>支持 {uploadPolicy?.supportedParserLabels?.join(" / ") ?? "TXT / Markdown / CSV / JSON / DOCX"}</span>
+                <span>单文件上限 {uploadLimitLabel}</span>
+                <span>{uploadPolicy?.pdfPolicy ?? "PDF 暂不支持索引，请先提取文本后上传。"}</span>
               </div>
 
               <div className="cici-kb-settings__actions cici-kb-settings__actions--batch">
@@ -1413,6 +1663,35 @@ export default function AdminKnowledgePage() {
                 </button>
               </div>
 
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">运行状态</h3>
+              <div className="cici-kb-ops-panel">
+                <div className="cici-kb-ops-panel__item">
+                  <span className="cici-kb-ops-panel__label">上传策略</span>
+                  <strong>{uploadPolicy?.supportedParserLabels?.join(" / ") ?? "TXT / Markdown / CSV / JSON / DOCX"}</strong>
+                  <span className="subtle">单文件 {uploadLimitLabel}，PDF 不进入索引流水线。</span>
+                </div>
+                <div className="cici-kb-ops-panel__item">
+                  <span className="cici-kb-ops-panel__label">向量库审计</span>
+                  <strong>{vectorAudit ? vectorAudit.status : "未运行"}</strong>
+                  <span className="subtle">
+                    {vectorAudit
+                      ? `登记 ${vectorAudit.registeredCount}，扫描 ${vectorAudit.scannedCount}，孤儿 ${vectorAudit.orphanCount}`
+                      : "检查当前组织向量库是否存在未登记向量。"}
+                  </span>
+                </div>
+                <button type="button" className="cici-btn cici-btn--ghost cici-btn--sm" onClick={() => void runVectorAudit()}>
+                  运行审计
+                </button>
+              </div>
+              {vectorAudit?.message && (
+                <div className={`cici-inline-feedback ${vectorAudit.success ? "cici-inline-feedback--success" : "cici-inline-feedback--warning"}`}>
+                  <div className="cici-inline-feedback__main">
+                    <strong>{vectorAudit.success ? "审计完成" : "审计异常"}</strong>
+                    <span>{vectorAudit.message}</span>
+                  </div>
+                </div>
+              )}
+
               <h3 className="cici-kb-main__title cici-kb-main__title--section">切片参数</h3>
               <div className="cici-kb-settings__grid cici-kb-settings__grid--triple">
                 <label className="cici-field">
@@ -1672,6 +1951,8 @@ export default function AdminKnowledgePage() {
           )}
         </main>
       </div>
+
+      {kbActionDialog}
 
       {chunkDocId !== null && (
         <div className="cici-modal-overlay" onClick={closeChunkPanel}>

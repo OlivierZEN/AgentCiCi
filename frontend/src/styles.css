@@ -4431,6 +4431,14 @@ select {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.18);
   animation: cici-modal-up 0.25s ease;
 }
+.cici-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 8px 0 0;
+  border-bottom: 1px solid var(--border);
+}
 @keyframes cici-modal-up {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
@@ -4443,6 +4451,37 @@ select {
   padding: 24px 28px 16px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+.cici-modal__head .cici-modal__title {
+  border-bottom: none;
+  padding-right: 12px;
+}
+.cici-modal__close {
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+}
+.cici-modal__close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.cici-modal__description {
+  margin: 0 0 16px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cici-modal--kb-action {
+  width: 480px;
+}
+.cici-modal--danger {
+  border-top: 3px solid #b91c1c;
 }
 .cici-modal__body {
   flex: 1;
@@ -4543,6 +4582,50 @@ select {
   font-size: 12px;
   color: var(--text-muted);
 }
+.cici-kb-upload-policy {
+  margin: -4px 0 12px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.cici-kb-upload-policy span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: var(--surface-2);
+}
+.cici-kb-ops-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 12px;
+}
+.cici-kb-ops-panel__item {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+.cici-kb-ops-panel__label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.cici-kb-ops-panel__item strong {
+  color: var(--text);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.cici-kb-ops-panel > .cici-btn {
+  align-self: center;
+  min-height: 36px;
+}
 .cici-inline-feedback {
   margin: 8px 0 12px;
   border: 1px solid var(--border);
@@ -4607,6 +4690,9 @@ select {
   }
   .cici-kb-settings__field-action {
     align-items: stretch;
+  }
+  .cici-kb-ops-panel {
+    grid-template-columns: 1fr;
   }
   .cici-doc-name__text {
     max-width: 180px;

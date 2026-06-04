@@ -2,13 +2,13 @@
 kind: feature-spec
 feature_id: FEAT-008
 title: Knowledge base lifecycle completion
-status: in_implementation
+status: in_maintenance
 owner_role: fullstack-agent
-task_ids: TASK-020
+task_ids: TASK-115, TASK-149
 related_decisions: none
 related_issues: ISSUE-2026-04-29-kb-delete-leaves-vector-points
-updated_at: 2026-05-19T02:01:14Z
-updated_by: ai
+updated_at: 2026-06-02T07:58:37Z
+updated_by: MANAGER-001
 ---
 
 # FEAT-008 - Knowledge base lifecycle completion
@@ -500,13 +500,66 @@ Chunk 详情：
 - 风险：一次性追平 Dify 全量能力会拉大范围。缓解：P0 先交付删除一致性、文件解析边界、切片设置、检索参数、启停状态和测试页；Notion/网页/外部 KB、Parent-child、Rerank、多模态和 Service API 作为 P1/P2。
 - 回滚方式：保留新增字段不删，恢复旧 API 行为时仍让 RAG 状态过滤生效；如果向量删除接口有问题，可暂时只做 DB 屏蔽并排队后台清理。
 
+## 2026-06-02 知识库缺口复盘
+
+本节是当前知识库事实源入口，用于替代上方早期“必须缺口”和“已验证现状”中已经过期的判断。上方内容保留原始设计背景；接手实现时以下表为准。
+
+### 已闭环能力
+
+| 领域 | 当前状态 | 事实来源 |
+|---|---|---|
+| 生命周期清理 | 文档删除、知识库删除、取消发布、重建索引都会清理 DB chunk 和向量；RAG 会用 DB 状态作为最终闸门。 | `V27__kb_lifecycle_completion.sql`, `KnowledgeBaseService`, `RagService`, `KnowledgeBaseLifecycleIntegrationTest` |
+| 向量库契约 | `VectorStoreClient` 已支持结构化 upsert/search 和按 vectorId、document、knowledgeBase 删除；memory 与 Qdrant 均有实现。 | `VectorStoreClient`, `MemoryVectorStoreClient`, `QdrantVectorStoreClient` |
+| 切片与检索参数 | KB 级 `chunkSize/chunkOverlap/chunkDelimiter/topK/scoreThreshold/retrievalStrategy` 已落地，管理端可编辑并可做切片预览。 | `V28__kb_chunking_and_retrieval_settings.sql`, `/kb/{id}/settings`, `/kb/{id}/chunking/preview` |
+| 检索测试与日志 | 管理端可发起 retrieval test，查看 hit、score、source，并记录最近检索日志。 | `/kb/{id}/retrieval/test`, `/kb/{id}/retrieval/logs`, `kb_retrieval_log` |
+| 元数据基础 | metadata field、文档 metadata、检索测试 metadata filter、未知字段校验已落地。 | `V29__kb_metadata_and_chunk_ops.sql`, metadata API, integration tests |
+| 文档与 chunk 运营 | 文档重命名、启停、归档、批量操作；chunk 列表、编辑、启停、删除、批量操作已落地。 | `KnowledgeBaseController`, `AdminKnowledgePage.tsx` |
+| Embedding 设置 | KB 级 embedding provider/model/dimension 已落地，管理端可选平台配置里的 embedding 模型。 | `V52__kb_embedding_model_settings.sql`, `/kb/embedding-models` |
+| P0 文件解析 | `txt/md/csv/json` 继续按 UTF-8 文本解析；`.docx` 已支持 Word OpenXML 文本抽取并覆盖回归。 | `KnowledgeBaseService.readSupportedText(...)`, `TASK-149` |
+| 上传准入与 PDF 策略 | 上传策略由后端集中返回，管理端使用同一白名单和单文件大小限制；PDF 在当前构建中明确拒绝，不再通过图标或 accept 暗示支持。 | `GET /kb/upload-policy`, `KnowledgeBaseService.validateUploadAdmission(...)`, `AdminKnowledgePage.tsx`, `TASK-150` |
+| 向量库审计入口 | 后端提供组织级向量库 audit payload，管理端设置页可触发并展示登记/扫描/孤儿向量计数；memory 回归覆盖 audit 契约。 | `GET /kb/vector-store/audit`, `VectorStoreClient.auditOrgVectors(...)`, `KnowledgeBaseLifecycleIntegrationTest`, `TASK-150` |
+| 管理端弹窗治理 | 删除 KB/文档/chunk、批量删除、重命名、chunk 编辑、文档 metadata 编辑均已替换原生 `confirm/prompt`，使用项目内 modal 和内联错误保留输入。 | `AdminKnowledgePage.tsx`, `styles.css`, Playwright desktop smoke, `TASK-150` |
+| 运行时 metadata filter 与结构化来源 | Chat API/SSE 支持 runtime `metadataFilters`；RAG 返回结构化 source，chat phase、run trace 和 detail metadata 透出 KB/document/chunk/score/source 信息。 | `ChatController`, `ChatOrchestratorService`, `RagService`, `AgentRunTraceService`, `TASK-150` |
+| 安全扩展点说明 | upload policy 明确 `LOCAL_FILE/EMPTY/WEB/NOTION/EXTERNAL_API` 状态和 Knowledge Service API 未开放状态，避免把未实现连接器误承诺为可用能力。 | `KnowledgeBaseService.uploadPolicy(...)`, `TASK-150` |
+
+### 仍需补齐的缺口
+
+| 缺口 | 优先级 | 目标结果 | 备注 |
+|---|---|---|---|
+| 真实 Qdrant profile 实测 | P0 | 在可用 Qdrant 环境中跑 smoke 或 profile 级集成验证，覆盖 upsert、按 ids/document/KB 删除、audit 结果。 | 当前 TASK-150 已补 audit 契约和 memory 回归，PostgreSQL 集成回归已通过；仍需独立 Qdrant profile smoke。 |
+| 混合检索与 rerank | P1 | 增加全文索引、hybrid 权重和 rerank provider/model 扩展点，保留向量检索兼容。 | 现有 `retrievalStrategy` 仍以 `VECTOR` 为主。 |
+| 数据源模型与同步 | P1 | 补 `LOCAL_FILE/EMPTY/WEB/NOTION/EXTERNAL_API` 数据源骨架、同步状态、source config 和失败恢复。 | 现阶段仍以本地文件和手工 chunk 为主。 |
+| Knowledge Service API | P2 | 以独立 API key/access 开关开放 KB、document、chunk 维护能力。 | 需与 OpenAPI、权限、计费和审计统一设计。 |
+| Parent-child / 摘要 / 关键词 / 附件 | P2 | 建立父子 chunk、摘要、关键词、多附件的长期检索质量模型。 | 等 parser、引用归因和 hybrid 稳定后再做。 |
+
+### 推荐后续任务包
+
+- `TASK-150` 生产就绪收口：上传准入、PDF 明确拒绝、vector audit、管理端 modal、runtime metadata filters、结构化来源、安全扩展点已实现，进入 review。
+- `TASK-115B` Qdrant 真实环境验证：在可用 PostgreSQL/Qdrant profile 下重跑生命周期和 audit smoke，补残留补偿设计。
+- `TASK-115E` 高级检索与数据源：数据源同步骨架、full-text/hybrid、rerank 扩展点。
+- `TASK-115F` Knowledge Service API：独立 API key/access 开关、权限、计费、审计与 OpenAPI 统一设计。
+
+### 验收缺口清单
+
+- `KnowledgeBaseLifecycleIntegrationTest` 必须继续覆盖本地 memory 确定性回归；新增解析或删除逻辑时至少补一个 focused test。
+- 对 parser 类改动，必须覆盖成功格式、显式拒绝格式、解析失败格式和空文本格式。
+- 对 Qdrant 类改动，必须提供真实 Qdrant 连接的 smoke 证据；无环境时在 `.claw/test-report.md` 记录阻塞。
+- 对管理端 UI 改动，必须完成 `/admin/kb` 桌面端截图和关键状态检查；默认不做移动端适配或移动端测试。
+- 对运行时 RAG 改动，必须覆盖状态过滤、metadata filter、引用输出和 trace 摘要，避免旧向量或未授权文档进入模型上下文。
+
 ## 实现进展
+
+- 2026-06-02 复盘结论：
+  - FEAT-008 进入维护期，真实任务入口更新为 `TASK-115` 和 `TASK-149`。
+  - `TASK-149` 已补 `.docx` Word OpenXML 文本解析，P0 支持格式更新为 `txt/md/csv/json/docx`；PDF 仍未实现，应明确拒绝或另立解析任务。
+  - `TASK-150` 已补上传准入、PDF 明确拒绝、vector audit、管理端弹窗治理、运行时 metadata filter、结构化引用归因和安全扩展点说明。
+  - 当前继续项收敛为真实 Qdrant profile 实测、hybrid/rerank、数据源同步骨架、Knowledge Service API、Parent-child/摘要/关键词/附件等高级能力。
 
 - 2026-05-19 复核结论：
   - 当前知识库已经具备 P0 生命周期闭环：文档/知识库删除、取消发布、重建索引、chunk 启停/编辑/删除、RAG DB 状态过滤、切片预览、检索测试、metadata 字段、文档 metadata、批量操作和基础检索日志均已落地。
   - 本轮验证通过：`mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test`，8 tests / 0 failures / 0 errors。
   - 新维护任务：`TASK-115 Knowledge base module maintenance`，分配给 `DEV-zhongda`，assignment 为 `.claw/assignments/TASK-115.yaml`，任务状态片为 `.claw/tasks/TASK-115.md`，分支为 `codex/TASK-115-kb-module-maintenance`。
-  - P0 继续项：文件解析与上传限制、PDF/DOCX parser 或明确拒绝策略、真实 Qdrant 生命周期验证、管理端 modal/可访问性收口、失败与清理状态回归测试。
+  - P0 继续项：文件解析与上传限制、PDF parser 或明确拒绝策略、真实 Qdrant 生命周期验证、管理端 modal/可访问性收口、失败与清理状态回归测试。
   - P1 继续项：runtime metadata filters、结构化引用归因、数据源模型骨架、full-text/hybrid 检索首片和 rerank 扩展点。
   - P2 继续项：Knowledge Service API/API access、Notion/网页/外部 KB 同步、Parent-child chunk 与更完整检索质量运营。
 
@@ -552,6 +605,6 @@ Chunk 详情：
 
 ## 交接说明
 
-- 下一位接手者可从 `TASK-020F/TASK-020G` 继续：先落切片设置/预览，再落检索参数与 retrieval test。
+- 下一位接手者不要再从早期 `TASK-020F/TASK-020G/TASK-020H` 继续；这些能力已经拆到 FEAT-008 的实现进展中。当前可执行入口是 `TASK-115` 的维护包和 `TASK-149` 的 docx parser review。
 - 当前 P0 删除一致性已具备 DB 状态最终闸门；即使 Qdrant 中存在历史残留点，没有有效 `chunk_id` 或 DB 状态不可检索的 hit 不会进入 RAG 上下文。
-- 手工 chunk 入口已改为同步写向量并返回 chunk/vector 信息，但仍缺少 chunk 编辑/删除 API；后续按 `TASK-020H` 补齐。
+- 当前手工 chunk 入口已同步写向量，chunk 编辑/启停/删除和批量操作也已具备；TASK-150 已补生产级上传准入、管理端弹窗、运行时 metadata filter 和引用归因，后续重点是真实 Qdrant profile 验证和高级检索质量。

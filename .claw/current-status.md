@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-02T05:26:00Z
+updated_at: 2026-06-02T23:20:41Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Local main integration: TASK-146 ops observability and TASK-147/TASK-148 WeCom customer-service/domain work merged into main."
-next_action: "Commit the validated local main integration; then push or open review as appropriate."
+active_task: "TASK-150 Knowledge Base production readiness is in review on top of TASK-149 docx parser work."
+next_action: "Review and merge TASK-150 production-readiness changes."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,13 @@ read_next:
 
 ## Snapshot
 
-- Focus: local main integration for ops observability plus FEAT-023 Enterprise WeChat customer-service continuation.
+- Focus: review FEAT-008 Knowledge Base production-readiness closure on top of the `.docx` upload parser fix.
+- TASK-150 implemented production-readiness closure: upload policy/admission with explicit PDF rejection, vector-store audit endpoint, admin KB modal governance and runtime status panel, runtime metadata filters, structured RAG sources in chat/trace metadata, and safe extension-point reporting for non-local sources/API access.
+- TASK-150 validation is now fully green: `npm run build`, Playwright desktop smoke for `/admin/kb`, `mvn -DskipTests test`, assignment scope check, `KnowledgeBaseLifecycleIntegrationTest`, and Qdrant stack smoke all passed after starting local Docker infrastructure.
+- TASK-149 implemented on `codex/TASK-149-kb-docx-upload-parser`: KB indexing now extracts `.docx` text from Word OpenXML parts without adding dependencies.
+- FEAT-008 refreshed on 2026-06-02: current closed capabilities and remaining KB gaps are now summarized under `2026-06-02 知识库缺口复盘`.
+- TASK-149 validation passed: `KnowledgeBaseLifecycleIntegrationTest`, assignment scope check, state line-budget check, and `git diff --check`.
+- Prior local main integration remains unpushed: ops observability plus FEAT-023 Enterprise WeChat customer-service/domain work.
 - TASK-146 implemented on `codex/TASK-146-ops-observability-audit`: added `/admin/agents/runtime-snapshots`, trace/list `errorReason`, tool `status/errorMessage`, `/ops/audit/logs` filtering and redaction, and production-grade `/admin/ops` audit UI.
 - TASK-146 validation passed: `mvn -q -Dtest=AgentRunTraceIntegrationTest test`, `npm run build`, `git diff --check`, and desktop browser smoke for `/admin/ops` with screenshots under `output/playwright/`.
 - `.claw` state validation is still blocked by an existing out-of-scope issue: `.claw/tasks/TASK-143.md` has 121 lines, over the 120-line budget.
@@ -43,6 +49,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks only
+- `.claw/tasks/TASK-150.md`, `docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md` - active Knowledge Base production-readiness implementation
+- `.claw/tasks/TASK-149.md`, `docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md` - current Knowledge Base docx fix and gap review
 - `.claw/tasks/TASK-146.md`, `.claw/tasks/TASK-148.md`, `.claw/tasks/TASK-147.md` - newly merged task status slices
 - `.claw/tasks/TASK-145.md`, `docs/specs/FEAT-062-platform-model-provider-governance.md` - platform model-provider governance
 - `.claw/tasks/TASK-144.md`, `docs/specs/FEAT-061-agentcici-public-website-restructure.md` - public AgentCiCi website restructure
@@ -51,9 +59,3 @@ read_next:
 - `.claw/tasks/TASK-132.md`, `.claw/tasks/TASK-133.md`, `.claw/tasks/TASK-137.md` - tasks waiting review/merge
 - `.claw/tasks/TASK-140.md`, `.claw/tasks/TASK-139.md`, `.claw/tasks/TASK-136.md`, `.claw/tasks/TASK-138.md`, `.claw/tasks/TASK-141.md` - assigned implementation tasks
 - `.claw/tasks/TASK-115.md`, `.claw/tasks/TASK-116.md` - remaining active slices
-
-## Maintenance Rules
-
-- Keep this file under 60 lines.
-- Keep historical progress out of this file.
-- Put task progress, verification, changed files, and handoff notes in `.claw/tasks/TASK-xxx.md`.

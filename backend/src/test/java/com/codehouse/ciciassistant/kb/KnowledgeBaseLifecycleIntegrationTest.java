@@ -10,10 +10,14 @@ import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -105,7 +109,54 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(detailed.knowledgeBases())
                 .extracting(RagService.RetrievedKnowledgeBase::name)
                 .contains("Lifecycle KB");
+        assertThat(detailed.sources())
+                .extracting(RagService.RetrievedSource::documentName)
+                .contains("policy.txt");
         assertThat(detailed.timingsMs()).containsKey("total");
+    }
+
+    @Test
+    void shouldExposeUploadPolicyAndRejectPdfAdmission() {
+        String orgId = "kb-policy-" + UUID.randomUUID();
+        Map<String, Object> policy = knowledgeBaseService.uploadPolicy(orgId);
+        @SuppressWarnings("unchecked")
+        List<String> allowedExtensions = (List<String>) policy.get("allowedExtensions");
+        @SuppressWarnings("unchecked")
+        List<String> unsupportedParserLabels = (List<String>) policy.get("unsupportedParserLabels");
+        @SuppressWarnings("unchecked")
+        Map<String, Object> serviceApi = (Map<String, Object>) policy.get("serviceApi");
+
+        assertThat(allowedExtensions)
+                .contains("txt", "md", "csv", "json", "docx")
+                .doesNotContain("pdf");
+        assertThat(unsupportedParserLabels).contains("PDF");
+        assertThat((String) policy.get("pdfPolicy")).contains("PDF parsing is not enabled");
+        assertThat(serviceApi).containsEntry("apiAccessEnabled", false);
+
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Policy KB", "test");
+        Long kbId = ((Number) kb.get("id")).longValue();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "brief.pdf",
+                "application/pdf",
+                "%PDF-1.4".getBytes(StandardCharsets.UTF_8));
+
+        assertThatThrownBy(() -> knowledgeBaseService.uploadDocument(orgId, kbId, file))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("PDF parsing is not enabled");
+    }
+
+    @Test
+    void shouldAuditRegisteredVectorsWithoutOrphans() {
+        Fixture fixture = createPublishedDocument("vector audit readiness epsilon");
+
+        Map<String, Object> audit = knowledgeBaseService.auditVectorStore(fixture.orgId());
+
+        assertThat(audit).containsEntry("success", true);
+        assertThat(audit).containsEntry("status", "OK");
+        assertThat((Integer) audit.get("registeredCount")).isEqualTo(1);
+        assertThat((Integer) audit.get("scannedCount")).isEqualTo(1);
+        assertThat((Integer) audit.get("orphanCount")).isZero();
     }
 
     @Test
@@ -200,6 +251,23 @@ class KnowledgeBaseLifecycleIntegrationTest {
                         Map.of("region", "east")));
         assertThat(filtered.get("hitCount")).isEqualTo(1);
 
+        RagService.RetrievalResult runtimeFiltered = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "sales policy",
+                Map.of("region", "east"));
+        assertThat(runtimeFiltered.context()).hasSize(1);
+        assertThat(runtimeFiltered.sources()).hasSize(1);
+        assertThat(runtimeFiltered.metadataFilters()).containsEntry("region", "east");
+
+        RagService.RetrievalResult runtimeMiss = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "sales policy",
+                Map.of("region", "west"));
+        assertThat(runtimeMiss.context()).isEmpty();
+        assertThat(runtimeMiss.sources()).isEmpty();
+
         knowledgeBaseService.setChunkEnabled(fixture.orgId(), chunkId, false);
         Map<String, Object> afterDisable = knowledgeBaseService.testRetrieval(
                 fixture.orgId(),
@@ -250,6 +318,28 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 .hasMessageContaining("Unknown metadata filter field");
     }
 
+    @Test
+    void shouldIndexDocxUpload() throws Exception {
+        String orgId = "kb-docx-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "DOCX KB", "test");
+        Long kbId = ((Number) kb.get("id")).longValue();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "CloudCC运维千问.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                docxBytes("CloudCC 运维千问 包含巡检流程和告警处置。"));
+
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Long documentId = ((Number) document.get("id")).longValue();
+        Map<String, Object> published = knowledgeBaseService.publishDocument(orgId, documentId);
+
+        assertThat(published.get("status")).isEqualTo("PUBLISHED");
+        assertThat(chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
+                orgId, documentId, "ACTIVE")).isEqualTo(1);
+        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "巡检流程"))
+                .anyMatch(item -> item.contains("告警处置"));
+    }
+
     private Fixture createPublishedDocument(String content) {
         String orgId = "kb-life-" + UUID.randomUUID();
         Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Lifecycle KB", "test");
@@ -264,6 +354,30 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Map<String, Object> published = knowledgeBaseService.publishDocument(orgId, documentId);
         assertThat(published.get("status")).isEqualTo("PUBLISHED");
         return new Fixture(orgId, kbId, documentId);
+    }
+
+    private byte[] docxBytes(String text) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output, StandardCharsets.UTF_8)) {
+            zip.putNextEntry(new ZipEntry("[Content_Types].xml"));
+            zip.write("""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+                      <Default Extension="xml" ContentType="application/xml"/>
+                      <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+                    </Types>
+                    """.getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+            zip.putNextEntry(new ZipEntry("word/document.xml"));
+            zip.write(("""
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                      <w:body><w:p><w:r><w:t>%s</w:t></w:r></w:p></w:body>
+                    </w:document>
+                    """).formatted(text).getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+        }
+        return output.toByteArray();
     }
 
     private record Fixture(String orgId, Long kbId, Long documentId) {

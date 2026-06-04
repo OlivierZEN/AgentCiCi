@@ -674,6 +674,8 @@ public class AgentRunTraceService {
         return Map.of(
                 "triggered", !rag.knowledgeBases().isEmpty() || !rag.context().isEmpty(),
                 "contextCount", rag.context().size(),
+                "sources", rag.sources().stream().map(RagService.RetrievedSource::toPayload).toList(),
+                "metadataFilters", rag.metadataFilters(),
                 "knowledgeBases", rag.knowledgeBases().stream().map(kb -> Map.of("id", kb.id(), "name", kb.name())).toList(),
                 "timingsMs", rag.timingsMs(),
                 "fallbackUsed", rag.fallbackUsed()

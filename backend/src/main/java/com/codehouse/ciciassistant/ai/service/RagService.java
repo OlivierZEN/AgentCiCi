@@ -2,6 +2,8 @@ package com.codehouse.ciciassistant.ai.service;
 
 import com.codehouse.ciciassistant.kb.domain.KbChunkEntity;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
+import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataEntity;
+import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentEntity;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
@@ -28,17 +30,20 @@ public class RagService {
 
     private final KbChunkRepository kbChunkRepository;
     private final KbDocumentRepository kbDocumentRepository;
+    private final KbDocumentMetadataRepository kbDocumentMetadataRepository;
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
 
     public RagService(KbChunkRepository kbChunkRepository,
                       KbDocumentRepository kbDocumentRepository,
+                      KbDocumentMetadataRepository kbDocumentMetadataRepository,
                       KnowledgeBaseRepository knowledgeBaseRepository,
                       VectorStoreClient vectorStoreClient,
                       EmbeddingService embeddingService) {
         this.kbChunkRepository = kbChunkRepository;
         this.kbDocumentRepository = kbDocumentRepository;
+        this.kbDocumentMetadataRepository = kbDocumentMetadataRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
@@ -49,11 +54,16 @@ public class RagService {
     }
 
     public RetrievalResult retrieveDetailed(String orgId, List<String> knowledgeBaseIds, String query) {
+        return retrieveDetailed(orgId, knowledgeBaseIds, query, Map.of());
+    }
+
+    public RetrievalResult retrieveDetailed(String orgId, List<String> knowledgeBaseIds, String query, Map<String, String> metadataFilters) {
         long started = System.nanoTime();
         Map<String, Long> timingsMs = new LinkedHashMap<>();
+        Map<String, String> normalizedFilters = normalizeMetadataFilters(metadataFilters);
         if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty()) {
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), timingsMs, false);
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters);
         }
         long validationStarted = System.nanoTime();
         Map<String, Double> scoreThresholdByKb = new HashMap<>();
@@ -74,7 +84,7 @@ public class RagService {
         if (requestedNumericIds.isEmpty()) {
             timingsMs.put("validation", elapsedMs(validationStarted));
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), timingsMs, false);
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters);
         }
         Map<Long, KnowledgeBaseEntity> kbById = knowledgeBaseRepository.findByOrgIdAndIdIn(orgId, requestedNumericIds).stream()
                 .collect(Collectors.toMap(KnowledgeBaseEntity::getId, item -> item));
@@ -98,7 +108,7 @@ public class RagService {
         timingsMs.put("validation", elapsedMs(validationStarted));
         if (allowedKnowledgeBaseIds.isEmpty()) {
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), timingsMs, false);
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters);
         }
         int safeTopK = Math.max(1, Math.min(20, topK == 0 ? 5 : topK));
         long embeddingStarted = System.nanoTime();
@@ -132,31 +142,57 @@ public class RagService {
         timingsMs.put("vectorSearch", elapsedMs(vectorStarted));
         long filterStarted = System.nanoTime();
         Set<String> activeKnowledgeBaseIds = new HashSet<>(allowedKnowledgeBaseIds);
-        List<String> vectorRecall = filterVectorHits(orgId, hits, safeTopK, scoreThresholdByKb, activeKnowledgeBaseIds);
+        List<RetrievedSource> vectorSources = filterVectorHits(
+                orgId,
+                hits,
+                safeTopK,
+                scoreThresholdByKb,
+                activeKnowledgeBaseIds,
+                kbById,
+                normalizedFilters);
         timingsMs.put("filter", elapsedMs(filterStarted));
-        if (!vectorRecall.isEmpty()) {
+        if (!vectorSources.isEmpty()) {
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(vectorRecall, retrievedKnowledgeBases, timingsMs, false);
+            return new RetrievalResult(
+                    vectorSources.stream().map(RetrievedSource::content).toList(),
+                    vectorSources,
+                    retrievedKnowledgeBases,
+                    timingsMs,
+                    false,
+                    normalizedFilters);
         }
         long fallbackStarted = System.nanoTime();
         List<KbChunkEntity> fallbackCandidates = kbChunkRepository.findTop50ByOrgIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
                         orgId,
                         allowedKnowledgeBaseIds,
                         "ACTIVE");
-        List<String> fallback = filterSearchableChunks(orgId, fallbackCandidates, safeTopK, activeKnowledgeBaseIds).stream()
+        List<RetrievedSource> fallbackSources = filterSearchableChunks(
+                        orgId,
+                        fallbackCandidates,
+                        safeTopK,
+                        activeKnowledgeBaseIds,
+                        kbById,
+                        normalizedFilters).stream()
                 .limit(safeTopK)
-                .map(KbChunkEntity::getContent)
                 .collect(Collectors.toList());
         timingsMs.put("fallback", elapsedMs(fallbackStarted));
         timingsMs.put("total", elapsedMs(started));
-        return new RetrievalResult(fallback, retrievedKnowledgeBases, timingsMs, true);
+        return new RetrievalResult(
+                fallbackSources.stream().map(RetrievedSource::content).toList(),
+                fallbackSources,
+                retrievedKnowledgeBases,
+                timingsMs,
+                true,
+                normalizedFilters);
     }
 
-    private List<String> filterVectorHits(String orgId,
-                                          List<VectorSearchHit> hits,
-                                          int topK,
-                                          Map<String, Double> scoreThresholdByKb,
-                                          Set<String> activeKnowledgeBaseIds) {
+    private List<RetrievedSource> filterVectorHits(String orgId,
+                                                   List<VectorSearchHit> hits,
+                                                   int topK,
+                                                   Map<String, Double> scoreThresholdByKb,
+                                                   Set<String> activeKnowledgeBaseIds,
+                                                   Map<Long, KnowledgeBaseEntity> kbById,
+                                                   Map<String, String> metadataFilters) {
         ArrayList<VectorSearchHit> candidates = new ArrayList<>();
         LinkedHashSet<Long> chunkIds = new LinkedHashSet<>();
         for (VectorSearchHit hit : hits) {
@@ -179,11 +215,14 @@ public class RagService {
         Map<Long, KbChunkEntity> chunkById = kbChunkRepository.findByIdInAndOrgId(new ArrayList<>(chunkIds), orgId).stream()
                 .collect(Collectors.toMap(KbChunkEntity::getId, item -> item));
         Map<Long, KbDocumentEntity> documentById = loadDocuments(orgId, chunkById.values().stream().toList());
-        ArrayList<String> out = new ArrayList<>();
+        ArrayList<RetrievedSource> out = new ArrayList<>();
         for (VectorSearchHit hit : candidates) {
             KbChunkEntity chunk = chunkById.get(hit.chunkId());
-            if (chunk != null && isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)) {
-                out.add(chunk.getContent());
+            KbDocumentEntity document = chunk == null ? null : documentById.get(chunk.getDocumentId());
+            if (chunk != null
+                    && isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)
+                    && matchesMetadataFilters(orgId, chunk, document, metadataFilters)) {
+                out.add(toRetrievedSource(chunk, document, kbById, hit.score(), "vector"));
                 if (out.size() >= topK) {
                     break;
                 }
@@ -192,15 +231,19 @@ public class RagService {
         return out;
     }
 
-    private List<KbChunkEntity> filterSearchableChunks(String orgId,
-                                                       List<KbChunkEntity> chunks,
-                                                       int topK,
-                                                       Set<String> activeKnowledgeBaseIds) {
+    private List<RetrievedSource> filterSearchableChunks(String orgId,
+                                                         List<KbChunkEntity> chunks,
+                                                         int topK,
+                                                         Set<String> activeKnowledgeBaseIds,
+                                                         Map<Long, KnowledgeBaseEntity> kbById,
+                                                         Map<String, String> metadataFilters) {
         Map<Long, KbDocumentEntity> documentById = loadDocuments(orgId, chunks);
-        ArrayList<KbChunkEntity> out = new ArrayList<>();
+        ArrayList<RetrievedSource> out = new ArrayList<>();
         for (KbChunkEntity chunk : chunks) {
-            if (isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)) {
-                out.add(chunk);
+            KbDocumentEntity document = documentById.get(chunk.getDocumentId());
+            if (isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)
+                    && matchesMetadataFilters(orgId, chunk, document, metadataFilters)) {
+                out.add(toRetrievedSource(chunk, document, kbById, 0.0, "fallback"));
                 if (out.size() >= topK) {
                     break;
                 }
@@ -245,6 +288,71 @@ public class RagService {
                 && String.valueOf(doc.getKnowledgeBaseId()).equals(chunk.getKnowledgeBaseId());
     }
 
+    private boolean matchesMetadataFilters(String orgId,
+                                           KbChunkEntity chunk,
+                                           KbDocumentEntity document,
+                                           Map<String, String> filters) {
+        if (filters == null || filters.isEmpty()) {
+            return true;
+        }
+        if (chunk == null || document == null || document.getId() == null) {
+            return false;
+        }
+        List<KbDocumentMetadataEntity> metadata = kbDocumentMetadataRepository.findByOrgIdAndKnowledgeBaseIdAndDocumentId(
+                orgId,
+                document.getKnowledgeBaseId(),
+                document.getId());
+        if (metadata.isEmpty()) {
+            return false;
+        }
+        Map<String, String> found = metadata.stream()
+                .collect(Collectors.toMap(KbDocumentMetadataEntity::getFieldKey, KbDocumentMetadataEntity::getStringValue, (a, b) -> b));
+        for (Map.Entry<String, String> filter : filters.entrySet()) {
+            String actual = found.get(filter.getKey());
+            if (actual == null || !actual.equalsIgnoreCase(filter.getValue())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private RetrievedSource toRetrievedSource(KbChunkEntity chunk,
+                                              KbDocumentEntity document,
+                                              Map<Long, KnowledgeBaseEntity> kbById,
+                                              double score,
+                                              String sourceType) {
+        Long kbNumericId = parseLong(chunk.getKnowledgeBaseId()).orElse(null);
+        KnowledgeBaseEntity kb = kbNumericId == null ? null : kbById.get(kbNumericId);
+        return new RetrievedSource(
+                chunk.getContent(),
+                chunk.getKnowledgeBaseId(),
+                kb == null ? "" : kb.getName(),
+                document == null || document.getId() == null ? null : document.getId(),
+                document == null ? "" : document.getName(),
+                chunk.getId(),
+                chunk.getChunkIndex(),
+                score,
+                sourceType);
+    }
+
+    private Map<String, String> normalizeMetadataFilters(Map<String, String> raw) {
+        if (raw == null || raw.isEmpty()) {
+            return Map.of();
+        }
+        Map<String, String> out = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : raw.entrySet()) {
+            if (entry.getKey() == null || entry.getValue() == null) {
+                continue;
+            }
+            String key = entry.getKey().trim().toLowerCase().replace(' ', '_');
+            String value = entry.getValue().trim();
+            if (!key.isBlank() && key.matches("[a-z0-9_\\-]{2,64}") && !value.isBlank()) {
+                out.put(key, value);
+            }
+        }
+        return Collections.unmodifiableMap(out);
+    }
+
     private long elapsedMs(long startedNs) {
         return Math.max(0L, (System.nanoTime() - startedNs) / 1_000_000L);
     }
@@ -261,12 +369,39 @@ public class RagService {
     }
 
     public record RetrievalResult(List<String> context,
+                                  List<RetrievedSource> sources,
                                   List<RetrievedKnowledgeBase> knowledgeBases,
                                   Map<String, Long> timingsMs,
-                                  boolean fallbackUsed) {
+                                  boolean fallbackUsed,
+                                  Map<String, String> metadataFilters) {
     }
 
     public record RetrievedKnowledgeBase(String id, String name) {
+    }
+
+    public record RetrievedSource(String content,
+                                  String knowledgeBaseId,
+                                  String knowledgeBaseName,
+                                  Long documentId,
+                                  String documentName,
+                                  Long chunkId,
+                                  Integer chunkIndex,
+                                  double score,
+                                  String sourceType) {
+
+        public Map<String, Object> toPayload() {
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("knowledgeBaseId", knowledgeBaseId == null ? "" : knowledgeBaseId);
+            payload.put("knowledgeBaseName", knowledgeBaseName == null ? "" : knowledgeBaseName);
+            payload.put("documentId", documentId == null ? "" : documentId);
+            payload.put("documentName", documentName == null ? "" : documentName);
+            payload.put("chunkId", chunkId == null ? "" : chunkId);
+            payload.put("chunkIndex", chunkIndex == null ? "" : chunkIndex);
+            payload.put("score", score);
+            payload.put("sourceType", sourceType == null ? "" : sourceType);
+            payload.put("contentPreview", content == null || content.length() <= 220 ? content == null ? "" : content : content.substring(0, 219) + "…");
+            return payload;
+        }
     }
 
     private record EmbeddingConfig(String provider, String model, Integer dimension) {

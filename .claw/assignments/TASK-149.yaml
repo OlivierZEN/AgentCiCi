@@ -1,0 +1,44 @@
+task_id: TASK-149
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-02T07:48:18Z
+expires_at: none
+spec_path: docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+task_status_path: .claw/tasks/TASK-149.md
+branch: codex/TASK-149-kb-docx-upload-parser
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - docs/specs/**
+scope_files:
+  - .claw/tasks/TASK-149.md
+  - .claw/assignments/TASK-149.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/TASK-115.yaml
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+task_boundary:
+  - "Fix the Knowledge Base local-file parser so `.docx` uploads can be indexed predictably."
+  - "Do not change unrelated Knowledge Base lifecycle behavior or frontend page structure."
+  - "Keep unsupported file rejection explicit for formats that are still not implemented."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed for assignment management on 2026-06-02T07:48:18Z."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Narrow bugfix task created from user-reported docx upload indexing failure. User requested reassignment to Owen; repository identity is MANAGER-001."

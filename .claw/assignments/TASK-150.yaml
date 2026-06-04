@@ -1,0 +1,52 @@
+task_id: TASK-150
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-02T08:11:08Z
+expires_at: none
+spec_path: docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+task_status_path: .claw/tasks/TASK-150.md
+branch: codex/TASK-149-kb-docx-upload-parser
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/admin/**
+  - frontend/src/assistant/**
+  - frontend/src/styles.css
+  - docs/specs/**
+scope_files:
+  - .claw/tasks/TASK-150.md
+  - .claw/assignments/TASK-150.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/TASK-115.yaml
+  - .claw/assignments/TASK-149.yaml
+  - .claw/developers/**
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+task_boundary:
+  - "Complete the FEAT-008 knowledge-base production-readiness gaps identified on 2026-06-02."
+  - "Prioritize upload admission, explicit PDF strategy, vector-store verification hooks, admin modal governance, runtime metadata filters, structured citations, and safe data-source/API extension points."
+  - "Do not implement real Notion/website/external sync against third-party services in this task; provide safe schemas, states, and explicit unsupported behavior where needed."
+  - "Keep authenticated product UI inside the Gilded Ledger design language and desktop-only verification scope."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed for assignment management on 2026-06-02T08:11:08Z."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Created after user requested all FEAT-008 knowledge-base gaps be completed to production-ready quality. Branch currently contains TASK-149 docx parser work, which is prerequisite KB readiness work."

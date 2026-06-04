@@ -17,6 +17,8 @@ public interface KbChunkRepository extends JpaRepository<KbChunkEntity, Long> {
 
     List<KbChunkEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, String knowledgeBaseId, String status);
 
+    List<KbChunkEntity> findByOrgIdAndStatusNot(String orgId, String status);
+
     List<KbChunkEntity> findByOrgIdAndDocumentIdAndStatusNotOrderByChunkIndexAscIdAsc(String orgId, Long documentId, String status);
 
     List<KbChunkEntity> findByIdInAndOrgId(List<Long> ids, String orgId);

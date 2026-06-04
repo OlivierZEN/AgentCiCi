@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-05-31T00:55:00Z
+updated_at: 2026-06-02T23:20:41Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,28 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-150 - Knowledge Base production readiness
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md`
+- task_status_path: `.claw/tasks/TASK-150.md`
+- assignment_path: `.claw/assignments/TASK-150.yaml`
+- blocked_by: `none`
+- next_action: Review and merge TASK-150 production-readiness implementation; frontend build, desktop smoke, backend compile, assignment check, KB lifecycle integration, and Qdrant stack smoke all passed.
+
+### TASK-149 - Knowledge Base DOCX upload parser
+
+- status: `review`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md`
+- task_status_path: `.claw/tasks/TASK-149.md`
+- assignment_path: `.claw/assignments/TASK-149.yaml`
+- blocked_by: `none`
+- next_action: Review and merge `codex/TASK-149-kb-docx-upload-parser`; local KB lifecycle regression and static diff checks passed.
 
 ### TASK-146 - 观测与运维生产就绪收口
 
