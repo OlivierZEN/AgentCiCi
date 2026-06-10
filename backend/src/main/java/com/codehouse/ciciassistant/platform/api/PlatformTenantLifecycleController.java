@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.platform.api;
 
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
@@ -35,6 +36,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantProvisionView> createTenant(
             @Valid @RequestBody CreateTenantRequest request) {
         return ApiResponse.ok(tenantLifecycleService.createTenant(
@@ -56,6 +58,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PatchMapping("/{orgId}/retention")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantRetentionDetailView> updateRetention(
             @PathVariable String orgId,
             @Valid @RequestBody RetentionPolicyRequest request) {
@@ -77,6 +80,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/suspend")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantLifecycleView> suspendTenant(
             @PathVariable String orgId,
             @RequestBody(required = false) LifecycleActionRequest request) {
@@ -85,6 +89,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/resume")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantLifecycleView> resumeTenant(
             @PathVariable String orgId,
             @RequestBody(required = false) LifecycleActionRequest request) {
@@ -93,6 +98,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/pending-purge")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.TenantLifecycleView> markPendingPurge(
             @PathVariable String orgId,
             @RequestBody(required = false) LifecycleActionRequest request) {
@@ -101,6 +107,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/purge-jobs")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> createPurgeJob(
             @PathVariable String orgId,
             @Valid @RequestBody PurgeJobRequest request) {
@@ -123,6 +130,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/purge-jobs/{jobId}/retry")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> retryPurgeJob(
             @PathVariable String orgId,
             @PathVariable Long jobId,
@@ -138,6 +146,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/purge-jobs/{jobId}/cancel")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.PurgeJobView> cancelPurgeJob(
             @PathVariable String orgId,
             @PathVariable Long jobId,
@@ -150,6 +159,7 @@ public class PlatformTenantLifecycleController {
     }
 
     @PostMapping("/{orgId}/export-jobs")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformTenantLifecycleService.ExportJobView> createExportJob(
             @PathVariable String orgId,
             @RequestBody(required = false) ExportJobRequest request) {

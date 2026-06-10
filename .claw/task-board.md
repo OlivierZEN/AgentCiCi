@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-02T23:20:41Z
+updated_at: 2026-06-08T12:06:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-151 - RBAC and audit production readiness
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-064-rbac-production-readiness.md`
+- task_status_path: `.claw/tasks/TASK-151.md`
+- assignment_path: `.claw/assignments/TASK-151.yaml`
+- blocked_by: `none`
+- next_action: Review and merge `codex/TASK-151-rbac-production-readiness`; RBAC hardening plus audit tracking readiness passed focused backend audit/RBAC/platform/model regression, frontend build, assignment check, and `git diff --check`.
 
 ### TASK-150 - Knowledge Base production readiness
 

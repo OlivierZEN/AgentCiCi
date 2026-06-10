@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codehouse.ciciassistant.ai.service.ToolOrchestratorService;
+import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,9 @@ class PlatformGovernanceIntegrationTest {
     @Autowired
     private ToolOrchestratorService toolOrchestratorService;
 
+    @Autowired
+    private PlatformAuditService platformAuditService;
+
     @Test
     void shouldManagePlatformSkillTemplateVersionsAndBuiltinToolsWithAuditAndRuntimeKillSwitch() throws Exception {
         String platformToken = platformToken();
@@ -47,7 +51,7 @@ class PlatformGovernanceIntegrationTest {
 
         long skillId = generalAssistant.path("id").asLong();
 
-        mockMvc.perform(post("/platform/skills/{id}/versions", skillId)
+        MvcResult skillDraftResult = mockMvc.perform(post("/platform/skills/{id}/versions", skillId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -64,21 +68,24 @@ class PlatformGovernanceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.latestDraftVersionNo").value(2));
+                .andReturn();
+        JsonNode skillDraft = objectMapper.readTree(skillDraftResult.getResponse().getContentAsString()).path("data");
+        assertThat(skillDraft.path("latestDraftVersionNo").asInt()).isGreaterThanOrEqualTo(2);
+        int skillDraftVersionNo = skillDraft.path("latestDraftVersionNo").asInt();
 
         mockMvc.perform(post("/platform/skills/{id}/publish", skillId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "versionNo": 2,
+                                  "versionNo": %d,
                                   "enabled": true,
                                   "visibility": "VISIBLE",
                                   "bindingPolicy": "DEFAULT_ON"
                                 }
-                                """))
+                                """.formatted(skillDraftVersionNo)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.currentTemplateVersionNo").value(2))
+                .andExpect(jsonPath("$.data.currentTemplateVersionNo").value(skillDraftVersionNo))
                 .andExpect(jsonPath("$.data.bindingPolicy").value("DEFAULT_ON"))
                 .andExpect(jsonPath("$.data.enabled").value(true));
 
@@ -129,7 +136,7 @@ class PlatformGovernanceIntegrationTest {
                 .contains("conversation-core", "knowledge-first", "safe-handoff");
         assertThat(policy.path("versionCount").asInt()).isGreaterThanOrEqualTo(1);
 
-        mockMvc.perform(post("/platform/policies/core/versions")
+        MvcResult policyDraftResult = mockMvc.perform(post("/platform/policies/core/versions")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -142,7 +149,10 @@ class PlatformGovernanceIntegrationTest {
                                 }
                                 """))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.latestDraftVersionNo").value(2));
+                .andReturn();
+        JsonNode policyDraft = objectMapper.readTree(policyDraftResult.getResponse().getContentAsString()).path("data");
+        assertThat(policyDraft.path("latestDraftVersionNo").asInt()).isGreaterThanOrEqualTo(2);
+        int policyDraftVersionNo = policyDraft.path("latestDraftVersionNo").asInt();
 
         MvcResult policyVersionsResult = mockMvc.perform(get("/platform/policies/core/versions")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
@@ -150,7 +160,7 @@ class PlatformGovernanceIntegrationTest {
                 .andReturn();
         JsonNode policyVersions = objectMapper.readTree(policyVersionsResult.getResponse().getContentAsString()).path("data");
         assertThat(policyVersions.isArray()).isTrue();
-        assertThat(policyVersions.get(0).path("versionNo").asInt()).isEqualTo(2);
+        assertThat(policyVersions.get(0).path("versionNo").asInt()).isEqualTo(policyDraftVersionNo);
         assertThat(policyVersions.get(0).path("impact").path("rolloutStage").asText()).isEqualTo("DRAFT_PENDING");
 
         mockMvc.perform(post("/platform/policies/core/publish")
@@ -158,11 +168,11 @@ class PlatformGovernanceIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "versionNo": 2
+                                  "versionNo": %d
                                 }
-                                """))
+                                """.formatted(policyDraftVersionNo)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.versionNo").value(2));
+                .andExpect(jsonPath("$.data.versionNo").value(policyDraftVersionNo));
 
         mockMvc.perform(post("/platform/policies/core/rollback")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
@@ -184,11 +194,32 @@ class PlatformGovernanceIntegrationTest {
         assertThat(versions.get(0).path("impact").path("summaryLines").isArray()).isTrue();
         assertThat(versions.get(0).path("impact").path("rolloutStage").asText()).isNotBlank();
 
+        platformAuditService.log("demo-org", "platform-redaction-test", "PLATFORM_ADMIN",
+                "platform.audit.redaction",
+                "model_provider",
+                "redaction-test",
+                "Authorization=Bearer raw-platform-token apiKey=platform-key password=szyd1234 mobile=13800138000");
+
+        MvcResult redactionAuditResult = mockMvc.perform(get("/platform/audit/logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .param("eventType", "platform.audit.redaction")
+                        .param("q", "platform-redaction-test")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String redactionBody = redactionAuditResult.getResponse().getContentAsString();
+        assertThat(redactionBody).contains("[redacted]");
+        assertThat(redactionBody).contains("138****8000");
+        assertThat(redactionBody).doesNotContain("raw-platform-token");
+        assertThat(redactionBody).doesNotContain("platform-key");
+        assertThat(redactionBody).doesNotContain("szyd1234");
+
         MvcResult auditResult = mockMvc.perform(get("/platform/audit/logs")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andReturn();
-        JsonNode auditRows = objectMapper.readTree(auditResult.getResponse().getContentAsString()).path("data");
+        JsonNode auditData = objectMapper.readTree(auditResult.getResponse().getContentAsString()).path("data");
+        JsonNode auditRows = auditData.has("items") ? auditData.path("items") : auditData;
         assertThat(auditRows.isArray()).isTrue();
         assertThat(auditRows).extracting(node -> node.path("eventType").asText())
                 .contains(

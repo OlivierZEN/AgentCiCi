@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-02T23:20:41Z
+updated_at: 2026-06-08T12:06:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-150 Knowledge Base production readiness is in review on top of TASK-149 docx parser work."
-next_action: "Review and merge TASK-150 production-readiness changes."
+active_task: "TASK-151 RBAC and audit production readiness hardening is ready for review."
+next_action: "Review and merge TASK-151 RBAC/audit hardening changes."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,10 @@ read_next:
 
 ## Snapshot
 
+- Focus: review TASK-151 RBAC and audit production-readiness hardening.
+- TASK-151 implemented production RBAC hardening: protected APIs now require authenticated context by default, public trust in `X-Org-Id` / `X-User-Id` is disabled unless explicitly configured, platform write APIs have role-specific restrictions, and RBAC regression coverage was added.
+- TASK-151 audit tracking gaps are now closed for this release: platform model governance writes enter platform audit without secrets, platform audit supports filterable/redacted DTO queries, organization audit search is database-filtered, and V62 adds audit query indexes.
+- TASK-151 validation passed: focused audit/RBAC/platform/model backend regression, prior auth/platform/governance/billing/model/OpenAPI regression suite after rebuilding polluted `agentcici_test`, frontend build, assignment scope check, and `git diff --check`.
 - Focus: review FEAT-008 Knowledge Base production-readiness closure on top of the `.docx` upload parser fix.
 - TASK-150 implemented production-readiness closure: upload policy/admission with explicit PDF rejection, vector-store audit endpoint, admin KB modal governance and runtime status panel, runtime metadata filters, structured RAG sources in chat/trace metadata, and safe extension-point reporting for non-local sources/API access.
 - TASK-150 validation is now fully green: `npm run build`, Playwright desktop smoke for `/admin/kb`, `mvn -DskipTests test`, assignment scope check, `KnowledgeBaseLifecycleIntegrationTest`, and Qdrant stack smoke all passed after starting local Docker infrastructure.

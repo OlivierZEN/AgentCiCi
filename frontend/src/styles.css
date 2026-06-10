@@ -15613,6 +15613,7 @@ td.skills-data-table__actions > * {
 
 .platform-audit__table {
   width: 100%;
+  min-width: 0;
   table-layout: fixed;
 }
 
@@ -15621,15 +15622,15 @@ td.skills-data-table__actions > * {
 }
 
 .platform-audit__col-time {
-  width: 16%;
+  width: 14%;
 }
 
 .platform-audit__col-role {
-  width: 18%;
+  width: 13%;
 }
 
 .platform-audit__col-event {
-  width: 18%;
+  width: 21%;
 }
 
 .platform-audit__col-resource {
@@ -15637,7 +15638,7 @@ td.skills-data-table__actions > * {
 }
 
 .platform-audit__col-detail {
-  width: 31%;
+  width: 35%;
 }
 
 .platform-main .platform-page .platform-audit__table td {
@@ -15654,6 +15655,12 @@ td.skills-data-table__actions > * {
 .platform-audit__table td:nth-child(4),
 .platform-audit__table td:nth-child(5) {
   white-space: normal;
+}
+
+.platform-audit__table td:nth-child(5) {
+  overflow: visible;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .platform-console__grid--balanced {

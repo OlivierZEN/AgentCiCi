@@ -1,0 +1,61 @@
+task_id: TASK-151
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-08T00:00:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-064-rbac-production-readiness.md
+task_status_path: .claw/tasks/TASK-151.md
+branch: codex/TASK-151-rbac-production-readiness
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/api/**
+  - backend/src/main/java/com/codehouse/ciciassistant/model/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/test/java/com/codehouse/ciciassistant/model/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/platform/**
+  - frontend/src/styles.css
+  - docs/specs/**
+scope_files:
+  - .claw/tasks/TASK-151.md
+  - .claw/assignments/TASK-151.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/developers/**
+  - .claw/assignments/TASK-115.yaml
+  - .claw/assignments/TASK-150.yaml
+  - scripts/dev-login.py
+  - scripts/check-assignment.py
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-064-rbac-production-readiness.md
+  - docs/specs/FEAT-041-platform-accountless-login.md
+  - docs/specs/FEAT-042-agent-access-control.md
+task_boundary:
+  - "Harden RBAC production defaults without introducing a full Spring Security migration."
+  - "Disable external header-based tenant/user context by default and require authenticated context for protected business APIs."
+  - "Keep explicit public, OpenAPI, embed, health, auth, and Enterprise WeChat callback exceptions working."
+  - "Narrow platform write operations to explicit platform roles and preserve read-only auditor behavior."
+  - "Close audit-log production readiness gaps found during review: platform model audit events, platform audit query/redaction, and audit query indexes."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed for assignment management on 2026-06-08T00:00:00+08:00."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Created after user requested RBAC production readiness hardening."

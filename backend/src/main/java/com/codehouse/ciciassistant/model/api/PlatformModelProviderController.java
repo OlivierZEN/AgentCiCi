@@ -1,8 +1,12 @@
 package com.codehouse.ciciassistant.model.api;
 
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
+import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
+import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
+import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.util.List;
@@ -22,9 +26,15 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlatformModelProviderController {
 
     private final ModelProviderService modelProviderService;
+    private final PlatformAuditService platformAuditService;
+    private final PlatformAccountProperties platformAccountProperties;
 
-    public PlatformModelProviderController(ModelProviderService modelProviderService) {
+    public PlatformModelProviderController(ModelProviderService modelProviderService,
+                                           PlatformAuditService platformAuditService,
+                                           PlatformAccountProperties platformAccountProperties) {
         this.modelProviderService = modelProviderService;
+        this.platformAuditService = platformAuditService;
+        this.platformAccountProperties = platformAccountProperties;
     }
 
     @GetMapping("/providers")
@@ -33,16 +43,25 @@ public class PlatformModelProviderController {
     }
 
     @PutMapping("/providers/{providerCode}")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<Map<String, Object>> updateProvider(@PathVariable String providerCode,
                                                            @Valid @RequestBody UpdateProviderRequest request) {
-        return ApiResponse.ok(modelProviderService.updatePlatformProvider(
+        Map<String, Object> payload = modelProviderService.updatePlatformProvider(
                 providerCode,
                 request.enabled(),
                 request.apiBaseUrl(),
-                request.apiKey()));
+                request.apiKey());
+        writeAudit("platform.model.provider.update",
+                "model_provider",
+                providerCode,
+                "enabled=" + payload.get("enabled")
+                        + ", apiBaseUrlUpdated=" + (request.apiBaseUrl() != null && !request.apiBaseUrl().isBlank())
+                        + ", apiKeyUpdated=" + (request.apiKey() != null));
+        return ApiResponse.ok(payload);
     }
 
     @PostMapping("/providers/{providerCode}/check")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<Map<String, Object>> checkProvider(@PathVariable String providerCode) {
         return ApiResponse.ok(modelProviderService.checkPlatformProvider(providerCode));
     }
@@ -53,14 +72,22 @@ public class PlatformModelProviderController {
     }
 
     @PostMapping("/providers/{providerCode}/models/fetch")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<Map<String, Object>> fetchProviderModels(@PathVariable String providerCode) {
         return ApiResponse.ok(modelProviderService.fetchPlatformProviderModels(providerCode));
     }
 
     @PutMapping("/providers/{providerCode}/selected-models")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<Map<String, Object>> updateSelectedModels(@PathVariable String providerCode,
                                                                  @Valid @RequestBody UpdateSelectedModelsRequest request) {
-        return ApiResponse.ok(modelProviderService.updatePlatformSelectedModels(providerCode, request.selectedModels()));
+        Map<String, Object> payload = modelProviderService.updatePlatformSelectedModels(providerCode, request.selectedModels());
+        List<?> selected = payload.get("selectedModels") instanceof List<?> list ? list : List.of();
+        writeAudit("platform.model.selected_models.update",
+                "model_provider",
+                providerCode,
+                "selectedModelCount=" + selected.size());
+        return ApiResponse.ok(payload);
     }
 
     @GetMapping("/routes")
@@ -69,17 +96,46 @@ public class PlatformModelProviderController {
     }
 
     @PutMapping("/routes/{sceneCode}")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<Map<String, Object>> updateModelRoute(@PathVariable String sceneCode,
                                                              @Valid @RequestBody UpdateModelRouteRequest request) {
-        return ApiResponse.ok(modelProviderService.updatePlatformModelRoute(
+        Map<String, Object> payload = modelProviderService.updatePlatformModelRoute(
                 sceneCode,
                 request.providerCode(),
-                request.modelName()));
+                request.modelName());
+        writeAudit("platform.model.route.update",
+                "model_route",
+                String.valueOf(payload.getOrDefault("sceneCode", sceneCode)),
+                "provider=" + payload.getOrDefault("providerCode", request.providerCode())
+                        + ", model=" + payload.getOrDefault("modelName", request.modelName()));
+        return ApiResponse.ok(payload);
     }
 
     @DeleteMapping("/routes/{sceneCode}")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<Map<String, Object>> deleteModelRoute(@PathVariable String sceneCode) {
-        return ApiResponse.ok(modelProviderService.deletePlatformModelRoute(sceneCode));
+        Map<String, Object> payload = modelProviderService.deletePlatformModelRoute(sceneCode);
+        writeAudit("platform.model.route.delete",
+                "model_route",
+                String.valueOf(payload.getOrDefault("sceneCode", sceneCode)),
+                "configured=false");
+        return ApiResponse.ok(payload);
+    }
+
+    private void writeAudit(String eventType, String resourceType, String resourceKey, String detail) {
+        platformAuditService.log(
+                platformScopeId(),
+                TenantContext.getUserId().orElse("platform-system"),
+                TenantContext.getRoles().stream().filter(RoleCodes::isPlatformRole).findFirst().orElse(RoleCodes.PLATFORM_ADMIN),
+                eventType,
+                resourceType,
+                resourceKey,
+                detail);
+    }
+
+    private String platformScopeId() {
+        String configured = platformAccountProperties.getGovernanceOrgId();
+        return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
     public record UpdateProviderRequest(Boolean enabled, String apiBaseUrl, String apiKey) {
