@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.billing.api;
 
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService;
 import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.BillingCatalogView;
 import com.codehouse.ciciassistant.billing.service.BillingEditionConfigurationService.BillingChangeLogView;
@@ -40,6 +41,7 @@ public class PlatformBillingController {
     }
 
     @PutMapping("/editions/{editionCode}")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_BILLING})
     public ApiResponse<BillingEditionView> updateEdition(@PathVariable String editionCode,
                                                          @Valid @RequestBody EditionUpdateRequest request) {
         return ApiResponse.ok(billingEditionConfigurationService.updateEdition(editionCode,
@@ -79,6 +81,7 @@ public class PlatformBillingController {
     }
 
     @PutMapping("/packages/{packageCode}")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_BILLING})
     public ApiResponse<BillingPackageView> updatePackage(@PathVariable String packageCode,
                                                          @Valid @RequestBody PackageUpdateRequest request) {
         return ApiResponse.ok(billingEditionConfigurationService.updatePackage(packageCode,

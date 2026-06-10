@@ -3,12 +3,18 @@ import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
 type PlatformAuditRow = {
   id: number;
+  userId?: string;
   roleCode: string;
   eventType: string;
   resourceType: string;
   resourceKey: string;
   detail: string;
   createdAt: string;
+};
+
+type PlatformAuditResponse = {
+  items?: PlatformAuditRow[];
+  hasMore?: boolean;
 };
 
 function readToken(): string {
@@ -125,19 +131,48 @@ function detailLabel(detail: string): string {
 export default function PlatformAuditPage() {
   const token = readToken();
   const [rows, setRows] = useState<PlatformAuditRow[]>([]);
+  const [query, setQuery] = useState("");
+  const [eventType, setEventType] = useState("");
+  const [resourceType, setResourceType] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [hasMore, setHasMore] = useState(false);
   const eventCount = new Set(rows.map((row) => row.eventType)).size;
   const resourceCount = new Set(rows.map((row) => `${row.resourceType}:${row.resourceKey}`)).size;
 
-  useEffect(() => {
+  const loadRows = async () => {
     if (!token) return;
-    void (async () => {
-      const res = await fetch(`${PLATFORM_API_BASE}/audit/logs`, { headers: { Authorization: `Bearer ${token}` } });
+    setLoading(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ limit: "100" });
+      if (query.trim()) params.set("q", query.trim());
+      if (eventType.trim()) params.set("eventType", eventType.trim());
+      if (resourceType.trim()) params.set("resourceType", resourceType.trim());
+      const res = await fetch(`${PLATFORM_API_BASE}/audit/logs?${params.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const json = await res.json();
       if (res.ok && json.success) {
-        setRows((json.data ?? []) as PlatformAuditRow[]);
+        const data = json.data as PlatformAuditResponse | PlatformAuditRow[] | undefined;
+        const items = Array.isArray(data) ? data : data?.items;
+        setRows(Array.isArray(items) ? items : []);
+        setHasMore(!Array.isArray(data) && Boolean(data?.hasMore));
+      } else {
+        throw new Error(json?.message ?? `HTTP ${res.status}`);
       }
-    })();
-  }, [token]);
+    } catch (err) {
+      setRows([]);
+      setHasMore(false);
+      setError(err instanceof Error ? err.message : "平台审计加载失败");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadRows();
+  }, [token, eventType, resourceType]);
 
   return (
     <div className="admin-page skills-catalog platform-page platform-audit-page">
@@ -147,11 +182,43 @@ export default function PlatformAuditPage() {
           <p className="subtle skills-catalog__subtitle">记录平台侧高风险治理与版本动作，便于回看最近事实。</p>
         </div>
         <div className="platform-page-head__aside">
-          <span className="platform-inline-stat">记录 {rows.length}</span>
+          <span className="platform-inline-stat">{loading ? "加载中" : `记录 ${rows.length}`}</span>
           <span className="platform-inline-stat">事件类型 {eventCount}</span>
           <span className="platform-inline-stat">资源 {resourceCount}</span>
         </div>
       </header>
+      <section className="admin-ops-audit-toolbar" aria-label="平台审计筛选">
+        <label className="cici-monitor__search admin-ops-audit-search">
+          <span className="cici-monitor__search-icon" aria-hidden />
+          <input
+            type="text"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") void loadRows();
+            }}
+            placeholder="搜索操作者、事件、资源或脱敏详情"
+            aria-label="搜索平台审计"
+          />
+        </label>
+        <input
+          className="admin-ops-audit-filter"
+          value={eventType}
+          onChange={(event) => setEventType(event.target.value)}
+          placeholder="事件类型"
+          aria-label="按事件类型筛选平台审计"
+        />
+        <input
+          className="admin-ops-audit-filter"
+          value={resourceType}
+          onChange={(event) => setResourceType(event.target.value)}
+          placeholder="资源类型"
+          aria-label="按资源类型筛选平台审计"
+        />
+        <button type="button" className="cici-monitor__refresh" onClick={() => void loadRows()}>
+          查询
+        </button>
+      </section>
       <div className="skills-table-wrap platform-audit__table-wrap">
         <table className="skills-data-table platform-audit__table">
           <colgroup>
@@ -182,12 +249,13 @@ export default function PlatformAuditPage() {
             ))}
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={5} className="skills-data-table__summary">当前还没有平台审计记录。</td>
+                <td colSpan={5} className="skills-data-table__summary">{error || "当前还没有平台审计记录。"}</td>
               </tr>
             ) : null}
           </tbody>
         </table>
       </div>
+      {hasMore ? <p className="subtle">当前只显示最新 100 条，请继续收窄筛选条件。</p> : null}
     </div>
   );
 }

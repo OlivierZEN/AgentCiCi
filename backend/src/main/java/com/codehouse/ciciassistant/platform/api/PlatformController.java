@@ -1,15 +1,17 @@
 package com.codehouse.ciciassistant.platform.api;
 
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
+import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
-import com.codehouse.ciciassistant.platform.domain.PlatformAuditLogEntity;
 import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -84,6 +87,7 @@ public class PlatformController {
     }
 
     @PostMapping("/policies/core/versions")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> createCorePolicyBundleDraft(
             @Valid @RequestBody PolicyBundleDraftRequest request) {
         String orgId = platformScopeId();
@@ -98,6 +102,7 @@ public class PlatformController {
     }
 
     @PostMapping("/policies/core/publish")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> publishCorePolicyBundle(
             @Valid @RequestBody PolicyBundlePublishRequest request) {
         String orgId = platformScopeId();
@@ -105,6 +110,7 @@ public class PlatformController {
     }
 
     @PostMapping("/policies/core/rollback")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformPolicyBundleView> rollbackCorePolicyBundle(
             @Valid @RequestBody PolicyBundlePublishRequest request) {
         String orgId = platformScopeId();
@@ -112,6 +118,7 @@ public class PlatformController {
     }
 
     @PostMapping("/skills/{id}/versions")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> createPlatformSkillDraft(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillDraftRequest request) {
@@ -131,6 +138,7 @@ public class PlatformController {
     }
 
     @PostMapping("/skills/{id}/publish")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> publishPlatformSkillVersion(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillPublishRequest request) {
@@ -144,6 +152,7 @@ public class PlatformController {
     }
 
     @PostMapping("/skills/{id}/rollback")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformSkillView> rollbackPlatformSkillVersion(
             @PathVariable Long id,
             @Valid @RequestBody PlatformSkillPublishRequest request) {
@@ -163,6 +172,7 @@ public class PlatformController {
     }
 
     @PutMapping("/tools/{toolName}")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
     public ApiResponse<PlatformGovernanceService.PlatformToolView> updateBuiltinTool(
             @PathVariable String toolName,
             @Valid @RequestBody PlatformToolUpdateRequest request) {
@@ -178,9 +188,22 @@ public class PlatformController {
     }
 
     @GetMapping("/audit/logs")
-    public ApiResponse<List<Map<String, Object>>> listPlatformAuditLogs() {
+    public ApiResponse<Map<String, Object>> listPlatformAuditLogs(
+            @RequestParam(name = "from", required = false) String from,
+            @RequestParam(name = "to", required = false) String to,
+            @RequestParam(name = "eventType", required = false) String eventType,
+            @RequestParam(name = "resourceType", required = false) String resourceType,
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "limit", defaultValue = "100") int limit) {
         String orgId = platformScopeId();
-        return ApiResponse.ok(platformAuditService.latest(orgId).stream().map(this::toAuditPayload).toList());
+        return ApiResponse.ok(platformAuditService.query(orgId, new PlatformAuditService.PlatformAuditLogQuery(
+                parseInstant(from),
+                parseInstant(to),
+                blankToNull(eventType),
+                blankToNull(resourceType),
+                blankToNull(q),
+                limit
+        )));
     }
 
     private String platformScopeId() {
@@ -188,18 +211,19 @@ public class PlatformController {
         return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
-    private Map<String, Object> toAuditPayload(PlatformAuditLogEntity item) {
-        Map<String, Object> payload = new LinkedHashMap<>();
-        payload.put("id", item.getId());
-        payload.put("orgId", item.getOrgId());
-        payload.put("userId", item.getUserId());
-        payload.put("roleCode", item.getRoleCode());
-        payload.put("eventType", item.getEventType());
-        payload.put("resourceType", item.getResourceType());
-        payload.put("resourceKey", item.getResourceKey());
-        payload.put("detail", item.getDetail());
-        payload.put("createdAt", item.getCreatedAt().toString());
-        return payload;
+    private Instant parseInstant(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return Instant.parse(value);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Invalid instant: " + value);
+        }
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value;
     }
 
     public record PlatformSkillDraftRequest(

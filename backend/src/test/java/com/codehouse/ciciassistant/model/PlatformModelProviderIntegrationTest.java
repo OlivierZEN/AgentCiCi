@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.model;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -8,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -89,6 +91,34 @@ class PlatformModelProviderIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.sceneCode").value("chat"))
                 .andExpect(jsonPath("$.data.configured").value(false));
+
+        MvcResult auditResult = mockMvc.perform(get("/platform/audit/logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .param("q", "deepseek")
+                        .param("limit", "20"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String auditBody = auditResult.getResponse().getContentAsString();
+        assertThat(auditBody).doesNotContain("platform-secret");
+        JsonNode auditItems = objectMapper.readTree(auditBody).path("data").path("items");
+        assertThat(auditItems).extracting(node -> node.path("eventType").asText())
+                .contains(
+                        "platform.model.provider.update",
+                        "platform.model.selected_models.update",
+                        "platform.model.route.update"
+                );
+
+        MvcResult routeDeleteAuditResult = mockMvc.perform(get("/platform/audit/logs")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .param("eventType", "platform.model.route.delete")
+                        .param("resourceType", "model_route")
+                        .param("q", "chat")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andReturn();
+        JsonNode routeDeleteAuditItems = objectMapper.readTree(routeDeleteAuditResult.getResponse().getContentAsString())
+                .path("data").path("items");
+        assertThat(routeDeleteAuditItems).extracting(node -> node.path("resourceKey").asText()).contains("chat");
 
         mockMvc.perform(put("/models/providers/{providerCode}", "deepseek")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + orgToken)

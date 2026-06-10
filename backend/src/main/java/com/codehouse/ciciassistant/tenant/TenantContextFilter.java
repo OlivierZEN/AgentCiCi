@@ -11,6 +11,7 @@ import io.jsonwebtoken.Claims;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -23,19 +24,24 @@ public class TenantContextFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final ObjectMapper objectMapper;
+    private final boolean allowHeaderContext;
 
-    public TenantContextFilter(JwtService jwtService, ObjectMapper objectMapper) {
+    public TenantContextFilter(JwtService jwtService,
+                               ObjectMapper objectMapper,
+                               @Value("${app.auth.allow-header-context:false}") boolean allowHeaderContext) {
         this.jwtService = jwtService;
         this.objectMapper = objectMapper;
+        this.allowHeaderContext = allowHeaderContext;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         try {
-            String orgId = request.getHeader(ORG_HEADER);
-            String userId = request.getHeader(USER_HEADER);
+            String orgId = allowHeaderContext ? request.getHeader(ORG_HEADER) : null;
+            String userId = allowHeaderContext ? request.getHeader(USER_HEADER) : null;
             String authorization = request.getHeader(AUTH_HEADER);
+            boolean authenticated = false;
 
             if (authorization != null && authorization.startsWith("Bearer ")) {
                 String bearer = authorization.substring("Bearer ".length());
@@ -59,6 +65,7 @@ public class TenantContextFilter extends OncePerRequestFilter {
                     orgId = claims.get("org_id", String.class);
                     TenantContext.setTokenType(tokenType == null || tokenType.isBlank() ? "organization" : tokenType);
                     TenantContext.setRoles(extractRoles(claims));
+                    authenticated = true;
                     if ("platform".equals(tokenType)) {
                         userId = claims.get("platform_account_id", String.class);
                         if (userId == null || userId.isBlank()) {
@@ -75,6 +82,17 @@ public class TenantContextFilter extends OncePerRequestFilter {
                     response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Invalid or expired token")));
                     return;
                 }
+            }
+
+            if (!authenticated && allowHeaderContext) {
+                authenticated = hasText(orgId) && hasText(userId);
+            }
+
+            if (!authenticated && requiresAuthenticatedContext(request)) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.setContentType("application/json");
+                response.getWriter().write(objectMapper.writeValueAsString(ApiResponse.fail("Authentication required")));
+                return;
             }
 
             if (orgId != null && !orgId.isBlank()) {
@@ -98,6 +116,47 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 && bearer.startsWith("cici_ak_");
     }
 
+    private boolean requiresAuthenticatedContext(HttpServletRequest request) {
+        return !isPublicRequest(request);
+    }
+
+    private boolean isPublicRequest(HttpServletRequest request) {
+        String method = request.getMethod();
+        if ("OPTIONS".equalsIgnoreCase(method)) {
+            return true;
+        }
+        String path = request.getRequestURI();
+        if (path == null || path.isBlank()) {
+            return false;
+        }
+        if (path.startsWith("/openapi/v1/")) {
+            return true;
+        }
+        if (path.startsWith("/embed/v1/apps/")) {
+            return true;
+        }
+        if (path.startsWith("/wecom/kf/callback")) {
+            return true;
+        }
+        if (path.startsWith("/public/")) {
+            return true;
+        }
+        return isExactPublicPath(path);
+    }
+
+    private boolean isExactPublicPath(String path) {
+        return "/auth/sms/send".equals(path)
+                || "/auth/sms/login".equals(path)
+                || "/auth/password/login".equals(path)
+                || "/auth/register".equals(path)
+                || "/auth/platform/password/login".equals(path)
+                || "/actuator/health".equals(path)
+                || "/system/health".equals(path)
+                || "/system/version".equals(path)
+                || "/billing/mode".equals(path)
+                || "/api/autoservice/demo-requests".equals(path);
+    }
+
     private boolean isEmbedTokenIssueRequest(String path) {
         return path != null
                 && path.startsWith("/embed/v1/apps/")
@@ -107,6 +166,10 @@ public class TenantContextFilter extends OncePerRequestFilter {
     private boolean isEmbedRuntimeRequest(HttpServletRequest request) {
         String path = request.getRequestURI();
         return path != null && path.startsWith("/embed/v1/apps/");
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     @SuppressWarnings("unchecked")

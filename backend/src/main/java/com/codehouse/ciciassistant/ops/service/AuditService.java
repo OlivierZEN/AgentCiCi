@@ -40,14 +40,19 @@ public class AuditService {
     public Map<String, Object> query(String orgId, AuditLogQuery query) {
         Instant to = query.to() == null ? Instant.now() : query.to();
         Instant from = query.from() == null ? to.minus(Duration.ofDays(7)) : query.from();
+        if (from.isAfter(to)) {
+            from = to;
+        }
         if (from.isBefore(to.minus(Duration.ofDays(7)))) {
             from = to.minus(Duration.ofDays(7));
         }
         int limit = Math.min(Math.max(query.limit(), 1), 100);
-        List<Map<String, Object>> items = repository
-                .findByOrgIdAndCreatedAtBetweenOrderByCreatedAtDesc(orgId, from, to, PageRequest.of(0, 500))
-                .stream()
-                .filter(item -> matches(item, query))
+        String eventType = normalized(query.eventType());
+        String q = normalized(query.q());
+        List<AuditLogEntity> rows = repository.searchOrgAuditLogs(
+                orgId, from, to, eventType, q, PageRequest.of(0, limit + 1));
+        boolean hasMore = rows.size() > limit;
+        List<Map<String, Object>> items = rows.stream()
                 .limit(limit)
                 .map(this::toPayload)
                 .toList();
@@ -55,25 +60,9 @@ public class AuditService {
                 "items", items,
                 "from", from.toString(),
                 "to", to.toString(),
+                "hasMore", hasMore,
                 "nextCursor", ""
         );
-    }
-
-    private boolean matches(AuditLogEntity item, AuditLogQuery query) {
-        if (query.eventType() != null && !query.eventType().isBlank()
-                && !query.eventType().equalsIgnoreCase(item.getEventType())) {
-            return false;
-        }
-        if (query.q() != null && !query.q().isBlank()) {
-            String q = query.q().toLowerCase(Locale.ROOT);
-            String haystack = String.join(" ",
-                    String.valueOf(item.getId()),
-                    item.getUserId(),
-                    item.getEventType(),
-                    item.getDetail()).toLowerCase(Locale.ROOT);
-            return haystack.contains(q);
-        }
-        return true;
     }
 
     private Map<String, Object> toPayload(AuditLogEntity item) {
@@ -94,6 +83,10 @@ public class AuditService {
         String withoutAuth = AUTHORIZATION_PATTERN.matcher(raw).replaceAll("$1[redacted]");
         return MOBILE_PATTERN.matcher(SECRET_PATTERN.matcher(withoutAuth).replaceAll("$1$2[redacted]"))
                 .replaceAll("$1****$2");
+    }
+
+    private String normalized(String value) {
+        return value == null || value.isBlank() ? null : value.trim().toLowerCase(Locale.ROOT);
     }
 
     public record AuditLogQuery(Instant from, Instant to, String eventType, String q, int limit) {

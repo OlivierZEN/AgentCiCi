@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-02T23:20:41Z
+updated_at: 2026-06-08T12:06:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-02T23:20:41Z
+last_run_at: 2026-06-08T12:06:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,33 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-150 Knowledge Base production-readiness closure.
-- 命令：frontend production build, backend compile gate, mocked desktop browser smoke, focused KB lifecycle integration rerun, and assignment scope check.
+- 范围：TASK-151 RBAC and audit production-readiness hardening.
+- 命令：focused audit/RBAC/platform/model regression suite, frontend production build, assignment scope check, and static diff check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-151 RBAC and audit production readiness (2026-06-08T12:06:00+08:00):
+  - Commands:
+    - `identity`: `dev-login.py` from the loaded `cc-aidev-guidelines-common` skill package for `MANAGER-001` with TASK-151 representative files -> **allowed**.
+    - `assignment`: `check-assignment.py` from the loaded skill package for representative TASK-151 audit/RBAC/backend/frontend/spec/task files -> **allowed**.
+    - `postgres-env`: first focused RBAC test run was blocked because `localhost:5432` refused connections; started Docker Desktop, ran `docker compose up -d postgres`, and confirmed `cici-postgres` healthy.
+    - `local-services`: started `redis` and `rabbitmq` with `docker compose up -d redis rabbitmq`; `cici-redis` and `cici-rabbitmq` containers reported healthy, but the existing RabbitMQ volume still refused the app user during Actuator health checks. RBAC tests therefore assert `/actuator/health` is not blocked by auth rather than requiring dependency `UP`.
+    - `backend-rbac`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=RbacProductionReadinessIntegrationTest test` in `backend/` -> **success**.
+    - `test-db-reset`: first expanded regression rerun exposed persistent `agentcici_test` data pollution (`AuthFlowIntegrationTest` registration cases returned duplicate/invalid `400`, platform governance version expected `2` but saw `3`); rebuilt only `agentcici_test`, not `agentcici`.
+    - `backend-regression`: after rebuilding `agentcici_test`, `mvn -q -Dmaven.repo.local=.m2 -Dtest=RbacProductionReadinessIntegrationTest,PlatformAuthIntegrationTest,AuthFlowIntegrationTest,PlatformGovernanceIntegrationTest,PlatformBillingConfigurationIntegrationTest,PlatformModelProviderIntegrationTest,AgentOpenApiIntegrationTest test` in `backend/` -> **success**.
+    - `backend-audit-regression`: `mvn -q -Dtest=AgentRunTraceIntegrationTest,RbacProductionReadinessIntegrationTest,PlatformGovernanceIntegrationTest,PlatformModelProviderIntegrationTest test` in `backend/` -> **success** after fixing query parameter typing and test version assumptions.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `browser-desktop`: Vite `http://127.0.0.1:5173/platform/audit` with mocked platform auth/audit APIs -> **success** for page structure, keyword/event/resource filters, redacted audit rows, and table fit (`tableWidth=926`, `wrapWidth=928`, no body horizontal overflow). In-app browser screenshot capture timed out twice after DOM/layout checks.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Protected business APIs now return `401 Authentication required` without authenticated context.
+    - `X-Org-Id` / `X-User-Id` no longer establish context unless `app.auth.allow-header-context=true` is explicitly configured.
+    - OpenAPI, embed token, `/system/health`, `/actuator/health`, version, auth, public avatar, billing mode, public demo request, and WeCom callback entry points remain explicit exceptions.
+    - Platform write APIs now require role-specific platform roles; `PLATFORM_AUDITOR` remains read-only for covered platform surfaces.
+    - Platform model provider, selected-model, model-route update, and model-route delete actions now write platform audit events without storing API keys or raw secrets in detail.
+    - Organization audit search and platform audit search now use database-side filtering and return DTOs with redacted sensitive fields; V62 adds audit query indexes.
+    - Platform audit UI now supports keyword, event type, and resource type filters and tolerates legacy array responses plus new `{items}` responses.
 
 - TASK-150 Knowledge Base production readiness (2026-06-02T23:20:41Z):
   - Commands:
