@@ -101,10 +101,20 @@ public class MeetingMinutesService {
                 Map.of("role", "user", "content", prompt)
         ), null, true, credentials.get("apiBaseUrl"), credentials.get("apiKey"));
         String content = result.content();
+        boolean billable = content != null
+                && !content.isBlank()
+                && !content.startsWith("Model call failed:")
+                && !content.startsWith("Aliyun API key is not configured.")
+                && !content.startsWith("Empty response.")
+                && !content.startsWith("No choices in response.");
         return new MeetingMinutesResult(
                 content == null || content.isBlank() ? "模型未能生成会议纪要。" : content.trim(),
                 meetingSkill.skillCode(),
-                meetingSkill.skillName()
+                meetingSkill.skillName(),
+                modelName,
+                result.promptTokens(),
+                result.completionTokens(),
+                billable
         );
     }
 
@@ -174,7 +184,16 @@ public class MeetingMinutesService {
     public record TranscriptSegment(String speakerId, String speakerName, String text, Long startMs, Long endMs) {
     }
 
-    public record MeetingMinutesResult(String summary, String skillCode, String skillName) {
+    public record MeetingMinutesResult(String summary,
+                                       String skillCode,
+                                       String skillName,
+                                       String modelName,
+                                       int promptTokens,
+                                       int completionTokens,
+                                       boolean billable) {
+        public MeetingMinutesResult(String summary, String skillCode, String skillName) {
+            this(summary, skillCode, skillName, "", 0, 0, true);
+        }
     }
 
     private record MeetingSkillContext(

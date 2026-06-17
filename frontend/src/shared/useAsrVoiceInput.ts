@@ -237,9 +237,25 @@ export function useAsrVoiceInput() {
         };
 
         await new Promise<void>((resolve, reject) => {
-          websocket.onopen = () => resolve();
-          const timeout = window.setTimeout(() => reject(new Error("超时")), 8000);
-          websocket.addEventListener("open", () => window.clearTimeout(timeout), { once: true });
+          let settled = false;
+          const finish = (callback: () => void) => {
+            if (settled) {
+              return;
+            }
+            settled = true;
+            window.clearTimeout(timeout);
+            callback();
+          };
+          const timeout = window.setTimeout(() => {
+            finish(() => reject(new Error("实时语音服务连接超时")));
+          }, 8000);
+          websocket.onopen = () => finish(resolve);
+          websocket.addEventListener("error", () => {
+            finish(() => reject(new Error("实时语音服务连接失败")));
+          }, { once: true });
+          websocket.addEventListener("close", () => {
+            finish(() => reject(new Error("实时语音服务已关闭")));
+          }, { once: true });
         });
 
         websocket.send(JSON.stringify({

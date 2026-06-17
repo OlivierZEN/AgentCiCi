@@ -536,7 +536,7 @@ export default function PlatformBillingPage() {
                 </label>
               </div>
               <div className="platform-console__actions">
-                <button type="button" className="primary" disabled={saving || !editionForm.reason.trim()} onClick={saveEdition}>保存版本</button>
+                <button type="button" className="platform-button platform-button--primary" disabled={saving || !editionForm.reason.trim()} onClick={saveEdition}>保存版本</button>
               </div>
             </div>
           ) : (
@@ -605,7 +605,7 @@ export default function PlatformBillingPage() {
                   <textarea rows={3} value={packageForm.reason} onChange={(e) => setPackageForm((prev) => ({ ...prev, reason: e.target.value }))} />
                 </label>
                 <div className="platform-console__actions">
-                  <button type="button" className="primary" disabled={saving || !packageForm.reason.trim()} onClick={savePackage}>保存包</button>
+                  <button type="button" className="platform-button platform-button--primary" disabled={saving || !packageForm.reason.trim()} onClick={savePackage}>保存包</button>
                 </div>
               </div>
             ) : null}

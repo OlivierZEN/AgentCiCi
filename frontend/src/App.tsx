@@ -26,6 +26,7 @@ import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoSe
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
 import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
 import PlatformModelsPage from "./platform/pages/PlatformModelsPage";
+import PlatformIntegrationsPage from "./platform/pages/PlatformIntegrationsPage";
 import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
 import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
@@ -81,6 +82,7 @@ export default function App() {
           <Route element={<PlatformShell />}>
             <Route index element={<PlatformHomePage />} />
             <Route path="models" element={<PlatformModelsPage />} />
+            <Route path="integrations" element={<PlatformIntegrationsPage />} />
             <Route path="billing" element={<PlatformBillingPage />} />
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />

@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.userworkflow.service;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.ai.service.ToolOrchestratorService;
+import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
 import com.codehouse.ciciassistant.feishu.service.FeishuBotConfigService;
 import com.codehouse.ciciassistant.feishu.service.FeishuBotMessenger;
@@ -67,6 +68,7 @@ public class UserWorkflowService {
     private final FeishuBotConfigService feishuBotConfigService;
     private final FeishuBotPairingService feishuBotPairingService;
     private final FeishuBotMessenger feishuBotMessenger;
+    private final BillingUsageMeteringService billingUsageMeteringService;
     private final AuditService auditService;
     private final ObjectMapper objectMapper;
 
@@ -82,6 +84,7 @@ public class UserWorkflowService {
                                FeishuBotConfigService feishuBotConfigService,
                                FeishuBotPairingService feishuBotPairingService,
                                FeishuBotMessenger feishuBotMessenger,
+                               BillingUsageMeteringService billingUsageMeteringService,
                                AuditService auditService,
                                ObjectMapper objectMapper) {
         this.agentDefinitionService = agentDefinitionService;
@@ -96,6 +99,7 @@ public class UserWorkflowService {
         this.feishuBotConfigService = feishuBotConfigService;
         this.feishuBotPairingService = feishuBotPairingService;
         this.feishuBotMessenger = feishuBotMessenger;
+        this.billingUsageMeteringService = billingUsageMeteringService;
         this.auditService = auditService;
         this.objectMapper = objectMapper;
     }
@@ -356,6 +360,7 @@ public class UserWorkflowService {
         userWorkflowExecutionRepository.save(execution);
         executeWorkflow(version, routine, getOrCreateProfile(orgId, userId, agent.agentId()), execution);
         auditService.log(orgId, userId, "user.workflow.run_now", "agent=" + agent.agentId() + ",routine=" + routine.routineKey());
+        recordWorkflowBillingSafely(execution);
         return execution;
     }
 
@@ -385,6 +390,7 @@ public class UserWorkflowService {
             UserAgentProfileEntity profile = getOrCreateProfile(trigger.getOrgId(), trigger.getUserId(), trigger.getAgentId());
             try {
                 executeWorkflow(version.get(), findRoutine(version.get(), trigger.getRoutineKey()), profile, execution);
+                recordWorkflowBillingSafely(execution);
             } catch (Exception ex) {
                 execution.markFailed(traceJson(List.of(Map.of(
                         "type", "error",
@@ -518,6 +524,24 @@ public class UserWorkflowService {
                 "message", delivery.message()
         ));
         execution.markSuccess(traceJson(trace), outputSummary);
+    }
+
+    private void recordWorkflowBillingSafely(UserWorkflowExecutionEntity execution) {
+        if (execution == null || !"SUCCESS".equals(execution.getStatus())) {
+            return;
+        }
+        billingUsageMeteringService.recordWorkflowRunSafely(new BillingUsageMeteringService.WorkflowRunMeteringInput(
+                execution.getOrgId(),
+                execution.getUserId(),
+                execution.getAgentId(),
+                "user_workflow",
+                execution.getId(),
+                execution.getRoutineKey(),
+                execution.getTriggerSource(),
+                0,
+                "user-workflow-run",
+                execution.getOrgId() + ":user:" + execution.getUserId() + ":workflow-execution:" + execution.getId(),
+                Instant.now()));
     }
 
     private List<String> actualToolNames(CompiledRoutine routine) {

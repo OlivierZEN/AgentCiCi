@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-08T12:06:00+08:00
+updated_at: 2026-06-18T00:19:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-08T12:06:00+08:00
+last_run_at: 2026-06-18T00:19:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,93 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-151 RBAC and audit production-readiness hardening.
-- 命令：focused audit/RBAC/platform/model regression suite, frontend production build, assignment scope check, and static diff check.
+- 范围：TASK-155 运营端前端页面 UI 整体美化.
+- 命令：TASK-155 身份/授权门禁、`npm run build`、`git diff --check`、Playwright 桌面截图巡检.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-155 运营端前端页面 UI 整体美化 (2026-06-18T00:19:00+08:00):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-155` with representative platform frontend/spec/task/status/report files -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-155 representative files -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `browser-desktop`: Playwright CLI at `1440x1000` after platform login `admin@cloudcc.com / szyd1234` opened `/platform`, `/platform/skills`, `/platform/models`, `/platform/integrations`, `/platform/tools`, `/platform/billing`, `/platform/tenants`, `/platform/tenants/demo-org`, `/platform/website-leads`, and `/platform/audit` -> **success**; every final route screenshot reported `overflow=false` and no UI error banner.
+  - Notes:
+    - Screenshot artifacts: `output/playwright/task155-platform-*-accepted.png`.
+    - `/api/platform/audit/logs?limit=100` returned backend **HTTP 500** in the current local runtime; the audit page now displays a Chinese fallback message, but backend audit loading remains outside TASK-155.
+    - TASK-155 preserved the existing dirty TASK-152/TASK-153/TASK-154 worktree and only changed platform frontend UI plus task/spec/status files.
+
+- TASK-154 Credits metering production readiness sweep (2026-06-18T00:08:00+08:00):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-154` with representative billing/OpenAPI/KB/user-workflow/test/spec/task files -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-154 representative files -> **allowed**.
+    - `backend-focused`: `mvn -Dmaven.repo.local=.m2 -Dtest=AgentOpenApiIntegrationTest,KnowledgeBaseLifecycleIntegrationTest,AdminBillingIntegrationTest test` in `backend/` -> **success**, 29 tests passed.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Open API blocking/streaming success now emits request-level `open_api_chat` Credits facts in addition to underlying chat runtime usage.
+    - KB publish/reindex/manual chunk indexing now emits `kb_indexing` usage and ledger debits after successful vector work.
+    - Personal workflow success outside chat now emits `workflow_run`; failed/disabled workflows and platform schedule stubs are not debited.
+
+- TASK-153 OneKeyToken static model catalog and no-404 model fetch (2026-06-18T00:07:00+08:00):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-153` with model service, model provider test, platform models page, FEAT-062, and task status -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-153 files -> **allowed**.
+    - `backend-focused`: `mvn -Dmaven.repo.local=.m2 -Dtest=PlatformModelProviderIntegrationTest test` in `backend/` -> **success**, 1 test passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `local-restart`: killed the stale Java listener on `8080`, restarted `cici-backend`, and backend `/actuator/health` returned `{"status":"UP"}`.
+    - `local-api-smoke`: `POST /platform/models/providers/onekeytoken/models/fetch` -> **success**, returned `catalogSource=static`, `remoteFetchSupported=false`, `count=3`, and models `onekeytoken/auto`, `deepseek-chat`, `qwen3.5-flash`.
+    - `browser-desktop`: Playwright CLI on `http://localhost:5173/platform/models` after platform login -> **success**; selecting OneKeyToken and clicking `全部模型` no longer shows a 404 banner and opens `预设模型 · OneKeyToken` with the static catalog notice.
+  - Notes:
+    - `deepseek-chat` and `qwen3.5-flash` are local static catalog entries from the OneKeyToken developer guide, not evidence of a successful remote `/models` response.
+    - Screenshot artifact: `.playwright-cli/page-2026-06-17T16-07-01-441Z.png`.
+
+- TASK-153 platform model configuration tab IA adjustment (2026-06-17T23:43:00+08:00):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-153` with `PlatformShell.tsx`, `PlatformModelsPage.tsx`, `styles.css`, and task status -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-153 frontend/task files -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `browser-desktop`: Playwright CLI on `http://localhost:5173/platform/models` after platform login -> **success**; sidebar shows `模型配置`, page title shows `模型配置`, `模型厂商治理` and `场景模型路由` are peer tabs, and the route tab shows only scene route controls.
+  - Notes:
+    - Screenshot artifact: `.playwright-cli/page-2026-06-17T15-42-42-251Z.png`.
+
+- TASK-153 OneKeyToken provider logo replacement (2026-06-17T23:21:00+08:00):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` -> **allowed**.
+    - `assignment`: initial TASK-153 assignment check for `frontend/public/provider-logos/onekeytoken.png` was blocked until the manager assignment added `frontend/public/provider-logos/**`; rerun `dev-login.py` and `check-assignment.py` for the logo asset plus `PlatformModelsPage.tsx` -> **allowed**.
+    - `asset-check`: generated `frontend/public/provider-logos/onekeytoken.png` from the user-provided logo image; confirmed PNG `110 x 110`, RGBA.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - `/platform/models` now maps `onekeytoken` to `/provider-logos/onekeytoken.png` instead of the temporary OpenAI logo.
+
+- TASK-153 platform-governed Tavily, Iflytek, and OneKeyToken provider (2026-06-17T21:39:00+08:00):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-153` with representative backend/frontend/spec/task files -> **allowed**.
+    - `assignment`: `check-assignment.py` for representative TASK-153 files -> **allowed**.
+    - `backend-focused`: `mvn -Dmaven.repo.local=.m2 -Dtest=PlatformIntegrationGovernanceIntegrationTest,PlatformModelProviderIntegrationTest,ManagementConsoleIntegrationTest,TavilyToolServiceTest test` in `backend/` -> **success**, 15 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `local-restart`: restarted local backend/frontend screen sessions after stopping the stale Java listener on `8080`; backend `/actuator/health` -> `{"status":"UP"}`, frontend `HEAD /` -> `HTTP 200`.
+    - `local-api-smoke`: platform `/platform/integrations` returned `tavily`,`iflytek_asr`; org `/integrations` returned `cloudcc_crm`,`feishu_bot`; `/platform/models/providers` returned `onekeytoken` with `https://my.onekeytoken.com/v1`; org `PUT /integrations/tavily` returned **HTTP 403** with the platform-managed message.
+  - Notes:
+    - Tavily and Iflytek runtime config now resolves through the platform governance org while callers may continue passing the business org id.
+    - Desktop Playwright screenshot attempt with temporary `npx playwright` specs was blocked by transient module-resolution behavior for `@playwright/test`; temporary spec/config files were removed and no screenshot artifact was produced.
+
+- TASK-152 AI 听记 credits and start-timeout hotfix (2026-06-17T08:20:00+08:00):
+  - Commands:
+    - `identity`: `dev-login.py` from the loaded `cc-aidev-guidelines-common` skill package for `MANAGER-001` -> **allowed**.
+    - `assignment`: task-scoped `dev-login.py` for `TASK-152` on `codex/TASK-152-ai-minutes-billing-timeout` with representative billing/embed/AI/frontend/task files -> **allowed**.
+    - `backend-focused`: `mvn -Dmaven.repo.local=.m2 -Dtest=EmbedAppIntegrationTest,AdminBillingIntegrationTest test` in `backend/` -> **success**, 3 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `local-api-smoke`: local `demo-org` login, embed app config/debug-token/session creation, `POST /embed/v1/apps/meeting-minutes/sessions/{sessionId}/summary`, and billing overview check on `127.0.0.1:8080` -> **success**; summary returned `success=true`, consumed credits changed from `0.00` to `2.24`.
+  - Notes:
+    - Embedded AI 听记 summary now writes `meeting-minutes` usage meter events and credits ledger debits through `BillingUsageMeteringService`.
+    - The new integration assertion verifies `demo-org:{sessionId}:workflow_run` usage and positive consumed credits after summary generation.
+    - AI 听记 realtime start no longer hard-forces the disabled-by-default Iflytek provider in local UI paths; WebSocket connection failure now reports immediately instead of waiting for the generic timeout.
+    - Local backend/frontend were restarted after the code change; health checks returned backend `UP` and frontend `HTTP 200`.
 
 - TASK-151 RBAC and audit production readiness (2026-06-08T12:06:00+08:00):
   - Commands:

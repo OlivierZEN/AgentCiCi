@@ -153,6 +153,7 @@ FunASR 对本项目推荐链路的“免费”应拆开理解：
 - 前端 `MeetingMinutesPanel` 已有导入录音、transcript 展示、speaker 内联编辑、下载转写和生成纪要能力。
 - 本地 ASR 应复用现有 transcript segment：`speakerId`、`speakerName`、`text`、`startMs`、`endMs`。
 - 本地模型服务与业务后端分进程部署，避免 Python/模型依赖污染 Spring Boot 打包、启动和内存模型。
+- 2026-06-17 `TASK-152` 本地热修确认：在本地和未启用讯飞的组织中，前端 AI 听记启动不得硬绑 `iflytek`；默认走现有阿里云实时 provider，避免“开始听记”因禁用的讯飞配置进入超时/失败路径。WebSocket 连接失败应即时反馈真实连接失败或超时原因。
 
 ## 方案设计
 

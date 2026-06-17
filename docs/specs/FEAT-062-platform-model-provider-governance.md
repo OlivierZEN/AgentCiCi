@@ -4,7 +4,7 @@ feature_id: FEAT-062
 title: Platform Model Provider Governance
 status: implemented
 owner_role: project-manager
-task_ids: TASK-145
+task_ids: TASK-145, TASK-153
 related_decisions: FEAT-003, FEAT-022, FEAT-037
 related_issues: none
 updated_at: 2026-05-30T09:21:24Z
@@ -34,6 +34,50 @@ updated_by: MANAGER-001
 - 本任务不迁移历史组织级模型配置数据，只改变后续读写事实源。
 - 本任务不改变 Agent、Skill、知识库的业务权限模型。
 - 本任务不新增移动端布局或移动端测试。
+
+## TASK-153 补充：平台统一第三方 AI 集成配置
+
+用户反馈要求把科大讯飞实时转写与 Tavily Search 的集成配置从组织后台上收到运营管理端统一控制，并在模型厂商治理中增加 OneKeyToken token 中转站方案。依据来源为本地文档 `/Volumes/AISpace/AI/KB/cloudcc/onekeytoken-developer-integration-guide.md`，其中 OneKeyToken 生产 Base URL 为 `https://my.onekeytoken.com/v1`，采用 OpenAI Chat Completions 兼容协议，推荐默认模型为 `onekeytoken/auto`，服务端使用 `Authorization: Bearer <OneKeyToken Key>`，业务调用应使用唯一 `x-request-id` 并可按客户传 `x-customer-id`。
+
+### 目标
+
+- Tavily Search 与科大讯飞实时转写配置由运营平台统一维护，不再由组织管理员在 `/admin/integrations` 配置。
+- 组织后台的集成应用页只保留组织自有或租户侧连接器，例如 CloudCC CRM、飞书机器人。
+- 组织 token 对 Tavily 与讯飞集成写接口必须被拒绝，避免租户绕过运营治理。
+- 运行时 Tavily 工具与讯飞实时 ASR 从平台治理作用域读取配置。
+- `/platform/models` 增加 OneKeyToken 厂商，默认 API 地址 `https://my.onekeytoken.com/v1`。OneKeyToken 当前生产接入以 Chat Completions 为主，不承诺开放 OpenAI-compatible `/models` 枚举；平台模型列表使用接入指南中的静态模型目录，避免把网关 404 误报成候选模型异常。
+
+### 非目标
+
+- 不在本任务中接入 OneKeyToken 的应用级客户钱包、`x-customer-id` 归因或账单对账。
+- 不迁移历史租户行中的 Tavily/讯飞密钥；后续由平台运营重新配置或另开迁移任务。
+- 不改变 CloudCC CRM、飞书机器人等租户自有集成的组织后台配置归属。
+
+### 后端设计
+
+- `IntegrationAppService` 继续复用 `integration_app`，但为 Tavily 与讯飞定义 platform-managed app code。
+- 平台端新增 `/platform/integrations`：
+  - `GET /platform/integrations` 返回平台托管集成。
+  - `PUT /platform/integrations/{appCode}` 更新启停、描述和配置。
+  - `POST /platform/integrations/tavily/test` 测试 Tavily 连接。
+- 组织端 `/integrations`：
+  - 列表过滤掉平台托管集成。
+  - 更新或测试平台托管集成返回 403，并提示由运营平台统一配置。
+- `findRawConfig()` 与 `isEnabled()` 对平台托管 app code 自动解析到平台治理组织，运行时调用方仍传业务 `orgId` 以保持签名稳定。
+
+### 前端设计
+
+- `/admin/integrations` 不展示 Tavily 与讯飞，只保留组织级集成。
+- `/platform/integrations` 复用现有集成卡片与配置弹窗，纳入运营控制台导航。
+- `/platform/models` 厂商列表中新增 OneKeyToken，展示默认文档链接、API 地址和推荐模型目录。
+
+### 验收标准
+
+- 组织后台集成应用页不显示 Tavily 和讯飞。
+- 组织 token 更新 `/integrations/tavily` 或 `/integrations/iflytek_asr` 返回 403。
+- 平台 token 可在 `/platform/integrations` 查看、更新 Tavily 和讯飞，并可测试 Tavily。
+- Tavily/讯飞运行时配置读取平台治理作用域。
+- `/platform/models` 列表包含 `onekeytoken`，默认地址为 `https://my.onekeytoken.com/v1`，推荐/静态模型含 `onekeytoken/auto`、`deepseek-chat`、`qwen3.5-flash`。
 
 ## 权限与事实源
 

@@ -31,6 +31,8 @@ import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerRepository;
+import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -127,6 +129,12 @@ class AgentOpenApiIntegrationTest {
 
     @Autowired
     private AgentApiUsageDailyRepository usageDailyRepository;
+
+    @Autowired
+    private UsageMeterEventRepository usageMeterEventRepository;
+
+    @Autowired
+    private BillingCreditLedgerRepository creditLedgerRepository;
 
     @Autowired
     private AgentRunTraceRepository traceRepository;
@@ -374,6 +382,21 @@ class AgentOpenApiIntegrationTest {
                     assertThat(usage.getCallCount()).isEqualTo(1);
                     assertThat(usage.getSuccessCount()).isEqualTo(1);
                 });
+        var openApiUsage = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc("demo-org").stream()
+                .filter(item -> "open_api_chat".equals(item.getBillableDomain()))
+                .filter(item -> item.getMetadataJson().contains(traceId))
+                .toList();
+        assertThat(openApiUsage).singleElement().satisfies(event -> {
+            assertThat(event.getBillableItemCode()).isEqualTo("non_stream_chat");
+            assertThat(event.getWorkCreditQuantity()).isEqualByComparingTo("2.00");
+            assertThat(event.getBillingType()).isEqualTo("platform_paid");
+            assertThat(event.getMetadataJson()).contains("\"officialPricingItem\":\"Credits 包\"");
+        });
+        assertThat(creditLedgerRepository.findByOrgIdOrderByIdAsc("demo-org")).anySatisfy(entry -> {
+            assertThat(entry.getEntryType()).isEqualTo("usage_debit");
+            assertThat(entry.getCreditsDelta()).isEqualByComparingTo("-2.00");
+            assertThat(entry.getSourceEventId()).isEqualTo(openApiUsage.get(0).getId());
+        });
 
         mockMvc.perform(get("/agents/{agentId}/api-calls", agentId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)

@@ -26,6 +26,13 @@ type FetchModelDetailPayload = {
   capabilities?: string[];
 };
 
+type FetchModelsPayload = {
+  models?: string[];
+  modelDetails?: FetchModelDetailPayload[];
+  remoteFetchSupported?: boolean;
+  catalogSource?: string;
+};
+
 type ModelCandidate = {
   providerCode: string;
   providerName: string;
@@ -45,8 +52,9 @@ type ModelRoute = {
 };
 
 type CapabilityKey = "text" | "tool" | "search" | "reasoning" | "vision";
+type ModelConfigTab = "providers" | "routes";
 
-const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "anthropic", "openai"];
+const PROVIDER_ORDER = ["aliyun-bailian", "deepseek", "ollama-local", "lmstudio-local", "onekeytoken", "anthropic", "openai"];
 const providerRank = new Map(PROVIDER_ORDER.map((code, idx) => [code, idx]));
 
 const PROVIDER_ICON_URLS: Record<string, string> = {
@@ -54,6 +62,7 @@ const PROVIDER_ICON_URLS: Record<string, string> = {
   deepseek: "/provider-logos/deepseek.svg",
   "ollama-local": "/provider-logos/ollama.svg",
   "lmstudio-local": "/provider-logos/lmstudio.webp",
+  onekeytoken: "/provider-logos/onekeytoken.png",
   anthropic: "/provider-logos/anthropic.svg",
   openai: "/provider-logos/openai.svg",
 };
@@ -117,11 +126,13 @@ export default function PlatformModelsPage() {
   const [selectedModels, setSelectedModels] = useState<Set<string>>(new Set());
   const [providerModels, setProviderModels] = useState<string[]>([]);
   const [modelRoutes, setModelRoutes] = useState<ModelRoute[]>([]);
+  const [activeConfigTab, setActiveConfigTab] = useState<ModelConfigTab>("providers");
   const [modelCandidates, setModelCandidates] = useState<ModelCandidate[]>([]);
   const [capabilityMap, setCapabilityMap] = useState<Record<string, CapabilityKey[]>>({});
   const [allModelsOpen, setAllModelsOpen] = useState(false);
   const [allModelsLoading, setAllModelsLoading] = useState(false);
   const [allModelsSearch, setAllModelsSearch] = useState("");
+  const [allModelsCatalogSource, setAllModelsCatalogSource] = useState<"remote" | "static">("remote");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -279,6 +290,7 @@ export default function PlatformModelsPage() {
     setAllModelsOpen(true);
     setNotice("");
     setError("");
+    setAllModelsCatalogSource("remote");
     try {
       const res = await fetch(`${PLATFORM_API_BASE}/models/providers/${encodeURIComponent(selected.providerCode)}/models/fetch`, {
         method: "POST",
@@ -286,8 +298,10 @@ export default function PlatformModelsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "拉取模型列表失败");
-      const models = dedupeModels((json.data?.models ?? []) as string[]).sort((a, b) => a.localeCompare(b));
-      const rawDetails = (json.data?.modelDetails ?? []) as FetchModelDetailPayload[];
+      const data = (json.data ?? {}) as FetchModelsPayload;
+      const models = dedupeModels(data.models ?? []).sort((a, b) => a.localeCompare(b));
+      const rawDetails = data.modelDetails ?? [];
+      const staticCatalog = data.remoteFetchSupported === false || data.catalogSource === "static";
       const detailsMap = new Map<string, CapabilityKey[]>();
       rawDetails.forEach((item) => {
         const caps = (item.capabilities ?? [])
@@ -296,6 +310,7 @@ export default function PlatformModelsPage() {
         detailsMap.set(item.modelName, caps.length > 0 ? [...new Set(caps)] : inferCapabilities(item.modelName));
       });
       setProviderModels(models);
+      setAllModelsCatalogSource(staticCatalog ? "static" : "remote");
       setCapabilityMap((prev) => {
         const next = { ...prev };
         models.forEach((name) => {
@@ -303,7 +318,11 @@ export default function PlatformModelsPage() {
         });
         return next;
       });
-      setNotice(`已拉取 ${models.length} 个模型。`);
+      if (staticCatalog) {
+        setNotice(`已加载 ${models.length} 个预设模型；当前厂商未开放远程模型枚举。`);
+      } else {
+        setNotice(`已拉取 ${models.length} 个模型。`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "拉取模型列表失败");
     } finally {
@@ -405,8 +424,8 @@ export default function PlatformModelsPage() {
     <div className="admin-page platform-page platform-models-page">
       <header className="skills-catalog__header">
         <div className="platform-page-head__main">
-          <h1 className="skills-catalog__title">模型厂商治理</h1>
-          <p className="subtle skills-catalog__subtitle">统一控制模型厂商、凭据、可用模型和运行时模型目录。</p>
+          <h1 className="skills-catalog__title">模型配置</h1>
+          <p className="subtle skills-catalog__subtitle">统一控制模型厂商、凭据、可用模型、运行时模型目录和场景路由。</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">厂商 {providers.length}</span>
@@ -419,221 +438,246 @@ export default function PlatformModelsPage() {
       {error ? <div className="platform-console__banner platform-console__banner--error">{error}</div> : null}
       {notice ? <div className="platform-console__banner platform-console__banner--success">{notice}</div> : null}
 
-      <div className="model-center platform-models-center">
-        <aside className="model-provider-list">
-          <div className="model-provider-list__title">平台模型厂商</div>
-          {orderedProviders.map((provider) => (
-            <button
-              key={provider.providerCode}
-              type="button"
-              className={`model-provider-item${selectedProvider === provider.providerCode ? " is-active" : ""}`}
-              onClick={() => setSelectedProvider(provider.providerCode)}
-            >
-              <span className="model-provider-item__icon">
-                <img
-                  src={PROVIDER_ICON_URLS[provider.providerCode] || DEFAULT_PROVIDER_ICON_URL}
-                  alt={provider.providerName}
-                  className="model-provider-item__img"
-                />
-              </span>
-              <span className="model-provider-item__name">{provider.providerName}</span>
-              <span className={`model-provider-item__status ${provider.enabled ? "on" : "off"}`}>
-                {provider.enabled ? "ON" : "OFF"}
-              </span>
-            </button>
-          ))}
-        </aside>
+      <div className="model-config-tabs" role="tablist" aria-label="模型配置">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeConfigTab === "providers"}
+          className={`model-config-tab${activeConfigTab === "providers" ? " is-active" : ""}`}
+          onClick={() => setActiveConfigTab("providers")}
+        >
+          模型厂商治理
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeConfigTab === "routes"}
+          className={`model-config-tab${activeConfigTab === "routes" ? " is-active" : ""}`}
+          onClick={() => setActiveConfigTab("routes")}
+        >
+          场景模型路由
+        </button>
+      </div>
 
-        <section className="model-provider-main">
-          {selected ? (
-            <>
-              <div className="model-provider-main__head">
-                <h3>{selected.providerName}</h3>
-                <a href={selected.docUrl} target="_blank" rel="noreferrer" className="text-link">
-                  文档
-                </a>
-              </div>
-
-              <div className="model-form-grid">
-                <label className="cici-field">
-                  <span className="cici-field__label">API Key</span>
-                  <div className="model-key-row">
-                    <input
-                      className="cici-field__input"
-                      type={showApiKey ? "text" : "password"}
-                      value={apiKey}
-                      onChange={(event) => setApiKey(event.target.value)}
-                      placeholder={
-                        selected.apiKeySet
-                          ? `已配置：${selected.apiKeyMasked}`
-                          : selected.apiKeyRequired === false
-                            ? "本地服务通常无需 API Key"
-                            : "请输入 API Key"
-                      }
+      {activeConfigTab === "providers" ? (
+        <div className="model-config-tab-panel">
+          <div className="model-center platform-models-center">
+            <aside className="model-provider-list">
+              <div className="model-provider-list__title">平台模型厂商</div>
+              {orderedProviders.map((provider) => (
+                <button
+                  key={provider.providerCode}
+                  type="button"
+                  className={`model-provider-item${selectedProvider === provider.providerCode ? " is-active" : ""}`}
+                  onClick={() => setSelectedProvider(provider.providerCode)}
+                >
+                  <span className="model-provider-item__icon">
+                    <img
+                      src={PROVIDER_ICON_URLS[provider.providerCode] || DEFAULT_PROVIDER_ICON_URL}
+                      alt={provider.providerName}
+                      className="model-provider-item__img"
                     />
-                    <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setShowApiKey((value) => !value)}>
-                      {showApiKey ? "隐藏" : "显示"}
-                    </button>
-                    <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setApiKey("")}>
-                      重置
-                    </button>
+                  </span>
+                  <span className="model-provider-item__name">{provider.providerName}</span>
+                  <span className={`model-provider-item__status ${provider.enabled ? "on" : "off"}`}>
+                    {provider.enabled ? "ON" : "OFF"}
+                  </span>
+                </button>
+              ))}
+            </aside>
+
+            <section className="model-provider-main">
+              {selected ? (
+                <>
+                  <div className="model-provider-main__head">
+                    <h3>{selected.providerName}</h3>
+                    <a href={selected.docUrl} target="_blank" rel="noreferrer" className="text-link">
+                      文档
+                    </a>
                   </div>
-                </label>
 
-                <label className="cici-field">
-                  <span className="cici-field__label">API 地址</span>
-                  <input
-                    className="cici-field__input"
-                    value={apiBaseUrl}
-                    onChange={(event) => setApiBaseUrl(event.target.value)}
-                    placeholder={selected.defaultBaseUrl}
-                  />
-                </label>
+                  <div className="model-form-grid">
+                    <label className="cici-field">
+                      <span className="cici-field__label">API Key</span>
+                      <div className="model-key-row">
+                        <input
+                          className="cici-field__input"
+                          type={showApiKey ? "text" : "password"}
+                          value={apiKey}
+                          onChange={(event) => setApiKey(event.target.value)}
+                          placeholder={
+                            selected.apiKeySet
+                              ? `已配置：${selected.apiKeyMasked}`
+                              : selected.apiKeyRequired === false
+                                ? "本地服务通常无需 API Key"
+                                : "请输入 API Key"
+                          }
+                        />
+                        <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setShowApiKey((value) => !value)}>
+                          {showApiKey ? "隐藏" : "显示"}
+                        </button>
+                        <button type="button" className="cici-btn cici-btn--ghost" onClick={() => setApiKey("")}>
+                          重置
+                        </button>
+                      </div>
+                    </label>
 
-                <div className="model-actions-row">
-                  <label className="kb-check">
-                    <input
-                      type="checkbox"
-                      checked={providerEnabled}
-                      onChange={(event) => {
-                        const nextEnabled = event.target.checked;
-                        setProviderEnabled(nextEnabled);
-                        void saveProvider(nextEnabled);
-                      }}
-                    />
-                    <span>启用厂商</span>
-                  </label>
-                  <div className="row">
-                    <button type="button" onClick={() => void checkProvider()} disabled={busy}>
-                      检测
-                    </button>
-                    <button type="button" onClick={() => void saveProvider()} disabled={busy}>
-                      保存
-                    </button>
-                    <button type="button" onClick={() => void fetchModels()} disabled={busy}>
-                      全部模型
-                    </button>
+                    <label className="cici-field">
+                      <span className="cici-field__label">API 地址</span>
+                      <input
+                        className="cici-field__input"
+                        value={apiBaseUrl}
+                        onChange={(event) => setApiBaseUrl(event.target.value)}
+                        placeholder={selected.defaultBaseUrl}
+                      />
+                    </label>
+
+                    <div className="model-actions-row">
+                      <label className="kb-check">
+                        <input
+                          type="checkbox"
+                          checked={providerEnabled}
+                          onChange={(event) => {
+                            const nextEnabled = event.target.checked;
+                            setProviderEnabled(nextEnabled);
+                            void saveProvider(nextEnabled);
+                          }}
+                        />
+                        <span>启用厂商</span>
+                      </label>
+                      <div className="row">
+                        <button type="button" className="platform-button platform-button--secondary" onClick={() => void checkProvider()} disabled={busy}>
+                          检测
+                        </button>
+                        <button type="button" className="platform-button platform-button--primary" onClick={() => void saveProvider()} disabled={busy}>
+                          保存
+                        </button>
+                        <button type="button" className="platform-button platform-button--secondary" onClick={() => void fetchModels()} disabled={busy}>
+                          全部模型
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="model-section model-section--routes">
-                <div className="model-section__head">
-                  <h4>场景模型路由</h4>
-                  <span className="model-count-badge">已配置 {configuredRouteCount} 个</span>
-                </div>
-                {modelCandidates.length === 0 ? (
-                  <p className="subtle">暂无可用于路由的模型。先把模型加入平台已选模型目录。</p>
-                ) : (
-                  <div className="model-route-board">
-                    {modelRoutes.map((route) => {
-                      const value = route.providerCode && route.modelName
-                        ? selectedModelKey(route.providerCode, route.modelName)
-                        : "";
-                      return (
-                        <div className="model-route-row" key={route.sceneCode}>
-                          <div className="model-route-row__main">
-                            <div className="model-route-row__title">{route.displayName}</div>
-                            <div className="model-route-row__desc">{route.description}</div>
-                            {route.configured && !route.available ? (
-                              <div className="model-route-row__warning">当前配置的模型已不在平台已选模型目录中。</div>
-                            ) : null}
-                          </div>
-                          <div className="model-route-row__controls">
-                            <select
-                              className="cici-field__input model-route-select"
-                              value={route.available ? value : ""}
-                              disabled={busy}
-                              onChange={(event) => void saveModelRoute(route.sceneCode, event.target.value)}
-                            >
-                              <option value="">使用平台默认模型</option>
-                              {modelCandidates.map((candidate) => (
-                                <option
-                                  key={`${route.sceneCode}-${candidate.providerCode}-${candidate.modelName}`}
-                                  value={selectedModelKey(candidate.providerCode, candidate.modelName)}
+                  <div className="model-section model-section--target">
+                    <div className="model-section__head">
+                      <h4>平台已选模型</h4>
+                      <span className="model-count-badge">已选 {selectedModelsForCurrentProvider.length} 个</span>
+                    </div>
+                    {selectedModelsForCurrentProvider.length === 0 ? (
+                      <p className="subtle">暂无已选模型。点击“全部模型”后把允许运行的模型加入目录。</p>
+                    ) : (
+                      <div className="provider-model-board">
+                        {selectedModelsForCurrentProvider.map((name) => {
+                          const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? inferCapabilities(name);
+                          return (
+                            <div className="provider-model-row" key={`${selected.providerCode}-${name}`}>
+                              <div className="provider-model-row__left">
+                                <span className="provider-model-row__logo">
+                                  <img
+                                    src={PROVIDER_ICON_URLS[selected.providerCode] || DEFAULT_PROVIDER_ICON_URL}
+                                    alt={selected.providerName}
+                                    className="provider-model-row__logo-img"
+                                  />
+                                </span>
+                                <div className="provider-model-row__name-wrap">
+                                  <div className="provider-model-row__name">{name}</div>
+                                  <div className="provider-model-row__hint">运行时目录由平台统一控制</div>
+                                </div>
+                              </div>
+                              <div className="provider-model-row__right">
+                                <div className="provider-model-row__caps">
+                                  {caps.map((cap) => {
+                                    const meta = CAPABILITY_META[cap];
+                                    return (
+                                      <span key={`${name}-${cap}`} className={`model-cap-pill model-cap-pill--${meta.tone}`}>
+                                        <span className="model-cap-pill__icon">{meta.icon}</span>
+                                        <span>{meta.label}</span>
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                                <button
+                                  type="button"
+                                  className="model-row-icon-btn"
+                                  title="从平台已选模型移除"
+                                  onClick={() => void toggleSelectedModel(name)}
                                 >
-                                  {candidate.displayLabel || `${candidate.modelName} · ${candidate.providerName}`}
-                                </option>
-                              ))}
-                            </select>
-                            {route.configured ? (
-                              <button type="button" className="cici-btn cici-btn--ghost" disabled={busy} onClick={() => void clearModelRoute(route.sceneCode)}>
-                                清除
-                              </button>
-                            ) : null}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              <div className="model-section model-section--target">
-                <div className="model-section__head">
-                  <h4>平台已选模型</h4>
-                  <span className="model-count-badge">已选 {selectedModelsForCurrentProvider.length} 个</span>
-                </div>
-                {selectedModelsForCurrentProvider.length === 0 ? (
-                  <p className="subtle">暂无已选模型。点击“全部模型”后把允许运行的模型加入目录。</p>
-                ) : (
-                  <div className="provider-model-board">
-                    {selectedModelsForCurrentProvider.map((name) => {
-                      const caps = capabilityMap[selectedModelKey(selected.providerCode, name)] ?? inferCapabilities(name);
-                      return (
-                        <div className="provider-model-row" key={`${selected.providerCode}-${name}`}>
-                          <div className="provider-model-row__left">
-                            <span className="provider-model-row__logo">
-                              <img
-                                src={PROVIDER_ICON_URLS[selected.providerCode] || DEFAULT_PROVIDER_ICON_URL}
-                                alt={selected.providerName}
-                                className="provider-model-row__logo-img"
-                              />
-                            </span>
-                            <div className="provider-model-row__name-wrap">
-                              <div className="provider-model-row__name">{name}</div>
-                              <div className="provider-model-row__hint">运行时目录由平台统一控制</div>
+                                  -
+                                </button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="provider-model-row__right">
-                            <div className="provider-model-row__caps">
-                              {caps.map((cap) => {
-                                const meta = CAPABILITY_META[cap];
-                                return (
-                                  <span key={`${name}-${cap}`} className={`model-cap-pill model-cap-pill--${meta.tone}`}>
-                                    <span className="model-cap-pill__icon">{meta.icon}</span>
-                                    <span>{meta.label}</span>
-                                  </span>
-                                );
-                              })}
-                            </div>
-                            <button
-                              type="button"
-                              className="model-row-icon-btn"
-                              title="从平台已选模型移除"
-                              onClick={() => void toggleSelectedModel(name)}
-                            >
-                              -
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            </>
+                </>
+              ) : (
+                <p className="subtle">暂无可用模型厂商。</p>
+              )}
+            </section>
+          </div>
+        </div>
+      ) : (
+        <section className="model-section model-section--routes model-config-tab-panel">
+          <div className="model-section__head">
+            <h4>场景模型路由</h4>
+            <span className="model-count-badge">已配置 {configuredRouteCount} 个</span>
+          </div>
+          {modelCandidates.length === 0 ? (
+            <p className="subtle">暂无可用于路由的模型。先把模型加入平台已选模型目录。</p>
           ) : (
-            <p className="subtle">暂无可用模型厂商。</p>
+            <div className="model-route-board">
+              {modelRoutes.map((route) => {
+                const value = route.providerCode && route.modelName
+                  ? selectedModelKey(route.providerCode, route.modelName)
+                  : "";
+                return (
+                  <div className="model-route-row" key={route.sceneCode}>
+                    <div className="model-route-row__main">
+                      <div className="model-route-row__title">{route.displayName}</div>
+                      <div className="model-route-row__desc">{route.description}</div>
+                      {route.configured && !route.available ? (
+                        <div className="model-route-row__warning">当前配置的模型已不在平台已选模型目录中。</div>
+                      ) : null}
+                    </div>
+                    <div className="model-route-row__controls">
+                      <select
+                        className="cici-field__input model-route-select"
+                        value={route.available ? value : ""}
+                        disabled={busy}
+                        onChange={(event) => void saveModelRoute(route.sceneCode, event.target.value)}
+                      >
+                        <option value="">使用平台默认模型</option>
+                        {modelCandidates.map((candidate) => (
+                          <option
+                            key={`${route.sceneCode}-${candidate.providerCode}-${candidate.modelName}`}
+                            value={selectedModelKey(candidate.providerCode, candidate.modelName)}
+                          >
+                            {candidate.displayLabel || `${candidate.modelName} · ${candidate.providerName}`}
+                          </option>
+                        ))}
+                      </select>
+                      {route.configured ? (
+                        <button type="button" className="cici-btn cici-btn--ghost" disabled={busy} onClick={() => void clearModelRoute(route.sceneCode)}>
+                          清除
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </section>
-      </div>
+      )}
 
       {allModelsOpen && selected ? (
         <div className="all-models-overlay" onClick={() => setAllModelsOpen(false)}>
           <div className="all-models-modal" onClick={(event) => event.stopPropagation()}>
             <div className="all-models-modal__head">
-              <h3>全部模型 · {selected.providerName}</h3>
+              <h3>{allModelsCatalogSource === "static" ? "预设模型" : "全部模型"} · {selected.providerName}</h3>
               <button type="button" className="all-models-close" onClick={() => setAllModelsOpen(false)}>
                 x
               </button>

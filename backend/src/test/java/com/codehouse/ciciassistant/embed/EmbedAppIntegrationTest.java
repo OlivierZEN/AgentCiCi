@@ -11,6 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.codehouse.ciciassistant.ai.service.MeetingMinutesService;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
+import com.codehouse.ciciassistant.billing.domain.BillingSubscriptionRepository;
+import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionEntity;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionRepository;
 import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService;
@@ -23,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.math.BigDecimal;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -66,6 +69,12 @@ class EmbedAppIntegrationTest {
 
     @Autowired
     private MeetingSessionRepository meetingSessionRepository;
+
+    @Autowired
+    private UsageMeterEventRepository usageMeterEventRepository;
+
+    @Autowired
+    private BillingSubscriptionRepository billingSubscriptionRepository;
 
     @Autowired
     private IntegrationAppService integrationAppService;
@@ -189,6 +198,13 @@ class EmbedAppIntegrationTest {
         assertThat(stored.getObjectType()).isEqualTo("Opportunity");
         assertThat(stored.getObjectId()).isEqualTo("006xx000001");
         assertThat(stored.getSummaryMarkdown()).contains("客户确认下周评审");
+        var workflowUsage = usageMeterEventRepository
+                .findBySourceTypeAndSourceId("meeting-minutes", "demo-org:" + sessionId + ":workflow_run")
+                .orElseThrow();
+        assertThat(workflowUsage.getBillableItemCode()).isEqualTo("workflow_credit");
+        assertThat(workflowUsage.getWorkCreditQuantity()).isGreaterThan(BigDecimal.ZERO);
+        assertThat(billingSubscriptionRepository.findByOrgId("demo-org").orElseThrow().getConsumedCredits())
+                .isGreaterThan(BigDecimal.ZERO);
 
         MvcResult previewResult = mockMvc.perform(post("/embed/v1/apps/meeting-minutes/sessions/{sessionId}/writeback-preview", sessionId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + embedToken))

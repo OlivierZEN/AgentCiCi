@@ -15,6 +15,50 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-155 - 运营端前端页面 UI 整体美化
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-065-platform-console-ui-polish.md`
+- task_status_path: `.claw/tasks/TASK-155.md`
+- assignment_path: `.claw/assignments/TASK-155.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-155 platform UI polish; task gates, frontend build, `git diff --check`, and desktop Playwright screenshots for all platform routes passed, with `/api/platform/audit/logs` still returning backend 500.
+
+### TASK-154 - Credits metering production readiness sweep
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-037-saas-billing-usage-ledger.md`
+- task_status_path: `.claw/tasks/TASK-154.md`
+- assignment_path: `.claw/assignments/TASK-154.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-154 Credits metering completion; assignment/login gates, Open API/KB/admin billing focused tests, and `git diff --check` passed.
+
+### TASK-153 - Platform-governed Tavily, Iflytek, and OneKeyToken provider
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-062-platform-model-provider-governance.md`
+- task_status_path: `.claw/tasks/TASK-153.md`
+- assignment_path: `.claw/assignments/TASK-153.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-153 changes; focused backend tests, frontend build, local API smoke, local service restart, and `git diff --check` passed.
+
+### TASK-152 - AI 听记 credits and start-timeout hotfix
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-037-saas-billing-usage-ledger.md`
+- task_status_path: `.claw/tasks/TASK-152.md`
+- assignment_path: `.claw/assignments/TASK-152.yaml`
+- blocked_by: `none`
+- next_action: Fix local-test defects where AI 听记 start can time out and successful AI 听记 usage does not consume organization credits; then run focused backend validation and local smoke.
+
 ### TASK-151 - RBAC and audit production readiness
 
 - status: `review`

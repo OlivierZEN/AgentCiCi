@@ -1,0 +1,58 @@
+task_id: TASK-155
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-18T00:09:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-065-platform-console-ui-polish.md
+task_status_path: .claw/tasks/TASK-155.md
+branch: codex/TASK-152-ai-minutes-billing-timeout
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/platform/**
+  - frontend/src/styles.css
+  - frontend/src/App.tsx
+  - frontend/public/provider-logos/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-155.md
+  - .claw/assignments/TASK-155.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-065-platform-console-ui-polish.md
+  - frontend/src/App.tsx
+  - frontend/src/styles.css
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-065-platform-console-ui-polish.md
+task_boundary:
+  - "Audit and polish authenticated platform operations pages under /platform/* for desktop product quality."
+  - "Keep the Gilded Ledger style: warm ivory canvas, ledger ink text, compact density, champagne-gold structure lines, and restrained enterprise workbench tone."
+  - "Remove or override visible violations such as decorative gradients, old blue/teal/purple product tags, grey modal vocabulary, round icon-button chrome, thick side accents, nested card-like treatment, and inconsistent button classes."
+  - "Do not add mobile compatibility work, backend API changes, database changes, production release work, or non-platform route redesign."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-18T00:07:00+08:00; user requested goal-mode UI polish for all operations-side frontend pages."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created frontend UI polish task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-155 on branch codex/TASK-152-ai-minutes-billing-timeout before implementation edits."

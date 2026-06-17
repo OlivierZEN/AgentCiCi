@@ -8098,6 +8098,63 @@ button:hover:not(:disabled),
   flex-wrap: wrap;
 }
 
+.model-config-tabs {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.model-config-tab {
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0 0 8px;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.model-config-tab:hover {
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  transform: none;
+}
+
+.model-config-tab.is-active {
+  color: var(--admin-accent-strong, #876223);
+  border-bottom: 2px solid var(--admin-accent, #c8a45d);
+}
+
+.model-config-tab-panel {
+  margin-top: 14px;
+}
+
+.admin-main .admin-page .model-config-tab,
+.admin-main .admin-page .model-config-tab:hover,
+.admin-main .admin-page .model-config-tab:focus,
+.admin-main .admin-page .model-config-tab:focus-visible,
+.admin-main .admin-page .model-config-tab:active {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+  outline: 0;
+}
+
+.admin-main .admin-page .model-config-tab.is-active,
+.admin-main .admin-page .model-config-tab.is-active:hover,
+.admin-main .admin-page .model-config-tab.is-active:focus-visible {
+  color: var(--admin-accent-strong, #876223);
+  border-bottom: 2px solid var(--admin-accent, #c8a45d);
+}
+
 .model-section {
   margin-top: 10px;
 }
@@ -15130,17 +15187,14 @@ td.skills-data-table__actions > * {
   gap: 14px;
   padding: 14px;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-  background:
-    radial-gradient(circle at top left, rgba(185, 150, 82, 0.12), transparent 26%),
-    radial-gradient(circle at bottom right, rgba(166, 124, 47, 0.08), transparent 24%),
-    linear-gradient(180deg, var(--platform-bg) 0%, #fcf9f2 100%);
+  background: var(--platform-bg);
 }
 
 .platform-nav {
   border: 1px solid var(--platform-line-strong);
-  border-radius: 18px;
+  border-radius: 12px;
   padding: 18px 14px 14px;
-  background: linear-gradient(180deg, #fbf7ef 0%, var(--platform-bg-2) 100%);
+  background: #fbf7ef;
   box-shadow:
     inset 0 0 0 1px rgba(255, 252, 244, 0.96),
     0 12px 32px rgba(65, 47, 18, 0.05);
@@ -15293,9 +15347,9 @@ td.skills-data-table__actions > * {
 }
 
 .platform-main {
-  border-radius: 18px;
+  border-radius: 12px;
   border: 1px solid var(--platform-line-strong);
-  background: linear-gradient(180deg, #fffdf8 0%, #fbf6ec 100%);
+  background: #fffdf8;
   box-shadow:
     inset 0 0 0 1px rgba(255, 250, 241, 0.98),
     0 12px 32px rgba(65, 47, 18, 0.05);
@@ -15518,6 +15572,7 @@ td.skills-data-table__actions > * {
   letter-spacing: 0.02em;
   box-shadow: none;
   border: 1px solid transparent;
+  white-space: nowrap;
   transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -15546,13 +15601,13 @@ td.skills-data-table__actions > * {
 .platform-button--primary,
 .platform-main .platform-page .cici-btn--primary {
   border-color: var(--platform-line-bright);
-  background: var(--platform-accent);
-  color: #fff9ee;
+  background: var(--platform-accent) !important;
+  color: #fff9ee !important;
 }
 
 .platform-button--primary:hover:not(:disabled),
 .platform-main .platform-page .cici-btn--primary:hover:not(:disabled) {
-  background: var(--platform-accent-strong);
+  background: var(--platform-accent-strong) !important;
   border-color: var(--platform-accent-strong);
   box-shadow: 0 2px 8px rgba(135, 98, 35, 0.16);
 }
@@ -15572,20 +15627,16 @@ td.skills-data-table__actions > * {
 
 .platform-login .platform-button--primary {
   border-color: #8b631e;
-  background: linear-gradient(180deg, #d4ac61 0%, #b9852f 55%, #9a6d24 100%);
+  background: var(--platform-accent);
   color: #fffaf0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 245, 220, 0.55),
-    0 8px 18px rgba(135, 98, 35, 0.18);
+  box-shadow: none;
 }
 
 .platform-login .platform-button--primary:hover:not(:disabled) {
   border-color: #7c5818;
-  background: linear-gradient(180deg, #ddb66c 0%, #c18f37 55%, #a27124 100%);
+  background: var(--platform-accent-strong);
   color: #fffdf6;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 248, 230, 0.6),
-    0 10px 20px rgba(135, 98, 35, 0.22);
+  box-shadow: none;
 }
 
 .platform-login .platform-button--secondary {
@@ -16136,10 +16187,7 @@ td.skills-data-table__actions > * {
 }
 
 .platform-login {
-  background:
-    radial-gradient(circle at 0% 0%, rgba(185, 150, 82, 0.14), transparent 28%),
-    radial-gradient(circle at 100% 100%, rgba(166, 124, 47, 0.08), transparent 24%),
-    linear-gradient(180deg, #faf6ed 0%, #f4eddf 100%);
+  background: #f7f3eb;
 }
 
 .platform-login__card {
@@ -16226,15 +16274,38 @@ td.skills-data-table__actions > * {
 }
 
 .platform-main .platform-page .platform-console__checkbox {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border: 1px solid var(--platform-line-strong);
-  border-radius: 10px;
-  background: var(--platform-panel-2);
-  box-shadow: inset 0 0 0 1px rgba(255, 248, 235, 0.99);
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .platform-main .platform-page .platform-console__checkbox input {
+  accent-color: var(--platform-accent);
+}
+
+.platform-main .platform-page .kb-check {
+  display: inline-flex;
+  width: auto;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--platform-heading);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.platform-main .platform-page .kb-check input {
+  width: 15px;
+  height: 15px;
+  padding: 0;
   accent-color: var(--platform-accent);
 }
 
@@ -16246,6 +16317,372 @@ td.skills-data-table__actions > * {
   position: sticky;
   top: 0;
   z-index: 1;
+}
+
+.platform-main .platform-page .platform-billing__toolbar button,
+.platform-main .platform-page .platform-billing__toolbar button:hover,
+.platform-main .platform-page .platform-billing__toolbar button:focus-visible,
+.platform-main .platform-page .platform-billing__toolbar button:active,
+.platform-main .platform-page .platform-billing__toolbar button.active {
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--platform-muted);
+  transform: none !important;
+}
+
+.platform-main .platform-page .platform-billing__toolbar button:hover,
+.platform-main .platform-page .platform-billing__toolbar button:focus-visible,
+.platform-main .platform-page .platform-billing__toolbar button.active {
+  color: var(--platform-accent-strong);
+}
+
+.platform-main .platform-page .platform-billing__toolbar button.active {
+  border-bottom: 2px solid var(--platform-line-bright) !important;
+}
+
+.platform-main .platform-page .admin-ops-audit-toolbar {
+  grid-template-columns: minmax(240px, 1fr) minmax(140px, 220px) minmax(140px, 220px) auto;
+}
+
+.platform-main .platform-page .admin-ops-audit-toolbar .platform-button,
+.platform-main .platform-page .autoservice-demo-admin__search .platform-button {
+  width: auto;
+  min-width: 56px;
+  justify-self: end;
+}
+
+.platform-main .platform-page .model-center {
+  grid-template-columns: 248px minmax(0, 1fr);
+  gap: 14px;
+}
+
+.platform-main .platform-page .model-provider-list,
+.platform-main .platform-page .model-provider-main {
+  border-color: var(--platform-line-strong);
+  border-radius: 12px;
+  background: var(--platform-panel);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 248, 235, 0.99),
+    0 8px 20px rgba(65, 47, 18, 0.04);
+}
+
+.platform-main .platform-page .model-provider-list {
+  gap: 0;
+  padding: 12px;
+}
+
+.platform-main .platform-page .model-provider-list__title {
+  padding: 0 0 8px;
+  color: var(--platform-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.platform-main .platform-page .model-provider-item,
+.platform-main .platform-page .model-provider-item:hover,
+.platform-main .platform-page .model-provider-item:focus,
+.platform-main .platform-page .model-provider-item:focus-visible,
+.platform-main .platform-page .model-provider-item:active,
+.platform-main .platform-page .model-provider-item.is-active {
+  border: 0 !important;
+  border-top: 1px solid rgba(196, 177, 145, 0.42) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--platform-ink);
+  transform: none !important;
+}
+
+.platform-main .platform-page .model-provider-item {
+  min-height: 46px;
+  padding: 9px 0;
+  font-size: 13px;
+}
+
+.platform-main .platform-page .model-provider-item:hover,
+.platform-main .platform-page .model-provider-item:focus-visible,
+.platform-main .platform-page .model-provider-item.is-active {
+  color: var(--platform-accent-strong);
+  outline: none;
+}
+
+.platform-main .platform-page .model-provider-item.is-active .model-provider-item__name {
+  font-weight: 750;
+  text-decoration: underline;
+  text-decoration-color: var(--platform-line-bright);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.platform-main .platform-page .model-provider-item__icon,
+.platform-main .platform-page .provider-model-row__logo {
+  border: 1px solid rgba(196, 177, 145, 0.5);
+  border-radius: 8px;
+  background: #fffdf8;
+}
+
+.platform-main .platform-page .model-provider-item__status,
+.platform-main .platform-page .model-provider-item__status.on,
+.platform-main .platform-page .model-provider-item__status.off {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  color: var(--platform-muted);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+}
+
+.platform-main .platform-page .model-provider-item__status.on {
+  color: var(--platform-success);
+}
+
+.platform-main .platform-page .model-provider-item__status.off {
+  color: var(--platform-danger);
+}
+
+.platform-main .platform-page .model-provider-main {
+  padding: 16px;
+}
+
+.platform-main .platform-page .model-provider-main__head {
+  border-bottom: 1px solid rgba(196, 177, 145, 0.56);
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+}
+
+.platform-main .platform-page .model-provider-main__head h3,
+.platform-main .platform-page .model-section__head h4,
+.platform-main .platform-page .model-route-row__title,
+.platform-main .platform-page .provider-model-row__name {
+  color: var(--platform-heading);
+}
+
+.platform-main .platform-page .model-config-tabs {
+  border-bottom-color: var(--platform-line);
+}
+
+.platform-main .platform-page .model-config-tab,
+.platform-main .platform-page .model-config-tab:hover,
+.platform-main .platform-page .model-config-tab:focus,
+.platform-main .platform-page .model-config-tab:focus-visible,
+.platform-main .platform-page .model-config-tab:active {
+  color: var(--platform-muted);
+  font-size: 13px;
+  outline: 0;
+}
+
+.platform-main .platform-page .model-config-tab:hover,
+.platform-main .platform-page .model-config-tab:focus-visible,
+.platform-main .platform-page .model-config-tab.is-active {
+  color: var(--platform-accent-strong);
+}
+
+.platform-main .platform-page .model-config-tab.is-active {
+  border-bottom-color: var(--platform-line-bright);
+}
+
+.platform-main .platform-page .model-section,
+.platform-main .platform-page .model-section--target,
+.platform-main .platform-page .model-section--routes {
+  border: 0;
+  border-top: 1px solid rgba(196, 177, 145, 0.56);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 12px 0 0;
+}
+
+.platform-main .platform-page .model-count-badge {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--platform-muted);
+  padding: 0;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.platform-main .platform-page .provider-model-board,
+.platform-main .platform-page .model-route-board {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+
+.platform-main .platform-page .provider-model-group,
+.platform-main .platform-page .provider-model-row,
+.platform-main .platform-page .model-route-row {
+  border-color: rgba(196, 177, 145, 0.46);
+}
+
+.platform-main .platform-page .provider-model-group__header,
+.platform-main .platform-page .provider-model-group__body {
+  border-color: rgba(196, 177, 145, 0.46);
+  background: transparent;
+}
+
+.platform-main .platform-page .provider-model-group__title {
+  color: var(--platform-heading);
+  font-size: 13px;
+}
+
+.platform-main .platform-page .provider-model-row {
+  min-height: 46px;
+  padding: 8px 0;
+}
+
+.platform-main .platform-page .provider-model-row__hint,
+.platform-main .platform-page .model-route-row__desc {
+  color: var(--platform-muted);
+}
+
+.platform-main .platform-page .provider-model-row__right {
+  min-width: 0;
+}
+
+.platform-main .platform-page .model-cap-pill,
+.platform-main .platform-page .model-cap-pill--text,
+.platform-main .platform-page .model-cap-pill--tool,
+.platform-main .platform-page .model-cap-pill--search,
+.platform-main .platform-page .model-cap-pill--reasoning,
+.platform-main .platform-page .model-cap-pill--vision {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--platform-muted);
+  padding: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.platform-main .platform-page .model-cap-pill--tool,
+.platform-main .platform-page .model-cap-pill--search,
+.platform-main .platform-page .model-cap-pill--reasoning,
+.platform-main .platform-page .model-cap-pill--vision {
+  color: var(--platform-accent-strong);
+}
+
+.platform-main .platform-page .model-row-icon-btn,
+.platform-main .platform-page .model-row-icon-btn:hover:not(:disabled),
+.platform-main .platform-page .model-row-icon-btn:focus-visible {
+  width: 24px;
+  height: 24px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--platform-accent-strong);
+  transform: none !important;
+}
+
+.platform-main .platform-page .model-row-icon-btn:hover:not(:disabled),
+.platform-main .platform-page .model-row-icon-btn:focus-visible {
+  color: var(--platform-heading);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.platform-main .platform-page .model-route-row {
+  padding: 10px 0;
+}
+
+.platform-main .platform-page .model-route-row__warning {
+  color: var(--platform-danger);
+}
+
+.platform-layout .model-edit-overlay {
+  background: rgba(43, 34, 23, 0.28);
+}
+
+.platform-layout .model-edit-modal {
+  background: #fffdf8;
+  border-color: var(--platform-line);
+  border-radius: 12px;
+  box-shadow: 0 18px 42px rgba(43, 34, 23, 0.16);
+}
+
+.platform-layout .model-edit-modal__head {
+  border-bottom-color: rgba(196, 177, 145, 0.5);
+}
+
+.platform-layout .model-edit-modal__head h3 {
+  color: var(--platform-heading);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.platform-layout .model-edit-close,
+.platform-layout .model-edit-close:hover,
+.platform-layout .model-edit-close:focus-visible {
+  border: 0 !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--platform-muted);
+  transform: none !important;
+}
+
+.platform-layout .model-edit-close:hover,
+.platform-layout .model-edit-close:focus-visible {
+  color: var(--platform-heading);
+}
+
+.platform-layout .model-edit-field__label,
+.platform-layout .model-edit-unit-row span {
+  color: var(--platform-muted);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.platform-layout .model-edit-field__input {
+  border-color: rgba(183, 138, 54, 0.74);
+  border-radius: 10px;
+  background: #fffefb;
+  color: var(--platform-ink);
+  font-size: 13px;
+}
+
+.platform-layout .model-edit-divider {
+  background: rgba(196, 177, 145, 0.5);
+}
+
+.platform-layout .model-edit-more-btn,
+.platform-layout .model-edit-cap-btn {
+  border-color: var(--platform-line-strong);
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--platform-muted);
+  box-shadow: none;
+}
+
+.platform-layout .model-edit-more-btn:hover,
+.platform-layout .model-edit-more-btn:focus-visible,
+.platform-layout .model-edit-cap-btn:hover,
+.platform-layout .model-edit-cap-btn:focus-visible {
+  border-color: var(--platform-line-bright);
+  background: #fbf4e8;
+  color: var(--platform-heading);
+}
+
+.platform-layout .model-edit-cap-btn.is-active {
+  border-color: var(--platform-line-bright);
+  background: #fbf4e8;
+  color: var(--platform-accent-strong);
+}
+
+.platform-layout .model-edit-switch span {
+  background: #ded2bb;
+}
+
+.platform-layout .model-edit-switch input:checked + span {
+  background: var(--platform-accent);
 }
 
 @media (max-width: 980px) {

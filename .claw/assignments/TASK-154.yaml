@@ -1,0 +1,58 @@
+task_id: TASK-154
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-18T00:02:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
+task_status_path: .claw/tasks/TASK-154.md
+branch: codex/TASK-152-ai-minutes-billing-timeout
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/userworkflow/**
+  - backend/src/test/java/com/codehouse/ciciassistant/userworkflow/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-154.md
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - docs/specs/FEAT-022-agent-workload-billing-model.md
+  - docs/specs/FEAT-003-saas-billing-and-packaging.md
+task_boundary:
+  - "Audit user-facing and admin/platform-facing runtime functions against the Credits billing specification."
+  - "Add append-only usage-meter and credits-ledger entries for production-ready billable domains that currently lack runtime metering."
+  - "Prioritize Open API chat request metering and KB document/chunk indexing because chat/RAG/tool/workflow usage is already partially captured through ChatOrchestratorService."
+  - "Preserve private-deployment behavior: customer-owned local models and customer-paid resources are not double-charged by default."
+  - "Do not add payment, invoice, tax, renewal, production release, migration, or mobile QA work in this task."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-18T00:01:53+08:00; user requested a goal to make all Credits-billable user/admin functions production-ready."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created Credits production-readiness task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-154 on branch codex/TASK-152-ai-minutes-billing-timeout before implementation edits."

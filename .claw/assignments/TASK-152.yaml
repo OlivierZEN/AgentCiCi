@@ -1,0 +1,56 @@
+task_id: TASK-152
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-17T08:20:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-037-saas-billing-usage-ledger.md
+task_status_path: .claw/tasks/TASK-152.md
+branch: codex/TASK-152-ai-minutes-billing-timeout
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/test/java/com/codehouse/ciciassistant/billing/**
+  - backend/src/main/java/com/codehouse/ciciassistant/embed/**
+  - backend/src/test/java/com/codehouse/ciciassistant/embed/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-152.md
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - docs/specs/FEAT-059-ai-minutes-local-asr.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-037-saas-billing-usage-ledger.md
+  - docs/specs/FEAT-059-ai-minutes-local-asr.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "Fix AI 听记 runtime defects reported during local testing: starting listening times out and successful AI 听记 usage does not consume organization credits."
+  - "Connect meeting minutes summary/start runtime facts to the existing credits metering service without changing database schema unless separately authorized."
+  - "Preserve local development behavior and avoid production release script or migration edits."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-17T08:20:00+08:00; user reported AI 听记 timeout and missing credits consumption, assigned TASK-152 to MANAGER-001 for immediate local fix."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created hotfix task for local validation. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py on branch codex/TASK-152-ai-minutes-billing-timeout before implementation edits."

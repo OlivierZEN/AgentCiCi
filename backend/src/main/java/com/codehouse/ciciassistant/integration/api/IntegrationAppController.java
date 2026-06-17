@@ -56,6 +56,9 @@ public class IntegrationAppController {
      */
     @PostMapping("/tavily/test")
     public ApiResponse<Map<String, Object>> testTavily(@RequestBody(required = false) TestTavilyRequest request) {
+        if (integrationAppService.isPlatformManagedApp(IntegrationAppService.APP_CODE_TAVILY)) {
+            throw new com.codehouse.ciciassistant.common.error.ForbiddenException(IntegrationAppService.PLATFORM_MANAGED_MESSAGE);
+        }
         String orgId = TenantContext.requireOrgId();
         String override = request == null ? null : request.apiKey();
         return ApiResponse.ok(tavilyToolService.testConnection(orgId, override));

@@ -121,8 +121,15 @@ function isSecretField(appCode: string, key: string): boolean {
   return SECRET_FIELDS[appCode]?.includes(key) ?? false;
 }
 
-export default function AdminIntegrationsPage() {
-  const token = useAdminToken();
+type IntegrationSettingsPageProps = {
+  token: string;
+  apiBase: string;
+  title: string;
+  subtitle: string;
+  className?: string;
+};
+
+export function IntegrationSettingsPage({ token, apiBase, title, subtitle, className = "" }: IntegrationSettingsPageProps) {
   const [notice, setNotice] = useState("");
   const [apps, setApps] = useState<IntegrationApp[]>([]);
   const [editing, setEditing] = useState<IntegrationApp | null>(null);
@@ -133,7 +140,7 @@ export default function AdminIntegrationsPage() {
   const [testResult, setTestResult] = useState<string>("");
 
   const loadApps = async () => {
-    const res = await fetch("/integrations", { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(apiBase, { headers: { Authorization: `Bearer ${token}` } });
     const json = await res.json();
     if (!res.ok || !json.success) {
       setNotice(json.message ?? "加载失败");
@@ -158,7 +165,7 @@ export default function AdminIntegrationsPage() {
     try {
       // Only send apiKey when user edited it to something other than the mask
       const apiKey = form.apiKey && form.apiKey !== "tvly-****" ? form.apiKey : "";
-      const res = await fetch(`/integrations/tavily/test`, {
+      const res = await fetch(`${apiBase}/tavily/test`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ apiKey }),
@@ -185,7 +192,7 @@ export default function AdminIntegrationsPage() {
     if (!editing) return;
     setSaving(true);
     try {
-      const res = await fetch(`/integrations/${editing.appCode}`, {
+      const res = await fetch(`${apiBase}/${editing.appCode}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ enabled: editing.enabled, description: formDescription, config: form }),
@@ -204,7 +211,7 @@ export default function AdminIntegrationsPage() {
   };
 
   const toggleEnabled = async (app: IntegrationApp) => {
-    const res = await fetch(`/integrations/${app.appCode}`, {
+    const res = await fetch(`${apiBase}/${app.appCode}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ enabled: !app.enabled, description: app.description ?? "", config: app.config ?? {} }),
@@ -220,13 +227,13 @@ export default function AdminIntegrationsPage() {
 
   useEffect(() => {
     void loadApps();
-  }, [token]);
+  }, [token, apiBase]);
 
   return (
-    <div className="admin-page">
+    <div className={`admin-page ${className}`.trim()}>
       <header className="chat-header">
-        <h1>集成应用</h1>
-        <p className="subtle">标准内置集成应用（不可手动新增）</p>
+        <h1>{title}</h1>
+        <p className="subtle">{subtitle}</p>
       </header>
 
       <div className="integration-grid">
@@ -334,5 +341,17 @@ export default function AdminIntegrationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AdminIntegrationsPage() {
+  const token = useAdminToken();
+  return (
+    <IntegrationSettingsPage
+      token={token}
+      apiBase="/integrations"
+      title="集成应用"
+      subtitle="组织侧标准内置集成应用（不可手动新增）"
+    />
   );
 }
