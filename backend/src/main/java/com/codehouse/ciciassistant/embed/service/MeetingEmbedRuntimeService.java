@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.embed.service;
 
 import com.codehouse.ciciassistant.ai.service.MeetingMinutesService;
+import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionEntity;
 import com.codehouse.ciciassistant.embed.domain.MeetingSessionRepository;
@@ -8,6 +9,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,15 +25,18 @@ public class MeetingEmbedRuntimeService {
 
     private final MeetingSessionRepository sessionRepository;
     private final MeetingMinutesService meetingMinutesService;
+    private final BillingUsageMeteringService billingUsageMeteringService;
     private final CloudccMeetingWritebackConnector cloudccWritebackConnector;
     private final ObjectMapper objectMapper;
 
     public MeetingEmbedRuntimeService(MeetingSessionRepository sessionRepository,
                                       MeetingMinutesService meetingMinutesService,
+                                      BillingUsageMeteringService billingUsageMeteringService,
                                       CloudccMeetingWritebackConnector cloudccWritebackConnector,
                                       ObjectMapper objectMapper) {
         this.sessionRepository = sessionRepository;
         this.meetingMinutesService = meetingMinutesService;
+        this.billingUsageMeteringService = billingUsageMeteringService;
         this.cloudccWritebackConnector = cloudccWritebackConnector;
         this.objectMapper = objectMapper;
     }
@@ -73,6 +78,17 @@ public class MeetingEmbedRuntimeService {
                     title,
                     command == null ? List.of() : command.transcript());
             session.markSummaryReady(result.summary());
+            billingUsageMeteringService.recordMeetingMinutesRunSafely(new BillingUsageMeteringService.MeetingMinutesMeteringInput(
+                    session.getOrgId(),
+                    session.getUserId(),
+                    session.getId(),
+                    result.modelName(),
+                    result.promptTokens(),
+                    result.completionTokens(),
+                    command == null || command.transcript() == null ? 0 : command.transcript().size(),
+                    result.summary() == null ? 0 : result.summary().length(),
+                    result.billable(),
+                    Instant.now()));
             Map<String, Object> data = sessionView(session);
             data.put("summary", result.summary());
             data.put("skillCode", result.skillCode());

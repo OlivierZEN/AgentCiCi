@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.kb.service;
 
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
+import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.kb.domain.KbChunkEntity;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataEntity;
@@ -25,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -63,6 +65,7 @@ public class KnowledgeBaseService {
     private final KbRetrievalLogRepository retrievalLogRepository;
     private final AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
     private final ModelProviderService modelProviderService;
+    private final BillingUsageMeteringService billingUsageMeteringService;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
     private final RabbitTemplate rabbitTemplate;
@@ -84,6 +87,7 @@ public class KnowledgeBaseService {
                                 KbRetrievalLogRepository retrievalLogRepository,
                                 AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
                                 ModelProviderService modelProviderService,
+                                BillingUsageMeteringService billingUsageMeteringService,
                                 VectorStoreClient vectorStoreClient,
                                 EmbeddingService embeddingService,
                                 RabbitTemplate rabbitTemplate,
@@ -104,6 +108,7 @@ public class KnowledgeBaseService {
         this.retrievalLogRepository = retrievalLogRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
         this.modelProviderService = modelProviderService;
+        this.billingUsageMeteringService = billingUsageMeteringService;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
         this.rabbitTemplate = rabbitTemplate;
@@ -339,6 +344,7 @@ public class KnowledgeBaseService {
         chunk.updateContent(normalized, contentHash);
         chunk.setVectorId(vectorId);
         chunkRepository.save(chunk);
+        recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), contentHash, "chunk_update");
         return chunkPayload(chunk);
     }
 
@@ -367,6 +373,7 @@ public class KnowledgeBaseService {
                                 embeddingConfig.dimension(),
                                 chunk.getContent())));
                 chunk.setVectorId(vectorId);
+                recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), chunk.getContentHash(), "chunk_enable");
             }
             chunk.enable();
         } else {
@@ -796,6 +803,7 @@ public class KnowledgeBaseService {
                         normalizedContent)));
         chunk.setVectorId(vectorId);
         chunkRepository.save(chunk);
+        recordKbChunkIndexingSafely(orgId, normalizedKbId, chunk.getId(), contentHash, "chunk_add");
         parseLong(normalizedKbId).flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId)).ifPresent(kb -> {
             if (!"DELETED".equals(kb.getStatus())) {
                 kb.setStatus("ACTIVE");
@@ -866,6 +874,7 @@ public class KnowledgeBaseService {
             }
             doc.markPublished();
             documentRepository.save(doc);
+            recordKbDocumentIndexingSafely(doc, indexedChunks.size(), "document_index");
             kbRepository.findByIdAndOrgId(doc.getKnowledgeBaseId(), orgId).ifPresent(kb -> {
                 kb.setStatus("ACTIVE");
                 kbRepository.save(kb);
@@ -875,6 +884,54 @@ public class KnowledgeBaseService {
             doc.markFailed(ex.getMessage());
             documentRepository.save(doc);
         }
+    }
+
+    private void recordKbDocumentIndexingSafely(KbDocumentEntity doc, int chunkCount, String operation) {
+        if (doc == null || chunkCount <= 0) {
+            return;
+        }
+        String sourceId = doc.getOrgId() + ":kb:" + doc.getKnowledgeBaseId()
+                + ":doc:" + doc.getId() + ":v" + doc.getIndexVersion() + ":" + operation;
+        billingUsageMeteringService.recordKbIndexingSafely(new BillingUsageMeteringService.KbIndexingMeteringInput(
+                doc.getOrgId(),
+                "",
+                "",
+                String.valueOf(doc.getKnowledgeBaseId()),
+                doc.getId(),
+                doc.getName(),
+                doc.getFileSize() == null ? 0L : doc.getFileSize(),
+                doc.getIndexVersion(),
+                chunkCount,
+                operation,
+                sourceId,
+                Instant.now()));
+    }
+
+    private void recordKbChunkIndexingSafely(String orgId,
+                                             String knowledgeBaseId,
+                                             Long chunkId,
+                                             String contentHash,
+                                             String operation) {
+        if (orgId == null || orgId.isBlank() || knowledgeBaseId == null || knowledgeBaseId.isBlank() || chunkId == null) {
+            return;
+        }
+        String hash = contentHash == null || contentHash.isBlank()
+                ? "nohash"
+                : contentHash.substring(0, Math.min(16, contentHash.length()));
+        String sourceId = orgId + ":kb:" + knowledgeBaseId + ":chunk:" + chunkId + ":" + hash + ":" + operation;
+        billingUsageMeteringService.recordKbIndexingSafely(new BillingUsageMeteringService.KbIndexingMeteringInput(
+                orgId,
+                "",
+                "",
+                knowledgeBaseId,
+                null,
+                "",
+                0L,
+                0,
+                1,
+                operation,
+                sourceId,
+                Instant.now()));
     }
 
     private CleanupResult cleanupDocumentForDelete(KbDocumentEntity doc, boolean deleteSource) {

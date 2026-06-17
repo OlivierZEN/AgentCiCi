@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.tool.tavily;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codehouse.ciciassistant.common.crypto.SecretCipherService;
+import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.feishu.service.FeishuBotClientManager;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppEntity;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppRepository;
@@ -43,7 +44,7 @@ class TavilyToolServiceTest {
         mapper = new ObjectMapper();
         SecretCipherService cipher = new SecretCipherService("");
         integrationAppService = new IntegrationAppService(
-                fakeRepo, mapper, new NoopObjectProvider(), cipher);
+                fakeRepo, mapper, new NoopObjectProvider(), cipher, new PlatformAccountProperties());
         TavilyProperties props = new TavilyProperties(
                 "https://api.tavily.com", 5, "basic", "general",
                 "none", "markdown", 20_000, 10, Duration.ofSeconds(10));
@@ -147,10 +148,10 @@ class TavilyToolServiceTest {
 
     @Test
     void apiKeyIsEncryptedAtRestAndMaskedOnRead() {
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_TAVILY,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", "tvly-real-key"));
         // Ciphertext envelope persisted in the row, not plaintext
-        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("org-1",
+        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_TAVILY).orElseThrow();
         assertThat(row.getConfigJson()).doesNotContain("tvly-real-key");
         assertThat(row.getConfigJson()).contains("cipher").contains("iv");
@@ -158,7 +159,7 @@ class TavilyToolServiceTest {
         String resolved = service.resolveApiKey("org-1");
         assertThat(resolved).isEqualTo("tvly-real-key");
         // Public view masks the key
-        Map<String, Object> view = integrationAppService.list("org-1").stream()
+        Map<String, Object> view = integrationAppService.listPlatformManaged().stream()
                 .filter(v -> "tavily".equals(v.get("appCode")))
                 .findFirst().orElseThrow();
         @SuppressWarnings("unchecked")
@@ -168,14 +169,14 @@ class TavilyToolServiceTest {
 
     @Test
     void updatingWithMaskPreservesStoredCiphertext() {
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_TAVILY,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", "tvly-real-key"));
-        String firstConfig = fakeRepo.findByOrgIdAndAppCode("org-1",
+        String firstConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_TAVILY).orElseThrow().getConfigJson();
         // Subsequent save that passes the mask back should NOT overwrite the ciphertext.
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_TAVILY,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", IntegrationAppService.API_KEY_MASK));
-        String secondConfig = fakeRepo.findByOrgIdAndAppCode("org-1",
+        String secondConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_TAVILY).orElseThrow().getConfigJson();
         assertThat(secondConfig).contains("cipher").contains("iv");
         assertThat(secondConfig).doesNotContain("tvly-****");
@@ -185,14 +186,14 @@ class TavilyToolServiceTest {
 
     @Test
     void iflytekAsrSecretIsEncryptedMaskedAndDecryptable() {
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_IFLYTEK_ASR,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_IFLYTEK_ASR,
                 true, "iflytek", Map.of(
                         "appId", "iflytek-app",
                         "accessKeyId", "iflytek-access-key",
                         "accessKeySecret", "iflytek-secret"
                 ));
 
-        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("org-1",
+        IntegrationAppEntity row = fakeRepo.findByOrgIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow();
         assertThat(row.getConfigJson()).doesNotContain("iflytek-secret");
         assertThat(row.getConfigJson()).contains("cipher").contains("iv");
@@ -201,7 +202,7 @@ class TavilyToolServiceTest {
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow();
         assertThat(integrationAppService.decryptIflytekAccessKeySecret(raw)).contains("iflytek-secret");
 
-        Map<String, Object> view = integrationAppService.list("org-1").stream()
+        Map<String, Object> view = integrationAppService.listPlatformManaged().stream()
                 .filter(v -> IntegrationAppService.APP_CODE_IFLYTEK_ASR.equals(v.get("appCode")))
                 .findFirst().orElseThrow();
         @SuppressWarnings("unchecked")
@@ -214,22 +215,22 @@ class TavilyToolServiceTest {
 
     @Test
     void iflytekAsrMaskPreservesStoredCiphertext() {
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_IFLYTEK_ASR,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_IFLYTEK_ASR,
                 true, "iflytek", Map.of(
                         "appId", "iflytek-app",
                         "accessKeyId", "iflytek-access-key",
                         "accessKeySecret", "iflytek-secret"
                 ));
-        String firstConfig = fakeRepo.findByOrgIdAndAppCode("org-1",
+        String firstConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow().getConfigJson();
 
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_IFLYTEK_ASR,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_IFLYTEK_ASR,
                 true, "iflytek", Map.of(
                         "appId", "iflytek-app",
                         "accessKeyId", "iflytek-access-key",
                         "accessKeySecret", IntegrationAppService.IFLYTEK_SECRET_MASK
                 ));
-        String secondConfig = fakeRepo.findByOrgIdAndAppCode("org-1",
+        String secondConfig = fakeRepo.findByOrgIdAndAppCode("demo-org",
                 IntegrationAppService.APP_CODE_IFLYTEK_ASR).orElseThrow().getConfigJson();
 
         assertThat(secondConfig).isEqualTo(firstConfig);
@@ -246,7 +247,7 @@ class TavilyToolServiceTest {
     }
 
     private void primeApiKey(String plain) {
-        integrationAppService.update("org-1", IntegrationAppService.APP_CODE_TAVILY,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", plain));
     }
 

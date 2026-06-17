@@ -17,11 +17,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,9 @@ public class BillingUsageMeteringService {
     private static final BigDecimal RAG_RETRIEVAL_CREDITS = new BigDecimal("0.20");
     private static final BigDecimal TOOL_CALL_CREDITS = new BigDecimal("0.50");
     private static final BigDecimal WORKFLOW_RUN_CREDITS = new BigDecimal("0.20");
+    private static final BigDecimal OPEN_API_SYNC_CREDITS = new BigDecimal("2.00");
+    private static final BigDecimal OPEN_API_STREAM_CREDITS = new BigDecimal("3.00");
+    private static final BigDecimal KB_INDEXING_CREDITS_PER_CHUNK = new BigDecimal("0.20");
 
     private final BillingSubscriptionRepository subscriptionRepository;
     private final BillingEditionRepository editionRepository;
@@ -94,6 +99,204 @@ public class BillingUsageMeteringService {
             recordChatRun(input);
         } catch (RuntimeException ignored) {
             // Runtime billing must never break the user's chat turn.
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public BillingRunMeteringResult recordOpenApiChatRun(OpenApiChatMeteringInput input) {
+        if (input == null || blank(input.orgId()) || blank(input.requestId())) {
+            return BillingRunMeteringResult.empty();
+        }
+        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
+        String billingType = billingTypeFor(edition);
+        boolean chargeCredits = chargesCredits(billingType);
+        Instant occurredAt = input.endedAt() == null ? Instant.now().truncatedTo(ChronoUnit.SECONDS) : input.endedAt().truncatedTo(ChronoUnit.SECONDS);
+        BigDecimal credits = chargeCredits
+                ? (input.stream() ? OPEN_API_STREAM_CREDITS : OPEN_API_SYNC_CREDITS)
+                : BigDecimal.ZERO;
+        UsageMeterEventEntity event = new UsageMeterEventEntity(
+                input.orgId(),
+                input.userId(),
+                input.agentId(),
+                "open_api_chat",
+                input.stream() ? "stream_chat" : "non_stream_chat",
+                input.stream() ? "Open API 流式对话请求 Credits" : "Open API 对话请求 Credits",
+                BigDecimal.ONE,
+                "request",
+                credits,
+                billingType,
+                "open-api-chat",
+                openApiSourceId(input),
+                occurredAt,
+                writeJson(mapOf(
+                        "officialPricingItem", "Credits 包",
+                        "credentialId", Math.max(0L, input.credentialId()),
+                        "requestId", input.requestId(),
+                        "idempotencyKeyPresent", !blank(input.idempotencyKey()),
+                        "externalUserId", input.externalUserId(),
+                        "sessionId", input.sessionId(),
+                        "traceId", input.traceId(),
+                        "responseMode", input.stream() ? "streaming" : "blocking",
+                        "elapsedMs", Math.max(0, input.elapsedMs()),
+                        "creditsPerRequest", input.stream() ? OPEN_API_STREAM_CREDITS : OPEN_API_SYNC_CREDITS)));
+        return recordSingleEvent(subscription, event, chargeCredits);
+    }
+
+    public void recordOpenApiChatRunSafely(OpenApiChatMeteringInput input) {
+        try {
+            recordOpenApiChatRun(input);
+        } catch (RuntimeException ignored) {
+            // Runtime billing must never break Open API responses.
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public BillingRunMeteringResult recordKbIndexing(KbIndexingMeteringInput input) {
+        if (input == null || blank(input.orgId()) || blank(input.sourceId()) || input.chunkCount() <= 0) {
+            return BillingRunMeteringResult.empty();
+        }
+        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
+        String billingType = billingTypeFor(edition);
+        boolean chargeCredits = chargesCredits(billingType);
+        Instant occurredAt = input.endedAt() == null ? Instant.now().truncatedTo(ChronoUnit.SECONDS) : input.endedAt().truncatedTo(ChronoUnit.SECONDS);
+        BigDecimal quantity = new BigDecimal(Math.max(0, input.chunkCount()));
+        BigDecimal credits = chargeCredits
+                ? KB_INDEXING_CREDITS_PER_CHUNK.multiply(quantity).setScale(2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+        UsageMeterEventEntity event = new UsageMeterEventEntity(
+                input.orgId(),
+                input.userId(),
+                input.agentId(),
+                "kb_indexing",
+                "kb_indexing_credit",
+                "知识库索引 Credits",
+                quantity,
+                "chunk",
+                credits,
+                billingType,
+                "kb-indexing",
+                input.sourceId(),
+                occurredAt,
+                writeJson(mapOf(
+                        "officialPricingItem", "Credits 包",
+                        "knowledgeBaseId", input.knowledgeBaseId(),
+                        "documentId", input.documentId(),
+                        "documentName", input.documentName(),
+                        "documentBytes", Math.max(0L, input.documentBytes()),
+                        "indexVersion", Math.max(0, input.indexVersion()),
+                        "operation", input.operation(),
+                        "creditsPerChunk", KB_INDEXING_CREDITS_PER_CHUNK)));
+        return recordSingleEvent(subscription, event, chargeCredits);
+    }
+
+    public void recordKbIndexingSafely(KbIndexingMeteringInput input) {
+        try {
+            recordKbIndexing(input);
+        } catch (RuntimeException ignored) {
+            // Runtime billing must never break knowledge indexing.
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public BillingRunMeteringResult recordWorkflowRun(WorkflowRunMeteringInput input) {
+        if (input == null || blank(input.orgId()) || blank(input.sourceId())) {
+            return BillingRunMeteringResult.empty();
+        }
+        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
+        String billingType = billingTypeFor(edition);
+        boolean chargeCredits = chargesCredits(billingType);
+        Instant occurredAt = input.endedAt() == null ? Instant.now().truncatedTo(ChronoUnit.SECONDS) : input.endedAt().truncatedTo(ChronoUnit.SECONDS);
+        UsageMeterEventEntity event = new UsageMeterEventEntity(
+                input.orgId(),
+                input.userId(),
+                input.agentId(),
+                "workflow_run",
+                "workflow_credit",
+                "工作流运行 Credits",
+                BigDecimal.ONE,
+                "run",
+                chargeCredits ? WORKFLOW_RUN_CREDITS : BigDecimal.ZERO,
+                billingType,
+                blank(input.sourceType()) ? "workflow-run" : input.sourceType(),
+                input.sourceId(),
+                occurredAt,
+                writeJson(mapOf(
+                        "officialPricingItem", "Credits 包",
+                        "workflowKind", input.workflowKind(),
+                        "executionId", input.executionId(),
+                        "routineKey", input.routineKey(),
+                        "triggerSource", input.triggerSource(),
+                        "elapsedMs", Math.max(0, input.elapsedMs()),
+                        "creditsPerRun", WORKFLOW_RUN_CREDITS)));
+        return recordSingleEvent(subscription, event, chargeCredits);
+    }
+
+    public void recordWorkflowRunSafely(WorkflowRunMeteringInput input) {
+        try {
+            recordWorkflowRun(input);
+        } catch (RuntimeException ignored) {
+            // Runtime billing must never break workflow execution.
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public BillingRunMeteringResult recordMeetingMinutesRun(MeetingMinutesMeteringInput input) {
+        if (input == null || blank(input.orgId()) || blank(input.sessionId())) {
+            return BillingRunMeteringResult.empty();
+        }
+        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
+        boolean billableRun = input.billable();
+        String billingType = billableRun ? billingTypeFor(edition) : "non_billable";
+        boolean chargeCredits = billableRun && chargesCredits(billingType);
+        Instant occurredAt = input.endedAt() == null ? Instant.now().truncatedTo(ChronoUnit.SECONDS) : input.endedAt().truncatedTo(ChronoUnit.SECONDS);
+        BigDecimal modelCredits = chargeCredits
+                ? modelCredits(input.promptTokens(), input.completionTokens())
+                : BigDecimal.ZERO;
+        BigDecimal workflowCredits = chargeCredits ? WORKFLOW_RUN_CREDITS : BigDecimal.ZERO;
+        List<UsageMeterEventEntity> events = List.of(
+                meetingEvent(input, "workflow_run", "workflow_credit", "AI 听记纪要生成 Credits",
+                        BigDecimal.ONE, "run", workflowCredits, billingType,
+                        usageSourceId(input, "workflow_run"), occurredAt,
+                        mapOf("officialPricingItem", "Credits 包", "appCode", "meeting-minutes",
+                                "transcriptSegmentCount", Math.max(0, input.transcriptSegmentCount()),
+                                "summaryChars", Math.max(0, input.summaryChars()))),
+                meetingEvent(input, "model_usage", "model_token_credit", "AI 听记模型 token 工作量 Credits",
+                        new BigDecimal(Math.max(0, input.promptTokens()) + Math.max(0, input.completionTokens())),
+                        "token", modelCredits, billingType, usageSourceId(input, "model_usage"), occurredAt,
+                        mapOf("officialPricingItem", "Credits 包", "appCode", "meeting-minutes",
+                                "modelName", input.modelName(), "inputTokens", Math.max(0, input.promptTokens()),
+                                "outputTokens", Math.max(0, input.completionTokens()),
+                                "inputCreditsPer1k", MODEL_INPUT_CREDITS_PER_1K,
+                                "outputCreditsPer1k", MODEL_OUTPUT_CREDITS_PER_1K))
+        ).stream().filter(event -> event.getQuantity().compareTo(BigDecimal.ZERO) > 0
+                || event.getBillableDomain().equals("workflow_run")).toList();
+
+        BigDecimal debited = BigDecimal.ZERO;
+        int created = 0;
+        for (UsageMeterEventEntity event : events) {
+            if (usageMeterEventRepository.findBySourceTypeAndSourceId(event.getSourceType(), event.getSourceId()).isPresent()) {
+                continue;
+            }
+            UsageMeterEventEntity saved = usageMeterEventRepository.save(event);
+            created++;
+            if (chargeCredits && saved.getWorkCreditQuantity().compareTo(BigDecimal.ZERO) > 0) {
+                debited = debited.add(saved.getWorkCreditQuantity());
+                appendUsageDebit(subscription, saved);
+            }
+        }
+        refreshSubscriptionBalance(subscription);
+        return new BillingRunMeteringResult(created, debited.setScale(2, RoundingMode.HALF_UP), chargeCredits, billingType);
+    }
+
+    public void recordMeetingMinutesRunSafely(MeetingMinutesMeteringInput input) {
+        try {
+            recordMeetingMinutesRun(input);
+        } catch (RuntimeException ignored) {
+            // Runtime billing must never break meeting minutes generation.
         }
     }
 
@@ -170,6 +373,38 @@ public class BillingUsageMeteringService {
         return input.orgId() + ":" + input.sessionId() + ":" + domain;
     }
 
+    private UsageMeterEventEntity meetingEvent(MeetingMinutesMeteringInput input,
+                                               String domain,
+                                               String itemCode,
+                                               String description,
+                                               BigDecimal quantity,
+                                               String unit,
+                                               BigDecimal credits,
+                                               String billingType,
+                                               String sourceId,
+                                               Instant occurredAt,
+                                               Map<String, Object> metadata) {
+        return new UsageMeterEventEntity(
+                input.orgId(),
+                input.userId(),
+                "ai-meeting-notetaker",
+                domain,
+                itemCode,
+                description,
+                quantity,
+                unit,
+                credits.setScale(2, RoundingMode.HALF_UP),
+                billingType,
+                "meeting-minutes",
+                sourceId,
+                occurredAt,
+                writeJson(metadata));
+    }
+
+    private String usageSourceId(MeetingMinutesMeteringInput input, String domain) {
+        return input.orgId() + ":" + input.sessionId() + ":" + domain;
+    }
+
     private void appendUsageDebit(BillingSubscriptionEntity subscription, UsageMeterEventEntity event) {
         BigDecimal currentBalance = currentBalance(subscription);
         BigDecimal nextBalance = currentBalance.subtract(event.getWorkCreditQuantity()).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
@@ -183,6 +418,23 @@ public class BillingUsageMeteringService {
                 event.getOccurredAt(),
                 writeJson(Map.of("billableDomain", event.getBillableDomain(), "itemCode", event.getBillableItemCode(),
                         "billingType", event.getBillingType(), "sourceType", event.getSourceType(), "sourceId", event.getSourceId()))));
+    }
+
+    private BillingRunMeteringResult recordSingleEvent(BillingSubscriptionEntity subscription,
+                                                       UsageMeterEventEntity event,
+                                                       boolean chargeCredits) {
+        if (usageMeterEventRepository.findBySourceTypeAndSourceId(event.getSourceType(), event.getSourceId()).isPresent()) {
+            refreshSubscriptionBalance(subscription);
+            return new BillingRunMeteringResult(0, BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP), chargeCredits, event.getBillingType());
+        }
+        UsageMeterEventEntity saved = usageMeterEventRepository.save(event);
+        BigDecimal debited = BigDecimal.ZERO;
+        if (chargeCredits && saved.getWorkCreditQuantity().compareTo(BigDecimal.ZERO) > 0) {
+            debited = saved.getWorkCreditQuantity();
+            appendUsageDebit(subscription, saved);
+        }
+        refreshSubscriptionBalance(subscription);
+        return new BillingRunMeteringResult(1, debited.setScale(2, RoundingMode.HALF_UP), chargeCredits, event.getBillingType());
     }
 
     BillingSubscriptionEntity ensureBillingState(String orgId) {
@@ -270,6 +522,10 @@ public class BillingUsageMeteringService {
         }
         int inputTokens = modelCalls.stream().mapToInt(AgentRunTraceService.ModelCallTraceInput::inputTokens).sum();
         int outputTokens = modelCalls.stream().mapToInt(AgentRunTraceService.ModelCallTraceInput::outputTokens).sum();
+        return modelCredits(inputTokens, outputTokens);
+    }
+
+    private BigDecimal modelCredits(int inputTokens, int outputTokens) {
         BigDecimal inputCredits = new BigDecimal(inputTokens).multiply(MODEL_INPUT_CREDITS_PER_1K).divide(new BigDecimal("1000"), 4, RoundingMode.HALF_UP);
         BigDecimal outputCredits = new BigDecimal(outputTokens).multiply(MODEL_OUTPUT_CREDITS_PER_1K).divide(new BigDecimal("1000"), 4, RoundingMode.HALF_UP);
         return inputCredits.add(outputCredits).setScale(2, RoundingMode.HALF_UP);
@@ -289,6 +545,13 @@ public class BillingUsageMeteringService {
 
     private boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private String openApiSourceId(OpenApiChatMeteringInput input) {
+        String source = blank(input.idempotencyKey()) ? input.requestId() : input.idempotencyKey();
+        String fingerprint = UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8)).toString();
+        return input.orgId() + ":credential-" + Math.max(0L, input.credentialId()) + ":"
+                + (input.stream() ? "stream" : "sync") + ":" + fingerprint;
     }
 
     private Map<String, Object> mapOf(Object... pairs) {
@@ -319,6 +582,67 @@ public class BillingUsageMeteringService {
                 int workflowElapsedMs,
                 boolean billable,
                 Instant endedAt
+    ) {
+    }
+
+    public record MeetingMinutesMeteringInput(
+            String orgId,
+            String userId,
+            String sessionId,
+            String modelName,
+            int promptTokens,
+            int completionTokens,
+            int transcriptSegmentCount,
+            int summaryChars,
+            boolean billable,
+            Instant endedAt
+    ) {
+    }
+
+    public record OpenApiChatMeteringInput(
+            String orgId,
+            String userId,
+            String agentId,
+            long credentialId,
+            String requestId,
+            String idempotencyKey,
+            String externalUserId,
+            String sessionId,
+            String traceId,
+            boolean stream,
+            int elapsedMs,
+            Instant endedAt
+    ) {
+    }
+
+    public record KbIndexingMeteringInput(
+            String orgId,
+            String userId,
+            String agentId,
+            String knowledgeBaseId,
+            Long documentId,
+            String documentName,
+            long documentBytes,
+            int indexVersion,
+            int chunkCount,
+            String operation,
+            String sourceId,
+            Instant endedAt
+    ) {
+    }
+
+    public record WorkflowRunMeteringInput(
+            String orgId,
+            String userId,
+            String agentId,
+            String workflowKind,
+            Long executionId,
+            String routineKey,
+            String triggerSource,
+            int elapsedMs,
+            String sourceType,
+            String sourceId,
+            Instant endedAt
     ) {
     }
 

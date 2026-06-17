@@ -128,6 +128,12 @@ function detailLabel(detail: string): string {
   }
 }
 
+function auditErrorLabel(message: string): string {
+  if (!message) return "平台审计加载失败，请稍后重试。";
+  if (/unexpected server error/i.test(message)) return "平台审计加载失败，请稍后重试。";
+  return message;
+}
+
 export default function PlatformAuditPage() {
   const token = readToken();
   const [rows, setRows] = useState<PlatformAuditRow[]>([]);
@@ -164,7 +170,7 @@ export default function PlatformAuditPage() {
     } catch (err) {
       setRows([]);
       setHasMore(false);
-      setError(err instanceof Error ? err.message : "平台审计加载失败");
+      setError(auditErrorLabel(err instanceof Error ? err.message : ""));
     } finally {
       setLoading(false);
     }
@@ -215,7 +221,7 @@ export default function PlatformAuditPage() {
           placeholder="资源类型"
           aria-label="按资源类型筛选平台审计"
         />
-        <button type="button" className="cici-monitor__refresh" onClick={() => void loadRows()}>
+        <button type="button" className="platform-button platform-button--secondary" onClick={() => void loadRows()}>
           查询
         </button>
       </section>

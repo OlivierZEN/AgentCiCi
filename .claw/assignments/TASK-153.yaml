@@ -1,0 +1,60 @@
+task_id: TASK-153
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-17T21:30:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-062-platform-model-provider-governance.md
+task_status_path: .claw/tasks/TASK-153.md
+branch: codex/TASK-152-ai-minutes-billing-timeout
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/model/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/**
+  - backend/src/test/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/model/**
+  - backend/src/test/java/com/codehouse/ciciassistant/management/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/test/java/com/codehouse/ciciassistant/tool/**
+  - frontend/src/**
+  - frontend/public/provider-logos/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-153.md
+  - docs/specs/FEAT-062-platform-model-provider-governance.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-062-platform-model-provider-governance.md
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "Move Tavily search and Iflytek realtime ASR integration configuration from organization admin to platform operations control."
+  - "Keep organization-owned integrations such as CloudCC CRM and Feishu bot in the organization admin surface."
+  - "Add OneKeyToken as a platform model provider option using the OpenAI-compatible Chat Completions endpoint and model catalog defaults from the provided developer guide."
+  - "Do not add database migrations unless existing storage cannot support the feature."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-17T21:29:33+08:00; user requested platform-governed Tavily/Iflytek configuration and OneKeyToken model-provider option."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created platform governance task. No private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py on branch codex/TASK-152-ai-minutes-billing-timeout before implementation edits."

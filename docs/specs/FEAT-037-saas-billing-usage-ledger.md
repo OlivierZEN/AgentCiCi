@@ -48,6 +48,10 @@ updated_by: MANAGER-001
 
 本次完成真实运行时计费闭环，组织管理员账单不再依赖演示用量 seed。`ChatOrchestratorService` 在同步和流式聊天路径完成运行后调用 `BillingUsageMeteringService`，把同一次用户聊天拆成可审计的 usage meter events，并按 SaaS 计费策略写入 append-only credits ledger。计费写入失败不得打断用户对话；错误只影响计费事件补偿，不影响聊天响应。
 
+2026-06-17 补充：`TASK-152` 将嵌入式 `AI 听记` 纪要生成纳入同一计费闭环。`MeetingEmbedRuntimeService.summarize()` 在纪要生成成功后调用 `BillingUsageMeteringService.recordMeetingMinutesRunSafely()`，以 `meeting-minutes` 作为 `source_type`，以 `orgId:sessionId:domain` 作为幂等 source id，写入 `workflow_run/workflow_credit` 和有真实 token 时的 `model_usage/model_token_credit`。计费失败不得打断纪要生成；模型配置错误、空响应或模型失败结果按 `non_billable` 处理。
+
+2026-06-18 补充：`TASK-154` 负责完成用户端和管理端 runtime 功能的 Credits 生产就绪扫尾。已确认聊天同步/流式路径通过 `ChatOrchestratorService` 覆盖 `assistant_chat`、`model_usage`、`rag_retrieval`、`tool_call` 和 `workflow_run`；AI 听记通过 `meeting-minutes` 覆盖纪要生成。剩余首批生产缺口是 Open API chat 请求维度、知识库索引维度和个人 workflow 独立执行维度：Open API 成功请求必须以 `open_api_chat` 记录请求级 Credits，按 `credentialId:requestId|idempotencyKey:stream|sync` 幂等；知识库文档发布、重建索引和手工 chunk 索引必须以 `kb_indexing` 记录成功索引的 chunk/文档工作量；个人 workflow 手动或定时成功执行必须以 `workflow_run` 记录一次运行 Credits。失败、取消、鉴权拒绝、模型无可用结果、占位调度和幂等回放不得重复扣减。
+
 运行时首批扣费项目：
 
 | 计费域 | item code | 官网报价条目 | 首版费率 | 说明 |

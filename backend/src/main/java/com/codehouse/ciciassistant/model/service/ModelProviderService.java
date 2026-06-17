@@ -33,10 +33,12 @@ public class ModelProviderService {
     public static final String PROVIDER_ANTHROPIC = "anthropic";
     public static final String PROVIDER_OPENAI = "openai";
     public static final String PROVIDER_DEEPSEEK = "deepseek";
+    public static final String PROVIDER_ONEKEYTOKEN = "onekeytoken";
 
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
     private static final String FETCH_OLLAMA = "ollama";
     private static final String FETCH_ANTHROPIC = "anthropic";
+    private static final String FETCH_STATIC_CATALOG = "static-catalog";
     private static final List<SceneRouteDef> SCENE_ROUTES = List.of(
             new SceneRouteDef("chat", "智能体对话", "员工工作台、渠道消息和 OpenAPI chat 默认模型。"),
             new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。"),
@@ -113,6 +115,16 @@ public class ModelProviderService {
                     FETCH_OPENAI_STYLE,
                     true,
                     List.of("deepseek-chat", "deepseek-reasoner")
+            )),
+            Map.entry(PROVIDER_ONEKEYTOKEN,
+            new ProviderDef(
+                    PROVIDER_ONEKEYTOKEN,
+                    "OneKeyToken",
+                    "https://my.onekeytoken.com/v1",
+                    "https://my.onekeytoken.com",
+                    FETCH_STATIC_CATALOG,
+                    true,
+                    List.of("onekeytoken/auto", "deepseek-chat", "qwen3.5-flash")
             ))
     );
 
@@ -370,24 +382,30 @@ public class ModelProviderService {
 
     @Transactional(readOnly = true)
     public Map<String, Object> checkProvider(String orgId, String providerCode) {
+        ProviderDef def = requireDef(providerCode);
         List<String> models = fetchRemoteModels(orgId, providerCode);
         return Map.of(
                 "providerCode", providerCode,
                 "ok", true,
                 "modelCount", models.size(),
-                "sampleModels", models.stream().limit(8).toList()
+                "sampleModels", models.stream().limit(8).toList(),
+                "catalogSource", catalogSource(def),
+                "remoteFetchSupported", supportsRemoteModelFetch(def)
         );
     }
 
     @Transactional(readOnly = true)
     public Map<String, Object> fetchProviderModels(String orgId, String providerCode) {
+        ProviderDef def = requireDef(providerCode);
         List<ModelDetail> details = fetchRemoteModelDetails(orgId, providerCode);
         List<String> models = details.stream().map(ModelDetail::modelName).toList();
         return Map.of(
                 "providerCode", providerCode,
                 "count", models.size(),
                 "models", models,
-                "modelDetails", details
+                "modelDetails", details,
+                "catalogSource", catalogSource(def),
+                "remoteFetchSupported", supportsRemoteModelFetch(def)
         );
     }
 
@@ -423,8 +441,26 @@ public class ModelProviderService {
             case FETCH_OPENAI_STYLE -> fetchOpenAiCompatibleModels(entity.getApiBaseUrl(), entity.getApiKey(), def.apiKeyRequired());
             case FETCH_OLLAMA -> fetchOllamaModels(entity.getApiBaseUrl());
             case FETCH_ANTHROPIC -> fetchAnthropicModels(entity.getApiBaseUrl(), entity.getApiKey());
+            case FETCH_STATIC_CATALOG -> staticModelDetails(def.defaultModels());
             default -> throw new IllegalArgumentException("Unsupported provider fetch type: " + def.fetchKind());
         };
+    }
+
+    private List<ModelDetail> staticModelDetails(List<String> models) {
+        return models.stream()
+                .filter(name -> name != null && !name.isBlank())
+                .map(String::trim)
+                .distinct()
+                .map(name -> new ModelDetail(name, inferCapabilitiesByName(name)))
+                .toList();
+    }
+
+    private String catalogSource(ProviderDef def) {
+        return supportsRemoteModelFetch(def) ? "remote" : "static";
+    }
+
+    private boolean supportsRemoteModelFetch(ProviderDef def) {
+        return !FETCH_STATIC_CATALOG.equals(def.fetchKind());
     }
 
     private List<ModelDetail> fetchOpenAiCompatibleModels(String baseUrl, String apiKey, boolean apiKeyRequired) {
@@ -732,6 +768,7 @@ public class ModelProviderService {
                 PROVIDER_DEFS.get(PROVIDER_DEEPSEEK),
                 PROVIDER_DEFS.get(PROVIDER_OLLAMA),
                 PROVIDER_DEFS.get(PROVIDER_LMSTUDIO),
+                PROVIDER_DEFS.get(PROVIDER_ONEKEYTOKEN),
                 PROVIDER_DEFS.get(PROVIDER_ANTHROPIC),
                 PROVIDER_DEFS.get(PROVIDER_OPENAI)
         );

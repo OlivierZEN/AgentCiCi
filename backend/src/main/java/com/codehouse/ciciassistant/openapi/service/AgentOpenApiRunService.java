@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
+import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
 import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -46,6 +47,7 @@ public class AgentOpenApiRunService {
     private final AgentOpenApiRateLimitService rateLimitService;
     private final AgentOpenApiCallLogService callLogService;
     private final ChatOrchestratorService chatOrchestratorService;
+    private final BillingUsageMeteringService billingUsageMeteringService;
     private final AgentRunTraceRepository traceRepository;
     private final AgentKnowledgeBindingRepository knowledgeBindingRepository;
     private final SkillDefinitionRepository skillDefinitionRepository;
@@ -62,6 +64,7 @@ public class AgentOpenApiRunService {
                                   AgentOpenApiRateLimitService rateLimitService,
                                   AgentOpenApiCallLogService callLogService,
                                   ChatOrchestratorService chatOrchestratorService,
+                                  BillingUsageMeteringService billingUsageMeteringService,
                                   AgentRunTraceRepository traceRepository,
                                   AgentKnowledgeBindingRepository knowledgeBindingRepository,
                                   SkillDefinitionRepository skillDefinitionRepository,
@@ -77,6 +80,7 @@ public class AgentOpenApiRunService {
         this.rateLimitService = rateLimitService;
         this.callLogService = callLogService;
         this.chatOrchestratorService = chatOrchestratorService;
+        this.billingUsageMeteringService = billingUsageMeteringService;
         this.traceRepository = traceRepository;
         this.knowledgeBindingRepository = knowledgeBindingRepository;
         this.skillDefinitionRepository = skillDefinitionRepository;
@@ -114,6 +118,8 @@ public class AgentOpenApiRunService {
             int elapsedMs = elapsedMs(startedAt, Instant.now());
             callLogService.completeSuccess(auth.credential().getId(), requestId, trace == null ? "" : trace.getTraceId(), answer, elapsedMs);
             rateLimitService.markSuccess(auth, elapsedMs);
+            recordOpenApiBillingSafely(auth, session, requestId, idempotencyKey, externalUserId,
+                    trace == null ? "" : trace.getTraceId(), false, elapsedMs);
             Map<String, Object> payload = responsePayload(auth, session, requestId, chatPayload, trace, answer, elapsedMs);
             return new ChatExecution(auth, session, requestId, trace == null ? "" : trace.getTraceId(), answer, elapsedMs, payload);
         } catch (AgentOpenApiException ex) {
@@ -160,7 +166,7 @@ public class AgentOpenApiRunService {
                 requestId);
         rateLimitService.reserve(auth);
         callLogService.start(auth, session, requestId, externalUserId, idempotencyKey, command.message());
-        return new ChatStreamExecution(auth, session, requestId, externalUserId, startedAt, cloudccOverride);
+        return new ChatStreamExecution(auth, session, requestId, idempotencyKey, externalUserId, startedAt, cloudccOverride);
     }
 
     public void runChatStream(ChatStreamExecution execution,
@@ -207,6 +213,8 @@ public class AgentOpenApiRunService {
                 safeAnswer,
                 elapsedMs);
         rateLimitService.markSuccess(execution.auth(), elapsedMs);
+        recordOpenApiBillingSafely(execution.auth(), execution.session(), execution.requestId(), execution.idempotencyKey(),
+                execution.externalUserId(), trace == null ? "" : trace.getTraceId(), true, elapsedMs);
         return new StreamCompletion(trace == null ? "" : trace.getTraceId(), elapsedMs);
     }
 
@@ -246,6 +254,29 @@ public class AgentOpenApiRunService {
                 execution.auth().credential().getAgentId(),
                 command.activeSkillCode(),
                 emitter);
+    }
+
+    private void recordOpenApiBillingSafely(AgentOpenApiAuthService.AuthenticatedCredential auth,
+                                            AgentOpenApiSessionService.SessionResolution session,
+                                            String requestId,
+                                            String idempotencyKey,
+                                            String externalUserId,
+                                            String traceId,
+                                            boolean stream,
+                                            int elapsedMs) {
+        billingUsageMeteringService.recordOpenApiChatRunSafely(new BillingUsageMeteringService.OpenApiChatMeteringInput(
+                auth.credential().getOrgId(),
+                auth.credential().getRunAsUserId(),
+                auth.credential().getAgentId(),
+                auth.credential().getId() == null ? 0L : auth.credential().getId(),
+                requestId,
+                idempotencyKey,
+                externalUserId,
+                session.externalSessionId(),
+                traceId,
+                stream,
+                elapsedMs,
+                Instant.now()));
     }
 
     private Map<String, Object> invokeChatWithTimeout(AgentOpenApiAuthService.AuthenticatedCredential auth,
@@ -737,6 +768,7 @@ public class AgentOpenApiRunService {
             AgentOpenApiAuthService.AuthenticatedCredential auth,
             AgentOpenApiSessionService.SessionResolution session,
             String requestId,
+            String idempotencyKey,
             String externalUserId,
             Instant startedAt,
             CloudccAccessTokenService.CloudccSessionContext cloudccOverride

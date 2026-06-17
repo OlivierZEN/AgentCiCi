@@ -674,7 +674,7 @@ class SkillGovernanceIntegrationTest {
                 "demo-org", "user-1", toolName, "{\"keyword\":\"张三\"}", List.of(), List.of());
         assertThat(denied).contains("not active");
 
-        integrationAppService.update("demo-org", IntegrationAppService.APP_CODE_TAVILY,
+        integrationAppService.updatePlatformManaged(IntegrationAppService.APP_CODE_TAVILY,
                 true, "tavily", Map.of("apiKey", "runtime-test-key"));
         AtomicReference<String> authHeader = new AtomicReference<>("");
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);

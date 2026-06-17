@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
 import com.codehouse.ciciassistant.ai.service.RagService;
+import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerRepository;
+import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
@@ -50,6 +52,12 @@ class KnowledgeBaseLifecycleIntegrationTest {
 
     @Autowired
     private AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
+
+    @Autowired
+    private UsageMeterEventRepository usageMeterEventRepository;
+
+    @Autowired
+    private BillingCreditLedgerRepository creditLedgerRepository;
 
     @Test
     void shouldDeleteDocumentChunksAndVectorsAndStopRag() {
@@ -113,6 +121,41 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 .extracting(RagService.RetrievedSource::documentName)
                 .contains("policy.txt");
         assertThat(detailed.timingsMs()).containsKey("total");
+    }
+
+    @Test
+    void shouldRecordCreditsForDocumentAndManualChunkIndexing() {
+        String orgId = "kb-billing-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Billing KB", "test");
+        Long kbId = ((Number) kb.get("id")).longValue();
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "billing.txt",
+                "text/plain",
+                "credits billing policy document".getBytes(StandardCharsets.UTF_8));
+
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Long documentId = ((Number) document.get("id")).longValue();
+        knowledgeBaseService.publishDocument(orgId, documentId);
+        knowledgeBaseService.reindexDocument(orgId, documentId);
+        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "manual billing chunk", "");
+
+        var indexingEvents = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(orgId).stream()
+                .filter(item -> "kb_indexing".equals(item.getBillableDomain()))
+                .toList();
+        assertThat(indexingEvents).hasSize(3);
+        assertThat(indexingEvents)
+                .extracting(item -> item.getBillableItemCode())
+                .containsOnly("kb_indexing_credit");
+        assertThat(indexingEvents)
+                .allSatisfy(event -> {
+                    assertThat(event.getWorkCreditQuantity()).isEqualByComparingTo("0.20");
+                    assertThat(event.getBillingType()).isEqualTo("platform_paid");
+                    assertThat(event.getMetadataJson()).contains("\"officialPricingItem\":\"Credits 包\"");
+                });
+        assertThat(creditLedgerRepository.findByOrgIdOrderByIdAsc(orgId).stream()
+                .filter(entry -> "usage_debit".equals(entry.getEntryType()))
+                .toList()).hasSize(3);
     }
 
     @Test

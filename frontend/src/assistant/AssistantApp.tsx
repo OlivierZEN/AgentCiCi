@@ -2820,8 +2820,8 @@ export default function AssistantApp() {
 
     await startAsrSession({
       token: auth.token,
-      provider: "iflytek",
-      speakerDiarization: true,
+      provider: "aliyun",
+      speakerDiarization: false,
       getPrefix: () => "",
       onLiveText: () => {},
       onNotice: (message) => {

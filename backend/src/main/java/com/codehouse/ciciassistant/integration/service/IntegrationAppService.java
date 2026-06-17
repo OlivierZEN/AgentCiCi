@@ -1,6 +1,8 @@
 package com.codehouse.ciciassistant.integration.service;
 
+import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
 import com.codehouse.ciciassistant.common.crypto.SecretCipherService;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.feishu.service.FeishuBotClientManager;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppEntity;
 import com.codehouse.ciciassistant.integration.domain.IntegrationAppRepository;
@@ -12,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,35 +30,77 @@ public class IntegrationAppService {
     /** Displayed to the frontend when an encrypted apiKey exists. The frontend never receives the ciphertext. */
     public static final String API_KEY_MASK = "tvly-****";
     public static final String IFLYTEK_SECRET_MASK = "iflytek-****";
+    public static final String PLATFORM_MANAGED_MESSAGE = "Tavily 搜索和讯飞实时转写由运营平台统一配置，组织后台不可修改。";
 
     private static final String DEFAULT_IFLYTEK_REALTIME_URL = "wss://office-api-ast-dx.iflyaisol.com/ast/communicate/v1";
     private static final Map<String, BuiltinAppDef> BUILTIN_APPS = builtinApps();
+    private static final Set<String> PLATFORM_MANAGED_APP_CODES = Set.of(APP_CODE_TAVILY, APP_CODE_IFLYTEK_ASR);
 
     private final IntegrationAppRepository repository;
     private final ObjectMapper objectMapper;
     private final ObjectProvider<FeishuBotClientManager> feishuBotClientManagerProvider;
     private final SecretCipherService secretCipherService;
+    private final PlatformAccountProperties platformAccountProperties;
 
     public IntegrationAppService(IntegrationAppRepository repository,
                                  ObjectMapper objectMapper,
                                  ObjectProvider<FeishuBotClientManager> feishuBotClientManagerProvider,
-                                 SecretCipherService secretCipherService) {
+                                 SecretCipherService secretCipherService,
+                                 PlatformAccountProperties platformAccountProperties) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.feishuBotClientManagerProvider = feishuBotClientManagerProvider;
         this.secretCipherService = secretCipherService;
+        this.platformAccountProperties = platformAccountProperties;
     }
 
     @Transactional
     public List<Map<String, Object>> list(String orgId) {
         ensureBuiltinRows(orgId);
         return repository.findByOrgIdOrderByIdAsc(orgId).stream()
+                .filter(entity -> !isPlatformManagedApp(entity.getAppCode()))
+                .map(this::toView)
+                .toList();
+    }
+
+    @Transactional
+    public List<Map<String, Object>> listPlatformManaged() {
+        String scopeId = platformScopeId();
+        ensurePlatformManagedRows(scopeId);
+        return repository.findByOrgIdOrderByIdAsc(scopeId).stream()
+                .filter(entity -> isPlatformManagedApp(entity.getAppCode()))
                 .map(this::toView)
                 .toList();
     }
 
     @Transactional
     public Map<String, Object> update(
+            String orgId,
+            String appCode,
+            boolean enabled,
+            String description,
+            Map<String, Object> config) {
+        if (isPlatformManagedApp(appCode)) {
+            throw new ForbiddenException(PLATFORM_MANAGED_MESSAGE);
+        }
+        return updateInternal(orgId, appCode, enabled, description, config);
+    }
+
+    @Transactional
+    public Map<String, Object> updatePlatformManaged(
+            String appCode,
+            boolean enabled,
+            String description,
+            Map<String, Object> config) {
+        if (!isPlatformManagedApp(appCode)) {
+            throw new IllegalArgumentException("非平台托管集成应用不可在运营端配置: " + appCode);
+        }
+        String scopeId = platformScopeId();
+        ensurePlatformManagedRows(scopeId);
+        return updateInternal(scopeId, appCode, enabled, description, config);
+    }
+
+    private Map<String, Object> updateInternal(
             String orgId,
             String appCode,
             boolean enabled,
@@ -97,14 +142,18 @@ public class IntegrationAppService {
      * secret envelopes.
      */
     public Optional<Map<String, Object>> findRawConfig(String orgId, String appCode) {
-        return repository.findByOrgIdAndAppCode(orgId, appCode)
+        return repository.findByOrgIdAndAppCode(configScopeId(orgId, appCode), appCode)
                 .filter(IntegrationAppEntity::isEnabled)
                 .map(e -> readJsonToMap(e.getConfigJson()));
     }
 
     public Optional<Boolean> isEnabled(String orgId, String appCode) {
-        return repository.findByOrgIdAndAppCode(orgId, appCode)
+        return repository.findByOrgIdAndAppCode(configScopeId(orgId, appCode), appCode)
                 .map(IntegrationAppEntity::isEnabled);
+    }
+
+    public boolean isPlatformManagedApp(String appCode) {
+        return PLATFORM_MANAGED_APP_CODES.contains(appCode);
     }
 
     /**
@@ -161,6 +210,32 @@ public class IntegrationAppService {
                 ));
             }
         }
+    }
+
+    private void ensurePlatformManagedRows(String orgId) {
+        for (String appCode : PLATFORM_MANAGED_APP_CODES) {
+            BuiltinAppDef def = BUILTIN_APPS.get(appCode);
+            boolean exists = repository.findByOrgIdAndAppCode(orgId, def.appCode()).isPresent();
+            if (!exists) {
+                repository.save(new IntegrationAppEntity(
+                        orgId,
+                        def.appCode(),
+                        def.appName(),
+                        def.description(),
+                        def.defaultEnabled(),
+                        "{}"
+                ));
+            }
+        }
+    }
+
+    private String configScopeId(String orgId, String appCode) {
+        return isPlatformManagedApp(appCode) ? platformScopeId() : orgId;
+    }
+
+    private String platformScopeId() {
+        String configured = platformAccountProperties.getGovernanceOrgId();
+        return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
     private Map<String, Object> toView(IntegrationAppEntity e) {
