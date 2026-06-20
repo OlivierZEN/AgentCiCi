@@ -70,7 +70,10 @@ public class PlatformTenantLifecycleService {
                     "kb_eval_suite",
                     "kb_eval_case",
                     "kb_eval_run",
-                    "kb_eval_case_result"
+                    "kb_eval_case_result",
+                    "kb_data_source",
+                    "kb_sync_job",
+                    "kb_source_document_map"
             )),
             new DomainGroup("agents", "Agent、工作流、发布与调度", List.of(
                     "agent_definition",
@@ -175,6 +178,9 @@ public class PlatformTenantLifecycleService {
             "skill_authoring_session",
             "skill_version",
             "skill_definition",
+            "kb_source_document_map",
+            "kb_sync_job",
+            "kb_data_source",
             "kb_eval_case_result",
             "kb_eval_run",
             "kb_eval_case",

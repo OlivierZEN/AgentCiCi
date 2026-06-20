@@ -5,6 +5,8 @@ import com.codehouse.ciciassistant.ai.service.RagService;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.kb.domain.KbChunkEntity;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
+import com.codehouse.ciciassistant.kb.domain.KbDataSourceEntity;
+import com.codehouse.ciciassistant.kb.domain.KbDataSourceRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataEntity;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentEntity;
@@ -21,6 +23,10 @@ import com.codehouse.ciciassistant.kb.domain.KbMetadataFieldEntity;
 import com.codehouse.ciciassistant.kb.domain.KbMetadataFieldRepository;
 import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogEntity;
 import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogRepository;
+import com.codehouse.ciciassistant.kb.domain.KbSourceDocumentMapEntity;
+import com.codehouse.ciciassistant.kb.domain.KbSourceDocumentMapRepository;
+import com.codehouse.ciciassistant.kb.domain.KbSyncJobEntity;
+import com.codehouse.ciciassistant.kb.domain.KbSyncJobRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -29,6 +35,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -79,6 +89,9 @@ public class KnowledgeBaseService {
     private final KbEvalCaseRepository evalCaseRepository;
     private final KbEvalRunRepository evalRunRepository;
     private final KbEvalCaseResultRepository evalCaseResultRepository;
+    private final KbDataSourceRepository dataSourceRepository;
+    private final KbSyncJobRepository syncJobRepository;
+    private final KbSourceDocumentMapRepository sourceDocumentMapRepository;
     private final AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
     private final ModelProviderService modelProviderService;
     private final BillingUsageMeteringService billingUsageMeteringService;
@@ -96,6 +109,7 @@ public class KnowledgeBaseService {
     private final Set<String> allowedUploadExtensions;
     private final Set<String> allowedUploadContentTypes;
     private final Path storageRoot;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public KnowledgeBaseService(KnowledgeBaseRepository kbRepository,
                                 KbDocumentRepository documentRepository,
@@ -107,6 +121,9 @@ public class KnowledgeBaseService {
                                 KbEvalCaseRepository evalCaseRepository,
                                 KbEvalRunRepository evalRunRepository,
                                 KbEvalCaseResultRepository evalCaseResultRepository,
+                                KbDataSourceRepository dataSourceRepository,
+                                KbSyncJobRepository syncJobRepository,
+                                KbSourceDocumentMapRepository sourceDocumentMapRepository,
                                 AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
                                 ModelProviderService modelProviderService,
                                 BillingUsageMeteringService billingUsageMeteringService,
@@ -134,6 +151,9 @@ public class KnowledgeBaseService {
         this.evalCaseRepository = evalCaseRepository;
         this.evalRunRepository = evalRunRepository;
         this.evalCaseResultRepository = evalCaseResultRepository;
+        this.dataSourceRepository = dataSourceRepository;
+        this.syncJobRepository = syncJobRepository;
+        this.sourceDocumentMapRepository = sourceDocumentMapRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
         this.modelProviderService = modelProviderService;
         this.billingUsageMeteringService = billingUsageMeteringService;
@@ -229,9 +249,9 @@ public class KnowledgeBaseService {
         payload.put("sourceTypes", List.of(
                 Map.of("code", "LOCAL_FILE", "status", "available"),
                 Map.of("code", "EMPTY", "status", "available_via_manual_chunks"),
-                Map.of("code", "WEB", "status", "planned"),
-                Map.of("code", "NOTION", "status", "planned"),
-                Map.of("code", "EXTERNAL_API", "status", "planned")
+                Map.of("code", "WEB", "status", "available"),
+                Map.of("code", "NOTION", "status", "contract_only"),
+                Map.of("code", "EXTERNAL_API", "status", "available")
         ));
         payload.put("serviceApi", Map.of(
                 "status", "planned",
@@ -279,6 +299,70 @@ public class KnowledgeBaseService {
         } catch (IOException ex) {
             throw new IllegalArgumentException("Failed to store file: " + ex.getMessage());
         }
+    }
+
+    @Transactional
+    public Map<String, Object> createDataSource(String orgId, Long kbId, DataSourceCommand command) {
+        requireKnowledgeBase(orgId, kbId);
+        String sourceType = normalizeSourceType(command.sourceType());
+        String name = requireText(command.name(), "Data source name is required");
+        KbDataSourceEntity created = dataSourceRepository.save(new KbDataSourceEntity(
+                orgId,
+                kbId,
+                sourceType,
+                name.length() > 160 ? name.substring(0, 160) : name,
+                toJson(command.config())));
+        return dataSourcePayload(created);
+    }
+
+    public List<Map<String, Object>> listDataSources(String orgId, Long kbId) {
+        requireKnowledgeBase(orgId, kbId);
+        return dataSourceRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(orgId, kbId)
+                .stream()
+                .map(this::dataSourcePayload)
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> syncDataSource(String orgId, Long dataSourceId, String triggerType) {
+        KbDataSourceEntity source = dataSourceRepository.findByIdAndOrgId(dataSourceId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Data source not found"));
+        KbSyncJobEntity job = syncJobRepository.save(new KbSyncJobEntity(
+                orgId,
+                source.getKnowledgeBaseId(),
+                source.getId(),
+                triggerType,
+                source.getSyncCursor()));
+        try {
+            SyncedDocument synced = resolveSyncedDocument(source);
+            KbDocumentEntity document = upsertSyncedDocument(source, synced);
+            Map<String, Object> published = publishDocument(orgId, document.getId());
+            if (!"PUBLISHED".equals(published.get("status"))) {
+                throw new IllegalStateException("Synced document indexing failed: " + published.getOrDefault("errorMessage", ""));
+            }
+            int chunkCount = ((Number) published.getOrDefault("chunkCount", 0)).intValue();
+            String cursor = sha256(synced.externalDocumentId() + ":" + synced.contentHash());
+            source.markSynced(cursor);
+            dataSourceRepository.save(source);
+            job.markSuccess(cursor, 1, chunkCount);
+            syncJobRepository.save(job);
+            return syncJobPayload(job);
+        } catch (Exception ex) {
+            source.markError(ex.getMessage());
+            dataSourceRepository.save(source);
+            job.markFailed(ex.getMessage());
+            syncJobRepository.save(job);
+            return syncJobPayload(job);
+        }
+    }
+
+    public List<Map<String, Object>> listSyncJobs(String orgId, Long dataSourceId) {
+        KbDataSourceEntity source = dataSourceRepository.findByIdAndOrgId(dataSourceId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Data source not found"));
+        return syncJobRepository.findTop20ByOrgIdAndDataSourceIdOrderByIdDesc(orgId, source.getId())
+                .stream()
+                .map(this::syncJobPayload)
+                .toList();
     }
 
     public List<Map<String, Object>> listDocuments(String orgId, Long kbId) {
@@ -1403,6 +1487,166 @@ public class KnowledgeBaseService {
         }
     }
 
+    private SyncedDocument resolveSyncedDocument(KbDataSourceEntity source) throws IOException, InterruptedException {
+        Map<String, Object> config = parseObjectJson(source.getConfigJson());
+        if ("NOTION".equals(source.getSourceType())) {
+            throw new IllegalArgumentException("NOTION provider contract is registered but sync is not enabled in this build.");
+        }
+        String externalId = stringValue(config, "externalId");
+        String url = stringValue(config, "url");
+        if (externalId == null) {
+            externalId = url == null ? "default" : url;
+        }
+        String title = stringValue(config, "title");
+        if (title == null) {
+            title = source.getName() + ".txt";
+        }
+        String content = stringValue(config, "content");
+        if (content == null && url != null) {
+            content = fetchSourceUrl(url);
+            if ("WEB".equals(source.getSourceType())) {
+                content = stripHtml(content);
+            }
+        }
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("Data source sync content is empty. Provide config.content or config.url.");
+        }
+        String normalized = content.replace('\u0000', ' ').trim();
+        return new SyncedDocument(externalId, title, normalized, sha256(normalized));
+    }
+
+    private KbDocumentEntity upsertSyncedDocument(KbDataSourceEntity source, SyncedDocument synced) throws IOException {
+        KbSourceDocumentMapEntity mapping = sourceDocumentMapRepository
+                .findByOrgIdAndDataSourceIdAndExternalDocumentId(source.getOrgId(), source.getId(), synced.externalDocumentId())
+                .orElse(null);
+        KbDocumentEntity existing = mapping == null
+                ? null
+                : documentRepository.findByIdAndOrgId(mapping.getDocumentId(), source.getOrgId()).orElse(null);
+        String safeTitle = sanitizeOriginalFilename(synced.title().endsWith(".txt") ? synced.title() : synced.title() + ".txt");
+        KbDocumentEntity document;
+        if (existing == null) {
+            Files.createDirectories(storageRoot.resolve(source.getOrgId()).resolve(String.valueOf(source.getKnowledgeBaseId())));
+            Path path = storageRoot.resolve(source.getOrgId()).resolve(String.valueOf(source.getKnowledgeBaseId()))
+                    .resolve(UUID.randomUUID() + "-" + safeTitle);
+            Files.writeString(path, synced.content(), StandardCharsets.UTF_8);
+            document = documentRepository.save(new KbDocumentEntity(
+                    source.getOrgId(),
+                    source.getKnowledgeBaseId(),
+                    safeTitle,
+                    "text/plain",
+                    path.toString(),
+                    (long) synced.content().getBytes(StandardCharsets.UTF_8).length));
+        } else {
+            Files.writeString(Path.of(existing.getStoragePath()), synced.content(), StandardCharsets.UTF_8);
+            existing.rename(safeTitle);
+            existing.setStatus("UPLOADED");
+            document = documentRepository.save(existing);
+        }
+        if (mapping == null) {
+            sourceDocumentMapRepository.save(new KbSourceDocumentMapEntity(
+                    source.getOrgId(),
+                    source.getKnowledgeBaseId(),
+                    source.getId(),
+                    synced.externalDocumentId(),
+                    document.getId(),
+                    synced.contentHash()));
+        } else {
+            mapping.update(document.getId(), synced.contentHash());
+            sourceDocumentMapRepository.save(mapping);
+        }
+        return document;
+    }
+
+    private String fetchSourceUrl(String url) throws IOException, InterruptedException {
+        URI uri = URI.create(url);
+        if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("Data source url must use http or https");
+        }
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(java.time.Duration.ofSeconds(15))
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalArgumentException("Data source url returned HTTP " + response.statusCode());
+        }
+        return response.body();
+    }
+
+    private String stripHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("(?is)<script.*?</script>", " ")
+                .replaceAll("(?is)<style.*?</style>", " ")
+                .replaceAll("(?s)<[^>]+>", " ")
+                .replaceAll("&nbsp;", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseObjectJson(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json, Map.class);
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
+
+    private String stringValue(Map<String, Object> map, String key) {
+        Object value = map == null ? null : map.get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isBlank() ? null : text;
+    }
+
+    private Map<String, Object> dataSourcePayload(KbDataSourceEntity source) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", source.getId());
+        row.put("knowledgeBaseId", source.getKnowledgeBaseId());
+        row.put("sourceType", source.getSourceType());
+        row.put("name", source.getName());
+        row.put("status", source.getStatus());
+        row.put("syncCursor", source.getSyncCursor() == null ? "" : source.getSyncCursor());
+        row.put("lastSyncedAt", source.getLastSyncedAt() == null ? "" : source.getLastSyncedAt().toString());
+        row.put("errorMessage", source.getErrorMessage() == null ? "" : source.getErrorMessage());
+        row.put("config", parseObjectJson(source.getConfigJson()));
+        row.put("createdAt", source.getCreatedAt().toString());
+        row.put("updatedAt", source.getUpdatedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> syncJobPayload(KbSyncJobEntity job) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", job.getId());
+        row.put("knowledgeBaseId", job.getKnowledgeBaseId());
+        row.put("dataSourceId", job.getDataSourceId());
+        row.put("triggerType", job.getTriggerType());
+        row.put("status", job.getStatus());
+        row.put("syncCursorBefore", job.getSyncCursorBefore() == null ? "" : job.getSyncCursorBefore());
+        row.put("syncCursorAfter", job.getSyncCursorAfter() == null ? "" : job.getSyncCursorAfter());
+        row.put("documentCount", job.getDocumentCount());
+        row.put("chunkCount", job.getChunkCount());
+        row.put("errorMessage", job.getErrorMessage() == null ? "" : job.getErrorMessage());
+        row.put("startedAt", job.getStartedAt().toString());
+        row.put("finishedAt", job.getFinishedAt() == null ? "" : job.getFinishedAt().toString());
+        return row;
+    }
+
+    private String normalizeSourceType(String value) {
+        String normalized = value == null || value.isBlank() ? "" : value.trim().toUpperCase();
+        if (Set.of("LOCAL_FILE", "EMPTY", "WEB", "NOTION", "EXTERNAL_API").contains(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("Unsupported data source type: " + value);
+    }
+
     private EvalCaseOutcome evaluateCase(String orgId, Long kbId, KbEvalCaseEntity evalCase) {
         Map<String, String> filters = parseMetadataFiltersJson(evalCase.getMetadataFiltersJson());
         RagService.RetrievalResult result = ragService.retrieveDetailed(
@@ -2194,6 +2438,13 @@ public class KnowledgeBaseService {
     ) {
     }
 
+    public record DataSourceCommand(
+            String sourceType,
+            String name,
+            Map<String, Object> config
+    ) {
+    }
+
     public record EvalSuiteCommand(
             String name,
             String description
@@ -2228,6 +2479,9 @@ public class KnowledgeBaseService {
             Long matchedChunkId,
             Map<String, Object> summary
     ) {
+    }
+
+    private record SyncedDocument(String externalDocumentId, String title, String content, String contentHash) {
     }
 
     private record UploadAdmission(String originalFilename, String safeFilename, String contentType) {

@@ -357,6 +357,34 @@ class KnowledgeBaseLifecycleIntegrationTest {
     }
 
     @Test
+    void shouldSyncExternalApiDataSourceIntoPublishedDocument() {
+        String orgId = "kb-sync-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Sync KB", "test");
+        Long kbId = ((Number) kb.get("id")).longValue();
+
+        Map<String, Object> source = knowledgeBaseService.createDataSource(
+                orgId,
+                kbId,
+                new KnowledgeBaseService.DataSourceCommand(
+                        "EXTERNAL_API",
+                        "Policy Feed",
+                        Map.of(
+                                "externalId", "policy-feed-1",
+                                "title", "policy-feed",
+                                "content", "connector sync lambda policy")));
+        Long sourceId = ((Number) source.get("id")).longValue();
+
+        Map<String, Object> job = knowledgeBaseService.syncDataSource(orgId, sourceId, "MANUAL");
+        List<Map<String, Object>> jobs = knowledgeBaseService.listSyncJobs(orgId, sourceId);
+
+        assertThat(job).containsEntry("status", "SUCCEEDED");
+        assertThat(job).containsEntry("documentCount", 1);
+        assertThat(jobs).isNotEmpty();
+        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "lambda policy"))
+                .anyMatch(item -> item.contains("connector sync"));
+    }
+
+    @Test
     void shouldSupportChunkToggleAndMetadataFilteringInRetrievalTest() {
         Fixture fixture = createPublishedDocument("sales policy for east region only");
 

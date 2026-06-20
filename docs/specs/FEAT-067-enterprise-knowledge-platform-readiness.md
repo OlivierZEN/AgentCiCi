@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-157
 related_decisions: FEAT-008, FEAT-018, FEAT-031, FEAT-042
-updated_at: 2026-06-20T16:31:34Z
+updated_at: 2026-06-20T16:37:00Z
 updated_by: MANAGER-001
 ---
 
@@ -222,3 +222,10 @@ Chat/Open API/trace 需透出这些字段，前端可先展示基础引用卡片
   - run 聚合输出 `hitRate`、`expectedSourceRecall`、`forbiddenSourceViolations`、`averageTopScore`、`staleSourceRate`，case result 保存 source 证据摘要。
   - 租户导出/清理清单纳入四张 eval 表，避免组织删除后残留评测数据。
   - `KnowledgeBaseLifecycleIntegrationTest` 增加召回评测 suite/case/run/results 用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 和 `git diff --check` 已通过。
+- 2026-06-20T16:37:00Z：
+  - 新增 `kb_data_source`、`kb_sync_job`、`kb_source_document_map`，建立连接器同步骨架。
+  - 新增管理端后端 API：创建/列出数据源、手动同步数据源、查看同步 job。
+  - `WEB` / `EXTERNAL_API` 首版支持 `config.content` inline 文本或 `config.url` HTTP(S) GET；WEB 响应会轻量去 HTML 标签，NOTION 暂为 `contract_only` 并返回明确失败。
+  - 同步内容写入内部 `kb_document` 并复用 `publishDocument` 索引路径，外部 `externalId` 通过 `kb_source_document_map` 关联内部文档，重复同步会更新并重建同一文档。
+  - 租户导出/清理清单纳入三张 connector 表；upload policy sourceTypes 更新为 WEB/EXTERNAL_API available、NOTION contract_only。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加 EXTERNAL_API inline content 同步后 RAG 可召回用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 和 `git diff --check` 已通过。

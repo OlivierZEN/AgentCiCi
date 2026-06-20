@@ -203,6 +203,45 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.uploadDocument(orgId, knowledgeBaseId, file));
     }
 
+    @GetMapping("/{kbId}/data-sources")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listDataSources(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listDataSources(orgId, kbId));
+    }
+
+    @PostMapping("/{kbId}/data-sources")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> createDataSource(@PathVariable Long kbId,
+                                                              @Valid @RequestBody DataSourceRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.createDataSource(
+                orgId,
+                kbId,
+                new KnowledgeBaseService.DataSourceCommand(
+                        request.sourceType(),
+                        request.name(),
+                        request.config())));
+    }
+
+    @PostMapping("/data-sources/{sourceId}/sync")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> syncDataSource(@PathVariable Long sourceId,
+                                                            @RequestBody(required = false) SyncDataSourceRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.syncDataSource(
+                orgId,
+                sourceId,
+                request == null ? "MANUAL" : request.triggerType()));
+    }
+
+    @GetMapping("/data-sources/{sourceId}/sync-jobs")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listSyncJobs(@PathVariable Long sourceId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listSyncJobs(orgId, sourceId));
+    }
+
     @PostMapping("/{kbId}/chunking/preview")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> previewChunking(@PathVariable Long kbId,
@@ -508,6 +547,18 @@ public class KnowledgeBaseController {
             Double scoreThreshold,
             String retrievalStrategy,
             Map<String, String> metadataFilters
+    ) {
+    }
+
+    public record DataSourceRequest(
+            @NotBlank String sourceType,
+            @NotBlank String name,
+            Map<String, Object> config
+    ) {
+    }
+
+    public record SyncDataSourceRequest(
+            String triggerType
     ) {
     }
 

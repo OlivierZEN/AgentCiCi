@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:31:34Z
+updated_at: 2026-06-20T16:37:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -48,6 +48,9 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `git diff --check` -> success.
 - `docker ps` -> blocked; Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` is unavailable.
 - `nc -z localhost 5432` -> `postgres-closed`; focused integration tests still cannot run locally.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 connector sync files and V65 migration -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with connector sync changes.
+- `git diff --check` -> success.
 
 ## Changed Files
 
@@ -71,6 +74,13 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalRunRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseResultEntity.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseResultRepository.java`
+- `backend/src/main/resources/db/migration/V65__kb_connector_sync.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDataSourceEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDataSourceRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSyncJobEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSyncJobRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
@@ -87,5 +97,6 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - Drift audit/repair endpoint is implemented and compile-verified; embedding drift remains explicitly not available until chunk embedding metadata is persisted.
 - Citation trust fields are exposed in RAG source payloads and compile-verified.
 - Retrieval evaluation backend model, API, metrics, evidence persistence, and tenant purge coverage are implemented and compile-verified.
+- Connector sync backend skeleton, WEB/EXTERNAL_API minimal sync path, sync jobs, source-document mapping, and tenant purge coverage are implemented and compile-verified.
 - Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: connector sync and embedding metadata for full drift comparison.
+- Next P0: embedding metadata for full drift comparison and Agent Builder minimal evaluation gate.
