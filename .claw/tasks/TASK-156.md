@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-156
 status: in_progress
-updated_at: 2026-06-20T16:10:12Z
+updated_at: 2026-06-20T16:50:30Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -27,7 +27,7 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 ## Implementation Plan
 
 - 创建 FEAT-066 并登记任务边界。
-- 先实现后端 readiness summary 和发布 gate，再补最小 evaluation 数据模型与断言。
+- 后端 readiness summary、发布 gate 和最小 evaluation 数据模型/断言先收口。
 - 前端随后接入发布检查清单、评测入口和发布证据摘要。
 - 最后跑后端集成测试、前端 build、`git diff --check` 和桌面截图。
 
@@ -39,6 +39,13 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> blocked by local PostgreSQL connection refused on `localhost:5432`; Docker daemon was not running, so `docker compose up -d postgres` could not start the dependency.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile.
 - `git diff --check` -> success.
+- `dev-login.py` rerun with TASK-156 assignment scope update from V63 to V67 migration -> allowed.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-156 evaluation gate files including V67 migration, eval domain/repositories, `AgentEvaluationService`, runtime/readiness/controller, and integration test -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with minimal evaluation gate changes.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> blocked by local PostgreSQL connection refused on `localhost:5432`; Spring/Flyway could not create the test ApplicationContext.
+- `git diff --check` -> success.
+- `check-assignment.py` for TASK-156 changed files -> allowed.
 
 ## Changed Files
 
@@ -49,12 +56,25 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 - `.claw/current-status.md`
 - `.claw/test-report.md`
 - `backend/src/main/java/com/codehouse/ciciassistant/agent/api/AgentDefinitionController.java`
+- `backend/src/main/resources/db/migration/V67__agent_evaluation_gate.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalSuiteEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalSuiteRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalCaseEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalCaseRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalRunEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalRunRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalCaseResultEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentEvalCaseResultRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentEvaluationService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentDefinitionService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentProductionReadinessService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentWorkflowRuntimeService.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/agent/AgentProductionReadinessIntegrationTest.java`
 
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
 - Backend readiness gate is implemented and compile-verified; rerun focused integration test after Docker/PostgreSQL is available.
-- Next: implement minimal evaluation gate or start the KB P0 parser/ACL/drift track, depending on integration environment availability.
+- Minimal evaluation gate backend is implemented and compile-verified: suites, cases, runs, results, deterministic assertions, candidate-version evaluation runtime marker, readiness summary, and publish-time blocking.
+- Focused integration test contains coverage for P0 evaluation failure blocking publish but cannot execute until PostgreSQL is available.
+- Next: finish Agent Builder frontend readiness/evaluation/publish evidence UX, then rerun backend integration and authenticated desktop validation.

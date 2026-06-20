@@ -168,6 +168,40 @@ public class AgentWorkflowRuntimeService {
         );
     }
 
+    public RuntimeExecutionResult evaluateVersionForEvaluation(String orgId, String agentId, Integer versionNo, String input) {
+        AgentWorkflowVersionEntity targetVersion = agentWorkflowVersionRepository
+                .findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+                .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
+        AgentCapabilityResolverService.AgentCapabilityResolution capability =
+                capabilityResolverService.resolve(orgId, agentId, List.of());
+        RuntimeResolution runtimeResolution = resolveRuntimeResolution(orgId, capability, targetVersion);
+        PlatformGovernanceService.RuntimePolicyBundle policyBundle =
+                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+        ExecutionResult executionResult = executeWorkflow(
+                targetVersion,
+                input,
+                runtimeResolution.effectiveToolNames(),
+                policyBundle
+        );
+        executionResult.contextSnapshot().put("runMode", "EVALUATION");
+        executionResult.contextSnapshot().put("evaluationVersionNo", targetVersion.getVersionNo());
+        executionResult.trace().add(0, "run-mode:evaluation");
+        return new RuntimeExecutionResult(
+                executionResult.status(),
+                executionResult.output(),
+                targetVersion.getId(),
+                buildRuntimeSkillGovernanceViews(orgId, agentId, capability, targetVersion),
+                new RuntimePolicyBundleView(
+                        policyBundle.bundleCode(),
+                        policyBundle.versionNo(),
+                        policyBundle.handoffRules().size(),
+                        countPromptLines(policyBundle.promptFragment())
+                ),
+                executionResult.trace(),
+                executionResult.contextSnapshot()
+        );
+    }
+
     private List<RuntimeSkillGovernanceView> buildRuntimeSkillGovernanceViews(String orgId,
                                                                               String agentId,
                                                                               AgentCapabilityResolverService.AgentCapabilityResolution capability,
@@ -330,6 +364,7 @@ public class AgentWorkflowRuntimeService {
         String route = normalizedInput.isBlank() ? "default" : "input-based";
         contextSnapshot.put("inputRoute", route);
         contextSnapshot.put("toolScopeSize", effectiveToolNames.size());
+        contextSnapshot.put("allowedToolNames", effectiveToolNames);
         contextSnapshot.put("intent", "classified");
         contextSnapshot.put("branchHit", "default".equals(route) ? "route-default" : "route-input-based");
         contextSnapshot.put("policyBundleCode", policyBundle.bundleCode());

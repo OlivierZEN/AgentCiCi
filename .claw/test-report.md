@@ -1,23 +1,36 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:40:13Z
+updated_at: 2026-06-20T16:50:30Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:40:13Z
-last_run_status: success
+last_run_at: 2026-06-20T16:50:30Z
+last_run_status: blocked
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`
-- 范围：TASK-157 embedding metadata drift.
-- 命令：TASK-157 authorization rerun, backend test-compile, static check.
+- 状态：`blocked`
+- 范围：TASK-156 Agent Builder minimal evaluation gate.
+- 命令：TASK-156 authorization rerun, backend compile/test-compile, focused integration attempt, static check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156 Agent Builder minimal evaluation gate (2026-06-20T16:50:30Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` after updating assignment migration scope from V63 to V67 -> **allowed**.
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` covering V67 migration, Agent evaluation domain/repositories, `AgentEvaluationService`, runtime/readiness/controller, integration test, and state docs -> **allowed**.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with minimal evaluation gate changes.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **blocked**, Spring/Flyway could not connect to PostgreSQL at `localhost:5432`; test ApplicationContext failed before assertions.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-156 changed files -> **allowed**.
+  - Notes:
+    - Added Agent evaluation suites, cases, runs, results, deterministic assertions, candidate-version evaluation runtime marker, readiness summary, and publish-time blocking for P0/safety/threshold failures.
+    - `AgentProductionReadinessIntegrationTest` contains coverage for P0 evaluation failure blocking publish but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-157 embedding metadata drift (2026-06-20T16:40:13Z):
   - Commands:

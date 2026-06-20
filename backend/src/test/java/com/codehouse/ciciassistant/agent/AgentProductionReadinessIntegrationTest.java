@@ -88,6 +88,45 @@ class AgentProductionReadinessIntegrationTest {
                 .andExpect(jsonPath("$.data.readiness.summary.versionNo").value(versionNo));
     }
 
+    @Test
+    void shouldBlockPublishWhenBlockingEvaluationFails() throws Exception {
+        String token = loginToken("13800138111");
+        String agentId = "ready-eval-" + suffix();
+        createAgent(token, agentId, "Eval Agent", "[\"web\"]");
+        int versionNo = compileAgent(token, agentId, "[\"web\"]");
+        long suiteId = createEvaluationSuite(token, agentId);
+        addFailingEvaluationCase(token, agentId, suiteId);
+
+        mockMvc.perform(post("/agents/{agentId}/evaluation/suites/{suiteId}/runs", agentId, suiteId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "versionNo": %d
+                                }
+                                """.formatted(versionNo)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("FAILED"))
+                .andExpect(jsonPath("$.data.p0FailedCount").value(1));
+
+        mockMvc.perform(get("/agents/{agentId}/readiness?versionNo={versionNo}", agentId, versionNo)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.blocked").value(true))
+                .andExpect(jsonPath("$.data.summary.evaluationGate.status").value("blocked"));
+
+        mockMvc.perform(post("/agents/{agentId}/publish", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "versionNo": %d
+                                }
+                                """.formatted(versionNo)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("评测门禁未通过")));
+    }
+
     private void createAgent(String token, String agentId, String name, String channelsJson) throws Exception {
         mockMvc.perform(post("/agents")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
@@ -127,6 +166,42 @@ class AgentProductionReadinessIntegrationTest {
                 .andReturn();
         return objectMapper.readTree(result.getResponse().getContentAsString())
                 .path("data").path("draftVersionNo").asInt();
+    }
+
+    private long createEvaluationSuite(String token, String agentId) throws Exception {
+        MvcResult result = mockMvc.perform(post("/agents/{agentId}/evaluation/suites", agentId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "发布阻塞评测",
+                                  "description": "P0 用例失败时阻止发布",
+                                  "gateMode": "BLOCKING",
+                                  "minPassRate": 1.0
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.gateMode").value("BLOCKING"))
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("id").asLong();
+    }
+
+    private void addFailingEvaluationCase(String token, String agentId, long suiteId) throws Exception {
+        mockMvc.perform(post("/agents/{agentId}/evaluation/suites/{suiteId}/cases", agentId, suiteId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "输出必须包含不存在内容",
+                                  "inputText": "请执行发布前评测",
+                                  "assertionType": "OUTPUT_CONTAINS",
+                                  "expectedText": "NEVER_APPEARS_IN_RUNTIME_OUTPUT",
+                                  "priority": "P0"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.assertionType").value("OUTPUT_CONTAINS"))
+                .andExpect(jsonPath("$.data.priority").value("P0"));
     }
 
     private String loginToken(String mobile) throws Exception {

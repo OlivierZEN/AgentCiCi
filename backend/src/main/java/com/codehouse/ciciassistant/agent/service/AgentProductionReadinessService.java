@@ -41,6 +41,7 @@ public class AgentProductionReadinessService {
     private final AgentApiCredentialRepository apiCredentialRepository;
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final ModelProviderService modelProviderService;
+    private final AgentEvaluationService agentEvaluationService;
 
     public AgentProductionReadinessService(AgentDefinitionRepository agentDefinitionRepository,
                                            AgentWorkflowVersionRepository agentWorkflowVersionRepository,
@@ -50,7 +51,8 @@ public class AgentProductionReadinessService {
                                            AgentRuntimeScheduleTriggerRepository scheduleTriggerRepository,
                                            AgentApiCredentialRepository apiCredentialRepository,
                                            KnowledgeBaseRepository knowledgeBaseRepository,
-                                           ModelProviderService modelProviderService) {
+                                           ModelProviderService modelProviderService,
+                                           AgentEvaluationService agentEvaluationService) {
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
@@ -60,6 +62,7 @@ public class AgentProductionReadinessService {
         this.apiCredentialRepository = apiCredentialRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.modelProviderService = modelProviderService;
+        this.agentEvaluationService = agentEvaluationService;
     }
 
     @Transactional(readOnly = true)
@@ -104,6 +107,11 @@ public class AgentProductionReadinessService {
                 scheduleTriggerRepository.findByOrgIdAndAgentIdAndActiveTrueOrderByIdAsc(orgId, agentId);
         long activeApiKeys = activeApiKeyCount(orgId, agentId);
         checkRuntimeEntries(channels, schedules, activeApiKeys, checks);
+        AgentEvaluationService.EvaluationGateSummary evaluationGate = agentEvaluationService.latestGateSummary(
+                orgId,
+                agentId,
+                targetVersion == null ? versionNo : targetVersion.getVersionNo());
+        checkEvaluationGate(evaluationGate, checks);
 
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("versionNo", targetVersion == null ? null : targetVersion.getVersionNo());
@@ -113,6 +121,7 @@ public class AgentProductionReadinessService {
         summary.put("channelCount", channels.size());
         summary.put("scheduleCount", schedules.size());
         summary.put("activeApiKeyCount", activeApiKeys);
+        summary.put("evaluationGate", evaluationGate);
         return result(agentId, targetVersion == null ? null : targetVersion.getVersionNo(), checks, summary);
     }
 
@@ -195,6 +204,27 @@ public class AgentProductionReadinessService {
             return;
         }
         checks.add(blocker("runtime_entry", "缺少可用生产入口：请至少启用一个渠道、计划触发器或 Open API Key。"));
+    }
+
+    private void checkEvaluationGate(AgentEvaluationService.EvaluationGateSummary evaluationGate,
+                                     ArrayList<ReadinessCheck> checks) {
+        if ("not_checked".equals(evaluationGate.status())) {
+            checks.add(warn("evaluation_gate", "未指定目标版本，暂未检查评测门禁。"));
+            return;
+        }
+        if ("not_configured".equals(evaluationGate.status())) {
+            checks.add(warn("evaluation_gate", "尚未配置 Agent 评测集；生产验收前应至少配置 P0 或 safety 用例。"));
+            return;
+        }
+        if (evaluationGate.blocked()) {
+            checks.add(blocker("evaluation_gate", "评测门禁未通过：缺少当前版本评测运行或存在 P0/safety/阈值失败。"));
+            return;
+        }
+        if ("warning".equals(evaluationGate.status())) {
+            checks.add(warn("evaluation_gate", "评测门禁存在警告：部分评测集为空、warn-only 失败或缺少运行。"));
+            return;
+        }
+        checks.add(pass("evaluation_gate", "当前版本评测门禁已通过。"));
     }
 
     private long activeApiKeyCount(String orgId, String agentId) {

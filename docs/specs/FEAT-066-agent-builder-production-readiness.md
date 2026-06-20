@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-156
 related_decisions: FEAT-004, FEAT-021, FEAT-031, FEAT-036, FEAT-042
-updated_at: 2026-06-20T16:10:12Z
+updated_at: 2026-06-20T16:50:30Z
 updated_by: MANAGER-001
 ---
 
@@ -141,3 +141,10 @@ Agent Builder 需要把现有分散信息汇总为同一生产闭环：
   - `GET /agents/{agentId}/readiness` 已返回 readiness 状态、检查项和摘要。
   - `POST /agents/{agentId}/publish` 发布前调用 readiness gate；存在 blocker 时返回 `409 Conflict`，发布成功响应携带 readiness 摘要。
   - 新增 `AgentProductionReadinessIntegrationTest` 覆盖无生产入口阻止发布和 Web 入口发布响应携带 readiness；当前本地真实执行被 PostgreSQL/Docker 未启动阻塞，测试代码编译已通过。
+- 2026-06-20T16:50:30Z：
+  - 新增 `V67__agent_evaluation_gate.sql` 和 Agent 评测集、用例、运行、结果四类持久化模型。
+  - 新增 `AgentEvaluationService` 与 `/agents/{agentId}/evaluation/...` API，支持创建评测集、添加用例、按 `versionNo` 手动运行评测、查看运行和结果。
+  - 评测运行使用 `AgentWorkflowRuntimeService.evaluateVersionForEvaluation` 执行候选版本，并在运行上下文标记 `runMode=EVALUATION` 和 `evaluationVersionNo`。
+  - 已支持确定性断言：输出包含/不包含、状态匹配、工具调用/禁止调用、RAG 节点使用、人工接管节点请求。
+  - readiness summary 现在包含 `evaluationGate`；blocking 评测集存在用例时，当前版本缺少评测运行、P0/safety 失败或低于通过率阈值会阻止发布。
+  - `AgentProductionReadinessIntegrationTest` 新增 P0 评测失败阻止发布覆盖；当前真实执行仍被本地 PostgreSQL 不可用阻塞，主代码和测试代码编译已通过。
