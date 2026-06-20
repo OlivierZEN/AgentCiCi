@@ -168,8 +168,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(audit).containsEntry("status", "OK");
         assertThat(audit).containsEntry("repairRequested", false);
         assertThat(audit).containsEntry("missingVectorChunkCount", 0);
+        assertThat(audit).containsEntry("embeddingMismatchChunkCount", 0);
         assertThat(audit).containsEntry("publishedDocumentWithoutChunkCount", 0);
         assertThat(audit).containsEntry("staleSyncDocumentCount", 0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> embeddingDriftCheck = (Map<String, Object>) audit.get("embeddingDriftCheck");
+        assertThat(embeddingDriftCheck).containsEntry("status", "AVAILABLE");
+        assertThat(embeddingDriftCheck).containsEntry("mismatchCount", 0);
     }
 
     @Test

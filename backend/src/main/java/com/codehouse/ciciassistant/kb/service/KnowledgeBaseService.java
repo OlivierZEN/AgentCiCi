@@ -457,6 +457,7 @@ public class KnowledgeBaseService {
                         normalized)));
         chunk.updateContent(normalized, contentHash);
         chunk.setVectorId(vectorId);
+        chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
         chunkRepository.save(chunk);
         recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), contentHash, "chunk_update");
         return chunkPayload(chunk);
@@ -487,6 +488,7 @@ public class KnowledgeBaseService {
                                 embeddingConfig.dimension(),
                                 chunk.getContent())));
                 chunk.setVectorId(vectorId);
+                chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
                 recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), chunk.getContentHash(), "chunk_enable");
             }
             chunk.enable();
@@ -951,6 +953,15 @@ public class KnowledgeBaseService {
                 .filter(KbChunkEntity::isSearchable)
                 .filter(chunk -> chunk.getVectorId() == null || chunk.getVectorId().isBlank())
                 .toList();
+        Map<String, EmbeddingConfig> embeddingConfigByKb = chunks.stream()
+                .map(KbChunkEntity::getKnowledgeBaseId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .collect(Collectors.toMap(id -> id, id -> embeddingConfigForKnowledgeBase(orgId, id), (a, b) -> a));
+        List<KbChunkEntity> embeddingMismatchChunks = chunks.stream()
+                .filter(KbChunkEntity::isSearchable)
+                .filter(chunk -> !embeddingMetadataMatches(chunk, embeddingConfigByKb.get(chunk.getKnowledgeBaseId())))
+                .toList();
         List<KbDocumentEntity> publishedDocumentsWithoutChunks = documents.stream()
                 .filter(doc -> doc.isEnabled() && !doc.isArchived() && "PUBLISHED".equals(doc.getStatus()))
                 .filter(doc -> chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(orgId, doc.getId(), "ACTIVE") == 0)
@@ -961,6 +972,11 @@ public class KnowledgeBaseService {
 
         LinkedHashSet<Long> documentsToReindex = new LinkedHashSet<>();
         for (KbChunkEntity chunk : missingVectorChunks) {
+            if (chunk.getDocumentId() != null) {
+                documentsToReindex.add(chunk.getDocumentId());
+            }
+        }
+        for (KbChunkEntity chunk : embeddingMismatchChunks) {
             if (chunk.getDocumentId() != null) {
                 documentsToReindex.add(chunk.getDocumentId());
             }
@@ -977,6 +993,12 @@ public class KnowledgeBaseService {
                     repairedManualChunks++;
                 }
             }
+            int repairedEmbeddingMismatchChunks = 0;
+            for (KbChunkEntity chunk : embeddingMismatchChunks) {
+                if (chunk.getDocumentId() == null && repairChunkVector(orgId, chunk)) {
+                    repairedEmbeddingMismatchChunks++;
+                }
+            }
             int reindexedDocuments = 0;
             for (Long documentId : documentsToReindex) {
                 publishDocument(orgId, documentId);
@@ -987,6 +1009,7 @@ public class KnowledgeBaseService {
                     : VectorDeleteResult.success(0, 0);
             repairSummary.put("reindexedDocuments", reindexedDocuments);
             repairSummary.put("repairedManualChunks", repairedManualChunks);
+            repairSummary.put("repairedEmbeddingMismatchChunks", repairedEmbeddingMismatchChunks);
             repairSummary.put("orphanCleanupSuccess", orphanCleanup.success());
             repairSummary.put("orphanDeleteRequested", orphanCleanup.requestedCount());
             repairSummary.put("orphanDeletedCount", orphanCleanup.deletedCount());
@@ -997,6 +1020,7 @@ public class KnowledgeBaseService {
         String status = !vectorAudit.success()
                 ? "FAILED"
                 : missingVectorChunks.isEmpty()
+                && embeddingMismatchChunks.isEmpty()
                 && publishedDocumentsWithoutChunks.isEmpty()
                 && staleSyncDocuments.isEmpty()
                 && orphanCount == 0
@@ -1016,11 +1040,16 @@ public class KnowledgeBaseService {
                 "message", vectorAudit.message()));
         payload.put("missingVectorChunkCount", missingVectorChunks.size());
         payload.put("missingVectorChunks", missingVectorChunks.stream().limit(50).map(this::chunkDriftPayload).toList());
+        payload.put("embeddingMismatchChunkCount", embeddingMismatchChunks.size());
+        payload.put("embeddingMismatchChunks", embeddingMismatchChunks.stream().limit(50).map(this::chunkDriftPayload).toList());
         payload.put("publishedDocumentWithoutChunkCount", publishedDocumentsWithoutChunks.size());
         payload.put("publishedDocumentsWithoutChunks", publishedDocumentsWithoutChunks.stream().limit(50).map(this::documentDriftPayload).toList());
         payload.put("staleSyncDocumentCount", staleSyncDocuments.size());
         payload.put("staleSyncDocuments", staleSyncDocuments.stream().limit(50).map(this::documentDriftPayload).toList());
-        payload.put("embeddingDriftCheck", "NOT_AVAILABLE_UNTIL_CHUNK_EMBEDDING_METADATA_IS_PERSISTED");
+        payload.put("embeddingDriftCheck", Map.of(
+                "status", "AVAILABLE",
+                "checkedChunkCount", chunks.stream().filter(KbChunkEntity::isSearchable).count(),
+                "mismatchCount", embeddingMismatchChunks.size()));
         return payload;
     }
 
@@ -1168,6 +1197,7 @@ public class KnowledgeBaseService {
                         embeddingConfig.dimension(),
                         normalizedContent)));
         chunk.setVectorId(vectorId);
+        chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
         chunkRepository.save(chunk);
         recordKbChunkIndexingSafely(orgId, normalizedKbId, chunk.getId(), contentHash, "chunk_add");
         parseLong(normalizedKbId).flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId)).ifPresent(kb -> {
@@ -1234,6 +1264,7 @@ public class KnowledgeBaseService {
                                 embeddingDimension,
                                 chunkText)));
                 chunk.setVectorId(vectorId);
+                chunk.setEmbeddingMetadata(embeddingProvider, embeddingModel, embeddingDimension);
                 chunkRepository.save(chunk);
                 indexedChunks.add(chunk);
                 chunkIndex++;
@@ -1980,6 +2011,9 @@ public class KnowledgeBaseService {
         row.put("status", chunk.getStatus());
         row.put("enabled", chunk.isEnabled());
         row.put("vectorId", chunk.getVectorId() == null ? "" : chunk.getVectorId());
+        row.put("embeddingProvider", chunk.getEmbeddingProvider() == null ? "" : chunk.getEmbeddingProvider());
+        row.put("embeddingModel", chunk.getEmbeddingModel() == null ? "" : chunk.getEmbeddingModel());
+        row.put("embeddingDimension", chunk.getEmbeddingDimension() == null ? "" : chunk.getEmbeddingDimension());
         return row;
     }
 
@@ -1992,6 +2026,9 @@ public class KnowledgeBaseService {
         row.put("status", chunk.getStatus());
         row.put("vectorId", chunk.getVectorId() == null ? "" : chunk.getVectorId());
         row.put("contentHash", chunk.getContentHash() == null ? "" : chunk.getContentHash());
+        row.put("embeddingProvider", chunk.getEmbeddingProvider() == null ? "" : chunk.getEmbeddingProvider());
+        row.put("embeddingModel", chunk.getEmbeddingModel() == null ? "" : chunk.getEmbeddingModel());
+        row.put("embeddingDimension", chunk.getEmbeddingDimension() == null ? "" : chunk.getEmbeddingDimension());
         return row;
     }
 
@@ -2036,8 +2073,18 @@ public class KnowledgeBaseService {
                         kb.getEmbeddingDimension(),
                         chunk.getContent())));
         chunk.setVectorId(vectorId);
+        chunk.setEmbeddingMetadata(kb.getEmbeddingProvider(), kb.getEmbeddingModel(), kb.getEmbeddingDimension());
         chunkRepository.save(chunk);
         return true;
+    }
+
+    private boolean embeddingMetadataMatches(KbChunkEntity chunk, EmbeddingConfig expected) {
+        if (chunk == null || expected == null) {
+            return false;
+        }
+        return Objects.equals(normalizeEmbeddingProvider(chunk.getEmbeddingProvider()), expected.provider())
+                && Objects.equals(normalizeEmbeddingModel(chunk.getEmbeddingModel()), expected.model())
+                && Objects.equals(sanitizeEmbeddingDimension(chunk.getEmbeddingDimension()), sanitizeEmbeddingDimension(expected.dimension()));
     }
 
     private Map<String, Object> batchOperateDocuments(String orgId, List<Long> rawIds, String action) {

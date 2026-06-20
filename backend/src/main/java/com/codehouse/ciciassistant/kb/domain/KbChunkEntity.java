@@ -40,6 +40,15 @@ public class KbChunkEntity {
     @Column(name = "content_hash", length = 128)
     private String contentHash;
 
+    @Column(name = "embedding_provider", length = 64)
+    private String embeddingProvider;
+
+    @Column(name = "embedding_model", length = 128)
+    private String embeddingModel;
+
+    @Column(name = "embedding_dimension")
+    private Integer embeddingDimension;
+
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
@@ -116,6 +125,18 @@ public class KbChunkEntity {
         return contentHash;
     }
 
+    public String getEmbeddingProvider() {
+        return embeddingProvider;
+    }
+
+    public String getEmbeddingModel() {
+        return embeddingModel;
+    }
+
+    public Integer getEmbeddingDimension() {
+        return embeddingDimension;
+    }
+
     public String getStatus() {
         return status;
     }
@@ -130,6 +151,12 @@ public class KbChunkEntity {
 
     public void setVectorId(String vectorId) {
         this.vectorId = vectorId;
+    }
+
+    public void setEmbeddingMetadata(String provider, String model, Integer dimension) {
+        this.embeddingProvider = provider;
+        this.embeddingModel = model;
+        this.embeddingDimension = dimension;
     }
 
     public void markDeleted() {

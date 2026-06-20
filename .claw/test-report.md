@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:37:00Z
+updated_at: 2026-06-20T16:40:13Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:37:00Z
+last_run_at: 2026-06-20T16:40:13Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-157 connector sync foundation.
+- 范围：TASK-157 embedding metadata drift.
 - 命令：TASK-157 authorization rerun, backend test-compile, static check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-157 embedding metadata drift (2026-06-20T16:40:13Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V66 migration, `KbChunkEntity`, `KnowledgeBaseService`, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 embedding metadata drift files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with embedding metadata drift changes.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Added chunk embedding provider/model/dimension persistence and drift audit mismatch detection/repair behavior.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains healthy embedding drift check coverage but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-157 connector sync foundation (2026-06-20T16:37:00Z):
   - Commands:

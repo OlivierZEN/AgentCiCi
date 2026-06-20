@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:37:00Z
+updated_at: 2026-06-20T16:40:13Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -51,6 +51,9 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `dev-login.py` / `check-assignment.py` rerun for TASK-157 connector sync files and V65 migration -> allowed.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with connector sync changes.
 - `git diff --check` -> success.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 embedding metadata drift files and V66 migration -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with embedding metadata drift changes.
+- `git diff --check` -> success.
 
 ## Changed Files
 
@@ -81,6 +84,8 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSyncJobRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapEntity.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapRepository.java`
+- `backend/src/main/resources/db/migration/V66__kb_chunk_embedding_metadata.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbChunkEntity.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
@@ -98,5 +103,6 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - Citation trust fields are exposed in RAG source payloads and compile-verified.
 - Retrieval evaluation backend model, API, metrics, evidence persistence, and tenant purge coverage are implemented and compile-verified.
 - Connector sync backend skeleton, WEB/EXTERNAL_API minimal sync path, sync jobs, source-document mapping, and tenant purge coverage are implemented and compile-verified.
+- Embedding metadata is persisted on chunks and drift audit now compares chunk metadata against current KB embedding config.
 - Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: embedding metadata for full drift comparison and Agent Builder minimal evaluation gate.
+- Next P0: Agent Builder minimal evaluation gate and full environment validation.
