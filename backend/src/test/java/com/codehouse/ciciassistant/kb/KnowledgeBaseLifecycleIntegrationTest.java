@@ -20,6 +20,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -159,7 +164,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
     }
 
     @Test
-    void shouldExposeUploadPolicyAndRejectPdfAdmission() {
+    void shouldExposeUploadPolicyAndIndexTextPdf() throws Exception {
         String orgId = "kb-policy-" + UUID.randomUUID();
         Map<String, Object> policy = knowledgeBaseService.uploadPolicy(orgId);
         @SuppressWarnings("unchecked")
@@ -170,10 +175,9 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Map<String, Object> serviceApi = (Map<String, Object>) policy.get("serviceApi");
 
         assertThat(allowedExtensions)
-                .contains("txt", "md", "csv", "json", "docx")
-                .doesNotContain("pdf");
-        assertThat(unsupportedParserLabels).contains("PDF");
-        assertThat((String) policy.get("pdfPolicy")).contains("PDF parsing is not enabled");
+                .contains("txt", "md", "csv", "json", "docx", "pdf");
+        assertThat(unsupportedParserLabels).isEmpty();
+        assertThat((String) policy.get("pdfPolicy")).contains("Text-based PDF parsing is enabled");
         assertThat(serviceApi).containsEntry("apiAccessEnabled", false);
 
         Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Policy KB", "test");
@@ -182,11 +186,14 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 "file",
                 "brief.pdf",
                 "application/pdf",
-                "%PDF-1.4".getBytes(StandardCharsets.UTF_8));
+                textPdf("pdf parser readiness omega"));
 
-        assertThatThrownBy(() -> knowledgeBaseService.uploadDocument(orgId, kbId, file))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("PDF parsing is not enabled");
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Long documentId = ((Number) document.get("id")).longValue();
+        knowledgeBaseService.publishDocument(orgId, documentId);
+
+        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "omega"))
+                .anyMatch(item -> item.contains("pdf parser readiness"));
     }
 
     @Test
@@ -421,6 +428,23 @@ class KnowledgeBaseLifecycleIntegrationTest {
             zip.closeEntry();
         }
         return output.toByteArray();
+    }
+
+    private byte[] textPdf(String text) throws IOException {
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+                content.newLineAtOffset(72, 720);
+                content.showText(text);
+                content.endText();
+            }
+            document.save(out);
+            return out.toByteArray();
+        }
     }
 
     private record Fixture(String orgId, Long kbId, Long documentId) {

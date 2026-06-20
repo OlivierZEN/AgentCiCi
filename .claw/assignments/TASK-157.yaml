@@ -10,6 +10,7 @@ branch: codex/TASK-156-production-readiness-goal
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
+  - backend/pom.xml
   - backend/src/main/java/com/codehouse/ciciassistant/kb/**
   - backend/src/test/java/com/codehouse/ciciassistant/kb/**
   - backend/src/main/java/com/codehouse/ciciassistant/ai/**
@@ -26,6 +27,7 @@ scope_files:
   - .claw/current-status.md
   - .claw/test-report.md
   - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+  - backend/pom.xml
   - backend/src/main/resources/db/migration/V64__enterprise_knowledge_platform_readiness.sql
 protected_paths:
   - .claw/assignments/**
@@ -50,6 +52,7 @@ shared_contracts:
 task_boundary:
   - "Raise Knowledge Base to enterprise knowledge platform readiness: parser stability, connector sync, document/chunk ACL, retrieval evaluation, citation trust, rebuild index, and drift checks."
   - "Prioritize correctness, permissions, parser reliability, Qdrant verification, and drift diagnosis before broad connector coverage."
+  - "Allow backend dependency changes only when directly required for parser reliability, such as text-based PDF parsing."
   - "Do not add mobile compatibility work, unrelated Agent Builder changes, production release work, or complex OCR beyond text-PDF parsing."
 change_manifest_required: true
 signature: "MANAGER-001 local ssh challenge allowed 2026-06-21T00:01:12+08:00; user opened goal mode to finish enterprise KB production readiness."

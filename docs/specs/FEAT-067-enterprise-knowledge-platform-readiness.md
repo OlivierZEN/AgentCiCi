@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-157
 related_decisions: FEAT-008, FEAT-018, FEAT-031, FEAT-042
-updated_at: 2026-06-20T16:01:12Z
+updated_at: 2026-06-20T16:13:20Z
 updated_by: MANAGER-001
 ---
 
@@ -188,3 +188,12 @@ Chat/Open API/trace 需透出这些字段，前端可先展示基础引用卡片
 - 风险：ACL 过滤影响召回。缓解：trace 记录 permission filtered count，并提供管理端诊断。
 - 风险：连接器同步扩大范围。缓解：先做 provider contract、job、cursor 和 external API/web 最小路径。
 - 回滚：ACL 可默认兼容已有 KB 全组织可见策略；drift repair 可先 dry-run。
+
+## 实现进展
+
+- 2026-06-20T16:13:20Z：
+  - 引入 PDFBox，上传策略默认允许 `pdf` / `application/pdf`。
+  - `KnowledgeBaseService` 对文本型 PDF 执行 PDFBox 文本抽取；加密、扫描/空文本、损坏 PDF 会明确失败。
+  - `uploadPolicy` 说明更新为文本型 PDF 已启用，PDF 不再列为 unsupported parser。
+  - `KnowledgeBaseLifecycleIntegrationTest` 更新 PDF 用例，使用 PDFBox 生成文本 PDF 并验证发布后 RAG 可召回。
+  - 当前本地真实集成测试仍受 Docker/PostgreSQL 未启动阻塞；`mvn -DskipTests test` 已验证主代码和测试代码编译。

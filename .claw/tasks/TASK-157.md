@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:06:00Z
+updated_at: 2026-06-20T16:13:20Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -34,6 +34,9 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 
 - `dev-login.py .claw --developer MANAGER-001 --task TASK-157 --branch codex/TASK-156-production-readiness-goal --files ...` -> allowed.
 - `check-assignment.py .claw --developer MANAGER-001 --task TASK-157 --branch codex/TASK-156-production-readiness-goal --files ...` -> allowed.
+- `dev-login.py` / `check-assignment.py` rerun after adding `backend/pom.xml` to assignment scope -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with PDFBox.
+- `git diff --check` -> success.
 
 ## Changed Files
 
@@ -43,8 +46,13 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
+- `backend/pom.xml`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/kb/KnowledgeBaseLifecycleIntegrationTest.java`
 
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
-- Prefer P0 safety and correctness gates before connector breadth.
+- Text-based PDF parser support is implemented and compile-verified.
+- Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
+- Next P0: document/chunk ACL and rebuild/drift audit.

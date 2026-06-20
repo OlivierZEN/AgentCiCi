@@ -43,6 +43,9 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -98,8 +101,8 @@ public class KnowledgeBaseService {
                                 @Value("${app.kb.embedding.model:local-hash}") String defaultEmbeddingModel,
                                 @Value("${app.kb.embedding.dimension:1024}") Integer defaultEmbeddingDimension,
                                 @Value("${app.kb.upload.max-file-size-bytes:26214400}") Long maxUploadFileSizeBytes,
-                                @Value("${app.kb.upload.allowed-extensions:txt,md,markdown,csv,json,docx}") String allowedUploadExtensions,
-                                @Value("${app.kb.upload.allowed-content-types:text/plain,text/markdown,text/csv,application/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document}") String allowedUploadContentTypes) {
+                                @Value("${app.kb.upload.allowed-extensions:txt,md,markdown,csv,json,docx,pdf}") String allowedUploadExtensions,
+                                @Value("${app.kb.upload.allowed-content-types:text/plain,text/markdown,text/csv,application/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf}") String allowedUploadContentTypes) {
         this.kbRepository = kbRepository;
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
@@ -193,9 +196,9 @@ public class KnowledgeBaseService {
         payload.put("maxFilesPerUpload", 1);
         payload.put("allowedExtensions", allowedUploadExtensions.stream().sorted().toList());
         payload.put("allowedContentTypes", allowedUploadContentTypes.stream().sorted().toList());
-        payload.put("supportedParserLabels", List.of("TXT", "Markdown", "CSV", "JSON", "DOCX"));
-        payload.put("unsupportedParserLabels", List.of("PDF"));
-        payload.put("pdfPolicy", "PDF parsing is not enabled in this build. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+        payload.put("supportedParserLabels", List.of("TXT", "Markdown", "CSV", "JSON", "DOCX", "PDF"));
+        payload.put("unsupportedParserLabels", List.of());
+        payload.put("pdfPolicy", "Text-based PDF parsing is enabled. Encrypted, scanned, malformed, or empty-text PDFs fail with a clear parser error.");
         payload.put("sourceTypes", List.of(
                 Map.of("code", "LOCAL_FILE", "status", "available"),
                 Map.of("code", "EMPTY", "status", "available_via_manual_chunks"),
@@ -1019,7 +1022,7 @@ public class KnowledgeBaseService {
             return readDocxText(path);
         }
         if (isPdfFile(contentType, name)) {
-            throw new IllegalArgumentException("PDF parsing is not enabled. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+            return readPdfText(path);
         }
         boolean supported = contentType.startsWith("text/")
                 || "application/json".equals(contentType)
@@ -1029,7 +1032,7 @@ public class KnowledgeBaseService {
                 || name.endsWith(".csv")
                 || name.endsWith(".json");
         if (!supported) {
-            throw new IllegalArgumentException("Unsupported file type. P0 indexing supports txt, md, csv, json and docx files only.");
+            throw new IllegalArgumentException("Unsupported file type. P0 indexing supports txt, md, csv, json, docx and text-based pdf files only.");
         }
         return Files.readString(path, StandardCharsets.UTF_8);
     }
@@ -1040,6 +1043,24 @@ public class KnowledgeBaseService {
 
     private boolean isPdfFile(String contentType, String name) {
         return name.endsWith(".pdf") || contentType.contains("application/pdf");
+    }
+
+    private String readPdfText(Path path) throws IOException {
+        try (PDDocument document = Loader.loadPDF(path.toFile())) {
+            if (document.isEncrypted()) {
+                throw new IllegalArgumentException("PDF file is encrypted and cannot be parsed.");
+            }
+            String text = new PDFTextStripper().getText(document);
+            String normalized = text == null ? "" : text.replace('\u0000', ' ').trim();
+            if (normalized.isBlank()) {
+                throw new IllegalArgumentException("PDF file does not contain readable text. Scanned PDFs require OCR before upload.");
+            }
+            return normalized;
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new IOException("Failed to parse PDF content: " + ex.getMessage(), ex);
+        }
     }
 
     private String readDocxText(Path path) throws IOException {
@@ -1157,13 +1178,10 @@ public class KnowledgeBaseService {
         String original = sanitizeOriginalFilename(file.getOriginalFilename());
         String extension = fileExtension(original);
         String contentType = file.getContentType() == null ? "" : file.getContentType().trim().toLowerCase();
-        if ("pdf".equals(extension) || "application/pdf".equals(contentType)) {
-            throw new IllegalArgumentException("PDF parsing is not enabled. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
-        }
         boolean extensionAllowed = allowedUploadExtensions.contains(extension);
         boolean contentAllowed = contentType.isBlank() || contentType.startsWith("text/") || allowedUploadContentTypes.contains(contentType);
         if (!extensionAllowed || !contentAllowed) {
-            throw new IllegalArgumentException("Unsupported file type. Upload txt, md, csv, json, or docx files only.");
+            throw new IllegalArgumentException("Unsupported file type. Upload txt, md, csv, json, docx, or text-based pdf files only.");
         }
         return new UploadAdmission(original, original, contentType.isBlank() ? contentTypeForExtension(extension) : contentType);
     }
@@ -1194,6 +1212,7 @@ public class KnowledgeBaseService {
             case "csv" -> "text/csv";
             case "md", "markdown" -> "text/markdown";
             case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "pdf" -> "application/pdf";
             default -> "text/plain";
         };
     }

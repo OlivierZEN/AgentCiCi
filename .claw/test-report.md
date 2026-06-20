@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:10:12Z
+updated_at: 2026-06-20T16:13:20Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:10:12Z
+last_run_at: 2026-06-20T16:13:20Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-156 Agent Builder readiness gate first implementation.
-- 命令：backend compile/test-compile, focused integration attempt, `git diff --check`.
+- 范围：TASK-157 text-based PDF parser support.
+- 命令：TASK-157 authorization rerun, backend test-compile, `git diff --check`.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-157 text-based PDF parser support (2026-06-20T16:13:20Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` after adding `backend/pom.xml` to assignment scope -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-157 actual PDF parser files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with PDFBox.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Text-based PDF parsing is now enabled through PDFBox; scanned/empty/encrypted PDFs return clear parser errors.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains PDF indexing/RAG coverage but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-156 Agent Builder readiness gate first implementation (2026-06-20T16:10:12Z):
   - Commands:
