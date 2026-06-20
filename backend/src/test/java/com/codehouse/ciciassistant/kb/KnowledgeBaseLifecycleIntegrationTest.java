@@ -318,6 +318,45 @@ class KnowledgeBaseLifecycleIntegrationTest {
     }
 
     @Test
+    void shouldRunRetrievalEvaluationSuite() {
+        Fixture fixture = createPublishedDocument("evaluation recall handbook omega source");
+
+        Map<String, Object> suite = knowledgeBaseService.createEvalSuite(
+                fixture.orgId(),
+                fixture.kbId(),
+                new KnowledgeBaseService.EvalSuiteCommand("Recall Smoke", "expected source recall"));
+        Long suiteId = ((Number) suite.get("id")).longValue();
+
+        Map<String, Object> evalCase = knowledgeBaseService.addEvalCase(
+                fixture.orgId(),
+                suiteId,
+                new KnowledgeBaseService.EvalCaseCommand(
+                        "recall omega",
+                        fixture.documentId(),
+                        "policy.txt",
+                        "recall handbook",
+                        0.0,
+                        fixture.documentId() + 1000,
+                        Map.of()));
+
+        Map<String, Object> run = knowledgeBaseService.runEvalSuite(fixture.orgId(), suiteId);
+        List<Map<String, Object>> runs = knowledgeBaseService.listEvalRuns(fixture.orgId(), suiteId);
+        List<Map<String, Object>> results = knowledgeBaseService.listEvalRunResults(
+                fixture.orgId(),
+                ((Number) run.get("id")).longValue());
+
+        assertThat(evalCase).containsEntry("query", "recall omega");
+        assertThat(run).containsEntry("status", "PASSED");
+        assertThat(run).containsEntry("caseCount", 1);
+        assertThat(run).containsEntry("passedCount", 1);
+        assertThat(run).containsEntry("forbiddenSourceViolations", 0);
+        assertThat((Double) run.get("expectedSourceRecall")).isEqualTo(1.0);
+        assertThat(runs).isNotEmpty();
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0)).containsEntry("expectedHit", true);
+    }
+
+    @Test
     void shouldSupportChunkToggleAndMetadataFilteringInRetrievalTest() {
         Fixture fixture = createPublishedDocument("sales policy for east region only");
 

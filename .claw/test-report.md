@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:50:20Z
+updated_at: 2026-06-20T16:31:34Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:50:20Z
+last_run_at: 2026-06-20T16:31:34Z
 last_run_status: success
 ---
 
@@ -13,11 +13,23 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-157 citation trust fields.
-- 命令：TASK-157 authorization rerun, backend test-compile.
+- 范围：TASK-157 retrieval evaluation foundation.
+- 命令：TASK-157 authorization rerun, backend test-compile, static check, Docker/PostgreSQL availability probe.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-157 retrieval evaluation foundation (2026-06-20T16:31:34Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V64 migration, eval domain/repositories, KB service/controller, tenant lifecycle purge file, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 retrieval evaluation files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with retrieval evaluation changes.
+    - `static-check`: `git diff --check` -> **success**.
+    - `docker`: `docker ps --format '{{.Names}}'` -> **blocked**, Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` unavailable.
+    - `postgres`: `nc -z localhost 5432 && echo postgres-open || echo postgres-closed` -> **blocked**, `postgres-closed`.
+  - Notes:
+    - Added retrieval evaluation suites, cases, runs, case results, metrics, source evidence persistence, API endpoints, and tenant purge/export coverage.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains suite/case/run/results coverage but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-157 citation trust fields (2026-06-20T16:50:20Z):
   - Commands:

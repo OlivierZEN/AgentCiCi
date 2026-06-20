@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:50:20Z
+updated_at: 2026-06-20T16:31:34Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -43,6 +43,11 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with drift audit changes.
 - `dev-login.py` / `check-assignment.py` rerun for TASK-157 citation trust files -> allowed.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with citation trust fields.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 retrieval evaluation files, V64 migration, and tenant lifecycle purge integration -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with retrieval evaluation changes.
+- `git diff --check` -> success.
+- `docker ps` -> blocked; Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` is unavailable.
+- `nc -z localhost 5432` -> `postgres-closed`; focused integration tests still cannot run locally.
 
 ## Changed Files
 
@@ -57,9 +62,19 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantEntity.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDocumentRepository.java`
+- `backend/src/main/resources/db/migration/V64__kb_retrieval_evaluation.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalSuiteEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalSuiteRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalRunEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalRunRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseResultEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseResultRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformTenantLifecycleService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/ai/service/RagService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/kb/KnowledgeBaseLifecycleIntegrationTest.java`
@@ -71,5 +86,6 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - Document/chunk ACL data model, management API, RAG filtering, Chat principal propagation, and permission-filtered trace count are implemented and compile-verified.
 - Drift audit/repair endpoint is implemented and compile-verified; embedding drift remains explicitly not available until chunk embedding metadata is persisted.
 - Citation trust fields are exposed in RAG source payloads and compile-verified.
+- Retrieval evaluation backend model, API, metrics, evidence persistence, and tenant purge coverage are implemented and compile-verified.
 - Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: retrieval evaluation, connector sync, and embedding metadata for full drift comparison.
+- Next P0: connector sync and embedding metadata for full drift comparison.

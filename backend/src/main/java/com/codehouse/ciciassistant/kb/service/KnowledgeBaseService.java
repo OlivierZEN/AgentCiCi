@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.kb.service;
 
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
+import com.codehouse.ciciassistant.ai.service.RagService;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.kb.domain.KbChunkEntity;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
@@ -8,6 +9,14 @@ import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataEntity;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentEntity;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseResultEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseResultRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalRunEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalRunRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalSuiteEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalSuiteRepository;
 import com.codehouse.ciciassistant.kb.domain.KbMetadataFieldEntity;
 import com.codehouse.ciciassistant.kb.domain.KbMetadataFieldRepository;
 import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogEntity;
@@ -66,12 +75,17 @@ public class KnowledgeBaseService {
     private final KbMetadataFieldRepository metadataFieldRepository;
     private final KbDocumentMetadataRepository documentMetadataRepository;
     private final KbRetrievalLogRepository retrievalLogRepository;
+    private final KbEvalSuiteRepository evalSuiteRepository;
+    private final KbEvalCaseRepository evalCaseRepository;
+    private final KbEvalRunRepository evalRunRepository;
+    private final KbEvalCaseResultRepository evalCaseResultRepository;
     private final AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
     private final ModelProviderService modelProviderService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
     private final KbAccessControlService kbAccessControlService;
+    private final RagService ragService;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final String indexingMode;
@@ -89,12 +103,17 @@ public class KnowledgeBaseService {
                                 KbMetadataFieldRepository metadataFieldRepository,
                                 KbDocumentMetadataRepository documentMetadataRepository,
                                 KbRetrievalLogRepository retrievalLogRepository,
+                                KbEvalSuiteRepository evalSuiteRepository,
+                                KbEvalCaseRepository evalCaseRepository,
+                                KbEvalRunRepository evalRunRepository,
+                                KbEvalCaseResultRepository evalCaseResultRepository,
                                 AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
                                 ModelProviderService modelProviderService,
                                 BillingUsageMeteringService billingUsageMeteringService,
                                 VectorStoreClient vectorStoreClient,
                                 EmbeddingService embeddingService,
                                 KbAccessControlService kbAccessControlService,
+                                RagService ragService,
                                 RabbitTemplate rabbitTemplate,
                                 ObjectMapper objectMapper,
                                 @Value("${app.kb.storage-dir:./data/kb-files}") String storageDir,
@@ -111,12 +130,17 @@ public class KnowledgeBaseService {
         this.metadataFieldRepository = metadataFieldRepository;
         this.documentMetadataRepository = documentMetadataRepository;
         this.retrievalLogRepository = retrievalLogRepository;
+        this.evalSuiteRepository = evalSuiteRepository;
+        this.evalCaseRepository = evalCaseRepository;
+        this.evalRunRepository = evalRunRepository;
+        this.evalCaseResultRepository = evalCaseResultRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
         this.modelProviderService = modelProviderService;
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
         this.kbAccessControlService = kbAccessControlService;
+        this.ragService = ragService;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.indexingMode = indexingMode;
@@ -664,6 +688,148 @@ public class KnowledgeBaseService {
                     row.put("createdAt", log.getCreatedAt().toString());
                     return row;
                 })
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> createEvalSuite(String orgId, Long kbId, EvalSuiteCommand command) {
+        requireKnowledgeBase(orgId, kbId);
+        String name = requireText(command.name(), "Suite name is required");
+        KbEvalSuiteEntity created = evalSuiteRepository.save(new KbEvalSuiteEntity(
+                orgId,
+                kbId,
+                name.length() > 160 ? name.substring(0, 160) : name,
+                truncateText(command.description(), 1000)));
+        return evalSuitePayload(created);
+    }
+
+    public List<Map<String, Object>> listEvalSuites(String orgId, Long kbId) {
+        requireKnowledgeBase(orgId, kbId);
+        return evalSuiteRepository.findByOrgIdAndKnowledgeBaseIdAndStatusOrderByIdDesc(
+                        orgId,
+                        kbId,
+                        KbEvalSuiteEntity.STATUS_ACTIVE)
+                .stream()
+                .map(this::evalSuitePayload)
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> addEvalCase(String orgId, Long suiteId, EvalCaseCommand command) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        String query = requireText(command.query(), "Eval query is required");
+        Map<String, String> metadataFilters = normalizeMetadataFilters(command.metadataFilters());
+        validateMetadataFilterKeys(orgId, suite.getKnowledgeBaseId(), metadataFilters);
+        KbEvalCaseEntity created = evalCaseRepository.save(new KbEvalCaseEntity(
+                orgId,
+                suite.getId(),
+                suite.getKnowledgeBaseId(),
+                query,
+                command.expectedDocumentId(),
+                trimToNull(command.expectedDocumentKeyword()),
+                trimToNull(command.expectedChunkKeyword()),
+                sanitizeEvalMinScore(command.minScore()),
+                command.forbiddenDocumentId(),
+                toJson(metadataFilters)));
+        return evalCasePayload(created);
+    }
+
+    public List<Map<String, Object>> listEvalCases(String orgId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        return evalCaseRepository.findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(
+                        orgId,
+                        suite.getId(),
+                        KbEvalCaseEntity.STATUS_ACTIVE)
+                .stream()
+                .map(this::evalCasePayload)
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> runEvalSuite(String orgId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        List<KbEvalCaseEntity> cases = evalCaseRepository.findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(
+                orgId,
+                suiteId,
+                KbEvalCaseEntity.STATUS_ACTIVE);
+        if (cases.isEmpty()) {
+            throw new IllegalArgumentException("Evaluation suite has no active cases");
+        }
+
+        KbEvalRunEntity run = evalRunRepository.save(new KbEvalRunEntity(orgId, suiteId, suite.getKnowledgeBaseId(), cases.size()));
+        int passed = 0;
+        int failed = 0;
+        int expectedHits = 0;
+        int forbiddenViolations = 0;
+        int staleSources = 0;
+        double topScoreSum = 0.0;
+        ArrayList<Map<String, Object>> resultSummaries = new ArrayList<>();
+
+        for (KbEvalCaseEntity evalCase : cases) {
+            EvalCaseOutcome outcome = evaluateCase(orgId, suite.getKnowledgeBaseId(), evalCase);
+            if (outcome.passed()) {
+                passed++;
+            } else {
+                failed++;
+            }
+            if (outcome.expectedHit()) {
+                expectedHits++;
+            }
+            if (outcome.forbiddenViolation()) {
+                forbiddenViolations++;
+            }
+            if (outcome.staleSource()) {
+                staleSources++;
+            }
+            topScoreSum += outcome.topScore();
+            KbEvalCaseResultEntity saved = evalCaseResultRepository.save(new KbEvalCaseResultEntity(
+                    orgId,
+                    run.getId(),
+                    evalCase.getId(),
+                    outcome.passed() ? "PASSED" : "FAILED",
+                    outcome.expectedHit(),
+                    outcome.forbiddenViolation(),
+                    outcome.staleSource(),
+                    outcome.topScore(),
+                    outcome.matchedDocumentId(),
+                    outcome.matchedChunkId(),
+                    toJson(outcome.summary())));
+            resultSummaries.add(evalCaseResultPayload(saved));
+        }
+
+        double denominator = Math.max(1, cases.size());
+        double hitRate = roundMetric((double) passed / denominator);
+        double expectedRecall = roundMetric((double) expectedHits / denominator);
+        double averageTopScore = roundMetric(topScoreSum / denominator);
+        double staleSourceRate = roundMetric((double) staleSources / denominator);
+        run.finish(
+                failed == 0 ? "PASSED" : "FAILED",
+                passed,
+                failed,
+                hitRate,
+                expectedRecall,
+                forbiddenViolations,
+                averageTopScore,
+                staleSourceRate,
+                toJson(Map.of("results", resultSummaries)));
+        evalRunRepository.save(run);
+        return evalRunPayload(run);
+    }
+
+    public List<Map<String, Object>> listEvalRuns(String orgId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        return evalRunRepository.findTop20ByOrgIdAndSuiteIdOrderByIdDesc(orgId, suite.getId())
+                .stream()
+                .map(this::evalRunPayload)
+                .toList();
+    }
+
+    public List<Map<String, Object>> listEvalRunResults(String orgId, Long runId) {
+        KbEvalRunEntity run = evalRunRepository.findByIdAndOrgId(runId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Evaluation run not found"));
+        return evalCaseResultRepository.findByOrgIdAndRunIdOrderByIdAsc(orgId, run.getId())
+                .stream()
+                .map(this::evalCaseResultPayload)
                 .toList();
     }
 
@@ -1234,6 +1400,211 @@ public class KnowledgeBaseService {
             factory.setProperty("javax.xml.stream.isSupportingExternalEntities", false);
         } catch (IllegalArgumentException ignored) {
             // Some XMLInputFactory implementations do not expose this property.
+        }
+    }
+
+    private EvalCaseOutcome evaluateCase(String orgId, Long kbId, KbEvalCaseEntity evalCase) {
+        Map<String, String> filters = parseMetadataFiltersJson(evalCase.getMetadataFiltersJson());
+        RagService.RetrievalResult result = ragService.retrieveDetailed(
+                orgId,
+                List.of(String.valueOf(kbId)),
+                evalCase.getQuery(),
+                filters);
+        List<RagService.RetrievedSource> sources = result.sources();
+        double topScore = sources.isEmpty() ? 0.0 : sources.get(0).score();
+        boolean minScoreMet = evalCase.getMinScore() == null || topScore >= evalCase.getMinScore();
+        boolean forbiddenViolation = evalCase.getForbiddenDocumentId() != null
+                && sources.stream().anyMatch(source -> evalCase.getForbiddenDocumentId().equals(source.documentId()));
+        boolean staleSource = sources.stream().anyMatch(source -> "STALE".equals(source.freshnessStatus()));
+
+        RagService.RetrievedSource expectedMatch = expectedMatch(evalCase, sources);
+        boolean hasExplicitExpected = evalCase.getExpectedDocumentId() != null
+                || evalCase.getExpectedDocumentKeyword() != null
+                || evalCase.getExpectedChunkKeyword() != null;
+        boolean expectedHit = hasExplicitExpected ? expectedMatch != null : !sources.isEmpty();
+        boolean passed = expectedHit && minScoreMet && !forbiddenViolation;
+        RagService.RetrievedSource evidence = expectedMatch == null && !sources.isEmpty() ? sources.get(0) : expectedMatch;
+        HashMap<String, Object> summary = new HashMap<>();
+        summary.put("query", evalCase.getQuery());
+        summary.put("expectedHit", expectedHit);
+        summary.put("minScoreMet", minScoreMet);
+        summary.put("forbiddenViolation", forbiddenViolation);
+        summary.put("staleSource", staleSource);
+        summary.put("topScore", topScore);
+        summary.put("metadataFilters", filters);
+        summary.put("sourceCount", sources.size());
+        summary.put("sources", sources.stream().map(RagService.RetrievedSource::toPayload).toList());
+        return new EvalCaseOutcome(
+                passed,
+                expectedHit,
+                forbiddenViolation,
+                staleSource,
+                topScore,
+                evidence == null ? null : evidence.documentId(),
+                evidence == null ? null : evidence.chunkId(),
+                summary);
+    }
+
+    private RagService.RetrievedSource expectedMatch(KbEvalCaseEntity evalCase, List<RagService.RetrievedSource> sources) {
+        for (RagService.RetrievedSource source : sources) {
+            if (evalCase.getExpectedDocumentId() != null && !evalCase.getExpectedDocumentId().equals(source.documentId())) {
+                continue;
+            }
+            if (evalCase.getExpectedDocumentKeyword() != null
+                    && !containsIgnoreCase(source.documentName(), evalCase.getExpectedDocumentKeyword())) {
+                continue;
+            }
+            if (evalCase.getExpectedChunkKeyword() != null
+                    && !containsIgnoreCase(source.content(), evalCase.getExpectedChunkKeyword())) {
+                continue;
+            }
+            return source;
+        }
+        return null;
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return true;
+        }
+        return value != null && value.toLowerCase().contains(keyword.toLowerCase());
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> parseMetadataFiltersJson(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> raw = objectMapper.readValue(json, Map.class);
+            HashMap<String, String> out = new HashMap<>();
+            for (Map.Entry<String, Object> entry : raw.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    out.put(entry.getKey(), String.valueOf(entry.getValue()));
+                }
+            }
+            return normalizeMetadataFilters(out);
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
+
+    private KnowledgeBaseEntity requireKnowledgeBase(String orgId, Long kbId) {
+        return kbRepository.findByIdAndOrgId(kbId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
+    }
+
+    private KbEvalSuiteEntity requireEvalSuite(String orgId, Long suiteId) {
+        return evalSuiteRepository.findByIdAndOrgId(suiteId, orgId)
+                .filter(item -> KbEvalSuiteEntity.STATUS_ACTIVE.equals(item.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException("Evaluation suite not found"));
+    }
+
+    private Map<String, Object> evalSuitePayload(KbEvalSuiteEntity suite) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", suite.getId());
+        row.put("knowledgeBaseId", suite.getKnowledgeBaseId());
+        row.put("name", suite.getName());
+        row.put("description", suite.getDescription() == null ? "" : suite.getDescription());
+        row.put("status", suite.getStatus());
+        row.put("createdAt", suite.getCreatedAt().toString());
+        row.put("updatedAt", suite.getUpdatedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> evalCasePayload(KbEvalCaseEntity evalCase) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", evalCase.getId());
+        row.put("suiteId", evalCase.getSuiteId());
+        row.put("knowledgeBaseId", evalCase.getKnowledgeBaseId());
+        row.put("query", evalCase.getQuery());
+        row.put("expectedDocumentId", evalCase.getExpectedDocumentId() == null ? "" : evalCase.getExpectedDocumentId());
+        row.put("expectedDocumentKeyword", evalCase.getExpectedDocumentKeyword() == null ? "" : evalCase.getExpectedDocumentKeyword());
+        row.put("expectedChunkKeyword", evalCase.getExpectedChunkKeyword() == null ? "" : evalCase.getExpectedChunkKeyword());
+        row.put("minScore", evalCase.getMinScore() == null ? "" : evalCase.getMinScore());
+        row.put("forbiddenDocumentId", evalCase.getForbiddenDocumentId() == null ? "" : evalCase.getForbiddenDocumentId());
+        row.put("metadataFilters", parseMetadataFiltersJson(evalCase.getMetadataFiltersJson()));
+        row.put("status", evalCase.getStatus());
+        row.put("createdAt", evalCase.getCreatedAt().toString());
+        row.put("updatedAt", evalCase.getUpdatedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> evalRunPayload(KbEvalRunEntity run) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", run.getId());
+        row.put("suiteId", run.getSuiteId());
+        row.put("knowledgeBaseId", run.getKnowledgeBaseId());
+        row.put("status", run.getStatus());
+        row.put("caseCount", run.getCaseCount());
+        row.put("passedCount", run.getPassedCount());
+        row.put("failedCount", run.getFailedCount());
+        row.put("hitRate", run.getHitRate());
+        row.put("expectedSourceRecall", run.getExpectedSourceRecall());
+        row.put("forbiddenSourceViolations", run.getForbiddenSourceViolations());
+        row.put("averageTopScore", run.getAverageTopScore());
+        row.put("staleSourceRate", run.getStaleSourceRate());
+        row.put("summaryJson", run.getSummaryJson() == null ? "" : run.getSummaryJson());
+        row.put("startedAt", run.getStartedAt().toString());
+        row.put("finishedAt", run.getFinishedAt() == null ? "" : run.getFinishedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> evalCaseResultPayload(KbEvalCaseResultEntity result) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", result.getId());
+        row.put("runId", result.getRunId());
+        row.put("caseId", result.getCaseId());
+        row.put("status", result.getStatus());
+        row.put("expectedHit", result.isExpectedHit());
+        row.put("forbiddenViolation", result.isForbiddenViolation());
+        row.put("staleSource", result.isStaleSource());
+        row.put("topScore", result.getTopScore());
+        row.put("matchedDocumentId", result.getMatchedDocumentId() == null ? "" : result.getMatchedDocumentId());
+        row.put("matchedChunkId", result.getMatchedChunkId() == null ? "" : result.getMatchedChunkId());
+        row.put("resultSummaryJson", result.getResultSummaryJson() == null ? "" : result.getResultSummaryJson());
+        row.put("createdAt", result.getCreatedAt().toString());
+        return row;
+    }
+
+    private String requireText(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String truncateText(String value, int maxLength) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength);
+    }
+
+    private Double sanitizeEvalMinScore(Double value) {
+        if (value == null) {
+            return null;
+        }
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private double roundMetric(double value) {
+        return Math.round(value * 10_000.0) / 10_000.0;
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value == null ? Map.of() : value);
+        } catch (JsonProcessingException ex) {
+            return "{}";
         }
     }
 
@@ -1823,10 +2194,39 @@ public class KnowledgeBaseService {
     ) {
     }
 
+    public record EvalSuiteCommand(
+            String name,
+            String description
+    ) {
+    }
+
+    public record EvalCaseCommand(
+            String query,
+            Long expectedDocumentId,
+            String expectedDocumentKeyword,
+            String expectedChunkKeyword,
+            Double minScore,
+            Long forbiddenDocumentId,
+            Map<String, String> metadataFilters
+    ) {
+    }
+
     public record MetadataFieldCommand(
             String fieldKey,
             String fieldName,
             String valueType
+    ) {
+    }
+
+    private record EvalCaseOutcome(
+            boolean passed,
+            boolean expectedHit,
+            boolean forbiddenViolation,
+            boolean staleSource,
+            double topScore,
+            Long matchedDocumentId,
+            Long matchedChunkId,
+            Map<String, Object> summary
     ) {
     }
 

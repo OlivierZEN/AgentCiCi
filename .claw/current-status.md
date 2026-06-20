@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-20T16:50:20Z
+updated_at: 2026-06-20T16:31:34Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-156 readiness gate implemented; TASK-157 PDF parser, ACL, drift audit, and citation trust foundations implemented."
-next_action: "Rerun focused integration tests when Docker/PostgreSQL is available; continue TASK-157 retrieval evaluation, connector sync, and embedding metadata drift; then TASK-156 minimal evaluation gate."
+active_task: "TASK-156 readiness gate implemented; TASK-157 PDF parser, ACL, drift audit, citation trust, and retrieval evaluation foundations implemented."
+next_action: "Rerun focused integration tests when Docker/PostgreSQL is available; continue TASK-157 connector sync and embedding metadata drift; then TASK-156 minimal evaluation gate."
 read_next:
   goals: false
   decisions: false
@@ -26,7 +26,7 @@ read_next:
 - User opened a goal to finish two production-readiness tracks: Agent Builder production closure and enterprise knowledge platform readiness.
 - TASK-156 first implementation added Agent production readiness checks, `GET /agents/{agentId}/readiness`, and a publish-time readiness gate.
 - TASK-156 compile validation passed; focused integration test is blocked until local Docker/PostgreSQL is available.
-- TASK-157 first implementations added PDFBox text-based PDF parsing, document/chunk ACL, RAG/Chat permission filtering, drift audit/repair, and RAG citation trust fields; retrieval evaluation, connector sync, and embedding metadata drift remain.
+- TASK-157 first implementations added PDFBox text-based PDF parsing, document/chunk ACL, RAG/Chat permission filtering, drift audit/repair, RAG citation trust fields, and retrieval evaluation backend model/API/metrics; connector sync and embedding metadata drift remain.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
 
 ## Read Next

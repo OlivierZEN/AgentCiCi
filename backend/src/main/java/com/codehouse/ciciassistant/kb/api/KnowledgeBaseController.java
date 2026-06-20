@@ -239,6 +239,70 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.listRetrievalLogs(orgId, kbId, limit));
     }
 
+    @GetMapping("/{kbId}/eval/suites")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalSuites(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalSuites(orgId, kbId));
+    }
+
+    @PostMapping("/{kbId}/eval/suites")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> createEvalSuite(@PathVariable Long kbId,
+                                                             @Valid @RequestBody EvalSuiteRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.createEvalSuite(
+                orgId,
+                kbId,
+                new KnowledgeBaseService.EvalSuiteCommand(request.name(), request.description())));
+    }
+
+    @GetMapping("/eval/suites/{suiteId}/cases")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalCases(@PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalCases(orgId, suiteId));
+    }
+
+    @PostMapping("/eval/suites/{suiteId}/cases")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> addEvalCase(@PathVariable Long suiteId,
+                                                         @Valid @RequestBody EvalCaseRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.addEvalCase(
+                orgId,
+                suiteId,
+                new KnowledgeBaseService.EvalCaseCommand(
+                        request.query(),
+                        request.expectedDocumentId(),
+                        request.expectedDocumentKeyword(),
+                        request.expectedChunkKeyword(),
+                        request.minScore(),
+                        request.forbiddenDocumentId(),
+                        request.metadataFilters())));
+    }
+
+    @PostMapping("/eval/suites/{suiteId}/runs")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> runEvalSuite(@PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.runEvalSuite(orgId, suiteId));
+    }
+
+    @GetMapping("/eval/suites/{suiteId}/runs")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalRuns(@PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalRuns(orgId, suiteId));
+    }
+
+    @GetMapping("/eval/runs/{runId}/results")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalRunResults(@PathVariable Long runId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalRunResults(orgId, runId));
+    }
+
     @GetMapping("/{kbId}/metadata/fields")
     public ApiResponse<List<Map<String, Object>>> listMetadataFields(@PathVariable Long kbId) {
         String orgId = TenantContext.requireOrgId();
@@ -443,6 +507,23 @@ public class KnowledgeBaseController {
             Integer topK,
             Double scoreThreshold,
             String retrievalStrategy,
+            Map<String, String> metadataFilters
+    ) {
+    }
+
+    public record EvalSuiteRequest(
+            @NotBlank String name,
+            String description
+    ) {
+    }
+
+    public record EvalCaseRequest(
+            @NotBlank String query,
+            Long expectedDocumentId,
+            String expectedDocumentKeyword,
+            String expectedChunkKeyword,
+            Double minScore,
+            Long forbiddenDocumentId,
             Map<String, String> metadataFilters
     ) {
     }
