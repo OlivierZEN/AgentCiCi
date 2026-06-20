@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:13:20Z
+updated_at: 2026-06-20T16:28:40Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:13:20Z
+last_run_at: 2026-06-20T16:28:40Z
 last_run_status: success
 ---
 
@@ -13,11 +13,20 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-157 text-based PDF parser support.
-- 命令：TASK-157 authorization rerun, backend test-compile, `git diff --check`.
+- 范围：TASK-157 document/chunk ACL foundation.
+- 命令：TASK-157 authorization rerun, backend test-compile.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-157 document/chunk ACL foundation (2026-06-20T16:28:40Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V63 migration, KB ACL domain/service/controller, `RagService`, `ChatOrchestratorService`, and integration test -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 ACL files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with ACL changes.
+  - Notes:
+    - Added document/chunk READ grants, ACL-aware RAG filtering, Chat principal propagation, admin ACL endpoints, and `permissionFilteredCount`.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains ACL filtering coverage but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-157 text-based PDF parser support (2026-06-20T16:13:20Z):
   - Commands:

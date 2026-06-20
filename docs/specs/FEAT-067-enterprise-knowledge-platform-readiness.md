@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-157
 related_decisions: FEAT-008, FEAT-018, FEAT-031, FEAT-042
-updated_at: 2026-06-20T16:13:20Z
+updated_at: 2026-06-20T16:28:40Z
 updated_by: MANAGER-001
 ---
 
@@ -197,3 +197,10 @@ Chat/Open API/trace 需透出这些字段，前端可先展示基础引用卡片
   - `uploadPolicy` 说明更新为文本型 PDF 已启用，PDF 不再列为 unsupported parser。
   - `KnowledgeBaseLifecycleIntegrationTest` 更新 PDF 用例，使用 PDFBox 生成文本 PDF 并验证发布后 RAG 可召回。
   - 当前本地真实集成测试仍受 Docker/PostgreSQL 未启动阻塞；`mvn -DskipTests test` 已验证主代码和测试代码编译。
+- 2026-06-20T16:28:40Z：
+  - 新增 `kb_access_grant`，支持文档级和 chunk 级 `READ` 授权，首版 principal 覆盖 `ORG`、`USER`、`SYSTEM_ROLE`。
+  - 新增 `KbAccessControlService`，chunk 授权优先于文档授权；未配置 ACL 时兼容历史全员可读，配置 ACL 后按 principal 严格过滤。
+  - `RagService` 的向量命中和 fallback 检索均接入 ACL 过滤，并在 `RetrievalResult`、Chat trace、SSE RAG 阶段透出 `permissionFilteredCount`。
+  - Chat 同步和流式路径传入当前 `userId` 与 `TenantContext` roles，避免模型上下文接收未授权知识片段。
+  - 新增 `/kb/documents/{id}/acl`、`/kb/chunks/{id}/acl` 管理接口，组织管理员可查看和替换授权列表。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加文档 ACL 检索过滤用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 已验证主代码和测试代码编译。

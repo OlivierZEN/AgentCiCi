@@ -71,6 +71,7 @@ public class KnowledgeBaseService {
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
+    private final KbAccessControlService kbAccessControlService;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final String indexingMode;
@@ -93,6 +94,7 @@ public class KnowledgeBaseService {
                                 BillingUsageMeteringService billingUsageMeteringService,
                                 VectorStoreClient vectorStoreClient,
                                 EmbeddingService embeddingService,
+                                KbAccessControlService kbAccessControlService,
                                 RabbitTemplate rabbitTemplate,
                                 ObjectMapper objectMapper,
                                 @Value("${app.kb.storage-dir:./data/kb-files}") String storageDir,
@@ -114,6 +116,7 @@ public class KnowledgeBaseService {
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
+        this.kbAccessControlService = kbAccessControlService;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.indexingMode = indexingMode;
@@ -498,6 +501,28 @@ public class KnowledgeBaseService {
             documentMetadataRepository.save(item);
         }
         return getDocumentMetadata(orgId, documentId);
+    }
+
+    public List<Map<String, Object>> listDocumentAccessGrants(String orgId, Long documentId) {
+        return kbAccessControlService.listDocumentGrants(orgId, documentId);
+    }
+
+    public List<Map<String, Object>> replaceDocumentAccessGrants(String orgId,
+                                                                 Long documentId,
+                                                                 String actorUserId,
+                                                                 List<KbAccessControlService.GrantInput> grants) {
+        return kbAccessControlService.replaceDocumentGrants(orgId, documentId, actorUserId, grants);
+    }
+
+    public List<Map<String, Object>> listChunkAccessGrants(String orgId, Long chunkId) {
+        return kbAccessControlService.listChunkGrants(orgId, chunkId);
+    }
+
+    public List<Map<String, Object>> replaceChunkAccessGrants(String orgId,
+                                                              Long chunkId,
+                                                              String actorUserId,
+                                                              List<KbAccessControlService.GrantInput> grants) {
+        return kbAccessControlService.replaceChunkGrants(orgId, chunkId, actorUserId, grants);
     }
 
     @Transactional

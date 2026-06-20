@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.kb.service.EmbeddingService;
+import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.kb.service.VectorSearchHit;
 import com.codehouse.ciciassistant.kb.service.VectorSearchQuery;
 import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
@@ -34,19 +35,22 @@ public class RagService {
     private final KnowledgeBaseRepository knowledgeBaseRepository;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
+    private final KbAccessControlService kbAccessControlService;
 
     public RagService(KbChunkRepository kbChunkRepository,
                       KbDocumentRepository kbDocumentRepository,
                       KbDocumentMetadataRepository kbDocumentMetadataRepository,
                       KnowledgeBaseRepository knowledgeBaseRepository,
                       VectorStoreClient vectorStoreClient,
-                      EmbeddingService embeddingService) {
+                      EmbeddingService embeddingService,
+                      KbAccessControlService kbAccessControlService) {
         this.kbChunkRepository = kbChunkRepository;
         this.kbDocumentRepository = kbDocumentRepository;
         this.kbDocumentMetadataRepository = kbDocumentMetadataRepository;
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
+        this.kbAccessControlService = kbAccessControlService;
     }
 
     public List<String> retrieveContext(String orgId, List<String> knowledgeBaseIds, String query) {
@@ -58,12 +62,20 @@ public class RagService {
     }
 
     public RetrievalResult retrieveDetailed(String orgId, List<String> knowledgeBaseIds, String query, Map<String, String> metadataFilters) {
+        return retrieveDetailed(orgId, knowledgeBaseIds, query, metadataFilters, KbAccessControlService.AccessPrincipal.system());
+    }
+
+    public RetrievalResult retrieveDetailed(String orgId,
+                                            List<String> knowledgeBaseIds,
+                                            String query,
+                                            Map<String, String> metadataFilters,
+                                            KbAccessControlService.AccessPrincipal principal) {
         long started = System.nanoTime();
         Map<String, Long> timingsMs = new LinkedHashMap<>();
         Map<String, String> normalizedFilters = normalizeMetadataFilters(metadataFilters);
         if (knowledgeBaseIds == null || knowledgeBaseIds.isEmpty()) {
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters);
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters, 0);
         }
         long validationStarted = System.nanoTime();
         Map<String, Double> scoreThresholdByKb = new HashMap<>();
@@ -84,7 +96,7 @@ public class RagService {
         if (requestedNumericIds.isEmpty()) {
             timingsMs.put("validation", elapsedMs(validationStarted));
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters);
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters, 0);
         }
         Map<Long, KnowledgeBaseEntity> kbById = knowledgeBaseRepository.findByOrgIdAndIdIn(orgId, requestedNumericIds).stream()
                 .collect(Collectors.toMap(KnowledgeBaseEntity::getId, item -> item));
@@ -108,7 +120,7 @@ public class RagService {
         timingsMs.put("validation", elapsedMs(validationStarted));
         if (allowedKnowledgeBaseIds.isEmpty()) {
             timingsMs.put("total", elapsedMs(started));
-            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters);
+            return new RetrievalResult(Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), timingsMs, false, normalizedFilters, 0);
         }
         int safeTopK = Math.max(1, Math.min(20, topK == 0 ? 5 : topK));
         long embeddingStarted = System.nanoTime();
@@ -142,6 +154,7 @@ public class RagService {
         timingsMs.put("vectorSearch", elapsedMs(vectorStarted));
         long filterStarted = System.nanoTime();
         Set<String> activeKnowledgeBaseIds = new HashSet<>(allowedKnowledgeBaseIds);
+        PermissionFilterCounter permissionFilterCounter = new PermissionFilterCounter();
         List<RetrievedSource> vectorSources = filterVectorHits(
                 orgId,
                 hits,
@@ -149,7 +162,9 @@ public class RagService {
                 scoreThresholdByKb,
                 activeKnowledgeBaseIds,
                 kbById,
-                normalizedFilters);
+                normalizedFilters,
+                principal,
+                permissionFilterCounter);
         timingsMs.put("filter", elapsedMs(filterStarted));
         if (!vectorSources.isEmpty()) {
             timingsMs.put("total", elapsedMs(started));
@@ -159,7 +174,8 @@ public class RagService {
                     retrievedKnowledgeBases,
                     timingsMs,
                     false,
-                    normalizedFilters);
+                    normalizedFilters,
+                    permissionFilterCounter.count());
         }
         long fallbackStarted = System.nanoTime();
         List<KbChunkEntity> fallbackCandidates = kbChunkRepository.findTop50ByOrgIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
@@ -172,7 +188,9 @@ public class RagService {
                         safeTopK,
                         activeKnowledgeBaseIds,
                         kbById,
-                        normalizedFilters).stream()
+                        normalizedFilters,
+                        principal,
+                        permissionFilterCounter).stream()
                 .limit(safeTopK)
                 .collect(Collectors.toList());
         timingsMs.put("fallback", elapsedMs(fallbackStarted));
@@ -183,7 +201,8 @@ public class RagService {
                 retrievedKnowledgeBases,
                 timingsMs,
                 true,
-                normalizedFilters);
+                normalizedFilters,
+                permissionFilterCounter.count());
     }
 
     private List<RetrievedSource> filterVectorHits(String orgId,
@@ -192,7 +211,9 @@ public class RagService {
                                                    Map<String, Double> scoreThresholdByKb,
                                                    Set<String> activeKnowledgeBaseIds,
                                                    Map<Long, KnowledgeBaseEntity> kbById,
-                                                   Map<String, String> metadataFilters) {
+                                                   Map<String, String> metadataFilters,
+                                                   KbAccessControlService.AccessPrincipal principal,
+                                                   PermissionFilterCounter permissionFilterCounter) {
         ArrayList<VectorSearchHit> candidates = new ArrayList<>();
         LinkedHashSet<Long> chunkIds = new LinkedHashSet<>();
         for (VectorSearchHit hit : hits) {
@@ -221,6 +242,7 @@ public class RagService {
             KbDocumentEntity document = chunk == null ? null : documentById.get(chunk.getDocumentId());
             if (chunk != null
                     && isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)
+                    && canReadChunk(orgId, chunk, document, principal, permissionFilterCounter)
                     && matchesMetadataFilters(orgId, chunk, document, metadataFilters)) {
                 out.add(toRetrievedSource(chunk, document, kbById, hit.score(), "vector"));
                 if (out.size() >= topK) {
@@ -236,12 +258,15 @@ public class RagService {
                                                          int topK,
                                                          Set<String> activeKnowledgeBaseIds,
                                                          Map<Long, KnowledgeBaseEntity> kbById,
-                                                         Map<String, String> metadataFilters) {
+                                                         Map<String, String> metadataFilters,
+                                                         KbAccessControlService.AccessPrincipal principal,
+                                                         PermissionFilterCounter permissionFilterCounter) {
         Map<Long, KbDocumentEntity> documentById = loadDocuments(orgId, chunks);
         ArrayList<RetrievedSource> out = new ArrayList<>();
         for (KbChunkEntity chunk : chunks) {
             KbDocumentEntity document = documentById.get(chunk.getDocumentId());
             if (isChunkSearchable(chunk, activeKnowledgeBaseIds, documentById)
+                    && canReadChunk(orgId, chunk, document, principal, permissionFilterCounter)
                     && matchesMetadataFilters(orgId, chunk, document, metadataFilters)) {
                 out.add(toRetrievedSource(chunk, document, kbById, 0.0, "fallback"));
                 if (out.size() >= topK) {
@@ -316,6 +341,25 @@ public class RagService {
         return true;
     }
 
+    private boolean canReadChunk(String orgId,
+                                 KbChunkEntity chunk,
+                                 KbDocumentEntity document,
+                                 KbAccessControlService.AccessPrincipal principal,
+                                 PermissionFilterCounter permissionFilterCounter) {
+        Long knowledgeBaseId = parseLong(chunk.getKnowledgeBaseId()).orElse(null);
+        boolean allowed = knowledgeBaseId != null
+                && kbAccessControlService.canReadChunk(
+                orgId,
+                knowledgeBaseId,
+                document == null ? chunk.getDocumentId() : document.getId(),
+                chunk.getId(),
+                principal);
+        if (!allowed) {
+            permissionFilterCounter.increment();
+        }
+        return allowed;
+    }
+
     private RetrievedSource toRetrievedSource(KbChunkEntity chunk,
                                               KbDocumentEntity document,
                                               Map<Long, KnowledgeBaseEntity> kbById,
@@ -373,7 +417,8 @@ public class RagService {
                                   List<RetrievedKnowledgeBase> knowledgeBases,
                                   Map<String, Long> timingsMs,
                                   boolean fallbackUsed,
-                                  Map<String, String> metadataFilters) {
+                                  Map<String, String> metadataFilters,
+                                  long permissionFilteredCount) {
     }
 
     public record RetrievedKnowledgeBase(String id, String name) {
@@ -408,5 +453,17 @@ public class RagService {
     }
 
     private record GroupEmbedding(List<String> knowledgeBaseIds, List<Float> embedding) {
+    }
+
+    private static final class PermissionFilterCounter {
+        private long count;
+
+        private void increment() {
+            count++;
+        }
+
+        private long count() {
+            return count;
+        }
     }
 }

@@ -21,6 +21,7 @@ import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
+import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
@@ -186,7 +187,12 @@ public class ChatOrchestratorService {
                 question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
-                ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question, metadataFilters)
+                ? ragService.retrieveDetailed(
+                orgId,
+                effectiveKnowledgeBaseIds,
+                question,
+                metadataFilters,
+                KbAccessControlService.AccessPrincipal.user(userId, TenantContext.getRoles()))
                 : emptyRagRetrievalResult();
         stageTraces.add(stageTrace("RAG", useKnowledgeRetrieval ? "知识库检索" : "知识库检索未触发",
                 useKnowledgeRetrieval ? "SUCCESS" : "SKIPPED", ragStartedAt, Instant.now(),
@@ -363,7 +369,12 @@ public class ChatOrchestratorService {
                 }
                 Instant ragStartedAt = Instant.now();
                 RagService.RetrievalResult ragResult = useKnowledgeRetrieval
-                        ? ragService.retrieveDetailed(orgId, effectiveKnowledgeBaseIds, question, metadataFilters)
+                        ? ragService.retrieveDetailed(
+                        orgId,
+                        effectiveKnowledgeBaseIds,
+                        question,
+                        metadataFilters,
+                        KbAccessControlService.AccessPrincipal.user(userId, TenantContext.getRoles()))
                         : emptyRagRetrievalResult();
                 stageTraces.add(stageTrace("RAG", useKnowledgeRetrieval ? "知识库检索" : "知识库检索未触发",
                         useKnowledgeRetrieval ? "SUCCESS" : "SKIPPED", ragStartedAt, Instant.now(),
@@ -1005,6 +1016,7 @@ public class ChatOrchestratorService {
         metadata.put("knowledgeBases", ragResult.knowledgeBases().stream().map(RagService.RetrievedKnowledgeBase::name).toList());
         metadata.put("sources", ragResult.sources().stream().map(RagService.RetrievedSource::toPayload).toList());
         metadata.put("metadataFilters", ragResult.metadataFilters());
+        metadata.put("permissionFilteredCount", ragResult.permissionFilteredCount());
         metadata.put("timingsMs", ragResult.timingsMs());
         metadata.put("fallbackUsed", ragResult.fallbackUsed());
         return metadata;
@@ -1526,6 +1538,7 @@ public class ChatOrchestratorService {
         payload.put("contextCount", result.context().size());
         payload.put("sources", result.sources().stream().map(RagService.RetrievedSource::toPayload).toList());
         payload.put("metadataFilters", result.metadataFilters());
+        payload.put("permissionFilteredCount", result.permissionFilteredCount());
         payload.put("elapsedMs", result.timingsMs().getOrDefault("total", 0L));
         payload.put("timingsMs", result.timingsMs());
         payload.put("fallbackUsed", result.fallbackUsed());
@@ -2183,7 +2196,7 @@ public class ChatOrchestratorService {
     }
 
     private static RagService.RetrievalResult emptyRagRetrievalResult() {
-        return new RagService.RetrievalResult(List.of(), List.of(), List.of(), Map.of("total", 0L), false, Map.of());
+        return new RagService.RetrievalResult(List.of(), List.of(), List.of(), Map.of("total", 0L), false, Map.of(), 0);
     }
 
     private record ModelCallCredentials(String providerCode, String apiBaseUrl, String apiKey, boolean apiKeyRequired) {

@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:13:20Z
+updated_at: 2026-06-20T16:28:40Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -37,6 +37,8 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `dev-login.py` / `check-assignment.py` rerun after adding `backend/pom.xml` to assignment scope -> allowed.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with PDFBox.
 - `git diff --check` -> success.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 ACL files including V63 migration, KB domain/service/controller, `RagService`, `ChatOrchestratorService`, and integration test -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with ACL changes.
 
 ## Changed Files
 
@@ -47,12 +49,20 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `.claw/current-status.md`
 - `.claw/test-report.md`
 - `backend/pom.xml`
+- `backend/src/main/resources/db/migration/V63__kb_document_chunk_acl.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/RagService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/kb/KnowledgeBaseLifecycleIntegrationTest.java`
 
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
 - Text-based PDF parser support is implemented and compile-verified.
+- Document/chunk ACL data model, management API, RAG filtering, Chat principal propagation, and permission-filtered trace count are implemented and compile-verified.
 - Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: document/chunk ACL and rebuild/drift audit.
+- Next P0: rebuild/drift audit, retrieval evaluation, citation trust, and connector sync.

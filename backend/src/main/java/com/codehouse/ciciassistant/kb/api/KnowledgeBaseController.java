@@ -2,11 +2,13 @@ package com.codehouse.ciciassistant.kb.api;
 
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -262,6 +264,25 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.updateDocumentMetadata(orgId, id, metadata));
     }
 
+    @GetMapping("/documents/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listDocumentAccessGrants(@PathVariable Long id) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listDocumentAccessGrants(orgId, id));
+    }
+
+    @PutMapping("/documents/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> replaceDocumentAccessGrants(@PathVariable Long id,
+                                                                               @Valid @RequestBody ReplaceAccessGrantsRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.replaceDocumentAccessGrants(
+                orgId,
+                id,
+                currentUserId(),
+                toGrantInputs(request)));
+    }
+
     @PostMapping("/documents/{id}/publish")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> publishDocument(@PathVariable Long id) {
@@ -310,6 +331,25 @@ public class KnowledgeBaseController {
     public ApiResponse<Map<String, Object>> enableChunk(@PathVariable Long id) {
         String orgId = TenantContext.requireOrgId();
         return ApiResponse.ok(knowledgeBaseService.setChunkEnabled(orgId, id, true));
+    }
+
+    @GetMapping("/chunks/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listChunkAccessGrants(@PathVariable Long id) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listChunkAccessGrants(orgId, id));
+    }
+
+    @PutMapping("/chunks/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> replaceChunkAccessGrants(@PathVariable Long id,
+                                                                            @Valid @RequestBody ReplaceAccessGrantsRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.replaceChunkAccessGrants(
+                orgId,
+                id,
+                currentUserId(),
+                toGrantInputs(request)));
     }
 
     @PostMapping("/chunks/{id}/disable")
@@ -410,5 +450,33 @@ public class KnowledgeBaseController {
     public record BatchIdsRequest(
             @NotEmpty List<Long> ids
     ) {
+    }
+
+    public record AccessGrantRequest(
+            @NotBlank String principalType,
+            String principalId,
+            Instant expiresAt
+    ) {
+    }
+
+    public record ReplaceAccessGrantsRequest(
+            List<AccessGrantRequest> grants
+    ) {
+    }
+
+    private List<KbAccessControlService.GrantInput> toGrantInputs(ReplaceAccessGrantsRequest request) {
+        if (request == null || request.grants() == null || request.grants().isEmpty()) {
+            return List.of();
+        }
+        return request.grants().stream()
+                .map(item -> new KbAccessControlService.GrantInput(
+                        item.principalType(),
+                        item.principalId(),
+                        item.expiresAt()))
+                .toList();
+    }
+
+    private String currentUserId() {
+        return TenantContext.getUserId().orElse("org-admin");
     }
 }

@@ -11,6 +11,7 @@ import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
+import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -126,6 +127,34 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 .extracting(RagService.RetrievedSource::documentName)
                 .contains("policy.txt");
         assertThat(detailed.timingsMs()).containsKey("total");
+    }
+
+    @Test
+    void shouldFilterRetrievalByDocumentAccessGrant() {
+        Fixture fixture = createPublishedDocument("restricted payroll policy theta");
+        knowledgeBaseService.replaceDocumentAccessGrants(
+                fixture.orgId(),
+                fixture.documentId(),
+                "admin-user",
+                List.of(new KbAccessControlService.GrantInput("USER", "allowed-user", null)));
+
+        RagService.RetrievalResult allowed = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "payroll theta",
+                Map.of(),
+                KbAccessControlService.AccessPrincipal.user("allowed-user", List.of("ORG_USER")));
+        RagService.RetrievalResult denied = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "payroll theta",
+                Map.of(),
+                KbAccessControlService.AccessPrincipal.user("blocked-user", List.of("ORG_USER")));
+
+        assertThat(allowed.context()).anyMatch(item -> item.contains("restricted payroll"));
+        assertThat(allowed.permissionFilteredCount()).isZero();
+        assertThat(denied.context()).isEmpty();
+        assertThat(denied.permissionFilteredCount()).isGreaterThan(0);
     }
 
     @Test
