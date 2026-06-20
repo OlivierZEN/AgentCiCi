@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:06:00Z
+updated_at: 2026-06-20T16:10:12Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:06:00Z
+last_run_at: 2026-06-20T16:10:12Z
 last_run_status: success
 ---
 
@@ -13,11 +13,22 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-156/TASK-157 生产就绪目标任务分配与授权验证.
-- 命令：TASK-156/TASK-157 身份/授权门禁和 assignment scope checks.
+- 范围：TASK-156 Agent Builder readiness gate first implementation.
+- 命令：backend compile/test-compile, focused integration attempt, `git diff --check`.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156 Agent Builder readiness gate first implementation (2026-06-20T16:10:12Z):
+  - Commands:
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **blocked**, Spring/Flyway could not connect to PostgreSQL at `localhost:5432`.
+    - `postgres-env`: `docker compose up -d postgres` from repo root -> **blocked**, Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` was unavailable.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Added publish-time Agent readiness gate and `/agents/{agentId}/readiness`.
+    - Focused integration coverage exists in `AgentProductionReadinessIntegrationTest` and should be rerun when local PostgreSQL is available.
 
 - TASK-156/TASK-157 production-readiness goal setup (2026-06-21T00:06:00+08:00):
   - Commands:

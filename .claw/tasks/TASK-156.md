@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-156
 status: in_progress
-updated_at: 2026-06-20T16:06:00Z
+updated_at: 2026-06-20T16:10:12Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -35,6 +35,10 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 
 - `dev-login.py .claw --developer MANAGER-001 --task TASK-156 --branch codex/TASK-156-production-readiness-goal --files ...` -> allowed.
 - `check-assignment.py .claw --developer MANAGER-001 --task TASK-156 --branch codex/TASK-156-production-readiness-goal --files ...` -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` -> success.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> blocked by local PostgreSQL connection refused on `localhost:5432`; Docker daemon was not running, so `docker compose up -d postgres` could not start the dependency.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile.
+- `git diff --check` -> success.
 
 ## Changed Files
 
@@ -44,8 +48,13 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/api/AgentDefinitionController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentDefinitionService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentProductionReadinessService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/agent/AgentProductionReadinessIntegrationTest.java`
 
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
-- Start with backend readiness gate; keep FEAT-031 full evaluation scope trimmed to publish-gate minimum before broad UI work.
+- Backend readiness gate is implemented and compile-verified; rerun focused integration test after Docker/PostgreSQL is available.
+- Next: implement minimal evaluation gate or start the KB P0 parser/ACL/drift track, depending on integration environment availability.

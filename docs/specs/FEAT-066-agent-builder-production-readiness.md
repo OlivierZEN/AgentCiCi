@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-156
 related_decisions: FEAT-004, FEAT-021, FEAT-031, FEAT-036, FEAT-042
-updated_at: 2026-06-20T16:01:12Z
+updated_at: 2026-06-20T16:10:12Z
 updated_by: MANAGER-001
 ---
 
@@ -133,3 +133,11 @@ Agent Builder 需要把现有分散信息汇总为同一生产闭环：
 - 风险：一次性实现全部 FEAT-031 会扩大范围。缓解：先做发布门禁所需的最小评测闭环。
 - 风险：发布 gate 误阻塞现有客户。缓解：先支持 `warnOnly`，但 production-ready 验收必须有阻塞模式。
 - 回滚：readiness gate 可配置为 warn-only；新增评测表保留，不影响现有 Agent 运行。
+
+## 实现进展
+
+- 2026-06-20T16:10:12Z：
+  - 新增 `AgentProductionReadinessService`，基于现有版本、模型路由、KB 绑定、Tool 绑定、渠道、schedule 和 Open API Key 生成生产就绪检查。
+  - `GET /agents/{agentId}/readiness` 已返回 readiness 状态、检查项和摘要。
+  - `POST /agents/{agentId}/publish` 发布前调用 readiness gate；存在 blocker 时返回 `409 Conflict`，发布成功响应携带 readiness 摘要。
+  - 新增 `AgentProductionReadinessIntegrationTest` 覆盖无生产入口阻止发布和 Web 入口发布响应携带 readiness；当前本地真实执行被 PostgreSQL/Docker 未启动阻塞，测试代码编译已通过。
