@@ -1,23 +1,32 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:50:30Z
+updated_at: 2026-06-20T16:59:31Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:50:30Z
-last_run_status: blocked
+last_run_at: 2026-06-20T16:59:31Z
+last_run_status: success
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`blocked`
-- 范围：TASK-156 Agent Builder minimal evaluation gate.
-- 命令：TASK-156 authorization rerun, backend compile/test-compile, focused integration attempt, static check.
+- 状态：`success`
+- 范围：TASK-156 Agent Builder frontend production gate UX.
+- 命令：TASK-156 frontend authorization rerun, frontend build, mocked desktop browser validation.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156 Agent Builder frontend production gate UX (2026-06-20T16:59:31Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` covering `AgentBuilderShell.tsx`, `cici-ui.css`, FEAT-066, task/status/report files -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `browser-desktop-mocked`: Vite `http://127.0.0.1:5173/admin/agent-builder/support-agent` with mocked admin auth/API via Playwright using system Chrome -> **success**; screenshot `output/playwright/task156-agent-builder-production-gate.png`; `overflowX=false`; required text for production readiness, evaluation gate, and blocker message present.
+  - Notes:
+    - Agent Builder publish tab now shows readiness checks, blocker/warning counts, evaluation gate summary, P0 case creation, evaluation run action, and pre-publish readiness refresh.
+    - Browser validation used mocked API responses because local PostgreSQL remains unavailable; rerun authenticated real-backend validation when Docker/PostgreSQL is restored.
 
 - TASK-156 Agent Builder minimal evaluation gate (2026-06-20T16:50:30Z):
   - Commands:

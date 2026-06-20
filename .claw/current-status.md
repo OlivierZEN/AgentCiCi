@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-20T16:50:30Z
+updated_at: 2026-06-20T16:59:31Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-156 readiness and minimal evaluation gate implemented; TASK-157 enterprise KB backend foundations implemented through embedding metadata drift."
-next_action: "Restore Docker/PostgreSQL and rerun focused integration tests; continue TASK-156 frontend production evidence and Agent Builder desktop validation."
+active_task: "TASK-156 readiness/evaluation backend and frontend production gate UX implemented; TASK-157 enterprise KB backend foundations implemented through embedding metadata drift."
+next_action: "Restore Docker/PostgreSQL and rerun focused Agent/KB integration tests; then perform authenticated real-backend Agent Builder desktop validation."
 read_next:
   goals: false
   decisions: false
@@ -24,8 +24,8 @@ read_next:
 
 - Current branch: `codex/TASK-156-production-readiness-goal`.
 - User opened a goal to finish two production-readiness tracks: Agent Builder production closure and enterprise knowledge platform readiness.
-- TASK-156 added Agent production readiness checks, `GET /agents/{agentId}/readiness`, a publish-time readiness gate, and a minimal Agent evaluation gate with suites/cases/runs/results.
-- TASK-156 compile validation passed; focused integration test is blocked until local PostgreSQL is available.
+- TASK-156 added Agent production readiness checks, `GET /agents/{agentId}/readiness`, a publish-time readiness gate, a minimal Agent evaluation gate with suites/cases/runs/results, and Agent Builder publish-tab production gate UX.
+- TASK-156 backend/frontend compile validation passed; focused integration test is blocked until local PostgreSQL is available.
 - TASK-157 first implementations added PDFBox text-based PDF parsing, document/chunk ACL, RAG/Chat permission filtering, drift audit/repair including embedding metadata comparison, RAG citation trust fields, retrieval evaluation backend model/API/metrics, and connector sync skeleton.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
 

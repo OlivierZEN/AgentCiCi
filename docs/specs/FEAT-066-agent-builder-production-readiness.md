@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-156
 related_decisions: FEAT-004, FEAT-021, FEAT-031, FEAT-036, FEAT-042
-updated_at: 2026-06-20T16:50:30Z
+updated_at: 2026-06-20T16:59:31Z
 updated_by: MANAGER-001
 ---
 
@@ -148,3 +148,9 @@ Agent Builder 需要把现有分散信息汇总为同一生产闭环：
   - 已支持确定性断言：输出包含/不包含、状态匹配、工具调用/禁止调用、RAG 节点使用、人工接管节点请求。
   - readiness summary 现在包含 `evaluationGate`；blocking 评测集存在用例时，当前版本缺少评测运行、P0/safety 失败或低于通过率阈值会阻止发布。
   - `AgentProductionReadinessIntegrationTest` 新增 P0 评测失败阻止发布覆盖；当前真实执行仍被本地 PostgreSQL 不可用阻塞，主代码和测试代码编译已通过。
+- 2026-06-20T16:59:31Z：
+  - Agent Builder 发布页新增生产就绪面板，展示目标版本、线上版本、阻塞/警告数量、后端 readiness 检查项和刷新动作。
+  - 发布页新增发布评测面板，展示评测集、门禁模式、最近运行、通过率，支持创建阻塞评测集、添加 P0 输出包含用例并运行，以及运行现有评测集。
+  - 发布动作在调用 `/publish` 前会先刷新当前候选版本 readiness；存在 blocker 时前端停止发布并保留检查清单证据。
+  - 前端 `npm run build` 已通过；桌面端 Playwright 使用 mocked admin auth/API 验证发布页布局无横向溢出，并生成截图 `output/playwright/task156-agent-builder-production-gate.png`。
+  - 真实后端 authenticated desktop validation 仍需在 PostgreSQL/Docker 恢复后执行。

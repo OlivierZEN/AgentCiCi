@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-156
 status: in_progress
-updated_at: 2026-06-20T16:50:30Z
+updated_at: 2026-06-20T16:59:31Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -46,6 +46,9 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> blocked by local PostgreSQL connection refused on `localhost:5432`; Spring/Flyway could not create the test ApplicationContext.
 - `git diff --check` -> success.
 - `check-assignment.py` for TASK-156 changed files -> allowed.
+- `dev-login.py` rerun for TASK-156 frontend production gate UX files and status docs -> allowed.
+- `cd frontend && npm run build` -> success; existing Vite large chunk warning remains.
+- Desktop Playwright with mocked admin auth/API on `http://127.0.0.1:5173/admin/agent-builder/support-agent` -> success; screenshot `output/playwright/task156-agent-builder-production-gate.png`, `overflowX=false`, production gate/evaluation gate/blocker text present.
 
 ## Changed Files
 
@@ -70,11 +73,15 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 - `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentProductionReadinessService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentWorkflowRuntimeService.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/agent/AgentProductionReadinessIntegrationTest.java`
+- `frontend/src/assistant/AgentBuilderShell.tsx`
+- `frontend/src/assistant/cici-ui.css`
 
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
 - Backend readiness gate is implemented and compile-verified; rerun focused integration test after Docker/PostgreSQL is available.
 - Minimal evaluation gate backend is implemented and compile-verified: suites, cases, runs, results, deterministic assertions, candidate-version evaluation runtime marker, readiness summary, and publish-time blocking.
+- Agent Builder publish tab now shows production readiness checks, blocker/warning counts, evaluation suite/run status, P0 case creation, evaluation run action, and pre-publish readiness refresh.
 - Focused integration test contains coverage for P0 evaluation failure blocking publish but cannot execute until PostgreSQL is available.
-- Next: finish Agent Builder frontend readiness/evaluation/publish evidence UX, then rerun backend integration and authenticated desktop validation.
+- Mocked desktop browser validation passed for the frontend production gate layout; this is not a substitute for real-backend authenticated validation.
+- Next: restore PostgreSQL/Docker, rerun backend integration, then perform authenticated real-backend desktop validation before marking production-ready.

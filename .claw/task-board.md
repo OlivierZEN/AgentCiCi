@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-20T16:50:30Z
+updated_at: 2026-06-20T16:59:31Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-156.md`
 - assignment_path: `.claw/assignments/TASK-156.yaml`
 - blocked_by: `none`
-- next_action: Continue Agent Builder frontend readiness/evaluation/publish evidence UX, then rerun focused backend integration and authenticated desktop validation when PostgreSQL/Docker are available.
+- next_action: Restore PostgreSQL/Docker, rerun focused Agent Builder backend integration, then perform authenticated real-backend desktop validation before production-ready closure.
 
 ### TASK-157 - Enterprise knowledge platform readiness
 
