@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:42:00Z
+updated_at: 2026-06-20T16:50:20Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:42:00Z
+last_run_at: 2026-06-20T16:50:20Z
 last_run_status: success
 ---
 
@@ -13,11 +13,20 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-157 drift audit/repair foundation.
+- 范围：TASK-157 citation trust fields.
 - 命令：TASK-157 authorization rerun, backend test-compile.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-157 citation trust fields (2026-06-20T16:50:20Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering `RagService`, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 citation trust files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with citation trust fields.
+  - Notes:
+    - RAG source payloads now include confidence, trust level, freshness, document index version/index time, and chunk hash.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains source payload field assertions but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-157 drift audit/repair foundation (2026-06-20T16:42:00Z):
   - Commands:

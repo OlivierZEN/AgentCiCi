@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-157
 related_decisions: FEAT-008, FEAT-018, FEAT-031, FEAT-042
-updated_at: 2026-06-20T16:42:00Z
+updated_at: 2026-06-20T16:50:20Z
 updated_by: MANAGER-001
 ---
 
@@ -210,3 +210,8 @@ Chat/Open API/trace 需透出这些字段，前端可先展示基础引用卡片
   - repair 会删除已采样 orphan vector、重建受影响文档，并对无文档归属的手工 chunk 缺失 vector 进行 upsert 修复。
   - 当前 chunk 表未持久化 embedding provider/model/dimension，embedding drift 暂返回 `NOT_AVAILABLE_UNTIL_CHUNK_EMBEDDING_METADATA_IS_PERSISTED`，后续需补元数据后做真实比较。
   - `KnowledgeBaseLifecycleIntegrationTest` 增加健康知识库 drift audit 用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 已验证主代码和测试代码编译。
+- 2026-06-20T16:50:20Z：
+  - `RagService.RetrievedSource` 增加 `confidence`、`trustLevel`、`freshnessStatus`、`documentIndexVersion`、`documentIndexedAt`、`chunkContentHash`。
+  - Chat trace 和 SSE RAG 阶段复用 `source.toPayload()`，因此引用可信度字段会随 sources 透出。
+  - trust 首版规则：向量分数高于 0.82 为 `HIGH`，高于 0.55 为 `MEDIUM`，fallback 为 `MEDIUM`，未发布或异常文档为 `LOW`；freshness 按 indexedAt 分为 `FRESH`、`AGING`、`STALE`、`UNKNOWN`。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加 source payload 字段断言；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 已验证主代码和测试代码编译。

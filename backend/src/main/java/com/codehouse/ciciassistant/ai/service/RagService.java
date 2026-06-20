@@ -13,6 +13,8 @@ import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.kb.service.VectorSearchHit;
 import com.codehouse.ciciassistant.kb.service.VectorSearchQuery;
 import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -375,8 +377,51 @@ public class RagService {
                 document == null ? "" : document.getName(),
                 chunk.getId(),
                 chunk.getChunkIndex(),
+                chunk.getContentHash(),
+                document == null ? null : document.getIndexVersion(),
+                document == null ? null : document.getIndexedAt(),
                 score,
+                confidenceScore(score, sourceType),
+                trustLevel(score, sourceType, document),
+                freshnessStatus(document),
                 sourceType);
+    }
+
+    private double confidenceScore(double score, String sourceType) {
+        if ("fallback".equals(sourceType)) {
+            return 0.35;
+        }
+        return Math.max(0.0, Math.min(1.0, score));
+    }
+
+    private String trustLevel(double score, String sourceType, KbDocumentEntity document) {
+        if (document == null || !"PUBLISHED".equals(document.getStatus())) {
+            return "LOW";
+        }
+        if ("fallback".equals(sourceType)) {
+            return "MEDIUM";
+        }
+        if (score >= 0.82) {
+            return "HIGH";
+        }
+        if (score >= 0.55) {
+            return "MEDIUM";
+        }
+        return "LOW";
+    }
+
+    private String freshnessStatus(KbDocumentEntity document) {
+        if (document == null || document.getIndexedAt() == null) {
+            return "UNKNOWN";
+        }
+        long ageDays = Duration.between(document.getIndexedAt(), Instant.now()).toDays();
+        if (ageDays <= 30) {
+            return "FRESH";
+        }
+        if (ageDays <= 180) {
+            return "AGING";
+        }
+        return "STALE";
     }
 
     private Map<String, String> normalizeMetadataFilters(Map<String, String> raw) {
@@ -431,7 +476,13 @@ public class RagService {
                                   String documentName,
                                   Long chunkId,
                                   Integer chunkIndex,
+                                  String chunkContentHash,
+                                  Integer documentIndexVersion,
+                                  Instant documentIndexedAt,
                                   double score,
+                                  double confidence,
+                                  String trustLevel,
+                                  String freshnessStatus,
                                   String sourceType) {
 
         public Map<String, Object> toPayload() {
@@ -442,7 +493,13 @@ public class RagService {
             payload.put("documentName", documentName == null ? "" : documentName);
             payload.put("chunkId", chunkId == null ? "" : chunkId);
             payload.put("chunkIndex", chunkIndex == null ? "" : chunkIndex);
+            payload.put("chunkContentHash", chunkContentHash == null ? "" : chunkContentHash);
+            payload.put("documentIndexVersion", documentIndexVersion == null ? "" : documentIndexVersion);
+            payload.put("documentIndexedAt", documentIndexedAt == null ? "" : documentIndexedAt.toString());
             payload.put("score", score);
+            payload.put("confidence", confidence);
+            payload.put("trustLevel", trustLevel == null ? "" : trustLevel);
+            payload.put("freshnessStatus", freshnessStatus == null ? "" : freshnessStatus);
             payload.put("sourceType", sourceType == null ? "" : sourceType);
             payload.put("contentPreview", content == null || content.length() <= 220 ? content == null ? "" : content : content.substring(0, 219) + "…");
             return payload;

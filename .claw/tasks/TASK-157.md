@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:42:00Z
+updated_at: 2026-06-20T16:50:20Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -41,6 +41,8 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with ACL changes.
 - `dev-login.py` / `check-assignment.py` rerun for TASK-157 drift audit files -> allowed.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with drift audit changes.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 citation trust files -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with citation trust fields.
 
 ## Changed Files
 
@@ -68,5 +70,6 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - Text-based PDF parser support is implemented and compile-verified.
 - Document/chunk ACL data model, management API, RAG filtering, Chat principal propagation, and permission-filtered trace count are implemented and compile-verified.
 - Drift audit/repair endpoint is implemented and compile-verified; embedding drift remains explicitly not available until chunk embedding metadata is persisted.
+- Citation trust fields are exposed in RAG source payloads and compile-verified.
 - Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: retrieval evaluation, citation trust, connector sync, and embedding metadata for full drift comparison.
+- Next P0: retrieval evaluation, connector sync, and embedding metadata for full drift comparison.

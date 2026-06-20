@@ -126,6 +126,8 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(detailed.sources())
                 .extracting(RagService.RetrievedSource::documentName)
                 .contains("policy.txt");
+        assertThat(detailed.sources().get(0).toPayload())
+                .containsKeys("confidence", "trustLevel", "freshnessStatus", "documentIndexVersion", "chunkContentHash");
         assertThat(detailed.timingsMs()).containsKey("total");
     }
 
