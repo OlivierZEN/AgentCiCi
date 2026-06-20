@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-157
 status: in_progress
-updated_at: 2026-06-20T16:28:40Z
+updated_at: 2026-06-20T16:42:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -39,6 +39,8 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `git diff --check` -> success.
 - `dev-login.py` / `check-assignment.py` rerun for TASK-157 ACL files including V63 migration, KB domain/service/controller, `RagService`, `ChatOrchestratorService`, and integration test -> allowed.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with ACL changes.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 drift audit files -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with drift audit changes.
 
 ## Changed Files
 
@@ -52,6 +54,7 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `backend/src/main/resources/db/migration/V63__kb_document_chunk_acl.sql`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantEntity.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDocumentRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
@@ -64,5 +67,6 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - Branch: `codex/TASK-156-production-readiness-goal`.
 - Text-based PDF parser support is implemented and compile-verified.
 - Document/chunk ACL data model, management API, RAG filtering, Chat principal propagation, and permission-filtered trace count are implemented and compile-verified.
+- Drift audit/repair endpoint is implemented and compile-verified; embedding drift remains explicitly not available until chunk embedding metadata is persisted.
 - Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: rebuild/drift audit, retrieval evaluation, citation trust, and connector sync.
+- Next P0: retrieval evaluation, citation trust, connector sync, and embedding metadata for full drift comparison.

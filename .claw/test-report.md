@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:28:40Z
+updated_at: 2026-06-20T16:42:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:28:40Z
+last_run_at: 2026-06-20T16:42:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-157 document/chunk ACL foundation.
+- 范围：TASK-157 drift audit/repair foundation.
 - 命令：TASK-157 authorization rerun, backend test-compile.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-157 drift audit/repair foundation (2026-06-20T16:42:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering drift audit backend files and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 drift audit files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with drift audit changes.
+  - Notes:
+    - Added `/kb/drift/audit` dry-run/repair, orphan vector sampling cleanup, missing-vector chunk detection, published-document-without-chunks detection, stale document reporting, document rebuild repair, and manual chunk vector repair.
+    - Embedding model/dimension drift is explicitly reported as unavailable until chunk embedding metadata is persisted.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains healthy drift audit coverage but real execution remains blocked until local PostgreSQL is available.
 
 - TASK-157 document/chunk ACL foundation (2026-06-20T16:28:40Z):
   - Commands:

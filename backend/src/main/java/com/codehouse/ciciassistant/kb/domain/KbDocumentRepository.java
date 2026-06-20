@@ -12,6 +12,8 @@ public interface KbDocumentRepository extends JpaRepository<KbDocumentEntity, Lo
 
     List<KbDocumentEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, Long knowledgeBaseId, String status);
 
+    List<KbDocumentEntity> findByOrgIdAndStatusNot(String orgId, String status);
+
     List<KbDocumentEntity> findByIdInAndOrgId(List<Long> ids, String orgId);
 
     Optional<KbDocumentEntity> findByIdAndOrgId(Long id, String orgId);

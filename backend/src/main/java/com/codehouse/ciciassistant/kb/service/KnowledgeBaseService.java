@@ -687,6 +687,94 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
+    public Map<String, Object> auditIndexDrift(String orgId, boolean repair) {
+        List<KbChunkEntity> chunks = chunkRepository.findByOrgIdAndStatusNot(orgId, "DELETED");
+        List<KbDocumentEntity> documents = documentRepository.findByOrgIdAndStatusNot(orgId, "DELETED");
+        List<String> registeredVectorIds = chunks.stream()
+                .map(KbChunkEntity::getVectorId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        VectorStoreAuditResult vectorAudit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
+
+        List<KbChunkEntity> missingVectorChunks = chunks.stream()
+                .filter(KbChunkEntity::isSearchable)
+                .filter(chunk -> chunk.getVectorId() == null || chunk.getVectorId().isBlank())
+                .toList();
+        List<KbDocumentEntity> publishedDocumentsWithoutChunks = documents.stream()
+                .filter(doc -> doc.isEnabled() && !doc.isArchived() && "PUBLISHED".equals(doc.getStatus()))
+                .filter(doc -> chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(orgId, doc.getId(), "ACTIVE") == 0)
+                .toList();
+        List<KbDocumentEntity> staleSyncDocuments = documents.stream()
+                .filter(doc -> "FAILED".equals(doc.getStatus()) || "CLEANUP_FAILED".equals(doc.getStatus()))
+                .toList();
+
+        LinkedHashSet<Long> documentsToReindex = new LinkedHashSet<>();
+        for (KbChunkEntity chunk : missingVectorChunks) {
+            if (chunk.getDocumentId() != null) {
+                documentsToReindex.add(chunk.getDocumentId());
+            }
+        }
+        publishedDocumentsWithoutChunks.stream()
+                .map(KbDocumentEntity::getId)
+                .forEach(documentsToReindex::add);
+
+        HashMap<String, Object> repairSummary = new HashMap<>();
+        if (repair) {
+            int repairedManualChunks = 0;
+            for (KbChunkEntity chunk : missingVectorChunks) {
+                if (chunk.getDocumentId() == null && repairChunkVector(orgId, chunk)) {
+                    repairedManualChunks++;
+                }
+            }
+            int reindexedDocuments = 0;
+            for (Long documentId : documentsToReindex) {
+                publishDocument(orgId, documentId);
+                reindexedDocuments++;
+            }
+            VectorDeleteResult orphanCleanup = vectorAudit.success() && !vectorAudit.orphanVectorIds().isEmpty()
+                    ? vectorStoreClient.deleteByVectorIds(orgId, vectorAudit.orphanVectorIds())
+                    : VectorDeleteResult.success(0, 0);
+            repairSummary.put("reindexedDocuments", reindexedDocuments);
+            repairSummary.put("repairedManualChunks", repairedManualChunks);
+            repairSummary.put("orphanCleanupSuccess", orphanCleanup.success());
+            repairSummary.put("orphanDeleteRequested", orphanCleanup.requestedCount());
+            repairSummary.put("orphanDeletedCount", orphanCleanup.deletedCount());
+            repairSummary.put("orphanCleanupMessage", orphanCleanup.message());
+        }
+
+        int orphanCount = vectorAudit.success() ? vectorAudit.orphanCount() : 0;
+        String status = !vectorAudit.success()
+                ? "FAILED"
+                : missingVectorChunks.isEmpty()
+                && publishedDocumentsWithoutChunks.isEmpty()
+                && staleSyncDocuments.isEmpty()
+                && orphanCount == 0
+                ? "OK"
+                : "DRIFT_DETECTED";
+
+        HashMap<String, Object> payload = new HashMap<>();
+        payload.put("status", status);
+        payload.put("repairRequested", repair);
+        payload.put("repairSummary", repairSummary);
+        payload.put("registeredVectorCount", registeredVectorIds.size());
+        payload.put("vectorAudit", Map.of(
+                "success", vectorAudit.success(),
+                "scannedCount", vectorAudit.scannedCount(),
+                "orphanCount", vectorAudit.orphanCount(),
+                "orphanVectorIds", vectorAudit.orphanVectorIds(),
+                "message", vectorAudit.message()));
+        payload.put("missingVectorChunkCount", missingVectorChunks.size());
+        payload.put("missingVectorChunks", missingVectorChunks.stream().limit(50).map(this::chunkDriftPayload).toList());
+        payload.put("publishedDocumentWithoutChunkCount", publishedDocumentsWithoutChunks.size());
+        payload.put("publishedDocumentsWithoutChunks", publishedDocumentsWithoutChunks.stream().limit(50).map(this::documentDriftPayload).toList());
+        payload.put("staleSyncDocumentCount", staleSyncDocuments.size());
+        payload.put("staleSyncDocuments", staleSyncDocuments.stream().limit(50).map(this::documentDriftPayload).toList());
+        payload.put("embeddingDriftCheck", "NOT_AVAILABLE_UNTIL_CHUNK_EMBEDDING_METADATA_IS_PERSISTED");
+        return payload;
+    }
+
+    @Transactional
     public Map<String, Object> publishDocument(String orgId, Long documentId) {
         KbDocumentEntity doc = documentRepository.findByIdAndOrgId(documentId, orgId)
                 .orElseThrow(() -> new IllegalArgumentException("Document not found"));
@@ -1278,6 +1366,63 @@ public class KnowledgeBaseService {
         row.put("enabled", chunk.isEnabled());
         row.put("vectorId", chunk.getVectorId() == null ? "" : chunk.getVectorId());
         return row;
+    }
+
+    private Map<String, Object> chunkDriftPayload(KbChunkEntity chunk) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("chunkId", chunk.getId());
+        row.put("knowledgeBaseId", chunk.getKnowledgeBaseId());
+        row.put("documentId", chunk.getDocumentId() == null ? "" : chunk.getDocumentId());
+        row.put("chunkIndex", chunk.getChunkIndex() == null ? "" : chunk.getChunkIndex());
+        row.put("status", chunk.getStatus());
+        row.put("vectorId", chunk.getVectorId() == null ? "" : chunk.getVectorId());
+        row.put("contentHash", chunk.getContentHash() == null ? "" : chunk.getContentHash());
+        return row;
+    }
+
+    private Map<String, Object> documentDriftPayload(KbDocumentEntity document) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("documentId", document.getId());
+        row.put("knowledgeBaseId", document.getKnowledgeBaseId());
+        row.put("name", document.getName());
+        row.put("status", document.getStatus());
+        row.put("enabled", document.isEnabled());
+        row.put("archived", document.isArchived());
+        row.put("indexVersion", document.getIndexVersion());
+        row.put("indexedAt", document.getIndexedAt() == null ? "" : document.getIndexedAt().toString());
+        row.put("errorMessage", document.getErrorMessage() == null ? "" : document.getErrorMessage());
+        return row;
+    }
+
+    private boolean repairChunkVector(String orgId, KbChunkEntity chunk) {
+        Long kbId = parseLong(chunk.getKnowledgeBaseId()).orElse(null);
+        if (kbId == null || !chunk.isSearchable()) {
+            return false;
+        }
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId).orElse(null);
+        if (kb == null || !"ACTIVE".equals(kb.getStatus())) {
+            return false;
+        }
+        String contentHash = chunk.getContentHash() == null || chunk.getContentHash().isBlank()
+                ? sha256(chunk.getContent())
+                : chunk.getContentHash();
+        String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
+                orgId,
+                chunk.getKnowledgeBaseId(),
+                chunk.getDocumentId(),
+                chunk.getId(),
+                chunk.getChunkIndex(),
+                chunk.getContent(),
+                contentHash,
+                embeddingService.embed(
+                        orgId,
+                        kb.getEmbeddingProvider(),
+                        kb.getEmbeddingModel(),
+                        kb.getEmbeddingDimension(),
+                        chunk.getContent())));
+        chunk.setVectorId(vectorId);
+        chunkRepository.save(chunk);
+        return true;
     }
 
     private Map<String, Object> batchOperateDocuments(String orgId, List<Long> rawIds, String action) {

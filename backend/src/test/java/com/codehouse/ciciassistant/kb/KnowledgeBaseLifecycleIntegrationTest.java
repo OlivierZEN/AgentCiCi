@@ -158,6 +158,19 @@ class KnowledgeBaseLifecycleIntegrationTest {
     }
 
     @Test
+    void shouldAuditIndexDriftForHealthyKnowledgeBase() {
+        Fixture fixture = createPublishedDocument("healthy drift baseline iota");
+
+        Map<String, Object> audit = knowledgeBaseService.auditIndexDrift(fixture.orgId(), false);
+
+        assertThat(audit).containsEntry("status", "OK");
+        assertThat(audit).containsEntry("repairRequested", false);
+        assertThat(audit).containsEntry("missingVectorChunkCount", 0);
+        assertThat(audit).containsEntry("publishedDocumentWithoutChunkCount", 0);
+        assertThat(audit).containsEntry("staleSyncDocumentCount", 0);
+    }
+
+    @Test
     void shouldRecordCreditsForDocumentAndManualChunkIndexing() {
         String orgId = "kb-billing-" + UUID.randomUUID();
         Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Billing KB", "test");

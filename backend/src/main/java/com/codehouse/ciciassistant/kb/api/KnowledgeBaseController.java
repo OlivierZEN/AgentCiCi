@@ -98,6 +98,13 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.auditVectorStore(orgId));
     }
 
+    @PostMapping("/drift/audit")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> auditIndexDrift(@RequestBody(required = false) DriftAuditRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.auditIndexDrift(orgId, request != null && Boolean.TRUE.equals(request.repair())));
+    }
+
     @DeleteMapping("/{id}")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> deleteKnowledgeBase(@PathVariable Long id) {
@@ -461,6 +468,11 @@ public class KnowledgeBaseController {
 
     public record ReplaceAccessGrantsRequest(
             List<AccessGrantRequest> grants
+    ) {
+    }
+
+    public record DriftAuditRequest(
+            Boolean repair
     ) {
     }
 
