@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-08T12:06:00+08:00
+updated_at: 2026-06-20T16:01:12Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,28 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-156 - Agent Builder production readiness closure
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-066-agent-builder-production-readiness.md`
+- task_status_path: `.claw/tasks/TASK-156.md`
+- assignment_path: `.claw/assignments/TASK-156.yaml`
+- blocked_by: `none`
+- next_action: Implement Agent Builder readiness gate, minimal evaluation gate, publish evidence, and authenticated desktop UI validation on `codex/TASK-156-production-readiness-goal`.
+
+### TASK-157 - Enterprise knowledge platform readiness
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md`
+- task_status_path: `.claw/tasks/TASK-157.md`
+- assignment_path: `.claw/assignments/TASK-157.yaml`
+- blocked_by: `none`
+- next_action: Implement parser/PDF reliability, document/chunk ACL, rebuild and drift checks, retrieval evaluation, citation trust, and connector sync skeleton on `codex/TASK-156-production-readiness-goal`.
 
 ### TASK-155 - 运营端前端页面 UI 整体美化
 

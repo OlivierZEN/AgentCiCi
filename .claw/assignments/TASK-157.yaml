@@ -1,0 +1,60 @@
+task_id: TASK-157
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-21T00:01:12+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+task_status_path: .claw/tasks/TASK-157.md
+branch: codex/TASK-156-production-readiness-goal
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/admin/**
+  - frontend/src/assistant/**
+  - frontend/src/styles.css
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-157.md
+  - .claw/assignments/TASK-157.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+  - backend/src/main/resources/db/migration/V64__enterprise_knowledge_platform_readiness.sql
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+  - docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+task_boundary:
+  - "Raise Knowledge Base to enterprise knowledge platform readiness: parser stability, connector sync, document/chunk ACL, retrieval evaluation, citation trust, rebuild index, and drift checks."
+  - "Prioritize correctness, permissions, parser reliability, Qdrant verification, and drift diagnosis before broad connector coverage."
+  - "Do not add mobile compatibility work, unrelated Agent Builder changes, production release work, or complex OCR beyond text-PDF parsing."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-21T00:01:12+08:00; user opened goal mode to finish enterprise KB production readiness."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created enterprise knowledge readiness task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-157 on branch codex/TASK-156-production-readiness-goal before implementation edits."

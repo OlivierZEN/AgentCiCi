@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-20T23:28:22+08:00
+updated_at: 2026-06-20T16:01:12Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-152/TASK-153/TASK-154/TASK-155 local work has been committed, merged into main, and pushed to origin/main."
-next_action: "Monitor remote main CI/review status; no uncommitted local work remains."
+active_task: "TASK-156/TASK-157 production-readiness goal started on codex/TASK-156-production-readiness-goal."
+next_action: "Validate assignments, then implement Agent Builder readiness/evaluation gate and enterprise KB parser/ACL/drift foundations."
 read_next:
   goals: false
   decisions: false
@@ -13,7 +13,7 @@ read_next:
   task_board: true
   active_task_status: true
   test_report: true
-  devops: true
+  devops: false
 ---
 
 # Project Current Status
@@ -22,23 +22,19 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`.
-- Remote `origin/main` includes merge commit `Merge TASK-152 through TASK-155 readiness work`, which merged commit `6b6b50f` from `codex/TASK-152-ai-minutes-billing-timeout`.
-- Other local task branches checked during this session had no commits ahead of `main`; their work was already included or they were behind `main`.
-- TASK-152 fixes local AI 听记 defects: successful embedded meeting-minutes summaries now record usage and credits debits; local/default AI 听记 start no longer hard-forces disabled Iflytek; WebSocket start failures report immediately.
-- TASK-153 moves Tavily Search and Iflytek realtime ASR configuration to platform operations, adds `/platform/integrations`, and adds OneKeyToken as a platform model provider with a static preset catalog.
-- TASK-154 records Credits usage for remaining production-readiness runtime gaps: Open API chat, KB indexing, and personal workflow runs outside chat.
-- TASK-155 completes the `/platform/*` desktop UI polish sweep using the Gilded Ledger product style and records the audit API 500 as an out-of-scope backend limitation.
-- Recorded validation for TASK-152 through TASK-155 remains in `.claw/test-report.md`; the local integration session additionally reran `git diff --check` before committing.
-- Local `main` was pushed to `origin/main` on 2026-06-20; GitHub accepted the push and reported the repository has moved to `https://github.com/OlivierZEN/CICI.git`.
+- Current branch: `codex/TASK-156-production-readiness-goal`.
+- User opened a goal to finish two production-readiness tracks: Agent Builder production closure and enterprise knowledge platform readiness.
+- TASK-156 is active for Agent Builder readiness gate, minimal evaluation gate, publish evidence, runtime entry readiness, observability, and authenticated desktop UI.
+- TASK-157 is active for enterprise KB parser stability, connector sync, document/chunk ACL, retrieval evaluation, citation trust, rebuild index, and drift checks.
+- New specs: `docs/specs/FEAT-066-agent-builder-production-readiness.md` and `docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md`.
+- Current implementation should start with assignment validation, then P0 backend correctness gates before UI expansion.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
 
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-152.md` - AI 听记 credits and start-timeout hotfix state.
-- `.claw/tasks/TASK-153.md` - platform-governed Tavily, Iflytek, and OneKeyToken provider state.
-- `.claw/tasks/TASK-154.md` - Credits metering sweep state.
-- `.claw/tasks/TASK-155.md` - platform console UI polish state.
+- `.claw/tasks/TASK-156.md` - Agent Builder production readiness state.
+- `.claw/tasks/TASK-157.md` - enterprise knowledge platform readiness state.
+- `docs/specs/FEAT-066-agent-builder-production-readiness.md` - Agent Builder production readiness spec.
+- `docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md` - enterprise KB production readiness spec.
 - `.claw/test-report.md` - latest verified commands.
-- `.claw/devops.md` - local restart and smoke commands.

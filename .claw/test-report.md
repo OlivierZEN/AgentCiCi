@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-18T00:19:00+08:00
+updated_at: 2026-06-20T16:06:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-18T00:19:00+08:00
+last_run_at: 2026-06-20T16:06:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-155 运营端前端页面 UI 整体美化.
-- 命令：TASK-155 身份/授权门禁、`npm run build`、`git diff --check`、Playwright 桌面截图巡检.
+- 范围：TASK-156/TASK-157 生产就绪目标任务分配与授权验证.
+- 命令：TASK-156/TASK-157 身份/授权门禁和 assignment scope checks.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156/TASK-157 production-readiness goal setup (2026-06-21T00:06:00+08:00):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` on `codex/TASK-156-production-readiness-goal` with representative Agent Builder backend/frontend/spec/task/status/migration files -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-156 representative files -> **allowed**.
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` on `codex/TASK-156-production-readiness-goal` with representative KB backend/frontend/spec/task/status/migration files -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 representative files -> **allowed**.
+  - Notes:
+    - FEAT-066 and FEAT-067 define the production-readiness scope requested by the user goal.
+    - No build, backend test, frontend test, browser smoke, Qdrant smoke, or production smoke has been run yet for implementation.
 
 - TASK-155 运营端前端页面 UI 整体美化 (2026-06-18T00:19:00+08:00):
   - Commands:
