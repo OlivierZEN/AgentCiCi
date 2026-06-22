@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.ai.service;
 
 import com.codehouse.ciciassistant.agent.domain.AgentPermission;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
+import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
@@ -43,8 +44,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.UUID;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
@@ -95,7 +99,9 @@ public class ChatOrchestratorService {
     private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService;
     private final AgentRunTraceService agentRunTraceService;
     private final AgentAccessControlService agentAccessControlService;
+    private final AgentRuntimeConcurrencyService agentRuntimeConcurrencyService;
     private final BillingUsageMeteringService billingUsageMeteringService;
+    private final Executor agentRuntimeExecutor;
     private final TransactionTemplate tx;
 
     public ChatOrchestratorService(ChatSessionRepository chatSessionRepository,
@@ -122,6 +128,8 @@ public class ChatOrchestratorService {
                                    AgentRunTraceService agentRunTraceService,
                                    AgentAccessControlService agentAccessControlService,
                                    BillingUsageMeteringService billingUsageMeteringService,
+                                   AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
+                                   @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor,
                                    PlatformTransactionManager transactionManager) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
@@ -147,6 +155,8 @@ public class ChatOrchestratorService {
         this.agentRunTraceService = agentRunTraceService;
         this.agentAccessControlService = agentAccessControlService;
         this.billingUsageMeteringService = billingUsageMeteringService;
+        this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
+        this.agentRuntimeExecutor = agentRuntimeExecutor;
         this.tx = new TransactionTemplate(transactionManager);
     }
 
@@ -159,6 +169,16 @@ public class ChatOrchestratorService {
     public Map<String, Object> chat(String orgId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode, Map<String, String> metadataFilters) {
+        String runId = newRunId();
+        return agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId,
+                () -> chatLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
+                        activeSkillCode, metadataFilters, runId));
+    }
+
+    private Map<String, Object> chatLocked(String orgId, String userId, String sessionId,
+                                           String question, List<String> kbIds, String requestedAgentId,
+                                           String activeSkillCode, Map<String, String> metadataFilters,
+                                           String runId) {
         Instant runStartedAt = Instant.now();
         List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
         List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -171,11 +191,11 @@ public class ChatOrchestratorService {
                 builtinSkillDocumentService.resolveDocs(skillContext, question);
         stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                 "已解析当前智能体绑定技能、工具边界与会话激活技能。",
-                skillTraceMetadata(skillContext, List.of(), builtinDocs)));
+                withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
         Instant userPersistStartedAt = Instant.now();
         persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
-                clipForTrace(question, 220), Map.of("sessionId", sessionId)));
+                clipForTrace(question, 220), Map.of("sessionId", sessionId, "runId", runId)));
 
         Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
@@ -199,7 +219,7 @@ public class ChatOrchestratorService {
                 useKnowledgeRetrieval
                         ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                         : "本轮输入未满足知识库检索条件。",
-                ragDetailMetadata(ragResult)));
+                withRunId(ragDetailMetadata(ragResult), runId)));
         List<String> ragContext = ragResult.context();
         Instant toolSchemaStartedAt = Instant.now();
         List<Map<String, Object>> tools = isWecomKfSession(sessionId)
@@ -208,7 +228,7 @@ public class ChatOrchestratorService {
                 orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
         stageTraces.add(stageTrace("TOOL_SCHEMA", "工具定义加载", "SUCCESS", toolSchemaStartedAt, Instant.now(),
                 "已加载本轮可用工具定义 " + tools.size() + " 个。",
-                Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames())));
+                Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames(), "runId", runId)));
         RuntimeContext runtimeContext = runtimeContextPromptService.current();
 
         chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
@@ -217,10 +237,11 @@ public class ChatOrchestratorService {
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
-                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces);
+                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId);
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
+        executionResult.contextSnapshot().put("runId", runId);
         Instant wfEndedAt = Instant.now();
         int wfMs = elapsedMs(wfStartedAt, wfEndedAt);
         stageTraces.add(stageTrace("WORKFLOW", "技能运行治理",
@@ -269,6 +290,7 @@ public class ChatOrchestratorService {
                 modelCallTraces, toolCallTraces, wfMs, isBillableAssistantAnswer(answer));
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("orgId", orgId);
+        payload.put("runId", runId);
         payload.put("sessionId", sessionId);
         payload.put("agentId", skillContext.agentId());
         payload.put("answer", answer);
@@ -322,7 +344,7 @@ public class ChatOrchestratorService {
                            String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
         CompletableFuture.runAsync(() -> {
             chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, emitter);
-        });
+        }, agentRuntimeExecutor);
     }
 
     public void chatStreamBlocking(String orgId, String userId, String sessionId,
@@ -334,11 +356,24 @@ public class ChatOrchestratorService {
     public void chatStreamBlocking(String orgId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
+        String runId = newRunId();
+        agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId, () -> {
+            chatStreamBlockingLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
+                    activeSkillCode, metadataFilters, emitter, runId);
+            return null;
+        });
+    }
+
+    private void chatStreamBlockingLocked(String orgId, String userId, String sessionId,
+                                          String question, List<String> kbIds, String requestedAgentId,
+                                          String activeSkillCode, Map<String, String> metadataFilters,
+                                          SseEmitter emitter, String runId) {
             Instant runStartedAt = Instant.now();
             List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
             List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
             List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces = new ArrayList<>();
             try {
+                safeSendPhase(emitter, "run", null, Map.of("runId", runId));
                 Instant skillStartedAt = Instant.now();
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
@@ -347,11 +382,11 @@ public class ChatOrchestratorService {
                         builtinSkillDocumentService.resolveDocs(skillContext, question);
                 stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                         "已解析当前智能体绑定技能、工具边界与会话激活技能。",
-                        skillTraceMetadata(skillContext, List.of(), builtinDocs)));
+                        withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
                 Instant userPersistStartedAt = Instant.now();
                 persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
-                        clipForTrace(question, 220), Map.of("sessionId", sessionId)));
+                        clipForTrace(question, 220), Map.of("sessionId", sessionId, "runId", runId)));
 
                 Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
@@ -381,7 +416,7 @@ public class ChatOrchestratorService {
                         useKnowledgeRetrieval
                                 ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                                 : "本轮输入未满足知识库检索条件。",
-                        ragDetailMetadata(ragResult)));
+                        withRunId(ragDetailMetadata(ragResult), runId)));
                 List<String> ragContext = ragResult.context();
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "rag_done", modelName, ragPhasePayload(ragResult));
@@ -400,7 +435,7 @@ public class ChatOrchestratorService {
                         orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
                 stageTraces.add(stageTrace("TOOL_SCHEMA", "工具定义加载", "SUCCESS", toolSchemaStartedAt, Instant.now(),
                         "已加载本轮可用工具定义 " + tools.size() + " 个。",
-                        Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames())));
+                        Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames(), "runId", runId)));
                 RuntimeContext runtimeContext = runtimeContextPromptService.current();
                 chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
                 List<Map<String, Object>> messages = buildInitialMessages(
@@ -409,7 +444,7 @@ public class ChatOrchestratorService {
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
-                        showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces);
+                        showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId);
                 if (pendingApprovalsUsed) {
                     // Keep chat concise when a dedicated approvals page is rendered on frontend.
                     messages.add(Map.of(
@@ -497,6 +532,7 @@ public class ChatOrchestratorService {
                 Instant wfStartedAt = Instant.now();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                         orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
+                executionResult.contextSnapshot().put("runId", runId);
                 Instant wfEndedAt = Instant.now();
                 int wfMs = elapsedMs(wfStartedAt, wfEndedAt);
                 stageTraces.add(stageTrace("WORKFLOW", "技能运行治理",
@@ -543,12 +579,12 @@ public class ChatOrchestratorService {
                         Instant.now());
                 recordBillingUsageSafely(orgId, userId, sessionId, modelName, skillContext.agentId(), ragResult,
                         modelCallTraces, toolCallTraces, wfMs, isBillableAssistantAnswer(finalText));
-                emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true)));
+                emitter.send(SseEmitter.event().name("done").data(Map.of("ok", true, "runId", runId)));
                 emitter.complete();
             } catch (Exception e) {
                 try {
                     emitter.send(SseEmitter.event().name("error")
-                            .data(Map.of("message", e.getMessage() == null ? "stream failed" : e.getMessage())));
+                            .data(Map.of("message", e.getMessage() == null ? "stream failed" : e.getMessage(), "runId", runId)));
                 } catch (IOException ignored) {}
                 emitter.completeWithError(e);
             }
@@ -565,7 +601,8 @@ public class ChatOrchestratorService {
                                boolean showThinking, ResolvedSkillContext skillContext, int maxToolRounds,
                                ModelCallCredentials modelCredentials,
                                List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces,
-                               List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
+                               List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                               String runId) {
         for (int round = 0; round < maxToolRounds; round++) {
             Instant modelStartedAt = Instant.now();
             ChatCompletionResult result;
@@ -612,7 +649,7 @@ public class ChatOrchestratorService {
                 return appendToolResultFallbackIfDeferred(answer, messages);
             }
 
-            appendToolCallsAndResults(messages, result, orgId, userId, sessionId, skillContext, null, toolCallTraces);
+            appendToolCallsAndResults(messages, result, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId);
         }
         return completeFromToolResultsAfterLimit(modelName, messages, showThinking, maxToolRounds, modelCredentials, modelCallTraces);
     }
@@ -695,7 +732,8 @@ public class ChatOrchestratorService {
                                   int maxToolRounds,
                                   ModelCallCredentials modelCredentials,
                                   List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces,
-                                  List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
+                                  List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                                  String runId) {
         if (tools.isEmpty()) return false;
         boolean pendingApprovalsUsed = false;
 
@@ -741,7 +779,7 @@ public class ChatOrchestratorService {
                 break;
             }
             pendingApprovalsUsed = appendToolCallsAndResults(
-                    messages, result, orgId, userId, sessionId, skillContext, emitter, toolCallTraces)
+                    messages, result, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId)
                     || pendingApprovalsUsed;
             if (shouldSkipToolPlanningStop(questionFromMessages(messages), resultToolCalls, messages)) {
                 modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
@@ -767,7 +805,8 @@ public class ChatOrchestratorService {
                                             String sessionId,
                                             ResolvedSkillContext skillContext,
                                             SseEmitter emitter,
-                                            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces) {
+                                            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                                            String runId) {
         List<Map<String, Object>> toolCallMaps = new ArrayList<>();
         List<ToolCallInfo> toolCalls = safeToolCalls(result);
         for (ToolCallInfo tc : toolCalls) {
@@ -790,6 +829,7 @@ public class ChatOrchestratorService {
             }
             log.info("Calling MCP tool: {} with args: {}", tc.name(), tc.arguments());
             String canonicalTool = ToolNameNormalizer.canonicalize(tc.name());
+            String idempotencyKey = toolIdempotencyKey(runId, tc.id(), canonicalTool != null ? canonicalTool : tc.name());
             Instant toolStartedAt = Instant.now();
             String toolResult = "";
             boolean toolSuccess = true;
@@ -811,7 +851,7 @@ public class ChatOrchestratorService {
                     toolCallTraces.add(new AgentRunTraceService.ToolCallTraceInput(
                             tc.id(),
                             canonicalTool != null ? canonicalTool : tc.name(),
-                            tc.arguments(),
+                            traceToolArguments(tc.arguments(), idempotencyKey),
                             toolResult,
                             toolSuccess && !looksFailedToolResult(toolResult),
                             toolStartedAt,
@@ -969,6 +1009,46 @@ public class ChatOrchestratorService {
                 elapsedMs(startedAt, endedAt),
                 summary,
                 metadata == null ? Map.of() : metadata);
+    }
+
+    private static String newRunId() {
+        return "run-" + UUID.randomUUID();
+    }
+
+    private static Map<String, Object> withRunId(Map<String, Object> metadata, String runId) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (metadata != null) {
+            payload.putAll(metadata);
+        }
+        payload.put("runId", runId);
+        return payload;
+    }
+
+    private static String toolIdempotencyKey(String runId, String toolCallId, String toolName) {
+        return String.join(":",
+                runId == null ? "run-unknown" : runId,
+                toolName == null || toolName.isBlank() ? "tool" : toolName,
+                toolCallId == null || toolCallId.isBlank() ? "call" : toolCallId);
+    }
+
+    private static String traceToolArguments(String rawArguments, String idempotencyKey) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("_idempotencyKey", idempotencyKey);
+        String args = rawArguments == null ? "" : rawArguments.trim();
+        if (!args.isBlank()) {
+            try {
+                Map<String, Object> parsed = TOOL_RESULT_OBJECT_MAPPER.readValue(args, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+                payload.putAll(parsed);
+                return TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(payload);
+            } catch (Exception ignored) {
+                payload.put("arguments", args);
+            }
+        }
+        try {
+            return TOOL_RESULT_OBJECT_MAPPER.writeValueAsString(payload);
+        } catch (Exception ignored) {
+            return args;
+        }
     }
 
     private static List<ToolCallInfo> safeToolCalls(ChatCompletionResult result) {

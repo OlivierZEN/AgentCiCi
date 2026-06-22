@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-067
 title: Enterprise knowledge platform readiness
-status: in_implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-157
 related_decisions: FEAT-008, FEAT-018, FEAT-031, FEAT-042
-updated_at: 2026-06-20T16:40:13Z
+updated_at: 2026-06-21T15:30:34Z
 updated_by: MANAGER-001
 ---
 
@@ -235,3 +235,10 @@ Chat/Open API/trace 需透出这些字段，前端可先展示基础引用卡片
   - repair 模式会对文档 chunk 触发文档重建，对手工 chunk 重新 upsert 向量并刷新 embedding 元数据。
   - chunk payload 和 drift payload 透出 embedding 元数据，便于管理端排障。
   - `KnowledgeBaseLifecycleIntegrationTest` 增加健康 drift audit 的 embedding check 断言；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 和 `git diff --check` 已通过。
+- 2026-06-21T15:30:34Z：
+  - Docker/PostgreSQL/Redis/RabbitMQ/Qdrant 本地依赖恢复，`KnowledgeBaseLifecycleIntegrationTest` 在真实 PostgreSQL/Flyway schema v67 下通过。
+  - 为 `KbAsyncConfig` 启用 Rabbit listener，修复 `application-local.yml` 的 `indexing.mode=mq` 只入队不消费的问题。
+  - 真实 Qdrant smoke 通过：临时 KB 文档发布后 `cici_kb_chunk` 点位从 0 变为 1，检索命中目标文本，应用向量审计 `success=true/status=OK/scannedCount=1/orphanCount=0`，删除文档后 Qdrant 点位回到 0。
+  - 复测前发现本地 Qdrant 集合维度漂移为 16，已按当前 1024 维 embedding 配置重建；drift audit 能识别本地历史数据的 missing vector / embedding mismatch。
+  - 使用真实后端和真实登录完成 `/admin/kb` 桌面验收：列表页、知识库详情、文档表、PDF parser 说明均正常展示，无横向溢出和控制台错误。
+  - 验收截图：`output/playwright/task157-kb-real-backend-desktop.png`、`output/playwright/task157-kb-detail-real-backend-desktop.png`。

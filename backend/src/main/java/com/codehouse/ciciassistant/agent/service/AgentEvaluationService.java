@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,7 +32,7 @@ public class AgentEvaluationService {
     private final AgentEvalCaseRepository caseRepository;
     private final AgentEvalRunRepository runRepository;
     private final AgentEvalCaseResultRepository resultRepository;
-    private final AgentWorkflowRuntimeService runtimeService;
+    private final ObjectProvider<AgentWorkflowRuntimeService> runtimeServiceProvider;
     private final ObjectMapper objectMapper;
 
     public AgentEvaluationService(AgentDefinitionRepository agentDefinitionRepository,
@@ -40,7 +41,7 @@ public class AgentEvaluationService {
                                   AgentEvalCaseRepository caseRepository,
                                   AgentEvalRunRepository runRepository,
                                   AgentEvalCaseResultRepository resultRepository,
-                                  AgentWorkflowRuntimeService runtimeService,
+                                  ObjectProvider<AgentWorkflowRuntimeService> runtimeServiceProvider,
                                   ObjectMapper objectMapper) {
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.versionRepository = versionRepository;
@@ -48,7 +49,7 @@ public class AgentEvaluationService {
         this.caseRepository = caseRepository;
         this.runRepository = runRepository;
         this.resultRepository = resultRepository;
-        this.runtimeService = runtimeService;
+        this.runtimeServiceProvider = runtimeServiceProvider;
         this.objectMapper = objectMapper;
     }
 
@@ -253,7 +254,8 @@ public class AgentEvaluationService {
 
     private EvalOutcome evaluateCase(String orgId, String agentId, Integer versionNo, AgentEvalCaseEntity evalCase) {
         AgentWorkflowRuntimeService.RuntimeExecutionResult result =
-                runtimeService.evaluateVersionForEvaluation(orgId, agentId, versionNo, evalCase.getInputText());
+                runtimeServiceProvider.getObject()
+                        .evaluateVersionForEvaluation(orgId, agentId, versionNo, evalCase.getInputText());
         String output = result.executionOutput() == null ? "" : result.executionOutput();
         String actualStatus = result.executionStatus() == null ? "" : result.executionStatus();
         List<String> trace = result.executionTrace() == null ? List.of() : result.executionTrace();

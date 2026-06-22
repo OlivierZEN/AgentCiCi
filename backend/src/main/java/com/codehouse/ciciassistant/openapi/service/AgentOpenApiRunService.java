@@ -30,8 +30,10 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -58,6 +60,7 @@ public class AgentOpenApiRunService {
     private final CloudccAccessTokenService cloudccAccessTokenService;
     private final AgentOpenApiProperties properties;
     private final ObjectMapper objectMapper;
+    private final Executor agentRuntimeExecutor;
 
     public AgentOpenApiRunService(AgentOpenApiAuthService authService,
                                   AgentOpenApiSessionService sessionService,
@@ -74,7 +77,8 @@ public class AgentOpenApiRunService {
                                   ModelProviderService modelProviderService,
                                   CloudccAccessTokenService cloudccAccessTokenService,
                                   AgentOpenApiProperties properties,
-                                  ObjectMapper objectMapper) {
+                                  ObjectMapper objectMapper,
+                                  @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor) {
         this.authService = authService;
         this.sessionService = sessionService;
         this.rateLimitService = rateLimitService;
@@ -91,6 +95,7 @@ public class AgentOpenApiRunService {
         this.cloudccAccessTokenService = cloudccAccessTokenService;
         this.properties = properties;
         this.objectMapper = objectMapper;
+        this.agentRuntimeExecutor = agentRuntimeExecutor;
     }
 
     public ChatExecution chatWithAuth(AgentOpenApiAuthService.AuthenticatedCredential auth,
@@ -194,7 +199,7 @@ public class AgentOpenApiRunService {
                 }
                 emitter.completeWithError(ex);
             }
-        });
+        }, agentRuntimeExecutor);
     }
 
     public StreamCompletion completeChatStreamSuccess(ChatStreamExecution execution, String answer) {
@@ -292,7 +297,7 @@ public class AgentOpenApiRunService {
                     auth.credential().getRunAsUserId(),
                     cloudccOverride,
                     () -> invokeChat(auth, session, command));
-        });
+        }, agentRuntimeExecutor);
         try {
             return future.get(normalizedTimeoutMs(), TimeUnit.MILLISECONDS);
         } catch (TimeoutException ex) {

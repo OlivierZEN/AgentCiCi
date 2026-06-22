@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-156
-status: in_progress
-updated_at: 2026-06-20T16:59:31Z
+status: review
+updated_at: 2026-06-21T15:30:34Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -49,6 +49,18 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 - `dev-login.py` rerun for TASK-156 frontend production gate UX files and status docs -> allowed.
 - `cd frontend && npm run build` -> success; existing Vite large chunk warning remains.
 - Desktop Playwright with mocked admin auth/API on `http://127.0.0.1:5173/admin/agent-builder/support-agent` -> success; screenshot `output/playwright/task156-agent-builder-production-gate.png`, `overflowX=false`, production gate/evaluation gate/blocker text present.
+- `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` -> success; local PostgreSQL/Redis/RabbitMQ healthy and Qdrant running.
+- `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> success; `localhost:5432` and `localhost:6333` reachable.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> initially failed with a Spring circular dependency across readiness/evaluation/runtime services; fixed by making `AgentEvaluationService` lazily obtain `AgentWorkflowRuntimeService`.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> success after the lazy runtime fix.
+- `git diff --check` -> success.
+- `check-assignment.py` for TASK-156 changed files -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` -> success after TASK-157 Rabbit listener fix.
+- `cd frontend && npm run build` -> success; existing Vite large chunk warning remains.
+- Local backend `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local` -> success on port 8080 with PostgreSQL/Flyway schema v67 and RabbitMQ connection.
+- Real login API `POST /auth/password/login` with `13900009999 / szyd1234` -> success, `ORG_ADMIN`.
+- Authenticated desktop Playwright on `http://127.0.0.1:5173/admin/agent-builder/support-agent` -> success; screenshot `output/playwright/task156-agent-builder-real-backend-production-gate.png`, `overflowX=false`, console errors 0.
+- Agent Builder production gate backend calls returned 200: `/agents/cici-system/readiness?versionNo=47`, `/agents/cici-system/evaluation/suites`; `刷新检查` and `同步评测` actions stayed error-free.
 
 ## Changed Files
 
@@ -79,9 +91,10 @@ spec_path: docs/specs/FEAT-066-agent-builder-production-readiness.md
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
-- Backend readiness gate is implemented and compile-verified; rerun focused integration test after Docker/PostgreSQL is available.
+- Backend readiness gate is implemented and focused integration-verified against local PostgreSQL.
 - Minimal evaluation gate backend is implemented and compile-verified: suites, cases, runs, results, deterministic assertions, candidate-version evaluation runtime marker, readiness summary, and publish-time blocking.
 - Agent Builder publish tab now shows production readiness checks, blocker/warning counts, evaluation suite/run status, P0 case creation, evaluation run action, and pre-publish readiness refresh.
-- Focused integration test contains coverage for P0 evaluation failure blocking publish but cannot execute until PostgreSQL is available.
-- Mocked desktop browser validation passed for the frontend production gate layout; this is not a substitute for real-backend authenticated validation.
-- Next: restore PostgreSQL/Docker, rerun backend integration, then perform authenticated real-backend desktop validation before marking production-ready.
+- Focused integration test covers P0 evaluation failure blocking publish and now passes locally.
+- Mocked and real-backend desktop browser validation both passed for the frontend production gate layout.
+- Ready for review: Agent Builder production readiness gate, minimal evaluation gate, publish-tab UX, focused backend integration, frontend build, and authenticated desktop validation are complete.
+- Note: the existing `cici-system` demo Agent shows a readiness warning because no evaluation suite is configured, but blockers are 0; blocking behavior is covered by `AgentProductionReadinessIntegrationTest`.

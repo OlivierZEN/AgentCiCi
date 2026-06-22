@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-066
 title: Agent Builder production readiness closure
-status: in_implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-156
 related_decisions: FEAT-004, FEAT-021, FEAT-031, FEAT-036, FEAT-042
-updated_at: 2026-06-20T16:59:31Z
+updated_at: 2026-06-21T15:30:34Z
 updated_by: MANAGER-001
 ---
 
@@ -154,3 +154,9 @@ Agent Builder 需要把现有分散信息汇总为同一生产闭环：
   - 发布动作在调用 `/publish` 前会先刷新当前候选版本 readiness；存在 blocker 时前端停止发布并保留检查清单证据。
   - 前端 `npm run build` 已通过；桌面端 Playwright 使用 mocked admin auth/API 验证发布页布局无横向溢出，并生成截图 `output/playwright/task156-agent-builder-production-gate.png`。
   - 真实后端 authenticated desktop validation 仍需在 PostgreSQL/Docker 恢复后执行。
+- 2026-06-21T15:30:34Z：
+  - Docker/PostgreSQL/Redis/RabbitMQ/Qdrant 本地依赖恢复，`AgentProductionReadinessIntegrationTest` 在真实 PostgreSQL/Flyway schema v67 下通过。
+  - 修复 `AgentEvaluationService` 与运行时服务之间的 Spring 循环依赖，评测运行时改为懒加载 `AgentWorkflowRuntimeService`。
+  - 使用真实后端和真实登录完成 Agent Builder 发布页桌面验收：`/admin/agent-builder/support-agent` 的生产就绪、发布评测、刷新检查、同步评测均返回后端 200；页面无横向溢出和控制台错误。
+  - 验收截图：`output/playwright/task156-agent-builder-real-backend-production-gate.png`。
+  - 当前内置示例 Agent `cici-system` 因未配置评测集显示 `warning`，但 blockers 为 0；发布 gate 和 P0 评测阻塞能力已由集成测试覆盖。

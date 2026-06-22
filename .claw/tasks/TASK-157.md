@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-157
-status: in_progress
-updated_at: 2026-06-20T16:40:13Z
+status: review
+updated_at: 2026-06-21T15:30:34Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -54,6 +54,15 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `dev-login.py` / `check-assignment.py` rerun for TASK-157 embedding metadata drift files and V66 migration -> allowed.
 - `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with embedding metadata drift changes.
 - `git diff --check` -> success.
+- `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` -> success; local PostgreSQL/Redis/RabbitMQ healthy and Qdrant running.
+- `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> success; `localhost:5432` and `localhost:6333` reachable.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> success.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> success after enabling Rabbit listener.
+- `cd frontend && npm run build` -> success; existing Vite large chunk warning remains.
+- Local backend `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local` -> success on port 8080 with PostgreSQL/Flyway schema v67, RabbitMQ consumer for `kb.index.queue`, and Qdrant collection `cici_kb_chunk`.
+- Authenticated `/admin/kb` desktop Playwright -> success; screenshots `output/playwright/task157-kb-real-backend-desktop.png` and `output/playwright/task157-kb-detail-real-backend-desktop.png`, `overflowX=false`, console errors 0.
+- Real Qdrant smoke after fixing local collection dimension drift -> success: temporary document publish produced `qdrantPointsBeforeDelete=1`, vector retrieval contained target text, vector audit returned `success=true/status=OK/registeredCount=304/scannedCount=1/orphanCount=0`, delete returned `cleanupStatus=COMPLETED`, and `qdrantPointsAfterDelete=0`.
+- Drift audit on the same local dataset returned `DRIFT_DETECTED` with historical `missingVectorChunkCount=7` and `embeddingMismatchChunkCount=195`, proving the drift checker surfaces existing index/config drift rather than hiding it.
 
 ## Changed Files
 
@@ -86,6 +95,7 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapRepository.java`
 - `backend/src/main/resources/db/migration/V66__kb_chunk_embedding_metadata.sql`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbChunkEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/config/KbAsyncConfig.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
@@ -104,5 +114,6 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - Retrieval evaluation backend model, API, metrics, evidence persistence, and tenant purge coverage are implemented and compile-verified.
 - Connector sync backend skeleton, WEB/EXTERNAL_API minimal sync path, sync jobs, source-document mapping, and tenant purge coverage are implemented and compile-verified.
 - Embedding metadata is persisted on chunks and drift audit now compares chunk metadata against current KB embedding config.
-- Rerun `KnowledgeBaseLifecycleIntegrationTest` after Docker/PostgreSQL is available.
-- Next P0: Agent Builder minimal evaluation gate and full environment validation.
+- `KnowledgeBaseLifecycleIntegrationTest` now passes locally after Docker/PostgreSQL recovery.
+- Local `application-local` MQ indexing is fixed by enabling Rabbit listeners; real Qdrant upsert/delete/audit smoke now passes after correcting the local collection dimension drift.
+- Ready for review: enterprise KB parser/PDF, ACL filtering, citation trust, retrieval evaluation, connector sync skeleton, rebuild/drift audit, frontend build, authenticated desktop validation, and real Qdrant smoke are complete.

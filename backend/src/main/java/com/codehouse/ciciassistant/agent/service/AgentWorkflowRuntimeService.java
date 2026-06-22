@@ -387,6 +387,8 @@ public class AgentWorkflowRuntimeService {
                 payload("toolScopeReady", "true")));
         if (publishedVersion == null) {
             contextSnapshot.put("runtimeSource", "fallback");
+            contextSnapshot.put("publishedVersionId", "");
+            contextSnapshot.put("publishedVersionNo", "");
             contextSnapshot.put("knowledgeUsed", false);
             contextSnapshot.put("toolInvoked", false);
             contextSnapshot.put("errorNode", "");
@@ -409,6 +411,8 @@ public class AgentWorkflowRuntimeService {
         String code = publishedVersion.getWorkflowCode() == null ? "" : publishedVersion.getWorkflowCode();
         if (!code.contains("runAgent")) {
             contextSnapshot.put("runtimeSource", "published");
+            contextSnapshot.put("publishedVersionId", publishedVersion.getId());
+            contextSnapshot.put("publishedVersionNo", publishedVersion.getVersionNo());
             contextSnapshot.put("knowledgeUsed", false);
             contextSnapshot.put("toolInvoked", false);
             contextSnapshot.put("validationError", "missing-runAgent");
@@ -438,6 +442,8 @@ public class AgentWorkflowRuntimeService {
                     payload("parsedNode", node), payload("recognized", "true")));
         }
         contextSnapshot.put("runtimeSource", "published");
+        contextSnapshot.put("publishedVersionId", publishedVersion.getId());
+        contextSnapshot.put("publishedVersionNo", publishedVersion.getVersionNo());
         contextSnapshot.put("parsedNodes", parsedNodes);
         contextSnapshot.put("knowledgeUsed", parsedNodes.contains("knowledge-search"));
         contextSnapshot.put("toolInvoked", parsedNodes.contains("tool-invoke-best") && !effectiveToolNames.isEmpty());

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:59:31Z
+updated_at: 2026-06-22T02:00:26Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:59:31Z
+last_run_at: 2026-06-22T02:00:26Z
 last_run_status: success
 ---
 
@@ -13,11 +13,69 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-156 Agent Builder frontend production gate UX.
-- 命令：TASK-156 frontend authorization rerun, frontend build, mocked desktop browser validation.
+- 范围：TASK-156/TASK-157/TASK-158 production-readiness merge preparation.
+- 命令：orchestrator integration fixture repair, combined backend integration suite, frontend production build, static and assignment checks.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156/TASK-157/TASK-158 merge preparation (2026-06-22T02:00:26Z):
+  - Commands:
+    - `backend-orchestrator`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` in `backend/` -> **success** after refreshing fixtures for current model routing, production readiness gate, persistent PostgreSQL test data, and Agent RBAC grants.
+    - `backend-integration-combined`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest,AgentProductionReadinessIntegrationTest,KnowledgeBaseLifecycleIntegrationTest,AgentOpenApiIntegrationTest,AgentRuntimeConcurrencyServiceTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - The previous `OrchestratorIntegrationTest` expectation drift is resolved.
+    - Next gate is to commit, merge into `main`, rerun integration checks on `main`, then push `origin/main`.
+
+- TASK-158 Agent runtime concurrency hardening (2026-06-21T23:47:34Z):
+  - Commands:
+    - `identity`: manager and task-scoped `dev-login.py` for `MANAGER-001` / `TASK-158` covering Agent runtime, Chat orchestrator, OpenAPI run service, migration, test, spec, task, assignment, status, and report files -> **allowed**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRuntimeConcurrencyServiceTest test` in `backend/` -> **success**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with runtime concurrency changes.
+    - `backend-regression-probe`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` in `backend/` -> **failed** on existing expectation drift: current model routing returns `qwen3.6-plus` instead of the stale `cici-default` fixture, and the new production readiness gate blocks a stale published-agent fixture that lacks production entry/channel/schedule/OpenAPI key setup.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-158 changed files -> **allowed**.
+  - Notes:
+    - Added per-session runtime serialization, different-session parallelism, bounded Agent runtime executor, runId propagation, `chat_session_state` optimistic locking, lightweight org/agent/user concurrency limits, tool trace idempotency keys, and workflow published-version metadata.
+    - `AgentRuntimeConcurrencyServiceTest` verifies same-session serialization, different-session parallel execution, and lock cleanup.
+    - Follow-up remains to refresh `OrchestratorIntegrationTest` fixtures for current model routing and readiness-gate behavior; this is not a compile blocker for TASK-158.
+
+- TASK-156/TASK-157 production-readiness final closure (2026-06-21T15:30:34Z):
+  - Commands:
+    - `backend-local`: `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local` in `backend/` -> **success** on port 8080; PostgreSQL/Flyway schema v67, RabbitMQ connection, and Qdrant local profile active.
+    - `frontend-local`: `npm run dev` in `frontend/` -> **success** on `http://127.0.0.1:5173/`.
+    - `auth-smoke`: `POST /auth/password/login` with `13900009999 / szyd1234` -> **success**, `ORG_ADMIN`.
+    - `browser-kb-list`: authenticated `/admin/kb` desktop Playwright -> **success**; screenshot `output/playwright/task157-kb-real-backend-desktop.png`; `overflowX=false`; console errors 0.
+    - `browser-kb-detail`: authenticated KB detail desktop Playwright -> **success**; screenshot `output/playwright/task157-kb-detail-real-backend-desktop.png`; document table and PDF parser note visible; `overflowX=false`; console errors 0.
+    - `browser-agent-builder`: authenticated `/admin/agent-builder/support-agent` desktop Playwright -> **success**; screenshot `output/playwright/task156-agent-builder-real-backend-production-gate.png`; production readiness and evaluation panels visible; readiness/evaluation backend calls 200; refresh/sync actions error-free; `overflowX=false`; console errors 0.
+    - `backend-kb-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**.
+    - `backend-agent-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `rabbit-listener-fix`: enabled Rabbit listener handling in `KbAsyncConfig`; `kb.index.queue` shows 1 consumer and 0 queued/unacked messages during local smoke.
+    - `qdrant-dimension-repair`: local `cici_kb_chunk` collection had stale 16-dim config; rebuilt it to 1024-dim to match current embedding config before real smoke.
+    - `qdrant-smoke`: temporary KB/document publish produced `qdrantPointsBeforeDelete=1`, vector retrieval contained target text, vector audit returned `success=true/status=OK/registeredCount=304/scannedCount=1/orphanCount=0`, document delete returned `cleanupStatus=COMPLETED`, and `qdrantPointsAfterDelete=0`.
+    - `drift-smoke`: `/kb/drift/audit` returned `DRIFT_DETECTED` for historical local data with `missingVectorChunkCount=7` and `embeddingMismatchChunkCount=195`, confirming drift visibility.
+  - Notes:
+    - TASK-156 is ready for review: readiness gate, minimal evaluation gate, publish UX, focused integration, frontend build, and real-backend desktop validation passed.
+    - TASK-157 is ready for review: parser/PDF, ACL filtering, citation trust, retrieval evaluation, connector sync skeleton, rebuild/drift audit, Rabbit/MQ indexing, real Qdrant smoke, frontend build, and real-backend desktop validation passed.
+
+- TASK-156/TASK-157 Docker/PostgreSQL recovery and focused integration (2026-06-21T13:26:30Z):
+  - Commands:
+    - `docker-info`: Docker daemon reachable, Docker Desktop server `29.4.3`.
+    - `local-infra`: `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` -> **success**.
+    - `infra-health`: `docker compose ps` -> `cici-postgres`, `cici-redis`, and `cici-rabbitmq` **healthy**; `cici-qdrant` running; ports `5432` and `6333` reachable.
+    - `postgres-ready`: `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> **success**, accepting connections.
+    - `backend-focused-initial`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **failed**, Spring context exposed a circular dependency across Agent readiness/evaluation/runtime services.
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` covering `AgentEvaluationService` and state docs -> **allowed**.
+    - `backend-focused`: after making `AgentEvaluationService` lazily obtain `AgentWorkflowRuntimeService`, `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **success**.
+    - `backend-kb-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-156 changed files -> **allowed**.
+  - Notes:
+    - The previous Docker/PostgreSQL blocker is resolved for local focused backend integration.
+    - `AgentProductionReadinessIntegrationTest` and `KnowledgeBaseLifecycleIntegrationTest` now execute against `agentcici_test` through Flyway schema version 67.
+    - Real-backend authenticated Agent Builder desktop validation remains the next UI gate; the previous desktop validation was mocked.
 
 - TASK-156 Agent Builder frontend production gate UX (2026-06-20T16:59:31Z):
   - Commands:
