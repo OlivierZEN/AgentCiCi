@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-22T02:00:26Z
+updated_at: 2026-06-22T02:02:28Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-158.md`
 - assignment_path: `.claw/assignments/TASK-158.yaml`
 - blocked_by: `none`
-- next_action: Merge TASK-156/TASK-157/TASK-158 branch to `main`, rerun integration gates on `main`, then push `origin/main`; orchestrator fixture drift is resolved and combined backend integration plus frontend build passed.
+- next_action: Push local `main` to `origin/main`; branch merge, main integration gates, and frontend build passed locally.
 
 ### TASK-156 - Agent Builder production readiness closure
 

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-22T02:00:26Z
+updated_at: 2026-06-22T02:02:28Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-22T02:00:26Z
+last_run_at: 2026-06-22T02:02:28Z
 last_run_status: success
 ---
 
@@ -13,11 +13,19 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-156/TASK-157/TASK-158 production-readiness merge preparation.
-- 命令：orchestrator integration fixture repair, combined backend integration suite, frontend production build, static and assignment checks.
+- 范围：TASK-156/TASK-157/TASK-158 merged on local `main`.
+- 命令：combined backend integration suite and frontend production build on `main`.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156/TASK-157/TASK-158 local main integration (2026-06-22T02:02:28Z):
+  - Commands:
+    - `merge-main`: `git merge --no-ff codex/TASK-156-production-readiness-goal -m "Merge agent production readiness"` on `main` -> **success**.
+    - `backend-integration-combined-main`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest,AgentProductionReadinessIntegrationTest,KnowledgeBaseLifecycleIntegrationTest,AgentOpenApiIntegrationTest,AgentRuntimeConcurrencyServiceTest test` in `backend/` on `main` -> **success**.
+    - `frontend-build-main`: `npm run build` in `frontend/` on `main` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - Local `main` is ready to push to `origin/main`.
 
 - TASK-156/TASK-157/TASK-158 merge preparation (2026-06-22T02:00:26Z):
   - Commands:
