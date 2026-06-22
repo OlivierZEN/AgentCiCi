@@ -1,8 +1,8 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-05-14T10:19:08Z
-updated_by: ai
+updated_at: 2026-06-22T13:28:23Z
+updated_by: MANAGER-001
 status: active
 ---
 
@@ -10,6 +10,16 @@ status: active
 
 ## Open Issues
 
+- ISSUE-2026-06-22-onechat-dns-nxdomain:
+  - Symptom: `onechat.agentcici.com` direct DNS lookup returned NXDOMAIN from the current resolver during the `2.1.1` production smoke.
+  - Verified facts: server-local HTTPS vhost smoke with explicit resolve returned HTTP 200, and public `https://onechat.agentcici.com/` with `--resolve onechat.agentcici.com:443:47.97.119.160` returned HTTP 200; `https://x.agentcici.com/` returned HTTP 200 through normal DNS.
+  - Inferred root cause: DNS record for `onechat.agentcici.com` is missing, not propagated, or not visible to the tested public resolver.
+  - Status: open (DNS/provider follow-up; release `2.1.1` is otherwise healthy on ECS).
+- ISSUE-2026-06-22-platform-audit-log-query-500:
+  - Symptom: production smoke for `/api/platform/audit/logs` returned backend HTTP 500 after platform login.
+  - Verified root cause: backend logs show PostgreSQL `ERROR: operator does not exist: text ~~ bytea` for a `platform_audit_log` query using `LIKE` filters with a bytea-bound parameter.
+  - Evidence: production `2.1.1` platform smoke on 2026-06-22 reproduced the same audit loading limitation already noted in TASK-155 local validation.
+  - Status: open (P2 backend query binding fix; does not block release health, skills/tools platform APIs passed).
 - ISSUE-2026-04-21-spec-compiler-is-template-based:
   - Symptom: 当前系统会生成 workflow code / preview / manifest，但更接近“规则归纳 + 固定模板代码生成”，尚不能可靠承接复杂自然语言业务意图。
   - Verified root cause: `SpecCompilerService` 仅做文本分行、关键词推断、简单规则抽取；`AgentCompileService.buildWorkflowCode(...)` 输出固定 TypeScript 模板，并未调用 LLM 做真实编译。

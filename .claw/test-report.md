@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-22T02:02:28Z
+updated_at: 2026-06-22T13:28:23Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-22T02:02:28Z
+last_run_at: 2026-06-22T13:28:23Z
 last_run_status: success
 ---
 
@@ -13,11 +13,35 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-156/TASK-157/TASK-158 merged on local `main`.
-- 命令：combined backend integration suite and frontend production build on `main`.
+- 范围：生产发布 `2.1.1` to ECS `47.97.119.160`.
+- 命令：ACR release script, production backup/deploy, container health, Flyway, public smoke, org/platform API smoke.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Production release 2.1.1 (2026-06-22T13:28:23Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` covering release status, report, issue, devops, and runbook files -> **allowed**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**; next production version resolved to `2.1.1`.
+    - `release-build-push`: `./scripts/release-acr.sh` -> **success**; backend/frontend packages built, linux/amd64 images pushed, `latest` aliases pushed, and Git tag `2.1.1` pushed to origin.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260622-212252-before-2.1.1` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-env`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.1` and `CICI_APP_VERSION=2.1.1`; production JWT, security secret, and Aliyun model key confirmed present with values redacted -> **success**.
+    - `production-deploy`: `docker compose --env-file acr.env -f docker-compose.acr.yml -f docker-compose.acr.ssl.yml pull backend frontend` then `up -d` -> **success** after locally tagging infra images with `2.1.1` because the shared Compose tag also applies to database, Redis, RabbitMQ, and Qdrant.
+    - `production-health`: compose ps showed `cici-backend`, `cici-frontend`, `cici-database`, `cici-redis`, `cici-rabbitmq`, and `cici-qdrant` healthy -> **success**.
+    - `backend-health`: `GET http://127.0.0.1:8080/actuator/health` on ECS -> `{"status":"UP"}` -> **success**.
+    - `backend-version`: `GET http://127.0.0.1:8080/system/version` on ECS returned `version=2.1.1`, `imageTag=2.1.1`, `gitCommit=17ec11b404a8` -> **success**.
+    - `flyway-check`: production schema history latest rows show migrations 62 through 68, including `68|agent runtime concurrency hardening|true` -> **success**.
+    - `frontend-nginx`: `docker exec cici-frontend nginx -t` -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` -> `200`; server-local `onechat.agentcici.com` HTTPS vhost with explicit resolve -> `200`; unauthenticated `/auth/me` returned expected `401` -> **success with DNS follow-up**.
+    - `org-api-smoke`: org login on `https://x.agentcici.com` with `demo-org/13900009999` -> `200`; `/auth/me`, `/agents`, `/skills`, `/me/agents/run-logs`, and `/admin/agents/run-logs?limit=10` -> `200`; org token `/api/platform/skills` -> `403` as expected -> **success**.
+    - `platform-api-smoke`: platform login with `admin@cloudcc.com` -> `200`; `/auth/platform/me`, `/api/platform/skills`, and `/api/platform/tools` -> `200`; `/api/platform/audit/logs` -> `500` known existing backend issue -> **partial**.
+    - `static-check`: `git diff --check` after release documentation updates -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.1`, inspect digest `sha256:1eabbcaf629f0951c47cd66ddcfebe1d195d73d135d144292ddaa47dd836afc4`, linux/amd64 manifest digest `sha256:274aa1505147f368f15245349f766662399ad1b30d5af6204c8b1f00093ee9f3`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.1`, inspect digest `sha256:eb6fcc503d1928e77d5a6ce4f2d993bcd5533fd2c279bcf5ce5dd310c4d36ee9`, linux/amd64 manifest digest `sha256:71326a6ea0c336bfc6d0a86b9025c27ff6e0802d3ded72b436b75df1171790e1`.
+  - Notes:
+    - Direct `onechat.agentcici.com` DNS lookup returned NXDOMAIN from the current resolver; server-local vhost and explicit public-IP resolve both render `200`, so the release is healthy but DNS must be repaired or propagated.
+    - `/api/platform/audit/logs` backend 500 logs show PostgreSQL `operator does not exist: text ~~ bytea`; this was already a known limitation from TASK-155 and remains a follow-up.
 
 - TASK-156/TASK-157/TASK-158 local main integration (2026-06-22T02:02:28Z):
   - Commands:

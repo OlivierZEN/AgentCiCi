@@ -1,8 +1,8 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-05-15T08:24:00Z
-updated_by: ai
+updated_at: 2026-06-22T13:28:23Z
+updated_by: MANAGER-001
 status: active
 ---
 
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.1 production-readiness release on 2026-06-22:
+  - Git commit: `17ec11b404a8` on `main`; annotated tag `2.1.1` was pushed to origin.
+  - Scope: Agent Builder production readiness gate/evaluation, enterprise KB readiness, and Agent runtime concurrency hardening.
+  - Release method: `./scripts/release-acr.sh --dry-run` then `./scripts/release-acr.sh`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.1` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.1`, inspect digest `sha256:1eabbcaf629f0951c47cd66ddcfebe1d195d73d135d144292ddaa47dd836afc4`, linux/amd64 manifest digest `sha256:274aa1505147f368f15245349f766662399ad1b30d5af6204c8b1f00093ee9f3`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.1`, inspect digest `sha256:eb6fcc503d1928e77d5a6ce4f2d993bcd5533fd2c279bcf5ce5dd310c4d36ee9`, linux/amd64 manifest digest `sha256:71326a6ea0c336bfc6d0a86b9025c27ff6e0802d3ded72b436b75df1171790e1`.
+  - Backup directory: `/opt/cici/backups/20260622-212252-before-2.1.1`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.1` and `CICI_APP_VERSION=2.1.1`.
+  - Deploy note: `docker compose up -d` initially could not resolve `cici-qdrant:2.1.1` from ACR because Compose uses the shared `CICI_IMAGE_TAG` for all six services; resolved by locally tagging the current ECS infra images as `2.1.1` before rerunning compose.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.1`, `imageTag=2.1.1`, and `gitCommit=17ec11b404a8`; Flyway latest migration is `68|agent runtime concurrency hardening|true`; frontend Nginx config test passed.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200; `onechat.agentcici.com` server-local and explicit production-IP HTTPS vhost smoke returned HTTP 200, but direct DNS returned NXDOMAIN from the current resolver.
+  - API smoke: org login and core org APIs passed; platform login, skills, and tools passed; `/api/platform/audit/logs` still returns backend 500 from the known audit query issue.
 
 - Production domain cutover on 2026-06-01:
   - Scope: stopped the application HTTPS vhost for `agentcici.com`, `www.agentcici.com`, and `autoservice.agentcici.com`; enabled production service on `onechat.agentcici.com` and `x.agentcici.com`.
@@ -264,8 +277,8 @@ status: active
   - Last pushed on 2026-05-07:
     - backend digest `sha256:82732586c707a9f0083fcc02191b16ed7b7345c8c0ad59988b65052ce7e00863`
     - frontend digest `sha256:a70521fa3f651bec5fe32e1eaf5c698e5587a2e5de84f1acfb9e4a00ac33b9be`
-- ECS deployment `agentcici.com` / `www.agentcici.com` / `autoservice.agentcici.com`:
-  - Host: `root@47.97.119.160`, key `/Volumes/workspace/datafiles/cc-cici-ecs.pem`
+- ECS deployment `onechat.agentcici.com` / `x.agentcici.com`:
+  - Host: `root@47.97.119.160`, key `/Volumes/AISpace/datafiles/ecs-key/cc-cici-ecs.pem`
   - Remote root: `/opt/cici`
   - Compose:
     - `/opt/cici/deploy/docker-compose.acr.yml`

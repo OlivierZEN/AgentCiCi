@@ -86,7 +86,7 @@ mvn -q -Dmaven.repo.local=.m2 -DskipTests compile
 
 ```bash
 export ACR_IMAGE_PREFIX=op-registry.cloudcc.cn/cloudcc-ai-native
-export SSH_KEY=/Volumes/workspace/datafiles/cc-cici-ecs.pem
+export SSH_KEY=/Volumes/AISpace/datafiles/ecs-key/cc-cici-ecs.pem
 export REMOTE=root@47.97.119.160
 
 # 只查看下一版生产号和将执行的动作，不推送镜像、不创建 tag
@@ -181,7 +181,7 @@ rsync -av -e "ssh -i $SSH_KEY" \
 
 域名切换要求：
 
-- `onechat.agentcici.com` 与 `x.agentcici.com` 已解析到生产 ECS 或公网入口。
+- `onechat.agentcici.com` 与 `x.agentcici.com` 应解析到生产 ECS 或公网入口；发布前后都要用公共解析器确认，若出现 NXDOMAIN 或旧 IP，先记录风险并推动 DNS 修复。
 - 上述证书文件必须包含 `onechat.agentcici.com` 与 `x.agentcici.com` 的 SAN，或使用覆盖这两个子域的 `*.agentcici.com` 证书。
 - `agentcici.com`、`www.agentcici.com`、`autoservice.agentcici.com` 已从生产 Nginx `server_name` 移除，不再作为当前线上入口。
 
@@ -270,6 +270,11 @@ grep -E '^(CICI_IMAGE_TAG|CICI_APP_VERSION)=' acr.env
 - `HTTPS_PORT=443`
 
 ### 7.2 拉取并启动
+
+注意：当前 Compose 使用同一个 `CICI_IMAGE_TAG` 引用 backend、frontend、database、redis、rabbitmq、qdrant 六个服务。`release-acr.sh` 只构建并推送 backend/frontend；如果 ACR 没有同版本基础设施镜像 tag，`up -d` 会尝试拉取并失败。生产发布前应确认以下任一条件成立：
+
+- ACR 已存在 `cici-database:<version>`、`cici-redis:<version>`、`cici-rabbitmq:<version>`、`cici-qdrant:<version>`。
+- 或在 ECS 上将当前已验证的基础设施镜像本地标记为本次 `<version>`，再运行 `up -d`。
 
 ```bash
 ssh -i "$SSH_KEY" "$REMOTE" '
