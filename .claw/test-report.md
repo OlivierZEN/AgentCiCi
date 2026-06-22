@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-20T16:06:00Z
+updated_at: 2026-06-22T02:00:26Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-20T16:06:00Z
+last_run_at: 2026-06-22T02:00:26Z
 last_run_status: success
 ---
 
@@ -13,11 +13,172 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-156/TASK-157 生产就绪目标任务分配与授权验证.
-- 命令：TASK-156/TASK-157 身份/授权门禁和 assignment scope checks.
+- 范围：TASK-156/TASK-157/TASK-158 production-readiness merge preparation.
+- 命令：orchestrator integration fixture repair, combined backend integration suite, frontend production build, static and assignment checks.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-156/TASK-157/TASK-158 merge preparation (2026-06-22T02:00:26Z):
+  - Commands:
+    - `backend-orchestrator`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` in `backend/` -> **success** after refreshing fixtures for current model routing, production readiness gate, persistent PostgreSQL test data, and Agent RBAC grants.
+    - `backend-integration-combined`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest,AgentProductionReadinessIntegrationTest,KnowledgeBaseLifecycleIntegrationTest,AgentOpenApiIntegrationTest,AgentRuntimeConcurrencyServiceTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - The previous `OrchestratorIntegrationTest` expectation drift is resolved.
+    - Next gate is to commit, merge into `main`, rerun integration checks on `main`, then push `origin/main`.
+
+- TASK-158 Agent runtime concurrency hardening (2026-06-21T23:47:34Z):
+  - Commands:
+    - `identity`: manager and task-scoped `dev-login.py` for `MANAGER-001` / `TASK-158` covering Agent runtime, Chat orchestrator, OpenAPI run service, migration, test, spec, task, assignment, status, and report files -> **allowed**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentRuntimeConcurrencyServiceTest test` in `backend/` -> **success**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with runtime concurrency changes.
+    - `backend-regression-probe`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=OrchestratorIntegrationTest test` in `backend/` -> **failed** on existing expectation drift: current model routing returns `qwen3.6-plus` instead of the stale `cici-default` fixture, and the new production readiness gate blocks a stale published-agent fixture that lacks production entry/channel/schedule/OpenAPI key setup.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-158 changed files -> **allowed**.
+  - Notes:
+    - Added per-session runtime serialization, different-session parallelism, bounded Agent runtime executor, runId propagation, `chat_session_state` optimistic locking, lightweight org/agent/user concurrency limits, tool trace idempotency keys, and workflow published-version metadata.
+    - `AgentRuntimeConcurrencyServiceTest` verifies same-session serialization, different-session parallel execution, and lock cleanup.
+    - Follow-up remains to refresh `OrchestratorIntegrationTest` fixtures for current model routing and readiness-gate behavior; this is not a compile blocker for TASK-158.
+
+- TASK-156/TASK-157 production-readiness final closure (2026-06-21T15:30:34Z):
+  - Commands:
+    - `backend-local`: `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local` in `backend/` -> **success** on port 8080; PostgreSQL/Flyway schema v67, RabbitMQ connection, and Qdrant local profile active.
+    - `frontend-local`: `npm run dev` in `frontend/` -> **success** on `http://127.0.0.1:5173/`.
+    - `auth-smoke`: `POST /auth/password/login` with `13900009999 / szyd1234` -> **success**, `ORG_ADMIN`.
+    - `browser-kb-list`: authenticated `/admin/kb` desktop Playwright -> **success**; screenshot `output/playwright/task157-kb-real-backend-desktop.png`; `overflowX=false`; console errors 0.
+    - `browser-kb-detail`: authenticated KB detail desktop Playwright -> **success**; screenshot `output/playwright/task157-kb-detail-real-backend-desktop.png`; document table and PDF parser note visible; `overflowX=false`; console errors 0.
+    - `browser-agent-builder`: authenticated `/admin/agent-builder/support-agent` desktop Playwright -> **success**; screenshot `output/playwright/task156-agent-builder-real-backend-production-gate.png`; production readiness and evaluation panels visible; readiness/evaluation backend calls 200; refresh/sync actions error-free; `overflowX=false`; console errors 0.
+    - `backend-kb-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**.
+    - `backend-agent-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `rabbit-listener-fix`: enabled Rabbit listener handling in `KbAsyncConfig`; `kb.index.queue` shows 1 consumer and 0 queued/unacked messages during local smoke.
+    - `qdrant-dimension-repair`: local `cici_kb_chunk` collection had stale 16-dim config; rebuilt it to 1024-dim to match current embedding config before real smoke.
+    - `qdrant-smoke`: temporary KB/document publish produced `qdrantPointsBeforeDelete=1`, vector retrieval contained target text, vector audit returned `success=true/status=OK/registeredCount=304/scannedCount=1/orphanCount=0`, document delete returned `cleanupStatus=COMPLETED`, and `qdrantPointsAfterDelete=0`.
+    - `drift-smoke`: `/kb/drift/audit` returned `DRIFT_DETECTED` for historical local data with `missingVectorChunkCount=7` and `embeddingMismatchChunkCount=195`, confirming drift visibility.
+  - Notes:
+    - TASK-156 is ready for review: readiness gate, minimal evaluation gate, publish UX, focused integration, frontend build, and real-backend desktop validation passed.
+    - TASK-157 is ready for review: parser/PDF, ACL filtering, citation trust, retrieval evaluation, connector sync skeleton, rebuild/drift audit, Rabbit/MQ indexing, real Qdrant smoke, frontend build, and real-backend desktop validation passed.
+
+- TASK-156/TASK-157 Docker/PostgreSQL recovery and focused integration (2026-06-21T13:26:30Z):
+  - Commands:
+    - `docker-info`: Docker daemon reachable, Docker Desktop server `29.4.3`.
+    - `local-infra`: `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` -> **success**.
+    - `infra-health`: `docker compose ps` -> `cici-postgres`, `cici-redis`, and `cici-rabbitmq` **healthy**; `cici-qdrant` running; ports `5432` and `6333` reachable.
+    - `postgres-ready`: `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> **success**, accepting connections.
+    - `backend-focused-initial`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **failed**, Spring context exposed a circular dependency across Agent readiness/evaluation/runtime services.
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` covering `AgentEvaluationService` and state docs -> **allowed**.
+    - `backend-focused`: after making `AgentEvaluationService` lazily obtain `AgentWorkflowRuntimeService`, `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **success**.
+    - `backend-kb-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-156 changed files -> **allowed**.
+  - Notes:
+    - The previous Docker/PostgreSQL blocker is resolved for local focused backend integration.
+    - `AgentProductionReadinessIntegrationTest` and `KnowledgeBaseLifecycleIntegrationTest` now execute against `agentcici_test` through Flyway schema version 67.
+    - Real-backend authenticated Agent Builder desktop validation remains the next UI gate; the previous desktop validation was mocked.
+
+- TASK-156 Agent Builder frontend production gate UX (2026-06-20T16:59:31Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` covering `AgentBuilderShell.tsx`, `cici-ui.css`, FEAT-066, task/status/report files -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `browser-desktop-mocked`: Vite `http://127.0.0.1:5173/admin/agent-builder/support-agent` with mocked admin auth/API via Playwright using system Chrome -> **success**; screenshot `output/playwright/task156-agent-builder-production-gate.png`; `overflowX=false`; required text for production readiness, evaluation gate, and blocker message present.
+  - Notes:
+    - Agent Builder publish tab now shows readiness checks, blocker/warning counts, evaluation gate summary, P0 case creation, evaluation run action, and pre-publish readiness refresh.
+    - Browser validation used mocked API responses because local PostgreSQL remains unavailable; rerun authenticated real-backend validation when Docker/PostgreSQL is restored.
+
+- TASK-156 Agent Builder minimal evaluation gate (2026-06-20T16:50:30Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` after updating assignment migration scope from V63 to V67 -> **allowed**.
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-156` covering V67 migration, Agent evaluation domain/repositories, `AgentEvaluationService`, runtime/readiness/controller, integration test, and state docs -> **allowed**.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with minimal evaluation gate changes.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **blocked**, Spring/Flyway could not connect to PostgreSQL at `localhost:5432`; test ApplicationContext failed before assertions.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-156 changed files -> **allowed**.
+  - Notes:
+    - Added Agent evaluation suites, cases, runs, results, deterministic assertions, candidate-version evaluation runtime marker, readiness summary, and publish-time blocking for P0/safety/threshold failures.
+    - `AgentProductionReadinessIntegrationTest` contains coverage for P0 evaluation failure blocking publish but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 embedding metadata drift (2026-06-20T16:40:13Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V66 migration, `KbChunkEntity`, `KnowledgeBaseService`, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 embedding metadata drift files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with embedding metadata drift changes.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Added chunk embedding provider/model/dimension persistence and drift audit mismatch detection/repair behavior.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains healthy embedding drift check coverage but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 connector sync foundation (2026-06-20T16:37:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V65 migration, connector domain/repositories, KB service/controller, tenant lifecycle purge file, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 connector sync files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with connector sync changes.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Added connector data sources, sync jobs, source-document mapping, WEB/EXTERNAL_API minimal sync, NOTION contract-only failure, and tenant purge/export coverage.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains EXTERNAL_API inline sync coverage but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 retrieval evaluation foundation (2026-06-20T16:31:34Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V64 migration, eval domain/repositories, KB service/controller, tenant lifecycle purge file, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 retrieval evaluation files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with retrieval evaluation changes.
+    - `static-check`: `git diff --check` -> **success**.
+    - `docker`: `docker ps --format '{{.Names}}'` -> **blocked**, Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` unavailable.
+    - `postgres`: `nc -z localhost 5432 && echo postgres-open || echo postgres-closed` -> **blocked**, `postgres-closed`.
+  - Notes:
+    - Added retrieval evaluation suites, cases, runs, case results, metrics, source evidence persistence, API endpoints, and tenant purge/export coverage.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains suite/case/run/results coverage but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 citation trust fields (2026-06-20T16:50:20Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering `RagService`, KB lifecycle test, and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 citation trust files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with citation trust fields.
+  - Notes:
+    - RAG source payloads now include confidence, trust level, freshness, document index version/index time, and chunk hash.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains source payload field assertions but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 drift audit/repair foundation (2026-06-20T16:42:00Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering drift audit backend files and status docs -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 drift audit files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with drift audit changes.
+  - Notes:
+    - Added `/kb/drift/audit` dry-run/repair, orphan vector sampling cleanup, missing-vector chunk detection, published-document-without-chunks detection, stale document reporting, document rebuild repair, and manual chunk vector repair.
+    - Embedding model/dimension drift is explicitly reported as unavailable until chunk embedding metadata is persisted.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains healthy drift audit coverage but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 document/chunk ACL foundation (2026-06-20T16:28:40Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` covering V63 migration, KB ACL domain/service/controller, `RagService`, `ChatOrchestratorService`, and integration test -> **allowed**.
+    - `assignment`: `check-assignment.py` for the same TASK-157 ACL files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with ACL changes.
+  - Notes:
+    - Added document/chunk READ grants, ACL-aware RAG filtering, Chat principal propagation, admin ACL endpoints, and `permissionFilteredCount`.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains ACL filtering coverage but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-157 text-based PDF parser support (2026-06-20T16:13:20Z):
+  - Commands:
+    - `identity`: task-scoped `dev-login.py` for `MANAGER-001` / `TASK-157` after adding `backend/pom.xml` to assignment scope -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-157 actual PDF parser files -> **allowed**.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile with PDFBox.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Text-based PDF parsing is now enabled through PDFBox; scanned/empty/encrypted PDFs return clear parser errors.
+    - `KnowledgeBaseLifecycleIntegrationTest` contains PDF indexing/RAG coverage but real execution remains blocked until local PostgreSQL is available.
+
+- TASK-156 Agent Builder readiness gate first implementation (2026-06-20T16:10:12Z):
+  - Commands:
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=AgentProductionReadinessIntegrationTest test` in `backend/` -> **blocked**, Spring/Flyway could not connect to PostgreSQL at `localhost:5432`.
+    - `postgres-env`: `docker compose up -d postgres` from repo root -> **blocked**, Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` was unavailable.
+    - `backend-test-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success**, main and test code compile.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Added publish-time Agent readiness gate and `/agents/{agentId}/readiness`.
+    - Focused integration coverage exists in `AgentProductionReadinessIntegrationTest` and should be rerun when local PostgreSQL is available.
 
 - TASK-156/TASK-157 production-readiness goal setup (2026-06-21T00:06:00+08:00):
   - Commands:

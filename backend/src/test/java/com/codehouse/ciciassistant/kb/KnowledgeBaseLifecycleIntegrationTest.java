@@ -11,6 +11,7 @@ import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
+import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -20,6 +21,11 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -120,7 +126,55 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(detailed.sources())
                 .extracting(RagService.RetrievedSource::documentName)
                 .contains("policy.txt");
+        assertThat(detailed.sources().get(0).toPayload())
+                .containsKeys("confidence", "trustLevel", "freshnessStatus", "documentIndexVersion", "chunkContentHash");
         assertThat(detailed.timingsMs()).containsKey("total");
+    }
+
+    @Test
+    void shouldFilterRetrievalByDocumentAccessGrant() {
+        Fixture fixture = createPublishedDocument("restricted payroll policy theta");
+        knowledgeBaseService.replaceDocumentAccessGrants(
+                fixture.orgId(),
+                fixture.documentId(),
+                "admin-user",
+                List.of(new KbAccessControlService.GrantInput("USER", "allowed-user", null)));
+
+        RagService.RetrievalResult allowed = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "payroll theta",
+                Map.of(),
+                KbAccessControlService.AccessPrincipal.user("allowed-user", List.of("ORG_USER")));
+        RagService.RetrievalResult denied = ragService.retrieveDetailed(
+                fixture.orgId(),
+                List.of(fixture.kbIdText()),
+                "payroll theta",
+                Map.of(),
+                KbAccessControlService.AccessPrincipal.user("blocked-user", List.of("ORG_USER")));
+
+        assertThat(allowed.context()).anyMatch(item -> item.contains("restricted payroll"));
+        assertThat(allowed.permissionFilteredCount()).isZero();
+        assertThat(denied.context()).isEmpty();
+        assertThat(denied.permissionFilteredCount()).isGreaterThan(0);
+    }
+
+    @Test
+    void shouldAuditIndexDriftForHealthyKnowledgeBase() {
+        Fixture fixture = createPublishedDocument("healthy drift baseline iota");
+
+        Map<String, Object> audit = knowledgeBaseService.auditIndexDrift(fixture.orgId(), false);
+
+        assertThat(audit).containsEntry("status", "OK");
+        assertThat(audit).containsEntry("repairRequested", false);
+        assertThat(audit).containsEntry("missingVectorChunkCount", 0);
+        assertThat(audit).containsEntry("embeddingMismatchChunkCount", 0);
+        assertThat(audit).containsEntry("publishedDocumentWithoutChunkCount", 0);
+        assertThat(audit).containsEntry("staleSyncDocumentCount", 0);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> embeddingDriftCheck = (Map<String, Object>) audit.get("embeddingDriftCheck");
+        assertThat(embeddingDriftCheck).containsEntry("status", "AVAILABLE");
+        assertThat(embeddingDriftCheck).containsEntry("mismatchCount", 0);
     }
 
     @Test
@@ -159,7 +213,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
     }
 
     @Test
-    void shouldExposeUploadPolicyAndRejectPdfAdmission() {
+    void shouldExposeUploadPolicyAndIndexTextPdf() throws Exception {
         String orgId = "kb-policy-" + UUID.randomUUID();
         Map<String, Object> policy = knowledgeBaseService.uploadPolicy(orgId);
         @SuppressWarnings("unchecked")
@@ -170,10 +224,9 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Map<String, Object> serviceApi = (Map<String, Object>) policy.get("serviceApi");
 
         assertThat(allowedExtensions)
-                .contains("txt", "md", "csv", "json", "docx")
-                .doesNotContain("pdf");
-        assertThat(unsupportedParserLabels).contains("PDF");
-        assertThat((String) policy.get("pdfPolicy")).contains("PDF parsing is not enabled");
+                .contains("txt", "md", "csv", "json", "docx", "pdf");
+        assertThat(unsupportedParserLabels).isEmpty();
+        assertThat((String) policy.get("pdfPolicy")).contains("Text-based PDF parsing is enabled");
         assertThat(serviceApi).containsEntry("apiAccessEnabled", false);
 
         Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Policy KB", "test");
@@ -182,11 +235,14 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 "file",
                 "brief.pdf",
                 "application/pdf",
-                "%PDF-1.4".getBytes(StandardCharsets.UTF_8));
+                textPdf("pdf parser readiness omega"));
 
-        assertThatThrownBy(() -> knowledgeBaseService.uploadDocument(orgId, kbId, file))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("PDF parsing is not enabled");
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Long documentId = ((Number) document.get("id")).longValue();
+        knowledgeBaseService.publishDocument(orgId, documentId);
+
+        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "omega"))
+                .anyMatch(item -> item.contains("pdf parser readiness"));
     }
 
     @Test
@@ -264,6 +320,73 @@ class KnowledgeBaseLifecycleIntegrationTest {
         List<Map<String, Object>> logs = knowledgeBaseService.listRetrievalLogs(fixture.orgId(), fixture.kbId(), 5);
         assertThat(logs).isNotEmpty();
         assertThat(logs.get(0)).containsEntry("query", "onboarding alpha");
+    }
+
+    @Test
+    void shouldRunRetrievalEvaluationSuite() {
+        Fixture fixture = createPublishedDocument("evaluation recall handbook omega source");
+
+        Map<String, Object> suite = knowledgeBaseService.createEvalSuite(
+                fixture.orgId(),
+                fixture.kbId(),
+                new KnowledgeBaseService.EvalSuiteCommand("Recall Smoke", "expected source recall"));
+        Long suiteId = ((Number) suite.get("id")).longValue();
+
+        Map<String, Object> evalCase = knowledgeBaseService.addEvalCase(
+                fixture.orgId(),
+                suiteId,
+                new KnowledgeBaseService.EvalCaseCommand(
+                        "recall omega",
+                        fixture.documentId(),
+                        "policy.txt",
+                        "recall handbook",
+                        0.0,
+                        fixture.documentId() + 1000,
+                        Map.of()));
+
+        Map<String, Object> run = knowledgeBaseService.runEvalSuite(fixture.orgId(), suiteId);
+        List<Map<String, Object>> runs = knowledgeBaseService.listEvalRuns(fixture.orgId(), suiteId);
+        List<Map<String, Object>> results = knowledgeBaseService.listEvalRunResults(
+                fixture.orgId(),
+                ((Number) run.get("id")).longValue());
+
+        assertThat(evalCase).containsEntry("query", "recall omega");
+        assertThat(run).containsEntry("status", "PASSED");
+        assertThat(run).containsEntry("caseCount", 1);
+        assertThat(run).containsEntry("passedCount", 1);
+        assertThat(run).containsEntry("forbiddenSourceViolations", 0);
+        assertThat((Double) run.get("expectedSourceRecall")).isEqualTo(1.0);
+        assertThat(runs).isNotEmpty();
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0)).containsEntry("expectedHit", true);
+    }
+
+    @Test
+    void shouldSyncExternalApiDataSourceIntoPublishedDocument() {
+        String orgId = "kb-sync-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Sync KB", "test");
+        Long kbId = ((Number) kb.get("id")).longValue();
+
+        Map<String, Object> source = knowledgeBaseService.createDataSource(
+                orgId,
+                kbId,
+                new KnowledgeBaseService.DataSourceCommand(
+                        "EXTERNAL_API",
+                        "Policy Feed",
+                        Map.of(
+                                "externalId", "policy-feed-1",
+                                "title", "policy-feed",
+                                "content", "connector sync lambda policy")));
+        Long sourceId = ((Number) source.get("id")).longValue();
+
+        Map<String, Object> job = knowledgeBaseService.syncDataSource(orgId, sourceId, "MANUAL");
+        List<Map<String, Object>> jobs = knowledgeBaseService.listSyncJobs(orgId, sourceId);
+
+        assertThat(job).containsEntry("status", "SUCCEEDED");
+        assertThat(job).containsEntry("documentCount", 1);
+        assertThat(jobs).isNotEmpty();
+        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "lambda policy"))
+                .anyMatch(item -> item.contains("connector sync"));
     }
 
     @Test
@@ -421,6 +544,23 @@ class KnowledgeBaseLifecycleIntegrationTest {
             zip.closeEntry();
         }
         return output.toByteArray();
+    }
+
+    private byte[] textPdf(String text) throws IOException {
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+            try (PDPageContentStream content = new PDPageContentStream(document, page)) {
+                content.beginText();
+                content.setFont(new PDType1Font(Standard14Fonts.FontName.HELVETICA), 12);
+                content.newLineAtOffset(72, 720);
+                content.showText(text);
+                content.endText();
+            }
+            document.save(out);
+            return out.toByteArray();
+        }
     }
 
     private record Fixture(String orgId, Long kbId, Long documentId) {

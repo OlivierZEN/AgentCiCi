@@ -1,0 +1,3 @@
+ALTER TABLE chat_session_state
+    ADD COLUMN IF NOT EXISTS version BIGINT NOT NULL DEFAULT 0;
+

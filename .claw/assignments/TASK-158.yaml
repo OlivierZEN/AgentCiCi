@@ -1,0 +1,55 @@
+task_id: TASK-158
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-22T00:00:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-068-agent-runtime-concurrency-hardening.md
+task_status_path: .claw/tasks/TASK-158.md
+branch: codex/TASK-156-production-readiness-goal
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/main/resources/db/migration/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-158.md
+  - .claw/assignments/TASK-158.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-068-agent-runtime-concurrency-hardening.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-068-agent-runtime-concurrency-hardening.md
+  - docs/specs/FEAT-066-agent-builder-production-readiness.md
+task_boundary:
+  - "Harden concurrent Agent runtime calls for Web and OpenAPI multi-user usage."
+  - "Implement session-level serialization, bounded async execution, runId traceability, optimistic session state locking, basic concurrency limits, and tool idempotency keys."
+  - "Do not introduce distributed lock infrastructure, mobile work, unrelated UI redesign, or production deployment changes."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-22T00:00:00+08:00; user requested Agent runtime concurrency hardening."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created runtime concurrency hardening task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-158 on branch codex/TASK-156-production-readiness-goal before implementation edits."

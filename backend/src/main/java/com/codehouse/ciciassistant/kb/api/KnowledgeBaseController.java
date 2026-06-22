@@ -2,11 +2,13 @@ package com.codehouse.ciciassistant.kb.api;
 
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -94,6 +96,13 @@ public class KnowledgeBaseController {
     public ApiResponse<Map<String, Object>> auditVectorStore() {
         String orgId = TenantContext.requireOrgId();
         return ApiResponse.ok(knowledgeBaseService.auditVectorStore(orgId));
+    }
+
+    @PostMapping("/drift/audit")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> auditIndexDrift(@RequestBody(required = false) DriftAuditRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.auditIndexDrift(orgId, request != null && Boolean.TRUE.equals(request.repair())));
     }
 
     @DeleteMapping("/{id}")
@@ -194,6 +203,45 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.uploadDocument(orgId, knowledgeBaseId, file));
     }
 
+    @GetMapping("/{kbId}/data-sources")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listDataSources(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listDataSources(orgId, kbId));
+    }
+
+    @PostMapping("/{kbId}/data-sources")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> createDataSource(@PathVariable Long kbId,
+                                                              @Valid @RequestBody DataSourceRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.createDataSource(
+                orgId,
+                kbId,
+                new KnowledgeBaseService.DataSourceCommand(
+                        request.sourceType(),
+                        request.name(),
+                        request.config())));
+    }
+
+    @PostMapping("/data-sources/{sourceId}/sync")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> syncDataSource(@PathVariable Long sourceId,
+                                                            @RequestBody(required = false) SyncDataSourceRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.syncDataSource(
+                orgId,
+                sourceId,
+                request == null ? "MANUAL" : request.triggerType()));
+    }
+
+    @GetMapping("/data-sources/{sourceId}/sync-jobs")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listSyncJobs(@PathVariable Long sourceId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listSyncJobs(orgId, sourceId));
+    }
+
     @PostMapping("/{kbId}/chunking/preview")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> previewChunking(@PathVariable Long kbId,
@@ -230,6 +278,70 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.listRetrievalLogs(orgId, kbId, limit));
     }
 
+    @GetMapping("/{kbId}/eval/suites")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalSuites(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalSuites(orgId, kbId));
+    }
+
+    @PostMapping("/{kbId}/eval/suites")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> createEvalSuite(@PathVariable Long kbId,
+                                                             @Valid @RequestBody EvalSuiteRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.createEvalSuite(
+                orgId,
+                kbId,
+                new KnowledgeBaseService.EvalSuiteCommand(request.name(), request.description())));
+    }
+
+    @GetMapping("/eval/suites/{suiteId}/cases")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalCases(@PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalCases(orgId, suiteId));
+    }
+
+    @PostMapping("/eval/suites/{suiteId}/cases")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> addEvalCase(@PathVariable Long suiteId,
+                                                         @Valid @RequestBody EvalCaseRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.addEvalCase(
+                orgId,
+                suiteId,
+                new KnowledgeBaseService.EvalCaseCommand(
+                        request.query(),
+                        request.expectedDocumentId(),
+                        request.expectedDocumentKeyword(),
+                        request.expectedChunkKeyword(),
+                        request.minScore(),
+                        request.forbiddenDocumentId(),
+                        request.metadataFilters())));
+    }
+
+    @PostMapping("/eval/suites/{suiteId}/runs")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> runEvalSuite(@PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.runEvalSuite(orgId, suiteId));
+    }
+
+    @GetMapping("/eval/suites/{suiteId}/runs")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalRuns(@PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalRuns(orgId, suiteId));
+    }
+
+    @GetMapping("/eval/runs/{runId}/results")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listEvalRunResults(@PathVariable Long runId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listEvalRunResults(orgId, runId));
+    }
+
     @GetMapping("/{kbId}/metadata/fields")
     public ApiResponse<List<Map<String, Object>>> listMetadataFields(@PathVariable Long kbId) {
         String orgId = TenantContext.requireOrgId();
@@ -260,6 +372,25 @@ public class KnowledgeBaseController {
                                                                           @RequestBody Map<String, String> metadata) {
         String orgId = TenantContext.requireOrgId();
         return ApiResponse.ok(knowledgeBaseService.updateDocumentMetadata(orgId, id, metadata));
+    }
+
+    @GetMapping("/documents/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listDocumentAccessGrants(@PathVariable Long id) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listDocumentAccessGrants(orgId, id));
+    }
+
+    @PutMapping("/documents/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> replaceDocumentAccessGrants(@PathVariable Long id,
+                                                                               @Valid @RequestBody ReplaceAccessGrantsRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.replaceDocumentAccessGrants(
+                orgId,
+                id,
+                currentUserId(),
+                toGrantInputs(request)));
     }
 
     @PostMapping("/documents/{id}/publish")
@@ -310,6 +441,25 @@ public class KnowledgeBaseController {
     public ApiResponse<Map<String, Object>> enableChunk(@PathVariable Long id) {
         String orgId = TenantContext.requireOrgId();
         return ApiResponse.ok(knowledgeBaseService.setChunkEnabled(orgId, id, true));
+    }
+
+    @GetMapping("/chunks/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listChunkAccessGrants(@PathVariable Long id) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.listChunkAccessGrants(orgId, id));
+    }
+
+    @PutMapping("/chunks/{id}/acl")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> replaceChunkAccessGrants(@PathVariable Long id,
+                                                                            @Valid @RequestBody ReplaceAccessGrantsRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(knowledgeBaseService.replaceChunkAccessGrants(
+                orgId,
+                id,
+                currentUserId(),
+                toGrantInputs(request)));
     }
 
     @PostMapping("/chunks/{id}/disable")
@@ -400,6 +550,35 @@ public class KnowledgeBaseController {
     ) {
     }
 
+    public record DataSourceRequest(
+            @NotBlank String sourceType,
+            @NotBlank String name,
+            Map<String, Object> config
+    ) {
+    }
+
+    public record SyncDataSourceRequest(
+            String triggerType
+    ) {
+    }
+
+    public record EvalSuiteRequest(
+            @NotBlank String name,
+            String description
+    ) {
+    }
+
+    public record EvalCaseRequest(
+            @NotBlank String query,
+            Long expectedDocumentId,
+            String expectedDocumentKeyword,
+            String expectedChunkKeyword,
+            Double minScore,
+            Long forbiddenDocumentId,
+            Map<String, String> metadataFilters
+    ) {
+    }
+
     public record CreateMetadataFieldRequest(
             @NotBlank String fieldKey,
             String fieldName,
@@ -410,5 +589,38 @@ public class KnowledgeBaseController {
     public record BatchIdsRequest(
             @NotEmpty List<Long> ids
     ) {
+    }
+
+    public record AccessGrantRequest(
+            @NotBlank String principalType,
+            String principalId,
+            Instant expiresAt
+    ) {
+    }
+
+    public record ReplaceAccessGrantsRequest(
+            List<AccessGrantRequest> grants
+    ) {
+    }
+
+    public record DriftAuditRequest(
+            Boolean repair
+    ) {
+    }
+
+    private List<KbAccessControlService.GrantInput> toGrantInputs(ReplaceAccessGrantsRequest request) {
+        if (request == null || request.grants() == null || request.grants().isEmpty()) {
+            return List.of();
+        }
+        return request.grants().stream()
+                .map(item -> new KbAccessControlService.GrantInput(
+                        item.principalType(),
+                        item.principalId(),
+                        item.expiresAt()))
+                .toList();
+    }
+
+    private String currentUserId() {
+        return TenantContext.getUserId().orElse("org-admin");
     }
 }

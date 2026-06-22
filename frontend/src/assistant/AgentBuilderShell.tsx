@@ -177,6 +177,47 @@ type VersionHistoryItem = {
   changeLog?: string[];
 };
 
+type ReadinessCheck = {
+  code: string;
+  status: string;
+  severity: "info" | "warning" | "blocker" | string;
+  message: string;
+};
+
+type AgentReadinessResult = {
+  agentId: string;
+  versionNo?: number | null;
+  status: "ready" | "warning" | "blocked" | string;
+  blocked: boolean;
+  checks: ReadinessCheck[];
+  summary?: Record<string, unknown>;
+};
+
+type AgentEvalSuite = {
+  id: number;
+  agentId: string;
+  name: string;
+  description?: string;
+  gateMode: string;
+  minPassRate: number;
+  status: string;
+};
+
+type AgentEvalRun = {
+  id: number;
+  suiteId: number;
+  versionNo: number;
+  status: "PASSED" | "FAILED" | "EMPTY" | string;
+  caseCount: number;
+  passedCount: number;
+  failedCount: number;
+  p0FailedCount: number;
+  safetyFailedCount: number;
+  passRate: number;
+  startedAt: string;
+  finishedAt?: string;
+};
+
 type AgentApiRecord = {
   agentId: string;
   name: string;
@@ -1465,6 +1506,16 @@ export default function AgentBuilderShell({
   const [debugInput, setDebugInput] = useState("请帮我看看这个客户是否适合直接生成报价说明？");
   const [debugTrace, setDebugTrace] = useState<DebugTraceResult | null>(null);
   const [publishedVersionNo, setPublishedVersionNo] = useState<number | null>(null);
+  const [latestCompiledVersionNo, setLatestCompiledVersionNo] = useState<number | null>(null);
+  const [productionReadiness, setProductionReadiness] = useState<AgentReadinessResult | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [evaluationSuites, setEvaluationSuites] = useState<AgentEvalSuite[]>([]);
+  const [evaluationRuns, setEvaluationRuns] = useState<AgentEvalRun[]>([]);
+  const [evaluationLoading, setEvaluationLoading] = useState(false);
+  const [evaluationError, setEvaluationError] = useState<string | null>(null);
+  const [evaluationInput, setEvaluationInput] = useState("请用一句话回答当前 Agent 的职责。");
+  const [evaluationExpectedText, setEvaluationExpectedText] = useState("");
   const [publishReadyFromCompile, setPublishReadyFromCompile] = useState(false);
   const [lastSuccessfulBackendCompileDigest, setLastSuccessfulBackendCompileDigest] = useState<string | null>(null);
   const [loadedAgentBaselineDigest, setLoadedAgentBaselineDigest] = useState<string | null>(null);
@@ -1558,6 +1609,7 @@ export default function AgentBuilderShell({
         setPersistedDraftDigest(persistPayloadDigest(preferred.draft, preferred.publishConfig, orgId));
         setLastSuccessfulBackendCompileDigest(null);
         setPublishReadyFromCompile(false);
+        resetProductionGateState();
         setCompileArtifact(generateCompileArtifact(preferred.draft, kbs, toolCatalog));
         setActiveEditorTab("definition");
         setActivePublishChannel(preferred.draft.channels.includes("feishu") ? "feishu" : preferred.draft.channels[0] ?? "feishu");
@@ -1715,6 +1767,11 @@ export default function AgentBuilderShell({
   const selectedModel = modelOptions.find((option) => option.value === draft.model);
   const openApiBaseUrl = `${window.location.origin}/openapi/v1`;
   const readinessCount = [draft.name, draft.specText, draft.channels.length > 0, draft.knowledgeBaseIds.length > 0, draft.toolIds.length > 0].filter(Boolean).length;
+  const targetReadinessVersionNo = latestCompiledVersionNo ?? publishedVersionNo;
+  const activeEvaluationSuite = evaluationSuites[0] ?? null;
+  const latestEvaluationRun = evaluationRuns[0] ?? null;
+  const readinessBlockingChecks = productionReadiness?.checks?.filter((item) => item.severity === "blocker" && item.status !== "passed") ?? [];
+  const readinessWarningChecks = productionReadiness?.checks?.filter((item) => item.severity === "warning" && item.status !== "passed") ?? [];
 
   const filteredExecutionRecords = useMemo(() => {
     const rows = executionRecordsFromServer.filter((row) => row.agentId === selectedAgentId);
@@ -1789,12 +1846,15 @@ export default function AgentBuilderShell({
       const { body: versionsBody } = await safeFetchJson<Array<{ versionNo: number; publishStatus?: string }>>(versionsRes);
       if (!versionsRes.ok || !versionsBody?.success || !Array.isArray(versionsBody.data)) {
         setPublishedVersionNo(null);
+        setLatestCompiledVersionNo(null);
         return;
       }
+      setLatestCompiledVersionNo(versionsBody.data[0]?.versionNo ?? null);
       const published = versionsBody.data.find((item) => (item.publishStatus ?? "").toUpperCase() === "PUBLISHED");
       setPublishedVersionNo(published?.versionNo ?? null);
     } catch {
       setPublishedVersionNo(null);
+      setLatestCompiledVersionNo(null);
     }
   }, [selectedAgentId, token]);
 
@@ -1811,12 +1871,82 @@ export default function AgentBuilderShell({
       if (!versionsRes.ok || !versionsBody?.success || !Array.isArray(versionsBody.data)) {
         throw new Error(versionsBody?.message ?? `HTTP ${versionsRes.status}`);
       }
+      setLatestCompiledVersionNo(versionsBody.data[0]?.versionNo ?? null);
       setVersionHistory(keepRecentVersionHistory(versionsBody.data, 10));
     } catch (error) {
       setVersionHistory([]);
       setVersionHistoryError(error instanceof Error ? error.message : String(error));
     } finally {
       setVersionHistoryLoading(false);
+    }
+  }, [selectedAgentId, token]);
+
+  const loadProductionReadiness = useCallback(async (versionNoOverride?: number | null) => {
+    if (!token || !selectedAgentId) return null;
+    const versionNo = versionNoOverride ?? targetReadinessVersionNo;
+    if (versionNo == null) {
+      setProductionReadiness(null);
+      setReadinessError("暂无可检查的编译版本，请先完成智能体编译。");
+      return null;
+    }
+    setReadinessLoading(true);
+    setReadinessError(null);
+    try {
+      const readinessRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/readiness?versionNo=${encodeURIComponent(String(versionNo))}`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<AgentReadinessResult>(readinessRes);
+      if (!readinessRes.ok || !body?.success || !body.data) {
+        throw new Error(body?.message ?? `HTTP ${readinessRes.status}`);
+      }
+      setProductionReadiness(body.data);
+      return body.data;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setProductionReadiness(null);
+      setReadinessError(message);
+      return null;
+    } finally {
+      setReadinessLoading(false);
+    }
+  }, [selectedAgentId, targetReadinessVersionNo, token]);
+
+  const loadEvaluationSuites = useCallback(async () => {
+    if (!token || !selectedAgentId) return;
+    setEvaluationLoading(true);
+    setEvaluationError(null);
+    try {
+      const suitesRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/evaluation/suites`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<AgentEvalSuite[]>(suitesRes);
+      if (!suitesRes.ok || !body?.success || !Array.isArray(body.data)) {
+        throw new Error(body?.message ?? `HTTP ${suitesRes.status}`);
+      }
+      setEvaluationSuites(body.data);
+      const firstSuite = body.data[0];
+      if (!firstSuite) {
+        setEvaluationRuns([]);
+        return;
+      }
+      const runsRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/evaluation/suites/${firstSuite.id}/runs`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body: runsBody } = await safeFetchJson<AgentEvalRun[]>(runsRes);
+      if (runsRes.ok && runsBody?.success && Array.isArray(runsBody.data)) {
+        setEvaluationRuns(runsBody.data);
+      } else {
+        setEvaluationRuns([]);
+      }
+    } catch (error) {
+      setEvaluationSuites([]);
+      setEvaluationRuns([]);
+      setEvaluationError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setEvaluationLoading(false);
     }
   }, [selectedAgentId, token]);
 
@@ -1904,6 +2034,12 @@ export default function AgentBuilderShell({
       void loadVersionHistory();
     }
   }, [activeCompileTab, loadRuntimeExecutions, loadRuntimeTriggers, loadVersionHistory, selectedAgentId, token]);
+
+  useEffect(() => {
+    if (!token || !selectedAgentId || activeEditorTab !== "publish") return;
+    void loadProductionReadiness();
+    void loadEvaluationSuites();
+  }, [activeEditorTab, loadEvaluationSuites, loadProductionReadiness, selectedAgentId, token]);
 
   const updateDraft = <K extends keyof AgentDraft>(key: K, value: AgentDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -2018,6 +2154,15 @@ export default function AgentBuilderShell({
         ? "选择允许当前 Agent 调用的工具，可多选。"
         : "";
 
+  const resetProductionGateState = () => {
+    setProductionReadiness(null);
+    setReadinessError(null);
+    setEvaluationSuites([]);
+    setEvaluationRuns([]);
+    setEvaluationError(null);
+    setLatestCompiledVersionNo(null);
+  };
+
   type PickerItem = { key: string; title: string; subtitle?: string; tag?: string };
   const loadMcpTools = async (server: McpServerSummary) => {
     if (!token || !server.enabled || mcpToolsByServer[server.id] || mcpServerLoading[server.id]) return;
@@ -2118,6 +2263,7 @@ export default function AgentBuilderShell({
       setPersistedDraftDigest(persistPayloadDigest(refreshed.draft, refreshed.publishConfig, orgId));
       setLastSuccessfulBackendCompileDigest(null);
       setPublishReadyFromCompile(false);
+      resetProductionGateState();
       setTriggersCatalog(null);
       setExecutionRecordsFromServer([]);
       setVersionHistory([]);
@@ -2141,6 +2287,7 @@ export default function AgentBuilderShell({
     setPersistedDraftDigest(persistPayloadDigest(target.draft, target.publishConfig, orgId));
     setLastSuccessfulBackendCompileDigest(null);
     setPublishReadyFromCompile(false);
+    resetProductionGateState();
     setTriggersCatalog(null);
     setExecutionRecordsFromServer([]);
     setVersionHistory([]);
@@ -2214,6 +2361,7 @@ export default function AgentBuilderShell({
       setPersistedDraftDigest(persistPayloadDigest(nextAgent.draft, nextAgent.publishConfig, orgId));
       setLastSuccessfulBackendCompileDigest(null);
       setPublishReadyFromCompile(false);
+      resetProductionGateState();
       setTriggersCatalog(null);
       setExecutionRecordsFromServer([]);
       setRuntimeExecutionsError(null);
@@ -2239,6 +2387,7 @@ export default function AgentBuilderShell({
     setPersistedDraftDigest(null);
     setLastSuccessfulBackendCompileDigest(null);
     setPublishReadyFromCompile(false);
+    resetProductionGateState();
     setTriggersCatalog(null);
     setExecutionRecordsFromServer([]);
     setVersionHistory([]);
@@ -2277,6 +2426,7 @@ export default function AgentBuilderShell({
           setPersistedDraftDigest(persistPayloadDigest(fallbackAgent.draft, fallbackAgent.publishConfig, orgId));
           setLastSuccessfulBackendCompileDigest(null);
           setPublishReadyFromCompile(false);
+          resetProductionGateState();
           setTriggersCatalog(null);
           setExecutionRecordsFromServer([]);
           setVersionHistory([]);
@@ -2476,6 +2626,11 @@ export default function AgentBuilderShell({
         setLastSuccessfulBackendCompileDigest(digest);
         setLoadedAgentBaselineDigest(digest);
         setPublishReadyFromCompile(body.data.changed === true && body.data.draftVersionNo != null);
+        if (body.data.draftVersionNo != null) {
+          setLatestCompiledVersionNo(body.data.draftVersionNo);
+        }
+        setProductionReadiness(null);
+        setReadinessError(null);
         setNotice(buildCompileNotice(body.data));
         void loadVersionHistory();
       } catch (error) {
@@ -2565,6 +2720,220 @@ export default function AgentBuilderShell({
   const activePublishMeta = CHANNEL_OPTIONS.find((channel) => channel.id === activePublishChannel) ?? CHANNEL_OPTIONS[0];
   const activePublishEnabled = draft.channels.includes(activePublishChannel);
 
+  const createDefaultEvaluationSuite = async (): Promise<AgentEvalSuite | null> => {
+    if (!selectedAgentId || !token) return null;
+    setEvaluationLoading(true);
+    setEvaluationError(null);
+    try {
+      const response = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/evaluation/suites`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: "发布门禁评测",
+          description: "发布前必须通过的 P0 与安全回归用例。",
+          gateMode: "BLOCKING",
+          minPassRate: 1,
+        }),
+      });
+      const { body } = await safeFetchJson<AgentEvalSuite>(response);
+      if (!response.ok || !body?.success || !body.data) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      setEvaluationSuites((current) => [body.data as AgentEvalSuite, ...current]);
+      setNotice("已创建 blocking 发布评测集。");
+      return body.data as AgentEvalSuite;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setEvaluationError(message);
+      setNotice(`创建评测集失败：${message}`);
+      return null;
+    } finally {
+      setEvaluationLoading(false);
+    }
+  };
+
+  const runEvaluationSuite = async (suite: AgentEvalSuite | null = activeEvaluationSuite) => {
+    if (!selectedAgentId || !token) return;
+    const targetSuite = suite ?? activeEvaluationSuite;
+    const versionNo = targetReadinessVersionNo;
+    if (!targetSuite) {
+      setEvaluationError("请先创建发布评测集。");
+      return;
+    }
+    if (versionNo == null) {
+      setEvaluationError("请先完成智能体编译，再运行评测。");
+      return;
+    }
+    setEvaluationLoading(true);
+    setEvaluationError(null);
+    try {
+      const response = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/evaluation/suites/${targetSuite.id}/runs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ versionNo }),
+      });
+      const { body } = await safeFetchJson<AgentEvalRun>(response);
+      if (!response.ok || !body?.success || !body.data) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      setEvaluationRuns((current) => [body.data as AgentEvalRun, ...current]);
+      setNotice(`评测完成：v${versionNo} ${body.data.status}，通过率 ${Math.round((body.data.passRate ?? 0) * 100)}%。`);
+      void loadProductionReadiness(versionNo);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setEvaluationError(message);
+      setNotice(`运行评测失败：${message}`);
+    } finally {
+      setEvaluationLoading(false);
+    }
+  };
+
+  const addP0EvaluationCaseAndRun = async () => {
+    if (!selectedAgentId || !token) return;
+    const expectedText = evaluationExpectedText.trim();
+    if (!expectedText) {
+      setEvaluationError("请先填写期望输出关键词。");
+      return;
+    }
+    const suite = activeEvaluationSuite ?? await createDefaultEvaluationSuite();
+    if (!suite) return;
+    setEvaluationLoading(true);
+    setEvaluationError(null);
+    try {
+      const response = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/evaluation/suites/${suite.id}/cases`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: `P0 输出包含：${expectedText.slice(0, 18)}`,
+          inputText: evaluationInput,
+          assertionType: "OUTPUT_CONTAINS",
+          expectedText,
+          priority: "P0",
+        }),
+      });
+      const { body } = await safeFetchJson<Record<string, unknown>>(response);
+      if (!response.ok || !body?.success) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      setNotice("已添加 P0 评测用例，开始运行当前版本评测。");
+      await runEvaluationSuite(suite);
+      void loadEvaluationSuites();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setEvaluationError(message);
+      setNotice(`添加评测用例失败：${message}`);
+    } finally {
+      setEvaluationLoading(false);
+    }
+  };
+
+  const readinessStatusText = productionReadiness?.blocked
+    ? "阻塞"
+    : productionReadiness?.status === "ready"
+      ? "可发布"
+      : productionReadiness?.status === "warning"
+        ? "有警告"
+        : "待检查";
+
+  const evaluationRunStatusText = latestEvaluationRun
+    ? latestEvaluationRun.status === "PASSED"
+      ? "通过"
+      : latestEvaluationRun.status === "FAILED"
+        ? "失败"
+        : "空集"
+    : "未运行";
+
+  const renderProductionGatePanel = () => (
+    <section className="cici-builder-production-gate" aria-label="生产就绪检查">
+      <div className="cici-builder-production-gate__head">
+        <div>
+          <span className="cici-builder-production-gate__eyebrow">Production Gate</span>
+          <h2>生产就绪</h2>
+        </div>
+        <div className="cici-builder-production-gate__actions">
+          <span className={`cici-builder-production-gate__status is-${productionReadiness?.blocked ? "blocked" : productionReadiness?.status === "ready" ? "ready" : "warning"}`}>
+            {readinessStatusText}
+          </span>
+          <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void loadProductionReadiness()} disabled={readinessLoading || !targetReadinessVersionNo}>
+            {readinessLoading ? "检查中…" : "刷新检查"}
+          </button>
+        </div>
+      </div>
+
+      <div className="cici-builder-production-gate__metrics">
+        <span>目标版本 <strong>{targetReadinessVersionNo != null ? `v${targetReadinessVersionNo}` : "未编译"}</strong></span>
+        <span>阻塞项 <strong>{readinessBlockingChecks.length}</strong></span>
+        <span>警告项 <strong>{readinessWarningChecks.length}</strong></span>
+        <span>线上版本 <strong>{publishedVersionNo != null ? `v${publishedVersionNo}` : "未发布"}</strong></span>
+      </div>
+
+      {readinessError ? <p className="cici-builder-production-gate__error">{readinessError}</p> : null}
+      <div className="cici-builder-production-gate__checks">
+        {(productionReadiness?.checks ?? []).slice(0, 6).map((check) => (
+          <div key={`${check.code}-${check.status}`} className={`cici-builder-production-check is-${check.severity === "blocker" ? "blocked" : check.severity === "warning" ? "warning" : "ready"}`}>
+            <span>{check.status === "passed" ? "通过" : check.severity === "blocker" ? "阻塞" : "提示"}</span>
+            <strong>{check.code}</strong>
+            <small>{check.message}</small>
+          </div>
+        ))}
+        {!productionReadiness && !readinessError ? (
+          <p className="cici-builder-production-gate__empty">打开发布页后会自动读取后端 readiness。发布前也会强制刷新一次。</p>
+        ) : null}
+      </div>
+    </section>
+  );
+
+  const renderEvaluationGatePanel = () => (
+    <section className="cici-builder-evaluation-gate" aria-label="发布评测">
+      <div className="cici-builder-evaluation-gate__head">
+        <div>
+          <span className="cici-builder-production-gate__eyebrow">Evaluation</span>
+          <h3>发布评测</h3>
+        </div>
+        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void loadEvaluationSuites()} disabled={evaluationLoading || !selectedAgentId}>
+          {evaluationLoading ? "同步中…" : "同步评测"}
+        </button>
+      </div>
+      <div className="cici-builder-evaluation-gate__summary">
+        <span>评测集 <strong>{activeEvaluationSuite?.name ?? "未配置"}</strong></span>
+        <span>门禁 <strong>{activeEvaluationSuite?.gateMode ?? "未开启"}</strong></span>
+        <span>最近运行 <strong>{evaluationRunStatusText}</strong></span>
+        <span>通过率 <strong>{latestEvaluationRun ? `${Math.round(latestEvaluationRun.passRate * 100)}%` : "无"}</strong></span>
+      </div>
+      <div className="cici-builder-evaluation-gate__form">
+        <label className="cici-builder-field">
+          <span>评测输入</span>
+          <textarea rows={2} value={evaluationInput} onChange={(event) => setEvaluationInput(event.target.value)} />
+        </label>
+        <label className="cici-builder-field">
+          <span>P0 期望关键词</span>
+          <input value={evaluationExpectedText} onChange={(event) => setEvaluationExpectedText(event.target.value)} placeholder="例如：报价说明、转人工、保修政策" />
+        </label>
+      </div>
+      {evaluationError ? <p className="cici-builder-production-gate__error">{evaluationError}</p> : null}
+      <div className="cici-builder-evaluation-gate__actions">
+        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void createDefaultEvaluationSuite()} disabled={evaluationLoading || Boolean(activeEvaluationSuite)}>
+          创建阻塞评测集
+        </button>
+        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void addP0EvaluationCaseAndRun()} disabled={evaluationLoading || !targetReadinessVersionNo}>
+          添加 P0 用例并运行
+        </button>
+        <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void runEvaluationSuite()} disabled={evaluationLoading || !activeEvaluationSuite || !targetReadinessVersionNo}>
+          运行评测
+        </button>
+      </div>
+    </section>
+  );
+
   const publishLatestVersion = async () => {
     if (!selectedAgentId) return;
     if (publishBlockedByCompileGate) {
@@ -2596,6 +2965,13 @@ export default function AgentBuilderShell({
 
       if (latestVersionNo == null) {
         throw new Error("未找到可发布的新编译版本，请先执行「智能体编译」。");
+      }
+      setLatestCompiledVersionNo(latestVersionNo);
+      const readiness = await loadProductionReadiness(latestVersionNo);
+      if (readiness?.blocked) {
+        setActiveEditorTab("publish");
+        setNotice("发布已停止：生产就绪检查仍有阻塞项，请先处理检查清单。");
+        return;
       }
 
       // Step 3: publish the target version
@@ -3391,39 +3767,43 @@ export default function AgentBuilderShell({
                 </section>
               </div>
             ) : (
-              <div className="cici-builder-publish-hub">
-                <aside className="cici-builder-publish-menu" aria-label="发布渠道菜单">
-                  {CHANNEL_OPTIONS.map((channel) => {
-                    const enabled = draft.channels.includes(channel.id);
-                    return (
-                      <button
-                        key={channel.id}
-                        type="button"
-                        className={`cici-builder-publish-menu__item${activePublishChannel === channel.id ? " is-active" : ""}`}
-                        onClick={() => setActivePublishChannel(channel.id)}
-                      >
-                        <span className="cici-builder-publish-menu__label-row">
-                          <strong>{channel.label}</strong>
-                          <span className={`cici-builder-publish-menu__status${enabled ? " is-enabled" : ""}`}>
-                            {enabled ? "已启用" : "未启用"}
+              <div className="cici-builder-publish-stack">
+                {renderProductionGatePanel()}
+                {renderEvaluationGatePanel()}
+                <div className="cici-builder-publish-hub">
+                  <aside className="cici-builder-publish-menu" aria-label="发布渠道菜单">
+                    {CHANNEL_OPTIONS.map((channel) => {
+                      const enabled = draft.channels.includes(channel.id);
+                      return (
+                        <button
+                          key={channel.id}
+                          type="button"
+                          className={`cici-builder-publish-menu__item${activePublishChannel === channel.id ? " is-active" : ""}`}
+                          onClick={() => setActivePublishChannel(channel.id)}
+                        >
+                          <span className="cici-builder-publish-menu__label-row">
+                            <strong>{channel.label}</strong>
+                            <span className={`cici-builder-publish-menu__status${enabled ? " is-enabled" : ""}`}>
+                              {enabled ? "已启用" : "未启用"}
+                            </span>
                           </span>
-                        </span>
-                        <small>{channel.tone}</small>
-                      </button>
-                    );
-                  })}
-                </aside>
+                          <small>{channel.tone}</small>
+                        </button>
+                      );
+                    })}
+                  </aside>
 
-                <section className="cici-builder-publish-panel">
-                  <div className="cici-builder-publish-panel__head">
-                    <div>
-                      <span className="cici-builder-publish-panel__eyebrow">Publish Channel</span>
-                      <h2>{activePublishMeta.label}</h2>
+                  <section className="cici-builder-publish-panel">
+                    <div className="cici-builder-publish-panel__head">
+                      <div>
+                        <span className="cici-builder-publish-panel__eyebrow">Publish Channel</span>
+                        <h2>{activePublishMeta.label}</h2>
+                      </div>
+                      <span>{activePublishEnabled ? "已纳入当前 Agent 的发布计划" : "当前未纳入发布计划"}</span>
                     </div>
-                    <span>{activePublishEnabled ? "已纳入当前 Agent 的发布计划" : "当前未纳入发布计划"}</span>
-                  </div>
-                  {renderPublishChannelPanel()}
-                </section>
+                    {renderPublishChannelPanel()}
+                  </section>
+                </div>
               </div>
             )}
           </section>

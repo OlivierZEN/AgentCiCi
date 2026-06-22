@@ -1,17 +1,32 @@
 package com.codehouse.ciciassistant.kb.service;
 
 import com.codehouse.ciciassistant.agent.domain.AgentKnowledgeBindingRepository;
+import com.codehouse.ciciassistant.ai.service.RagService;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.kb.domain.KbChunkEntity;
 import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
+import com.codehouse.ciciassistant.kb.domain.KbDataSourceEntity;
+import com.codehouse.ciciassistant.kb.domain.KbDataSourceRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataEntity;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentMetadataRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentEntity;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseResultEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalCaseResultRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalRunEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalRunRepository;
+import com.codehouse.ciciassistant.kb.domain.KbEvalSuiteEntity;
+import com.codehouse.ciciassistant.kb.domain.KbEvalSuiteRepository;
 import com.codehouse.ciciassistant.kb.domain.KbMetadataFieldEntity;
 import com.codehouse.ciciassistant.kb.domain.KbMetadataFieldRepository;
 import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogEntity;
 import com.codehouse.ciciassistant.kb.domain.KbRetrievalLogRepository;
+import com.codehouse.ciciassistant.kb.domain.KbSourceDocumentMapEntity;
+import com.codehouse.ciciassistant.kb.domain.KbSourceDocumentMapRepository;
+import com.codehouse.ciciassistant.kb.domain.KbSyncJobEntity;
+import com.codehouse.ciciassistant.kb.domain.KbSyncJobRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseEntity;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -20,6 +35,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,6 +62,9 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -63,11 +85,20 @@ public class KnowledgeBaseService {
     private final KbMetadataFieldRepository metadataFieldRepository;
     private final KbDocumentMetadataRepository documentMetadataRepository;
     private final KbRetrievalLogRepository retrievalLogRepository;
+    private final KbEvalSuiteRepository evalSuiteRepository;
+    private final KbEvalCaseRepository evalCaseRepository;
+    private final KbEvalRunRepository evalRunRepository;
+    private final KbEvalCaseResultRepository evalCaseResultRepository;
+    private final KbDataSourceRepository dataSourceRepository;
+    private final KbSyncJobRepository syncJobRepository;
+    private final KbSourceDocumentMapRepository sourceDocumentMapRepository;
     private final AgentKnowledgeBindingRepository agentKnowledgeBindingRepository;
     private final ModelProviderService modelProviderService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final VectorStoreClient vectorStoreClient;
     private final EmbeddingService embeddingService;
+    private final KbAccessControlService kbAccessControlService;
+    private final RagService ragService;
     private final RabbitTemplate rabbitTemplate;
     private final ObjectMapper objectMapper;
     private final String indexingMode;
@@ -78,6 +109,7 @@ public class KnowledgeBaseService {
     private final Set<String> allowedUploadExtensions;
     private final Set<String> allowedUploadContentTypes;
     private final Path storageRoot;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
 
     public KnowledgeBaseService(KnowledgeBaseRepository kbRepository,
                                 KbDocumentRepository documentRepository,
@@ -85,11 +117,20 @@ public class KnowledgeBaseService {
                                 KbMetadataFieldRepository metadataFieldRepository,
                                 KbDocumentMetadataRepository documentMetadataRepository,
                                 KbRetrievalLogRepository retrievalLogRepository,
+                                KbEvalSuiteRepository evalSuiteRepository,
+                                KbEvalCaseRepository evalCaseRepository,
+                                KbEvalRunRepository evalRunRepository,
+                                KbEvalCaseResultRepository evalCaseResultRepository,
+                                KbDataSourceRepository dataSourceRepository,
+                                KbSyncJobRepository syncJobRepository,
+                                KbSourceDocumentMapRepository sourceDocumentMapRepository,
                                 AgentKnowledgeBindingRepository agentKnowledgeBindingRepository,
                                 ModelProviderService modelProviderService,
                                 BillingUsageMeteringService billingUsageMeteringService,
                                 VectorStoreClient vectorStoreClient,
                                 EmbeddingService embeddingService,
+                                KbAccessControlService kbAccessControlService,
+                                RagService ragService,
                                 RabbitTemplate rabbitTemplate,
                                 ObjectMapper objectMapper,
                                 @Value("${app.kb.storage-dir:./data/kb-files}") String storageDir,
@@ -98,19 +139,28 @@ public class KnowledgeBaseService {
                                 @Value("${app.kb.embedding.model:local-hash}") String defaultEmbeddingModel,
                                 @Value("${app.kb.embedding.dimension:1024}") Integer defaultEmbeddingDimension,
                                 @Value("${app.kb.upload.max-file-size-bytes:26214400}") Long maxUploadFileSizeBytes,
-                                @Value("${app.kb.upload.allowed-extensions:txt,md,markdown,csv,json,docx}") String allowedUploadExtensions,
-                                @Value("${app.kb.upload.allowed-content-types:text/plain,text/markdown,text/csv,application/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document}") String allowedUploadContentTypes) {
+                                @Value("${app.kb.upload.allowed-extensions:txt,md,markdown,csv,json,docx,pdf}") String allowedUploadExtensions,
+                                @Value("${app.kb.upload.allowed-content-types:text/plain,text/markdown,text/csv,application/csv,application/json,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf}") String allowedUploadContentTypes) {
         this.kbRepository = kbRepository;
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.metadataFieldRepository = metadataFieldRepository;
         this.documentMetadataRepository = documentMetadataRepository;
         this.retrievalLogRepository = retrievalLogRepository;
+        this.evalSuiteRepository = evalSuiteRepository;
+        this.evalCaseRepository = evalCaseRepository;
+        this.evalRunRepository = evalRunRepository;
+        this.evalCaseResultRepository = evalCaseResultRepository;
+        this.dataSourceRepository = dataSourceRepository;
+        this.syncJobRepository = syncJobRepository;
+        this.sourceDocumentMapRepository = sourceDocumentMapRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
         this.modelProviderService = modelProviderService;
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.vectorStoreClient = vectorStoreClient;
         this.embeddingService = embeddingService;
+        this.kbAccessControlService = kbAccessControlService;
+        this.ragService = ragService;
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
         this.indexingMode = indexingMode;
@@ -193,15 +243,15 @@ public class KnowledgeBaseService {
         payload.put("maxFilesPerUpload", 1);
         payload.put("allowedExtensions", allowedUploadExtensions.stream().sorted().toList());
         payload.put("allowedContentTypes", allowedUploadContentTypes.stream().sorted().toList());
-        payload.put("supportedParserLabels", List.of("TXT", "Markdown", "CSV", "JSON", "DOCX"));
-        payload.put("unsupportedParserLabels", List.of("PDF"));
-        payload.put("pdfPolicy", "PDF parsing is not enabled in this build. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+        payload.put("supportedParserLabels", List.of("TXT", "Markdown", "CSV", "JSON", "DOCX", "PDF"));
+        payload.put("unsupportedParserLabels", List.of());
+        payload.put("pdfPolicy", "Text-based PDF parsing is enabled. Encrypted, scanned, malformed, or empty-text PDFs fail with a clear parser error.");
         payload.put("sourceTypes", List.of(
                 Map.of("code", "LOCAL_FILE", "status", "available"),
                 Map.of("code", "EMPTY", "status", "available_via_manual_chunks"),
-                Map.of("code", "WEB", "status", "planned"),
-                Map.of("code", "NOTION", "status", "planned"),
-                Map.of("code", "EXTERNAL_API", "status", "planned")
+                Map.of("code", "WEB", "status", "available"),
+                Map.of("code", "NOTION", "status", "contract_only"),
+                Map.of("code", "EXTERNAL_API", "status", "available")
         ));
         payload.put("serviceApi", Map.of(
                 "status", "planned",
@@ -249,6 +299,70 @@ public class KnowledgeBaseService {
         } catch (IOException ex) {
             throw new IllegalArgumentException("Failed to store file: " + ex.getMessage());
         }
+    }
+
+    @Transactional
+    public Map<String, Object> createDataSource(String orgId, Long kbId, DataSourceCommand command) {
+        requireKnowledgeBase(orgId, kbId);
+        String sourceType = normalizeSourceType(command.sourceType());
+        String name = requireText(command.name(), "Data source name is required");
+        KbDataSourceEntity created = dataSourceRepository.save(new KbDataSourceEntity(
+                orgId,
+                kbId,
+                sourceType,
+                name.length() > 160 ? name.substring(0, 160) : name,
+                toJson(command.config())));
+        return dataSourcePayload(created);
+    }
+
+    public List<Map<String, Object>> listDataSources(String orgId, Long kbId) {
+        requireKnowledgeBase(orgId, kbId);
+        return dataSourceRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(orgId, kbId)
+                .stream()
+                .map(this::dataSourcePayload)
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> syncDataSource(String orgId, Long dataSourceId, String triggerType) {
+        KbDataSourceEntity source = dataSourceRepository.findByIdAndOrgId(dataSourceId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Data source not found"));
+        KbSyncJobEntity job = syncJobRepository.save(new KbSyncJobEntity(
+                orgId,
+                source.getKnowledgeBaseId(),
+                source.getId(),
+                triggerType,
+                source.getSyncCursor()));
+        try {
+            SyncedDocument synced = resolveSyncedDocument(source);
+            KbDocumentEntity document = upsertSyncedDocument(source, synced);
+            Map<String, Object> published = publishDocument(orgId, document.getId());
+            if (!"PUBLISHED".equals(published.get("status"))) {
+                throw new IllegalStateException("Synced document indexing failed: " + published.getOrDefault("errorMessage", ""));
+            }
+            int chunkCount = ((Number) published.getOrDefault("chunkCount", 0)).intValue();
+            String cursor = sha256(synced.externalDocumentId() + ":" + synced.contentHash());
+            source.markSynced(cursor);
+            dataSourceRepository.save(source);
+            job.markSuccess(cursor, 1, chunkCount);
+            syncJobRepository.save(job);
+            return syncJobPayload(job);
+        } catch (Exception ex) {
+            source.markError(ex.getMessage());
+            dataSourceRepository.save(source);
+            job.markFailed(ex.getMessage());
+            syncJobRepository.save(job);
+            return syncJobPayload(job);
+        }
+    }
+
+    public List<Map<String, Object>> listSyncJobs(String orgId, Long dataSourceId) {
+        KbDataSourceEntity source = dataSourceRepository.findByIdAndOrgId(dataSourceId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Data source not found"));
+        return syncJobRepository.findTop20ByOrgIdAndDataSourceIdOrderByIdDesc(orgId, source.getId())
+                .stream()
+                .map(this::syncJobPayload)
+                .toList();
     }
 
     public List<Map<String, Object>> listDocuments(String orgId, Long kbId) {
@@ -343,6 +457,7 @@ public class KnowledgeBaseService {
                         normalized)));
         chunk.updateContent(normalized, contentHash);
         chunk.setVectorId(vectorId);
+        chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
         chunkRepository.save(chunk);
         recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), contentHash, "chunk_update");
         return chunkPayload(chunk);
@@ -373,6 +488,7 @@ public class KnowledgeBaseService {
                                 embeddingConfig.dimension(),
                                 chunk.getContent())));
                 chunk.setVectorId(vectorId);
+                chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
                 recordKbChunkIndexingSafely(orgId, chunk.getKnowledgeBaseId(), chunk.getId(), chunk.getContentHash(), "chunk_enable");
             }
             chunk.enable();
@@ -495,6 +611,28 @@ public class KnowledgeBaseService {
             documentMetadataRepository.save(item);
         }
         return getDocumentMetadata(orgId, documentId);
+    }
+
+    public List<Map<String, Object>> listDocumentAccessGrants(String orgId, Long documentId) {
+        return kbAccessControlService.listDocumentGrants(orgId, documentId);
+    }
+
+    public List<Map<String, Object>> replaceDocumentAccessGrants(String orgId,
+                                                                 Long documentId,
+                                                                 String actorUserId,
+                                                                 List<KbAccessControlService.GrantInput> grants) {
+        return kbAccessControlService.replaceDocumentGrants(orgId, documentId, actorUserId, grants);
+    }
+
+    public List<Map<String, Object>> listChunkAccessGrants(String orgId, Long chunkId) {
+        return kbAccessControlService.listChunkGrants(orgId, chunkId);
+    }
+
+    public List<Map<String, Object>> replaceChunkAccessGrants(String orgId,
+                                                              Long chunkId,
+                                                              String actorUserId,
+                                                              List<KbAccessControlService.GrantInput> grants) {
+        return kbAccessControlService.replaceChunkGrants(orgId, chunkId, actorUserId, grants);
     }
 
     @Transactional
@@ -640,6 +778,148 @@ public class KnowledgeBaseService {
     }
 
     @Transactional
+    public Map<String, Object> createEvalSuite(String orgId, Long kbId, EvalSuiteCommand command) {
+        requireKnowledgeBase(orgId, kbId);
+        String name = requireText(command.name(), "Suite name is required");
+        KbEvalSuiteEntity created = evalSuiteRepository.save(new KbEvalSuiteEntity(
+                orgId,
+                kbId,
+                name.length() > 160 ? name.substring(0, 160) : name,
+                truncateText(command.description(), 1000)));
+        return evalSuitePayload(created);
+    }
+
+    public List<Map<String, Object>> listEvalSuites(String orgId, Long kbId) {
+        requireKnowledgeBase(orgId, kbId);
+        return evalSuiteRepository.findByOrgIdAndKnowledgeBaseIdAndStatusOrderByIdDesc(
+                        orgId,
+                        kbId,
+                        KbEvalSuiteEntity.STATUS_ACTIVE)
+                .stream()
+                .map(this::evalSuitePayload)
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> addEvalCase(String orgId, Long suiteId, EvalCaseCommand command) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        String query = requireText(command.query(), "Eval query is required");
+        Map<String, String> metadataFilters = normalizeMetadataFilters(command.metadataFilters());
+        validateMetadataFilterKeys(orgId, suite.getKnowledgeBaseId(), metadataFilters);
+        KbEvalCaseEntity created = evalCaseRepository.save(new KbEvalCaseEntity(
+                orgId,
+                suite.getId(),
+                suite.getKnowledgeBaseId(),
+                query,
+                command.expectedDocumentId(),
+                trimToNull(command.expectedDocumentKeyword()),
+                trimToNull(command.expectedChunkKeyword()),
+                sanitizeEvalMinScore(command.minScore()),
+                command.forbiddenDocumentId(),
+                toJson(metadataFilters)));
+        return evalCasePayload(created);
+    }
+
+    public List<Map<String, Object>> listEvalCases(String orgId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        return evalCaseRepository.findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(
+                        orgId,
+                        suite.getId(),
+                        KbEvalCaseEntity.STATUS_ACTIVE)
+                .stream()
+                .map(this::evalCasePayload)
+                .toList();
+    }
+
+    @Transactional
+    public Map<String, Object> runEvalSuite(String orgId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        List<KbEvalCaseEntity> cases = evalCaseRepository.findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(
+                orgId,
+                suiteId,
+                KbEvalCaseEntity.STATUS_ACTIVE);
+        if (cases.isEmpty()) {
+            throw new IllegalArgumentException("Evaluation suite has no active cases");
+        }
+
+        KbEvalRunEntity run = evalRunRepository.save(new KbEvalRunEntity(orgId, suiteId, suite.getKnowledgeBaseId(), cases.size()));
+        int passed = 0;
+        int failed = 0;
+        int expectedHits = 0;
+        int forbiddenViolations = 0;
+        int staleSources = 0;
+        double topScoreSum = 0.0;
+        ArrayList<Map<String, Object>> resultSummaries = new ArrayList<>();
+
+        for (KbEvalCaseEntity evalCase : cases) {
+            EvalCaseOutcome outcome = evaluateCase(orgId, suite.getKnowledgeBaseId(), evalCase);
+            if (outcome.passed()) {
+                passed++;
+            } else {
+                failed++;
+            }
+            if (outcome.expectedHit()) {
+                expectedHits++;
+            }
+            if (outcome.forbiddenViolation()) {
+                forbiddenViolations++;
+            }
+            if (outcome.staleSource()) {
+                staleSources++;
+            }
+            topScoreSum += outcome.topScore();
+            KbEvalCaseResultEntity saved = evalCaseResultRepository.save(new KbEvalCaseResultEntity(
+                    orgId,
+                    run.getId(),
+                    evalCase.getId(),
+                    outcome.passed() ? "PASSED" : "FAILED",
+                    outcome.expectedHit(),
+                    outcome.forbiddenViolation(),
+                    outcome.staleSource(),
+                    outcome.topScore(),
+                    outcome.matchedDocumentId(),
+                    outcome.matchedChunkId(),
+                    toJson(outcome.summary())));
+            resultSummaries.add(evalCaseResultPayload(saved));
+        }
+
+        double denominator = Math.max(1, cases.size());
+        double hitRate = roundMetric((double) passed / denominator);
+        double expectedRecall = roundMetric((double) expectedHits / denominator);
+        double averageTopScore = roundMetric(topScoreSum / denominator);
+        double staleSourceRate = roundMetric((double) staleSources / denominator);
+        run.finish(
+                failed == 0 ? "PASSED" : "FAILED",
+                passed,
+                failed,
+                hitRate,
+                expectedRecall,
+                forbiddenViolations,
+                averageTopScore,
+                staleSourceRate,
+                toJson(Map.of("results", resultSummaries)));
+        evalRunRepository.save(run);
+        return evalRunPayload(run);
+    }
+
+    public List<Map<String, Object>> listEvalRuns(String orgId, Long suiteId) {
+        KbEvalSuiteEntity suite = requireEvalSuite(orgId, suiteId);
+        return evalRunRepository.findTop20ByOrgIdAndSuiteIdOrderByIdDesc(orgId, suite.getId())
+                .stream()
+                .map(this::evalRunPayload)
+                .toList();
+    }
+
+    public List<Map<String, Object>> listEvalRunResults(String orgId, Long runId) {
+        KbEvalRunEntity run = evalRunRepository.findByIdAndOrgId(runId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Evaluation run not found"));
+        return evalCaseResultRepository.findByOrgIdAndRunIdOrderByIdAsc(orgId, run.getId())
+                .stream()
+                .map(this::evalCaseResultPayload)
+                .toList();
+    }
+
+    @Transactional
     public Map<String, Object> auditVectorStore(String orgId) {
         List<String> registeredVectorIds = chunkRepository.findByOrgIdAndStatusNot(orgId, "DELETED").stream()
                 .map(KbChunkEntity::getVectorId)
@@ -655,6 +935,121 @@ public class KnowledgeBaseService {
         payload.put("orphanVectorIds", audit.orphanVectorIds());
         payload.put("message", audit.message());
         payload.put("status", audit.success() && audit.orphanCount() == 0 ? "OK" : audit.success() ? "NEEDS_CLEANUP" : "FAILED");
+        return payload;
+    }
+
+    @Transactional
+    public Map<String, Object> auditIndexDrift(String orgId, boolean repair) {
+        List<KbChunkEntity> chunks = chunkRepository.findByOrgIdAndStatusNot(orgId, "DELETED");
+        List<KbDocumentEntity> documents = documentRepository.findByOrgIdAndStatusNot(orgId, "DELETED");
+        List<String> registeredVectorIds = chunks.stream()
+                .map(KbChunkEntity::getVectorId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .toList();
+        VectorStoreAuditResult vectorAudit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
+
+        List<KbChunkEntity> missingVectorChunks = chunks.stream()
+                .filter(KbChunkEntity::isSearchable)
+                .filter(chunk -> chunk.getVectorId() == null || chunk.getVectorId().isBlank())
+                .toList();
+        Map<String, EmbeddingConfig> embeddingConfigByKb = chunks.stream()
+                .map(KbChunkEntity::getKnowledgeBaseId)
+                .filter(id -> id != null && !id.isBlank())
+                .distinct()
+                .collect(Collectors.toMap(id -> id, id -> embeddingConfigForKnowledgeBase(orgId, id), (a, b) -> a));
+        List<KbChunkEntity> embeddingMismatchChunks = chunks.stream()
+                .filter(KbChunkEntity::isSearchable)
+                .filter(chunk -> !embeddingMetadataMatches(chunk, embeddingConfigByKb.get(chunk.getKnowledgeBaseId())))
+                .toList();
+        List<KbDocumentEntity> publishedDocumentsWithoutChunks = documents.stream()
+                .filter(doc -> doc.isEnabled() && !doc.isArchived() && "PUBLISHED".equals(doc.getStatus()))
+                .filter(doc -> chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(orgId, doc.getId(), "ACTIVE") == 0)
+                .toList();
+        List<KbDocumentEntity> staleSyncDocuments = documents.stream()
+                .filter(doc -> "FAILED".equals(doc.getStatus()) || "CLEANUP_FAILED".equals(doc.getStatus()))
+                .toList();
+
+        LinkedHashSet<Long> documentsToReindex = new LinkedHashSet<>();
+        for (KbChunkEntity chunk : missingVectorChunks) {
+            if (chunk.getDocumentId() != null) {
+                documentsToReindex.add(chunk.getDocumentId());
+            }
+        }
+        for (KbChunkEntity chunk : embeddingMismatchChunks) {
+            if (chunk.getDocumentId() != null) {
+                documentsToReindex.add(chunk.getDocumentId());
+            }
+        }
+        publishedDocumentsWithoutChunks.stream()
+                .map(KbDocumentEntity::getId)
+                .forEach(documentsToReindex::add);
+
+        HashMap<String, Object> repairSummary = new HashMap<>();
+        if (repair) {
+            int repairedManualChunks = 0;
+            for (KbChunkEntity chunk : missingVectorChunks) {
+                if (chunk.getDocumentId() == null && repairChunkVector(orgId, chunk)) {
+                    repairedManualChunks++;
+                }
+            }
+            int repairedEmbeddingMismatchChunks = 0;
+            for (KbChunkEntity chunk : embeddingMismatchChunks) {
+                if (chunk.getDocumentId() == null && repairChunkVector(orgId, chunk)) {
+                    repairedEmbeddingMismatchChunks++;
+                }
+            }
+            int reindexedDocuments = 0;
+            for (Long documentId : documentsToReindex) {
+                publishDocument(orgId, documentId);
+                reindexedDocuments++;
+            }
+            VectorDeleteResult orphanCleanup = vectorAudit.success() && !vectorAudit.orphanVectorIds().isEmpty()
+                    ? vectorStoreClient.deleteByVectorIds(orgId, vectorAudit.orphanVectorIds())
+                    : VectorDeleteResult.success(0, 0);
+            repairSummary.put("reindexedDocuments", reindexedDocuments);
+            repairSummary.put("repairedManualChunks", repairedManualChunks);
+            repairSummary.put("repairedEmbeddingMismatchChunks", repairedEmbeddingMismatchChunks);
+            repairSummary.put("orphanCleanupSuccess", orphanCleanup.success());
+            repairSummary.put("orphanDeleteRequested", orphanCleanup.requestedCount());
+            repairSummary.put("orphanDeletedCount", orphanCleanup.deletedCount());
+            repairSummary.put("orphanCleanupMessage", orphanCleanup.message());
+        }
+
+        int orphanCount = vectorAudit.success() ? vectorAudit.orphanCount() : 0;
+        String status = !vectorAudit.success()
+                ? "FAILED"
+                : missingVectorChunks.isEmpty()
+                && embeddingMismatchChunks.isEmpty()
+                && publishedDocumentsWithoutChunks.isEmpty()
+                && staleSyncDocuments.isEmpty()
+                && orphanCount == 0
+                ? "OK"
+                : "DRIFT_DETECTED";
+
+        HashMap<String, Object> payload = new HashMap<>();
+        payload.put("status", status);
+        payload.put("repairRequested", repair);
+        payload.put("repairSummary", repairSummary);
+        payload.put("registeredVectorCount", registeredVectorIds.size());
+        payload.put("vectorAudit", Map.of(
+                "success", vectorAudit.success(),
+                "scannedCount", vectorAudit.scannedCount(),
+                "orphanCount", vectorAudit.orphanCount(),
+                "orphanVectorIds", vectorAudit.orphanVectorIds(),
+                "message", vectorAudit.message()));
+        payload.put("missingVectorChunkCount", missingVectorChunks.size());
+        payload.put("missingVectorChunks", missingVectorChunks.stream().limit(50).map(this::chunkDriftPayload).toList());
+        payload.put("embeddingMismatchChunkCount", embeddingMismatchChunks.size());
+        payload.put("embeddingMismatchChunks", embeddingMismatchChunks.stream().limit(50).map(this::chunkDriftPayload).toList());
+        payload.put("publishedDocumentWithoutChunkCount", publishedDocumentsWithoutChunks.size());
+        payload.put("publishedDocumentsWithoutChunks", publishedDocumentsWithoutChunks.stream().limit(50).map(this::documentDriftPayload).toList());
+        payload.put("staleSyncDocumentCount", staleSyncDocuments.size());
+        payload.put("staleSyncDocuments", staleSyncDocuments.stream().limit(50).map(this::documentDriftPayload).toList());
+        payload.put("embeddingDriftCheck", Map.of(
+                "status", "AVAILABLE",
+                "checkedChunkCount", chunks.stream().filter(KbChunkEntity::isSearchable).count(),
+                "mismatchCount", embeddingMismatchChunks.size()));
         return payload;
     }
 
@@ -802,6 +1197,7 @@ public class KnowledgeBaseService {
                         embeddingConfig.dimension(),
                         normalizedContent)));
         chunk.setVectorId(vectorId);
+        chunk.setEmbeddingMetadata(embeddingConfig.provider(), embeddingConfig.model(), embeddingConfig.dimension());
         chunkRepository.save(chunk);
         recordKbChunkIndexingSafely(orgId, normalizedKbId, chunk.getId(), contentHash, "chunk_add");
         parseLong(normalizedKbId).flatMap(id -> kbRepository.findByIdAndOrgId(id, orgId)).ifPresent(kb -> {
@@ -868,6 +1264,7 @@ public class KnowledgeBaseService {
                                 embeddingDimension,
                                 chunkText)));
                 chunk.setVectorId(vectorId);
+                chunk.setEmbeddingMetadata(embeddingProvider, embeddingModel, embeddingDimension);
                 chunkRepository.save(chunk);
                 indexedChunks.add(chunk);
                 chunkIndex++;
@@ -1019,7 +1416,7 @@ public class KnowledgeBaseService {
             return readDocxText(path);
         }
         if (isPdfFile(contentType, name)) {
-            throw new IllegalArgumentException("PDF parsing is not enabled. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
+            return readPdfText(path);
         }
         boolean supported = contentType.startsWith("text/")
                 || "application/json".equals(contentType)
@@ -1029,7 +1426,7 @@ public class KnowledgeBaseService {
                 || name.endsWith(".csv")
                 || name.endsWith(".json");
         if (!supported) {
-            throw new IllegalArgumentException("Unsupported file type. P0 indexing supports txt, md, csv, json and docx files only.");
+            throw new IllegalArgumentException("Unsupported file type. P0 indexing supports txt, md, csv, json, docx and text-based pdf files only.");
         }
         return Files.readString(path, StandardCharsets.UTF_8);
     }
@@ -1040,6 +1437,24 @@ public class KnowledgeBaseService {
 
     private boolean isPdfFile(String contentType, String name) {
         return name.endsWith(".pdf") || contentType.contains("application/pdf");
+    }
+
+    private String readPdfText(Path path) throws IOException {
+        try (PDDocument document = Loader.loadPDF(path.toFile())) {
+            if (document.isEncrypted()) {
+                throw new IllegalArgumentException("PDF file is encrypted and cannot be parsed.");
+            }
+            String text = new PDFTextStripper().getText(document);
+            String normalized = text == null ? "" : text.replace('\u0000', ' ').trim();
+            if (normalized.isBlank()) {
+                throw new IllegalArgumentException("PDF file does not contain readable text. Scanned PDFs require OCR before upload.");
+            }
+            return normalized;
+        } catch (IllegalArgumentException ex) {
+            throw ex;
+        } catch (IOException ex) {
+            throw new IOException("Failed to parse PDF content: " + ex.getMessage(), ex);
+        }
     }
 
     private String readDocxText(Path path) throws IOException {
@@ -1103,6 +1518,371 @@ public class KnowledgeBaseService {
         }
     }
 
+    private SyncedDocument resolveSyncedDocument(KbDataSourceEntity source) throws IOException, InterruptedException {
+        Map<String, Object> config = parseObjectJson(source.getConfigJson());
+        if ("NOTION".equals(source.getSourceType())) {
+            throw new IllegalArgumentException("NOTION provider contract is registered but sync is not enabled in this build.");
+        }
+        String externalId = stringValue(config, "externalId");
+        String url = stringValue(config, "url");
+        if (externalId == null) {
+            externalId = url == null ? "default" : url;
+        }
+        String title = stringValue(config, "title");
+        if (title == null) {
+            title = source.getName() + ".txt";
+        }
+        String content = stringValue(config, "content");
+        if (content == null && url != null) {
+            content = fetchSourceUrl(url);
+            if ("WEB".equals(source.getSourceType())) {
+                content = stripHtml(content);
+            }
+        }
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("Data source sync content is empty. Provide config.content or config.url.");
+        }
+        String normalized = content.replace('\u0000', ' ').trim();
+        return new SyncedDocument(externalId, title, normalized, sha256(normalized));
+    }
+
+    private KbDocumentEntity upsertSyncedDocument(KbDataSourceEntity source, SyncedDocument synced) throws IOException {
+        KbSourceDocumentMapEntity mapping = sourceDocumentMapRepository
+                .findByOrgIdAndDataSourceIdAndExternalDocumentId(source.getOrgId(), source.getId(), synced.externalDocumentId())
+                .orElse(null);
+        KbDocumentEntity existing = mapping == null
+                ? null
+                : documentRepository.findByIdAndOrgId(mapping.getDocumentId(), source.getOrgId()).orElse(null);
+        String safeTitle = sanitizeOriginalFilename(synced.title().endsWith(".txt") ? synced.title() : synced.title() + ".txt");
+        KbDocumentEntity document;
+        if (existing == null) {
+            Files.createDirectories(storageRoot.resolve(source.getOrgId()).resolve(String.valueOf(source.getKnowledgeBaseId())));
+            Path path = storageRoot.resolve(source.getOrgId()).resolve(String.valueOf(source.getKnowledgeBaseId()))
+                    .resolve(UUID.randomUUID() + "-" + safeTitle);
+            Files.writeString(path, synced.content(), StandardCharsets.UTF_8);
+            document = documentRepository.save(new KbDocumentEntity(
+                    source.getOrgId(),
+                    source.getKnowledgeBaseId(),
+                    safeTitle,
+                    "text/plain",
+                    path.toString(),
+                    (long) synced.content().getBytes(StandardCharsets.UTF_8).length));
+        } else {
+            Files.writeString(Path.of(existing.getStoragePath()), synced.content(), StandardCharsets.UTF_8);
+            existing.rename(safeTitle);
+            existing.setStatus("UPLOADED");
+            document = documentRepository.save(existing);
+        }
+        if (mapping == null) {
+            sourceDocumentMapRepository.save(new KbSourceDocumentMapEntity(
+                    source.getOrgId(),
+                    source.getKnowledgeBaseId(),
+                    source.getId(),
+                    synced.externalDocumentId(),
+                    document.getId(),
+                    synced.contentHash()));
+        } else {
+            mapping.update(document.getId(), synced.contentHash());
+            sourceDocumentMapRepository.save(mapping);
+        }
+        return document;
+    }
+
+    private String fetchSourceUrl(String url) throws IOException, InterruptedException {
+        URI uri = URI.create(url);
+        if (!"http".equalsIgnoreCase(uri.getScheme()) && !"https".equalsIgnoreCase(uri.getScheme())) {
+            throw new IllegalArgumentException("Data source url must use http or https");
+        }
+        HttpRequest request = HttpRequest.newBuilder(uri)
+                .timeout(java.time.Duration.ofSeconds(15))
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            throw new IllegalArgumentException("Data source url returned HTTP " + response.statusCode());
+        }
+        return response.body();
+    }
+
+    private String stripHtml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replaceAll("(?is)<script.*?</script>", " ")
+                .replaceAll("(?is)<style.*?</style>", " ")
+                .replaceAll("(?s)<[^>]+>", " ")
+                .replaceAll("&nbsp;", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseObjectJson(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return objectMapper.readValue(json, Map.class);
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
+
+    private String stringValue(Map<String, Object> map, String key) {
+        Object value = map == null ? null : map.get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = String.valueOf(value).trim();
+        return text.isBlank() ? null : text;
+    }
+
+    private Map<String, Object> dataSourcePayload(KbDataSourceEntity source) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", source.getId());
+        row.put("knowledgeBaseId", source.getKnowledgeBaseId());
+        row.put("sourceType", source.getSourceType());
+        row.put("name", source.getName());
+        row.put("status", source.getStatus());
+        row.put("syncCursor", source.getSyncCursor() == null ? "" : source.getSyncCursor());
+        row.put("lastSyncedAt", source.getLastSyncedAt() == null ? "" : source.getLastSyncedAt().toString());
+        row.put("errorMessage", source.getErrorMessage() == null ? "" : source.getErrorMessage());
+        row.put("config", parseObjectJson(source.getConfigJson()));
+        row.put("createdAt", source.getCreatedAt().toString());
+        row.put("updatedAt", source.getUpdatedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> syncJobPayload(KbSyncJobEntity job) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", job.getId());
+        row.put("knowledgeBaseId", job.getKnowledgeBaseId());
+        row.put("dataSourceId", job.getDataSourceId());
+        row.put("triggerType", job.getTriggerType());
+        row.put("status", job.getStatus());
+        row.put("syncCursorBefore", job.getSyncCursorBefore() == null ? "" : job.getSyncCursorBefore());
+        row.put("syncCursorAfter", job.getSyncCursorAfter() == null ? "" : job.getSyncCursorAfter());
+        row.put("documentCount", job.getDocumentCount());
+        row.put("chunkCount", job.getChunkCount());
+        row.put("errorMessage", job.getErrorMessage() == null ? "" : job.getErrorMessage());
+        row.put("startedAt", job.getStartedAt().toString());
+        row.put("finishedAt", job.getFinishedAt() == null ? "" : job.getFinishedAt().toString());
+        return row;
+    }
+
+    private String normalizeSourceType(String value) {
+        String normalized = value == null || value.isBlank() ? "" : value.trim().toUpperCase();
+        if (Set.of("LOCAL_FILE", "EMPTY", "WEB", "NOTION", "EXTERNAL_API").contains(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("Unsupported data source type: " + value);
+    }
+
+    private EvalCaseOutcome evaluateCase(String orgId, Long kbId, KbEvalCaseEntity evalCase) {
+        Map<String, String> filters = parseMetadataFiltersJson(evalCase.getMetadataFiltersJson());
+        RagService.RetrievalResult result = ragService.retrieveDetailed(
+                orgId,
+                List.of(String.valueOf(kbId)),
+                evalCase.getQuery(),
+                filters);
+        List<RagService.RetrievedSource> sources = result.sources();
+        double topScore = sources.isEmpty() ? 0.0 : sources.get(0).score();
+        boolean minScoreMet = evalCase.getMinScore() == null || topScore >= evalCase.getMinScore();
+        boolean forbiddenViolation = evalCase.getForbiddenDocumentId() != null
+                && sources.stream().anyMatch(source -> evalCase.getForbiddenDocumentId().equals(source.documentId()));
+        boolean staleSource = sources.stream().anyMatch(source -> "STALE".equals(source.freshnessStatus()));
+
+        RagService.RetrievedSource expectedMatch = expectedMatch(evalCase, sources);
+        boolean hasExplicitExpected = evalCase.getExpectedDocumentId() != null
+                || evalCase.getExpectedDocumentKeyword() != null
+                || evalCase.getExpectedChunkKeyword() != null;
+        boolean expectedHit = hasExplicitExpected ? expectedMatch != null : !sources.isEmpty();
+        boolean passed = expectedHit && minScoreMet && !forbiddenViolation;
+        RagService.RetrievedSource evidence = expectedMatch == null && !sources.isEmpty() ? sources.get(0) : expectedMatch;
+        HashMap<String, Object> summary = new HashMap<>();
+        summary.put("query", evalCase.getQuery());
+        summary.put("expectedHit", expectedHit);
+        summary.put("minScoreMet", minScoreMet);
+        summary.put("forbiddenViolation", forbiddenViolation);
+        summary.put("staleSource", staleSource);
+        summary.put("topScore", topScore);
+        summary.put("metadataFilters", filters);
+        summary.put("sourceCount", sources.size());
+        summary.put("sources", sources.stream().map(RagService.RetrievedSource::toPayload).toList());
+        return new EvalCaseOutcome(
+                passed,
+                expectedHit,
+                forbiddenViolation,
+                staleSource,
+                topScore,
+                evidence == null ? null : evidence.documentId(),
+                evidence == null ? null : evidence.chunkId(),
+                summary);
+    }
+
+    private RagService.RetrievedSource expectedMatch(KbEvalCaseEntity evalCase, List<RagService.RetrievedSource> sources) {
+        for (RagService.RetrievedSource source : sources) {
+            if (evalCase.getExpectedDocumentId() != null && !evalCase.getExpectedDocumentId().equals(source.documentId())) {
+                continue;
+            }
+            if (evalCase.getExpectedDocumentKeyword() != null
+                    && !containsIgnoreCase(source.documentName(), evalCase.getExpectedDocumentKeyword())) {
+                continue;
+            }
+            if (evalCase.getExpectedChunkKeyword() != null
+                    && !containsIgnoreCase(source.content(), evalCase.getExpectedChunkKeyword())) {
+                continue;
+            }
+            return source;
+        }
+        return null;
+    }
+
+    private boolean containsIgnoreCase(String value, String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            return true;
+        }
+        return value != null && value.toLowerCase().contains(keyword.toLowerCase());
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, String> parseMetadataFiltersJson(String json) {
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            Map<String, Object> raw = objectMapper.readValue(json, Map.class);
+            HashMap<String, String> out = new HashMap<>();
+            for (Map.Entry<String, Object> entry : raw.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    out.put(entry.getKey(), String.valueOf(entry.getValue()));
+                }
+            }
+            return normalizeMetadataFilters(out);
+        } catch (Exception ignored) {
+            return Map.of();
+        }
+    }
+
+    private KnowledgeBaseEntity requireKnowledgeBase(String orgId, Long kbId) {
+        return kbRepository.findByIdAndOrgId(kbId, orgId)
+                .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
+    }
+
+    private KbEvalSuiteEntity requireEvalSuite(String orgId, Long suiteId) {
+        return evalSuiteRepository.findByIdAndOrgId(suiteId, orgId)
+                .filter(item -> KbEvalSuiteEntity.STATUS_ACTIVE.equals(item.getStatus()))
+                .orElseThrow(() -> new IllegalArgumentException("Evaluation suite not found"));
+    }
+
+    private Map<String, Object> evalSuitePayload(KbEvalSuiteEntity suite) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", suite.getId());
+        row.put("knowledgeBaseId", suite.getKnowledgeBaseId());
+        row.put("name", suite.getName());
+        row.put("description", suite.getDescription() == null ? "" : suite.getDescription());
+        row.put("status", suite.getStatus());
+        row.put("createdAt", suite.getCreatedAt().toString());
+        row.put("updatedAt", suite.getUpdatedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> evalCasePayload(KbEvalCaseEntity evalCase) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", evalCase.getId());
+        row.put("suiteId", evalCase.getSuiteId());
+        row.put("knowledgeBaseId", evalCase.getKnowledgeBaseId());
+        row.put("query", evalCase.getQuery());
+        row.put("expectedDocumentId", evalCase.getExpectedDocumentId() == null ? "" : evalCase.getExpectedDocumentId());
+        row.put("expectedDocumentKeyword", evalCase.getExpectedDocumentKeyword() == null ? "" : evalCase.getExpectedDocumentKeyword());
+        row.put("expectedChunkKeyword", evalCase.getExpectedChunkKeyword() == null ? "" : evalCase.getExpectedChunkKeyword());
+        row.put("minScore", evalCase.getMinScore() == null ? "" : evalCase.getMinScore());
+        row.put("forbiddenDocumentId", evalCase.getForbiddenDocumentId() == null ? "" : evalCase.getForbiddenDocumentId());
+        row.put("metadataFilters", parseMetadataFiltersJson(evalCase.getMetadataFiltersJson()));
+        row.put("status", evalCase.getStatus());
+        row.put("createdAt", evalCase.getCreatedAt().toString());
+        row.put("updatedAt", evalCase.getUpdatedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> evalRunPayload(KbEvalRunEntity run) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", run.getId());
+        row.put("suiteId", run.getSuiteId());
+        row.put("knowledgeBaseId", run.getKnowledgeBaseId());
+        row.put("status", run.getStatus());
+        row.put("caseCount", run.getCaseCount());
+        row.put("passedCount", run.getPassedCount());
+        row.put("failedCount", run.getFailedCount());
+        row.put("hitRate", run.getHitRate());
+        row.put("expectedSourceRecall", run.getExpectedSourceRecall());
+        row.put("forbiddenSourceViolations", run.getForbiddenSourceViolations());
+        row.put("averageTopScore", run.getAverageTopScore());
+        row.put("staleSourceRate", run.getStaleSourceRate());
+        row.put("summaryJson", run.getSummaryJson() == null ? "" : run.getSummaryJson());
+        row.put("startedAt", run.getStartedAt().toString());
+        row.put("finishedAt", run.getFinishedAt() == null ? "" : run.getFinishedAt().toString());
+        return row;
+    }
+
+    private Map<String, Object> evalCaseResultPayload(KbEvalCaseResultEntity result) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("id", result.getId());
+        row.put("runId", result.getRunId());
+        row.put("caseId", result.getCaseId());
+        row.put("status", result.getStatus());
+        row.put("expectedHit", result.isExpectedHit());
+        row.put("forbiddenViolation", result.isForbiddenViolation());
+        row.put("staleSource", result.isStaleSource());
+        row.put("topScore", result.getTopScore());
+        row.put("matchedDocumentId", result.getMatchedDocumentId() == null ? "" : result.getMatchedDocumentId());
+        row.put("matchedChunkId", result.getMatchedChunkId() == null ? "" : result.getMatchedChunkId());
+        row.put("resultSummaryJson", result.getResultSummaryJson() == null ? "" : result.getResultSummaryJson());
+        row.put("createdAt", result.getCreatedAt().toString());
+        return row;
+    }
+
+    private String requireText(String value, String message) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
+    }
+
+    private String trimToNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String truncateText(String value, int maxLength) {
+        String normalized = trimToNull(value);
+        if (normalized == null) {
+            return null;
+        }
+        return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength);
+    }
+
+    private Double sanitizeEvalMinScore(Double value) {
+        if (value == null) {
+            return null;
+        }
+        return Math.max(0.0, Math.min(1.0, value));
+    }
+
+    private double roundMetric(double value) {
+        return Math.round(value * 10_000.0) / 10_000.0;
+    }
+
+    private String toJson(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value == null ? Map.of() : value);
+        } catch (JsonProcessingException ex) {
+            return "{}";
+        }
+    }
+
     private Map<String, Object> kbPayload(KnowledgeBaseEntity kb) {
         HashMap<String, Object> row = new HashMap<>();
         row.put("id", kb.getId());
@@ -1157,13 +1937,10 @@ public class KnowledgeBaseService {
         String original = sanitizeOriginalFilename(file.getOriginalFilename());
         String extension = fileExtension(original);
         String contentType = file.getContentType() == null ? "" : file.getContentType().trim().toLowerCase();
-        if ("pdf".equals(extension) || "application/pdf".equals(contentType)) {
-            throw new IllegalArgumentException("PDF parsing is not enabled. Upload txt, md, csv, json, or docx, or extract PDF text before upload.");
-        }
         boolean extensionAllowed = allowedUploadExtensions.contains(extension);
         boolean contentAllowed = contentType.isBlank() || contentType.startsWith("text/") || allowedUploadContentTypes.contains(contentType);
         if (!extensionAllowed || !contentAllowed) {
-            throw new IllegalArgumentException("Unsupported file type. Upload txt, md, csv, json, or docx files only.");
+            throw new IllegalArgumentException("Unsupported file type. Upload txt, md, csv, json, docx, or text-based pdf files only.");
         }
         return new UploadAdmission(original, original, contentType.isBlank() ? contentTypeForExtension(extension) : contentType);
     }
@@ -1194,6 +1971,7 @@ public class KnowledgeBaseService {
             case "csv" -> "text/csv";
             case "md", "markdown" -> "text/markdown";
             case "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "pdf" -> "application/pdf";
             default -> "text/plain";
         };
     }
@@ -1233,7 +2011,80 @@ public class KnowledgeBaseService {
         row.put("status", chunk.getStatus());
         row.put("enabled", chunk.isEnabled());
         row.put("vectorId", chunk.getVectorId() == null ? "" : chunk.getVectorId());
+        row.put("embeddingProvider", chunk.getEmbeddingProvider() == null ? "" : chunk.getEmbeddingProvider());
+        row.put("embeddingModel", chunk.getEmbeddingModel() == null ? "" : chunk.getEmbeddingModel());
+        row.put("embeddingDimension", chunk.getEmbeddingDimension() == null ? "" : chunk.getEmbeddingDimension());
         return row;
+    }
+
+    private Map<String, Object> chunkDriftPayload(KbChunkEntity chunk) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("chunkId", chunk.getId());
+        row.put("knowledgeBaseId", chunk.getKnowledgeBaseId());
+        row.put("documentId", chunk.getDocumentId() == null ? "" : chunk.getDocumentId());
+        row.put("chunkIndex", chunk.getChunkIndex() == null ? "" : chunk.getChunkIndex());
+        row.put("status", chunk.getStatus());
+        row.put("vectorId", chunk.getVectorId() == null ? "" : chunk.getVectorId());
+        row.put("contentHash", chunk.getContentHash() == null ? "" : chunk.getContentHash());
+        row.put("embeddingProvider", chunk.getEmbeddingProvider() == null ? "" : chunk.getEmbeddingProvider());
+        row.put("embeddingModel", chunk.getEmbeddingModel() == null ? "" : chunk.getEmbeddingModel());
+        row.put("embeddingDimension", chunk.getEmbeddingDimension() == null ? "" : chunk.getEmbeddingDimension());
+        return row;
+    }
+
+    private Map<String, Object> documentDriftPayload(KbDocumentEntity document) {
+        HashMap<String, Object> row = new HashMap<>();
+        row.put("documentId", document.getId());
+        row.put("knowledgeBaseId", document.getKnowledgeBaseId());
+        row.put("name", document.getName());
+        row.put("status", document.getStatus());
+        row.put("enabled", document.isEnabled());
+        row.put("archived", document.isArchived());
+        row.put("indexVersion", document.getIndexVersion());
+        row.put("indexedAt", document.getIndexedAt() == null ? "" : document.getIndexedAt().toString());
+        row.put("errorMessage", document.getErrorMessage() == null ? "" : document.getErrorMessage());
+        return row;
+    }
+
+    private boolean repairChunkVector(String orgId, KbChunkEntity chunk) {
+        Long kbId = parseLong(chunk.getKnowledgeBaseId()).orElse(null);
+        if (kbId == null || !chunk.isSearchable()) {
+            return false;
+        }
+        KnowledgeBaseEntity kb = kbRepository.findByIdAndOrgId(kbId, orgId).orElse(null);
+        if (kb == null || !"ACTIVE".equals(kb.getStatus())) {
+            return false;
+        }
+        String contentHash = chunk.getContentHash() == null || chunk.getContentHash().isBlank()
+                ? sha256(chunk.getContent())
+                : chunk.getContentHash();
+        String vectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
+                orgId,
+                chunk.getKnowledgeBaseId(),
+                chunk.getDocumentId(),
+                chunk.getId(),
+                chunk.getChunkIndex(),
+                chunk.getContent(),
+                contentHash,
+                embeddingService.embed(
+                        orgId,
+                        kb.getEmbeddingProvider(),
+                        kb.getEmbeddingModel(),
+                        kb.getEmbeddingDimension(),
+                        chunk.getContent())));
+        chunk.setVectorId(vectorId);
+        chunk.setEmbeddingMetadata(kb.getEmbeddingProvider(), kb.getEmbeddingModel(), kb.getEmbeddingDimension());
+        chunkRepository.save(chunk);
+        return true;
+    }
+
+    private boolean embeddingMetadataMatches(KbChunkEntity chunk, EmbeddingConfig expected) {
+        if (chunk == null || expected == null) {
+            return false;
+        }
+        return Objects.equals(normalizeEmbeddingProvider(chunk.getEmbeddingProvider()), expected.provider())
+                && Objects.equals(normalizeEmbeddingModel(chunk.getEmbeddingModel()), expected.model())
+                && Objects.equals(sanitizeEmbeddingDimension(chunk.getEmbeddingDimension()), sanitizeEmbeddingDimension(expected.dimension()));
     }
 
     private Map<String, Object> batchOperateDocuments(String orgId, List<Long> rawIds, String action) {
@@ -1634,11 +2485,50 @@ public class KnowledgeBaseService {
     ) {
     }
 
+    public record DataSourceCommand(
+            String sourceType,
+            String name,
+            Map<String, Object> config
+    ) {
+    }
+
+    public record EvalSuiteCommand(
+            String name,
+            String description
+    ) {
+    }
+
+    public record EvalCaseCommand(
+            String query,
+            Long expectedDocumentId,
+            String expectedDocumentKeyword,
+            String expectedChunkKeyword,
+            Double minScore,
+            Long forbiddenDocumentId,
+            Map<String, String> metadataFilters
+    ) {
+    }
+
     public record MetadataFieldCommand(
             String fieldKey,
             String fieldName,
             String valueType
     ) {
+    }
+
+    private record EvalCaseOutcome(
+            boolean passed,
+            boolean expectedHit,
+            boolean forbiddenViolation,
+            boolean staleSource,
+            double topScore,
+            Long matchedDocumentId,
+            Long matchedChunkId,
+            Map<String, Object> summary
+    ) {
+    }
+
+    private record SyncedDocument(String externalDocumentId, String title, String content, String contentHash) {
     }
 
     private record UploadAdmission(String originalFilename, String safeFilename, String contentType) {

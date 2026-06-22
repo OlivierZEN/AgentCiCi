@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-067
 title: Enterprise knowledge platform readiness
-status: in_implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-157
 related_decisions: FEAT-008, FEAT-018, FEAT-031, FEAT-042
-updated_at: 2026-06-20T16:01:12Z
+updated_at: 2026-06-21T15:30:34Z
 updated_by: MANAGER-001
 ---
 
@@ -188,3 +188,57 @@ Chat/Open API/trace 需透出这些字段，前端可先展示基础引用卡片
 - 风险：ACL 过滤影响召回。缓解：trace 记录 permission filtered count，并提供管理端诊断。
 - 风险：连接器同步扩大范围。缓解：先做 provider contract、job、cursor 和 external API/web 最小路径。
 - 回滚：ACL 可默认兼容已有 KB 全组织可见策略；drift repair 可先 dry-run。
+
+## 实现进展
+
+- 2026-06-20T16:13:20Z：
+  - 引入 PDFBox，上传策略默认允许 `pdf` / `application/pdf`。
+  - `KnowledgeBaseService` 对文本型 PDF 执行 PDFBox 文本抽取；加密、扫描/空文本、损坏 PDF 会明确失败。
+  - `uploadPolicy` 说明更新为文本型 PDF 已启用，PDF 不再列为 unsupported parser。
+  - `KnowledgeBaseLifecycleIntegrationTest` 更新 PDF 用例，使用 PDFBox 生成文本 PDF 并验证发布后 RAG 可召回。
+  - 当前本地真实集成测试仍受 Docker/PostgreSQL 未启动阻塞；`mvn -DskipTests test` 已验证主代码和测试代码编译。
+- 2026-06-20T16:28:40Z：
+  - 新增 `kb_access_grant`，支持文档级和 chunk 级 `READ` 授权，首版 principal 覆盖 `ORG`、`USER`、`SYSTEM_ROLE`。
+  - 新增 `KbAccessControlService`，chunk 授权优先于文档授权；未配置 ACL 时兼容历史全员可读，配置 ACL 后按 principal 严格过滤。
+  - `RagService` 的向量命中和 fallback 检索均接入 ACL 过滤，并在 `RetrievalResult`、Chat trace、SSE RAG 阶段透出 `permissionFilteredCount`。
+  - Chat 同步和流式路径传入当前 `userId` 与 `TenantContext` roles，避免模型上下文接收未授权知识片段。
+  - 新增 `/kb/documents/{id}/acl`、`/kb/chunks/{id}/acl` 管理接口，组织管理员可查看和替换授权列表。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加文档 ACL 检索过滤用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 已验证主代码和测试代码编译。
+- 2026-06-20T16:42:00Z：
+  - 新增 `/kb/drift/audit`，默认 dry-run，传 `repair=true` 时执行可安全修复。
+  - drift audit 覆盖已注册向量数、Qdrant/内存向量 orphan、active chunk 缺 vector、已发布文档无 active chunk、FAILED/CLEANUP_FAILED 文档。
+  - repair 会删除已采样 orphan vector、重建受影响文档，并对无文档归属的手工 chunk 缺失 vector 进行 upsert 修复。
+  - 当前 chunk 表未持久化 embedding provider/model/dimension，embedding drift 暂返回 `NOT_AVAILABLE_UNTIL_CHUNK_EMBEDDING_METADATA_IS_PERSISTED`，后续需补元数据后做真实比较。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加健康知识库 drift audit 用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 已验证主代码和测试代码编译。
+- 2026-06-20T16:50:20Z：
+  - `RagService.RetrievedSource` 增加 `confidence`、`trustLevel`、`freshnessStatus`、`documentIndexVersion`、`documentIndexedAt`、`chunkContentHash`。
+  - Chat trace 和 SSE RAG 阶段复用 `source.toPayload()`，因此引用可信度字段会随 sources 透出。
+  - trust 首版规则：向量分数高于 0.82 为 `HIGH`，高于 0.55 为 `MEDIUM`，fallback 为 `MEDIUM`，未发布或异常文档为 `LOW`；freshness 按 indexedAt 分为 `FRESH`、`AGING`、`STALE`、`UNKNOWN`。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加 source payload 字段断言；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 已验证主代码和测试代码编译。
+- 2026-06-20T16:31:34Z：
+  - 新增 `kb_eval_suite`、`kb_eval_case`、`kb_eval_run`、`kb_eval_case_result`，建立知识库召回评测数据模型。
+  - 新增管理端后端 API：创建/列出 suite、添加/列出 case、运行 suite、列出 runs、查看 run results。
+  - 评测运行复用真实 `RagService.retrieveDetailed`，按 expected document id、document keyword、chunk keyword、min score、forbidden document、metadata filter 计算 case 结果。
+  - run 聚合输出 `hitRate`、`expectedSourceRecall`、`forbiddenSourceViolations`、`averageTopScore`、`staleSourceRate`，case result 保存 source 证据摘要。
+  - 租户导出/清理清单纳入四张 eval 表，避免组织删除后残留评测数据。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加召回评测 suite/case/run/results 用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 和 `git diff --check` 已通过。
+- 2026-06-20T16:37:00Z：
+  - 新增 `kb_data_source`、`kb_sync_job`、`kb_source_document_map`，建立连接器同步骨架。
+  - 新增管理端后端 API：创建/列出数据源、手动同步数据源、查看同步 job。
+  - `WEB` / `EXTERNAL_API` 首版支持 `config.content` inline 文本或 `config.url` HTTP(S) GET；WEB 响应会轻量去 HTML 标签，NOTION 暂为 `contract_only` 并返回明确失败。
+  - 同步内容写入内部 `kb_document` 并复用 `publishDocument` 索引路径，外部 `externalId` 通过 `kb_source_document_map` 关联内部文档，重复同步会更新并重建同一文档。
+  - 租户导出/清理清单纳入三张 connector 表；upload policy sourceTypes 更新为 WEB/EXTERNAL_API available、NOTION contract_only。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加 EXTERNAL_API inline content 同步后 RAG 可召回用例；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 和 `git diff --check` 已通过。
+- 2026-06-20T16:40:13Z：
+  - 新增 `kb_chunk.embedding_provider`、`embedding_model`、`embedding_dimension`，索引、手工 chunk、chunk 更新/启用、repair upsert 都会写入实际 embedding 元数据。
+  - drift audit 现在比较 chunk embedding 元数据与当前 KB embedding 配置，输出 `embeddingMismatchChunkCount`、`embeddingMismatchChunks` 和 `embeddingDriftCheck`。
+  - repair 模式会对文档 chunk 触发文档重建，对手工 chunk 重新 upsert 向量并刷新 embedding 元数据。
+  - chunk payload 和 drift payload 透出 embedding 元数据，便于管理端排障。
+  - `KnowledgeBaseLifecycleIntegrationTest` 增加健康 drift audit 的 embedding check 断言；当前真实集成测试仍受 Docker/PostgreSQL 未启动阻塞，`mvn -DskipTests test` 和 `git diff --check` 已通过。
+- 2026-06-21T15:30:34Z：
+  - Docker/PostgreSQL/Redis/RabbitMQ/Qdrant 本地依赖恢复，`KnowledgeBaseLifecycleIntegrationTest` 在真实 PostgreSQL/Flyway schema v67 下通过。
+  - 为 `KbAsyncConfig` 启用 Rabbit listener，修复 `application-local.yml` 的 `indexing.mode=mq` 只入队不消费的问题。
+  - 真实 Qdrant smoke 通过：临时 KB 文档发布后 `cici_kb_chunk` 点位从 0 变为 1，检索命中目标文本，应用向量审计 `success=true/status=OK/scannedCount=1/orphanCount=0`，删除文档后 Qdrant 点位回到 0。
+  - 复测前发现本地 Qdrant 集合维度漂移为 16，已按当前 1024 维 embedding 配置重建；drift audit 能识别本地历史数据的 missing vector / embedding mismatch。
+  - 使用真实后端和真实登录完成 `/admin/kb` 桌面验收：列表页、知识库详情、文档表、PDF parser 说明均正常展示，无横向溢出和控制台错误。
+  - 验收截图：`output/playwright/task157-kb-real-backend-desktop.png`、`output/playwright/task157-kb-detail-real-backend-desktop.png`。

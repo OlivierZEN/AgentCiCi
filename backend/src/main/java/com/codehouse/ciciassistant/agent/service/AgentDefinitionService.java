@@ -168,6 +168,7 @@ public class AgentDefinitionService {
     private final AgentWorkflowExecutionLogService workflowExecutionLogService;
     private final AgentRuntimeScheduleSyncService runtimeScheduleSyncService;
     private final AgentWorkflowSkillRefService agentWorkflowSkillRefService;
+    private final AgentProductionReadinessService productionReadinessService;
 
     public AgentDefinitionService(AgentDefinitionRepository agentDefinitionRepository,
                                   AgentSpecRepository agentSpecRepository,
@@ -180,7 +181,8 @@ public class AgentDefinitionService {
                                   ObjectMapper objectMapper,
                                   AgentWorkflowExecutionLogService workflowExecutionLogService,
                                   AgentRuntimeScheduleSyncService runtimeScheduleSyncService,
-                                  AgentWorkflowSkillRefService agentWorkflowSkillRefService) {
+                                  AgentWorkflowSkillRefService agentWorkflowSkillRefService,
+                                  AgentProductionReadinessService productionReadinessService) {
         this.agentDefinitionRepository = agentDefinitionRepository;
         this.agentSpecRepository = agentSpecRepository;
         this.agentKnowledgeBindingRepository = agentKnowledgeBindingRepository;
@@ -193,6 +195,7 @@ public class AgentDefinitionService {
         this.workflowExecutionLogService = workflowExecutionLogService;
         this.runtimeScheduleSyncService = runtimeScheduleSyncService;
         this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
+        this.productionReadinessService = productionReadinessService;
     }
 
     /**
@@ -417,6 +420,7 @@ public class AgentDefinitionService {
         ensureBuiltinAgents(orgId);
         String agentId = normalizeAgentId(requestedAgentId);
         AgentDefinitionEntity definition = getDefinition(orgId, agentId);
+        productionReadinessService.requirePublishReady(orgId, agentId, versionNo);
         AgentWorkflowVersionEntity target = agentWorkflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("Agent version not found: " + versionNo));
 

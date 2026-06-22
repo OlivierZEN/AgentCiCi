@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-157
-status: in_progress
-updated_at: 2026-06-20T16:06:00Z
+status: review
+updated_at: 2026-06-21T15:30:34Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -34,6 +34,35 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 
 - `dev-login.py .claw --developer MANAGER-001 --task TASK-157 --branch codex/TASK-156-production-readiness-goal --files ...` -> allowed.
 - `check-assignment.py .claw --developer MANAGER-001 --task TASK-157 --branch codex/TASK-156-production-readiness-goal --files ...` -> allowed.
+- `dev-login.py` / `check-assignment.py` rerun after adding `backend/pom.xml` to assignment scope -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with PDFBox.
+- `git diff --check` -> success.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 ACL files including V63 migration, KB domain/service/controller, `RagService`, `ChatOrchestratorService`, and integration test -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with ACL changes.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 drift audit files -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with drift audit changes.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 citation trust files -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with citation trust fields.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 retrieval evaluation files, V64 migration, and tenant lifecycle purge integration -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with retrieval evaluation changes.
+- `git diff --check` -> success.
+- `docker ps` -> blocked; Docker daemon socket `/Users/owenmacbook/.docker/run/docker.sock` is unavailable.
+- `nc -z localhost 5432` -> `postgres-closed`; focused integration tests still cannot run locally.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 connector sync files and V65 migration -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with connector sync changes.
+- `git diff --check` -> success.
+- `dev-login.py` / `check-assignment.py` rerun for TASK-157 embedding metadata drift files and V66 migration -> allowed.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -DskipTests test` -> success; main and test code compile with embedding metadata drift changes.
+- `git diff --check` -> success.
+- `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant` -> success; local PostgreSQL/Redis/RabbitMQ healthy and Qdrant running.
+- `docker exec cici-postgres pg_isready -U cici -d agentcici_test` -> success; `localhost:5432` and `localhost:6333` reachable.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> success.
+- `cd backend && mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` -> success after enabling Rabbit listener.
+- `cd frontend && npm run build` -> success; existing Vite large chunk warning remains.
+- Local backend `mvn -Dmaven.repo.local=.m2 spring-boot:run -Dspring-boot.run.profiles=local` -> success on port 8080 with PostgreSQL/Flyway schema v67, RabbitMQ consumer for `kb.index.queue`, and Qdrant collection `cici_kb_chunk`.
+- Authenticated `/admin/kb` desktop Playwright -> success; screenshots `output/playwright/task157-kb-real-backend-desktop.png` and `output/playwright/task157-kb-detail-real-backend-desktop.png`, `overflowX=false`, console errors 0.
+- Real Qdrant smoke after fixing local collection dimension drift -> success: temporary document publish produced `qdrantPointsBeforeDelete=1`, vector retrieval contained target text, vector audit returned `success=true/status=OK/registeredCount=304/scannedCount=1/orphanCount=0`, delete returned `cleanupStatus=COMPLETED`, and `qdrantPointsAfterDelete=0`.
+- Drift audit on the same local dataset returned `DRIFT_DETECTED` with historical `missingVectorChunkCount=7` and `embeddingMismatchChunkCount=195`, proving the drift checker surfaces existing index/config drift rather than hiding it.
 
 ## Changed Files
 
@@ -43,8 +72,48 @@ spec_path: docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
+- `backend/pom.xml`
+- `backend/src/main/resources/db/migration/V63__kb_document_chunk_acl.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbAccessGrantRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDocumentRepository.java`
+- `backend/src/main/resources/db/migration/V64__kb_retrieval_evaluation.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalSuiteEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalSuiteRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalRunEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalRunRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseResultEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbEvalCaseResultRepository.java`
+- `backend/src/main/resources/db/migration/V65__kb_connector_sync.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDataSourceEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbDataSourceRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSyncJobEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSyncJobRepository.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbSourceDocumentMapRepository.java`
+- `backend/src/main/resources/db/migration/V66__kb_chunk_embedding_metadata.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/domain/KbChunkEntity.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/config/KbAsyncConfig.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KbAccessControlService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/service/KnowledgeBaseService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/kb/api/KnowledgeBaseController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformTenantLifecycleService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/RagService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/kb/KnowledgeBaseLifecycleIntegrationTest.java`
 
 ## Handoff
 
 - Branch: `codex/TASK-156-production-readiness-goal`.
-- Prefer P0 safety and correctness gates before connector breadth.
+- Text-based PDF parser support is implemented and compile-verified.
+- Document/chunk ACL data model, management API, RAG filtering, Chat principal propagation, and permission-filtered trace count are implemented and compile-verified.
+- Drift audit/repair endpoint is implemented and compile-verified; embedding drift remains explicitly not available until chunk embedding metadata is persisted.
+- Citation trust fields are exposed in RAG source payloads and compile-verified.
+- Retrieval evaluation backend model, API, metrics, evidence persistence, and tenant purge coverage are implemented and compile-verified.
+- Connector sync backend skeleton, WEB/EXTERNAL_API minimal sync path, sync jobs, source-document mapping, and tenant purge coverage are implemented and compile-verified.
+- Embedding metadata is persisted on chunks and drift audit now compares chunk metadata against current KB embedding config.
+- `KnowledgeBaseLifecycleIntegrationTest` now passes locally after Docker/PostgreSQL recovery.
+- Local `application-local` MQ indexing is fixed by enabling Rabbit listeners; real Qdrant upsert/delete/audit smoke now passes after correcting the local collection dimension drift.
+- Ready for review: enterprise KB parser/PDF, ACL filtering, citation trust, retrieval evaluation, connector sync skeleton, rebuild/drift audit, frontend build, authenticated desktop validation, and real Qdrant smoke are complete.

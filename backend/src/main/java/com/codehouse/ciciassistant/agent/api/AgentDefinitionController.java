@@ -6,6 +6,8 @@ import com.codehouse.ciciassistant.agent.domain.AgentSpecEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
+import com.codehouse.ciciassistant.agent.service.AgentEvaluationService;
+import com.codehouse.ciciassistant.agent.service.AgentProductionReadinessService;
 import com.codehouse.ciciassistant.agent.service.AgentSkillBindingService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
@@ -24,6 +26,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -35,15 +38,21 @@ public class AgentDefinitionController {
     private final AgentDefinitionService agentDefinitionService;
     private final AgentSkillBindingService agentSkillBindingService;
     private final AgentAccessControlService accessControlService;
+    private final AgentProductionReadinessService productionReadinessService;
+    private final AgentEvaluationService agentEvaluationService;
     private final ObjectMapper objectMapper;
 
     public AgentDefinitionController(AgentDefinitionService agentDefinitionService,
                                      AgentSkillBindingService agentSkillBindingService,
                                      AgentAccessControlService accessControlService,
+                                     AgentProductionReadinessService productionReadinessService,
+                                     AgentEvaluationService agentEvaluationService,
                                      ObjectMapper objectMapper) {
         this.agentDefinitionService = agentDefinitionService;
         this.agentSkillBindingService = agentSkillBindingService;
         this.accessControlService = accessControlService;
+        this.productionReadinessService = productionReadinessService;
+        this.agentEvaluationService = agentEvaluationService;
         this.objectMapper = objectMapper;
     }
 
@@ -233,13 +242,97 @@ public class AgentDefinitionController {
         return ApiResponse.ok(agentDefinitionService.listVersions(orgId, agentId).stream().map(this::toVersionPayload).toList());
     }
 
+    @GetMapping("/{agentId}/readiness")
+    public ApiResponse<AgentProductionReadinessService.ReadinessResult> readiness(
+            @PathVariable String agentId,
+            @RequestParam(name = "versionNo", required = false) Integer versionNo) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
+        return ApiResponse.ok(productionReadinessService.check(orgId, agentId, versionNo));
+    }
+
+    @GetMapping("/{agentId}/evaluation/suites")
+    public ApiResponse<List<Map<String, Object>>> listEvaluationSuites(@PathVariable String agentId) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
+        return ApiResponse.ok(agentEvaluationService.listSuites(orgId, agentId));
+    }
+
+    @PostMapping("/{agentId}/evaluation/suites")
+    public ApiResponse<Map<String, Object>> createEvaluationSuite(@PathVariable String agentId,
+                                                                   @Valid @RequestBody EvaluationSuiteRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
+        return ApiResponse.ok(agentEvaluationService.createSuite(orgId, agentId, new AgentEvaluationService.SuiteCommand(
+                request.name(),
+                request.description(),
+                request.gateMode(),
+                request.minPassRate()
+        )));
+    }
+
+    @GetMapping("/{agentId}/evaluation/suites/{suiteId}/cases")
+    public ApiResponse<List<Map<String, Object>>> listEvaluationCases(@PathVariable String agentId,
+                                                                       @PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
+        return ApiResponse.ok(agentEvaluationService.listCases(orgId, agentId, suiteId));
+    }
+
+    @PostMapping("/{agentId}/evaluation/suites/{suiteId}/cases")
+    public ApiResponse<Map<String, Object>> addEvaluationCase(@PathVariable String agentId,
+                                                               @PathVariable Long suiteId,
+                                                               @Valid @RequestBody EvaluationCaseRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
+        return ApiResponse.ok(agentEvaluationService.addCase(orgId, agentId, suiteId, new AgentEvaluationService.CaseCommand(
+                request.name(),
+                request.inputText(),
+                request.assertionType(),
+                request.expectedText(),
+                request.forbiddenText(),
+                request.expectedStatus(),
+                request.requiredToolName(),
+                request.forbiddenToolName(),
+                request.priority()
+        )));
+    }
+
+    @PostMapping("/{agentId}/evaluation/suites/{suiteId}/runs")
+    public ApiResponse<Map<String, Object>> runEvaluationSuite(@PathVariable String agentId,
+                                                                @PathVariable Long suiteId,
+                                                                @Valid @RequestBody EvaluationRunRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
+        return ApiResponse.ok(agentEvaluationService.runSuite(orgId, agentId, suiteId, request.versionNo()));
+    }
+
+    @GetMapping("/{agentId}/evaluation/suites/{suiteId}/runs")
+    public ApiResponse<List<Map<String, Object>>> listEvaluationRuns(@PathVariable String agentId,
+                                                                      @PathVariable Long suiteId) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
+        return ApiResponse.ok(agentEvaluationService.listRuns(orgId, agentId, suiteId));
+    }
+
+    @GetMapping("/{agentId}/evaluation/runs/{runId}/results")
+    public ApiResponse<List<Map<String, Object>>> listEvaluationResults(@PathVariable String agentId,
+                                                                         @PathVariable Long runId) {
+        String orgId = TenantContext.requireOrgId();
+        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
+        return ApiResponse.ok(agentEvaluationService.listResults(orgId, agentId, runId));
+    }
+
     @PostMapping("/{agentId}/publish")
     public ApiResponse<Map<String, Object>> publish(@PathVariable String agentId,
                                                      @Valid @RequestBody VersionActionRequest request) {
         String orgId = TenantContext.requireOrgId();
         accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
         AgentWorkflowVersionEntity version = agentDefinitionService.publishVersion(orgId, agentId, request.versionNo());
-        return ApiResponse.ok(toVersionPayload(version));
+        Map<String, Object> payload = new LinkedHashMap<>(toVersionPayload(version));
+        payload.put("published", true);
+        payload.put("readiness", productionReadinessService.check(orgId, agentId, version.getVersionNo()));
+        return ApiResponse.ok(payload);
     }
 
     @PostMapping("/{agentId}/rollback")
@@ -431,6 +524,30 @@ public class AgentDefinitionController {
     }
 
     public record VersionActionRequest(Integer versionNo) {
+    }
+
+    public record EvaluationSuiteRequest(
+            @NotBlank String name,
+            String description,
+            String gateMode,
+            Double minPassRate
+    ) {
+    }
+
+    public record EvaluationCaseRequest(
+            @NotBlank String name,
+            @NotBlank String inputText,
+            @NotBlank String assertionType,
+            String expectedText,
+            String forbiddenText,
+            String expectedStatus,
+            String requiredToolName,
+            String forbiddenToolName,
+            String priority
+    ) {
+    }
+
+    public record EvaluationRunRequest(Integer versionNo) {
     }
 
     public record ReplaceAccessGrantsRequest(List<AgentAccessControlService.GrantInput> grants) {
