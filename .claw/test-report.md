@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-23T00:48:00Z
+updated_at: 2026-06-23T02:12:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-23T00:48:00Z
+last_run_at: 2026-06-23T02:12:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,37 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-151 platform audit query fix.
-- 命令：task-scoped identity gate, focused backend unit/integration tests, assignment check, static diff check.
+- 范围：Production release `2.1.2` for TASK-151 platform audit query fix.
+- 命令：merge, focused backend/frontend gates, release dry-run, ACR build/push, ECS backup/deploy, production smoke, browser validation.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Production release 2.1.2 (2026-06-23T02:12:00Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` covering release status, report, issue, devops, and task files -> **allowed**.
+    - `merge-main`: committed TASK-151 audit fix on `codex/TASK-151-rbac-production-readiness`, merged into `main`, and pushed `origin/main` -> **success**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformAuditServiceTest,PlatformGovernanceIntegrationTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**; next production version resolved to `2.1.2`.
+    - `release-build-push-initial`: `./scripts/release-acr.sh` -> **failed before tag/image completion** because GitHub tag lookup reset and Docker Hub `eclipse-temurin:21-jre` metadata returned EOF; no release tag was created.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.2` -> **success** after locally tagging the previous backend image as the JRE base to bypass Docker Hub metadata EOF; backend/frontend images and Git tag `2.1.2` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260623-100637-before-2.1.2` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-env`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.2` and `CICI_APP_VERSION=2.1.2` -> **success**.
+    - `production-deploy`: pulled backend/frontend `2.1.2`, locally tagged infra images as `2.1.2`, and ran compose `up -d` -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.2`, `imageTag=2.1.2`, `gitCommit=06288ee6403b`; frontend `nginx -t` passed -> **success**.
+    - `flyway-check`: production schema history latest rows show migrations 64 through 68, including `68|agent runtime concurrency hardening|true` -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` -> `200`; direct `onechat.agentcici.com` still NXDOMAIN; explicit production-IP `onechat.agentcici.com` HTTPS resolve -> `200` -> **success with DNS follow-up**.
+    - `platform-api-smoke`: platform login, `/auth/platform/me`, `/api/platform/skills`, `/api/platform/tools`, and `/api/platform/audit/logs?limit=100` -> **success**, audit returned HTTP 200 with `success=true`.
+    - `org-api-smoke`: org login, `/auth/me`, `/agents`, `/skills`, `/me/agents/run-logs` -> **success**; org token `/api/platform/skills` -> expected `403`.
+    - `browser-platform-audit`: Playwright desktop `1440x1000` on `https://x.agentcici.com/platform/audit` -> **success**; page showed version `2.1.2`, table empty state, and network request `/api/platform/audit/logs?limit=100` returned `200`; screenshot `output/playwright/release-2.1.2-platform-audit.png`.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.2`, inspect digest `sha256:9fcdb4ce2941120d1a25643db49858eca98739d777cf71f23bf000ff45d2427f`, linux/amd64 manifest digest `sha256:b1b390aa5d844676864f7457ea444e3e19f302d70fddf1629ba7310d64985c5f`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.2`, inspect digest `sha256:0b543efd2680c47ad6579994bfe09f8f7af3877768c4e8bee4cf99d2b6c5d32b`, linux/amd64 manifest digest `sha256:081e93418f85fae9210aeda3c2bb1b1d453b707455dbbffcae5aa107900011af`.
+  - Notes:
+    - The platform audit production 500 is resolved in release `2.1.2`.
+    - Direct `onechat.agentcici.com` DNS lookup still returns NXDOMAIN from the current resolver; explicit production-IP resolve and `x.agentcici.com` are healthy.
 
 - TASK-151 platform audit query fix (2026-06-23T00:48:00Z):
   - Commands:

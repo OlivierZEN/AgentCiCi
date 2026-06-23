@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-06-22T13:28:23Z
+updated_at: 2026-06-23T02:12:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.2 platform audit hotfix on 2026-06-23:
+  - Git commit: `06288ee6403b` on `main`; annotated tag `2.1.2` was pushed to origin.
+  - Scope: TASK-151 platform audit query fix for production `/api/platform/audit/logs` HTTP 500 caused by nullable keyword `LIKE` binding being inferred as `bytea`.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.2`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.2` and `latest`.
+  - Release note: the first non-explicit `./scripts/release-acr.sh` attempt failed before tag/image completion because GitHub tag lookup reset and Docker Hub `eclipse-temurin:21-jre` metadata returned EOF; final release used explicit version `2.1.2` and a local backend-image tag as the JRE base to avoid Docker Hub metadata EOF.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.2`, inspect digest `sha256:9fcdb4ce2941120d1a25643db49858eca98739d777cf71f23bf000ff45d2427f`, linux/amd64 manifest digest `sha256:b1b390aa5d844676864f7457ea444e3e19f302d70fddf1629ba7310d64985c5f`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.2`, inspect digest `sha256:0b543efd2680c47ad6579994bfe09f8f7af3877768c4e8bee4cf99d2b6c5d32b`, linux/amd64 manifest digest `sha256:081e93418f85fae9210aeda3c2bb1b1d453b707455dbbffcae5aa107900011af`.
+  - Backup directory: `/opt/cici/backups/20260623-100637-before-2.1.2`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.2` and `CICI_APP_VERSION=2.1.2`.
+  - Deploy note: ECS infra images were locally tagged as `2.1.2` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.2`, `imageTag=2.1.2`, and `gitCommit=06288ee6403b`; Flyway latest migration remains `68|agent runtime concurrency hardening|true`; frontend Nginx config test passed.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200; `onechat.agentcici.com` direct DNS still returned NXDOMAIN, while explicit production-IP HTTPS resolve returned HTTP 200.
+  - API/browser smoke: org login and core org APIs passed; platform login, skills, tools, and `/api/platform/audit/logs?limit=100` passed; browser `/platform/audit` loaded with version `2.1.2` and no loading-failure fallback.
 
 - 2.1.1 production-readiness release on 2026-06-22:
   - Git commit: `17ec11b404a8` on `main`; annotated tag `2.1.1` was pushed to origin.

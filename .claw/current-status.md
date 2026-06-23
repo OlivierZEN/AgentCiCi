@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-23T00:48:00Z
+updated_at: 2026-06-23T02:12:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Platform audit-log 500 is fixed locally on TASK-151 branch; production 2.1.1 still needs redeploy."
-next_action: "Review, merge, and deploy the TASK-151 audit query fix; continue onechat.agentcici.com DNS NXDOMAIN follow-up."
+active_task: "Production release 2.1.2 is deployed on ECS and verified; platform audit loads successfully."
+next_action: "Continue onechat.agentcici.com DNS NXDOMAIN follow-up."
 read_next:
   goals: false
   decisions: false
@@ -22,13 +22,14 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `codex/TASK-151-rbac-production-readiness`; production is running release `2.1.1` from Git commit `17ec11b404a8`.
-- Production release `2.1.1` was built with `./scripts/release-acr.sh`, pushed to ACR for backend/frontend, deployed to ECS `47.97.119.160`, and verified via `/system/version`.
-- ECS backup before the release is `/opt/cici/backups/20260622-212252-before-2.1.1`, containing env, PostgreSQL dump, KB files, and Qdrant volume snapshots.
-- Six production Compose containers are healthy on tag `2.1.1`; infra images were locally retagged on ECS for the shared Compose `CICI_IMAGE_TAG`.
-- Public smoke: `https://x.agentcici.com/` returns `200`; server-local HTTPS vhost smoke for `onechat.agentcici.com` returns `200`, but direct DNS for `onechat.agentcici.com` returned NXDOMAIN from the current resolver and needs DNS follow-up.
-- Core org login and APIs passed on `https://x.agentcici.com`; platform login and `/api/platform/skills` / `/api/platform/tools` passed.
-- Known release follow-up: `/api/platform/audit/logs` returned backend `500` in production because the audit query applied `LIKE` to a bytea-bound nullable keyword value; TASK-151 now fixes this locally by using a no-keyword query path, but production still needs the fix deployed.
+- Current branch: `main`; production is running release `2.1.2` from Git commit `06288ee6403b`.
+- Production release `2.1.2` fixes `/api/platform/audit/logs` initial-load 500 by avoiding nullable keyword `LIKE` binding when `q` is empty.
+- Release `2.1.2` was built with explicit `./scripts/release-acr.sh --version 2.1.2` after the required dry-run; backend/frontend images and Git tag `2.1.2` were pushed.
+- ECS backup before the release is `/opt/cici/backups/20260623-100637-before-2.1.2`, containing env, PostgreSQL dump, KB files, and Qdrant volume snapshots.
+- Six production Compose containers are healthy on tag `2.1.2`; infra images were locally retagged on ECS for the shared Compose `CICI_IMAGE_TAG`.
+- Public smoke: `https://x.agentcici.com/` returns `200`; `onechat.agentcici.com` still returns NXDOMAIN from the current resolver, while explicit production-IP HTTPS resolve returns `200`.
+- Core org login and APIs passed on `https://x.agentcici.com`; platform login, `/api/platform/skills`, `/api/platform/tools`, and `/api/platform/audit/logs?limit=100` passed.
+- Production browser validation for `/platform/audit` passed; screenshot evidence is in `output/playwright/release-2.1.2-platform-audit.png`.
 - User opened a goal to finish two production-readiness tracks: Agent Builder production closure and enterprise knowledge platform readiness.
 - TASK-156 added Agent production readiness checks, `GET /agents/{agentId}/readiness`, a publish-time readiness gate, a minimal Agent evaluation gate with suites/cases/runs/results, and Agent Builder publish-tab production gate UX.
 - Local Docker/PostgreSQL blocker is resolved: `postgres`, `redis`, `rabbitmq`, and `qdrant` are running; `agentcici_test` is reachable on `localhost:5432`.
@@ -53,5 +54,4 @@ read_next:
 - `docs/specs/FEAT-066-agent-builder-production-readiness.md` - Agent Builder production readiness spec.
 - `docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md` - enterprise KB production readiness spec.
 - `docs/specs/FEAT-068-agent-runtime-concurrency-hardening.md` - Agent runtime concurrency hardening spec.
-- `.claw/tasks/TASK-151.md` - platform audit query fix state.
 - `.claw/test-report.md` - latest verified commands.

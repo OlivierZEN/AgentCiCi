@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-06-23T00:48:00Z
+updated_at: 2026-06-23T02:12:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -15,11 +15,6 @@ status: active
   - Verified facts: server-local HTTPS vhost smoke with explicit resolve returned HTTP 200, and public `https://onechat.agentcici.com/` with `--resolve onechat.agentcici.com:443:47.97.119.160` returned HTTP 200; `https://x.agentcici.com/` returned HTTP 200 through normal DNS.
   - Inferred root cause: DNS record for `onechat.agentcici.com` is missing, not propagated, or not visible to the tested public resolver.
   - Status: open (DNS/provider follow-up; release `2.1.1` is otherwise healthy on ECS).
-- ISSUE-2026-06-22-platform-audit-log-query-500:
-  - Symptom: production smoke for `/api/platform/audit/logs` returned backend HTTP 500 after platform login.
-  - Verified root cause: backend logs show PostgreSQL `ERROR: operator does not exist: text ~~ bytea` for a `platform_audit_log` query using `LIKE` filters with a bytea-bound parameter.
-  - Evidence: production `2.1.1` platform smoke on 2026-06-22 reproduced the same audit loading limitation already noted in TASK-155 local validation.
-  - Status: open (TASK-151 local backend fix verified on 2026-06-23; production remains affected until the fix is merged and deployed).
 - ISSUE-2026-04-21-spec-compiler-is-template-based:
   - Symptom: 当前系统会生成 workflow code / preview / manifest，但更接近“规则归纳 + 固定模板代码生成”，尚不能可靠承接复杂自然语言业务意图。
   - Verified root cause: `SpecCompilerService` 仅做文本分行、关键词推断、简单规则抽取；`AgentCompileService.buildWorkflowCode(...)` 输出固定 TypeScript 模板，并未调用 LLM 做真实编译。
@@ -44,6 +39,17 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-06-22-platform-audit-log-query-500:
+  - Symptom: production smoke for `/api/platform/audit/logs` returned backend HTTP 500 after platform login.
+  - Verified root cause: backend logs show PostgreSQL `ERROR: operator does not exist: text ~~ bytea` for a `platform_audit_log` query using `LIKE` filters with a bytea-bound parameter.
+  - Resolution (2026-06-23):
+    - TASK-151 routes empty-keyword platform audit queries through a repository method without `LIKE :q`.
+    - Release `2.1.2` deployed the fix to ECS.
+  - Verification (2026-06-23):
+    - `GET https://x.agentcici.com/api/platform/audit/logs?limit=100` with platform token -> HTTP 200, `success=true`.
+    - Browser `/platform/audit` on production shows the audit table empty state instead of the prior loading failure.
+  - Status: resolved.
 
 - ISSUE-2026-05-14-local-assistant-login-default-account:
   - Symptom: 本地前台助手登录页使用默认手机号和固定密码时显示 `登录失败：Invalid mobile or password`。

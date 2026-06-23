@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-23T00:48:00Z
+updated_at: 2026-06-23T02:12:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -94,14 +94,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-151 - RBAC and audit production readiness
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-064-rbac-production-readiness.md`
 - task_status_path: `.claw/tasks/TASK-151.md`
 - assignment_path: `.claw/assignments/TASK-151.yaml`
 - blocked_by: `none`
-- next_action: Review and merge the TASK-151 platform audit query fix, then redeploy so `/platform/audit` initial load no longer hits the production `text ~~ bytea` error.
+- next_action: Done; release `2.1.2` is deployed and `/platform/audit` loads without the production `text ~~ bytea` error.
 
 ### TASK-150 - Knowledge Base production readiness
 
