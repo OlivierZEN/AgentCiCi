@@ -31,6 +31,7 @@ scope_files:
   - .claw/task-board.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/issue-list.md
 protected_paths:
   - .claw/developers/**
   - .claw/assignments/TASK-115.yaml

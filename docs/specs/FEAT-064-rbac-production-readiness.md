@@ -116,7 +116,9 @@ updated_by: MANAGER-001
 - 2026-06-08: 创建规格与任务，开始 RBAC 生产就绪收口。
 - 2026-06-08: 已完成后端硬化与回归验证。`TenantContextFilter` 默认要求认证上下文并禁用外部 header 上下文；平台写接口补充方法级角色限制；新增 `RbacProductionReadinessIntegrationTest`，并覆盖 `/actuator/health` 不被 RBAC 拦截。
 - 2026-06-08: 已完成审计追踪生产就绪补强。平台模型治理写动作进入平台审计；平台审计和组织审计查询支持数据库侧过滤、DTO 和脱敏；新增审计查询索引；平台审计页补筛选。
+- 2026-06-23: 已修复生产发现的平台审计初次加载 500：`q` 为空时不再复用含 `LIKE :q` 的 JPQL，而是走不含关键词匹配的过滤查询，避免 PostgreSQL 将 nullable 参数推断为 `bytea`。
 - 验证通过：focused RBAC integration test、auth/platform/governance/billing/model/OpenAPI 回归套件、审计/RBAC/model/platform 窄回归、frontend build、assignment scope check、`git diff --check`。
+- 追加验证通过：`PlatformAuditServiceTest`、`PlatformGovernanceIntegrationTest`、assignment scope check、`git diff --check`。
 
 ## 交接说明
 
