@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-22T13:28:23Z
+updated_at: 2026-06-23T00:48:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-22T13:28:23Z
+last_run_at: 2026-06-23T00:48:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,21 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：生产发布 `2.1.1` to ECS `47.97.119.160`.
-- 命令：ACR release script, production backup/deploy, container health, Flyway, public smoke, org/platform API smoke.
+- 范围：TASK-151 platform audit query fix.
+- 命令：task-scoped identity gate, focused backend unit/integration tests, assignment check, static diff check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-151 platform audit query fix (2026-06-23T00:48:00Z):
+  - Commands:
+    - `identity`: `dev-login.py` for `MANAGER-001` / `TASK-151` covering platform audit repository/service/test/spec/status/report files -> **allowed**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformAuditServiceTest,PlatformGovernanceIntegrationTest test` in `backend/` -> **success** against local PostgreSQL/Flyway schema version 68.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-151 audit query fix files -> **allowed**.
+  - Notes:
+    - `/platform/audit/logs` empty-keyword queries now use a repository query without `LIKE :q`, avoiding the production PostgreSQL `operator does not exist: text ~~ bytea` failure on initial page load.
+    - Production `2.1.1` still needs this fix deployed before the live platform audit page is considered recovered.
 
 - Production release 2.1.1 (2026-06-22T13:28:23Z):
   - Commands:

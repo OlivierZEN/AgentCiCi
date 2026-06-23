@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-06-22T13:28:23Z
+updated_at: 2026-06-23T00:48:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -19,7 +19,7 @@ status: active
   - Symptom: production smoke for `/api/platform/audit/logs` returned backend HTTP 500 after platform login.
   - Verified root cause: backend logs show PostgreSQL `ERROR: operator does not exist: text ~~ bytea` for a `platform_audit_log` query using `LIKE` filters with a bytea-bound parameter.
   - Evidence: production `2.1.1` platform smoke on 2026-06-22 reproduced the same audit loading limitation already noted in TASK-155 local validation.
-  - Status: open (P2 backend query binding fix; does not block release health, skills/tools platform APIs passed).
+  - Status: open (TASK-151 local backend fix verified on 2026-06-23; production remains affected until the fix is merged and deployed).
 - ISSUE-2026-04-21-spec-compiler-is-template-based:
   - Symptom: 当前系统会生成 workflow code / preview / manifest，但更接近“规则归纳 + 固定模板代码生成”，尚不能可靠承接复杂自然语言业务意图。
   - Verified root cause: `SpecCompilerService` 仅做文本分行、关键词推断、简单规则抽取；`AgentCompileService.buildWorkflowCode(...)` 输出固定 TypeScript 模板，并未调用 LLM 做真实编译。

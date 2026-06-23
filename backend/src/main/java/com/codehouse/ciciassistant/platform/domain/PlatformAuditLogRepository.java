@@ -17,6 +17,22 @@ public interface PlatformAuditLogRepository extends JpaRepository<PlatformAuditL
               and item.createdAt between :from and :to
               and (:eventType is null or lower(item.eventType) = :eventType)
               and (:resourceType is null or lower(item.resourceType) = :resourceType)
+            order by item.createdAt desc
+            """)
+    List<PlatformAuditLogEntity> filterPlatformAuditLogs(
+            @Param("orgId") String orgId,
+            @Param("from") Instant from,
+            @Param("to") Instant to,
+            @Param("eventType") String eventType,
+            @Param("resourceType") String resourceType,
+            Pageable pageable);
+
+    @Query("""
+            select item from PlatformAuditLogEntity item
+            where item.orgId = :orgId
+              and item.createdAt between :from and :to
+              and (:eventType is null or lower(item.eventType) = :eventType)
+              and (:resourceType is null or lower(item.resourceType) = :resourceType)
               and (:q is null
                 or lower(item.userId) like concat('%', :q, '%')
                 or lower(item.roleCode) like concat('%', :q, '%')

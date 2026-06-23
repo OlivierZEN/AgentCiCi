@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-22T02:02:28Z
+updated_at: 2026-06-23T00:48:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -101,7 +101,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-151.md`
 - assignment_path: `.claw/assignments/TASK-151.yaml`
 - blocked_by: `none`
-- next_action: Review and merge `codex/TASK-151-rbac-production-readiness`; RBAC hardening plus audit tracking readiness passed focused backend audit/RBAC/platform/model regression, frontend build, assignment check, and `git diff --check`.
+- next_action: Review and merge the TASK-151 platform audit query fix, then redeploy so `/platform/audit` initial load no longer hits the production `text ~~ bytea` error.
 
 ### TASK-150 - Knowledge Base production readiness
 

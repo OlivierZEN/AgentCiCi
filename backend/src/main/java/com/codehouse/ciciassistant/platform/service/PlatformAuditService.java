@@ -51,14 +51,13 @@ public class PlatformAuditService {
             from = to.minus(Duration.ofDays(7));
         }
         int limit = Math.min(Math.max(query.limit(), 1), 100);
-        List<PlatformAuditLogEntity> rows = repository.searchPlatformAuditLogs(
-                orgId,
-                from,
-                to,
-                normalized(query.eventType()),
-                normalized(query.resourceType()),
-                normalized(query.q()),
-                PageRequest.of(0, limit + 1));
+        String eventType = normalized(query.eventType());
+        String resourceType = normalized(query.resourceType());
+        String q = normalized(query.q());
+        PageRequest pageRequest = PageRequest.of(0, limit + 1);
+        List<PlatformAuditLogEntity> rows = q == null
+                ? repository.filterPlatformAuditLogs(orgId, from, to, eventType, resourceType, pageRequest)
+                : repository.searchPlatformAuditLogs(orgId, from, to, eventType, resourceType, q, pageRequest);
         boolean hasMore = rows.size() > limit;
         List<Map<String, Object>> items = rows.stream()
                 .limit(limit)

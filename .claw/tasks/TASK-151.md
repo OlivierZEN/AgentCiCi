@@ -8,7 +8,7 @@ branch: codex/TASK-151-rbac-production-readiness
 pr_url: n/a
 spec_path: docs/specs/FEAT-064-rbac-production-readiness.md
 assignment_path: .claw/assignments/TASK-151.yaml
-updated_at: 2026-06-08T12:06:00+08:00
+updated_at: 2026-06-23T08:48:00+08:00
 updated_by: MANAGER-001
 ---
 
@@ -40,6 +40,7 @@ updated_by: MANAGER-001
 - 2026-06-08T00:00:00+08:00: Task opened and assigned to `MANAGER-001` on `codex/TASK-151-rbac-production-readiness`.
 - 2026-06-08T11:28:00+08:00: Implemented production RBAC hardening: protected APIs now require authenticated context by default, `X-Org-Id` / `X-User-Id` context is disabled unless explicitly configured, platform write APIs have method-level role restrictions, and focused RBAC regression coverage was added.
 - 2026-06-08T12:06:00+08:00: Closed audit tracking readiness gaps from review: platform model provider/selected-model/route writes now log platform audit events without secrets, platform audit logs support 7-day DTO query/filter/redaction, organization audit search is database-filtered, and V62 adds audit query indexes.
+- 2026-06-23T08:48:00+08:00: Fixed production-observed `/platform/audit/logs` initial-load failure by routing empty-keyword audit queries through a repository method without `LIKE :q`, avoiding PostgreSQL nullable parameter inference as `bytea`.
 
 ## Verification
 
@@ -55,6 +56,10 @@ updated_by: MANAGER-001
 - Browser desktop QA with Vite and mocked platform audit APIs -> **success** for `/platform/audit` structure, filters, redacted rows, and table fit (`tableWidth=926`, `wrapWidth=928`, no body horizontal overflow); screenshot capture timed out twice in the in-app browser after DOM/layout checks.
 - `git diff --check` after audit readiness changes -> **success**.
 - `check-assignment.py` after authorization expansion for audit/frontend/migration files -> **allowed**.
+- `dev-login.py` from the loaded `cc-aidev-guidelines-common` skill package for TASK-151 audit-query fix files -> **allowed**.
+- `mvn -q -Dmaven.repo.local=.m2 -Dtest=PlatformAuditServiceTest,PlatformGovernanceIntegrationTest test` in `backend/` -> **success**.
+- `git diff --check` after the audit query fix -> **success**.
+- `check-assignment.py` for the audit query fix files -> **allowed**.
 
 ## Changed Files
 
@@ -68,6 +73,7 @@ updated_by: MANAGER-001
 - `backend/src/main/java/com/codehouse/ciciassistant/ops/service/AuditService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/platform/domain/PlatformAuditLogRepository.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformAuditService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/platform/PlatformAuditServiceTest.java`
 - `backend/src/main/resources/db/migration/V62__audit_log_query_indexes.sql`
 - `backend/src/test/java/com/codehouse/ciciassistant/auth/RbacProductionReadinessIntegrationTest.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/model/PlatformModelProviderIntegrationTest.java`
@@ -75,6 +81,8 @@ updated_by: MANAGER-001
 - `frontend/src/platform/pages/PlatformAuditPage.tsx`
 - `frontend/src/styles.css`
 - `docs/specs/FEAT-064-rbac-production-readiness.md`
+- `.claw/assignments/TASK-151.yaml`
+- `.claw/issue-list.md`
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
