@@ -4,6 +4,7 @@ import "./agentcici-website.css";
 
 type Locale = "zh" | "en";
 type PageKey = "solutions" | "skillshub" | "pricing" | "docs" | "community";
+type DemoSubmitState = "idle" | "submitting" | "success" | "error";
 
 type NavItem = {
   key: PageKey;
@@ -60,11 +61,14 @@ type SiteCopy = {
     demoFields: {
       company: string;
       contact: string;
+      mobile: string;
       email: string;
       focus: string;
       note: string;
       submit: string;
+      submitting: string;
       submitted: string;
+      failed: string;
     };
   };
   solutions: {
@@ -162,11 +166,14 @@ const COPY: Record<Locale, SiteCopy> = {
       demoFields: {
         company: "公司名称",
         contact: "联系人",
-        email: "邮箱或手机号",
+        mobile: "联系电话",
+        email: "邮箱",
         focus: "重点场景",
         note: "补充说明",
         submit: "提交演示需求",
-        submitted: "已记录你的演示需求。下一步可以补充业务系统、知识库和部署模式。",
+        submitting: "正在提交",
+        submitted: "已记录你的演示需求，运营后台已生成预约记录。",
+        failed: "提交失败，请检查联系电话后重试。",
       },
     },
     solutions: {
@@ -409,11 +416,14 @@ const COPY: Record<Locale, SiteCopy> = {
       demoFields: {
         company: "Company",
         contact: "Contact",
+        mobile: "Phone",
         email: "Work email",
         focus: "Priority workflow",
         note: "Context",
         submit: "Submit demo request",
-        submitted: "Your request is noted. Add your systems, knowledge sources, and deployment preference for a sharper demo.",
+        submitting: "Submitting",
+        submitted: "Your request is recorded in the operations console.",
+        failed: "Submission failed. Check the phone number and try again.",
       },
     },
     solutions: {
@@ -614,7 +624,8 @@ export default function AgentCiciWebsite() {
   const copy = COPY[locale];
   const pageSeo = copy.seo[page];
   const [menuOpen, setMenuOpen] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [demoState, setDemoState] = useState<DemoSubmitState>("idle");
+  const [demoMessage, setDemoMessage] = useState("");
 
   useEffect(() => {
     document.title = pageSeo.title;
@@ -625,14 +636,49 @@ export default function AgentCiciWebsite() {
 
   useEffect(() => {
     setMenuOpen(false);
-    setSubmitted(false);
+    setDemoState("idle");
+    setDemoMessage("");
   }, [locale, page]);
 
   const activeNav = useMemo(() => copy.nav.find((item) => item.key === page) ?? copy.nav[0], [copy.nav, page]);
 
-  const submitDemo = (event: FormEvent<HTMLFormElement>) => {
+  const submitDemo = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmitted(true);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const readField = (name: string) => String(formData.get(name) ?? "").trim();
+    const focus = readField("focus");
+    const note = readField("note");
+
+    setDemoState("submitting");
+    setDemoMessage("");
+    try {
+      const response = await fetch("/api/autoservice/demo-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          site: locale === "en" ? "global" : "china",
+          locale: locale === "en" ? "en" : "zh-CN",
+          companyName: readField("company"),
+          contactName: readField("contact"),
+          mobile: readField("mobile"),
+          email: readField("email"),
+          roleTitle: "",
+          scenario: [focus, note].filter(Boolean).join(" / "),
+          sourcePath: location.pathname || copy.shared.homeHref,
+        }),
+      });
+      const body = (await response.json().catch(() => null)) as { success?: boolean; message?: string } | null;
+      if (!response.ok || body?.success === false) {
+        throw new Error(body?.message ?? copy.shared.demoFields.failed);
+      }
+      form.reset();
+      setDemoState("success");
+      setDemoMessage(copy.shared.demoFields.submitted);
+    } catch (error) {
+      setDemoState("error");
+      setDemoMessage(error instanceof Error ? error.message : copy.shared.demoFields.failed);
+    }
   };
 
   return (
@@ -689,7 +735,7 @@ export default function AgentCiciWebsite() {
       {page === "docs" ? <DocsPage copy={copy} /> : null}
       {page === "community" ? <CommunityPage copy={copy} /> : null}
 
-      <DemoSection copy={copy} submitted={submitted} onSubmit={submitDemo} />
+      <DemoSection copy={copy} demoState={demoState} message={demoMessage} onSubmit={submitDemo} />
 
       <footer className="acw-footer">
         <a className="acw-brand" href={copy.shared.homeHref} aria-label="AgentCiCi home">
@@ -722,17 +768,6 @@ function SolutionsPage({ copy }: { copy: SiteCopy }) {
         <div className="acw-hero__copy">
           <h1>{copy.solutions.heroTitle}</h1>
           <p>{copy.solutions.heroLead}</p>
-          <div className="acw-hero__actions">
-            <a className="acw-button acw-button--primary" href="#demo">
-              {copy.demoCta}
-            </a>
-            <a className="acw-button acw-button--secondary" href={copy.nav[1].href}>
-              SkillsHub
-            </a>
-            <a className="acw-button acw-button--secondary acw-button--login" href={copy.shared.loginHref}>
-              {copy.shared.loginLabel}
-            </a>
-          </div>
           <div className="acw-proof">
             {copy.solutions.heroPoints.map((point) => (
               <span key={point}>{point}</span>
@@ -1036,7 +1071,19 @@ function SectionHead({ title, intro }: { title: string; intro: string }) {
   );
 }
 
-function DemoSection({ copy, submitted, onSubmit }: { copy: SiteCopy; submitted: boolean; onSubmit: (event: FormEvent<HTMLFormElement>) => void }) {
+function DemoSection({
+  copy,
+  demoState,
+  message,
+  onSubmit,
+}: {
+  copy: SiteCopy;
+  demoState: DemoSubmitState;
+  message: string;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void | Promise<void>;
+}) {
+  const isSubmitting = demoState === "submitting";
+
   return (
     <section id="demo" className="acw-section acw-demo">
       <div className="acw-demo__copy">
@@ -1053,8 +1100,12 @@ function DemoSection({ copy, submitted, onSubmit }: { copy: SiteCopy; submitted:
           <input name="contact" autoComplete="name" required />
         </label>
         <label>
+          <span>{copy.shared.demoFields.mobile}</span>
+          <input name="mobile" autoComplete="tel" inputMode="tel" required />
+        </label>
+        <label>
           <span>{copy.shared.demoFields.email}</span>
-          <input name="email" autoComplete="email" required />
+          <input name="email" type="email" autoComplete="email" />
         </label>
         <label>
           <span>{copy.shared.demoFields.focus}</span>
@@ -1073,10 +1124,10 @@ function DemoSection({ copy, submitted, onSubmit }: { copy: SiteCopy; submitted:
           <span>{copy.shared.demoFields.note}</span>
           <textarea name="note" rows={4} />
         </label>
-        <button className="acw-button acw-button--primary" type="submit">
-          {copy.shared.demoFields.submit}
+        <button className="acw-button acw-button--primary" type="submit" disabled={isSubmitting}>
+          {isSubmitting ? copy.shared.demoFields.submitting : copy.shared.demoFields.submit}
         </button>
-        {submitted ? <p className="acw-demo__notice">{copy.shared.demoFields.submitted}</p> : null}
+        {message ? <p className={`acw-demo__notice acw-demo__notice--${demoState}`}>{message}</p> : null}
       </form>
     </section>
   );

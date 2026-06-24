@@ -8,7 +8,7 @@ branch: codex/TASK-144-agentcici-public-website-restructure
 pr_url: n/a
 spec_path: docs/specs/FEAT-061-agentcici-public-website-restructure.md
 assignment_path: .claw/assignments/TASK-144.yaml
-updated_at: 2026-05-30T09:41:53Z
+updated_at: 2026-06-24T03:40:00Z
 updated_by: MANAGER-001
 ---
 
@@ -23,12 +23,13 @@ updated_by: MANAGER-001
 - 新增或重写公开官网 React 组件与样式。
 - 重接公开官网路由。
 - 删除旧公开官网叙事入口：SalesMost AI Suite、AutoReachAI / FollowUpAI 主站矩阵、旧 AutoService 独立官网入口。
-- 保留预约演示 CTA。
+- 移除用户截图标注的首页 hero 下方 `预约演示 / SkillsHub / 登录` 三按钮组。
+- 保留全站预约演示入口，并让预约表单真实提交到运营后台预约记录。
 - 更新规格、任务状态和验证记录。
 
 ## Out Of Scope
 
-- 不修改认证后产品页、后台、平台控制台或后端业务接口。
+- 不修改认证后产品页、后台、平台控制台或后端业务接口；本次仅复用既有预约演示后端接口和运营后台列表。
 - 不实现真实 Community 发帖、Docs 文档搜索或 SkillsHub 在线交易。
 - 不新增移动端专项适配。
 
@@ -58,12 +59,26 @@ updated_by: MANAGER-001
   - `npm run build` in `frontend/` -> success; existing Vite large chunk warning remains.
   - In-app browser desktop check `http://127.0.0.1:5178/pricing` -> knowledge capacity, document processing, and related add-ons visible, console errors `0`; screenshot `output/playwright/task144-pricing-knowledge-zh.png`.
   - In-app browser desktop check `http://127.0.0.1:5178/global/pricing` -> English knowledge capacity and document processing visible, console errors `0`; screenshot `output/playwright/task144-pricing-knowledge-en.png`.
+- 2026-06-24T00:00:00Z: applying user feedback to remove the homepage hero CTA button group and wire the shared public demo form to the existing `/api/autoservice/demo-requests` endpoint so submitted data appears in the operations console appointment list.
+- 2026-06-24T03:08:00Z: validation for user feedback:
+  - `dev-login.py` for `MANAGER-001` / `TASK-144` covering public website frontend, spec, and task files -> **allowed**.
+  - `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - `mvn -q -Dtest=AutoServiceDemoRequestIntegrationTest test` in `backend/` -> **failed** on existing stale test credential: public submit returned `200` and created a request, but the test queried `/platform/autoservice/demo-requests` with an organization token and got expected platform-surface `403 需要平台账号权限`.
+  - Local real-backend browser validation with backend `mvn spring-boot:run -Dspring-boot.run.profiles=local` on `8080` and Vite on `5178` -> **success**.
+  - Playwright desktop checked `/`, `/solutions`, `/skill-hub`, `/pricing`, `/docs`, `/community`, `/global`, `/global/solutions`, `/global/skill-hub`, `/global/pricing`, `/global/docs`, and `/global/community`: each route has the shared demo form with company/contact/mobile/focus/submit fields, header demo link points to `#demo`, and Solutions hero CTA button count is `0`.
+  - Playwright submitted a real demo request from `/global/docs`; platform API and `/platform/website-leads` both found record `id=8`, status `NEW`, sourcePath `/global/docs`.
+  - Screenshots: `output/playwright/task144-demo-hero-buttons-removed.png`, `output/playwright/task144-demo-form-submit-success.png`, `output/playwright/task144-demo-record-platform.png`; final browser console errors `0`.
+- 2026-06-24T03:40:00Z: pre-merge/pre-release gates:
+  - `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+  - `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check.yml` -> **success**.
+  - `git diff --check` -> **success**.
 
 ## Changed Files
 
 - `docs/specs/FEAT-061-agentcici-public-website-restructure.md` defines the confirmed bilingual public website IA, Swan reference boundary, content requirements, design direction, and acceptance criteria.
 - `.claw/assignments/TASK-144.yaml` authorizes the public website rewrite for `MANAGER-001`.
-- `frontend/src/suite/AgentCiciWebsite.tsx` adds the new bilingual public website covering Solutions, SkillsHub, Pricing, Docs, Community, and demo booking.
+- `frontend/src/suite/AgentCiciWebsite.tsx` adds the new bilingual public website covering Solutions, SkillsHub, Pricing, Docs, Community, and demo booking; the shared demo form submits real records to the operations backend.
 - `frontend/src/suite/agentcici-website.css` adds the new public website visual system and desktop layout.
 - Pricing now uses production-facing standard, professional, and enterprise plan cards with monthly prices, initialized Credits, knowledge storage, document processing pages, builder seats, team-member capacity, concurrent agent runs, feature lists, Credits packs, knowledge capacity packs, document processing packs, concurrency/builder expansion, and launch services.
 - `frontend/src/App.tsx` wires the new public routes and redirects old `/suite/*`, `/pricing/global`, and `/autoservice/*` public routes to the new structure.

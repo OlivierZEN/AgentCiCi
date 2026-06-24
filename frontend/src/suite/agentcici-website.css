@@ -171,6 +171,12 @@
   transform: translateY(-1px);
 }
 
+.acw-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
 .acw-button--primary {
   background: linear-gradient(135deg, var(--acw-primary), oklch(60% 0.16 238));
   color: oklch(99% 0.004 260);
@@ -293,13 +299,6 @@
   font-size: 16px;
   line-height: 1.75;
   font-weight: 540;
-}
-
-.acw-hero__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 28px;
 }
 
 .acw-proof,
@@ -1037,6 +1036,10 @@
   color: var(--acw-primary-deep);
   font-size: 13px;
   font-weight: 760;
+}
+
+.acw-demo__notice--error {
+  color: oklch(50% 0.16 28);
 }
 
 .acw-footer {

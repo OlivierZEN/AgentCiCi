@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-23T02:12:00Z
+updated_at: 2026-06-24T03:08:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Production release 2.1.2 is deployed on ECS and verified; platform audit loads successfully."
-next_action: "Continue onechat.agentcici.com DNS NXDOMAIN follow-up."
+active_task: "TASK-144 public website demo booking feedback is implemented and locally verified on real backend."
+next_action: "Review/commit TASK-144 changes, then decide whether to merge and deploy the website update."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,13 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.1.2` from Git commit `06288ee6403b`.
+- Current branch: `codex/TASK-144-agentcici-public-website-restructure`; production is still running release `2.1.2` from Git commit `06288ee6403b`.
+- TASK-144 latest user feedback is implemented locally: homepage/Solutions hero no longer shows the screenshot-marked `预约演示 / SkillsHub / 登录` button group.
+- The shared public demo form now collects company, contact, mobile, optional email, focus, and note, then submits to the existing `/api/autoservice/demo-requests` endpoint.
+- Real-backend Playwright validation passed on 12 public routes (`/`, `/solutions`, `/skill-hub`, `/pricing`, `/docs`, `/community`, and `/global/*` equivalents): demo forms exist, header demo links target `#demo`, Solutions hero CTA button count is `0`, and final console errors are `0`.
+- A real demo request submitted from `/global/docs` was found in platform API and `/platform/website-leads` as record `id=8`, status `NEW`, sourcePath `/global/docs`; screenshots are `output/playwright/task144-demo-hero-buttons-removed.png`, `output/playwright/task144-demo-form-submit-success.png`, and `output/playwright/task144-demo-record-platform.png`.
+- Frontend build passed for TASK-144; the existing Vite large chunk warning remains.
+- Focused backend probe `AutoServiceDemoRequestIntegrationTest` currently fails because its platform-console query uses an organization token and receives expected `403 需要平台账号权限`; the runtime platform-account validation passed, so fixing that stale backend test should be a backend-authorized follow-up.
 - Production release `2.1.2` fixes `/api/platform/audit/logs` initial-load 500 by avoiding nullable keyword `LIKE` binding when `q` is empty.
 - Release `2.1.2` was built with explicit `./scripts/release-acr.sh --version 2.1.2` after the required dry-run; backend/frontend images and Git tag `2.1.2` were pushed.
 - ECS backup before the release is `/opt/cici/backups/20260623-100637-before-2.1.2`, containing env, PostgreSQL dump, KB files, and Qdrant volume snapshots.
