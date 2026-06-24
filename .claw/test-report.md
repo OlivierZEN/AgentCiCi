@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-24T03:40:00Z
+updated_at: 2026-06-24T03:24:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-24T03:40:00Z
+last_run_at: 2026-06-24T03:24:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,43 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-144 官网 hero CTA 移除与预约演示真实入库验证。
-- 命令：frontend build, backend compile, compose config, backend focused probe, local backend/frontend run, Playwright desktop route/form/backend-record validation.
+- 范围：TASK-144 官网 hero CTA 移除、预约演示真实入库、main 合并、2.1.3 线上发布与生产验收。
+- 命令：frontend build, backend compile, compose config, release dry-run, release build/push, ECS backup/deploy, production health/API/browser/demo-record validation.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- Production release 2.1.3 (2026-06-24T03:24:00Z):
+  - Commands:
+    - `identity`: manager `dev-login.py` for `MANAGER-001` covering TASK-144 frontend/spec/task/status/report/devops files -> **allowed**.
+    - `pre-release-frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `pre-release-backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `pre-release-compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check.yml` -> **success**.
+    - `pre-release-static-check`: `git diff --check` -> **success**.
+    - `merge-main`: committed TASK-144 fix as `2a9c5ea`, merged branch `codex/TASK-144-agentcici-public-website-restructure` into `main`, and pushed `origin/main` at `916ee5f48d7a` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` with production ACR/remote env -> **success**; version resolved to `2.1.3`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.3` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.3` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260624-111422-before-2.1.3` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-env`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.3` and `CICI_APP_VERSION=2.1.3` -> **success**.
+    - `production-deploy`: pulled backend/frontend `2.1.3`, locally tagged infra images as `2.1.3`, and ran compose `up -d` -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.3`, `imageTag=2.1.3`, `gitCommit=916ee5f48d7a`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `flyway-check`: production schema history latest rows show migrations through `68|agent runtime concurrency hardening|true`; no new migration was required -> **success**.
+    - `public-smoke`: `http://x.agentcici.com/` redirects to HTTPS and `https://x.agentcici.com/` returns `200`; direct `onechat.agentcici.com` still NXDOMAIN from the current resolver, while explicit production-IP HTTPS resolve returns `200` -> **success with DNS follow-up**.
+    - `org-api-smoke`: org login plus `/auth/me`, `/agents`, `/skills`, and `/me/agents/run-logs` -> **success**; org token `/api/platform/skills` -> expected `403`.
+    - `platform-api-smoke`: platform login plus `/auth/platform/me`, `/api/platform/skills`, `/api/platform/tools`, and `/api/platform/audit/logs?limit=100` -> **success**.
+    - `browser-production-public`: Playwright desktop on `https://x.agentcici.com/` confirmed hero CTA button count `0`, header demo link `#demo`, page title `AgentCiCi | 企业级智能体平台`, and console errors `0` -> **success**.
+    - `browser-production-demo-submit`: Playwright submitted a real demo request from `/global/docs`; platform appointment list found record `id=8`, company `线上发布验证 REL213-1782271046262`, status `NEW`, site `global`, locale `en`, sourcePath `/global/docs` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.3`, inspect digest `sha256:1efef95e23217006deae26760d0c006d1e6ba8faba4d09ea2d962cdeda2677d1`, linux/amd64 manifest digest `sha256:f8658ff9076c782b4b7024a55ad33497144eef6f5b27b68417812d6aea48cd11`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.3`, inspect digest `sha256:2d0f9025855c6d10bc164fa28bd03fac72f754c525d4441f317ca0556a1042ab`, linux/amd64 manifest digest `sha256:142ea9891921fcd881202438a21447f3b370fe5a345ae95e0d195f3d6344fef4`.
+  - Screenshots:
+    - `output/playwright/release-2.1.3-public-home.png`
+    - `output/playwright/release-2.1.3-demo-submit.png`
+    - `output/playwright/release-2.1.3-platform-website-leads.png`
+  - Notes:
+    - TASK-144 public demo booking fix is live on production version `2.1.3`.
+    - The stale focused integration test should still be updated in a backend-authorized task to log in through `/auth/platform/password/login` before querying `/platform/autoservice/demo-requests`.
+    - Direct `onechat.agentcici.com` DNS remains a separate known follow-up; `x.agentcici.com` and explicit production-IP vhost checks are healthy.
 
 - TASK-144 官网预约演示修正 (2026-06-24T03:08:00Z):
   - Commands:

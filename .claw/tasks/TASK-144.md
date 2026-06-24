@@ -3,12 +3,12 @@ kind: task-status
 task_id: TASK-144
 assignee: MANAGER-001
 owner_role: frontend-agent
-status: in_progress
+status: done
 branch: codex/TASK-144-agentcici-public-website-restructure
 pr_url: n/a
 spec_path: docs/specs/FEAT-061-agentcici-public-website-restructure.md
 assignment_path: .claw/assignments/TASK-144.yaml
-updated_at: 2026-06-24T03:40:00Z
+updated_at: 2026-06-24T03:24:00Z
 updated_by: MANAGER-001
 ---
 
@@ -73,6 +73,17 @@ updated_by: MANAGER-001
   - `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
   - `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check.yml` -> **success**.
   - `git diff --check` -> **success**.
+- 2026-06-24T03:24:00Z: merged and released to production as `2.1.3`:
+  - Branch `codex/TASK-144-agentcici-public-website-restructure` committed as `2a9c5ea`, merged into `main`, and pushed to `origin/main`; production release commit is `916ee5f48d7a`.
+  - Release used `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.3`; Git tag `2.1.3` and backend/frontend `2.1.3` plus `latest` images were pushed.
+  - Production backup created at `/opt/cici/backups/20260624-111422-before-2.1.3` with env, PostgreSQL dump, KB files, and Qdrant archive.
+  - ECS `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.3` and `CICI_APP_VERSION=2.1.3`; `/system/version` returns `version=2.1.3`, `imageTag=2.1.3`, `gitCommit=916ee5f48d7a`.
+  - Six production compose services are healthy; backend `/actuator/health` returns `UP`; latest Flyway rows remain applied through version `68`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returns `200`; `http://x.agentcici.com/` redirects to HTTPS; direct `onechat.agentcici.com` DNS remains NXDOMAIN from the current resolver, while explicit production-IP resolve returns `200`.
+  - API smoke: org login/core org APIs passed; platform login, platform me, skills, tools, and audit logs passed; org token against platform skills still returns expected `403`.
+  - Production Playwright desktop verification on `https://x.agentcici.com/` confirmed Solutions hero CTA button count `0`, header demo link to `#demo`, and no browser console errors.
+  - Production Playwright submitted a real demo request from `/global/docs`; platform appointment list found record `id=8`, company `线上发布验证 REL213-1782271046262`, status `NEW`, site `global`, locale `en`, sourcePath `/global/docs`.
+  - Screenshots: `output/playwright/release-2.1.3-public-home.png`, `output/playwright/release-2.1.3-demo-submit.png`, `output/playwright/release-2.1.3-platform-website-leads.png`.
 
 ## Changed Files
 
@@ -86,6 +97,7 @@ updated_by: MANAGER-001
 
 ## Handoff
 
-- Assigned branch: `codex/TASK-144-agentcici-public-website-restructure`.
+- Assigned branch: `codex/TASK-144-agentcici-public-website-restructure`; released to production from `main` in version `2.1.3`.
 - Shape confirmed by user on 2026-05-30.
-- Public website is restructured and locally verified on desktop. The latest pass addresses the oversized typography, odd hero image, grid background, excessive frame lines, weak color, design-sketch feel, abrupt pure-black blocks, high-contrast dark surfaces, uncoordinated gold/green/orange palette, unclear hero command copy, AI-flavored section eyebrow labels, and over-complicated private-deployment Pricing content. `SkillsHub` uses `/skill-hub` route to avoid the existing `/skills` API proxy prefix.
+- Public website is restructured, locally verified on desktop, merged to `main`, and deployed. The latest pass removes the screenshot-marked homepage hero button group while preserving header demo access, and all checked public pages submit real appointment records to the operations console. `SkillsHub` uses `/skill-hub` route to avoid the existing `/skills` API proxy prefix.
+- Follow-up: update the stale backend focused integration test so platform appointment-list assertions log in through `/auth/platform/password/login` instead of using an organization token.

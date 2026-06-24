@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-23T02:12:00Z
+updated_at: 2026-06-24T03:24:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-158 - Agent runtime concurrency hardening
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-068-agent-runtime-concurrency-hardening.md`
 - task_status_path: `.claw/tasks/TASK-158.md`
 - assignment_path: `.claw/assignments/TASK-158.yaml`
 - blocked_by: `none`
-- next_action: Push local `main` to `origin/main`; branch merge, main integration gates, and frontend build passed locally.
+- next_action: Included in production release `2.1.3`; monitor runtime concurrency behavior with normal production traffic.
 
 ### TASK-156 - Agent Builder production readiness closure
 
@@ -171,14 +171,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-144 - AgentCiCi public website restructure
 
-- status: `review`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-061-agentcici-public-website-restructure.md`
 - task_status_path: `.claw/tasks/TASK-144.md`
 - assignment_path: `.claw/assignments/TASK-144.yaml`
 - blocked_by: `none`
-- next_action: Included in the local `main` integration merge; rerun frontend build and desktop smoke before marking done.
+- next_action: Released to production in `2.1.3`; monitor website demo booking records.
 
 ### TASK-143 - Billing editions configurable in platform operations
 

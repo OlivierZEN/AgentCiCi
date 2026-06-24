@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-06-23T02:12:00Z
+updated_at: 2026-06-24T03:24:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.3 public demo booking release on 2026-06-24:
+  - Git commit: `916ee5f48d7a` on `main`; annotated tag `2.1.3` was pushed to origin.
+  - Scope: TASK-144 public website follow-up, removing the screenshot-marked homepage hero CTA button group and wiring every public demo form to the real operations appointment records.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.3`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.3` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.3`, inspect digest `sha256:1efef95e23217006deae26760d0c006d1e6ba8faba4d09ea2d962cdeda2677d1`, linux/amd64 manifest digest `sha256:f8658ff9076c782b4b7024a55ad33497144eef6f5b27b68417812d6aea48cd11`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.3`, inspect digest `sha256:2d0f9025855c6d10bc164fa28bd03fac72f754c525d4441f317ca0556a1042ab`, linux/amd64 manifest digest `sha256:142ea9891921fcd881202438a21447f3b370fe5a345ae95e0d195f3d6344fef4`.
+  - Backup directory: `/opt/cici/backups/20260624-111422-before-2.1.3`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.3` and `CICI_APP_VERSION=2.1.3`.
+  - Deploy note: ECS infra images were locally tagged as `2.1.3` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.3`, `imageTag=2.1.3`, and `gitCommit=916ee5f48d7a`; Flyway latest migration remains `68|agent runtime concurrency hardening|true`; frontend Nginx config test passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200 and the HTTP endpoint redirected to HTTPS; `onechat.agentcici.com` direct DNS still returned NXDOMAIN, while explicit production-IP HTTPS resolve returned HTTP 200.
+  - API/browser smoke: org login and core org APIs passed; platform login, skills, tools, and `/api/platform/audit/logs?limit=100` passed; browser production homepage showed zero hero CTA buttons and header demo access; production demo submission created operations appointment record `id=8`, company `线上发布验证 REL213-1782271046262`, sourcePath `/global/docs`.
 
 - 2.1.2 platform audit hotfix on 2026-06-23:
   - Git commit: `06288ee6403b` on `main`; annotated tag `2.1.2` was pushed to origin.
