@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-23T02:12:00Z
+updated_at: 2026-06-24T03:40:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-23T02:12:00Z
+last_run_at: 2026-06-24T03:40:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,32 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：Production release `2.1.2` for TASK-151 platform audit query fix.
-- 命令：merge, focused backend/frontend gates, release dry-run, ACR build/push, ECS backup/deploy, production smoke, browser validation.
+- 范围：TASK-144 官网 hero CTA 移除与预约演示真实入库验证。
+- 命令：frontend build, backend compile, compose config, backend focused probe, local backend/frontend run, Playwright desktop route/form/backend-record validation.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-144 官网预约演示修正 (2026-06-24T03:08:00Z):
+  - Commands:
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-144` covering public website frontend, spec, and task files -> **allowed**.
+    - `identity-status`: manager `dev-login.py` for `MANAGER-001` covering `.claw/test-report.md` and `.claw/current-status.md` -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check.yml` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `backend-focused-probe`: `mvn -q -Dtest=AutoServiceDemoRequestIntegrationTest test` in `backend/` -> **failed** on existing stale test credential: public submit returned `200` and created a request, but the test used an organization token against the platform endpoint and got expected `403 需要平台账号权限`.
+    - `local-backend`: `mvn spring-boot:run -Dspring-boot.run.profiles=local` in `backend/` -> **success** on port `8080`; local Flyway schema migrated to version `68`.
+    - `local-frontend`: `npm run dev -- --host 127.0.0.1 --port 5178` in `frontend/` -> **success**.
+    - `browser-public-routes`: Playwright desktop `1440x1000` checked `/`, `/solutions`, `/skill-hub`, `/pricing`, `/docs`, `/community`, `/global`, `/global/solutions`, `/global/skill-hub`, `/global/pricing`, `/global/docs`, and `/global/community` -> **success**. Each route has the shared demo form with company/contact/mobile/focus/submit fields; header demo link points to `#demo`; Solutions hero CTA button count is `0`; final console errors `0`.
+    - `browser-real-demo-submit`: Playwright submitted a real request from `/global/docs`; platform API and `/platform/website-leads` found record `id=8`, company `任务144预约验证 TASK144-1782270411895`, status `NEW`, sourcePath `/global/docs` -> **success**.
+  - Screenshots:
+    - `output/playwright/task144-demo-hero-buttons-removed.png`
+    - `output/playwright/task144-demo-form-submit-success.png`
+    - `output/playwright/task144-demo-record-platform.png`
+  - Notes:
+    - Frontend now uses the existing `/api/autoservice/demo-requests` public endpoint and the existing operations console list; no backend production logic change was needed.
+    - The stale focused integration test should be updated in a backend-authorized task to log in through `/auth/platform/password/login` before querying `/platform/autoservice/demo-requests`.
 
 - Production release 2.1.2 (2026-06-23T02:12:00Z):
   - Commands:

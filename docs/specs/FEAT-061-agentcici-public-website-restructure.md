@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-144
 related_decisions: FEAT-025, FEAT-037, FEAT-039
 related_issues: none
-updated_at: 2026-05-30T09:41:53Z
+updated_at: 2026-06-24T00:00:00Z
 updated_by: MANAGER-001
 ---
 
@@ -25,7 +25,7 @@ updated_by: MANAGER-001
 - `Docs`
 - `Community`
 
-`Solutions` 是主页，重点介绍系统内置功能和企业智能体落地场景：AutoService、AI 听记、客户洞察等。保留预约演示入口。
+`Solutions` 是主页，重点介绍系统内置功能和企业智能体落地场景：AutoService、AI 听记、客户洞察等。保留全站预约演示入口和共用预约表单。
 
 ## Reference Boundary
 
@@ -34,7 +34,7 @@ updated_by: MANAGER-001
 - 以用例和角色任务组织信息，而不是只堆功能列表。
 - 把智能体表达成可理解的工作单元。
 - 用 Before / After 或流程差异解释价值。
-- 展示集成生态、执行链路和轻量 CTA。
+- 展示集成生态、执行链路和轻量 CTA。2026-06-24 用户反馈要求移除首页 hero 文案下方的 `预约演示 / SkillsHub / 登录` 三按钮组，避免首屏 CTA 堆叠；站点头部、价格页和底部预约表单仍保留预约入口。
 
 不得照抄 Swan 的代码、文案、角色命名、视觉资产、图形素材、客户内容或页面结构细节。
 
@@ -80,7 +80,7 @@ updated_by: MANAGER-001
   - 可扩展补充：OpenAPI 智能体、知识库问答、工单/CRM 协同。
 - Enterprise runtime：权限、审计、评测、发布、Open API、成本/工作量计量。
 - Before / After：从人工检索、手工整理、分散系统到智能体可执行闭环。
-- 保留预约演示表单或 CTA。
+- 保留全站共用预约演示表单。表单必须真实提交到 `/api/autoservice/demo-requests`，生成运营后台 `/platform/website-leads` 可查询的预约记录。
 
 ### SkillsHub
 
@@ -161,7 +161,9 @@ updated_by: MANAGER-001
 - 旧官网主叙事被新 AgentCiCi 平台叙事替换。
 - `Solutions` 作为主页并包含 AutoService、AI 听记、客户洞察。
 - `SkillsHub`、`Pricing`、`Docs`、`Community` 均有独立页面与导航入口。
-- 预约演示 CTA 保留，中文和英文都可见。
+- 首页 hero 文案下方不再展示 `预约演示 / SkillsHub / 登录` 三按钮组。
+- 预约演示入口保留在站点头部、价格页和全站共用 demo 区域，中文和英文都可见。
+- 预约演示表单提交后必须真实写入 `autoservice_demo_request`，并可在运营后台 `网站注册与预约演示` 列表中查询。
 - 前端构建通过。
 - 使用真实浏览器完成桌面端截图检查，无明显文字重叠、导航错位或控制台错误。
 
@@ -169,3 +171,4 @@ updated_by: MANAGER-001
 
 - 本规格由用户在 2026-05-30 明确确认 shape 后创建。
 - 本次只重构公开官网，不修改认证后产品页 `/admin/*`、`/platform/*`、助手工作台或后端业务逻辑。
+- 2026-06-24 用户补充反馈：移除首页 hero 下方截图标注的三按钮组，并检查所有公开网站页面的预约演示能力，确保数据真实进入运营后台预约记录。
