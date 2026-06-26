@@ -80,6 +80,7 @@ class ChatOrchestratorServiceModelIdentityTest {
         assertThat(promptBlock)
                 .contains("只判断是否必须继续调用工具")
                 .contains("READY_TO_FINALIZE")
+                .contains("email_get_message")
                 .contains("不要为了润色、总结、排序或格式化而继续请求工具");
     }
 
@@ -95,6 +96,38 @@ class ChatOrchestratorServiceModelIdentityTest {
                 )));
 
         assertThat(skip).isTrue();
+    }
+
+    @Test
+    void shouldKeepPlanningStopForSingleEmailSearchWhenUserAskedForBody() {
+        boolean skip = ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "和利时环境大数据表排查分析 看下这封邮件内容",
+                List.of(new ToolCallInfo("call_1", "email_search", "{\"keyword\":\"和利时环境大数据表排查分析\"}")),
+                List.of(Map.of(
+                        "role", "tool",
+                        "tool_call_id", "call_1",
+                        "content", """
+                                🔎 在最近 50 封邮件中匹配到 1 封 (keyword='和利时环境大数据表排查分析', from='')：
+                                - [2026-06-24 07:25] yilei@cloudcc.com · 回复: 回复: 和利时环境大数据表排查分析 · id=2026062415253318283815@cloudcc.com
+                                """
+                )));
+
+        assertThat(skip).isFalse();
+    }
+
+    @Test
+    void shouldExtractSingleEmailMessageIdFromSearchResult() {
+        assertThat(ChatOrchestratorService.extractSingleEmailSearchMessageId("""
+                🔎 在最近 50 封邮件中匹配到 1 封：
+                - [2026-06-24 07:25] yilei@cloudcc.com · 主题 · id=2026062415253318283815@cloudcc.com。
+                """))
+                .contains("2026062415253318283815@cloudcc.com");
+
+        assertThat(ChatOrchestratorService.extractSingleEmailSearchMessageId("""
+                - first · id=first@cloudcc.com
+                - second · id=second@cloudcc.com
+                """))
+                .isEmpty();
     }
 
     @Test

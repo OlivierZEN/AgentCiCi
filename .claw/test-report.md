@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T04:50:00Z
+updated_at: 2026-06-26T06:22:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T04:50:00Z
+last_run_at: 2026-06-26T06:22:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-159 生产 `2.1.3` 对话报错热修、本地验证、main 合并、2.1.4 线上发布与生产验收。
-- 命令：production log/db inspection, focused Spring/Flyway integration tests, backend compile, frontend build, compose config, release dry-run, ECS-local hotfix deploy, production health/Flyway/chat smoke.
+- 范围：TASK-161 对话邮件正文展示与语音输入识别修复。
+- 命令：task identity/assignment checks, focused backend/frontend tests, backend compile, frontend build, static diff check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-161 mail body and voice input fix (2026-06-26T06:10:00Z):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` covering TASK-161 spec/task/assignment/status/report files -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-161` covering backend orchestrator, backend test, frontend ASR hook/test, spec, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-161 changed files -> **allowed**.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` in `backend/` -> **success**.
+    - `frontend-focused`: `npm run test -- useAsrVoiceInput.test.ts` in `frontend/` -> **success**.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - `email_search` single-hit results no longer trigger planning-stop skip when the user asks to view email body/content/detail; planning prompt now requires `email_get_message` if only `messageId` is available.
+    - `useAsrVoiceInput` now normalizes common ASR text fields and waits 1.5 seconds before closing the websocket after stop, reducing dropped final transcript events.
 
 - TASK-159 chat session state tenant primary key hotfix (2026-06-26T04:22:00Z):
   - Commands:
