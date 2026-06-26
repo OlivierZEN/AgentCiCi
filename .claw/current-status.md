@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-26T06:22:00Z
+updated_at: 2026-06-26T06:02:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-161 mail body display and voice-input recognition fix is locally validated on branch codex/TASK-161-mail-voice-dialog-fix."
-next_action: "Review, merge TASK-161 to main, then publish a production release if approved."
+active_task: "TASK-161 dialog mail-body and voice-input fix is deployed in production release 2.1.5."
+next_action: "Monitor production dialog behavior; verify with a real email-body and microphone session when a suitable account/browser is available."
 read_next:
   goals: false
   decisions: false
@@ -22,10 +22,13 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running hotfix release `2.1.4` from Git commit `d40d53d0a228`.
-- TASK-161 is locally validated on `codex/TASK-161-mail-voice-dialog-fix`: user reported that asking to view a matched email did not display body content, and voice input ended with `未识别到有效语音内容`.
+- Current branch: `main`; production is running release `2.1.5` from Git commit `947e47ddbe5a`.
+- TASK-161 is deployed in `2.1.5`: user reported that asking to view a matched email did not display body content, and voice input ended with `未识别到有效语音内容`.
 - TASK-161 fixes: chat tool-planning no longer treats a single successful `email_search` as complete when the user asked for email body/content/detail; the stop prompt explicitly requires `email_get_message` when only `messageId` is available; ASR frontend now normalizes common transcript fields and waits 1.5s before closing the websocket after stop.
 - TASK-161 verification passed: task-scoped identity/assignment checks, `ChatOrchestratorServiceModelIdentityTest`, `useAsrVoiceInput.test.ts`, backend compile, frontend build, and `git diff --check`.
+- Release `2.1.5` was built and pushed with `./scripts/release-acr.sh --version 2.1.5`; Git tag `2.1.5`, backend image, frontend image, `CICI_IMAGE_TAG`, and `/system/version` all use `2.1.5`.
+- ECS backup before the release is `/opt/cici/backups/20260626-135931-before-2.1.5`, containing env, PostgreSQL dump, KB files, and Qdrant volume snapshots.
+- Six production Compose containers are healthy on tag `2.1.5`; backend `/actuator/health` is `UP`, `/system/version` returns `version=2.1.5`, `imageTag=2.1.5`, `gitCommit=947e47ddbe5a`; frontend Nginx config passed; public `https://x.agentcici.com/` returned `200`; `/auth/me` returned expected `401`; recent backend error scan is empty.
 - TASK-159 is deployed: production `2.1.3` chat failed at `2026-06-26 12:12:12 CST` with `duplicate key value violates unique constraint "chat_session_state_pkey"` for `session_id=workbench:cici-system`.
 - Root cause was table-model drift: application reads session state by `session_id + org_id`, but `chat_session_state` primary key was only `session_id`; the same workbench session id is reused across orgs.
 - Hotfix `2.1.4` applied V69, changing `chat_session_state` primary key to `(session_id, org_id)`, and updated JPA to a composite id.

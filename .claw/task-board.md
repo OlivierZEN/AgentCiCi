@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-161 - 对话邮件正文展示与语音输入识别修复
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-071-mail-body-and-voice-input-fix.md`
 - task_status_path: `.claw/tasks/TASK-161.md`
 - assignment_path: `.claw/assignments/TASK-161.yaml`
 - blocked_by: `none`
-- next_action: Review, merge to main, and release after focused backend/frontend validation passed.
+- next_action: Done in production release `2.1.5`; monitor dialog mail-body and voice-input behavior.
 
 ### TASK-159 - Chat session state tenant primary key hotfix
 

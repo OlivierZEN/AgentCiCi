@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-161
-status: review
-updated_at: 2026-06-26T06:22:00Z
+status: done
+updated_at: 2026-06-26T06:02:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -35,6 +35,12 @@ spec_path: docs/specs/FEAT-071-mail-body-and-voice-input-fix.md
 - `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
 - `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
 - `git diff --check` -> **success**.
+- Merged `codex/TASK-161-mail-voice-dialog-fix` into `main` and pushed `origin/main` at `947e47ddbe5a` -> **success**.
+- `./scripts/release-acr.sh --dry-run` -> **success**, next version `2.1.5`.
+- `./scripts/release-acr.sh --version 2.1.5` -> **success**; backend/frontend images and Git tag `2.1.5` were pushed.
+- Production backup created at `/opt/cici/backups/20260626-135931-before-2.1.5` -> **success**.
+- Production deploy updated `/opt/cici/deploy/acr.env` to `CICI_IMAGE_TAG=2.1.5` and `CICI_APP_VERSION=2.1.5`, pulled backend/frontend images, tagged infra images locally as `2.1.5`, and restarted compose -> **success**.
+- Production verification passed: six services healthy, backend `/actuator/health` `UP`, `/system/version` returns `version=2.1.5`, frontend Nginx config passes, `https://x.agentcici.com/` returns `200`, `http://x.agentcici.com/` redirects to HTTPS, `/auth/me` returns expected `401`, and recent backend error scan is empty.
 
 ## Changed Files
 
@@ -52,4 +58,4 @@ spec_path: docs/specs/FEAT-071-mail-body-and-voice-input-fix.md
 ## Handoff
 
 - Branch: `codex/TASK-161-mail-voice-dialog-fix`.
-- 本地实现与 focused validation 已完成，等待合并和发布。
+- Merged to `main`, pushed to origin, and released to production as `2.1.5`.

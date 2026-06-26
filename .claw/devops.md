@@ -17,6 +17,18 @@ status: active
 
 ## Latest Release
 
+- 2.1.5 dialog mail-body and voice-input hotfix on 2026-06-26:
+  - Git commit: `947e47ddbe5a` on `main`; annotated tag `2.1.5` was pushed to origin.
+  - Scope: TASK-161 production dialog bug where email body requests stopped at `email_search` results and voice input could report `未识别到有效语音内容` when frontend ASR parsing or stop finalization missed returned text.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.5`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.5` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.5`, inspect digest `sha256:32acbd0013928896c6afbe6596b1a502976d7c9ba4e9c44216f6bc9c4bec908f`, linux/amd64 manifest digest `sha256:fd0b7c0b0dedb58bc9a47a184b012c2a6bde8065d72226087176a6da57a0c02f`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.5`, inspect digest `sha256:ee40b1c309df2e7764845de474eb7f50a7d5b432e5faaee4b720ff183c58f6f7`, linux/amd64 manifest digest `sha256:1281dcc7825334deabddc2a6559d976a2e0e196795619806ed0962e0c22d7a6a`.
+  - Backup directory: `/opt/cici/backups/20260626-135931-before-2.1.5`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.5` and `CICI_APP_VERSION=2.1.5`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.5` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.5`, `imageTag=2.1.5`, and `gitCommit=947e47ddbe5a`; frontend Nginx config test passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200, HTTP endpoint redirected to HTTPS, and unauthenticated `/auth/me` returned expected HTTP 401.
+
 - 2.1.4 chat session state tenant-key hotfix on 2026-06-26:
   - Git commit: `d40d53d0a228` on `main`; annotated tag `2.1.4` was pushed to origin.
   - Scope: TASK-159 production chat failure where `chat_session_state` had a single-column `session_id` primary key while application access is tenant-scoped by `session_id + org_id`.

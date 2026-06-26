@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T06:22:00Z
+updated_at: 2026-06-26T06:02:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T06:22:00Z
+last_run_at: 2026-06-26T06:02:00Z
 last_run_status: success
 ---
 
@@ -13,8 +13,8 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-161 对话邮件正文展示与语音输入识别修复。
-- 命令：task identity/assignment checks, focused backend/frontend tests, backend compile, frontend build, static diff check.
+- 范围：TASK-161 对话邮件正文展示与语音输入识别修复、本地验证、main 合并、2.1.5 线上发布与生产验收。
+- 命令：task identity/assignment checks, focused backend/frontend tests, backend compile, frontend build, static diff check, release dry-run, ACR image push, production backup/deploy, production health/public smoke.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -29,9 +29,20 @@ last_run_status: success
     - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
     - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
     - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: committed TASK-161 as `b716155`, merged into `main`, and pushed `origin/main` at `947e47ddbe5a` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.5`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.5` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.5` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260626-135931-before-2.1.5` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.5` and `CICI_APP_VERSION=2.1.5`; backend/frontend `2.1.5` images pulled; infra images locally tagged as `2.1.5`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.5`, `imageTag=2.1.5`, `gitCommit=947e47ddbe5a`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; `http://x.agentcici.com/` redirected to HTTPS; unauthenticated `/auth/me` returned expected `401` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.5`, inspect digest `sha256:32acbd0013928896c6afbe6596b1a502976d7c9ba4e9c44216f6bc9c4bec908f`, linux/amd64 manifest digest `sha256:fd0b7c0b0dedb58bc9a47a184b012c2a6bde8065d72226087176a6da57a0c02f`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.5`, inspect digest `sha256:ee40b1c309df2e7764845de474eb7f50a7d5b432e5faaee4b720ff183c58f6f7`, linux/amd64 manifest digest `sha256:1281dcc7825334deabddc2a6559d976a2e0e196795619806ed0962e0c22d7a6a`.
   - Notes:
     - `email_search` single-hit results no longer trigger planning-stop skip when the user asks to view email body/content/detail; planning prompt now requires `email_get_message` if only `messageId` is available.
     - `useAsrVoiceInput` now normalizes common ASR text fields and waits 1.5 seconds before closing the websocket after stop, reducing dropped final transcript events.
+    - TASK-161 is live in production release `2.1.5`.
 
 - TASK-159 chat session state tenant primary key hotfix (2026-06-26T04:22:00Z):
   - Commands:
