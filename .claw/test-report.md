@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T06:36:00Z
+updated_at: 2026-06-26T09:18:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T06:36:00Z
+last_run_at: 2026-06-26T09:18:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,24 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-162 连续确认后的邮件正文工具续执行、本地验证、main 合并、2.1.6 线上发布与生产验收。
-- 命令：task identity/assignment checks, focused backend test, backend compile, static diff check, release dry-run, ACR image push, production backup/deploy, production health/public smoke.
+- 范围：TASK-163 邮件 ID 刷新重试与语音后续可用性修复。
+- 命令：任务级门禁、focused backend test、frontend production build。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-163 email id refresh and voice follow-up fix (2026-06-26T09:15:00Z):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` covering TASK-163 spec/task/assignment/status/report files -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-163` covering backend orchestrator, session state, backend test, frontend AssistantApp, spec, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-163 intended changed files -> **allowed**.
+    - `backend-focused`: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest` in `backend/` -> **success**, 25 tests passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Notes:
+    - Pending email state now keeps subject/from with the short-lived POP3 `messageId`.
+    - A stale `email_get_message` result no longer clears pending email state; confirmation turns can refresh `email_search` and retry `email_get_message` in the same model turn.
+    - Chat loading is released after stream completion before history refresh, with a 180s stale-loading fallback for voice input usability.
+    - Production release is pending.
 
 - TASK-162 continuous email-body tool execution fix (2026-06-26T06:25:00Z):
   - Commands:

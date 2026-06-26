@@ -22,11 +22,15 @@ public class ChatSessionStateService {
     private static final String ACTIVE_SKILL_CODE_KEY = "active_skill_code";
     private static final String PENDING_EMAIL_MESSAGE_ID_KEY = "pending_email_message_id";
     private static final String PENDING_EMAIL_ACTION_KEY = "pending_email_action";
+    private static final String PENDING_EMAIL_FROM_KEY = "pending_email_from";
+    private static final String PENDING_EMAIL_SUBJECT_KEY = "pending_email_subject";
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private static final int MAX_SUMMARY_LENGTH = 480;
     private static final Pattern CAMPAIGN_NAME_PATTERN = Pattern.compile("([\\p{IsHan}A-Za-z0-9_-]{2,30})(活动|campaign)");
     private static final Pattern EMAIL_SEARCH_MESSAGE_ID_PATTERN = Pattern.compile("(?m)\\bid=([^\\s\\r\\n]+)");
+    private static final Pattern EMAIL_SEARCH_ITEM_PATTERN = Pattern.compile(
+            "(?m)^-\\s*\\[[^\\]]*]\\s*(.*?)\\s*·\\s*(.*?)\\s*·\\s*id=([^\\s\\r\\n]+)");
 
     private final ChatSessionStateRepository repository;
     private final ObjectMapper objectMapper;
@@ -114,8 +118,16 @@ public class ChatSessionStateService {
         }
         String pendingEmailMessageId = valueAsText(payload.get(PENDING_EMAIL_MESSAGE_ID_KEY));
         String pendingEmailAction = valueAsText(payload.get(PENDING_EMAIL_ACTION_KEY));
+        String pendingEmailFrom = valueAsText(payload.get(PENDING_EMAIL_FROM_KEY));
+        String pendingEmailSubject = valueAsText(payload.get(PENDING_EMAIL_SUBJECT_KEY));
         if (!pendingEmailMessageId.isBlank()) {
             block.append("- 待处理邮件 messageId：").append(pendingEmailMessageId).append("\n");
+            if (!pendingEmailFrom.isBlank()) {
+                block.append("- 待处理邮件发件人：").append(pendingEmailFrom).append("\n");
+            }
+            if (!pendingEmailSubject.isBlank()) {
+                block.append("- 待处理邮件主题：").append(pendingEmailSubject).append("\n");
+            }
             block.append("- 待处理邮件动作：")
                     .append(pendingEmailAction.isBlank() ? "读取正文" : pendingEmailAction)
                     .append("\n");
@@ -167,17 +179,29 @@ public class ChatSessionStateService {
             removeDistinct(state, "missing_fields", "target_segment");
         }
         if ("email_search".equals(normalizedTool)) {
-            extractSingleEmailSearchMessageId(toolResult).ifPresent(messageId -> {
-                state.put(PENDING_EMAIL_MESSAGE_ID_KEY, messageId);
+            extractSingleEmailSearchCandidate(toolResult).ifPresent(candidate -> {
+                state.put(PENDING_EMAIL_MESSAGE_ID_KEY, candidate.messageId());
                 state.put(PENDING_EMAIL_ACTION_KEY, "read_body");
+                if (!candidate.from().isBlank()) {
+                    state.put(PENDING_EMAIL_FROM_KEY, candidate.from());
+                }
+                if (!candidate.subject().isBlank()) {
+                    state.put(PENDING_EMAIL_SUBJECT_KEY, candidate.subject());
+                }
                 state.put("next_action", "call email_get_message");
             });
             appendDistinct(state, "confirmed_actions", "inspect_email");
         } else if ("email_get_message".equals(normalizedTool)) {
-            state.remove(PENDING_EMAIL_MESSAGE_ID_KEY);
-            state.remove(PENDING_EMAIL_ACTION_KEY);
-            appendDistinct(state, "confirmed_actions", "inspect_email_body");
-            state.put("next_action", "summarize_email_body");
+            if (looksEmailGetMessageMiss(toolResult)) {
+                state.put("next_action", "refresh email_search then call email_get_message");
+            } else {
+                state.remove(PENDING_EMAIL_MESSAGE_ID_KEY);
+                state.remove(PENDING_EMAIL_ACTION_KEY);
+                state.remove(PENDING_EMAIL_FROM_KEY);
+                state.remove(PENDING_EMAIL_SUBJECT_KEY);
+                appendDistinct(state, "confirmed_actions", "inspect_email_body");
+                state.put("next_action", "summarize_email_body");
+            }
         } else if ("email_send".equals(normalizedTool) || "email_reply".equals(normalizedTool)) {
             appendDistinct(state, "confirmed_actions", "send_email");
             removeDistinct(state, "deferred_actions", "hold_action");
@@ -185,6 +209,31 @@ public class ChatSessionStateService {
         }
         updateMissingFields(state);
         upsert(orgId, sessionId, agentId, state, deriveSummary(state));
+    }
+
+    private record EmailSearchCandidate(String messageId, String from, String subject) {}
+
+    private static Optional<EmailSearchCandidate> extractSingleEmailSearchCandidate(String result) {
+        String text = result == null ? "" : result;
+        if (text.isBlank()) {
+            return Optional.empty();
+        }
+        List<EmailSearchCandidate> candidates = new ArrayList<>();
+        Matcher itemMatcher = EMAIL_SEARCH_ITEM_PATTERN.matcher(text);
+        while (itemMatcher.find()) {
+            String id = stripTrailingEmailIdPunctuation(itemMatcher.group(3));
+            if (!id.isBlank() && candidates.stream().noneMatch(candidate -> candidate.messageId().equals(id))) {
+                candidates.add(new EmailSearchCandidate(
+                        id,
+                        itemMatcher.group(1) == null ? "" : itemMatcher.group(1).trim(),
+                        itemMatcher.group(2) == null ? "" : itemMatcher.group(2).trim()));
+            }
+        }
+        if (candidates.size() == 1) {
+            return Optional.of(candidates.get(0));
+        }
+        return extractSingleEmailSearchMessageId(text)
+                .map(id -> new EmailSearchCandidate(id, "", ""));
     }
 
     private static Optional<String> extractSingleEmailSearchMessageId(String result) {
@@ -201,6 +250,12 @@ public class ChatSessionStateService {
             }
         }
         return ids.size() == 1 ? Optional.of(ids.get(0)) : Optional.empty();
+    }
+
+    private static boolean looksEmailGetMessageMiss(String result) {
+        String text = result == null ? "" : result.toLowerCase(Locale.ROOT);
+        return text.contains("没有找到 messageid")
+                || (text.contains("messageid") && text.contains("pop3") && text.contains("获取最新 id"));
     }
 
     private static String stripTrailingEmailIdPunctuation(String raw) {

@@ -139,18 +139,37 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
-    void shouldReadPendingEmailMessageIdFromSessionStateJson() {
-        assertThat(ChatOrchestratorService.pendingEmailMessageIdFromStateJson("""
-                {"pending_email_message_id":"202606261421@example.com","pending_email_action":"read_body"}
+    void shouldReadPendingEmailStateFromSessionStateJson() {
+        assertThat(ChatOrchestratorService.pendingEmailFromStateJson("""
+                {"pending_email_message_id":"202606261421@example.com","pending_email_action":"read_body",
+                 "pending_email_subject":"Cloud CC 产品分享 - 标签管理","pending_email_from":"beibei.sun@mercedes-benz.com"}
                 """))
-                .contains("202606261421@example.com");
+                .contains(new ChatOrchestratorService.PendingEmailState(
+                        "202606261421@example.com",
+                        "Cloud CC 产品分享 - 标签管理",
+                        "beibei.sun@mercedes-benz.com"));
 
-        assertThat(ChatOrchestratorService.pendingEmailMessageIdFromStateJson("""
+        assertThat(ChatOrchestratorService.pendingEmailFromStateJson("""
                 {"pending_email_message_id":"202606261421@example.com","pending_email_action":"send_reply"}
                 """))
                 .isEmpty();
 
-        assertThat(ChatOrchestratorService.pendingEmailMessageIdFromStateJson("not-json")).isEmpty();
+        assertThat(ChatOrchestratorService.pendingEmailFromStateJson("not-json")).isEmpty();
+    }
+
+    @Test
+    void shouldBuildRefreshSearchForExpiredPop3EmailId() {
+        ChatOrchestratorService.PendingEmailState pending = new ChatOrchestratorService.PendingEmailState(
+                "202606261421@example.com",
+                "Cloud CC 产品分享 - 标签管理",
+                "beibei.sun@mercedes-benz.com");
+
+        assertThat(ChatOrchestratorService.isEmailMessageIdNotFoundResult("""
+                ❌ 在最近 50 封邮件中没有找到 messageId=202606261421@example.com。
+                POP3 下 messageId 仅在服务器可见范围内有效，建议先用 email_list_inbox 获取最新 id。
+                """)).isTrue();
+        assertThat(ChatOrchestratorService.buildEmailRefreshSearchArguments(pending))
+                .isEqualTo("{\"keyword\":\"Cloud CC 产品分享 - 标签管理\",\"limit\":5,\"scanLimit\":50,\"from\":\"beibei.sun@mercedes-benz.com\"}");
     }
 
     @Test

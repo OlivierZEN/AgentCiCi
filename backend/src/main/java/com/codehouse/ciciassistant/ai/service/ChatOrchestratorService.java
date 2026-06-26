@@ -891,13 +891,67 @@ public class ChatOrchestratorService {
         if (!isEmailBodyContinuationConfirmation(question)) {
             return false;
         }
-        Optional<String> pendingMessageId = pendingEmailMessageIdFromState(orgId, sessionId);
-        if (pendingMessageId.isEmpty()) {
+        Optional<PendingEmailState> pendingEmail = pendingEmailFromState(orgId, sessionId);
+        if (pendingEmail.isEmpty()) {
             return false;
         }
-        String toolName = "email_get_message";
-        String callId = "auto_email_body_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
-        String arguments = "{\"messageId\":\"" + escapeJson(pendingMessageId.get()) + "\"}";
+        PendingEmailState pending = pendingEmail.get();
+        String toolResult = executeAndAppendSyntheticToolCall(
+                messages,
+                orgId,
+                userId,
+                sessionId,
+                skillContext,
+                emitter,
+                toolCallTraces,
+                runId,
+                "email_get_message",
+                "{\"messageId\":\"" + escapeJson(pending.messageId()) + "\"}",
+                "auto_email_body_");
+        if (isEmailMessageIdNotFoundResult(toolResult) && pending.hasRefreshHints()) {
+            String searchResult = executeAndAppendSyntheticToolCall(
+                    messages,
+                    orgId,
+                    userId,
+                    sessionId,
+                    skillContext,
+                    emitter,
+                    toolCallTraces,
+                    runId,
+                    "email_search",
+                    buildEmailRefreshSearchArguments(pending),
+                    "auto_email_refresh_");
+            Optional<String> refreshedMessageId = extractSingleEmailSearchMessageId(searchResult);
+            if (refreshedMessageId.isPresent() && !refreshedMessageId.get().equals(pending.messageId())) {
+                executeAndAppendSyntheticToolCall(
+                        messages,
+                        orgId,
+                        userId,
+                        sessionId,
+                        skillContext,
+                        emitter,
+                        toolCallTraces,
+                        runId,
+                        "email_get_message",
+                        "{\"messageId\":\"" + escapeJson(refreshedMessageId.get()) + "\"}",
+                        "auto_email_body_");
+            }
+        }
+        return true;
+    }
+
+    private String executeAndAppendSyntheticToolCall(List<Map<String, Object>> messages,
+                                                     String orgId,
+                                                     String userId,
+                                                     String sessionId,
+                                                     ResolvedSkillContext skillContext,
+                                                     SseEmitter emitter,
+                                                     List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                                                     String runId,
+                                                     String toolName,
+                                                     String arguments,
+                                                     String callIdPrefix) {
+        String callId = callIdPrefix + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         messages.add(Map.of(
                 "role", "assistant",
                 "content", "",
@@ -947,15 +1001,21 @@ public class ChatOrchestratorService {
                 "tool_call_id", callId,
                 "content", toolResult
         ));
-        return true;
+        return toolResult;
     }
 
-    private Optional<String> pendingEmailMessageIdFromState(String orgId, String sessionId) {
+    private Optional<PendingEmailState> pendingEmailFromState(String orgId, String sessionId) {
         return chatSessionStateService.get(orgId, sessionId)
-                .flatMap(state -> pendingEmailMessageIdFromStateJson(state.getStateJson()));
+                .flatMap(state -> pendingEmailFromStateJson(state.getStateJson()));
     }
 
-    static Optional<String> pendingEmailMessageIdFromStateJson(String stateJson) {
+    record PendingEmailState(String messageId, String subject, String from) {
+        boolean hasRefreshHints() {
+            return (subject != null && !subject.isBlank()) || (from != null && !from.isBlank());
+        }
+    }
+
+    static Optional<PendingEmailState> pendingEmailFromStateJson(String stateJson) {
         if (stateJson == null || stateJson.isBlank()) {
             return Optional.empty();
         }
@@ -969,10 +1029,29 @@ public class ChatOrchestratorService {
             if (!action.isBlank() && !"read_body".equalsIgnoreCase(action)) {
                 return Optional.empty();
             }
-            return Optional.of(messageId);
+            String subject = root.path("pending_email_subject").asText("").trim();
+            String from = root.path("pending_email_from").asText("").trim();
+            return Optional.of(new PendingEmailState(messageId, subject, from));
         } catch (IOException ignored) {
             return Optional.empty();
         }
+    }
+
+    static boolean isEmailMessageIdNotFoundResult(String result) {
+        String text = result == null ? "" : result.toLowerCase(Locale.ROOT);
+        return text.contains("没有找到 messageid")
+                || (text.contains("messageid") && text.contains("pop3") && text.contains("获取最新 id"));
+    }
+
+    static String buildEmailRefreshSearchArguments(PendingEmailState pending) {
+        StringBuilder args = new StringBuilder("{\"keyword\":\"")
+                .append(escapeJson(pending.subject()))
+                .append("\",\"limit\":5,\"scanLimit\":50");
+        if (pending.from() != null && !pending.from().isBlank()) {
+            args.append(",\"from\":\"").append(escapeJson(pending.from())).append("\"");
+        }
+        args.append("}");
+        return args.toString();
     }
 
     private void logToolInvocationAudit(String orgId, String userId, String sessionId,

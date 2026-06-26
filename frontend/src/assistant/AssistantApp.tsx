@@ -37,6 +37,7 @@ import { appendMeetingTranscriptSegment, speakerDisplayName } from "./meetingTra
 
 const FRONT_LOGIN_MODE_CONFIG: FrontLoginMode = "login_mode2";
 const FRONT_LOGIN_USER_MODE_CONFIG: LoginMode = "agent";
+const CHAT_LOADING_STALE_TIMEOUT_MS = 180000;
 
 type OrganizationOption = { orgId: string; orgName: string; memberId: string; roleCode: string; current?: boolean };
 type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; memberId?: string; accountId?: string; roles: string[] };
@@ -1281,6 +1282,7 @@ export default function AssistantApp() {
   const organizationMenuCloseTimerRef = useRef<number | null>(null);
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
+  const chatLoadingStaleTimerRef = useRef<number | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
   const workspaceTabRef = useRef<WorkspaceTab>("workbench");
@@ -1976,6 +1978,30 @@ export default function AssistantApp() {
   useEffect(() => {
     workspaceTabRef.current = workspaceTab;
   }, [workspaceTab]);
+
+  const clearChatLoadingStaleTimer = () => {
+    if (chatLoadingStaleTimerRef.current !== null) {
+      window.clearTimeout(chatLoadingStaleTimerRef.current);
+      chatLoadingStaleTimerRef.current = null;
+    }
+  };
+
+  const beginChatLoading = () => {
+    clearChatLoadingStaleTimer();
+    setChatLoading(true);
+    chatLoadingStaleTimerRef.current = window.setTimeout(() => {
+      chatLoadingStaleTimerRef.current = null;
+      setChatLoading(false);
+      setSpeechNotice("当前回答已结束，可继续语音输入。");
+    }, CHAT_LOADING_STALE_TIMEOUT_MS);
+  };
+
+  const finishChatLoading = () => {
+    clearChatLoadingStaleTimer();
+    setChatLoading(false);
+  };
+
+  useEffect(() => clearChatLoadingStaleTimer, []);
 
   const sessionStreamActive =
     workspaceTab !== "workbench" &&
@@ -3123,6 +3149,7 @@ export default function AssistantApp() {
           }
         },
       );
+      finishChatLoading();
 
       if (renderedApproval) {
         if (isWorkbench) {
@@ -3191,7 +3218,7 @@ export default function AssistantApp() {
         });
       }
     } finally {
-      setChatLoading(false);
+      finishChatLoading();
       if (auth?.token) {
         void loadMonitorRunLogs(auth.token);
       }

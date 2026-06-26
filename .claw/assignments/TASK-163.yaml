@@ -1,0 +1,55 @@
+task_id: TASK-163
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-26T17:15:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md
+task_status_path: .claw/tasks/TASK-163.md
+branch: codex/TASK-163-email-id-refresh-voice-followup
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/shared/**
+  - frontend/src/assistant/**
+  - frontend/src/**/*.test.ts
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-163.md
+  - .claw/assignments/TASK-163.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md
+  - docs/specs/FEAT-072-continuous-tool-execution-confirmation.md
+  - docs/specs/FEAT-071-mail-body-and-voice-input-fix.md
+task_boundary:
+  - "Refresh stale POP3 messageId by re-searching pending email subject/from before retrying email_get_message."
+  - "Ensure failed email_get_message does not clear pending email context."
+  - "Address voice input being blocked by stale chat-loading/unfinished-answer state if needed."
+  - "Do not change mail account configuration, SMTP send semantics, unrelated chat UI, production credentials, or release scripts."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-26T17:15:00+08:00; user reported stale email id and voice follow-up defect after 2.1.6."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production behavior fix. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-163 on branch codex/TASK-163-email-id-refresh-voice-followup before implementation edits."
