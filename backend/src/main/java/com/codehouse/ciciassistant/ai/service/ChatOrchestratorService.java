@@ -68,9 +68,9 @@ public class ChatOrchestratorService {
     private static final int MAX_POLICY_TOOL_ROUNDS = 12;
     private static final ObjectMapper TOOL_RESULT_OBJECT_MAPPER = new ObjectMapper();
     private static final Pattern DEFERRED_TOOL_FINAL_PATTERN = Pattern.compile(
-            "(后续|接下来|随后|稍后).{0,18}(继续|重新|再|将|会|我)?.{0,18}(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
-                    + "|(让我|我来|我会|我再|将).{0,12}(继续|重新|再)?.{0,12}(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
-                    + "|(继续|重新|再).{0,8}(查询|检索|调用|获取|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)",
+            "(后续|接下来|随后|稍后).{0,18}(继续|重新|再|将|会|我)?.{0,18}(查询|检索|调用|获取|读取|查看|打开|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
+                    + "|(让我|我来|我会|我再|将).{0,12}(继续|重新|再)?.{0,12}(查询|检索|调用|获取|读取|查看|打开|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
+                    + "|(继续|重新|再).{0,8}(查询|检索|调用|获取|读取|查看|打开|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern TOOL_DATA_COUNT_PATTERN = Pattern.compile("返回\\s*(\\d+)\\s*条[，,]\\s*总计\\s*(\\d+)\\s*条");
     private static final Pattern TOOL_FIELD_COUNT_PATTERN = Pattern.compile("对象字段列表（标准字段\\s*(\\d+)\\s*条[，,]\\s*自定义字段\\s*(\\d+)\\s*条）");
@@ -236,6 +236,8 @@ public class ChatOrchestratorService {
         List<Map<String, Object>> messages = buildInitialMessages(
                 sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
+        appendConfirmedPendingEmailBodyToolResult(
+                messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId);
@@ -442,6 +444,8 @@ public class ChatOrchestratorService {
                 List<Map<String, Object>> messages = buildInitialMessages(
                         sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
+                appendConfirmedPendingEmailBodyToolResult(
+                        messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
@@ -873,6 +877,102 @@ public class ChatOrchestratorService {
             ));
         }
         return pendingApprovalsUsed;
+    }
+
+    private boolean appendConfirmedPendingEmailBodyToolResult(List<Map<String, Object>> messages,
+                                                              String orgId,
+                                                              String userId,
+                                                              String sessionId,
+                                                              ResolvedSkillContext skillContext,
+                                                              SseEmitter emitter,
+                                                              List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                                                              String runId,
+                                                              String question) {
+        if (!isEmailBodyContinuationConfirmation(question)) {
+            return false;
+        }
+        Optional<String> pendingMessageId = pendingEmailMessageIdFromState(orgId, sessionId);
+        if (pendingMessageId.isEmpty()) {
+            return false;
+        }
+        String toolName = "email_get_message";
+        String callId = "auto_email_body_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        String arguments = "{\"messageId\":\"" + escapeJson(pendingMessageId.get()) + "\"}";
+        messages.add(Map.of(
+                "role", "assistant",
+                "content", "",
+                "tool_calls", List.of(Map.of(
+                        "id", callId,
+                        "type", "function",
+                        "function", Map.of("name", toolName, "arguments", arguments)
+                ))
+        ));
+        if (emitter != null) {
+            safeSendToolCall(emitter, toolName);
+        }
+        String idempotencyKey = toolIdempotencyKey(runId, callId, toolName);
+        Instant toolStartedAt = Instant.now();
+        String toolResult = "";
+        boolean toolSuccess = true;
+        try {
+            toolResult = toolOrchestratorService.executeTool(
+                    orgId,
+                    userId,
+                    toolName,
+                    arguments,
+                    skillContext.allowedToolNames(),
+                    skillContext.agentDirectToolNames());
+        } catch (RuntimeException ex) {
+            toolSuccess = false;
+            toolResult = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
+            throw ex;
+        } finally {
+            Instant toolEndedAt = Instant.now();
+            if (toolCallTraces != null) {
+                toolCallTraces.add(new AgentRunTraceService.ToolCallTraceInput(
+                        callId,
+                        toolName,
+                        traceToolArguments(arguments, idempotencyKey),
+                        toolResult,
+                        toolSuccess && !looksFailedToolResult(toolResult),
+                        toolStartedAt,
+                        toolEndedAt,
+                        elapsedMs(toolStartedAt, toolEndedAt)));
+            }
+        }
+        logToolInvocationAudit(orgId, userId, sessionId, skillContext, toolName);
+        chatSessionStateService.mergeToolResult(orgId, sessionId, skillContext.agentId(), toolName, toolResult);
+        messages.add(Map.of(
+                "role", "tool",
+                "tool_call_id", callId,
+                "content", toolResult
+        ));
+        return true;
+    }
+
+    private Optional<String> pendingEmailMessageIdFromState(String orgId, String sessionId) {
+        return chatSessionStateService.get(orgId, sessionId)
+                .flatMap(state -> pendingEmailMessageIdFromStateJson(state.getStateJson()));
+    }
+
+    static Optional<String> pendingEmailMessageIdFromStateJson(String stateJson) {
+        if (stateJson == null || stateJson.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            JsonNode root = TOOL_RESULT_OBJECT_MAPPER.readTree(stateJson);
+            String messageId = root.path("pending_email_message_id").asText("").trim();
+            String action = root.path("pending_email_action").asText("").trim();
+            if (messageId.isBlank()) {
+                return Optional.empty();
+            }
+            if (!action.isBlank() && !"read_body".equalsIgnoreCase(action)) {
+                return Optional.empty();
+            }
+            return Optional.of(messageId);
+        } catch (IOException ignored) {
+            return Optional.empty();
+        }
     }
 
     private void logToolInvocationAudit(String orgId, String userId, String sessionId,
@@ -1691,6 +1791,21 @@ public class ChatOrchestratorService {
                 "查看", "看下", "看一下", "看看",
                 "body", "content", "detail", "details", "read", "open", "show"));
         return mentionsMail && asksBody;
+    }
+
+    static boolean isEmailBodyContinuationConfirmation(String question) {
+        String text = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        if (text.isBlank()) {
+            return false;
+        }
+        String compact = text.replaceAll("\\s+", "");
+        if (isEmailBodyReadIntent(text)) {
+            return true;
+        }
+        return containsAny(compact, List.of(
+                "是", "是的", "对", "对的", "可以", "好的", "好", "嗯", "嗯嗯", "继续",
+                "展开", "打开", "读取", "读一下", "看正文", "看内容", "查看正文",
+                "yes", "y", "ok", "okay", "continue", "read", "open", "show"));
     }
 
     static Optional<String> extractSingleEmailSearchMessageId(String result) {

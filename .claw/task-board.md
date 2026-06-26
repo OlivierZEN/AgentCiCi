@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-162 - 连续确认后的邮件正文工具续执行
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-072-continuous-tool-execution-confirmation.md`
+- task_status_path: `.claw/tasks/TASK-162.md`
+- assignment_path: `.claw/assignments/TASK-162.yaml`
+- blocked_by: `none`
+- next_action: Review, merge to main, and release after focused backend validation passed.
+
 ### TASK-161 - 对话邮件正文展示与语音输入识别修复
 
 - status: `done`
