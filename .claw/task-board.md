@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-26T04:20:00Z
+updated_at: 2026-06-26T04:50:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-159 - Chat session state tenant primary key hotfix
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md`
 - task_status_path: `.claw/tasks/TASK-159.md`
 - assignment_path: `.claw/assignments/TASK-159.yaml`
 - blocked_by: `none`
-- next_action: Fix production 2.1.3 chat failure where `chat_session_state` primary key is session-only while application access is tenant-scoped.
+- next_action: Done in production release `2.1.4`; monitor chat logs and follow up on ACR push durability.
 
 ### TASK-158 - Agent runtime concurrency hardening
 

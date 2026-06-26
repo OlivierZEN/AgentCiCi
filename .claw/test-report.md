@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T04:22:00Z
+updated_at: 2026-06-26T04:50:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T04:22:00Z
+last_run_at: 2026-06-26T04:50:00Z
 last_run_status: success
 ---
 
@@ -13,8 +13,8 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-159 生产 `2.1.3` 对话报错热修，本地验证 `chat_session_state` 租户复合主键。
-- 命令：production backend log inspection, focused Spring/Flyway integration tests, backend compile, assignment check, static diff check.
+- 范围：TASK-159 生产 `2.1.3` 对话报错热修、本地验证、main 合并、2.1.4 线上发布与生产验收。
+- 命令：production log/db inspection, focused Spring/Flyway integration tests, backend compile, frontend build, compose config, release dry-run, ECS-local hotfix deploy, production health/Flyway/chat smoke.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -28,11 +28,25 @@ last_run_status: success
     - `backend-focused`: after adding `@Transactional` to `deleteBySessionIdAndOrgId`, `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatSessionStateServiceIntegrationTest test` in `backend/` -> **success**. Local Flyway applied `V69__chat_session_state_tenant_primary_key.sql`.
     - `backend-chat-regression`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatSessionStateServiceIntegrationTest,OrchestratorIntegrationTest,AgentRuntimeConcurrencyServiceTest test` in `backend/` -> **success**.
     - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task159.yml` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
     - `assignment`: `check-assignment.py` for TASK-159 changed files -> **allowed**.
+    - `merge-main`: committed TASK-159 as `e2622a0`, merged into `main`, pushed `origin/main` at `d40d53d0a228` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.4`.
+    - `release-acr-attempt`: `./scripts/release-acr.sh --version 2.1.4` -> **blocked** because ACR/registry push stalled after backend layer push and before manifest/tag completion; no script-created Git tag or completed ACR image was produced.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260626-124138-before-2.1.4` with env, PostgreSQL dump, KB files, and Qdrant archive -> **success**.
+    - `ecs-local-image-build`: copied backend jar/frontend dist/build files to `/opt/cici/release-build/2.1.4`; ECS-local Docker build produced backend image `0131f3dcd944` and frontend image `a410d430f10b` under canonical `2.1.4` tags -> **success**.
+    - `production-deploy`: updated `/opt/cici/deploy/acr.env` to `CICI_IMAGE_TAG=2.1.4` and `CICI_APP_VERSION=2.1.4`, locally tagged infra images as `2.1.4`, and ran compose `up -d` -> **success**.
+    - `git-tag`: annotated tag `2.1.4` was created and pushed to origin -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.4`, `imageTag=2.1.4`, `gitCommit=d40d53d0a228`; frontend `nginx -t` passed -> **success**.
+    - `production-flyway`: latest row `69|chat session state tenant primary key|true`; `chat_session_state` primary key columns are `session_id`, `org_id`; rollback insert proof for duplicate workbench session across orgs succeeded -> **success**.
+    - `production-chat-smoke`: org login returned `200/success=true`; `/ai/chat` with `sessionId=workbench:cici-system` returned `200/success=true`; `chat_session_state_pkey` logs stayed `0` after smoke -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; HTTP endpoint redirects to HTTPS; recent backend error scan empty -> **success**.
   - Notes:
     - Fix changes `chat_session_state` to composite primary key `(session_id, org_id)` and aligns JPA with existing `findBySessionIdAndOrgId` semantics.
-    - Production release still pending in this test-report entry; post-release verification must confirm Flyway V69 and absence of new `chat_session_state_pkey` logs after retry.
+    - Production hotfix is live in `2.1.4`.
+    - Follow-up: restore ACR durability for the `2.1.4` image set; current production images are ECS-local canonical tags because registry push stalled.
 
 - Production release 2.1.3 (2026-06-24T03:24:00Z):
   - Commands:

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-159
-status: in_progress
-updated_at: 2026-06-26T04:22:00Z
+status: done
+updated_at: 2026-06-26T04:50:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -49,6 +49,25 @@ spec_path: docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md
 - `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
 - `git diff --check` -> **success**.
 - `check-assignment.py` for TASK-159 changed files -> **allowed**.
+- `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+- `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task159.yml` -> **success**.
+- Merged `codex/TASK-159-chat-session-state-tenant-key-hotfix` into `main` and pushed `origin/main`; production release commit is `d40d53d0a228`.
+- `./scripts/release-acr.sh --dry-run` -> **success**, next version `2.1.4`.
+- `./scripts/release-acr.sh --version 2.1.4` -> **blocked by registry push** twice: backend build passed but ACR push stalled after `pushing layers ... done` and before manifest/tag completion; no script-created Git tag or ACR image was completed.
+- Production fallback release:
+  - Backup created at `/opt/cici/backups/20260626-124138-before-2.1.4`.
+  - Backend jar, frontend dist, Dockerfiles, and Nginx config copied to `/opt/cici/release-build/2.1.4`.
+  - ECS-local Docker build created `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.4` image id `0131f3dcd944` and `cici-frontend:2.1.4` image id `a410d430f10b`.
+  - Infra images were locally tagged as `2.1.4`, `/opt/cici/deploy/acr.env` was updated to `CICI_IMAGE_TAG=2.1.4` and `CICI_APP_VERSION=2.1.4`, and compose `up -d` completed.
+  - Git tag `2.1.4` was created and pushed to origin.
+- Production verification:
+  - Six compose services healthy; `/actuator/health` -> `UP`; `/system/version` -> `version=2.1.4`, `imageTag=2.1.4`, `gitCommit=d40d53d0a228`.
+  - Flyway latest row: `69|chat session state tenant primary key|true`.
+  - `chat_session_state` primary key columns: `session_id`, `org_id`.
+  - Transaction rollback proof inserted `workbench:cici-system|task159-verify-org` and rolled back successfully.
+  - Real `/ai/chat` smoke using `sessionId=workbench:cici-system` returned HTTP 200 with `success=true`.
+  - `docker logs --since 5m cici-backend | grep chat_session_state_pkey` -> `0`.
+  - `https://x.agentcici.com/` -> `200`; `http://x.agentcici.com/` -> `301` to HTTPS; frontend `nginx -t` passed; recent backend error scan empty.
 
 ## Changed Files
 
@@ -63,9 +82,6 @@ spec_path: docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md
 
 ## Handoff
 
-- Branch: `codex/TASK-159-chat-session-state-tenant-key-hotfix`.
-- Ready to commit and merge after standard pre-release gates.
-- Production hotfix release should apply V69 and then verify:
-  - Flyway latest row is `69|chat session state tenant primary key|true`.
-  - `chat_session_state` primary key columns are `session_id, org_id`.
-  - Retrying workbench chat no longer emits `chat_session_state_pkey` in backend logs.
+- Branch: `codex/TASK-159-chat-session-state-tenant-key-hotfix`; merged to `main`.
+- Production hotfix is live in `2.1.4`.
+- Follow-up: restore normal ACR push durability for the `2.1.4` image set; current production images are present on the ECS host under the canonical image names/tags but were not pushed to ACR because registry push stalled.

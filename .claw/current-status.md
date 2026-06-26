@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-26T04:20:00Z
+updated_at: 2026-06-26T04:50:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-159 production chat hotfix is in progress for 2.1.3 chat_session_state primary-key failures."
-next_action: "Fix chat_session_state tenant primary key, run focused backend validation, then prepare a production hotfix release."
+active_task: "TASK-159 production chat hotfix is deployed and verified in 2.1.4."
+next_action: "Monitor production chat logs; follow up by restoring normal ACR push durability for the 2.1.4 image set."
 read_next:
   goals: false
   decisions: false
@@ -22,10 +22,13 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `codex/TASK-159-chat-session-state-tenant-key-hotfix`; production is running release `2.1.3` from Git commit `916ee5f48d7a`.
-- TASK-159 is active: production `2.1.3` chat failed at `2026-06-26 12:12:12 CST` with `duplicate key value violates unique constraint "chat_session_state_pkey"` for `session_id=workbench:cici-system`.
-- Production log root cause is table-model drift: application reads session state by `session_id + org_id`, but `chat_session_state` primary key is only `session_id`; the same workbench session id is reused across orgs.
-- Planned hotfix: append a Flyway migration changing `chat_session_state` primary key to `(session_id, org_id)`, update the JPA entity to a composite id, and add focused backend coverage.
+- Current branch: `main`; production is running hotfix release `2.1.4` from Git commit `d40d53d0a228`.
+- TASK-159 is deployed: production `2.1.3` chat failed at `2026-06-26 12:12:12 CST` with `duplicate key value violates unique constraint "chat_session_state_pkey"` for `session_id=workbench:cici-system`.
+- Root cause was table-model drift: application reads session state by `session_id + org_id`, but `chat_session_state` primary key was only `session_id`; the same workbench session id is reused across orgs.
+- Hotfix `2.1.4` applied V69, changing `chat_session_state` primary key to `(session_id, org_id)`, and updated JPA to a composite id.
+- Production backup before deploy: `/opt/cici/backups/20260626-124138-before-2.1.4`.
+- Release note: ACR push for `2.1.4` blocked twice at registry push/manifest; to restore service, backend/frontend images were built locally on ECS with tag `2.1.4`, infra images were locally tagged as `2.1.4`, Git tag `2.1.4` was pushed, and `/opt/cici/deploy/acr.env` now uses `CICI_IMAGE_TAG=2.1.4` and `CICI_APP_VERSION=2.1.4`.
+- Production verification passed: six containers healthy, `/system/version` returns `version=2.1.4`, `imageTag=2.1.4`, `gitCommit=d40d53d0a228`; Flyway latest row is `69|chat session state tenant primary key|true`; primary key columns are `session_id, org_id`; real `/ai/chat` smoke returned 200; no new `chat_session_state_pkey` logs after deploy.
 - TASK-144 public website feedback is live: homepage/Solutions hero no longer shows the screenshot-marked `预约演示 / SkillsHub / 登录` button group.
 - Public demo booking now posts real records through `/api/autoservice/demo-requests`; the operations console `/platform/website-leads` can query the submitted records.
 - Release `2.1.3` was built and pushed with `./scripts/release-acr.sh --version 2.1.3`; Git tag `2.1.3`, backend image, frontend image, `CICI_IMAGE_TAG`, and `/system/version` all use `2.1.3`.

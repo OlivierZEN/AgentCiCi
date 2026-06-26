@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-06-24T03:24:00Z
+updated_at: 2026-06-26T04:50:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.4 chat session state tenant-key hotfix on 2026-06-26:
+  - Git commit: `d40d53d0a228` on `main`; annotated tag `2.1.4` was pushed to origin.
+  - Scope: TASK-159 production chat failure where `chat_session_state` had a single-column `session_id` primary key while application access is tenant-scoped by `session_id + org_id`.
+  - Release method: required dry-run passed and resolved `2.1.4`; normal `./scripts/release-acr.sh --version 2.1.4` was attempted twice but ACR/registry push stalled after backend layer push and before manifest/tag completion. To restore production chat, backend/frontend artifacts were copied to ECS and images were built locally on the ECS host under the canonical image names/tags.
+  - Backend image on ECS: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.4`, local image id `0131f3dcd944`.
+  - Frontend image on ECS: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.4`, local image id `a410d430f10b`.
+  - Backup directory: `/opt/cici/backups/20260626-124138-before-2.1.4`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.4` and `CICI_APP_VERSION=2.1.4`.
+  - Deploy note: backend/frontend images plus infra image aliases are present locally on ECS as `2.1.4`; the `2.1.4` image set still needs ACR durability follow-up because registry push did not complete from this workstation.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.4`, `imageTag=2.1.4`, and `gitCommit=d40d53d0a228`; frontend Nginx config test passed.
+  - Database verification: Flyway latest row is `69|chat session state tenant primary key|true`; `chat_session_state` primary key columns are `session_id, org_id`; rollback insert proof for another org using `workbench:cici-system` succeeded.
+  - Chat smoke: org login succeeded; `/ai/chat` with `sessionId=workbench:cici-system` returned HTTP 200 and `success=true`; no new `chat_session_state_pkey` logs appeared after the smoke.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200; HTTP endpoint redirects to HTTPS; recent backend error scan was empty.
 
 - 2.1.3 public demo booking release on 2026-06-24:
   - Git commit: `916ee5f48d7a` on `main`; annotated tag `2.1.3` was pushed to origin.
