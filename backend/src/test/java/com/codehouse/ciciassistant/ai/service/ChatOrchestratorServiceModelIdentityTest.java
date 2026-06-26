@@ -131,6 +131,35 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldRecognizeEmailBodyContinuationConfirmation() {
+        assertThat(ChatOrchestratorService.isEmailBodyContinuationConfirmation("是的")).isTrue();
+        assertThat(ChatOrchestratorService.isEmailBodyContinuationConfirmation("好的，展开正文")).isTrue();
+        assertThat(ChatOrchestratorService.isEmailBodyContinuationConfirmation("看下这封邮件内容")).isTrue();
+        assertThat(ChatOrchestratorService.isEmailBodyContinuationConfirmation("不用了")).isFalse();
+    }
+
+    @Test
+    void shouldReadPendingEmailMessageIdFromSessionStateJson() {
+        assertThat(ChatOrchestratorService.pendingEmailMessageIdFromStateJson("""
+                {"pending_email_message_id":"202606261421@example.com","pending_email_action":"read_body"}
+                """))
+                .contains("202606261421@example.com");
+
+        assertThat(ChatOrchestratorService.pendingEmailMessageIdFromStateJson("""
+                {"pending_email_message_id":"202606261421@example.com","pending_email_action":"send_reply"}
+                """))
+                .isEmpty();
+
+        assertThat(ChatOrchestratorService.pendingEmailMessageIdFromStateJson("not-json")).isEmpty();
+    }
+
+    @Test
+    void shouldTreatPromisedEmailBodyReadAsDeferredToolResult() {
+        assertThat(ChatOrchestratorService.finalAnswerDefersToolResult("已找到邮件，让我读取正文内容。")).isTrue();
+        assertThat(ChatOrchestratorService.finalAnswerDefersToolResult("已找到邮件，正文如下：测试内容。")).isFalse();
+    }
+
+    @Test
     void shouldKeepPlanningStopForWritesFailuresOrMultipleTools() {
         assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
                 "查到客户后发送邮件",
