@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-163
-status: review
-updated_at: 2026-06-26T09:18:00Z
+status: done
+updated_at: 2026-06-26T09:24:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -30,6 +30,10 @@ spec_path: docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md
 
 - `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest` in `backend/` -> success, 25 tests passed.
 - `npm run build` in `frontend/` -> success; existing Vite large chunk warning remains.
+- `./scripts/release-acr.sh --dry-run` -> success, resolved production version `2.1.7`.
+- `./scripts/release-acr.sh --version 2.1.7` -> success, backend/frontend images and Git tag `2.1.7` pushed.
+- Production deploy -> success, `/system/version` returns `version=2.1.7`, `imageTag=2.1.7`, `gitCommit=ee84bc85c7be`.
+- Public smoke -> success, `https://x.agentcici.com/` returned 200, HTTP redirected to HTTPS, unauthenticated `/auth/me` returned expected 401.
 
 ## Changed Files
 
@@ -48,4 +52,4 @@ spec_path: docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md
 - Branch: `codex/TASK-163-email-id-refresh-voice-followup`.
 - 已实现 stale POP3 `messageId` 自动刷新重试：确认读正文时先尝试旧 ID，失败后用已保存主题/发件人重新搜索并立刻用新 ID 再读正文。
 - 前端回答流结束后会先释放 `chatLoading`，历史刷新不再阻塞麦克风；同时增加 180 秒兜底释放，避免 SSE/网络异常导致语音入口一直显示等待当前回答结束。
-- 未用自动化读取生产真实邮件正文，避免触碰真实邮件内容；发布后建议由用户在目标会话中复测同一邮件。
+- 已发布生产版本 `2.1.7`。未用自动化读取生产真实邮件正文，避免触碰真实邮件内容；建议由用户在目标会话中复测同一邮件。

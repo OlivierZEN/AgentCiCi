@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-26T09:18:00Z
+updated_at: 2026-06-26T09:24:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-163 fixes stale POP3 email id refresh and voice follow-up usability."
-next_action: "Merge TASK-163 to main, push origin/main, and publish the next production release."
+active_task: "TASK-163 done in production release 2.1.7."
+next_action: "Monitor production email-body continuation and voice input behavior; have the user retest the same conversation."
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,12 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `codex/TASK-163-email-id-refresh-voice-followup`; production is still running release `2.1.6` from Git commit `f88be9f89335`.
-- TASK-163 local validation passed: user confirmed email body expansion, but `email_get_message` used a stale POP3 `messageId` and stopped after saying the ID may be expired; the fix now stores the email subject/from with the pending ID, preserves pending state on ID misses, refreshes the search, and retries `email_get_message` in the same turn. The frontend also releases `chatLoading` immediately after stream completion and has a 180s stale-loading fallback so the microphone is not blocked by slow history refresh or missed completion state.
-- TASK-163 verification passed: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest` in `backend/` and `npm run build` in `frontend/`.
+- Current branch: `main`; production is running release `2.1.7` from Git commit `ee84bc85c7be`.
+- TASK-163 is deployed in `2.1.7`: user confirmed email body expansion, but `email_get_message` used a stale POP3 `messageId` and stopped after saying the ID may be expired; the fix now stores the email subject/from with the pending ID, preserves pending state on ID misses, refreshes the search, and retries `email_get_message` in the same turn. The frontend also releases `chatLoading` immediately after stream completion and has a 180s stale-loading fallback so the microphone is not blocked by slow history refresh or missed completion state.
+- TASK-163 verification passed: task authorization checks, `ChatOrchestratorServiceModelIdentityTest`, frontend production build, compose config check, `git diff --check`, production health/version checks, recent backend error scan, and public smoke.
+- Release `2.1.7` was built and pushed with `./scripts/release-acr.sh --version 2.1.7`; Git tag `2.1.7`, backend image, frontend image, `CICI_IMAGE_TAG`, and `/system/version` all use `2.1.7`.
+- ECS backup before the release is `/opt/cici/backups/20260626-172221-before-2.1.7`, containing env, PostgreSQL dump, KB files, and Qdrant volume snapshots.
+- Six production Compose containers are healthy on tag `2.1.7`; backend `/actuator/health` is `UP`, `/system/version` returns `version=2.1.7`, `imageTag=2.1.7`, `gitCommit=ee84bc85c7be`; frontend Nginx config passed; public `https://x.agentcici.com/` returned `200`; `/auth/me` returned expected `401`; recent backend error scan is empty.
 - TASK-162 is deployed in `2.1.6`: after `2.1.5`, user confirmed “是的” to expand the only email, but assistant only said “让我读取正文内容” and stopped without calling `email_get_message`.
 - TASK-162 fixes: `email_search` unique hits now persist `pending_email_message_id`; confirmation turns like “是的/好的/继续/展开正文” automatically execute `email_get_message` before final generation; “让我读取/查看/打开” is treated as an unfinished tool promise.
 - TASK-162 verification passed: task-scoped identity/assignment checks, `ChatOrchestratorServiceModelIdentityTest`, backend compile, and `git diff --check`.

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T09:18:00Z
+updated_at: 2026-06-26T09:24:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T09:18:00Z
+last_run_at: 2026-06-26T09:24:00Z
 last_run_status: success
 ---
 
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-163 邮件 ID 刷新重试与语音后续可用性修复。
-- 命令：任务级门禁、focused backend test、frontend production build。
+- 命令：任务级门禁、focused backend test、frontend production build、release dry-run、ACR build/push、production deploy、production smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -26,11 +26,24 @@ last_run_status: success
     - `assignment`: `check-assignment.py` for TASK-163 intended changed files -> **allowed**.
     - `backend-focused`: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest` in `backend/` -> **success**, 25 tests passed.
     - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task163.yml` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: committed TASK-163 as `ee84bc8`, fast-forward merged into `main`, and pushed `origin/main` at `ee84bc85c7be` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.7`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.7` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.7` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260626-172221-before-2.1.7` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.7` and `CICI_APP_VERSION=2.1.7`; backend/frontend `2.1.7` images pulled; infra images locally tagged as `2.1.7`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.7`, `imageTag=2.1.7`, `gitCommit=ee84bc85c7be`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; `http://x.agentcici.com/` redirected to HTTPS; unauthenticated `/auth/me` returned expected `401` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.7`, index digest `sha256:6058589bf31b769112f0a9d861bbd49fdda9568e13c7f16d5f528723687313b4`, linux/amd64 manifest digest `sha256:5e5f50925c1cf34810dfdaeb8ed04309ea1ccf0086d584981406260deef3dbb7`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.7`, index digest `sha256:6f8c84bfec739fbc29fab0fda7638516d694c35fad0d69376279ee8c0677b02f`, linux/amd64 manifest digest `sha256:59675ed8086d210cc7b14d3c3feafc89e7fcf8a84e6c9e9c44afee64297df253`.
   - Notes:
     - Pending email state now keeps subject/from with the short-lived POP3 `messageId`.
     - A stale `email_get_message` result no longer clears pending email state; confirmation turns can refresh `email_search` and retry `email_get_message` in the same model turn.
     - Chat loading is released after stream completion before history refresh, with a 180s stale-loading fallback for voice input usability.
-    - Production release is pending.
+    - TASK-163 is live in production release `2.1.7`.
+    - Automated production smoke did not open real mailbox body content to avoid reading sensitive email; user should retest the same target conversation.
 
 - TASK-162 continuous email-body tool execution fix (2026-06-26T06:25:00Z):
   - Commands:

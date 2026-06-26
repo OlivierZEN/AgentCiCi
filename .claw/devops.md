@@ -17,6 +17,18 @@ status: active
 
 ## Latest Release
 
+- 2.1.7 stale POP3 email-body retry and voice follow-up hotfix on 2026-06-26:
+  - Git commit: `ee84bc85c7be` on `main`; annotated tag `2.1.7` was pushed to origin.
+  - Scope: TASK-163 production dialog bug where a confirmation to read email body could use a stale POP3 `messageId`, fail with “没有找到 messageId”, and stop instead of refreshing the email id; voice input could remain blocked by a stale chat loading state after the answer appeared complete.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.7`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.7` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.7`, index digest `sha256:6058589bf31b769112f0a9d861bbd49fdda9568e13c7f16d5f528723687313b4`, linux/amd64 manifest digest `sha256:5e5f50925c1cf34810dfdaeb8ed04309ea1ccf0086d584981406260deef3dbb7`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.7`, index digest `sha256:6f8c84bfec739fbc29fab0fda7638516d694c35fad0d69376279ee8c0677b02f`, linux/amd64 manifest digest `sha256:59675ed8086d210cc7b14d3c3feafc89e7fcf8a84e6c9e9c44afee64297df253`.
+  - Backup directory: `/opt/cici/backups/20260626-172221-before-2.1.7`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.7` and `CICI_APP_VERSION=2.1.7`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.7` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.7`, `imageTag=2.1.7`, and `gitCommit=ee84bc85c7be`; frontend Nginx config test passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200, HTTP endpoint redirected to HTTPS, and unauthenticated `/auth/me` returned expected HTTP 401.
+
 - 2.1.6 continuous email-body task execution hotfix on 2026-06-26:
   - Git commit: `f88be9f89335` on `main`; annotated tag `2.1.6` was pushed to origin.
   - Scope: TASK-162 production dialog bug where user confirmation such as “是的” after a single email result caused the assistant to say “让我读取正文内容” but no `email_get_message` tool call was executed.

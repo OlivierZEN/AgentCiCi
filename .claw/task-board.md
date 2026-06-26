@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-06-26T09:18:00Z
+updated_at: 2026-06-26T09:24:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-163 - 邮件 ID 刷新重试与语音后续可用性修复
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md`
 - task_status_path: `.claw/tasks/TASK-163.md`
 - assignment_path: `.claw/assignments/TASK-163.yaml`
 - blocked_by: `none`
-- next_action: Local validation passed; merge TASK-163 to main and publish the next production release.
+- next_action: Done in production release `2.1.7`; user should retest the same email body continuation and voice input flow.
 
 ### TASK-162 - 连续确认后的邮件正文工具续执行
 
