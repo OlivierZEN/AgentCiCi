@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-24T03:24:00Z
+updated_at: 2026-06-26T04:22:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-24T03:24:00Z
+last_run_at: 2026-06-26T04:22:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-144 官网 hero CTA 移除、预约演示真实入库、main 合并、2.1.3 线上发布与生产验收。
-- 命令：frontend build, backend compile, compose config, release dry-run, release build/push, ECS backup/deploy, production health/API/browser/demo-record validation.
+- 范围：TASK-159 生产 `2.1.3` 对话报错热修，本地验证 `chat_session_state` 租户复合主键。
+- 命令：production backend log inspection, focused Spring/Flyway integration tests, backend compile, assignment check, static diff check.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-159 chat session state tenant primary key hotfix (2026-06-26T04:22:00Z):
+  - Commands:
+    - `production-log-inspection`: read-only ECS checks showed `cici-backend:2.1.3` healthy, `/system/version` returned `version=2.1.3` and `gitCommit=916ee5f48d7a`, and backend logs contained 9 recent `chat_session_state_pkey` failures. The key production stack is `ChatSessionStateService.mergeUserTurn` -> `ChatOrchestratorService.chatStreamBlockingLocked`; conflicting key is `session_id=workbench:cici-system`.
+    - `production-db-inspection`: read-only PostgreSQL query found existing row `workbench:cici-system|demo-org|cici-system|会话进行中|0|2026-05-25 07:40:59.304812`, confirming the table primary key was session-only while application access is tenant-scoped.
+    - `identity`: `dev-login.py` for `MANAGER-001` / `TASK-159` covering backend session-state entity/repository, V69 migration, focused test, spec, and state files -> **allowed**.
+    - `backend-focused-initial`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatSessionStateServiceIntegrationTest test` in `backend/` -> **failed** only during test cleanup because derived repository delete needed an explicit transaction.
+    - `backend-focused`: after adding `@Transactional` to `deleteBySessionIdAndOrgId`, `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatSessionStateServiceIntegrationTest test` in `backend/` -> **success**. Local Flyway applied `V69__chat_session_state_tenant_primary_key.sql`.
+    - `backend-chat-regression`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatSessionStateServiceIntegrationTest,OrchestratorIntegrationTest,AgentRuntimeConcurrencyServiceTest test` in `backend/` -> **success**.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `assignment`: `check-assignment.py` for TASK-159 changed files -> **allowed**.
+  - Notes:
+    - Fix changes `chat_session_state` to composite primary key `(session_id, org_id)` and aligns JPA with existing `findBySessionIdAndOrgId` semantics.
+    - Production release still pending in this test-report entry; post-release verification must confirm Flyway V69 and absence of new `chat_session_state_pkey` logs after retry.
 
 - Production release 2.1.3 (2026-06-24T03:24:00Z):
   - Commands:
