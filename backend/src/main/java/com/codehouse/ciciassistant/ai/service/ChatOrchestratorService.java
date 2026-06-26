@@ -75,6 +75,7 @@ public class ChatOrchestratorService {
     private static final Pattern TOOL_DATA_COUNT_PATTERN = Pattern.compile("返回\\s*(\\d+)\\s*条[，,]\\s*总计\\s*(\\d+)\\s*条");
     private static final Pattern TOOL_FIELD_COUNT_PATTERN = Pattern.compile("对象字段列表（标准字段\\s*(\\d+)\\s*条[，,]\\s*自定义字段\\s*(\\d+)\\s*条）");
     private static final Pattern TOOL_OBJECT_COUNT_PATTERN = Pattern.compile("所有对象列表（标准对象:\\s*(\\d+)\\s*条[，,]\\s*自定义对象:\\s*(\\d+)\\s*条[，,]\\s*总计:\\s*(\\d+)\\s*条）");
+    private static final Pattern EMAIL_SEARCH_MESSAGE_ID_PATTERN = Pattern.compile("(?m)\\bid=([^\\s\\r\\n]+)");
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -1648,6 +1649,7 @@ public class ChatOrchestratorService {
                 - 你现在只判断是否必须继续调用工具，不生成给用户看的最终回答。
                 - 如果已有 tool messages 足以进入最终回答，不要输出解释，只回复 READY_TO_FINALIZE。
                 - 只有确实缺少必要事实、字段结构、下一页游标或必须执行的后续动作时，才继续发起一个最小必要工具调用。
+                - 如果用户要求查看邮件正文/内容/详情，而现有 email_search 结果只有 messageId，没有正文，必须继续调用 email_get_message。
                 - 不要为了润色、总结、排序或格式化而继续请求工具。
                 """.trim();
     }
@@ -1670,7 +1672,52 @@ public class ChatOrchestratorService {
             return false;
         }
         String result = toolResults.get(0);
+        if ("email_search".equals(toolName)
+                && isEmailBodyReadIntent(question)
+                && extractSingleEmailSearchMessageId(result).isPresent()) {
+            return false;
+        }
         return !looksFailedToolResult(result) && !toolResultRequiresMoreToolWork(result);
+    }
+
+    static boolean isEmailBodyReadIntent(String question) {
+        String text = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        if (text.isBlank()) {
+            return false;
+        }
+        boolean mentionsMail = containsAny(text, List.of("邮件", "这封", "email", "mail", "message"));
+        boolean asksBody = containsAny(text, List.of(
+                "正文", "内容", "详情", "明细", "原文", "全文", "展开", "打开", "读", "读取",
+                "查看", "看下", "看一下", "看看",
+                "body", "content", "detail", "details", "read", "open", "show"));
+        return mentionsMail && asksBody;
+    }
+
+    static Optional<String> extractSingleEmailSearchMessageId(String result) {
+        String text = result == null ? "" : result;
+        if (text.isBlank()) {
+            return Optional.empty();
+        }
+        LinkedHashSet<String> ids = new LinkedHashSet<>();
+        Matcher matcher = EMAIL_SEARCH_MESSAGE_ID_PATTERN.matcher(text);
+        while (matcher.find()) {
+            String id = stripTrailingEmailIdPunctuation(matcher.group(1));
+            if (!id.isBlank()) {
+                ids.add(id);
+            }
+        }
+        if (ids.size() != 1) {
+            return Optional.empty();
+        }
+        return Optional.of(ids.iterator().next());
+    }
+
+    private static String stripTrailingEmailIdPunctuation(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        while (!value.isBlank() && "，,；;。)）]】".indexOf(value.charAt(value.length() - 1)) >= 0) {
+            value = value.substring(0, value.length() - 1).trim();
+        }
+        return value;
     }
 
     private static boolean isReadOnlyLookupTool(String toolName) {

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { downsampleTo16k } from "./asrPcm";
 
+const ASR_STOP_CLOSE_GRACE_MS = 1500;
+
 export function mergePrefixAsr(prefix: string, asr: string): string {
   const a = asr.trim();
   const p = prefix;
@@ -10,7 +12,67 @@ export function mergePrefixAsr(prefix: string, asr: string): string {
   return `${p}${join}${a}`;
 }
 
-type AsrWsMessage = { type?: string; text?: string; message?: string; speakerId?: string; speakerName?: string };
+export type AsrWsMessage = {
+  type?: string;
+  text?: unknown;
+  message?: string;
+  speakerId?: string;
+  speakerName?: string;
+  transcript?: unknown;
+  result?: unknown;
+  payload?: unknown;
+  sentence?: unknown;
+  data?: unknown;
+};
+
+function objectValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null;
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+function firstNonBlank(...values: unknown[]): string {
+  for (const value of values) {
+    const text = stringValue(value).trim();
+    if (text) {
+      return text;
+    }
+  }
+  return "";
+}
+
+export function extractAsrMessageText(message: AsrWsMessage): string {
+  const payload = objectValue(message.payload);
+  const sentence = objectValue(message.sentence);
+  const data = objectValue(message.data);
+  const payloadOutput = objectValue(payload?.output);
+  const payloadSentence = objectValue(payloadOutput?.sentence) ?? objectValue(payload?.sentence);
+  const dataOutput = objectValue(data?.output);
+  const dataSentence = objectValue(dataOutput?.sentence) ?? objectValue(data?.sentence);
+  const result = objectValue(message.result);
+  const resultSentence = objectValue(result?.sentence);
+
+  return firstNonBlank(
+    message.text,
+    message.transcript,
+    message.result,
+    payload?.text,
+    payloadSentence?.text,
+    sentence?.text,
+    data?.text,
+    data?.transcript,
+    dataSentence?.text,
+    result?.text,
+    result?.transcript,
+    resultSentence?.text,
+  );
+}
+
+export function isAsrStartedMessage(message: AsrWsMessage): boolean {
+  return message.type === "status" && message.message === "started";
+}
 
 export type AsrTranscriptEvent = {
   type: "partial" | "final";
@@ -120,7 +182,7 @@ export function useAsrVoiceInput() {
         if (websocket.readyState === 0 || websocket.readyState === 1) {
           websocket.close();
         }
-      }, 300);
+      }, ASR_STOP_CLOSE_GRACE_MS);
     }
   }, [clearSilenceTimer, disconnectAudio]);
 
@@ -186,8 +248,9 @@ export function useAsrVoiceInput() {
         websocket.onmessage = (event) => {
           try {
             const message = JSON.parse(String(event.data)) as AsrWsMessage;
+            const text = extractAsrMessageText(message);
             if (message.type === "partial") {
-              partialAsrTextRef.current = message.text ?? "";
+              partialAsrTextRef.current = text;
               if (partialAsrTextRef.current.trim()) {
                 armSilenceTimer();
                 transcriptHandlerRef.current({
@@ -199,13 +262,13 @@ export function useAsrVoiceInput() {
               }
               pushLive();
             } else if (message.type === "final") {
-              finalAsrTextRef.current += message.text ?? "";
+              finalAsrTextRef.current += text;
               partialAsrTextRef.current = "";
-              if ((message.text ?? "").trim()) {
+              if (text.trim()) {
                 armSilenceTimer();
                 transcriptHandlerRef.current({
                   type: "final",
-                  text: message.text ?? "",
+                  text,
                   speakerId: message.speakerId,
                   speakerName: message.speakerName,
                 });
@@ -213,8 +276,10 @@ export function useAsrVoiceInput() {
               pushLive();
             } else if (message.type === "error") {
               noticeHandlerRef.current(`实时识别失败：${message.message ?? "unknown"}`);
-            } else if (message.type === "status" && message.message === "started") {
+            } else if (isAsrStartedMessage(message)) {
               asrReadyRef.current = true;
+            } else if (message.type === "finished") {
+              stop();
             }
           } catch {
             /* ignore malformed */
@@ -309,7 +374,7 @@ export function useAsrVoiceInput() {
         abort();
       }
     },
-    [speechSupported, abort, armSilenceTimer, clearSilenceTimer, disconnectAudio],
+    [speechSupported, abort, armSilenceTimer, stop],
   );
 
   return { listening, speechSupported, start, stop, abort };
