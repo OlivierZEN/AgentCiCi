@@ -17,6 +17,18 @@ status: active
 
 ## Latest Release
 
+- 2.1.6 continuous email-body task execution hotfix on 2026-06-26:
+  - Git commit: `f88be9f89335` on `main`; annotated tag `2.1.6` was pushed to origin.
+  - Scope: TASK-162 production dialog bug where user confirmation such as “是的” after a single email result caused the assistant to say “让我读取正文内容” but no `email_get_message` tool call was executed.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.6`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.6` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.6`, inspect digest `sha256:3d6003add537003c211730aaf6cd1e1b32607a68685b52fff1b89f03e5b5ee89`, linux/amd64 manifest digest `sha256:93c4bb901ce182590bbfcf3103d3371383e3bf66725c79d192594d46b0ad6a29`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.6`, inspect digest `sha256:a829b4d7111c7c8bce821329015602da52b8d7632fe67fa8a3577c17a4fd2445`, linux/amd64 manifest digest `sha256:eb41b5f73718977d19edb2650d1737cce9a1989f61b68098923bd6cac92e404d`.
+  - Backup directory: `/opt/cici/backups/20260626-143306-before-2.1.6`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.6` and `CICI_APP_VERSION=2.1.6`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.6` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.6`, `imageTag=2.1.6`, and `gitCommit=f88be9f89335`; frontend Nginx config test passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200, HTTP endpoint redirected to HTTPS, and unauthenticated `/auth/me` returned expected HTTP 401.
+
 - 2.1.5 dialog mail-body and voice-input hotfix on 2026-06-26:
   - Git commit: `947e47ddbe5a` on `main`; annotated tag `2.1.5` was pushed to origin.
   - Scope: TASK-161 production dialog bug where email body requests stopped at `email_search` results and voice input could report `未识别到有效语音内容` when frontend ASR parsing or stop finalization missed returned text.

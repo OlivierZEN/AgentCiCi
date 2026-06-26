@@ -13,8 +13,8 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-162 连续确认后的邮件正文工具续执行。
-- 命令：task identity/assignment checks, focused backend test, backend compile, static diff check.
+- 范围：TASK-162 连续确认后的邮件正文工具续执行、本地验证、main 合并、2.1.6 线上发布与生产验收。
+- 命令：task identity/assignment checks, focused backend test, backend compile, static diff check, release dry-run, ACR image push, production backup/deploy, production health/public smoke.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -27,10 +27,21 @@ last_run_status: success
     - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest test` in `backend/` -> **success**.
     - `backend-compile`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` in `backend/` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: committed TASK-162 as `fc0f06d`, merged into `main`, and pushed `origin/main` at `f88be9f89335` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.6`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.6` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.6` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260626-143306-before-2.1.6` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.6` and `CICI_APP_VERSION=2.1.6`; backend/frontend `2.1.6` images pulled; infra images locally tagged as `2.1.6`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.6`, `imageTag=2.1.6`, `gitCommit=f88be9f89335`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; `http://x.agentcici.com/` redirected to HTTPS; unauthenticated `/auth/me` returned expected `401` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.6`, inspect digest `sha256:3d6003add537003c211730aaf6cd1e1b32607a68685b52fff1b89f03e5b5ee89`, linux/amd64 manifest digest `sha256:93c4bb901ce182590bbfcf3103d3371383e3bf66725c79d192594d46b0ad6a29`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.6`, inspect digest `sha256:a829b4d7111c7c8bce821329015602da52b8d7632fe67fa8a3577c17a4fd2445`, linux/amd64 manifest digest `sha256:eb41b5f73718977d19edb2650d1737cce9a1989f61b68098923bd6cac92e404d`.
   - Notes:
     - `email_search` unique hits now persist a pending message id in session state.
     - Confirmation turns can deterministically append an `email_get_message` tool result before final answer generation.
     - “让我读取/查看/打开” is now recognized as an unfinished deferred tool promise.
+    - TASK-162 is live in production release `2.1.6`.
 
 - TASK-161 mail body and voice input fix (2026-06-26T06:10:00Z):
   - Commands:
