@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T04:50:00Z
+updated_at: 2026-06-26T05:20:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T04:50:00Z
+last_run_at: 2026-06-26T05:20:00Z
 last_run_status: success
 ---
 
@@ -13,11 +13,24 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-159 生产 `2.1.3` 对话报错热修、本地验证、main 合并、2.1.4 线上发布与生产验收。
-- 命令：production log/db inspection, focused Spring/Flyway integration tests, backend compile, frontend build, compose config, release dry-run, ECS-local hotfix deploy, production health/Flyway/chat smoke.
+- 范围：TASK-160 多租户隔离安全测试、跨组织越权回归、`ResponseStatusException` 状态码修复。
+- 命令：focused Spring/Flyway integration tests, related backend regression tests.
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-160 multitenant isolation security test (2026-06-26T05:20:00Z):
+  - Commands:
+    - `identity`: `dev-login.py` for `MANAGER-001` / `TASK-160` covering backend test/code, spec, task, task board, current status, and test report files -> **allowed**.
+    - `backend-focused-initial`: `mvn -q -Dtest=MultitenantIsolationIntegrationTest test` in `backend/` -> **failed** because cross-tenant session-message access correctly raised `ResponseStatusException(HttpStatus.NOT_FOUND)`, but the global exception handler mapped it to HTTP 500.
+    - `backend-focused`: after adding a `ResponseStatusException` handler that preserves status/reason, and after tightening session-state assertions to structured state fields, `mvn -q -Dtest=MultitenantIsolationIntegrationTest test` in `backend/` -> **success**.
+    - `backend-related-regression`: `mvn -q -Dtest=MultitenantIsolationIntegrationTest,ChatSessionStateServiceIntegrationTest,AgentDefinitionDeleteIntegrationTest,PlatformAuthIntegrationTest test` in `backend/` -> **success**.
+  - Coverage:
+    - Two real registered organizations with real JWT auth through MockMvc.
+    - Auth switch rejection, organization profile scoping, Agent list/detail/delete isolation, chat session list/message/delete isolation, same workbench `chat_session_state` separation by `(session_id, org_id)`, user run-log list/detail isolation, KB/document/chunk read/write/delete isolation, and organization/platform token boundary checks.
+  - Findings:
+    - No cross-organization data leakage, deletion, or mutation was found in the covered surfaces.
+    - Fixed generic API semantics so service-thrown `ResponseStatusException` no longer falls through as `Unexpected server error`; denied/missing resources now return their intended 4xx status.
 
 - TASK-159 chat session state tenant primary key hotfix (2026-06-26T04:22:00Z):
   - Commands:

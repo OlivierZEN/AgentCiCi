@@ -1,0 +1,49 @@
+task_id: TASK-160
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-26T13:10:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-070-multitenant-isolation-security-test.md
+task_status_path: .claw/tasks/TASK-160.md
+branch: codex/TASK-160-multitenant-isolation-test
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-160.md
+  - .claw/assignments/TASK-160.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-070-multitenant-isolation-security-test.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-070-multitenant-isolation-security-test.md
+task_boundary:
+  - "Create comprehensive backend multitenant isolation tests for organization-scoped data safety."
+  - "Fix discovered tenant-isolation defects only when required by the new tests and within the documented scope."
+  - "Do not run destructive production tests, change production credentials, or modify released migrations."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-26T13:10:00+08:00; user requested comprehensive multitenant isolation testing."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Security test task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-160 on branch codex/TASK-160-multitenant-isolation-test before implementation edits."

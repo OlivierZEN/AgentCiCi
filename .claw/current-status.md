@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-26T04:50:00Z
+updated_at: 2026-06-26T05:20:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-159 production chat hotfix is deployed and verified in 2.1.4."
-next_action: "Monitor production chat logs; follow up by restoring normal ACR push durability for the 2.1.4 image set."
+active_task: "TASK-160 multitenant isolation security test is complete."
+next_action: "Review and merge TASK-160 if desired; production remains on 2.1.4."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,10 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running hotfix release `2.1.4` from Git commit `d40d53d0a228`.
+- Current branch: `codex/TASK-160-multitenant-isolation-test`; production is running hotfix release `2.1.4` from Git commit `d40d53d0a228`.
+- TASK-160 is complete on branch `codex/TASK-160-multitenant-isolation-test`: added comprehensive backend multitenant isolation integration coverage for two real registered organizations across auth, organization admin, Agent, chat/session state, run logs, KB/RAG, and platform boundary APIs.
+- TASK-160 found and fixed a generic API error semantics gap: `ResponseStatusException` was previously handled as HTTP 500 by the global fallback; it now preserves the original status and reason, so denied/missing cross-tenant resources return 404/4xx instead of 500.
+- TASK-160 verification passed: `MultitenantIsolationIntegrationTest` and related regressions `ChatSessionStateServiceIntegrationTest`, `AgentDefinitionDeleteIntegrationTest`, and `PlatformAuthIntegrationTest` all pass locally against PostgreSQL/Flyway schema version 69.
 - TASK-159 is deployed: production `2.1.3` chat failed at `2026-06-26 12:12:12 CST` with `duplicate key value violates unique constraint "chat_session_state_pkey"` for `session_id=workbench:cici-system`.
 - Root cause was table-model drift: application reads session state by `session_id + org_id`, but `chat_session_state` primary key was only `session_id`; the same workbench session id is reused across orgs.
 - Hotfix `2.1.4` applied V69, changing `chat_session_state` primary key to `(session_id, org_id)`, and updated JPA to a composite id.
@@ -56,6 +59,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
+- `.claw/tasks/TASK-160.md` - multitenant isolation security testing.
+- `docs/specs/FEAT-070-multitenant-isolation-security-test.md` - isolation test matrix.
 - `.claw/tasks/TASK-159.md` - production chat session state hotfix.
 - `docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md` - hotfix spec.
 - `.claw/tasks/TASK-144.md` - public website and demo booking release state.
