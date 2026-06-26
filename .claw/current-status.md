@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-06-24T03:24:00Z
+updated_at: 2026-06-26T04:20:00Z
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "Production release 2.1.3 is deployed and verified for TASK-144 public demo booking."
-next_action: "Monitor production; optional follow-up is to fix the stale AutoServiceDemoRequestIntegrationTest platform-token credential."
+active_task: "TASK-159 production chat hotfix is in progress for 2.1.3 chat_session_state primary-key failures."
+next_action: "Fix chat_session_state tenant primary key, run focused backend validation, then prepare a production hotfix release."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,10 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.1.3` from Git commit `916ee5f48d7a`.
+- Current branch: `codex/TASK-159-chat-session-state-tenant-key-hotfix`; production is running release `2.1.3` from Git commit `916ee5f48d7a`.
+- TASK-159 is active: production `2.1.3` chat failed at `2026-06-26 12:12:12 CST` with `duplicate key value violates unique constraint "chat_session_state_pkey"` for `session_id=workbench:cici-system`.
+- Production log root cause is table-model drift: application reads session state by `session_id + org_id`, but `chat_session_state` primary key is only `session_id`; the same workbench session id is reused across orgs.
+- Planned hotfix: append a Flyway migration changing `chat_session_state` primary key to `(session_id, org_id)`, update the JPA entity to a composite id, and add focused backend coverage.
 - TASK-144 public website feedback is live: homepage/Solutions hero no longer shows the screenshot-marked `预约演示 / SkillsHub / 登录` button group.
 - Public demo booking now posts real records through `/api/autoservice/demo-requests`; the operations console `/platform/website-leads` can query the submitted records.
 - Release `2.1.3` was built and pushed with `./scripts/release-acr.sh --version 2.1.3`; Git tag `2.1.3`, backend image, frontend image, `CICI_IMAGE_TAG`, and `/system/version` all use `2.1.3`.
@@ -50,6 +53,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
+- `.claw/tasks/TASK-159.md` - production chat session state hotfix.
+- `docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md` - hotfix spec.
 - `.claw/tasks/TASK-144.md` - public website and demo booking release state.
 - `docs/specs/FEAT-061-agentcici-public-website-restructure.md` - public website spec.
 - `.claw/test-report.md` - latest verified commands.

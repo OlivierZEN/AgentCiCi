@@ -1,0 +1,51 @@
+task_id: TASK-159
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-06-26T12:20:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md
+task_status_path: .claw/tasks/TASK-159.md
+branch: codex/TASK-159-chat-session-state-tenant-key-hotfix
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/db/migration/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-159.md
+  - .claw/assignments/TASK-159.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-069-chat-session-state-tenant-key-hotfix.md
+  - docs/specs/FEAT-068-agent-runtime-concurrency-hardening.md
+task_boundary:
+  - "Fix production chat failure caused by chat_session_state primary key being session_id-only while application access is tenant-scoped."
+  - "Append a forward Flyway migration and focused backend coverage for tenant-scoped session state."
+  - "Do not change frontend session id generation, unrelated chat UX, production credentials, or existing released migrations."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-06-26T12:20:00+08:00; user reported production 2.1.3 chat failure."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production hotfix task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-159 on branch codex/TASK-159-chat-session-state-tenant-key-hotfix before implementation edits."

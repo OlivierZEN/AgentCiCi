@@ -3,18 +3,21 @@ package com.codehouse.ciciassistant.ai.domain;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.IdClass;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
 
 @Entity
 @Table(name = "chat_session_state")
+@IdClass(ChatSessionStateId.class)
 public class ChatSessionStateEntity {
 
     @Id
     @Column(name = "session_id", nullable = false, length = 64)
     private String sessionId;
 
+    @Id
     @Column(name = "org_id", nullable = false, length = 64)
     private String orgId;
 
