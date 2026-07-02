@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-02T23:10:00+08:00
+updated_at: 2026-07-02T23:18:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-164 fixes production Qdrant vector dimension drift."
-next_action: "Align Qdrant default dimension to 1024, backup/repair production collection, reindex KB vectors, and verify the reported Markdown upload."
+active_task: "TASK-164 done in production release 2.1.8."
+next_action: "Monitor KB upload and vector indexing; user can retry or inspect the uploaded Markdown document."
 read_next:
   goals: false
   decisions: false
@@ -22,10 +22,12 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `codex/TASK-164-qdrant-dimension-repair`; production is running release `2.1.7` from Git commit `ee84bc85c7be`.
-- TASK-164 is in progress: production KB upload of `/Volumes/AISpace/AI/y-skills/cc-customer-success/knowledge/import-ready/01-cloudcc-company-overview.md` failed with `Qdrant upsert failed ... Vector dimension error: expected dim: 16, got 1024`.
-- Production investigation found `APP_KB_VECTOR_STORE=qdrant`, no explicit `APP_KB_EMBEDDING_DIMENSION`, Qdrant collection `cici_kb_chunk` configured with `vectors.size=16`, while `knowledge_base` and `kb_chunk` DB embedding dimensions are `1024`.
-- Root cause candidate: `QdrantVectorStoreClient` defaults `app.kb.embedding.dimension` to `16`, while `EmbeddingService`, `KnowledgeBaseService`, and migrations default to `1024`.
+- Current branch: `main`; production is running release `2.1.8` from Git commit `4cfba0b836e8`.
+- TASK-164 is deployed in `2.1.8`: production KB upload of `/Volumes/AISpace/AI/y-skills/cc-customer-success/knowledge/import-ready/01-cloudcc-company-overview.md` failed with `Qdrant upsert failed ... Vector dimension error: expected dim: 16, got 1024`.
+- Root cause was Qdrant collection dimension drift: production `cici_kb_chunk` was configured with `vectors.size=16`, while DB KB/chunk dimensions and current embedding output are `1024`; `QdrantVectorStoreClient` also had a stale default of `16`.
+- TASK-164 code fix: Qdrant default embedding dimension is now `1024`, and startup logs an explicit collection dimension mismatch when existing Qdrant metadata differs from configured embedding dimension.
+- TASK-164 production repair: backup `/opt/cici/backups/20260702-230957-before-2.1.8-qdrant-dimension-repair`; collection `cici_kb_chunk` rebuilt with `vectors.size=1024`; 311 active chunks were backfilled from DB; failed document `id=11` was requeued and became `PUBLISHED`.
+- TASK-164 verification passed: Qdrant count `316`, active searchable chunks `316`, doc `11` has 6 active chunks, recent Qdrant/dimension error scan empty, public home `200`, `/auth/me` expected `401`.
 - TASK-163 is deployed in `2.1.7`: user confirmed email body expansion, but `email_get_message` used a stale POP3 `messageId` and stopped after saying the ID may be expired; the fix now stores the email subject/from with the pending ID, preserves pending state on ID misses, refreshes the search, and retries `email_get_message` in the same turn. The frontend also releases `chatLoading` immediately after stream completion and has a 180s stale-loading fallback so the microphone is not blocked by slow history refresh or missed completion state.
 - TASK-163 verification passed: task authorization checks, `ChatOrchestratorServiceModelIdentityTest`, frontend production build, compose config check, `git diff --check`, production health/version checks, recent backend error scan, and public smoke.
 - Release `2.1.7` was built and pushed with `./scripts/release-acr.sh --version 2.1.7`; Git tag `2.1.7`, backend image, frontend image, `CICI_IMAGE_TAG`, and `/system/version` all use `2.1.7`.

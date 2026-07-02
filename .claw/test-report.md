@@ -1,7 +1,7 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-02T23:10:00+08:00
+updated_at: 2026-07-02T23:18:00+08:00
 updated_by: MANAGER-001
 status: active
 last_run_at: 2026-07-02T23:18:00+08:00
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-164 Qdrant 向量维度漂移修复。
-- 命令：任务级门禁、focused backend test、backend compile、static check。生产 Qdrant backup/repair/reindex/upload smoke 待发布后执行。
+- 命令：任务级门禁、focused backend test、backend compile、static check、release dry-run、ACR build/push、production backup/deploy、Qdrant rebuild/reindex、production smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -28,10 +28,24 @@ last_run_status: success
     - `backend-focused`: `mvn test -Dtest=QdrantVectorStoreClientTest` in `backend/` -> **success**, 3 tests passed.
     - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task164.yml` -> **success**.
+    - `merge-main`: committed TASK-164 as `4cfba0b`, fast-forward merged into `main`, and pushed `origin/main` at `4cfba0b836e8` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.8`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.8` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.8` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260702-230957-before-2.1.8-qdrant-dimension-repair` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.8` and `CICI_APP_VERSION=2.1.8`; backend/frontend `2.1.8` images pulled; infra images locally tagged as `2.1.8`; compose `up -d` completed -> **success**.
+    - `production-dimension-diagnostic`: after first 2.1.8 boot, backend logged explicit mismatch `expected 1024, actual 16`, confirming the new diagnostic path -> **success**.
+    - `production-qdrant-repair`: stopped backend; deleted and recreated `cici_kb_chunk` with vector size 1024; backfilled 311 active chunks from DB into Qdrant and updated DB vector ids -> **success**.
+    - `production-reindex-failed-doc`: requeued failed Qdrant document `id=11`, `org=org5nszpgj99jaysxv6y`; document became `PUBLISHED`, with 6 active chunks -> **success**.
+    - `production-health`: backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.8`, `imageTag=2.1.8`, `gitCommit=4cfba0b836e8`; Qdrant collection `vectors.size=1024`, Qdrant count `316`, active searchable chunks `316`; latest Qdrant/dimension error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.8`, index digest `sha256:28887773d8666d1606b2be18d11220a7c48ca5b2db1d914e1c9c300bb6c4514e`, linux/amd64 manifest digest `sha256:190942bfc1378cda4ed0463e387b007b0b4b23320d2b4435657bc4fe8fe67552`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.8`, index digest `sha256:de6901b1c854993cb7b161583be47deff2aba1902b0aa0a89d767c1b5aa6b3c2`, linux/amd64 manifest digest `sha256:405e479a96d7f419e52aa11042af6f6787a6a16f7e0f4a1d0020212a1c005ee5`.
   - Notes:
     - `QdrantVectorStoreClient` now defaults `app.kb.embedding.dimension` to `1024`, matching `EmbeddingService`, `KnowledgeBaseService`, and DB defaults.
     - Startup now reads existing Qdrant collection metadata and logs an explicit dimension mismatch if the collection differs from configured embedding dimension.
-    - Production repair and release are pending.
+    - TASK-164 is live in production release `2.1.8`; the reported Markdown document is indexed as production document `id=11`.
 
 - TASK-163 email id refresh and voice follow-up fix (2026-06-26T09:15:00Z):
   - Commands:

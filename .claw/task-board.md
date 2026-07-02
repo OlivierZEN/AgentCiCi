@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-02T23:10:00+08:00
+updated_at: 2026-07-02T23:18:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-164 - Qdrant 向量维度漂移修复
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-074-qdrant-dimension-repair.md`
 - task_status_path: `.claw/tasks/TASK-164.md`
 - assignment_path: `.claw/assignments/TASK-164.yaml`
 - blocked_by: `none`
-- next_action: Local validation passed; merge, release, repair production Qdrant collection to 1024, and reindex KB vectors.
+- next_action: Done in production release `2.1.8`; monitor KB upload and vector indexing.
 
 ### TASK-163 - 邮件 ID 刷新重试与语音后续可用性修复
 

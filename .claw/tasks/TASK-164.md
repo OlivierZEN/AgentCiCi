@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-164
-status: review
+status: done
 updated_at: 2026-07-02T23:18:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -31,6 +31,11 @@ spec_path: docs/specs/FEAT-074-qdrant-dimension-repair.md
 - `mvn test -Dtest=QdrantVectorStoreClientTest` in `backend/` -> success, 3 tests passed.
 - `mvn -DskipTests compile` in `backend/` -> success.
 - `git diff --check` -> success.
+- `./scripts/release-acr.sh --dry-run` -> success, resolved production version `2.1.8`.
+- `./scripts/release-acr.sh --version 2.1.8` -> success, backend/frontend images and Git tag `2.1.8` pushed.
+- Production backup -> `/opt/cici/backups/20260702-230957-before-2.1.8-qdrant-dimension-repair`.
+- Production Qdrant repair -> collection `cici_kb_chunk` rebuilt with `vectors.size=1024`; 311 active chunks were backfilled from DB; failed doc `id=11` was requeued and became `PUBLISHED`.
+- Production verification -> `/system/version` returned `2.1.8`; Qdrant count `316`; active searchable chunks `316`; latest Qdrant/dimension error scan empty; public home `200`, unauthenticated `/auth/me` expected `401`.
 
 ## Changed Files
 
@@ -46,5 +51,6 @@ spec_path: docs/specs/FEAT-074-qdrant-dimension-repair.md
 ## Handoff
 
 - Branch: `codex/TASK-164-qdrant-dimension-repair`.
-- 本地代码修复与验证已完成：Qdrant 默认 collection 维度改为 1024，并增加启动时 collection 维度 mismatch 诊断。
-- 生产修复仍待执行：发布新版本后备份并重建 Qdrant collection，再重建 KB 向量索引。
+- 已发布生产版本 `2.1.8`。
+- Qdrant 默认 collection 维度改为 1024，并增加启动时 collection 维度 mismatch 诊断。
+- 生产 collection 已重建为 1024 维，DB active chunks 已回填 Qdrant；用户上传的 `01-cloudcc-company-overview.md` 对应文档 `id=11` 已索引成功并进入 `PUBLISHED`。

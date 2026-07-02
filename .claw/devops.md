@@ -17,6 +17,20 @@ status: active
 
 ## Latest Release
 
+- 2.1.8 Qdrant vector dimension repair hotfix on 2026-07-02:
+  - Git commit: `4cfba0b836e8` on `main`; annotated tag `2.1.8` was pushed to origin.
+  - Scope: TASK-164 production KB upload bug where Qdrant collection `cici_kb_chunk` expected vector dimension `16` while current KB embedding output and DB metadata are `1024`, causing Markdown uploads to fail with `Qdrant upsert failed ... expected dim: 16, got 1024`.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.8`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.8` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.8`, index digest `sha256:28887773d8666d1606b2be18d11220a7c48ca5b2db1d914e1c9c300bb6c4514e`, linux/amd64 manifest digest `sha256:190942bfc1378cda4ed0463e387b007b0b4b23320d2b4435657bc4fe8fe67552`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.8`, index digest `sha256:de6901b1c854993cb7b161583be47deff2aba1902b0aa0a89d767c1b5aa6b3c2`, linux/amd64 manifest digest `sha256:405e479a96d7f419e52aa11042af6f6787a6a16f7e0f4a1d0020212a1c005ee5`.
+  - Backup directory: `/opt/cici/backups/20260702-230957-before-2.1.8-qdrant-dimension-repair`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.8` and `CICI_APP_VERSION=2.1.8`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.8` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Qdrant repair: after backup, backend was stopped; collection `cici_kb_chunk` was deleted and recreated with `vectors.size=1024`; 311 active chunks were backfilled from PostgreSQL into Qdrant and DB `vector_id` values were refreshed.
+  - Reported document recovery: failed production document `id=11`, `01-cloudcc-company-overview.md`, was requeued and became `PUBLISHED` with 6 active chunks.
+  - Verified after deploy: backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.8`, `imageTag=2.1.8`, and `gitCommit=4cfba0b836e8`; Qdrant collection vector size is `1024`; Qdrant point count and active searchable chunk count are both `316`; recent Qdrant/dimension error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200 and unauthenticated `/auth/me` returned expected HTTP 401.
+
 - 2.1.7 stale POP3 email-body retry and voice follow-up hotfix on 2026-06-26:
   - Git commit: `ee84bc85c7be` on `main`; annotated tag `2.1.7` was pushed to origin.
   - Scope: TASK-163 production dialog bug where a confirmation to read email body could use a stale POP3 `messageId`, fail with “没有找到 messageId”, and stop instead of refreshing the email id; voice input could remain blocked by a stale chat loading state after the answer appeared complete.
