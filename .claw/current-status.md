@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-02T23:18:00+08:00
+updated_at: 2026-07-03T00:14:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-164 done in production release 2.1.8."
-next_action: "Monitor KB upload and vector indexing; user can retry or inspect the uploaded Markdown document."
+active_task: "TASK-165 review: Agent-bound KB runtime retrieval trigger fix passed local verification."
+next_action: "Merge TASK-165 to main, push origin/main, run release dry-run, and publish production version."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,11 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.1.8` from Git commit `4cfba0b836e8`.
+- Current branch: `codex/TASK-165-agent-kb-runtime-retrieval`; production is running release `2.1.8` from Git commit `4cfba0b836e8`.
+- TASK-165 fixes the production trace where customer success Agent had an ACTIVE bound knowledge base but `CloudCC私有云部署注意事项有哪些` skipped RAG with `本轮输入未满足知识库检索条件`.
+- Root cause: `SkillResolverService` already resolved Agent-bound KB ids, but `ChatOrchestratorService.shouldUseKnowledgeRetrieval(...)` only triggers default-KB retrieval for a conservative keyword list; it did not include deployment/private-cloud/notice/best-practice style knowledge questions.
+- TASK-165 code fix: default-KB knowledge intent now includes `部署`、`私有云`、`公有云`、`注意事项`、`最佳实践`、`解决方案`, while casual-chat and ordinary business-tool skip behavior remains covered by tests.
+- TASK-165 verification passed: task authorization checks, production read-only binding check, TDD RED/GREEN `ChatOrchestratorServiceModelIdentityTest`, backend compile, Compose config, and `git diff --check`.
 - TASK-164 is deployed in `2.1.8`: production KB upload of `/Volumes/AISpace/AI/y-skills/cc-customer-success/knowledge/import-ready/01-cloudcc-company-overview.md` failed with `Qdrant upsert failed ... Vector dimension error: expected dim: 16, got 1024`.
 - Root cause was Qdrant collection dimension drift: production `cici_kb_chunk` was configured with `vectors.size=16`, while DB KB/chunk dimensions and current embedding output are `1024`; `QdrantVectorStoreClient` also had a stale default of `16`.
 - TASK-164 code fix: Qdrant default embedding dimension is now `1024`, and startup logs an explicit collection dimension mismatch when existing Qdrant metadata differs from configured embedding dimension.
@@ -78,8 +82,10 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-163.md` - current email id refresh and voice follow-up fix.
-- `docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md` - current task spec.
+- `.claw/tasks/TASK-165.md` - current Agent-bound KB runtime retrieval fix.
+- `docs/specs/FEAT-075-agent-kb-runtime-retrieval.md` - current task spec.
+- `.claw/tasks/TASK-163.md` - email id refresh and voice follow-up fix.
+- `docs/specs/FEAT-073-email-id-refresh-and-voice-followup.md` - email id refresh and voice follow-up spec.
 - `.claw/tasks/TASK-162.md` - current continuous email-body tool execution fix.
 - `docs/specs/FEAT-072-continuous-tool-execution-confirmation.md` - current task spec.
 - `.claw/tasks/TASK-161.md` - current mail body and voice input fix.

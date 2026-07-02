@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-02T23:18:00+08:00
+updated_at: 2026-07-03T00:14:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-165 - 智能体绑定知识库运行时检索触发修复
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-075-agent-kb-runtime-retrieval.md`
+- task_status_path: `.claw/tasks/TASK-165.md`
+- assignment_path: `.claw/assignments/TASK-165.yaml`
+- blocked_by: `none`
+- next_action: Local verification passed; merge to main, push, dry-run release, and publish production version.
 
 ### TASK-164 - Qdrant 向量维度漂移修复
 

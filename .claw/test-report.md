@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-02T23:18:00+08:00
+updated_at: 2026-07-03T00:14:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-02T23:18:00+08:00
+last_run_at: 2026-07-03T00:14:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-164 Qdrant 向量维度漂移修复。
-- 命令：任务级门禁、focused backend test、backend compile、static check、release dry-run、ACR build/push、production backup/deploy、Qdrant rebuild/reindex、production smoke。
+- 范围：TASK-165 智能体绑定知识库运行时检索触发修复。
+- 命令：任务级门禁、生产只读元数据核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-165 Agent-bound KB runtime retrieval trigger fix (2026-07-03T00:10:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` before TASK-165 assignment creation -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-165` covering orchestrator, focused backend test, spec, task, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-165 intended implementation files -> **allowed**.
+    - `production-readonly-binding`: production PostgreSQL metadata shows enabled ACTIVE KB bindings for customer success Agents, including `org5nszpgj99jaysxv6y / after-sales-agent / 客户成功 -> kb 8 CloudCC客户成功知识库`; backend `/system/version` is still `2.1.8` before deploy -> **confirmed**.
+    - `backend-focused-red`: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **failed as expected** because `CloudCC私有云部署注意事项有哪些` returned `false` for default-KB retrieval.
+    - `backend-focused-green`: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **success**, 26 tests passed.
+    - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task165.yml` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Root cause is verified as runtime retrieval trigger policy, not missing KB binding. `SkillResolverService` resolves default KB ids, but `shouldUseKnowledgeRetrieval(...)` skipped non-explicit KB requests whose text lacked the existing whitelist terms.
+    - The fix adds deployment/private-cloud/notice/best-practice/solution terms to default-KB knowledge intent while preserving casual-chat skip and ordinary business-tool skip behavior.
 
 - TASK-164 Qdrant dimension drift fix (2026-07-02T23:10:00+08:00):
   - Commands:

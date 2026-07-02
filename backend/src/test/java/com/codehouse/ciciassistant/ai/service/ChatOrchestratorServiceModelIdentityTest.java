@@ -241,6 +241,15 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldRetrieveKnowledgeForDeploymentQuestionWithDefaultKb() {
+        assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
+                "CloudCC私有云部署注意事项有哪些",
+                List.of("12"),
+                List.of()))
+                .isTrue();
+    }
+
+    @Test
     void shouldSkipKnowledgeForCasualOrBusinessToolIntentWithDefaultKb() {
         assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
                 "你好，上才艺",
