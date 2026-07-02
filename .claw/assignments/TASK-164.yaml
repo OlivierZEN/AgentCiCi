@@ -1,0 +1,54 @@
+task_id: TASK-164
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-02T23:10:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-074-qdrant-dimension-repair.md
+task_status_path: .claw/tasks/TASK-164.md
+branch: codex/TASK-164-qdrant-dimension-repair
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-164.md
+  - .claw/assignments/TASK-164.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - docs/specs/FEAT-074-qdrant-dimension-repair.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-074-qdrant-dimension-repair.md
+  - docs/specs/FEAT-008-knowledge-base-lifecycle-completion.md
+  - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+task_boundary:
+  - "Fix Qdrant vector dimension drift for KB indexing by aligning default collection dimension with current embedding defaults."
+  - "Add collection dimension mismatch diagnostics to avoid obscure Qdrant 400 errors."
+  - "Repair production Qdrant collection only after backup, then reindex existing KB vectors."
+  - "Do not change embedding model semantics, unrelated KB UI, tenant access control, production secrets, or release scripts."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-02T23:10:00+08:00; user reported production KB upload Qdrant dimension error."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production KB indexing hotfix. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-164 on branch codex/TASK-164-qdrant-dimension-repair before implementation edits."

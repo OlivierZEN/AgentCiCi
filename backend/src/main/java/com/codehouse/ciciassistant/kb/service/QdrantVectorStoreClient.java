@@ -3,9 +3,11 @@ package com.codehouse.ciciassistant.kb.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,7 +36,7 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
             @Value("${app.kb.qdrant.base-url:http://localhost:6333}") String baseUrl,
             @Value("${app.kb.qdrant.collection:cici_kb_chunk}") String collection,
             @Value("${app.kb.qdrant.api-key:}") String apiKey,
-            @Value("${app.kb.embedding.dimension:16}") int dimension) {
+            @Value("${app.kb.embedding.dimension:1024}") int dimension) {
         this.objectMapper = objectMapper;
         this.collection = collection;
         this.dimension = Math.max(4, dimension);
@@ -49,8 +51,11 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
     @jakarta.annotation.PostConstruct
     void ensureCollection() {
         try {
-            if (!collectionExists()) {
+            Optional<JsonNode> metadata = collectionMetadata();
+            if (metadata.isEmpty()) {
                 createCollection();
+            } else {
+                validateCollectionDimension(metadata.get());
             }
         } catch (Exception ex) {
             log.warn("Qdrant collection bootstrap skipped or failed (operations may fail until fixed): {}", ex.getMessage());
@@ -277,23 +282,64 @@ public class QdrantVectorStoreClient implements VectorStoreClient {
         }
     }
 
-    private boolean collectionExists() {
+    private Optional<JsonNode> collectionMetadata() {
         try {
-            restClient.get()
+            String response = restClient.get()
                     .uri("/collections/{name}", collection)
                     .retrieve()
-                    .toBodilessEntity();
-            return true;
+                    .body(String.class);
+            return Optional.of(objectMapper.readTree(response == null ? "{}" : response));
         } catch (RestClientResponseException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                return false;
+                return Optional.empty();
             }
             log.debug("Qdrant collection probe: {}", e.getMessage());
-            return false;
+            return Optional.empty();
         } catch (Exception e) {
             log.debug("Qdrant collection probe failed: {}", e.getMessage());
-            return false;
+            return Optional.empty();
         }
+    }
+
+    private void validateCollectionDimension(JsonNode metadata) {
+        Optional<Integer> actual = extractCollectionVectorSize(metadata);
+        if (actual.isEmpty()) {
+            log.warn("Qdrant collection {} exists but vector dimension could not be read; expected {}", collection, dimension);
+            return;
+        }
+        if (actual.get() != dimension) {
+            log.error("Qdrant collection {} vector dimension mismatch: expected {}, actual {}. "
+                            + "KB indexing will fail until the collection is rebuilt or app.kb.embedding.dimension is corrected.",
+                    collection, dimension, actual.get());
+        }
+    }
+
+    static Optional<Integer> extractCollectionVectorSize(JsonNode root) {
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return Optional.empty();
+        }
+        JsonNode vectors = root.path("result").path("config").path("params").path("vectors");
+        if (vectors.path("size").canConvertToInt()) {
+            return Optional.of(vectors.path("size").asInt());
+        }
+        if (vectors.isObject()) {
+            Integer first = null;
+            Iterator<JsonNode> items = vectors.elements();
+            while (items.hasNext()) {
+                JsonNode item = items.next();
+                if (!item.path("size").canConvertToInt()) {
+                    return Optional.empty();
+                }
+                int size = item.path("size").asInt();
+                if (first == null) {
+                    first = size;
+                } else if (first != size) {
+                    return Optional.empty();
+                }
+            }
+            return first == null ? Optional.empty() : Optional.of(first);
+        }
+        return Optional.empty();
     }
 
     private void createCollection() throws Exception {

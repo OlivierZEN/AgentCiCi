@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-06-26T09:24:00Z
+updated_at: 2026-07-02T23:10:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-06-26T09:24:00Z
+last_run_at: 2026-07-02T23:18:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-163 邮件 ID 刷新重试与语音后续可用性修复。
-- 命令：任务级门禁、focused backend test、frontend production build、release dry-run、ACR build/push、production deploy、production smoke。
+- 范围：TASK-164 Qdrant 向量维度漂移修复。
+- 命令：任务级门禁、focused backend test、backend compile、static check。生产 Qdrant backup/repair/reindex/upload smoke 待发布后执行。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-164 Qdrant dimension drift fix (2026-07-02T23:10:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` covering TASK-164 spec/task/assignment/status/report/devops files -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-164` covering Qdrant client, Qdrant focused test, spec, task, assignment, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-164 intended changed files -> **allowed**.
+    - `production-readonly-inspection`: production `/system/version` returned `2.1.7`; backend env has `APP_KB_VECTOR_STORE=qdrant` and no explicit `APP_KB_EMBEDDING_DIMENSION`; Qdrant collection `cici_kb_chunk` has `vectors.size=16` and `points_count=161`; DB `knowledge_base` and `kb_chunk` embedding dimensions are `1024`; latest uploaded doc failed with Qdrant dimension mismatch -> **confirmed**.
+    - `backend-focused`: `mvn test -Dtest=QdrantVectorStoreClientTest` in `backend/` -> **success**, 3 tests passed.
+    - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - `QdrantVectorStoreClient` now defaults `app.kb.embedding.dimension` to `1024`, matching `EmbeddingService`, `KnowledgeBaseService`, and DB defaults.
+    - Startup now reads existing Qdrant collection metadata and logs an explicit dimension mismatch if the collection differs from configured embedding dimension.
+    - Production repair and release are pending.
 
 - TASK-163 email id refresh and voice follow-up fix (2026-06-26T09:15:00Z):
   - Commands:
