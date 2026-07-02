@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T00:14:00+08:00
+updated_at: 2026-07-03T00:18:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T00:14:00+08:00
+last_run_at: 2026-07-03T00:18:00+08:00
 last_run_status: success
 ---
 
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-165 智能体绑定知识库运行时检索触发修复。
-- 命令：任务级门禁、生产只读元数据核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check。
+- 命令：任务级门禁、生产只读元数据核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check、release dry-run、ACR build/push、production backup/deploy、production smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -30,9 +30,20 @@ last_run_status: success
     - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
     - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task165.yml` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: committed TASK-165 as `01fb981`, fast-forward merged into `main`, and pushed `origin/main` at `01fb981fed61` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.9`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.9` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.9` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260703-001552-before-2.1.9-agent-kb-trigger` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.9` and `CICI_APP_VERSION=2.1.9`; backend/frontend `2.1.9` images pulled; infra images locally tagged as `2.1.9`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.9`, `imageTag=2.1.9`, `gitCommit=01fb981fed61`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.9`, index digest `sha256:9e8d77c0710f7a388918d10b1e1b3fc000d310af022a2db1429ee0a21cc22841`, linux/amd64 manifest digest `sha256:bd61d60376eb9dd83f787cd822d47e74fa5d243d2380b33826d11c0b305cdfe5`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.9`, index digest `sha256:7eba7c681395574a59da828cf1b62f08607dde80f49be2767a86ad96b776139c`, linux/amd64 manifest digest `sha256:961e16662d619d7de56cfcb546b9b2a64cb6c000ed19c9fe9b0b7763ea56e01e`.
   - Notes:
     - Root cause is verified as runtime retrieval trigger policy, not missing KB binding. `SkillResolverService` resolves default KB ids, but `shouldUseKnowledgeRetrieval(...)` skipped non-explicit KB requests whose text lacked the existing whitelist terms.
     - The fix adds deployment/private-cloud/notice/best-practice/solution terms to default-KB knowledge intent while preserving casual-chat skip and ordinary business-tool skip behavior.
+    - TASK-165 is live in production release `2.1.9`; authenticated real user retest is still needed to generate a new Agent run trace for the exact screenshot flow.
 
 - TASK-164 Qdrant dimension drift fix (2026-07-02T23:10:00+08:00):
   - Commands:

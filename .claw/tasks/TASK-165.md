@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-165
-status: review
-updated_at: 2026-07-03T00:14:00+08:00
+status: done
+updated_at: 2026-07-03T00:18:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -39,6 +39,12 @@ spec_path: docs/specs/FEAT-075-agent-kb-runtime-retrieval.md
 - `mvn -DskipTests compile` in `backend/` -> success.
 - `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task165.yml` -> success.
 - `git diff --check` -> success.
+- `./scripts/release-acr.sh --dry-run` -> success, resolved production version `2.1.9`.
+- `./scripts/release-acr.sh --version 2.1.9` -> success, backend/frontend images and Git tag `2.1.9` pushed.
+- Production backup -> `/opt/cici/backups/20260703-001552-before-2.1.9-agent-kb-trigger`.
+- Production deploy -> success, `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.9` and `CICI_APP_VERSION=2.1.9`.
+- Production health -> six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.9`, `imageTag=2.1.9`, `gitCommit=01fb981fed61`; frontend `nginx -t` passed; recent backend error scan empty.
+- Public smoke -> `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401`.
 
 ## Changed Files
 
@@ -49,10 +55,12 @@ spec_path: docs/specs/FEAT-075-agent-kb-runtime-retrieval.md
 - `.claw/assignments/TASK-165.yaml`
 - `.claw/task-board.md`
 - `.claw/test-report.md`
+- `.claw/current-status.md`
+- `.claw/devops.md`
 
 ## Handoff
 
 - Branch: `codex/TASK-165-agent-kb-runtime-retrieval`.
 - Root cause: RAG 有效知识库已解析，但未显式选择知识库时的触发词表漏掉部署/注意事项类知识问法。
 - Fix: 默认知识库检索意图词表增加 `部署`、`私有云`、`公有云`、`注意事项`、`最佳实践`、`解决方案`。
-- Next: merge to `main`, push remote, dry-run release, publish production version.
+- 已合并并发布生产版本 `2.1.9`。用户可用同一句 `CloudCC私有云部署注意事项有哪些` 复测，链路追踪应进入 `知识库检索` / `rag_done`，不再显示 `本轮输入未满足知识库检索条件`。

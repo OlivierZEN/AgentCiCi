@@ -6,7 +6,7 @@ assigned_at: 2026-07-03T00:10:00+08:00
 expires_at: none
 spec_path: docs/specs/FEAT-075-agent-kb-runtime-retrieval.md
 task_status_path: .claw/tasks/TASK-165.md
-branch: codex/TASK-165-agent-kb-runtime-retrieval
+branch: main
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
@@ -20,6 +20,7 @@ scope_files:
   - .claw/task-board.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/devops.md
   - docs/specs/FEAT-075-agent-kb-runtime-retrieval.md
 protected_paths:
   - .claw/assignments/**
@@ -48,4 +49,4 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "Production chat RAG trigger hotfix. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
-hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-165 on branch codex/TASK-165-agent-kb-runtime-retrieval before implementation edits."
+hard_gate_notes: "MANAGER-001 ran task-scoped dev-login.py for TASK-165 on branch codex/TASK-165-agent-kb-runtime-retrieval before implementation edits; release-record updates are authorized on main after merge."

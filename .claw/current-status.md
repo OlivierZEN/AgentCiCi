@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-03T00:14:00+08:00
+updated_at: 2026-07-03T00:18:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-165 review: Agent-bound KB runtime retrieval trigger fix passed local verification."
-next_action: "Merge TASK-165 to main, push origin/main, run release dry-run, and publish production version."
+active_task: "TASK-165 done in production release 2.1.9."
+next_action: "Monitor customer success Agent-bound KB retrieval traces; user can retry the same deployment question."
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,12 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `codex/TASK-165-agent-kb-runtime-retrieval`; production is running release `2.1.8` from Git commit `4cfba0b836e8`.
+- Current branch: `main`; production is running release `2.1.9` from Git commit `01fb981fed61`.
 - TASK-165 fixes the production trace where customer success Agent had an ACTIVE bound knowledge base but `CloudCC私有云部署注意事项有哪些` skipped RAG with `本轮输入未满足知识库检索条件`.
 - Root cause: `SkillResolverService` already resolved Agent-bound KB ids, but `ChatOrchestratorService.shouldUseKnowledgeRetrieval(...)` only triggers default-KB retrieval for a conservative keyword list; it did not include deployment/private-cloud/notice/best-practice style knowledge questions.
 - TASK-165 code fix: default-KB knowledge intent now includes `部署`、`私有云`、`公有云`、`注意事项`、`最佳实践`、`解决方案`, while casual-chat and ordinary business-tool skip behavior remains covered by tests.
-- TASK-165 verification passed: task authorization checks, production read-only binding check, TDD RED/GREEN `ChatOrchestratorServiceModelIdentityTest`, backend compile, Compose config, and `git diff --check`.
+- TASK-165 verification passed: task authorization checks, production read-only binding check, TDD RED/GREEN `ChatOrchestratorServiceModelIdentityTest`, backend compile, Compose config, `git diff --check`, release dry-run, ACR build/push, production backup/deploy, and production smoke.
+- TASK-165 release: Git tag `2.1.9` pushed; backup `/opt/cici/backups/20260703-001552-before-2.1.9-agent-kb-trigger`; six production containers healthy; `/system/version` returns `version=2.1.9`, `imageTag=2.1.9`, `gitCommit=01fb981fed61`; public home `200`, unauthenticated `/auth/me` expected `401`.
 - TASK-164 is deployed in `2.1.8`: production KB upload of `/Volumes/AISpace/AI/y-skills/cc-customer-success/knowledge/import-ready/01-cloudcc-company-overview.md` failed with `Qdrant upsert failed ... Vector dimension error: expected dim: 16, got 1024`.
 - Root cause was Qdrant collection dimension drift: production `cici_kb_chunk` was configured with `vectors.size=16`, while DB KB/chunk dimensions and current embedding output are `1024`; `QdrantVectorStoreClient` also had a stale default of `16`.
 - TASK-164 code fix: Qdrant default embedding dimension is now `1024`, and startup logs an explicit collection dimension mismatch when existing Qdrant metadata differs from configured embedding dimension.

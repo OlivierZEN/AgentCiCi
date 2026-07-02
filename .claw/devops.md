@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-06-26T04:50:00Z
+updated_at: 2026-07-03T00:18:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.9 Agent-bound KB retrieval trigger hotfix on 2026-07-03:
+  - Git commit: `01fb981fed61` on `main`; annotated tag `2.1.9` was pushed to origin.
+  - Scope: TASK-165 production trace where customer success Agent had an ACTIVE bound knowledge base but `CloudCC私有云部署注意事项有哪些` skipped RAG with `本轮输入未满足知识库检索条件`.
+  - Root cause: `SkillResolverService` resolved default KB ids, but `ChatOrchestratorService.shouldUseKnowledgeRetrieval(...)` only triggered default-KB retrieval for a conservative whitelist and missed deployment/private-cloud/notice/best-practice style questions.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.9`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.9` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.9`, index digest `sha256:9e8d77c0710f7a388918d10b1e1b3fc000d310af022a2db1429ee0a21cc22841`, linux/amd64 manifest digest `sha256:bd61d60376eb9dd83f787cd822d47e74fa5d243d2380b33826d11c0b305cdfe5`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.9`, index digest `sha256:7eba7c681395574a59da828cf1b62f08607dde80f49be2767a86ad96b776139c`, linux/amd64 manifest digest `sha256:961e16662d619d7de56cfcb546b9b2a64cb6c000ed19c9fe9b0b7763ea56e01e`.
+  - Backup directory: `/opt/cici/backups/20260703-001552-before-2.1.9-agent-kb-trigger`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.9` and `CICI_APP_VERSION=2.1.9`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.9` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.9`, `imageTag=2.1.9`, and `gitCommit=01fb981fed61`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200 and unauthenticated `/auth/me` returned expected HTTP 401.
 
 - 2.1.8 Qdrant vector dimension repair hotfix on 2026-07-02:
   - Git commit: `4cfba0b836e8` on `main`; annotated tag `2.1.8` was pushed to origin.
