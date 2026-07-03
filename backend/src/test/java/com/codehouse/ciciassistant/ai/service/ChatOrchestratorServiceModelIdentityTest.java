@@ -265,6 +265,22 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldExposeKnowledgeRetrievalDecisionMetadataForTraces() {
+        Map<String, Object> metadata = ChatOrchestratorService.knowledgeRetrievalDecisionMetadata(
+                KnowledgeRetrievalRouter.decide(
+                        "CloudCC 产品都有什么功能",
+                        List.of("12"),
+                        List.of(),
+                        "web:after-sales"));
+
+        assertThat(metadata)
+                .containsEntry("ragTriggerReason", "KNOWLEDGE_INTENT_MATCH")
+                .containsEntry("ragMatchedCategory", "product_knowledge")
+                .containsEntry("ragMatchedTerm", "产品")
+                .containsEntry("ragPolicyVersion", "rag-router-v1");
+    }
+
+    @Test
     void shouldGuardAgainstPseudoKnowledgeSearchXmlInToolBoundaryPrompt() {
         String prompt = ChatOrchestratorService.buildToolUseBoundaryPromptBlock("web:after-sales");
 

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T08:38:00+08:00
+updated_at: 2026-07-03T09:12:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T08:38:00+08:00
+last_run_at: 2026-07-03T09:12:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-166 产品功能类知识库触发与伪工具标签防护。
-- 命令：任务级门禁、生产只读 trace 核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check、release dry-run、ACR build/push、production backup/deploy、production smoke。
+- 范围：TASK-167 RAG 检索路由策略化改造。
+- 命令：任务级门禁、TDD RED/GREEN focused backend test、backend compile、static check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-167 RAG retrieval router policy hardening (2026-07-03T09:12:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` before TASK-167 assignment creation -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-167` covering router, orchestrator, focused backend tests, spec, task, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-167 intended implementation files -> **allowed**.
+    - `backend-focused-red`: `mvn test -Dtest=KnowledgeRetrievalRouterTest,ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **failed as expected** because `KnowledgeRetrievalRouter` and decision metadata API did not exist.
+    - `backend-focused-green`: `mvn test -Dtest=KnowledgeRetrievalRouterTest,ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **success**, 34 tests passed.
+    - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - `KnowledgeRetrievalRouter` now produces `shouldRetrieve`, `reason`, `matchedCategory`, `matchedTerm`, and `policyVersion`.
+    - `ChatOrchestratorService` now records `ragTriggerReason`, `ragMatchedCategory`, `ragMatchedTerm`, and `ragPolicyVersion` in RAG trace metadata.
+    - No production release was performed for TASK-167.
 
 - TASK-166 product-feature KB trigger and pseudo-tool guard (2026-07-03T08:30:00+08:00):
   - Commands:

@@ -204,8 +204,9 @@ public class ChatOrchestratorService {
         boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
-        boolean useKnowledgeRetrieval = shouldUseKnowledgeRetrieval(
+        KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                 question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+        boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
                 ? ragService.retrieveDetailed(
@@ -220,7 +221,7 @@ public class ChatOrchestratorService {
                 useKnowledgeRetrieval
                         ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                         : "本轮输入未满足知识库检索条件。",
-                withRunId(ragDetailMetadata(ragResult), runId)));
+                withRunId(ragDetailMetadata(ragResult, knowledgeDecision), runId)));
         List<String> ragContext = ragResult.context();
         Instant toolSchemaStartedAt = Instant.now();
         List<Map<String, Object>> tools = isWecomKfSession(sessionId)
@@ -397,12 +398,17 @@ public class ChatOrchestratorService {
                 boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
-                boolean useKnowledgeRetrieval = shouldUseKnowledgeRetrieval(
+                KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                         question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+                boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
                 safeSendPhase(emitter, "model", modelName);
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "retrieving", modelName, Map.of(
-                            "knowledgeBaseIds", effectiveKnowledgeBaseIds
+                            "knowledgeBaseIds", effectiveKnowledgeBaseIds,
+                            "ragTriggerReason", knowledgeDecision.reason().name(),
+                            "ragMatchedCategory", knowledgeDecision.matchedCategory(),
+                            "ragMatchedTerm", knowledgeDecision.matchedTerm(),
+                            "ragPolicyVersion", knowledgeDecision.policyVersion()
                     ));
                 }
                 Instant ragStartedAt = Instant.now();
@@ -419,7 +425,7 @@ public class ChatOrchestratorService {
                         useKnowledgeRetrieval
                                 ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                                 : "本轮输入未满足知识库检索条件。",
-                        withRunId(ragDetailMetadata(ragResult), runId)));
+                        withRunId(ragDetailMetadata(ragResult, knowledgeDecision), runId)));
                 List<String> ragContext = ragResult.context();
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "rag_done", modelName, ragPhasePayload(ragResult));
@@ -1267,8 +1273,18 @@ public class ChatOrchestratorService {
     }
 
     private static Map<String, Object> ragDetailMetadata(RagService.RetrievalResult ragResult) {
+        return ragDetailMetadata(ragResult, null);
+    }
+
+    private static Map<String, Object> ragDetailMetadata(RagService.RetrievalResult ragResult,
+                                                         KnowledgeRetrievalRouter.Decision decision) {
         if (ragResult == null) {
-            return Map.of("triggered", false, "contextCount", 0, "timingsMs", Map.of());
+            Map<String, Object> metadata = new LinkedHashMap<>();
+            metadata.put("triggered", false);
+            metadata.put("contextCount", 0);
+            metadata.put("timingsMs", Map.of());
+            metadata.putAll(knowledgeRetrievalDecisionMetadata(decision));
+            return metadata;
         }
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("triggered", !ragResult.context().isEmpty() || !ragResult.knowledgeBases().isEmpty());
@@ -1279,6 +1295,23 @@ public class ChatOrchestratorService {
         metadata.put("permissionFilteredCount", ragResult.permissionFilteredCount());
         metadata.put("timingsMs", ragResult.timingsMs());
         metadata.put("fallbackUsed", ragResult.fallbackUsed());
+        metadata.putAll(knowledgeRetrievalDecisionMetadata(decision));
+        return metadata;
+    }
+
+    static Map<String, Object> knowledgeRetrievalDecisionMetadata(KnowledgeRetrievalRouter.Decision decision) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        if (decision == null) {
+            metadata.put("ragTriggerReason", "");
+            metadata.put("ragMatchedCategory", "");
+            metadata.put("ragMatchedTerm", "");
+            metadata.put("ragPolicyVersion", KnowledgeRetrievalRouter.POLICY_VERSION);
+            return metadata;
+        }
+        metadata.put("ragTriggerReason", decision.reason().name());
+        metadata.put("ragMatchedCategory", decision.matchedCategory());
+        metadata.put("ragMatchedTerm", decision.matchedTerm());
+        metadata.put("ragPolicyVersion", decision.policyVersion());
         return metadata;
     }
 
@@ -2461,39 +2494,8 @@ public class ChatOrchestratorService {
                                                List<String> effectiveKnowledgeBaseIds,
                                                List<String> requestedKnowledgeBaseIds,
                                                String sessionId) {
-        if (effectiveKnowledgeBaseIds == null || effectiveKnowledgeBaseIds.isEmpty()) {
-            return false;
-        }
-        if (requestedKnowledgeBaseIds != null && !requestedKnowledgeBaseIds.isEmpty()) {
-            return true;
-        }
-        String text = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
-        if (text.isBlank()) {
-            return false;
-        }
-        if (containsAny(text, List.of(
-                "你好", "您好", "早上好", "晚上好", "谢谢", "感谢", "辛苦了",
-                "讲个笑话", "上才艺", "唱首歌", "写首诗", "角色扮演", "随便聊聊"))) {
-            return false;
-        }
-        if (containsAny(text, List.of(
-                "知识库", "知识", "文档", "资料", "制度", "政策", "流程", "规则", "规范", "手册",
-                "faq", "常见问题", "说明书", "操作指南", "配置", "口径", "依据", "条款", "产品说明",
-                "产品", "功能", "能力", "模块", "特性", "特色", "公司", "简介", "介绍",
-                "都有什么", "有哪些", "能做什么", "支持哪些", "包括哪些",
-                "部署", "私有云", "公有云", "注意事项", "最佳实践", "解决方案", "实施指南",
-                "报销制度", "价格政策"))) {
-            return true;
-        }
-        if (containsAny(text, List.of(
-                "查询", "查一下", "看下", "看一下", "拉取", "获取", "列出", "列表", "明细", "台账",
-                "客户", "线索", "商机", "报价", "订单", "审批", "待办", "日程", "邮件", "发送", "创建", "更新"))) {
-            if (isWecomKfSession(sessionId)) {
-                return true;
-            }
-            return false;
-        }
-        return isWecomKfSession(sessionId);
+        return KnowledgeRetrievalRouter.decide(
+                question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId).shouldRetrieve();
     }
 
     private static boolean isWecomKfSession(String sessionId) {

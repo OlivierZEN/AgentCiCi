@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-03T08:38:00+08:00
+updated_at: 2026-07-03T09:12:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-166 done in production release 2.1.10."
-next_action: "Monitor customer success product-feature KB retrieval traces; user can retry the same product-function question."
+active_task: "TASK-167 review: RAG retrieval router policy hardening implemented."
+next_action: "Review TASK-167 and decide whether to merge/release the RAG Router policy hardening."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,9 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.1.10` from Git commit `b635a8fb11fd`.
+- Current branch: `codex/TASK-167-rag-router-policy`; production is running release `2.1.10` from Git commit `b635a8fb11fd`.
+- TASK-167 implemented a maintainable RAG Router that returns stable trigger reasons, matched categories, matched terms, and policy version metadata; focused backend tests, backend compile, and static diff check passed.
+- TASK-167 scope excludes DB schema, Qdrant, KB ACL, frontend UI, release scripts, and adding a `search_knowledge` XML executor.
 - TASK-166 opened after user reported `CloudCC 产品都有什么功能` still missed KB and answered with literal `<search_knowledge ... />`.
 - Production trace `3405538b-7215-42ca-ade9-1315f45c0aab` confirms `rag_context_count=0`, `knowledge_base_names_json=[]`, `tool_call_count=0`, summary literal pseudo tool tag; nearby `私有云部署注意事项有哪些` on 2.1.9 hit 5 KB chunks.
 - TASK-166 code fix: Agent-bound default-KB trigger now covers product/function/capability/module/company-introduction questions, and tool boundary prompt forbids literal `search_knowledge` / XML pseudo tool tags.

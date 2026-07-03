@@ -1,0 +1,54 @@
+task_id: TASK-167
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-03T09:05:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-077-rag-router-policy.md
+task_status_path: .claw/tasks/TASK-167.md
+branch: codex/TASK-167-rag-router-policy
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-167.md
+  - .claw/assignments/TASK-167.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-077-rag-router-policy.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-077-rag-router-policy.md
+  - docs/specs/FEAT-076-product-kb-trigger-and-pseudo-tool-guard.md
+  - docs/specs/FEAT-075-agent-kb-runtime-retrieval.md
+  - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+task_boundary:
+  - "Extract RAG trigger logic into a maintainable router with stable reasons and categories."
+  - "Make RAG trace metadata expose trigger reason, matched category, matched term, and policy version."
+  - "Preserve KB ACL, tenant isolation, Qdrant storage, frontend UI, production secrets, and release scripts."
+  - "Do not add a search_knowledge XML executor."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-03T09:05:00+08:00; user approved RAG routing policy hardening after production missed-KB incidents."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Architecture hardening task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py before implementation edits."
