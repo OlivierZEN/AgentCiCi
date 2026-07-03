@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T00:18:00+08:00
+updated_at: 2026-07-03T08:34:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T00:18:00+08:00
+last_run_at: 2026-07-03T08:34:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-165 智能体绑定知识库运行时检索触发修复。
-- 命令：任务级门禁、生产只读元数据核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check、release dry-run、ACR build/push、production backup/deploy、production smoke。
+- 范围：TASK-166 产品功能类知识库触发与伪工具标签防护。
+- 命令：任务级门禁、生产只读 trace 核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-166 product-feature KB trigger and pseudo-tool guard (2026-07-03T08:30:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` before TASK-166 assignment creation -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-166` covering orchestrator, focused backend test, spec, task, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-166 intended implementation files -> **allowed**.
+    - `production-readonly-trace`: production trace `3405538b-7215-42ca-ade9-1315f45c0aab` for `CloudCC 产品都有什么功能` had `rag_context_count=0`, `knowledge_base_names_json=[]`, `tool_call_count=0`, and summary literal `<search_knowledge ... />`; nearby `私有云部署注意事项有哪些` on `2.1.9` hit 5 KB chunks -> **confirmed**.
+    - `backend-focused-red`: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **failed as expected** on product-feature KB trigger and pseudo-tool prompt guard tests.
+    - `backend-focused-green`: `mvn test -Dtest=ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **success**, 28 tests passed.
+    - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task166.yml` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - The fix broadens default-KB retrieval intent to product/function/capability/module/company-introduction questions.
+    - The runtime tool boundary prompt now explicitly forbids literal `search_knowledge` / XML pseudo tool tags in final answers.
 
 - TASK-165 Agent-bound KB runtime retrieval trigger fix (2026-07-03T00:10:00+08:00):
   - Commands:

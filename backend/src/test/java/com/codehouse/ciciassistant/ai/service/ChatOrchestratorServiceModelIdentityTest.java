@@ -250,6 +250,31 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldRetrieveKnowledgeForProductFeatureAndCompanyQuestionsWithDefaultKb() {
+        assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
+                "CloudCC 产品都有什么功能",
+                List.of("12"),
+                List.of()))
+                .isTrue();
+
+        assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
+                "介绍一下CloudCC这家公司",
+                List.of("12"),
+                List.of()))
+                .isTrue();
+    }
+
+    @Test
+    void shouldGuardAgainstPseudoKnowledgeSearchXmlInToolBoundaryPrompt() {
+        String prompt = ChatOrchestratorService.buildToolUseBoundaryPromptBlock("web:after-sales");
+
+        assertThat(prompt)
+                .contains("search_knowledge")
+                .contains("XML")
+                .contains("不要输出");
+    }
+
+    @Test
     void shouldSkipKnowledgeForCasualOrBusinessToolIntentWithDefaultKb() {
         assertThat(ChatOrchestratorService.shouldUseKnowledgeRetrieval(
                 "你好，上才艺",
