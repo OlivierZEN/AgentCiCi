@@ -129,6 +129,9 @@ public class TenantContextFilter extends OncePerRequestFilter {
         if (path == null || path.isBlank()) {
             return false;
         }
+        if (isAsrWebSocketRequest(path)) {
+            return true;
+        }
         if (path.startsWith("/openapi/v1/")) {
             return true;
         }
@@ -155,6 +158,10 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 || "/system/version".equals(path)
                 || "/billing/mode".equals(path)
                 || "/api/autoservice/demo-requests".equals(path);
+    }
+
+    private boolean isAsrWebSocketRequest(String path) {
+        return "/ws/asr".equals(path) || path.startsWith("/ws/asr/");
     }
 
     private boolean isEmbedTokenIssueRequest(String path) {

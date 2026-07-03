@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-168 - ASR WebSocket 鉴权与线上语音入口修复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-078-asr-websocket-auth-hotfix.md`
+- task_status_path: `.claw/tasks/TASK-168.md`
+- assignment_path: `.claw/assignments/TASK-168.yaml`
+- blocked_by: `none`
+- next_action: Fix production ASR WebSocket handshake 401 that prevents AI listening and chat microphone voice recognition.
+
 ### TASK-167 - RAG 检索路由策略化改造
 
 - status: `done`

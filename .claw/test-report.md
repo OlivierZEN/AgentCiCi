@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T09:32:00+08:00
+updated_at: 2026-07-03T15:03:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T09:32:00+08:00
+last_run_at: 2026-07-03T15:03:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-167 RAG 检索路由策略化改造。
-- 命令：任务级门禁、TDD RED/GREEN focused backend test、backend compile、static check、merge main、release dry-run、ACR build/push、production backup/deploy、production smoke。
+- 范围：TASK-168 ASR WebSocket 鉴权与线上语音入口修复。
+- 命令：任务级门禁、assignment check、TDD RED/GREEN `TenantContextFilterTest`、RBAC focused regression、backend compile、static check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-168 ASR WebSocket auth hotfix (2026-07-03T15:03:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` before TASK-168 assignment creation -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-168` covering tenant filter, focused test, spec, task, and state files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-168 intended implementation files -> **allowed**.
+    - `backend-focused-red`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=TenantContextFilterTest test` in `backend/` -> **failed as expected** because `/ws/asr` returned `401`.
+    - `backend-focused-green`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=TenantContextFilterTest test` in `backend/` -> **success**, 2 tests passed.
+    - `backend-rbac-regression`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=TenantContextFilterTest,RbacProductionReadinessIntegrationTest test` in `backend/` -> **success**; surefire reports show `TenantContextFilterTest` 2/2 and `RbacProductionReadinessIntegrationTest` 5/5 with 0 failures and 0 errors. Local RabbitMQ health check logged an authentication warning during actuator health, but the tests passed.
+    - `backend-compile`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Root cause confirmed: production `/ws/asr?token=...` was rejected by `TenantContextFilter` with `Authentication required` before the WebSocket handler could validate query token.
+    - The fix only lets `/ws/asr` and `/ws/asr/*` reach the WebSocket handler; protected REST APIs remain covered by RBAC regression.
+    - Production release and live WebSocket smoke are still pending.
 
 - TASK-167 RAG retrieval router policy hardening (2026-07-03T09:12:00+08:00):
   - Commands:

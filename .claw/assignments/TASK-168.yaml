@@ -1,0 +1,53 @@
+task_id: TASK-168
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-03T15:18:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-078-asr-websocket-auth-hotfix.md
+task_status_path: .claw/tasks/TASK-168.md
+branch: codex/TASK-168-asr-websocket-auth-hotfix
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/tenant/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-168.md
+  - .claw/assignments/TASK-168.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - docs/specs/FEAT-078-asr-websocket-auth-hotfix.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-078-asr-websocket-auth-hotfix.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "Fix production ASR WebSocket handshake being blocked by tenant auth filter before the handler can validate query token."
+  - "Preserve protected API authentication and tenant isolation for non-ASR endpoints."
+  - "Do not log or persist production bearer tokens or query JWT values."
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-03T15:18:00+08:00; user reported production AI listening and chat microphone voice recognition failures."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production hotfix task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py before implementation edits."

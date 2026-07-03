@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-03T09:32:00+08:00
+updated_at: 2026-07-03T15:18:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-167 done in production release 2.1.11."
-next_action: "Monitor RAG Router trace metadata and customer-success KB retrieval behavior."
+active_task: "TASK-168 in progress for production ASR WebSocket 401 and microphone failures."
+next_action: "Run task-scoped authorization, write RED test for /ws/asr filter behavior, implement minimal TenantContextFilter fix, verify, and release if checks pass."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,7 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.1.11` from Git commit `845a5fbaa2f2`.
+- TASK-168 opened after user reported production AI 听记 and chat-window microphone voice recognition failures. Investigation reproduced that `/ws/asr?token=...` receives `401 Authentication required` before entering the ASR WebSocket handler, so the frontend never reaches `getUserMedia`.
 - TASK-167 implemented and released a maintainable RAG Router that returns stable trigger reasons, matched categories, matched terms, and policy version metadata; production backup/deploy/smoke passed.
 - TASK-167 release: Git tag `2.1.11` pushed; backup `/opt/cici/backups/20260703-092849-before-2.1.11-rag-router-policy`; six production containers healthy; `/system/version` returns `version=2.1.11`, `imageTag=2.1.11`, `gitCommit=845a5fbaa2f2`; public home `200`, unauthenticated `/auth/me` expected `401`.
 - TASK-167 scope excludes DB schema, Qdrant, KB ACL, frontend UI, release scripts, and adding a `search_knowledge` XML executor.
@@ -91,6 +92,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
+- `.claw/tasks/TASK-168.md` - current ASR WebSocket auth hotfix.
+- `docs/specs/FEAT-078-asr-websocket-auth-hotfix.md` - current ASR WebSocket auth spec.
 - `.claw/tasks/TASK-166.md` - current product-feature KB trigger and pseudo-tool tag guard.
 - `docs/specs/FEAT-076-product-kb-trigger-and-pseudo-tool-guard.md` - current task spec.
 - `.claw/tasks/TASK-165.md` - current Agent-bound KB runtime retrieval fix.
