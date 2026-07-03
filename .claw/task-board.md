@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-03T08:34:00+08:00
+updated_at: 2026-07-03T08:38:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-166 - 产品功能类知识库触发与伪工具标签防护
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-076-product-kb-trigger-and-pseudo-tool-guard.md`
 - task_status_path: `.claw/tasks/TASK-166.md`
 - assignment_path: `.claw/assignments/TASK-166.yaml`
 - blocked_by: `none`
-- next_action: Local verification passed; merge to main, push, dry-run release, and publish production version.
+- next_action: Done in production release `2.1.10`; monitor product-feature KB retrieval traces.
 
 ### TASK-165 - 智能体绑定知识库运行时检索触发修复
 

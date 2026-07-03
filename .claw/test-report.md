@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T08:34:00+08:00
+updated_at: 2026-07-03T08:38:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T08:34:00+08:00
+last_run_at: 2026-07-03T08:38:00+08:00
 last_run_status: success
 ---
 
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-166 产品功能类知识库触发与伪工具标签防护。
-- 命令：任务级门禁、生产只读 trace 核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check。
+- 命令：任务级门禁、生产只读 trace 核验、TDD RED/GREEN focused backend test、backend compile、Compose config、static check、release dry-run、ACR build/push、production backup/deploy、production smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -30,9 +30,20 @@ last_run_status: success
     - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
     - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task166.yml` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: committed TASK-166 as `b635a8f`, fast-forward merged into `main`, and pushed `origin/main` at `b635a8fb11fd` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.10`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.10` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.10` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260703-083603-before-2.1.10-product-kb-trigger` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.10` and `CICI_APP_VERSION=2.1.10`; backend/frontend `2.1.10` images pulled; infra images locally tagged as `2.1.10`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.10`, `imageTag=2.1.10`, `gitCommit=b635a8fb11fd`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401` after backend warmup -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.10`, index digest `sha256:7cfb6730c6ffa020df56666bc520d7d33bef97d0729c9336aed719da190aeec2`, linux/amd64 manifest digest `sha256:fbae8c0b1a82abc6ee5b05a457e10b8f7badba11ba6c0c6b523db6efc672ec80`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.10`, index digest `sha256:fd75287bbff5e85813fe2457d662a6857e096bbe60a9f427ef944106529f2d5b`, linux/amd64 manifest digest `sha256:b10d2fc1fde30ccf88cad15b53c51e69f4de17f6880a0ac6404a8381ee413c15`.
   - Notes:
     - The fix broadens default-KB retrieval intent to product/function/capability/module/company-introduction questions.
     - The runtime tool boundary prompt now explicitly forbids literal `search_knowledge` / XML pseudo tool tags in final answers.
+    - TASK-166 is live in production release `2.1.10`; authenticated real user retest is still needed to generate a new Agent run trace for the exact screenshot flow.
 
 - TASK-165 Agent-bound KB runtime retrieval trigger fix (2026-07-03T00:10:00+08:00):
   - Commands:

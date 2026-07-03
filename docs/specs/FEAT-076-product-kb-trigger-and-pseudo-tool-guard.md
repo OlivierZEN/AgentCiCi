@@ -44,3 +44,7 @@
 - `你好，上才艺` 仍跳过知识库检索。
 - `看下今天的潜在客户和订阅台账明细` 在普通 Web 会话中仍跳过知识库检索。
 - 工具边界 prompt 包含禁止输出 `search_knowledge` / XML 伪工具标签的约束。
+
+## 交付记录
+
+- 2026-07-03：已在 `2.1.10` 发布。生产 trace 复核确认原问题 run 未触发 RAG 且原样输出伪工具标签；后端触发词表已扩展产品/功能/公司介绍类知识问法，工具边界 prompt 已禁止输出 `search_knowledge` / XML 伪工具标签；本地 focused 测试、backend compile、Compose config、发布 dry-run、ACR build/push、生产备份/部署和 smoke 均通过。

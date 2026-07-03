@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-03T08:34:00+08:00
+updated_at: 2026-07-03T08:38:00+08:00
 updated_by: MANAGER-001
 phase: maintenance
-active_task: "TASK-166 review: product-feature KB trigger and pseudo-tool tag guard passed local verification."
-next_action: "Merge TASK-166 to main, push origin/main, run release dry-run, and publish production version."
+active_task: "TASK-166 done in production release 2.1.10."
+next_action: "Monitor customer success product-feature KB retrieval traces; user can retry the same product-function question."
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,12 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.1.9` from Git commit `01fb981fed61`.
+- Current branch: `main`; production is running release `2.1.10` from Git commit `b635a8fb11fd`.
 - TASK-166 opened after user reported `CloudCC 产品都有什么功能` still missed KB and answered with literal `<search_knowledge ... />`.
 - Production trace `3405538b-7215-42ca-ade9-1315f45c0aab` confirms `rag_context_count=0`, `knowledge_base_names_json=[]`, `tool_call_count=0`, summary literal pseudo tool tag; nearby `私有云部署注意事项有哪些` on 2.1.9 hit 5 KB chunks.
 - TASK-166 code fix: Agent-bound default-KB trigger now covers product/function/capability/module/company-introduction questions, and tool boundary prompt forbids literal `search_knowledge` / XML pseudo tool tags.
-- TASK-166 verification passed: task authorization checks, production read-only trace check, TDD RED/GREEN `ChatOrchestratorServiceModelIdentityTest`, backend compile, Compose config, and `git diff --check`.
+- TASK-166 verification passed: task authorization checks, production read-only trace check, TDD RED/GREEN `ChatOrchestratorServiceModelIdentityTest`, backend compile, Compose config, `git diff --check`, release dry-run, ACR build/push, production backup/deploy, and production smoke.
+- TASK-166 release: Git tag `2.1.10` pushed; backup `/opt/cici/backups/20260703-083603-before-2.1.10-product-kb-trigger`; six production containers healthy; `/system/version` returns `version=2.1.10`, `imageTag=2.1.10`, `gitCommit=b635a8fb11fd`; public home `200`, unauthenticated `/auth/me` expected `401`.
 - TASK-165 fixes the production trace where customer success Agent had an ACTIVE bound knowledge base but `CloudCC私有云部署注意事项有哪些` skipped RAG with `本轮输入未满足知识库检索条件`.
 - Root cause: `SkillResolverService` already resolved Agent-bound KB ids, but `ChatOrchestratorService.shouldUseKnowledgeRetrieval(...)` only triggers default-KB retrieval for a conservative keyword list; it did not include deployment/private-cloud/notice/best-practice style knowledge questions.
 - TASK-165 code fix: default-KB knowledge intent now includes `部署`、`私有云`、`公有云`、`注意事项`、`最佳实践`、`解决方案`, while casual-chat and ordinary business-tool skip behavior remains covered by tests.

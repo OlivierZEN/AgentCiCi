@@ -6,7 +6,7 @@ assigned_at: 2026-07-03T08:40:00+08:00
 expires_at: none
 spec_path: docs/specs/FEAT-076-product-kb-trigger-and-pseudo-tool-guard.md
 task_status_path: .claw/tasks/TASK-166.md
-branch: codex/TASK-166-product-kb-trigger-guard
+branch: main
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
@@ -51,4 +51,4 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "Production chat RAG trigger hotfix. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
-hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-166 on branch codex/TASK-166-product-kb-trigger-guard before implementation edits."
+hard_gate_notes: "MANAGER-001 ran task-scoped dev-login.py for TASK-166 on branch codex/TASK-166-product-kb-trigger-guard before implementation edits; release-record updates are authorized on main after merge."

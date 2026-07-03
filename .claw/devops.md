@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-03T00:18:00+08:00
+updated_at: 2026-07-03T08:38:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.10 product-feature KB trigger and pseudo-tool guard hotfix on 2026-07-03:
+  - Git commit: `b635a8fb11fd` on `main`; annotated tag `2.1.10` was pushed to origin.
+  - Scope: TASK-166 production trace where `CloudCC 产品都有什么功能` had `rag_context_count=0`, `knowledge_base_names_json=[]`, `tool_call_count=0`, and final answer was literal `<search_knowledge ... />`.
+  - Root cause: default-KB retrieval trigger still missed product/function/company-introduction questions, and the runtime tool-boundary prompt did not forbid model-emitted pseudo XML knowledge-search tags.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.10`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.10` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.10`, index digest `sha256:7cfb6730c6ffa020df56666bc520d7d33bef97d0729c9336aed719da190aeec2`, linux/amd64 manifest digest `sha256:fbae8c0b1a82abc6ee5b05a457e10b8f7badba11ba6c0c6b523db6efc672ec80`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.10`, index digest `sha256:fd75287bbff5e85813fe2457d662a6857e096bbe60a9f427ef944106529f2d5b`, linux/amd64 manifest digest `sha256:b10d2fc1fde30ccf88cad15b53c51e69f4de17f6880a0ac6404a8381ee413c15`.
+  - Backup directory: `/opt/cici/backups/20260703-083603-before-2.1.10-product-kb-trigger`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.10` and `CICI_APP_VERSION=2.1.10`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.10` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.10`, `imageTag=2.1.10`, and `gitCommit=b635a8fb11fd`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200 and unauthenticated `/auth/me` returned expected HTTP 401 after backend warmup.
 
 - 2.1.9 Agent-bound KB retrieval trigger hotfix on 2026-07-03:
   - Git commit: `01fb981fed61` on `main`; annotated tag `2.1.9` was pushed to origin.
