@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-168
-status: in_progress
-updated_at: 2026-07-03T15:18:00+08:00
+status: done
+updated_at: 2026-07-03T15:08:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -35,6 +35,15 @@ spec_path: docs/specs/FEAT-078-asr-websocket-auth-hotfix.md
 - RBAC regression: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=TenantContextFilterTest,RbacProductionReadinessIntegrationTest test` in `backend/` -> success; surefire reports show 7 tests passed with 0 failures and 0 errors.
 - `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> success.
 - `git diff --check` -> success.
+- `git switch main && git merge --ff-only codex/TASK-168-asr-websocket-auth-hotfix && git push origin main` -> success; `main` now includes commit `caf4baf90575`.
+- `./scripts/release-acr.sh --dry-run` -> success, resolved production version `2.1.12`.
+- `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task168-release.yml` -> success.
+- `./scripts/release-acr.sh --version 2.1.12` -> success; backend/frontend images and Git tag `2.1.12` pushed.
+- Production backup -> `/opt/cici/backups/20260703-150359-before-2.1.12-asr-websocket-auth`. Initial backup attempt used stale database name `cici` and failed before deploy; successful backup used production database `agentcici`.
+- Production deploy -> success, `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.12` and `CICI_APP_VERSION=2.1.12`.
+- Production health -> six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.12`, `imageTag=2.1.12`, `gitCommit=caf4baf90575`; frontend `nginx -t` passed; recent backend ASR/WebSocket/error scan empty.
+- Public smoke -> `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401`.
+- Live ASR smoke -> real login token opened `wss://x.agentcici.com/ws/asr?token=...`, received `status=connected`, sent `start`, and received `status=started`.
 
 ## Changed Files
 
@@ -51,3 +60,4 @@ spec_path: docs/specs/FEAT-078-asr-websocket-auth-hotfix.md
 
 - Branch: `codex/TASK-168-asr-websocket-auth-hotfix`.
 - 线上复现时不要在记录中暴露 JWT token；只记录路径、状态码和行为。
+- 已合并并发布生产版本 `2.1.12`。用户需要在浏览器中复测 AI 听记和对话窗口麦克风权限/语音识别。

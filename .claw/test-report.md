@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T15:03:00+08:00
+updated_at: 2026-07-03T15:08:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T15:03:00+08:00
+last_run_at: 2026-07-03T15:08:00+08:00
 last_run_status: success
 ---
 
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-168 ASR WebSocket 鉴权与线上语音入口修复。
-- 命令：任务级门禁、assignment check、TDD RED/GREEN `TenantContextFilterTest`、RBAC focused regression、backend compile、static check。
+- 命令：任务级门禁、assignment check、TDD RED/GREEN `TenantContextFilterTest`、RBAC focused regression、backend compile、static check、merge main、release dry-run、ACR build/push、production backup/deploy、production smoke、live ASR WebSocket smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -29,10 +29,22 @@ last_run_status: success
     - `backend-rbac-regression`: `mvn -q -Dmaven.repo.local=../.m2 -Dtest=TenantContextFilterTest,RbacProductionReadinessIntegrationTest test` in `backend/` -> **success**; surefire reports show `TenantContextFilterTest` 2/2 and `RbacProductionReadinessIntegrationTest` 5/5 with 0 failures and 0 errors. Local RabbitMQ health check logged an authentication warning during actuator health, but the tests passed.
     - `backend-compile`: `mvn -q -Dmaven.repo.local=../.m2 -DskipTests compile` in `backend/` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: fast-forward merged `codex/TASK-168-asr-websocket-auth-hotfix` into `main` and pushed `origin/main` at `caf4baf90575` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.12`.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task168-release.yml` -> **success**.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.12` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.12` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260703-150359-before-2.1.12-asr-websocket-auth` with `acr.env.before-release` and `postgres.dump` -> **success**. The first backup attempt used stale database name `cici` and failed before deploy; the successful backup used production database `agentcici`.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.12` and `CICI_APP_VERSION=2.1.12`; backend/frontend `2.1.12` images pulled; infra images locally tagged as `2.1.12`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.12`, `imageTag=2.1.12`, `gitCommit=caf4baf90575`; frontend `nginx -t` passed; recent backend ASR/WebSocket/error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401` -> **success**.
+    - `live-asr-smoke`: real login token opened `wss://x.agentcici.com/ws/asr?token=...`, received `status=connected`, sent `start`, and received `status=started` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.12`, index digest `sha256:535de23f21d852945b045a4c0d80b8a9a5e38eca7108bba1ea7afac14baecc22`, linux/amd64 manifest digest `sha256:011382d277870698d809c937b48278ddedd25e35dbbd43ff09e0725928e365c3`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.12`, index digest `sha256:2c6a775426132b81da57d7dcf651bc350324092630390172a551a9165fb68c97`, linux/amd64 manifest digest `sha256:b4d3b82a8ccd4a1809f4c26007b4424f1502df2ca1817dbc73053d716f3c7f58`.
   - Notes:
     - Root cause confirmed: production `/ws/asr?token=...` was rejected by `TenantContextFilter` with `Authentication required` before the WebSocket handler could validate query token.
     - The fix only lets `/ws/asr` and `/ws/asr/*` reach the WebSocket handler; protected REST APIs remain covered by RBAC regression.
-    - Production release and live WebSocket smoke are still pending.
+    - TASK-168 is live in production release `2.1.12`.
 
 - TASK-167 RAG retrieval router policy hardening (2026-07-03T09:12:00+08:00):
   - Commands:

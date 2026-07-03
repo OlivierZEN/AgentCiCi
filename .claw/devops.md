@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-03T08:38:00+08:00
+updated_at: 2026-07-03T15:08:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.1.12 ASR WebSocket auth hotfix on 2026-07-03:
+  - Git commit: `caf4baf90575` on `main`; annotated tag `2.1.12` was pushed to origin.
+  - Scope: TASK-168 production AI 听记 and chat-window microphone failures where `/ws/asr?token=...` returned `401 Authentication required` before the WebSocket handler could validate query token.
+  - Root cause: browser WebSocket sends JWT as query token, while `TenantContextFilter` required an `Authorization` header for `/ws/asr`; frontend waits for WebSocket open before `getUserMedia`, so the microphone never started.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.1.12`; backend/frontend linux/amd64 images were pushed to ACR with both `2.1.12` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.12`, index digest `sha256:535de23f21d852945b045a4c0d80b8a9a5e38eca7108bba1ea7afac14baecc22`, linux/amd64 manifest digest `sha256:011382d277870698d809c937b48278ddedd25e35dbbd43ff09e0725928e365c3`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.12`, index digest `sha256:2c6a775426132b81da57d7dcf651bc350324092630390172a551a9165fb68c97`, linux/amd64 manifest digest `sha256:b4d3b82a8ccd4a1809f4c26007b4424f1502df2ca1817dbc73053d716f3c7f58`.
+  - Backup directory: `/opt/cici/backups/20260703-150359-before-2.1.12-asr-websocket-auth`, containing `acr.env.before-release` and `postgres.dump`. The current ECS layout did not have `data/kb-files` or `data/qdrant` directories to archive.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.1.12` and `CICI_APP_VERSION=2.1.12`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.1.12` before compose up because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.12`, `imageTag=2.1.12`, and `gitCommit=caf4baf90575`; frontend `nginx -t` passed; recent backend ASR/WebSocket/error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200 and unauthenticated `/auth/me` returned expected HTTP 401.
+  - Live ASR smoke: real login token opened `wss://x.agentcici.com/ws/asr?token=...`, received `status=connected`, sent `start`, and received `status=started`.
 
 - 2.1.10 product-feature KB trigger and pseudo-tool guard hotfix on 2026-07-03:
   - Git commit: `b635a8fb11fd` on `main`; annotated tag `2.1.10` was pushed to origin.
