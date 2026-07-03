@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T09:12:00+08:00
+updated_at: 2026-07-03T09:32:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T09:12:00+08:00
+last_run_at: 2026-07-03T09:32:00+08:00
 last_run_status: success
 ---
 
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-167 RAG 检索路由策略化改造。
-- 命令：任务级门禁、TDD RED/GREEN focused backend test、backend compile、static check。
+- 命令：任务级门禁、TDD RED/GREEN focused backend test、backend compile、static check、merge main、release dry-run、ACR build/push、production backup/deploy、production smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -28,10 +28,21 @@ last_run_status: success
     - `backend-focused-green`: `mvn test -Dtest=KnowledgeRetrievalRouterTest,ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> **success**, 34 tests passed.
     - `backend-compile`: `mvn -DskipTests compile` in `backend/` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `merge-main`: fast-forward merged `codex/TASK-167-rag-router-policy` into `main` and pushed `origin/main` at `845a5fbaa2f2` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.1.11`.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task167-release.yml` -> **success**.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.1.11` -> **success**; backend/frontend linux/amd64 images and Git tag `2.1.11` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260703-092849-before-2.1.11-rag-router-policy` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.11` and `CICI_APP_VERSION=2.1.11`; backend/frontend `2.1.11` images pulled; infra images locally tagged as `2.1.11`; compose `up -d` completed -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.11`, `imageTag=2.1.11`, `gitCommit=845a5fbaa2f2`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401` -> **success**.
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.11`, index digest `sha256:1cede18463ab90be0384e4cec8ea62e34058663eab5485a5c282b63ccd657fea`, linux/amd64 manifest digest `sha256:892cc2a4857cffc43f5d5943903b35d26da4b55e02c476e0b45f2cdefed2a99c`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.11`, index digest `sha256:b71cded862207f41c56c8644234a225afd92f35a14d61d2a81144bffe4cbf88d`, linux/amd64 manifest digest `sha256:7bdbae26a44383d10c3162a4d8af07e0e6eebf0fb11c6f065f24a6f45fe56eb0`.
   - Notes:
     - `KnowledgeRetrievalRouter` now produces `shouldRetrieve`, `reason`, `matchedCategory`, `matchedTerm`, and `policyVersion`.
     - `ChatOrchestratorService` now records `ragTriggerReason`, `ragMatchedCategory`, `ragMatchedTerm`, and `ragPolicyVersion` in RAG trace metadata.
-    - No production release was performed for TASK-167.
+    - TASK-167 is live in production release `2.1.11`.
 
 - TASK-166 product-feature KB trigger and pseudo-tool guard (2026-07-03T08:30:00+08:00):
   - Commands:

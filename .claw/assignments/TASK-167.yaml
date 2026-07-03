@@ -6,7 +6,7 @@ assigned_at: 2026-07-03T09:05:00+08:00
 expires_at: none
 spec_path: docs/specs/FEAT-077-rag-router-policy.md
 task_status_path: .claw/tasks/TASK-167.md
-branch: codex/TASK-167-rag-router-policy
+branch: main
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
@@ -20,6 +20,7 @@ scope_files:
   - .claw/task-board.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/devops.md
   - docs/specs/FEAT-077-rag-router-policy.md
 protected_paths:
   - .claw/assignments/**
@@ -51,4 +52,4 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "Architecture hardening task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
-hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py before implementation edits."
+hard_gate_notes: "MANAGER-001 ran task-scoped dev-login.py before implementation edits; after merge, release-record updates are authorized on main."

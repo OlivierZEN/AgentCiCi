@@ -500,4 +500,14 @@ status: active
 
 ## Pending Verification
 
+- Latest production release on 2026-07-03:
+  - Release tag: `2.1.11`.
+  - Git commit: `845a5fbaa2f2`.
+  - Scope: TASK-167 RAG retrieval router policy hardening; RAG trace metadata now includes `ragTriggerReason`, `ragMatchedCategory`, `ragMatchedTerm`, and `ragPolicyVersion`.
+  - Backup directory: `/opt/cici/backups/20260703-092849-before-2.1.11-rag-router-policy`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.1.11`, index digest `sha256:1cede18463ab90be0384e4cec8ea62e34058663eab5485a5c282b63ccd657fea`, linux/amd64 manifest digest `sha256:892cc2a4857cffc43f5d5943903b35d26da4b55e02c476e0b45f2cdefed2a99c`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.1.11`, index digest `sha256:b71cded862207f41c56c8644234a225afd92f35a14d61d2a81144bffe4cbf88d`, linux/amd64 manifest digest `sha256:7bdbae26a44383d10c3162a4d8af07e0e6eebf0fb11c6f065f24a6f45fe56eb0`.
+  - Verified remotely: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.11`, `imageTag=2.1.11`, `gitCommit=845a5fbaa2f2`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Verified publicly: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401`.
+
 - Qdrant container + `scripts/verify-qdrant-stack.sh`; full app E2E with `app.kb.vector-store=qdrant` (default in `application-local.yml`).

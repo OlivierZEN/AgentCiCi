@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-03T09:12:00+08:00
+updated_at: 2026-07-03T09:32:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-167 - RAG 检索路由策略化改造
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-077-rag-router-policy.md`
 - task_status_path: `.claw/tasks/TASK-167.md`
 - assignment_path: `.claw/assignments/TASK-167.yaml`
 - blocked_by: `none`
-- next_action: Review TASK-167 RAG Router policy extraction; focused backend tests, backend compile, and static diff check passed.
+- next_action: Done in production release `2.1.11`; monitor RAG Router trace metadata and KB retrieval behavior.
 
 ### TASK-166 - 产品功能类知识库触发与伪工具标签防护
 

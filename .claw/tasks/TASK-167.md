@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-167
-status: review
-updated_at: 2026-07-03T09:12:00+08:00
+status: done
+updated_at: 2026-07-03T09:32:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -35,6 +35,14 @@ spec_path: docs/specs/FEAT-077-rag-router-policy.md
 - GREEN: `mvn test -Dtest=KnowledgeRetrievalRouterTest,ChatOrchestratorServiceModelIdentityTest -DskipITs` in `backend/` -> success, 34 tests passed.
 - `mvn -DskipTests compile` in `backend/` -> success.
 - `git diff --check` -> success.
+- `git switch main && git merge --ff-only codex/TASK-167-rag-router-policy && git push origin main` -> success; `main` now includes commit `845a5fbaa2f2`.
+- `./scripts/release-acr.sh --dry-run` -> success, resolved production version `2.1.11`.
+- `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task167-release.yml` -> success.
+- `./scripts/release-acr.sh --version 2.1.11` -> success; backend/frontend images and Git tag `2.1.11` pushed.
+- Production backup -> `/opt/cici/backups/20260703-092849-before-2.1.11-rag-router-policy`.
+- Production deploy -> success, `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.1.11` and `CICI_APP_VERSION=2.1.11`.
+- Production health -> six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.1.11`, `imageTag=2.1.11`, `gitCommit=845a5fbaa2f2`; frontend `nginx -t` passed; recent backend error scan empty.
+- Public smoke -> `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401`.
 
 ## Changed Files
 
@@ -53,4 +61,4 @@ spec_path: docs/specs/FEAT-077-rag-router-policy.md
 
 - Branch: `codex/TASK-167-rag-router-policy`.
 - This task is an architectural hardening follow-up after production releases `2.1.9` and `2.1.10`.
-- Implementation is ready for review. It has not been merged to `main` or released to production in this task.
+- 已合并并发布生产版本 `2.1.11`。后续可通过 Agent run trace 的 `ragTriggerReason`、`ragMatchedCategory`、`ragMatchedTerm`、`ragPolicyVersion` 判断知识库路由命中原因。

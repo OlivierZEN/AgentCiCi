@@ -67,4 +67,4 @@ RAG Router 输出：
 
 ## 交付记录
 
-- 2026-07-03：已在 `codex/TASK-167-rag-router-policy` 实现。新增 `KnowledgeRetrievalRouter`，将 RAG 触发判断输出为 `shouldRetrieve`、`reason`、`matchedCategory`、`matchedTerm`、`policyVersion`；`ChatOrchestratorService` 已使用该决策执行预检索并写入 trace metadata。focused RED/GREEN 测试、backend compile、`git diff --check` 均通过。本任务未发布生产。
+- 2026-07-03：已在 `2.1.11` 发布。新增 `KnowledgeRetrievalRouter`，将 RAG 触发判断输出为 `shouldRetrieve`、`reason`、`matchedCategory`、`matchedTerm`、`policyVersion`；`ChatOrchestratorService` 已使用该决策执行预检索并写入 trace metadata。focused RED/GREEN 测试、backend compile、`git diff --check`、release dry-run、ACR build/push、生产备份/部署和 smoke 均通过。
