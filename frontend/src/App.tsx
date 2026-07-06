@@ -5,6 +5,7 @@ import AdminGuard from "./admin/AdminGuard";
 import AdminLogin from "./admin/AdminLogin";
 import AdminShell from "./admin/AdminShell";
 import AdminKnowledgePage from "./admin/pages/AdminKnowledgePage";
+import AdminDataQualityPage from "./admin/pages/AdminDataQualityPage";
 import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
@@ -59,6 +60,7 @@ export default function App() {
           <Route element={<AdminShell />}>
             <Route index element={<Navigate to="kb" replace />} />
             <Route path="kb" element={<AdminKnowledgePage />} />
+            <Route path="data-quality" element={<AdminDataQualityPage />} />
             <Route path="models" element={<Navigate to="billing" replace />} />
             <Route path="tools" element={<AdminToolsPage />} />
             <Route path="skills" element={<AdminSkillsListPage />} />

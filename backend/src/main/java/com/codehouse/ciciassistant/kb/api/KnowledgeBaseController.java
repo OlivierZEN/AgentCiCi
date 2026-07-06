@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.kb.api;
 import com.codehouse.ciciassistant.auth.RequireOrgAdmin;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
+import com.codehouse.ciciassistant.kb.service.KbDataQualityService;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -27,9 +28,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class KnowledgeBaseController {
 
     private final KnowledgeBaseService knowledgeBaseService;
+    private final KbDataQualityService kbDataQualityService;
 
-    public KnowledgeBaseController(KnowledgeBaseService knowledgeBaseService) {
+    public KnowledgeBaseController(KnowledgeBaseService knowledgeBaseService,
+                                   KbDataQualityService kbDataQualityService) {
         this.knowledgeBaseService = knowledgeBaseService;
+        this.kbDataQualityService = kbDataQualityService;
     }
 
     @PostMapping
@@ -348,6 +352,157 @@ public class KnowledgeBaseController {
         return ApiResponse.ok(knowledgeBaseService.listMetadataFields(orgId, kbId));
     }
 
+    @PostMapping("/{kbId}/quality/runs")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> startQualityScan(@PathVariable Long kbId,
+                                                              @RequestBody(required = false) QualityScanRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.startScan(
+                orgId,
+                kbId,
+                currentUserId(),
+                new KbDataQualityService.QualityScanCommand(request == null ? "MANUAL" : request.triggerType())));
+    }
+
+    @GetMapping("/{kbId}/quality/runs")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listQualityRuns(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.listRuns(orgId, kbId));
+    }
+
+    @GetMapping("/{kbId}/quality/issues")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listQualityIssues(@PathVariable Long kbId,
+                                                                     @RequestParam(name = "status", required = false) String status) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.listIssues(orgId, kbId, status));
+    }
+
+    @PostMapping("/quality/issues/{issueId}/ignore")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> ignoreQualityIssue(@PathVariable Long issueId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.markIssue(orgId, issueId, currentUserId(), "IGNORED"));
+    }
+
+    @PostMapping("/quality/issues/{issueId}/resolve")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> resolveQualityIssue(@PathVariable Long issueId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.markIssue(orgId, issueId, currentUserId(), "RESOLVED"));
+    }
+
+    @GetMapping("/{kbId}/quality/rules")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listQualityRules(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.listRules(orgId, kbId));
+    }
+
+    @PostMapping("/{kbId}/quality/rules")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> createQualityRule(@PathVariable Long kbId,
+                                                               @Valid @RequestBody QualityRuleRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.createRule(
+                orgId,
+                kbId,
+                currentUserId(),
+                new KbDataQualityService.QualityRuleCommand(
+                        request.name(),
+                        request.ruleType(),
+                        request.pattern(),
+                        request.replacement(),
+                        request.enabled())));
+    }
+
+    @PutMapping("/quality/rules/{ruleId}")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> updateQualityRule(@PathVariable Long ruleId,
+                                                               @Valid @RequestBody QualityRuleRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.updateRule(
+                orgId,
+                ruleId,
+                currentUserId(),
+                new KbDataQualityService.QualityRuleCommand(
+                        request.name(),
+                        request.ruleType(),
+                        request.pattern(),
+                        request.replacement(),
+                        request.enabled())));
+    }
+
+    @PostMapping("/quality/rules/{ruleId}/preview")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> previewQualityRule(@PathVariable Long ruleId,
+                                                                @RequestBody(required = false) QualityApplyRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.previewRule(orgId, ruleId, toQualityApplyCommand(request)));
+    }
+
+    @PostMapping("/quality/rules/{ruleId}/apply")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> applyQualityRule(@PathVariable Long ruleId,
+                                                              @RequestBody(required = false) QualityApplyRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.applyRule(
+                orgId,
+                ruleId,
+                currentUserId(),
+                toQualityApplyCommand(request)));
+    }
+
+    @PostMapping("/{kbId}/quality/annotations/suggest")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> suggestAnnotations(@PathVariable Long kbId,
+                                                                @RequestBody(required = false) AnnotationSuggestRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.suggestAnnotations(
+                orgId,
+                kbId,
+                currentUserId(),
+                new KbDataQualityService.AnnotationSuggestCommand(
+                        request == null ? null : request.targetType(),
+                        request == null ? null : request.fieldKey(),
+                        request == null ? null : request.limit())));
+    }
+
+    @GetMapping("/{kbId}/quality/annotations/suggestions")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listAnnotationSuggestions(@PathVariable Long kbId,
+                                                                             @RequestParam(name = "status", required = false) String status) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.listSuggestions(orgId, kbId, status));
+    }
+
+    @PostMapping("/quality/annotations/suggestions/{suggestionId}/accept")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> acceptAnnotationSuggestion(@PathVariable Long suggestionId,
+                                                                        @RequestBody(required = false) AnnotationReviewRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.acceptSuggestion(
+                orgId,
+                suggestionId,
+                currentUserId(),
+                new KbDataQualityService.AnnotationReviewCommand(request == null ? null : request.value())));
+    }
+
+    @PostMapping("/quality/annotations/suggestions/{suggestionId}/reject")
+    @RequireOrgAdmin
+    public ApiResponse<Map<String, Object>> rejectAnnotationSuggestion(@PathVariable Long suggestionId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.rejectSuggestion(orgId, suggestionId, currentUserId()));
+    }
+
+    @GetMapping("/{kbId}/quality/annotations/chunks")
+    @RequireOrgAdmin
+    public ApiResponse<List<Map<String, Object>>> listChunkAnnotations(@PathVariable Long kbId) {
+        String orgId = TenantContext.requireOrgId();
+        return ApiResponse.ok(kbDataQualityService.listChunkAnnotations(orgId, kbId));
+    }
+
     @PostMapping("/{kbId}/metadata/fields")
     @RequireOrgAdmin
     public ApiResponse<Map<String, Object>> createMetadataField(@PathVariable Long kbId,
@@ -586,6 +741,40 @@ public class KnowledgeBaseController {
     ) {
     }
 
+    public record QualityScanRequest(
+            String triggerType
+    ) {
+    }
+
+    public record QualityRuleRequest(
+            @NotBlank String name,
+            @NotBlank String ruleType,
+            String pattern,
+            String replacement,
+            Boolean enabled
+    ) {
+    }
+
+    public record QualityApplyRequest(
+            List<Long> chunkIds,
+            List<Long> issueIds,
+            Map<Long, String> expectedContentHashes,
+            Integer limit
+    ) {
+    }
+
+    public record AnnotationSuggestRequest(
+            String targetType,
+            String fieldKey,
+            Integer limit
+    ) {
+    }
+
+    public record AnnotationReviewRequest(
+            String value
+    ) {
+    }
+
     public record BatchIdsRequest(
             @NotEmpty List<Long> ids
     ) {
@@ -618,6 +807,14 @@ public class KnowledgeBaseController {
                         item.principalId(),
                         item.expiresAt()))
                 .toList();
+    }
+
+    private KbDataQualityService.QualityApplyCommand toQualityApplyCommand(QualityApplyRequest request) {
+        return new KbDataQualityService.QualityApplyCommand(
+                request == null ? List.of() : request.chunkIds(),
+                request == null ? List.of() : request.issueIds(),
+                request == null ? Map.of() : request.expectedContentHashes(),
+                request == null ? null : request.limit());
     }
 
     private String currentUserId() {

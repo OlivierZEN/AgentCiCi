@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.kb.domain.KbChunkRepository;
 import com.codehouse.ciciassistant.kb.domain.KbDocumentRepository;
 import com.codehouse.ciciassistant.kb.domain.KnowledgeBaseRepository;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
+import com.codehouse.ciciassistant.kb.service.KbDataQualityService;
 import com.codehouse.ciciassistant.kb.service.KnowledgeBaseService;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -49,6 +50,9 @@ class KnowledgeBaseLifecycleIntegrationTest {
 
     @Autowired
     private KbChunkRepository chunkRepository;
+
+    @Autowired
+    private KbDataQualityService kbDataQualityService;
 
     @Autowired
     private KbDocumentRepository documentRepository;
@@ -445,6 +449,94 @@ class KnowledgeBaseLifecycleIntegrationTest {
                         "VECTOR",
                         Map.of("region", "east")));
         assertThat(afterDisable.get("hitCount")).isEqualTo(0);
+    }
+
+    @Test
+    void shouldScanCleanAndAnnotateKnowledgeBaseData() {
+        String orgId = "kb-quality-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Quality KB", "test");
+        Long kbId = ((Number) kb.get("id")).longValue();
+        assertThat(kbDataQualityService.listSources(orgId))
+                .extracting(item -> item.get("sourceKey"))
+                .contains("kb:" + kbId);
+        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "duplicate deployment policy content", "");
+        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "duplicate deployment policy content", "");
+        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "tiny", "");
+        Map<String, Object> dirtyChunk = knowledgeBaseService.addChunk(
+                orgId,
+                String.valueOf(kbId),
+                "private cloud deployment guide\nDISCLAIMER: remove this footer",
+                "");
+        Long dirtyChunkId = ((Number) dirtyChunk.get("id")).longValue();
+
+        Map<String, Object> rule = kbDataQualityService.createRule(
+                orgId,
+                kbId,
+                "admin-user",
+                new KbDataQualityService.QualityRuleCommand(
+                        "Remove footer",
+                        "REGEX_REMOVE",
+                        "DISCLAIMER:.*",
+                        "",
+                        true));
+        Long ruleId = ((Number) rule.get("id")).longValue();
+
+        Map<String, Object> scan = kbDataQualityService.startScan(
+                orgId,
+                kbId,
+                "admin-user",
+                new KbDataQualityService.QualityScanCommand("MANUAL"));
+        List<Map<String, Object>> issues = kbDataQualityService.listIssues(orgId, kbId, "OPEN");
+        assertThat((Integer) scan.get("duplicateIssueCount")).isEqualTo(2);
+        assertThat((Integer) scan.get("invalidIssueCount")).isGreaterThanOrEqualTo(1);
+        assertThat((Integer) scan.get("regexIssueCount")).isEqualTo(1);
+        assertThat(issues).extracting(item -> item.get("issueType"))
+                .contains("DUPLICATE", "TOO_SHORT", "REGEX_MATCH");
+
+        Map<String, Object> preview = kbDataQualityService.previewRule(
+                orgId,
+                ruleId,
+                new KbDataQualityService.QualityApplyCommand(List.of(dirtyChunkId), List.of(), Map.of(), 10));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> previewItems = (List<Map<String, Object>>) preview.get("items");
+        assertThat(previewItems).hasSize(1);
+        assertThat((String) previewItems.get(0).get("before")).contains("DISCLAIMER");
+        assertThat((String) previewItems.get(0).get("after")).doesNotContain("DISCLAIMER");
+
+        Map<String, Object> apply = kbDataQualityService.applyRule(
+                orgId,
+                ruleId,
+                "admin-user",
+                new KbDataQualityService.QualityApplyCommand(
+                        List.of(dirtyChunkId),
+                        List.of(),
+                        Map.of(dirtyChunkId, (String) previewItems.get(0).get("contentHash")),
+                        10));
+        assertThat(apply).containsEntry("updatedCount", 1);
+        assertThat(chunkRepository.findByIdAndOrgId(dirtyChunkId, orgId)).get()
+                .extracting("content")
+                .asString()
+                .doesNotContain("DISCLAIMER");
+
+        Map<String, Object> suggestions = kbDataQualityService.suggestAnnotations(
+                orgId,
+                kbId,
+                "admin-user",
+                new KbDataQualityService.AnnotationSuggestCommand("CHUNK", "topic", 10));
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> suggestionItems = (List<Map<String, Object>>) suggestions.get("items");
+        assertThat(suggestionItems).isNotEmpty();
+        Long suggestionId = ((Number) suggestionItems.get(0).get("id")).longValue();
+        Map<String, Object> accepted = kbDataQualityService.acceptSuggestion(
+                orgId,
+                suggestionId,
+                "admin-user",
+                new KbDataQualityService.AnnotationReviewCommand(null));
+
+        assertThat(accepted).containsEntry("status", "ACCEPTED");
+        assertThat(kbDataQualityService.listChunkAnnotations(orgId, kbId))
+                .extracting(item -> item.get("fieldKey"))
+                .contains("topic");
     }
 
     @Test

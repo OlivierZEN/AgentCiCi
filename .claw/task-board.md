@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-03T09:32:00+08:00
+updated_at: 2026-07-06T16:08:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-169 - 知识库数据清洗与智能标注平台能力
+### TASK-169 - 独立数据清洗与智能标注平台能力
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-079-kb-data-quality-annotation.md`
 - task_status_path: `.claw/tasks/TASK-169.md`
 - assignment_path: `.claw/assignments/TASK-169.yaml`
 - blocked_by: `none`
-- next_action: Validate TASK-169 assignment, run task-scoped login, then implement KB quality scan, cleaning review, and annotation workflow.
+- next_action: Review and merge branch `codex/TASK-169-kb-data-quality-annotation`; local production-readiness validation is complete.
 
 ### TASK-168 - ASR WebSocket 鉴权与线上语音入口修复
 

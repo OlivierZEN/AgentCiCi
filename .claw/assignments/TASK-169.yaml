@@ -15,6 +15,12 @@ allowed_write_roots:
   - backend/src/main/resources/db/migration/**
   - backend/src/main/java/com/codehouse/ciciassistant/platform/service/**
   - frontend/src/admin/**
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/assistant/customer-insight/**
+  - frontend/src/App.tsx
+  - frontend/vite.config.js
+  - frontend/vite.config.ts
   - frontend/src/styles.css
   - docs/specs/**
   - .claw/tasks/**
@@ -27,6 +33,11 @@ scope_files:
   - docs/specs/FEAT-079-kb-data-quality-annotation.md
   - backend/src/main/resources/db/migration/V70__kb_data_quality_annotation.sql
   - backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformTenantLifecycleService.java
+  - frontend/src/App.tsx
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/vite.config.js
+  - frontend/vite.config.ts
 protected_paths:
   - .claw/assignments/**
   - .claw/developers/**
@@ -48,8 +59,10 @@ shared_contracts:
   - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
   - docs/specs/FEAT-079-kb-data-quality-annotation.md
 task_boundary:
-  - "补齐客户要求中的数据清洗与智能标注平台能力，优先落在知识库质量治理链路内。"
+  - "补齐客户要求中的独立数据清洗与智能标注平台能力，新增 /admin/data-quality 一级入口。"
+  - "实现所有数据源的聚合入口，首版以知识库和 KB 连接器作为第一批 adapter。"
   - "实现重复/无效数据扫描、正则清洗预览与应用、人工复核队列、智能标注建议与审核入库。"
+  - "将该能力以「知微画像」AI 应用形态落地到前端 AI 应用区，文案不得携带奔驰金融等外部品牌字样。"
   - "保持所有清洗写操作可预览、可审计、可回滚，并在清洗后刷新向量索引。"
   - "不得扩展到独立通用数据湖、OCR/图像/音视频标注、移动端适配或无审核自动写入。"
 change_manifest_required: true

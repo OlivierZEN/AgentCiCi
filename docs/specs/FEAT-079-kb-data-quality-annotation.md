@@ -1,7 +1,7 @@
 ---
 kind: feature-spec
 feature_id: FEAT-079
-title: 知识库数据清洗与智能标注平台能力
+title: 独立数据清洗与智能标注平台能力
 status: draft
 owner_role: fullstack-agent
 task_ids: TASK-169
@@ -11,7 +11,7 @@ updated_at: 2026-07-06T15:38:52+08:00
 updated_by: MANAGER-001
 ---
 
-# FEAT-079 - 知识库数据清洗与智能标注平台能力
+# FEAT-079 - 独立数据清洗与智能标注平台能力
 
 ## 背景与目标
 
@@ -20,20 +20,21 @@ updated_by: MANAGER-001
 - 数据清洗：识别重复/无效数据，支持正则表达式过滤与人工复核。
 - 智能标注工具：支持对数据进行标注。
 
-现有 AgentCiCi 已具备知识库上传、解析、切片、向量化、文档/片段权限、metadata、检索评测、连接器同步和 drift audit。当前缺口不是重新建设独立数据平台，而是在知识库生产链路中补齐数据质量治理与标注复核工作台，让向量化前后的知识数据可被扫描、清洗、复核、标注、审计和重新索引。
+现有 AgentCiCi 已具备知识库上传、解析、切片、向量化、文档/片段权限、metadata、检索评测、连接器同步和 drift audit。用户已明确选择范围更大的独立数据清洗标注平台方向：新增 `/admin/data-quality`，面向所有数据源统一治理。首版以知识库和 KB 连接器数据作为第一批数据源适配器，但产品形态、导航和 API 聚合入口必须独立，不再只是知识库详情里的附属 tab。
 
 本特性目标：
 
-- 为知识库管理员提供生产可用的数据质量扫描、清洗规则、人工复核和智能标注能力。
+- 为组织管理员提供生产可用的独立数据质量平台，统一管理所有可接入数据源的扫描、清洗规则、人工复核和智能标注能力。
 - 把重复、无效、噪声、正则命中、低质量片段转成可追踪的问题队列。
 - 清洗动作必须支持预览、人工确认、审计记录和向量重建，不允许静默破坏知识库内容。
-- 标注建议必须可审核，接受后写入现有 metadata 体系，并可用于检索过滤、评测和运营管理。
+- 标注建议必须可审核，接受后写入对应数据源适配器的元数据体系，并可用于后续检索过滤、评测和运营管理。
 
 ## 范围
 
 ### In Scope
 
-- 新增知识库质量治理后端模型、API 和管理端入口。
+- 新增独立管理端页面 `/admin/data-quality`，并在组织控制台导航中作为一级入口。
+- 新增独立后端聚合 API `/data-quality/*`，用于列出数据源、启动扫描和读取平台化结果；KB 相关细节 API 可作为首个 adapter 复用。
 - 支持质量扫描 run：
   - 重复 chunk 检测：基于 `contentHash` 的精确重复，预留近似重复扩展位。
   - 无效/低质量数据检测：空内容、过短、过长、过度空白、纯链接/纯符号、疑似乱码、格式噪声。
@@ -51,12 +52,12 @@ updated_by: MANAGER-001
   - 首版以规则/启发式建议为稳定兜底，并预留模型辅助建议入口。
   - 支持接受、拒绝、修改后接受和批量应用。
   - 接受后写入现有文档 metadata；chunk 级标注写入新增标注表。
-- 后台 `/admin/kb` 增加“质量治理/标注”工作区，覆盖扫描概览、问题队列、清洗规则、智能标注。
+- 后台 `/admin/data-quality` 覆盖数据源选择、扫描概览、问题队列、清洗规则、智能标注。
 - 覆盖组织隔离、管理员权限、操作审计、租户清理和错误处理。
 
 ### Out Of Scope
 
-- 不做独立于知识库的新数据平台、项目空间或通用数据湖。
+- 不做完整通用数据湖、跨业务域血缘图谱或外部对象存储迁移。
 - 不做商业级 OCR、语音/视频标注、图像框选标注。
 - 不做多人标注一致性统计、众包质检或复杂标注任务分配。
 - 不新增移动端兼容实现、移动端布局适配或移动端自动化验收。
@@ -64,7 +65,7 @@ updated_by: MANAGER-001
 
 ## 用户场景
 
-- 知识库管理员在上传或同步数据后发起质量扫描，快速看到重复、空内容、格式噪声和规则命中。
+- 组织管理员进入 `/admin/data-quality`，先选择知识库、WEB/EXTERNAL_API 等数据源，再发起质量扫描。
 - 管理员新增“删除页脚免责声明”“过滤广告行”等正则清洗规则，先预览影响，再批量应用。
 - 管理员逐条处理问题队列：忽略误报、确认清洗、标记已解决。
 - 管理员让平台给文档或片段生成标签建议，例如产品线、部署方式、客户阶段、风险类型，审核后写入 metadata。
@@ -74,7 +75,7 @@ updated_by: MANAGER-001
 
 - FEAT-067 已提供文档/chunk、metadata field、文档 metadata、ACL、eval、connector、drift audit、Qdrant smoke 和引用可信度。
 - `kb_chunk.content_hash` 可用于精确重复识别，`KbChunkEntity.updateContent(...)` 可刷新内容与 hash。
-- 现有 document metadata 适合承载文档级标注；chunk 级标注需要新增表，避免污染 chunk 主表。
+- 首版 KB adapter 复用 document metadata 承载文档级标注；chunk 级标注新增表，避免污染 chunk 主表。
 - 迁移目录最新版本为 `V69__chat_session_state_tenant_primary_key.sql`，本特性新增迁移使用 `V70__kb_data_quality_annotation.sql`。
 - 后台设计必须遵循 `PRODUCT.md` / `DESIGN.md` / `DESIGN.json` 的产品工作台风格：暖象牙底、墨色文字、紧凑密度、香槟金结构线、克制企业语气。
 
@@ -103,7 +104,14 @@ updated_by: MANAGER-001
 
 ### 2. API
 
-在现有知识库管理 API 下新增 `/kb/{knowledgeBaseId}/quality/*`：
+新增独立平台聚合 API：
+
+- `GET /data-quality/sources`：列出所有可治理数据源，首版包含知识库和 KB 连接器数据源。
+- `POST /data-quality/knowledge-bases/{kbId}/runs`：对 KB adapter 发起扫描。
+- `GET /data-quality/knowledge-bases/{kbId}/runs`：查看扫描历史。
+- `GET /data-quality/knowledge-bases/{kbId}/issues`：查看复核队列。
+
+KB adapter 继续提供细节 API，供独立页面调用：
 
 - `POST /quality/runs`：发起扫描。
 - `GET /quality/runs`：查看扫描历史和统计。
@@ -146,12 +154,13 @@ updated_by: MANAGER-001
 
 ### 5. 前端设计
 
-在知识库详情内新增“质量治理”区域，采用四个紧凑子视图：
+新增独立 `/admin/data-quality` 页面，采用左侧数据源选择 + 右侧治理工作区：
 
+- 数据源列表：知识库、KB 连接器、后续 CRM/工单/API 数据源统一出现在同一列表。
 - 扫描概览：最近扫描、问题总数、重复/无效/规则命中统计、发起扫描按钮。
 - 问题队列：表格、筛选、证据摘要、状态操作、清洗预览入口。
 - 清洗规则：规则列表、创建/编辑、启停、预览、应用。
-- 智能标注：建议队列、批量接受/拒绝、字段选择、chunk 已标注列表。
+- 智能标注：建议队列、批量接受/拒绝、字段选择、已接受标注列表。
 
 UI 原则：
 
@@ -162,10 +171,10 @@ UI 原则：
 ## 接口与数据影响
 
 - 新增 Flyway 迁移 `V70__kb_data_quality_annotation.sql`。
-- 新增 JPA entity/repository/service/controller，位于 `kb` 模块内。
+- 新增 JPA entity/repository/service/controller；首版实体仍复用 KB adapter 的 chunk/document 目标字段，同时通过 `/data-quality/sources` 抽象数据源入口。
 - `PlatformTenantLifecycleService` 需要纳入新表的租户清理。
 - 复用现有 KB 管理权限，所有接口要求组织管理员。
-- 新增 API 向后兼容，不改变现有上传、检索和 eval 行为。
+- 新增 API 向后兼容，不改变现有上传、检索和 eval 行为；`/admin/kb` 仍可作为知识库管理页，独立治理入口为 `/admin/data-quality`。
 - 清洗 apply 是有状态写操作，必须审计并保留 issue/run 证据。
 
 ## 任务拆分
@@ -173,7 +182,7 @@ UI 原则：
 - `TASK-169A`：规格、任务、授权和数据模型迁移。
 - `TASK-169B`：后端质量扫描、问题队列、规则 preview/apply、审计与租户清理。
 - `TASK-169C`：后端智能标注建议、接受/拒绝、文档 metadata 和 chunk annotation 落库。
-- `TASK-169D`：管理端“质量治理”工作区、表格、筛选、预览和批量操作。
+- `TASK-169D`：管理端 `/admin/data-quality` 独立页面、数据源选择、表格、筛选、预览和批量操作。
 - `TASK-169E`：集成测试、前端构建、桌面端截图、Qdrant 清洗后重建验证。
 
 ## 验收标准
@@ -189,14 +198,15 @@ UI 原则：
   - 非组织管理员不能访问质量治理写接口。
   - 跨组织 KB、run、issue、suggestion 不可读写。
 - 前端验收：
-  - `/admin/kb` 知识库详情能进入质量治理区域。
+  - `/admin/data-quality` 能作为组织控制台一级导航进入。
+  - 页面能列出知识库与 KB 连接器数据源，并按数据源加载扫描、问题、规则和标注队列。
   - 扫描、问题队列、规则预览、标注建议核心流程可完成。
   - 桌面端无横向溢出、无控制台错误、符合现有设计语言。
 - 验证命令至少包含：
   - `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test`
   - `npm run build` in `frontend/`
   - `git diff --check`
-  - 真实后端 `/admin/kb` 桌面 Playwright 截图。
+  - 真实后端 `/admin/data-quality` 桌面 Playwright 截图。
 
 ## 风险与回滚
 

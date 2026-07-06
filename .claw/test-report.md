@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T15:08:00+08:00
+updated_at: 2026-07-06T16:08:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T15:08:00+08:00
+last_run_at: 2026-07-06T16:08:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,29 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-168 ASR WebSocket 鉴权与线上语音入口修复。
-- 命令：任务级门禁、assignment check、TDD RED/GREEN `TenantContextFilterTest`、RBAC focused regression、backend compile、static check、merge main、release dry-run、ACR build/push、production backup/deploy、production smoke、live ASR WebSocket smoke。
+- 范围：TASK-169 独立数据清洗与智能标注平台能力。
+- 命令：任务级门禁、assignment check、backend compile/test、KB 生命周期集成测试、frontend build、Vite proxy smoke、真实本地 backend/frontend Playwright 桌面验证、static check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-169 independent data quality and annotation platform (2026-07-06T16:08:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` covering FEAT-079/TASK-169 assignment and state files -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-169` on branch `codex/TASK-169-kb-data-quality-annotation` -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-169 implementation files, including `frontend/vite.config.js`, `frontend/vite.config.ts`, data-quality page, backend API, and assignment file -> **allowed**.
+    - `backend-compile/test`: `mvn -q -Dmaven.repo.local=.m2 -DskipTests test` in `backend/` -> **success** after data-quality model/API changes.
+    - `backend-focused`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**; Flyway schema v70, data-source listing, scan, regex cleaning preview/apply, annotation acceptance, and lifecycle cleanup paths passed.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `vite-proxy-smoke`: `curl -i http://127.0.0.1:5173/data-quality/sources` -> **success**, returned expected unauthenticated `401` JSON through Vite proxy to backend.
+    - `browser-desktop`: Playwright at `http://127.0.0.1:5173/admin/data-quality` with local backend/frontend -> **success**; admin login worked, first-level nav opened the standalone page, sources/runs/issues/rules/annotation requests returned `200`, manual scan returned `200`, page showed `COMPLETED` scan with `114` chunks and `20` open issues, browser console had 0 errors/warnings, and no horizontal overflow at 1440px.
+    - `static-check`: `git diff --check` -> **success**.
+  - Artifact:
+    - Desktop screenshot: `output/playwright/task169-data-quality-desktop.png` (1440x1000).
+  - Notes:
+    - Standalone route `/admin/data-quality` is now the primary entry; `/data-quality/*` is the independent backend aggregation API.
+    - KB and KB connector data are the first supported source adapter, with the schema and API shaped for additional data-source adapters later.
+    - Cleaning writes stay behind preview/hash-guard/audit paths; annotation suggestions remain review-first.
 
 - TASK-168 ASR WebSocket auth hotfix (2026-07-03T15:03:00+08:00):
   - Commands:
