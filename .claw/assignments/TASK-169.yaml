@@ -1,0 +1,61 @@
+task_id: TASK-169
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-06T15:38:52+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-079-kb-data-quality-annotation.md
+task_status_path: .claw/tasks/TASK-169.md
+branch: codex/TASK-169-kb-data-quality-annotation
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/service/**
+  - frontend/src/admin/**
+  - frontend/src/styles.css
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-169.md
+  - .claw/assignments/TASK-169.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-079-kb-data-quality-annotation.md
+  - backend/src/main/resources/db/migration/V70__kb_data_quality_annotation.sql
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformTenantLifecycleService.java
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+  - docs/specs/FEAT-079-kb-data-quality-annotation.md
+task_boundary:
+  - "补齐客户要求中的数据清洗与智能标注平台能力，优先落在知识库质量治理链路内。"
+  - "实现重复/无效数据扫描、正则清洗预览与应用、人工复核队列、智能标注建议与审核入库。"
+  - "保持所有清洗写操作可预览、可审计、可回滚，并在清洗后刷新向量索引。"
+  - "不得扩展到独立通用数据湖、OCR/图像/音视频标注、移动端适配或无审核自动写入。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-06T15:38:52+08:00; user opened goal mode to finish data cleaning and intelligent annotation platform capability."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created data quality and annotation readiness task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-169 on branch codex/TASK-169-kb-data-quality-annotation before implementation edits."
