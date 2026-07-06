@@ -17,14 +17,14 @@
 ## Data Protection
 
 - [ ] Store secrets in KMS/config center (not plain yaml).
-- [ ] Add PII masking for audit payloads.
+- [ ] Add PII masking for audit payloads. Tracked by FEAT-080 / TASK-170.
 - [ ] Add data retention policy for chat and audit records.
 
 ## Prompt/Tool Safety
 
 - [x] Tool execution is controlled by registered tools.
 - [ ] Add role-based tool allowlist.
-- [ ] Add prompt injection detector and context sanitization rules.
+- [ ] Add prompt injection detector and context sanitization rules. Tracked by FEAT-080 / TASK-170.
 
 ## Release Gates
 

@@ -1,0 +1,75 @@
+task_id: TASK-170
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-06T16:20:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-080-security-rules-platform.md
+task_status_path: .claw/tasks/TASK-170.md
+branch: codex/TASK-170-security-rules-platform
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/security/**
+  - backend/src/test/java/com/codehouse/ciciassistant/security/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/service/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/**
+  - backend/src/test/java/com/codehouse/ciciassistant/kb/**
+  - frontend/src/admin/**
+  - frontend/src/App.tsx
+  - frontend/vite.config.js
+  - frontend/vite.config.ts
+  - docs/specs/**
+  - docs/security-and-compliance-checklist.md
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-170.md
+  - .claw/assignments/TASK-170.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - docs/specs/FEAT-080-security-rules-platform.md
+  - docs/security-and-compliance-checklist.md
+  - backend/src/main/resources/db/migration/V71__security_rules_platform.sql
+  - frontend/src/App.tsx
+  - frontend/vite.config.js
+  - frontend/vite.config.ts
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-080-security-rules-platform.md
+  - docs/security-and-compliance-checklist.md
+task_boundary:
+  - "补齐客户要求中的安全规则平台能力，新增 /admin/security-rules 一级入口。"
+  - "实现敏感信息识别脱敏、敏感词库维护、内容审核分类、prompt injection 检测和统一输入输出安全网关。"
+  - "接入聊天输入输出、RAG/tool 上下文、工具调用参数和审计 payload 脱敏。"
+  - "保持 RBAC、工具白名单和既有审计边界不被弱化。"
+  - "不得扩展到图片/音视频审核、外部商业审核云服务或复杂审批流。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-06T16:20:00+08:00; user opened goal mode to finish security rules platform capability."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created security rules platform readiness task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-170 on branch codex/TASK-170-security-rules-platform before implementation edits."

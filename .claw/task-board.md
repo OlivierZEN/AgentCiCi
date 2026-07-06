@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-03T09:32:00+08:00
+updated_at: 2026-07-06T16:20:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-170 - 安全规则平台与输入输出安全网关
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-080-security-rules-platform.md`
+- task_status_path: `.claw/tasks/TASK-170.md`
+- assignment_path: `.claw/assignments/TASK-170.yaml`
+- blocked_by: `none`
+- next_action: Validate assignment and implement V71 security rules platform, runtime gateway, admin API, and `/admin/security-rules`.
 
 ### TASK-169 - 知识库数据清洗与智能标注平台能力
 
