@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-169
-status: review
-updated_at: 2026-07-07T14:12:00+08:00
+status: done
+updated_at: 2026-07-07T14:18:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -37,6 +37,14 @@ spec_path: docs/specs/FEAT-079-kb-data-quality-annotation.md
 
 ## Verification
 
+- Production release 2026-07-07:
+  - `main` was pushed to `origin/main` at `65364b4460c9`.
+  - `./scripts/release-acr.sh --dry-run` resolved production version `2.2.1`; `./scripts/release-acr.sh --version 2.2.1` built backend/frontend, pushed ACR images, inspected images, and pushed Git tag `2.2.1`.
+  - ECS backup created at `/opt/cici/backups/20260707-141611-before-2.2.1-task169-data-quality` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Production `/opt/cici/deploy/acr.env` has `CICI_IMAGE_TAG=2.2.1` and `CICI_APP_VERSION=2.2.1`; backend/frontend containers were force-recreated onto `2.2.1`.
+  - Production health passed: backend/frontend/database/redis/rabbitmq/qdrant healthy, `/actuator/health` `UP`, `/system/version` reports `version=2.2.1`, `imageTag=2.2.1`, `gitCommit=65364b4460c9`, frontend `nginx -t` passed, and recent backend error scan was empty.
+  - Public smoke passed for `https://x.agentcici.com/`, unauthenticated `/auth/me` returned `401`, login succeeded, authenticated `/auth/me`, `/agents`, `/skills`, `/admin/agents/run-logs?limit=10` returned `200`, and `/admin/data-quality` SPA returned `200`.
+  - `onechat.agentcici.com` direct DNS from this workstation still failed to resolve; explicit production-IP and server-local vhost smoke returned `200`.
 - `dev-login.py` for `MANAGER-001` covering FEAT-079/TASK-169 assignment and state files -> allowed.
 - `check-assignment.py` for TASK-169 representative spec, state, V70 migration, KB backend, tenant lifecycle, integration test, and admin KB frontend files -> allowed.
 - `dev-login.py` for `MANAGER-001` / `TASK-169` covering the same representative files on `codex/TASK-169-kb-data-quality-annotation` -> allowed.
@@ -113,4 +121,4 @@ spec_path: docs/specs/FEAT-079-kb-data-quality-annotation.md
 - Branch for implementation: `codex/TASK-169-kb-data-quality-annotation`.
 - User changed direction from embedded KB治理 to independent `/admin/data-quality`; implementation pivoted accordingly.
 - Current implementation has backend data model/API, standalone frontend route/nav, KB adapter as first data source, desktop browser validation evidence, and front AI app entries where `知微画像` and `客户洞察` are separate applications with separate render paths.
-- Ready for review/merge packaging on branch `codex/TASK-169-kb-data-quality-annotation`.
+- Done in production release `2.2.1`; next work resumes with TASK-170.

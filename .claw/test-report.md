@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-07T14:12:00+08:00
+updated_at: 2026-07-07T14:18:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-07T14:12:00+08:00
+last_run_at: 2026-07-07T14:18:00+08:00
 last_run_status: success
 ---
 
@@ -14,13 +14,21 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-169 独立数据清洗与智能标注平台能力。
-- 命令：任务级门禁、assignment check、static check、Compose 配置渲染、frontend build、KB 生命周期集成测试、Vite proxy smoke、真实本地 backend/frontend Playwright 桌面验证、AI 应用桌面验证。
+- 命令：任务级门禁、assignment check、static check、Compose 配置渲染、frontend build、KB 生命周期集成测试、Vite proxy smoke、真实本地 backend/frontend Playwright 桌面验证、AI 应用桌面验证、main 合并推送、ACR 发布、ECS 备份部署、生产健康检查和公网 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
 
 - TASK-169 independent data quality and annotation platform (2026-07-07T14:12:00+08:00):
   - Commands:
+    - `merge-main`: merged `codex/TASK-169-kb-data-quality-annotation` into `main` and pushed `origin/main` at `65364b4460c9` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**, next production version `2.2.1`.
+    - `release-build-push`: `./scripts/release-acr.sh --version 2.2.1` -> **success**; backend/frontend linux/amd64 images and Git tag `2.2.1` were pushed.
+    - `production-backup`: ECS backup created at `/opt/cici/backups/20260707-141611-before-2.2.1-task169-data-quality` with `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz` -> **success**.
+    - `production-deploy`: `/opt/cici/deploy/acr.env` updated to `CICI_IMAGE_TAG=2.2.1` and `CICI_APP_VERSION=2.2.1`; backend/frontend `2.2.1` images pulled; infra images locally tagged as `2.2.1`; backend/frontend containers force-recreated onto `2.2.1` -> **success**.
+    - `production-health`: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.1`, `imageTag=2.2.1`, `gitCommit=65364b4460c9`; frontend `nginx -t` passed; recent backend error scan was empty -> **success**.
+    - `public-smoke`: `https://x.agentcici.com/` returned `200`; unauthenticated `/auth/me` returned expected `401`; login succeeded; authenticated `/auth/me`, `/agents`, `/skills`, and `/admin/agents/run-logs?limit=10` returned `200`; `/admin/data-quality` SPA returned `200` -> **success**.
+    - `onechat-vhost-smoke`: direct workstation DNS for `onechat.agentcici.com` failed to resolve; explicit production-IP and server-local vhost smoke returned `200` -> **partial**, service vhost is healthy but public DNS remains a known risk.
     - `identity-current`: `dev-login.py` for `MANAGER-001` / `TASK-169` covering current changed files on `codex/TASK-169-kb-data-quality-annotation` -> **allowed**.
     - `assignment-current`: `check-assignment.py` for current TASK-169 changed files -> **allowed**.
     - `static-check-current`: `git diff --check` -> **success**.
@@ -44,11 +52,15 @@ last_run_status: success
   - Artifact:
     - Desktop screenshot: `output/playwright/task169-data-quality-desktop.png` (1440x1000).
     - AI 应用 screenshot: `output/playwright/zhiwei-portrait-ai-app.png` (1440x960).
+  - Images:
+    - Backend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.1`, index digest `sha256:150076910eb43c79346f9ea3a16e01d1153896d95445a96d710126ad0b74f655`, linux/amd64 manifest digest `sha256:9e37580e17cd64721678d37d0d3f443d2951aaf9afa4480953a9c17942a9be4b`.
+    - Frontend: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.1`, index digest `sha256:8aeead0da9ac48b14f3311eba6bc3816af2991765baf6ef6171706280950f2c3`, linux/amd64 manifest digest `sha256:6ce87fb63a2ad35c9c6a131c1ad6f54b259e1336e3dd0a2637f4366f6f5da77c`.
   - Notes:
     - Standalone route `/admin/data-quality` is now the primary entry; `/data-quality/*` is the independent backend aggregation API.
     - KB and KB connector data are the first supported source adapter, with the schema and API shaped for additional data-source adapters later.
     - Cleaning writes stay behind preview/hash-guard/audit paths; annotation suggestions remain review-first.
     - 原「客户洞察」AI 应用已保留为独立入口；「知微画像」作为新增通用智能打标与画像引擎入口，按 demo 信息架构高保真还原且不包含奔驰金融等外部品牌字样。
+    - TASK-169 is live in production release `2.2.1`.
 
 - TASK-168 ASR WebSocket auth hotfix (2026-07-03T15:03:00+08:00):
   - Commands:

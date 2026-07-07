@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-07T14:20:00+08:00
+updated_at: 2026-07-07T14:18:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,18 +24,18 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-170.md`
 - assignment_path: `.claw/assignments/TASK-170.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment and implement V71 security rules platform, runtime gateway, admin API, and `/admin/security-rules`.
+- next_action: Resume after TASK-169 production release; validate assignment and implement V71 security rules platform, runtime gateway, admin API, and `/admin/security-rules`.
 
 ### TASK-169 - 独立数据清洗与智能标注平台能力
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-079-kb-data-quality-annotation.md`
 - task_status_path: `.claw/tasks/TASK-169.md`
 - assignment_path: `.claw/assignments/TASK-169.yaml`
 - blocked_by: `none`
-- next_action: Review and merge branch `codex/TASK-169-kb-data-quality-annotation`; local production-readiness validation is complete.
+- next_action: Done in production release `2.2.1`; monitor `/admin/data-quality`, data-quality API, and「知微画像」AI 应用.
 
 ### TASK-168 - ASR WebSocket 鉴权与线上语音入口修复
 

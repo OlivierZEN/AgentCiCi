@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-03T15:08:00+08:00
+updated_at: 2026-07-07T14:18:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.2.1 TASK-169 data quality and intelligent annotation platform release on 2026-07-07:
+  - Git commit: `65364b4460c9` on `main`; annotated tag `2.2.1` was pushed to origin.
+  - Scope: standalone `/admin/data-quality` data cleaning and intelligent annotation platform, `/data-quality/*` backend API, V70 quality/annotation schema, KB adapter as first data source, and independent「知微画像」AI app alongside existing「客户洞察」.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.2.1`; backend/frontend linux/amd64 images were pushed to ACR with both `2.2.1` and `latest`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.1`, index digest `sha256:150076910eb43c79346f9ea3a16e01d1153896d95445a96d710126ad0b74f655`, linux/amd64 manifest digest `sha256:9e37580e17cd64721678d37d0d3f443d2951aaf9afa4480953a9c17942a9be4b`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.1`, index digest `sha256:8aeead0da9ac48b14f3311eba6bc3816af2991765baf6ef6171706280950f2c3`, linux/amd64 manifest digest `sha256:6ce87fb63a2ad35c9c6a131c1ad6f54b259e1336e3dd0a2637f4366f6f5da77c`.
+  - Backup directory: `/opt/cici/backups/20260707-141611-before-2.2.1-task169-data-quality`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.2.1` and `CICI_APP_VERSION=2.2.1`.
+  - Deploy note: backend/frontend images were pulled from ACR and containers were force-recreated onto `2.2.1`; current ECS infra images were locally tagged as `2.2.1` before compose because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.1`, `imageTag=2.2.1`, and `gitCommit=65364b4460c9`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` returned HTTP 200; unauthenticated `/auth/me` returned expected HTTP 401; login succeeded; authenticated `/auth/me`, `/agents`, `/skills`, and `/admin/agents/run-logs?limit=10` returned HTTP 200; `/admin/data-quality` SPA returned HTTP 200.
+  - Known DNS note: direct workstation DNS for `onechat.agentcici.com` still failed to resolve, matching the previous DNS risk; explicit production-IP and server-local vhost smokes returned HTTP 200.
 
 - 2.1.12 ASR WebSocket auth hotfix on 2026-07-03:
   - Git commit: `caf4baf90575` on `main`; annotated tag `2.1.12` was pushed to origin.
