@@ -19,6 +19,7 @@ import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
 import { CustomerInsightAppPanel } from "./customer-insight/CustomerInsightAppPanel";
+import { ZhiweiPortraitDemoApp } from "./zhiwei-portrait/ZhiweiPortraitDemoApp";
 import {
   appendAssistantDelta,
   assistantResponseNeedsUserFollowup,
@@ -201,7 +202,7 @@ type PublishedAgentPayload = {
 type WorkbenchMetric = { label: string; value: string };
 
 type AiApplication = {
-  code: "meeting-minutes" | "customer-insight";
+  code: "meeting-minutes" | "customer-insight" | "zhiwei-portrait";
   name: string;
   shortName: string;
   status: string;
@@ -732,6 +733,15 @@ const AI_APPLICATIONS: AiApplication[] = [
     summary: "客户画像、合同订单、服务体验和一客一策分析。",
     description: "汇总 CRM、合同订单、客户服务和人工补充事实，形成可编辑的客户洞察报告。",
     meta: "CRM 洞察 · 业务闭环",
+  },
+  {
+    code: "zhiwei-portrait",
+    name: "知微画像",
+    shortName: "微",
+    status: "内置",
+    summary: "从多源事实中抽取标签、画像、依据和下一步建议。",
+    description: "面向任意业务对象的 AI 智能打标与画像引擎，覆盖对象列表、画像详情、标签库、AI 配置和运营看板。",
+    meta: "智能打标 · 画像引擎",
   },
 ];
 
@@ -4504,7 +4514,9 @@ export default function AssistantApp() {
                 </button>
               ) : null}
             </header>
-            {activeAiApplication.code === "customer-insight" ? (
+            {activeAiApplication.code === "zhiwei-portrait" ? (
+              <ZhiweiPortraitDemoApp />
+            ) : activeAiApplication.code === "customer-insight" ? (
               <CustomerInsightAppPanel token={auth?.token ?? ""} />
             ) : (
               <section className="cici-ai-apps__meeting-panel">

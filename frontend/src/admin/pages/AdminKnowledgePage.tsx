@@ -56,6 +56,73 @@ type KbChunk = {
   enabled: boolean;
 };
 
+type QualityRun = {
+  id: number;
+  status: string;
+  scannedChunkCount: number;
+  duplicateIssueCount: number;
+  invalidIssueCount: number;
+  regexIssueCount: number;
+  totalIssueCount: number;
+  startedAt: string;
+  finishedAt?: string;
+};
+
+type QualityIssue = {
+  id: number;
+  runId: number;
+  issueType: string;
+  severity: string;
+  chunkId: number;
+  documentId?: number;
+  ruleId?: number;
+  contentHash: string;
+  evidence: string;
+  status: string;
+  createdAt: string;
+};
+
+type QualityRule = {
+  id: number;
+  name: string;
+  ruleType: string;
+  pattern: string;
+  replacement: string;
+  enabled: boolean;
+};
+
+type QualityPreviewItem = {
+  chunkId: number;
+  documentId?: number;
+  contentHash: string;
+  before: string;
+  after: string;
+};
+
+type AnnotationSuggestion = {
+  id: number;
+  targetType: string;
+  targetId: number;
+  documentId?: number;
+  chunkId?: number;
+  fieldKey: string;
+  suggestedValue: string;
+  confidence: number;
+  source: string;
+  rationale: string;
+  status: string;
+};
+
+type ChunkAnnotation = {
+  id: number;
+  chunkId: number;
+  documentId?: number;
+  fieldKey: string;
+  value: string;
+  source: string;
+  updatedAt: string;
+};
+
 type BatchFeedback = {
   tone: "success" | "warning";
   title: string;
@@ -147,7 +214,7 @@ export default function AdminKnowledgePage() {
   const [kbName, setKbName] = useState("");
   const [kbDescription, setKbDescription] = useState("");
   const [editingKbId, setEditingKbId] = useState<number | null>(null);
-  const [detailTab, setDetailTab] = useState<"documents" | "settings">("documents");
+  const [detailTab, setDetailTab] = useState<"documents" | "settings" | "quality">("documents");
   const [chunkSize, setChunkSize] = useState(280);
   const [chunkOverlap, setChunkOverlap] = useState(40);
   const [chunkDelimiter, setChunkDelimiter] = useState("\\n");
@@ -180,6 +247,19 @@ export default function AdminKnowledgePage() {
   const [vectorAudit, setVectorAudit] = useState<VectorAudit | null>(null);
   const [kbDialog, setKbDialog] = useState<KbDialog | null>(null);
   const [dialogValue, setDialogValue] = useState("");
+  const [qualityRuns, setQualityRuns] = useState<QualityRun[]>([]);
+  const [qualityIssues, setQualityIssues] = useState<QualityIssue[]>([]);
+  const [qualityRules, setQualityRules] = useState<QualityRule[]>([]);
+  const [qualityPreview, setQualityPreview] = useState<QualityPreviewItem[]>([]);
+  const [annotationSuggestions, setAnnotationSuggestions] = useState<AnnotationSuggestion[]>([]);
+  const [chunkAnnotations, setChunkAnnotations] = useState<ChunkAnnotation[]>([]);
+  const [qualityRuleName, setQualityRuleName] = useState("");
+  const [qualityRuleType, setQualityRuleType] = useState("REGEX_REMOVE");
+  const [qualityRulePattern, setQualityRulePattern] = useState("");
+  const [qualityRuleReplacement, setQualityRuleReplacement] = useState("");
+  const [selectedQualityRuleId, setSelectedQualityRuleId] = useState<number | null>(null);
+  const [annotationTargetType, setAnnotationTargetType] = useState("CHUNK");
+  const [annotationFieldKey, setAnnotationFieldKey] = useState("topic");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const flash = (msg: string) => {
@@ -453,6 +533,172 @@ export default function AdminKnowledgePage() {
     setNewFieldName("");
     await loadMetadataFields(selectedKb.id);
     flash("元数据字段已新增");
+  };
+
+  const loadQualityData = useCallback(
+    async (kbId: number) => {
+      const [runsRes, issuesRes, rulesRes, suggestionsRes, annotationsRes] = await Promise.all([
+        fetch(`/kb/${kbId}/quality/runs`, { headers: headers() }),
+        fetch(`/kb/${kbId}/quality/issues?status=OPEN`, { headers: headers() }),
+        fetch(`/kb/${kbId}/quality/rules`, { headers: headers() }),
+        fetch(`/kb/${kbId}/quality/annotations/suggestions?status=PENDING`, { headers: headers() }),
+        fetch(`/kb/${kbId}/quality/annotations/chunks`, { headers: headers() }),
+      ]);
+      const [runsJson, issuesJson, rulesJson, suggestionsJson, annotationsJson] = await Promise.all([
+        runsRes.json(),
+        issuesRes.json(),
+        rulesRes.json(),
+        suggestionsRes.json(),
+        annotationsRes.json(),
+      ]);
+      if (runsJson.success) setQualityRuns((runsJson.data ?? []) as QualityRun[]);
+      if (issuesJson.success) setQualityIssues((issuesJson.data ?? []) as QualityIssue[]);
+      if (rulesJson.success) {
+        const rows = (rulesJson.data ?? []) as QualityRule[];
+        setQualityRules(rows);
+        if (!selectedQualityRuleId && rows.length > 0) {
+          setSelectedQualityRuleId(rows[0].id);
+        }
+      }
+      if (suggestionsJson.success) setAnnotationSuggestions((suggestionsJson.data ?? []) as AnnotationSuggestion[]);
+      if (annotationsJson.success) setChunkAnnotations((annotationsJson.data ?? []) as ChunkAnnotation[]);
+    },
+    [headers, selectedQualityRuleId],
+  );
+
+  const startQualityScan = async () => {
+    if (!selectedKb) return;
+    const res = await fetch(`/kb/${selectedKb.id}/quality/runs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers() },
+      body: JSON.stringify({ triggerType: "MANUAL" }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`质量扫描失败：${json.message}`);
+      return;
+    }
+    flash(`质量扫描完成，发现 ${json.data?.totalIssueCount ?? 0} 个问题`);
+    await loadQualityData(selectedKb.id);
+  };
+
+  const saveQualityRule = async () => {
+    if (!selectedKb || !qualityRuleName.trim()) return;
+    const res = await fetch(`/kb/${selectedKb.id}/quality/rules`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers() },
+      body: JSON.stringify({
+        name: qualityRuleName.trim(),
+        ruleType: qualityRuleType,
+        pattern: qualityRulePattern,
+        replacement: qualityRuleReplacement,
+        enabled: true,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`规则保存失败：${json.message}`);
+      return;
+    }
+    setQualityRuleName("");
+    setQualityRulePattern("");
+    setQualityRuleReplacement("");
+    setSelectedQualityRuleId(Number(json.data?.id ?? selectedQualityRuleId));
+    flash("清洗规则已保存");
+    await loadQualityData(selectedKb.id);
+  };
+
+  const previewQualityRule = async () => {
+    if (!selectedKb || !selectedQualityRuleId) return;
+    const res = await fetch(`/kb/quality/rules/${selectedQualityRuleId}/preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers() },
+      body: JSON.stringify({ limit: 20 }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`规则预览失败：${json.message}`);
+      return;
+    }
+    setQualityPreview((json.data?.items ?? []) as QualityPreviewItem[]);
+    flash(`预览完成，命中 ${json.data?.previewCount ?? 0} 条`);
+  };
+
+  const applyQualityRule = async () => {
+    if (!selectedKb || !selectedQualityRuleId || qualityPreview.length === 0) return;
+    const expectedContentHashes = Object.fromEntries(
+      qualityPreview.map((item) => [String(item.chunkId), item.contentHash]),
+    );
+    const res = await fetch(`/kb/quality/rules/${selectedQualityRuleId}/apply`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers() },
+      body: JSON.stringify({
+        chunkIds: qualityPreview.map((item) => item.chunkId),
+        expectedContentHashes,
+        limit: qualityPreview.length,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`规则应用失败：${json.message}`);
+      return;
+    }
+    flash(`清洗已应用，更新 ${json.data?.updatedCount ?? 0} 个切片`);
+    setQualityPreview([]);
+    await loadQualityData(selectedKb.id);
+  };
+
+  const markQualityIssue = async (issueId: number, action: "ignore" | "resolve") => {
+    if (!selectedKb) return;
+    const res = await fetch(`/kb/quality/issues/${issueId}/${action}`, {
+      method: "POST",
+      headers: headers(),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`问题处理失败：${json.message}`);
+      return;
+    }
+    flash(action === "ignore" ? "问题已忽略" : "问题已标记解决");
+    await loadQualityData(selectedKb.id);
+  };
+
+  const suggestAnnotations = async () => {
+    if (!selectedKb) return;
+    const res = await fetch(`/kb/${selectedKb.id}/quality/annotations/suggest`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers() },
+      body: JSON.stringify({
+        targetType: annotationTargetType,
+        fieldKey: annotationFieldKey,
+        limit: 50,
+      }),
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`标注建议生成失败：${json.message}`);
+      return;
+    }
+    flash(`已生成 ${json.data?.createdCount ?? 0} 条标注建议`);
+    await loadQualityData(selectedKb.id);
+    await loadMetadataFields(selectedKb.id);
+  };
+
+  const reviewAnnotationSuggestion = async (suggestionId: number, action: "accept" | "reject") => {
+    if (!selectedKb) return;
+    const res = await fetch(`/kb/quality/annotations/suggestions/${suggestionId}/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...headers() },
+      body: action === "accept" ? JSON.stringify({}) : undefined,
+    });
+    const json = await res.json();
+    if (!json.success) {
+      flash(`标注审核失败：${json.message}`);
+      return;
+    }
+    flash(action === "accept" ? "标注已接受" : "标注已拒绝");
+    await loadQualityData(selectedKb.id);
+    await loadMetadataFields(selectedKb.id);
   };
 
   const toggleDocSelection = (id: number, checked: boolean) => {
@@ -950,6 +1196,7 @@ export default function AdminKnowledgePage() {
     void loadUploadPolicy();
     void loadRetrievalLogs(kb.id);
     void loadMetadataFields(kb.id);
+    void loadQualityData(kb.id);
     setVectorAudit(null);
   };
 
@@ -974,6 +1221,12 @@ export default function AdminKnowledgePage() {
     void loadRetrievalLogs(selectedKb.id);
     void loadMetadataFields(selectedKb.id);
   }, [selectedKb, detailTab, loadKbSettings, loadEmbeddingOptions, loadRetrievalLogs, loadMetadataFields]);
+
+  useEffect(() => {
+    if (!selectedKb || detailTab !== "quality") return;
+    void loadQualityData(selectedKb.id);
+    void loadMetadataFields(selectedKb.id);
+  }, [selectedKb, detailTab, loadQualityData, loadMetadataFields]);
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -1294,6 +1547,18 @@ export default function AdminKnowledgePage() {
               </svg>
               设置
             </button>
+            <button
+              type="button"
+              className={`cici-kb-sidebar__link ${detailTab === "quality" ? "active" : ""}`}
+              onClick={() => setDetailTab("quality")}
+            >
+              <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
+                <path d="M4 5.5h12M4 10h8M4 14.5h5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                <circle cx="15" cy="13.5" r="2.2" stroke="currentColor" strokeWidth="1.4" />
+                <path d="m16.6 15.1 1.7 1.7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              质量治理
+            </button>
           </nav>
           <div className="cici-kb-sidebar__footer">
             <button
@@ -1610,6 +1875,272 @@ export default function AdminKnowledgePage() {
                 <span>{filteredDocs.length} 文档</span>
               </div>
             </>
+          )}
+
+          {detailTab === "quality" && selectedKb && (
+            <div className="cici-kb-settings">
+              <div className="cici-kb-main__header">
+                <div>
+                  <h2 className="cici-kb-main__title">质量治理</h2>
+                  <p className="cici-kb-main__subtitle">
+                    扫描重复、无效和规则命中的知识切片，清洗前先预览，标注建议需审核后入库。
+                  </p>
+                </div>
+                <div className="cici-kb-main__actions">
+                  <button type="button" className="cici-btn cici-btn--primary" onClick={() => void startQualityScan()}>
+                    发起扫描
+                  </button>
+                  <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void loadQualityData(selectedKb.id)}>
+                    刷新
+                  </button>
+                </div>
+              </div>
+
+              <div className="cici-kb-upload-policy">
+                <span>最近扫描 {qualityRuns[0] ? formatDate(qualityRuns[0].startedAt) : "-"}</span>
+                <span>开放问题 {qualityIssues.length}</span>
+                <span>待审核标注 {annotationSuggestions.length}</span>
+                <span>已接受 chunk 标注 {chunkAnnotations.length}</span>
+              </div>
+
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">扫描概览</h3>
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
+                  <thead>
+                    <tr>
+                      <th>时间</th>
+                      <th>状态</th>
+                      <th>扫描切片</th>
+                      <th>重复</th>
+                      <th>无效</th>
+                      <th>规则命中</th>
+                      <th>问题总数</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qualityRuns.length === 0 && (
+                      <tr>
+                        <td colSpan={7} className="cici-doc-table__empty">暂无扫描记录</td>
+                      </tr>
+                    )}
+                    {qualityRuns.slice(0, 5).map((run) => (
+                      <tr key={run.id}>
+                        <td>{formatDate(run.startedAt)}</td>
+                        <td>{run.status}</td>
+                        <td>{run.scannedChunkCount}</td>
+                        <td>{run.duplicateIssueCount}</td>
+                        <td>{run.invalidIssueCount}</td>
+                        <td>{run.regexIssueCount}</td>
+                        <td>{run.totalIssueCount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">问题队列</h3>
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
+                  <thead>
+                    <tr>
+                      <th>类型</th>
+                      <th>级别</th>
+                      <th>chunk</th>
+                      <th>证据</th>
+                      <th>状态</th>
+                      <th className="cici-doc-table__th--actions">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {qualityIssues.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="cici-doc-table__empty">暂无开放问题</td>
+                      </tr>
+                    )}
+                    {qualityIssues.map((issue) => (
+                      <tr key={issue.id}>
+                        <td>{issue.issueType}</td>
+                        <td>{issue.severity}</td>
+                        <td>{issue.chunkId || "-"}</td>
+                        <td>{issue.evidence}</td>
+                        <td>{issue.status}</td>
+                        <td className="cici-doc-table__actions">
+                          <button type="button" className="cici-btn cici-btn--text cici-btn--xs" onClick={() => void markQualityIssue(issue.id, "resolve")}>
+                            解决
+                          </button>
+                          <button type="button" className="cici-btn cici-btn--text cici-btn--xs" onClick={() => void markQualityIssue(issue.id, "ignore")}>
+                            忽略
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">清洗规则</h3>
+              <div className="cici-kb-settings__grid cici-kb-settings__grid--metadata">
+                <label className="cici-field">
+                  <span className="cici-field__label">规则名</span>
+                  <input className="cici-field__input" value={qualityRuleName} onChange={(e) => setQualityRuleName(e.target.value)} placeholder="删除页脚免责声明" />
+                </label>
+                <label className="cici-field">
+                  <span className="cici-field__label">类型</span>
+                  <select className="cici-field__input" value={qualityRuleType} onChange={(e) => setQualityRuleType(e.target.value)}>
+                    <option value="REGEX_REMOVE">正则删除</option>
+                    <option value="REGEX_REPLACE">正则替换</option>
+                    <option value="TRIM">首尾空白</option>
+                    <option value="COLLAPSE_WHITESPACE">压缩空白</option>
+                    <option value="REMOVE_EMPTY_LINES">删除空行</option>
+                  </select>
+                </label>
+                <label className="cici-field">
+                  <span className="cici-field__label">pattern</span>
+                  <input className="cici-field__input" value={qualityRulePattern} onChange={(e) => setQualityRulePattern(e.target.value)} placeholder="仅正则类规则需要" />
+                </label>
+                <label className="cici-field">
+                  <span className="cici-field__label">replacement</span>
+                  <input className="cici-field__input" value={qualityRuleReplacement} onChange={(e) => setQualityRuleReplacement(e.target.value)} placeholder="正则替换时使用" />
+                </label>
+                <div className="cici-kb-settings__field-action">
+                  <button type="button" className="cici-btn cici-btn--primary" disabled={!qualityRuleName.trim()} onClick={() => void saveQualityRule()}>
+                    保存规则
+                  </button>
+                </div>
+              </div>
+
+              <div className="cici-kb-settings__actions">
+                <select
+                  className="cici-field__input"
+                  value={selectedQualityRuleId ?? ""}
+                  onChange={(e) => setSelectedQualityRuleId(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">选择规则</option>
+                  {qualityRules.map((rule) => (
+                    <option key={rule.id} value={rule.id}>{rule.name} · {rule.ruleType}</option>
+                  ))}
+                </select>
+                <button type="button" className="cici-btn cici-btn--ghost" disabled={!selectedQualityRuleId} onClick={() => void previewQualityRule()}>
+                  预览
+                </button>
+                <button type="button" className="cici-btn cici-btn--primary" disabled={qualityPreview.length === 0} onClick={() => void applyQualityRule()}>
+                  应用预览结果
+                </button>
+              </div>
+
+              {qualityPreview.length > 0 && (
+                <div className="cici-doc-table-wrap">
+                  <table className="cici-doc-table">
+                    <thead>
+                      <tr>
+                        <th>chunk</th>
+                        <th>清洗前</th>
+                        <th>清洗后</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {qualityPreview.map((item) => (
+                        <tr key={item.chunkId}>
+                          <td>{item.chunkId}</td>
+                          <td>{item.before}</td>
+                          <td>{item.after}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">智能标注</h3>
+              <div className="cici-kb-settings__grid cici-kb-settings__grid--metadata">
+                <label className="cici-field">
+                  <span className="cici-field__label">目标</span>
+                  <select className="cici-field__input" value={annotationTargetType} onChange={(e) => setAnnotationTargetType(e.target.value)}>
+                    <option value="CHUNK">chunk</option>
+                    <option value="DOCUMENT">document</option>
+                  </select>
+                </label>
+                <label className="cici-field">
+                  <span className="cici-field__label">fieldKey</span>
+                  <input className="cici-field__input" value={annotationFieldKey} onChange={(e) => setAnnotationFieldKey(e.target.value)} placeholder="topic" />
+                </label>
+                <div className="cici-kb-settings__field-action">
+                  <button type="button" className="cici-btn cici-btn--primary" disabled={!annotationFieldKey.trim()} onClick={() => void suggestAnnotations()}>
+                    生成建议
+                  </button>
+                </div>
+              </div>
+
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
+                  <thead>
+                    <tr>
+                      <th>目标</th>
+                      <th>字段</th>
+                      <th>建议值</th>
+                      <th>置信度</th>
+                      <th>依据</th>
+                      <th className="cici-doc-table__th--actions">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {annotationSuggestions.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="cici-doc-table__empty">暂无待审核标注建议</td>
+                      </tr>
+                    )}
+                    {annotationSuggestions.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.targetType} #{item.targetId}</td>
+                        <td>{item.fieldKey}</td>
+                        <td>{item.suggestedValue}</td>
+                        <td>{item.confidence.toFixed(2)}</td>
+                        <td>{item.rationale}</td>
+                        <td className="cici-doc-table__actions">
+                          <button type="button" className="cici-btn cici-btn--text cici-btn--xs" onClick={() => void reviewAnnotationSuggestion(item.id, "accept")}>
+                            接受
+                          </button>
+                          <button type="button" className="cici-btn cici-btn--text cici-btn--xs" onClick={() => void reviewAnnotationSuggestion(item.id, "reject")}>
+                            拒绝
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <h3 className="cici-kb-main__title cici-kb-main__title--section">已接受 chunk 标注</h3>
+              <div className="cici-doc-table-wrap">
+                <table className="cici-doc-table">
+                  <thead>
+                    <tr>
+                      <th>chunk</th>
+                      <th>字段</th>
+                      <th>值</th>
+                      <th>来源</th>
+                      <th>更新时间</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chunkAnnotations.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="cici-doc-table__empty">暂无 chunk 标注</td>
+                      </tr>
+                    )}
+                    {chunkAnnotations.map((item) => (
+                      <tr key={item.id}>
+                        <td>{item.chunkId}</td>
+                        <td>{item.fieldKey}</td>
+                        <td>{item.value}</td>
+                        <td>{item.source}</td>
+                        <td>{formatDate(item.updatedAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {detailTab === "settings" && selectedKb && (

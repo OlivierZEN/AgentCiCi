@@ -35,7 +35,9 @@ export function CustomerInsightSectionEditor({
       </header>
 
       <div className="cici-customer-insight__facts">
-        <label htmlFor={`customer-insight-input-${section.sectionCode}`}>人工事实与补充</label>
+        <label htmlFor={`customer-insight-input-${section.sectionCode}`}>
+          人工事实与补充
+        </label>
         <textarea
           id={`customer-insight-input-${section.sectionCode}`}
           value={inputText}
@@ -65,7 +67,9 @@ export function CustomerInsightSectionEditor({
         {generated ? (
           <ChatMarkdown content={section.markdown} />
         ) : (
-          <p className="cici-customer-insight__empty">补充事实后生成模块分析，AI 输出会标记待人工确认。</p>
+          <p className="cici-customer-insight__empty">
+            补充事实后生成模块分析，AI 输出会标记待人工确认。
+          </p>
         )}
       </section>
     </section>

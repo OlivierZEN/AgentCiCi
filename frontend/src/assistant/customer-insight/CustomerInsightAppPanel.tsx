@@ -11,14 +11,42 @@ import {
 import { CustomerInsightModuleNav } from "./CustomerInsightModuleNav";
 import { CustomerInsightReportPreview } from "./CustomerInsightReportPreview";
 import { CustomerInsightSectionEditor } from "./CustomerInsightSectionEditor";
-import { inputToText, textToInput } from "./customerInsightSections";
+import { inputToText, sourceTypeLabel, textToInput } from "./customerInsightSections";
 import type { CustomerInsightProject, CustomerInsightSection } from "./customerInsightTypes";
 
 type Props = {
   token: string;
 };
 
+const CUSTOMER_COPY = {
+  ariaApp: "客户洞察 AI 应用",
+  ariaProjects: "客户洞察项目",
+  loadError: "客户洞察加载失败",
+  projectLoadError: "客户洞察项目加载失败",
+  missingName: "请先填写客户名称。",
+  created: "客户洞察项目已创建。",
+  createError: "创建客户洞察项目失败",
+  reportDone: "客户洞察报告已汇总。",
+  eyebrow: "CRM 洞察 · 业务闭环",
+  title: "客户洞察",
+  nameLabel: "客户名称",
+  namePlaceholder: "输入客户名称",
+  typeLabel: "行业",
+  typePlaceholder: "可选",
+  createButton: "新建洞察",
+  recentTitle: "最近项目",
+  loading: "正在加载客户洞察项目。",
+  typeFallback: "待补充行业",
+  empty: "还没有客户洞察项目。",
+  workspaceFallbackTitle: "客户洞察",
+  workspaceEmpty: "选择或新建客户项目开始分析",
+  refresh: "刷新业务来源",
+  starterTitle: "新建一个客户洞察项目",
+  starterCopy: "填写客户名称与行业后，可以逐段生成客户画像、合同订单、客户服务、竞争关系和一客一策。",
+};
+
 export function CustomerInsightAppPanel({ token }: Props) {
+  const copy = CUSTOMER_COPY;
   const [projects, setProjects] = useState<CustomerInsightProject[]>([]);
   const [activeProject, setActiveProject] = useState<CustomerInsightProject | null>(null);
   const [activeSectionCode, setActiveSectionCode] = useState("customer_info");
@@ -47,7 +75,7 @@ export function CustomerInsightAppPanel({ token }: Props) {
           setActiveSectionCode(detail.sections?.[0]?.sectionCode || "customer_info");
         }
       } catch (error) {
-        if (!cancelled) setNotice(error instanceof Error ? error.message : "客户洞察加载失败");
+        if (!cancelled) setNotice(error instanceof Error ? error.message : copy.loadError);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -78,7 +106,7 @@ export function CustomerInsightAppPanel({ token }: Props) {
       setActiveProject(detail);
       setActiveSectionCode(detail.sections?.[0]?.sectionCode || "customer_info");
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "客户洞察项目加载失败");
+      setNotice(error instanceof Error ? error.message : copy.projectLoadError);
     } finally {
       setLoading(false);
     }
@@ -88,7 +116,7 @@ export function CustomerInsightAppPanel({ token }: Props) {
     event.preventDefault();
     const name = customerName.trim();
     if (!name) {
-      setNotice("请先填写客户名称。");
+      setNotice(copy.missingName);
       return;
     }
     setSaving(true);
@@ -104,9 +132,9 @@ export function CustomerInsightAppPanel({ token }: Props) {
       setActiveSectionCode(project.sections?.[0]?.sectionCode || "customer_info");
       setCustomerName("");
       setIndustry("");
-      setNotice("客户洞察项目已创建。");
+      setNotice(copy.created);
     } catch (error) {
-      setNotice(error instanceof Error ? error.message : "创建客户洞察项目失败");
+      setNotice(error instanceof Error ? error.message : copy.createError);
     } finally {
       setSaving(false);
     }
@@ -181,7 +209,7 @@ export function CustomerInsightAppPanel({ token }: Props) {
       const result = await generateCustomerInsightFull(token, activeProject.projectId);
       setActiveSectionCode(result.section.sectionCode);
       await reloadActiveProject(result.project.projectId);
-      setNotice("客户洞察报告已汇总。");
+      setNotice(copy.reportDone);
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "整案汇总失败");
     } finally {
@@ -194,25 +222,29 @@ export function CustomerInsightAppPanel({ token }: Props) {
   }
 
   return (
-    <section className="cici-customer-insight" aria-label="客户洞察 AI 应用">
-      <aside className="cici-customer-insight__projects" aria-label="客户洞察项目">
+    <section className="cici-customer-insight" aria-label={copy.ariaApp}>
+      <aside className="cici-customer-insight__projects" aria-label={copy.ariaProjects}>
         <form className="cici-customer-insight__create" onSubmit={handleCreate}>
+          <div className="cici-customer-insight__create-head">
+            <p>{copy.eyebrow}</p>
+            <h3>{copy.title}</h3>
+          </div>
           <label>
-            客户名称
-            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="输入客户名称" />
+            {copy.nameLabel}
+            <input value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder={copy.namePlaceholder} />
           </label>
           <label>
-            行业
-            <input value={industry} onChange={(event) => setIndustry(event.target.value)} placeholder="可选" />
+            {copy.typeLabel}
+            <input value={industry} onChange={(event) => setIndustry(event.target.value)} placeholder={copy.typePlaceholder} />
           </label>
           <button type="submit" className="cici-customer-insight__primary" disabled={saving}>
-            新建洞察
+            {copy.createButton}
           </button>
         </form>
 
         <div className="cici-customer-insight__project-list">
-          <h3>最近项目</h3>
-          {loading && !projects.length ? <p className="cici-customer-insight__empty">正在加载客户洞察项目。</p> : null}
+          <h3>{copy.recentTitle}</h3>
+          {loading && !projects.length ? <p className="cici-customer-insight__empty">{copy.loading}</p> : null}
           {projects.map((project) => {
             const active = project.projectId === activeProject?.projectId;
             return (
@@ -223,23 +255,24 @@ export function CustomerInsightAppPanel({ token }: Props) {
                 onClick={() => void openProject(project.projectId)}
               >
                 <strong>{project.customerName}</strong>
-                <span>{project.industry || "待补充行业"} · {project.generatedSectionCount}/{project.sectionCount}</span>
+                <span>{project.industry || copy.typeFallback} · {project.generatedSectionCount}/{project.sectionCount}</span>
               </button>
             );
           })}
-          {!loading && !projects.length ? <p className="cici-customer-insight__empty">还没有客户洞察项目。</p> : null}
+          {!loading && !projects.length ? <p className="cici-customer-insight__empty">{copy.empty}</p> : null}
         </div>
       </aside>
 
       <section className="cici-customer-insight__workspace">
         <header className="cici-customer-insight__toolbar">
           <div>
-            <h3>{activeProject?.customerName || "客户洞察"}</h3>
-            <span>{activeProject ? `${activeProject.industry || "待补充行业"} · ${activeProject.sourceType}` : "选择或新建客户项目开始分析"}</span>
+            <p>{copy.title}</p>
+            <h3>{activeProject?.customerName || copy.workspaceFallbackTitle}</h3>
+            <span>{activeProject ? `${activeProject.industry || copy.typeFallback} · ${sourceTypeLabel(activeProject.sourceType)}` : copy.workspaceEmpty}</span>
           </div>
           <div className="cici-customer-insight__toolbar-actions">
             <button type="button" className="cici-customer-insight__secondary" onClick={handleRefreshSources} disabled={!activeProject || saving}>
-              刷新业务来源
+              {copy.refresh}
             </button>
             <button type="button" className="cici-customer-insight__primary" onClick={handleGenerateSection} disabled={!activeSection || generating}>
               {generating ? "生成中" : "生成模块"}
@@ -276,8 +309,8 @@ export function CustomerInsightAppPanel({ token }: Props) {
           </div>
         ) : (
           <div className="cici-customer-insight__starter">
-            <h3>新建一个客户洞察项目</h3>
-            <p>填写客户名称与行业后，可以逐段生成客户画像、合同订单、客户服务、竞争关系和一客一策。</p>
+            <h3>{copy.starterTitle}</h3>
+            <p>{copy.starterCopy}</p>
           </div>
         )}
       </section>

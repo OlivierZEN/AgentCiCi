@@ -15,6 +15,7 @@ export default defineConfig(({ mode }) => {
         "/ai": { target: backendTarget, changeOrigin: true, ws: true },
         "/ws": { target: backendTarget, changeOrigin: true, ws: true },
         "/kb": { target: backendTarget, changeOrigin: true },
+        "/data-quality": { target: backendTarget, changeOrigin: true },
         "/ops": { target: backendTarget, changeOrigin: true },
         "/models": { target: backendTarget, changeOrigin: true },
         "/openapi": { target: backendTarget, changeOrigin: true },

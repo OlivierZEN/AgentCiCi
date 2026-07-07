@@ -73,7 +73,12 @@ public class PlatformTenantLifecycleService {
                     "kb_eval_case_result",
                     "kb_data_source",
                     "kb_sync_job",
-                    "kb_source_document_map"
+                    "kb_source_document_map",
+                    "kb_quality_rule",
+                    "kb_quality_run",
+                    "kb_quality_issue",
+                    "kb_annotation_suggestion",
+                    "kb_chunk_annotation"
             )),
             new DomainGroup("agents", "Agent、工作流、发布与调度", List.of(
                     "agent_definition",
@@ -179,6 +184,11 @@ public class PlatformTenantLifecycleService {
             "skill_version",
             "skill_definition",
             "kb_source_document_map",
+            "kb_chunk_annotation",
+            "kb_annotation_suggestion",
+            "kb_quality_issue",
+            "kb_quality_run",
+            "kb_quality_rule",
             "kb_sync_job",
             "kb_data_source",
             "kb_eval_case_result",

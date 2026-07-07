@@ -1,5 +1,5 @@
 import ChatMarkdown from "../../components/ChatMarkdown";
-import { compactDate, statusLabel, statusTone } from "./customerInsightSections";
+import { compactDate, sourceTypeLabel, statusLabel, statusTone } from "./customerInsightSections";
 import type { CustomerInsightJob, CustomerInsightProject, CustomerInsightSection, CustomerInsightSource } from "./customerInsightTypes";
 
 type Props = {
@@ -38,7 +38,7 @@ export function CustomerInsightReportPreview({
           </div>
           <div>
             <dt>来源</dt>
-            <dd>{project.sourceType}</dd>
+            <dd>{sourceTypeLabel(project.sourceType)}</dd>
           </div>
           <div>
             <dt>完整度</dt>
@@ -56,7 +56,7 @@ export function CustomerInsightReportPreview({
           <h4>当前模块</h4>
           {activeSection ? <span className={`is-${statusTone(activeSection.status)}`}>{statusLabel(activeSection.status)}</span> : null}
         </div>
-        <p>{activeSection?.description || "选择模块继续编辑。"}</p>
+        <p>{activeSection ? activeSection.description : "选择模块继续编辑。"}</p>
       </section>
 
       <section className="cici-customer-insight__side-section">
@@ -69,7 +69,7 @@ export function CustomerInsightReportPreview({
             {sources.slice(0, 4).map((source) => (
               <li key={source.id}>
                 <strong>{source.sourceLabel}</strong>
-                <span>{source.sourceType} · {compactDate(source.collectedAt)}</span>
+                <span>{sourceTypeLabel(source.sourceType)} · {compactDate(source.collectedAt)}</span>
               </li>
             ))}
           </ul>
