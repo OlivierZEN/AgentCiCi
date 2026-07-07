@@ -29,6 +29,7 @@ allowed_write_roots:
   - frontend/pagecomponents/**
   - frontend/build/customer-workbench.umd.min.js
   - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - html/**
   - docs/specs/**
   - .claw/tasks/**
@@ -47,6 +48,7 @@ scope_files:
   - frontend/vite.config.ts
   - frontend/vite.config.js
   - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - html/customer_interaction_workbench/**
 protected_paths:
   - .claw/assignments/**
