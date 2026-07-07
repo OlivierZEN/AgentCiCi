@@ -22,6 +22,7 @@ export default defineConfig(function (_a) {
                 "/integrations": { target: backendTarget, changeOrigin: true },
                 "/embed/v1": { target: backendTarget, changeOrigin: true },
                 "/mcp-servers": { target: backendTarget, changeOrigin: true },
+                "/customer-workbench": { target: backendTarget, changeOrigin: true },
                 "/admin/users": { target: backendTarget, changeOrigin: true },
                 "/admin/agents": { target: backendTarget, changeOrigin: true },
                 "^/admin/billing/(overview|subscription|usage-events|ledger|quota)(/|$)": { target: backendTarget, changeOrigin: true },

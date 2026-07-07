@@ -25,6 +25,7 @@ allowed_write_roots:
   - frontend/src/**
   - frontend/public/**
   - frontend/vite.config.ts
+  - frontend/vite.config.js
   - frontend/pagecomponents/**
   - frontend/build/customer-workbench.umd.min.js
   - deploy/nginx.cici.conf
@@ -44,6 +45,7 @@ scope_files:
   - frontend/pagecomponents/customer-workbench/**
   - frontend/build/customer-workbench.umd.min.js
   - frontend/vite.config.ts
+  - frontend/vite.config.js
   - deploy/nginx.cici.conf
   - html/customer_interaction_workbench/**
 protected_paths:
