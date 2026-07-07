@@ -24,8 +24,10 @@ allowed_write_roots:
   - backend/src/main/resources/**
   - frontend/src/**
   - frontend/public/**
+  - frontend/vite.config.ts
   - frontend/pagecomponents/**
   - frontend/build/customer-workbench.umd.min.js
+  - deploy/nginx.cici.conf
   - html/**
   - docs/specs/**
   - .claw/tasks/**
@@ -41,6 +43,8 @@ scope_files:
   - backend/src/main/resources/db/migration/V72__customer_interaction_workbench.sql
   - frontend/pagecomponents/customer-workbench/**
   - frontend/build/customer-workbench.umd.min.js
+  - frontend/vite.config.ts
+  - deploy/nginx.cici.conf
   - html/customer_interaction_workbench/**
 protected_paths:
   - .claw/assignments/**
