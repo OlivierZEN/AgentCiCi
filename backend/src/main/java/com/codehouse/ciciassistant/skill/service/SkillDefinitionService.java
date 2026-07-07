@@ -76,6 +76,29 @@ public class SkillDefinitionService {
             输出要求：输出中文 Markdown，并尽量包含 summary、evidence、risks、nextActions、pendingFacts 字段语义。
             """.trim();
 
+    private static final String CUSTOMER_INTERACTION_WORKBENCH_PROMPT_FRAGMENT = """
+            你是客户互动工作台的客户助理，服务销售、售前、客户经理和销售主管。不要把微信、电话、会议、客户反馈都简单归类为拜访记录；应把它们理解为客户互动事实，并提炼为客户画像变化、风险、机会、下一步行动和可落地 CRM 建议。
+            处理客户问题时优先区分两条主线：新客户推进和老客户经营。一次互动可以同时命中多个主线，不要强行按固定阶段切分。所有 CRM 写回动作都必须先形成建议，等待用户确认后再执行；不得静默创建任务、商机、联系人、服务风险或修改客户状态。输出必须区分事实、推断、建议和待确认项。
+            """.trim();
+
+    private static final String CUSTOMER_INTERACTION_WORKBENCH_DRAFT_SPEC_TEXT = """
+            技能名称：客户互动工作台
+            目标：围绕客户互动事实，帮助销售、售前、客户经理和主管识别新客户推进机会、老客户经营风险、下一步行动和 CRM 落地建议。
+            触发场景：
+            - 用户要求总结某个客户最近互动
+            - 用户询问客户风险、续约、增购或推进状态
+            - 用户要求生成跟进任务、商机更新、联系人补充或服务风险建议
+            - 用户希望通过对话切换工作台客户、查看时间线或采纳建议
+            处理步骤：
+            1. 查询客户列表、客户详情、互动时间线和 AI 建议。
+            2. 分别评估新客户推进和老客户经营，不强行按拜访阶段归类。
+            3. 输出事实、风险、机会、下一步动作和待确认项。
+            4. 写入 CRM 前必须生成建议并等待用户确认。
+            5. 对高风险动作、价格承诺、合同判断、服务责任归因和客户敏感信息外发必须转人工或请求确认。
+            工具边界：可使用 CloudCC 只读查询工具获取客户、联系人、线索、商机、任务和对象字段；写回 CRM 必须通过工作台建议采纳流程。
+            输出要求：中文、短段落、面向业务动作；必要时给出“建议采纳/忽略/修改”的操作选项。
+            """.trim();
+
     private static final List<BuiltinSkillSpec> BUILTIN_SKILLS = List.of(
             new BuiltinSkillSpec(
                     "conversation-core",
@@ -246,6 +269,22 @@ public class SkillDefinitionService {
                     "MEDIUM"
             ),
             new BuiltinSkillSpec(
+                    "customer-interaction-workbench",
+                    "客户互动工作台",
+                    "面向新客户推进、老客户经营、互动整理和 CRM 落地建议的工作台能力。",
+                    CUSTOMER_INTERACTION_WORKBENCH_PROMPT_FRAGMENT,
+                    CUSTOMER_INTERACTION_WORKBENCH_DRAFT_SPEC_TEXT,
+                    String.join(",",
+                            "cloudcc_getStandardObjects",
+                            "cloudcc_getCustomObjects",
+                            "cloudcc_getObjectFields",
+                            "cloudcc_pageQuery"),
+                    null,
+                    "涉及 CRM 写回、价格承诺、合同解释、服务责任归因、关键人判断或客户敏感数据外发时，必须请求用户确认或转人工。",
+                    "输出必须包含事实、推断、风险/机会、下一步行动和待确认项；CRM 写回只输出建议，等待用户采纳后执行。",
+                    "MEDIUM"
+            ),
+            new BuiltinSkillSpec(
                     "web-search",
                     "Web 搜索",
                     "面向公开互联网的搜索与正文抽取能力，返回带 URL 的结构化来源。",
@@ -276,6 +315,7 @@ public class SkillDefinitionService {
                     DefaultBinding.alwaysOn("knowledge-first"),
                     DefaultBinding.alwaysOn("safe-handoff"),
                     DefaultBinding.alwaysOn("general-assistant"),
+                    DefaultBinding.intentRoute("customer-interaction-workbench"),
                     DefaultBinding.intentRoute("ai-meeting-notetaker"),
                     DefaultBinding.intentRoute("web-search")
             ),
@@ -283,7 +323,8 @@ public class SkillDefinitionService {
                     DefaultBinding.alwaysOn("conversation-core"),
                     DefaultBinding.alwaysOn("knowledge-first"),
                     DefaultBinding.alwaysOn("safe-handoff"),
-                    DefaultBinding.alwaysOn("sales-copilot")
+                    DefaultBinding.alwaysOn("sales-copilot"),
+                    DefaultBinding.intentRoute("customer-interaction-workbench")
             ),
             "approval-agent", List.of(
                     DefaultBinding.alwaysOn("conversation-core"),

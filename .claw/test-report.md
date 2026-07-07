@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-07T14:18:00+08:00
+updated_at: 2026-07-08T01:51:30+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-07T14:18:00+08:00
+last_run_at: 2026-07-08T01:51:30+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,33 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-169 独立数据清洗与智能标注平台能力。
-- 命令：任务级门禁、assignment check、static check、Compose 配置渲染、frontend build、KB 生命周期集成测试、Vite proxy smoke、真实本地 backend/frontend Playwright 桌面验证、AI 应用桌面验证、main 合并推送、ACR 发布、ECS 备份部署、生产健康检查和公网 smoke。
+- 范围：TASK-171 客户互动工作台生产就绪。
+- 命令：任务级门禁、assignment check、CloudCC MetadataService capabilities、CloudCC pagecomponent 安全更新、CloudCC customPage/menu/Sales Cloud 绑定验证、backend compile、frontend build、Playwright 桌面直达入口验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 customer interaction workbench (2026-07-08T01:21:50+08:00):
+  - Commands:
+    - `identity-task`: skill-packaged `dev-login.py .claw --task TASK-171 --files ... --json` for the latest deep-link/pagecomponent/spec/state files -> **allowed**.
+    - `assignment`: skill-packaged `check-assignment.py .claw --developer MANAGER-001 --task TASK-171 --files ... --json` -> **allowed**.
+    - `cloudcc-msapi-capabilities`: `cloudcc capabilities msapi .` -> **success**, returned 21 MetadataService domains including applications and menus.
+    - `cloudcc-pagecomponent-update`: safe temporary-project `cloudcc publish pagecomponent customer-workbench <tmpProject>` -> **success**, returnCode `200`; component default URL now includes `https://x.agentcici.com/app?aiApp=customer-workbench` and the old root URL is absent from the publish response. Temporary credential directory was deleted.
+    - `cloudcc-custom-page-read`: `cloudcc get customPage 1 50 .` and `cloudcc get custompage 1 50 .` -> **blocked by toolchain**, both returned `unsupported command`.
+    - `cloudcc-custom-page-create-direct`: direct devconsole API using the legacy CloudCC CLI payload contract -> **success**; created customPage id `6a4d3b831b8c6d0ec6dd22ef`, pageLabel `客户互动工作台`, pageApi `customer_interaction_workbench`, readback count `1`.
+    - `cloudcc-menu-create-direct`: setup service `/api/customTab/tabSetDone` -> **success**; created page menu tab id `acf2026C53BE54B9R1Iu`, tab label `客户互动工作台`, type `page`, lightning page `customer_interaction_workbench#lightning`, six profiles authorized, target app id `ace20220322Salesloud`.
+    - `cloudcc-sales-app-binding-read`: setup service `/api/appProgram/queryModifyPage` for Sales Cloud app `ace20220322Salesloud` -> **success**; `selectedTabList` contains tab id `acf2026C53BE54B9R1Iu` as `客户互动工作台*`, selected menu count `17`.
+    - `cloudcc-online-highcode-scan`: `cloudcc scan msapi . online-highcode` -> **partial success**; pagecomponent count `1`, HTML component count `1`, customPage count `1`; script endpoint returned a CloudCC server-side 500 unrelated to the workbench path, and sidecar remains out of CloudCC metadata scope.
+    - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `browser-ai-app-customer-workbench-deeplink`: Playwright at `http://127.0.0.1:5173/app?aiApp=customer-workbench` with mocked local auth/API -> **success**; active AI app was “客户互动工作台”, customer queue, 老客户经营, and CRM 落地建议 rendered; browser console had 0 errors/warnings and no horizontal overflow at 1440px.
+  - Artifacts:
+    - Desktop direct-link screenshot: `output/playwright/task171-customer-workbench-deeplink.png` (1440x900).
+    - Debug screenshot from the pre-fix failure is retained at `output/playwright/task171-customer-workbench-deeplink-debug.png`.
+  - Notes:
+    - Direct-link validation initially exposed a frontend runtime error when the embedded/SSO auth cache lacked `roles`; `AssistantApp` now guards `auth.roles` before reading the first role.
+    - The safely published CloudCC component id is `6a4d348fe4b0a577cbba1ebf`, apiName `custc_202607Hdhm60zo`.
+    - CRM menu/app/profile binding is verified through direct setup/devconsole APIs. MSAPI apply still lacks `metadata:apply`, but that path is no longer required for the current visible CRM entry.
 
 - TASK-169 independent data quality and annotation platform (2026-07-07T14:12:00+08:00):
   - Commands:
@@ -5386,3 +5408,76 @@ last_run_status: success
   - Command: `mvn -q -Dtest='AgentRunTraceIntegrationTest,ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest,com.codehouse.ciciassistant.wecom.**.*Test' test` in `backend/`
   - Result: success after the constructor injection merge fix.
   - Notes: covers ops trace visibility, platform model-provider governance, and WeCom customer-service client/config behavior on the local `agentcici_test` database.
+
+## 2026-07-08 TASK-171 Customer Interaction Workbench
+
+- Authorization:
+  - Command: `dev-login.py .claw --task TASK-171 ... --json`
+  - Result: success
+  - Notes: `MANAGER-001` passed identity and task-scope authorization for representative backend, frontend, spec, and CloudCC page component files; `check-assignment.py --task TASK-171 ...` also passed.
+- CloudCC connectivity:
+  - Command: CloudCC OpenAPI token flow plus MetadataService capabilities/standard-catalog checks; OpenAPI queries for standard `Task`, `Event`, and `Opportunity`.
+  - Result: success
+  - Notes: CRM standard objects returned real rows; MetadataService remained reachable with the OpenAPI token. Secrets and tokens are intentionally omitted from this report.
+- Backend compile:
+  - Command: `mvn -q -DskipTests compile` in `backend/`
+  - Result: success
+  - Notes: covers new customer workbench JPA entities, repositories, service/controller, migration reference, and skill definition changes.
+- Frontend build:
+  - Command: `npm run build` in `frontend/`
+  - Result: success
+  - Notes: existing Vite large chunk warning remains.
+- Desktop browser validation:
+  - Command: Vite dev server plus Playwright at 1440x900 with mocked authenticated APIs.
+  - Result: success
+  - Evidence: `output/playwright/task171-customer-workbench-desktop.png`.
+  - Notes: AI 应用入口, 客户互动工作台, 老客户经营 tab, AI 快捷指令, CRM 落地建议, and `置信度 92%` render correctly; no horizontal overflow; console shows 0 errors and 0 warnings.
+- CloudCC page component local validation:
+  - Command: `cloudcc detail pagecomponent customer-workbench "" .`
+  - Result: success
+  - Notes: local component config and `prebuiltBundlePath` are recognized.
+- CloudCC page component publish safety check:
+  - Command: `cloudcc publish pagecomponent customer-workbench .`, followed immediately by `cloudcc delete pagecomponent <published-id> .`
+  - Result: publish API returned success, then deletion returned success.
+  - Notes: publish was not accepted as a valid release because the CLI packed root project config into the uploaded source payload. The cloud component record was deleted immediately, and a follow-up `cloudcc get pagecomponent .` did not show the component.
+- CloudCC page component safe publish:
+  - Command: create a temporary minimal CloudCC project under `/tmp` containing only `package.json.devConsoleConfig`, `frontend/pagecomponents/customer-workbench/customer-workbench.vue`, `frontend/pagecomponents/customer-workbench/config.json`, and `frontend/build/customer-workbench.umd.min.js`; then run `cloudcc publish pagecomponent customer-workbench <tmpProject>`.
+  - Result: success
+  - Evidence: final active component id `6a4d348fe4b0a577cbba1ebf`, apiName `custc_202607Hdhm60zo`; publish/update responses used only the minimal pagecomponent payload, unsafe config/token pattern count was `0`, and temporary credential directories were deleted.
+- CloudCC page component remote verification:
+  - Command: `cloudcc detail pagecomponent "" 6a4d348fe4b0a577cbba1ebf .` and `cloudcc scan msapi . online-highcode`
+  - Result: success
+  - Notes: remote component shows `component-customer-workbench`, `客户互动`, `isDeleted=0`, `loadModel=lazy`, and default URL `https://x.agentcici.com/app?aiApp=customer-workbench`.
+- CloudCC CRM menu placement exploration:
+  - Command: `cloudcc plan msapi . menus ... create`
+  - Result: planned but not applied
+  - Notes: generated script-menu plans did not include app/profile binding steps (`appCount=0`, `profileCount=0`), so applying was intentionally skipped to avoid an invisible or incomplete CRM menu.
+- CloudCC HTML component publish:
+  - Command: direct devconsole API `POST /devconsole/htmlComponent/saveHtmlComponent` with `accessToken` header and local `html/customer_interaction_workbench/{config.json,index.html}`.
+  - Result: success
+  - Evidence: HTML component id `6a4d37ece4b0a577cbba1ec0`, apiName `customer_interaction_workbench`, accessPath `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`.
+  - Notes: `cloudcc publish html customer_interaction_workbench .` currently fails because the CLI sends `pluginToken` as the `accessToken` header for this endpoint; direct call with the OpenAPI `accessToken` succeeds.
+- CloudCC online high-code scan:
+  - Command: `cloudcc scan msapi . online-highcode`
+  - Result: partial success
+  - Evidence: `pagecomponent` count `1` with id `6a4d348fe4b0a577cbba1ebf`, apiName `custc_202607Hdhm60zo`, component `component-customer-workbench`; `html` count `1` with id `6a4d37ece4b0a577cbba1ec0`, apiName `customer_interaction_workbench`; `customPage` count `1` with id `6a4d3b831b8c6d0ec6dd22ef`.
+  - Notes: script endpoint returned an unrelated CloudCC server-side 500 during scan, so the scan is recorded as partial success even though the workbench assets are present.
+- CloudCC MetadataService menu apply:
+  - Command: `cloudcc apply msapi . pla2026E964195FlLpjf`
+  - Result: blocked
+  - Notes: MetadataService returned HTTP 403 `insufficient_scope` because the token is missing `metadata:apply`; no menu write was applied.
+- CloudCC token scope probe:
+  - Command: request `/api/cauth/token` with the standard body and with `scope=metadata:apply`, `metadata:read metadata:write metadata:apply`, `scopes:["metadata:apply"]`, and grant-type variants.
+  - Result: blocked for apply
+  - Notes: every successful response returned a JWT with payload keys `ClientId/aud/binding/exp/loginName/orgId` and no scope claim, so this developer key cannot self-request `metadata:apply`.
+- CloudCC customPage write probe:
+  - Command: direct devconsole API `/devconsole/custom/pc/1.0/post/insertCustomPage` using the legacy CloudCC CLI customPage payload contract.
+  - Result: success
+  - Evidence: customPage id `6a4d3b831b8c6d0ec6dd22ef`, pageLabel `客户互动工作台`, pageApi `customer_interaction_workbench`; `pageCustomPage` readback returned total `1`.
+- CloudCC page menu and Sales Cloud binding:
+  - Command: setup service `/api/customTab/tabSetDone`, then `/api/customTab/queryTabList` and `/api/appProgram/queryModifyPage`.
+  - Result: success
+  - Evidence: tab id `acf2026C53BE54B9R1Iu`, label `客户互动工作台`, lightning page `customer_interaction_workbench#lightning`, profile authorization count `6`; Sales Cloud app `ace20220322Salesloud` selected menu count `17`, with `客户互动工作台*` present in `selectedTabList`.
+- Static diff check:
+  - Command: `git diff --check`
+  - Result: success

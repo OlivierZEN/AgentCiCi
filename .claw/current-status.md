@@ -1,15 +1,15 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-07T14:18:00+08:00
+updated_at: 2026-07-08T01:51:30+08:00
 updated_by: MANAGER-001
 phase: implementation
-active_task: "TASK-170 安全规则平台与输入输出安全网关"
-next_action: "Resume TASK-170: validate assignment, run task-scoped dev-login/check-assignment, then implement V71 security rules platform and runtime gateway."
+active_task: "TASK-171 客户互动工作台生产就绪"
+next_action: "Complete TASK-171 release readiness: update docs with verified CloudCC customPage/menu binding, rerun local validation, then decide whether to release AgentCiCi changes to the production domain used by the CRM entry."
 read_next:
   goals: false
   decisions: false
-  issue_list: false
+  issue_list: true
   task_board: true
   active_task_status: true
   test_report: true
@@ -28,16 +28,26 @@ read_next:
 - Latest TASK-169 validation: assignment and identity gates passed, `git diff --check` passed, production compose config rendered, frontend build passed, backend `KnowledgeBaseLifecycleIntegrationTest` passed against local `agentcici_test`, real local backend/frontend Playwright desktop validation of `/admin/data-quality` passed, scan `POST /data-quality/knowledge-bases/{kbId}/runs` returned `200`, browser console had 0 errors/warnings, no horizontal overflow at 1440px, and screenshot is `output/playwright/task169-data-quality-desktop.png`.
 - Production release `2.2.1` was built and deployed on 2026-07-07: backend/frontend ACR images and Git tag were pushed, ECS backup is `/opt/cici/backups/20260707-141611-before-2.2.1-task169-data-quality`, six services are healthy, `/system/version` reports `version=2.2.1`, `imageTag=2.2.1`, `gitCommit=65364b4460c9`, and `x.agentcici.com` plus authenticated core APIs passed smoke.
 - Front AI app follow-up: original `客户洞察` AI 应用 is preserved as a separate app; new `知微画像` AI 应用 now uses an independent `zhiwei-portrait` module and high-fidelity CDP demo structure with 对象列表、画像详情、标签库、AI 配置、运营看板. Desktop Playwright validation passed with 0 console errors and no horizontal overflow; screenshot is `output/playwright/zhiwei-portrait-ai-app.png`.
-- TASK-170 is assigned and next; it covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, runtime integration, and `/admin/security-rules`.
+- TASK-171 is active: build the Customer Interaction Workbench AI app with new-customer progression, existing-customer growth, CloudCC CRM integration/module linkage, supporting skills/agent content, and sufficient demo data for production-ready validation.
+- TASK-171 AgentCiCi-side implementation is functionally complete in local workspace: backend models/API/demo data, built-in `customer-interaction-workbench` skill binding, AI app entry, three-column workbench UI, new-customer progression, existing-customer growth, CRM landing suggestions, and AI assistant interactions are implemented.
+- TASK-171 validation so far: backend `mvn -q -DskipTests compile` passed, frontend `npm run build` passed, Playwright desktop validation passed with screenshot `output/playwright/task171-customer-workbench-desktop.png`, direct `/app?aiApp=customer-workbench` validation passed with screenshot `output/playwright/task171-customer-workbench-deeplink.png`, no horizontal overflow, console 0 errors/warnings, and `git diff --check` previously passed.
+- TASK-171 CloudCC side: OpenAPI and MetadataService are reachable; MetadataService capabilities returned 21 domains; standard `Task`, `Event`, and `Opportunity` queries returned real CRM rows; `customer-workbench` pagecomponent plus UMD bundle were safely published and updated through a temporary minimal project. Current online pagecomponent id is `6a4d348fe4b0a577cbba1ebf`, apiName is `custc_202607Hdhm60zo`, and default component URL targets `https://x.agentcici.com/app?aiApp=customer-workbench`. Do not publish this component directly from the repository root until the CLI dependency collection whitelist is fixed.
+- TASK-171 CRM side also has an online HTML wrapper component id `6a4d37ece4b0a577cbba1ec0`, apiName `customer_interaction_workbench`, accessPath `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`.
+- TASK-171 CloudCC CRM-side visible entry is now verified through direct devconsole/setup APIs after the Go CLI `customPage` dispatcher and MSAPI apply path proved insufficient. Online customPage id is `6a4d3b831b8c6d0ec6dd22ef`, pageApi is `customer_interaction_workbench`; CRM page menu id is `acf2026C53BE54B9R1Iu`, tab label is `客户互动工作台`, lightning page is `customer_interaction_workbench#lightning`, six profiles are authorized, and Sales Cloud app `ace20220322Salesloud` has the tab in `selectedTabList`.
+- TASK-170 remains assigned and active but is no longer the current working focus in this thread; it covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, runtime integration, and `/admin/security-rules`.
 - FEAT-067 remains the source for existing enterprise KB readiness capabilities: parser/PDF, ACL, eval, connector skeleton, drift audit, embedding metadata, Qdrant smoke, and `/admin/kb` desktop validation.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
 
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-170.md` - current security rules platform task state.
-- `.claw/assignments/TASK-170.yaml` - current authorized write scope.
-- `docs/specs/FEAT-080-security-rules-platform.md` - current security rules platform feature spec.
+- `.claw/tasks/TASK-171.md` - current customer interaction workbench task state.
+- `.claw/assignments/TASK-171.yaml` - current authorized write scope.
+- `docs/specs/FEAT-081-customer-interaction-workbench.md` - customer interaction workbench feature spec.
+- `.claw/tasks/TASK-170.md` - active security rules platform task state.
+- `.claw/assignments/TASK-170.yaml` - active security rules platform write scope.
+- `docs/specs/FEAT-080-security-rules-platform.md` - security rules platform feature spec.
 - `.claw/tasks/TASK-169.md` - completed data cleaning and annotation task state.
 - `docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md` - existing KB platform readiness source.
 - `.claw/test-report.md` - latest verified commands.
+- `.claw/issue-list.md` - latest CloudCC customPage/menu automation findings for TASK-171.

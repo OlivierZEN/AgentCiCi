@@ -1,0 +1,5 @@
+{
+  "apiName": "customer_interaction_workbench",
+  "htmlLabel": "客户互动工作台",
+  "description": "在 CloudCC CRM 中嵌入 AgentCiCi 客户互动工作台。"
+}

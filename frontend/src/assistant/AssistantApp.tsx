@@ -19,6 +19,7 @@ import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
 import { CustomerInsightAppPanel } from "./customer-insight/CustomerInsightAppPanel";
+import { CustomerWorkbenchApp } from "./customer-workbench/CustomerWorkbenchApp";
 import { ZhiweiPortraitDemoApp } from "./zhiwei-portrait/ZhiweiPortraitDemoApp";
 import {
   appendAssistantDelta,
@@ -202,7 +203,7 @@ type PublishedAgentPayload = {
 type WorkbenchMetric = { label: string; value: string };
 
 type AiApplication = {
-  code: "meeting-minutes" | "customer-insight" | "zhiwei-portrait";
+  code: "meeting-minutes" | "customer-insight" | "zhiwei-portrait" | "customer-workbench";
   name: string;
   shortName: string;
   status: string;
@@ -726,6 +727,15 @@ const AI_APPLICATIONS: AiApplication[] = [
     meta: "会议听记 · AI 纪要",
   },
   {
+    code: "customer-workbench",
+    name: "客户互动工作台",
+    shortName: "互",
+    status: "内置",
+    summary: "新客户推进、老客户经营和 CRM 落地建议。",
+    description: "读取 CRM 客户队列和互动事实，用 AI 客户助理整理风险、机会、下一步行动，并通过确认流程落地到 CRM。",
+    meta: "客户经营 · CRM 闭环",
+  },
+  {
     code: "customer-insight",
     name: "客户洞察",
     shortName: "客",
@@ -744,6 +754,12 @@ const AI_APPLICATIONS: AiApplication[] = [
     meta: "智能打标 · 画像引擎",
   },
 ];
+
+function aiApplicationCodeFromLocation(): AiApplication["code"] | "" {
+  if (typeof window === "undefined") return "";
+  const code = new URLSearchParams(window.location.search).get("aiApp")?.trim();
+  return AI_APPLICATIONS.some((item) => item.code === code) ? (code as AiApplication["code"]) : "";
+}
 
 function createInitialWorkbenchMessages() {
   return Object.fromEntries(
@@ -1211,6 +1227,7 @@ function HumanModeStaticLogin() {
 }
 
 export default function AssistantApp() {
+  const initialAiAppCode = aiApplicationCodeFromLocation();
   const [mobile, setMobile] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
@@ -1251,8 +1268,8 @@ export default function AssistantApp() {
   const [activeConversationId, setActiveConversationId] = useState("");
   const [searchText, setSearchText] = useState("");
   const [activeChannel, setActiveChannel] = useState<"all" | ConversationThread["channel"]>("all");
-  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>("workbench");
-  const [activeAiAppCode, setActiveAiAppCode] = useState<AiApplication["code"]>(AI_APPLICATIONS[0].code);
+  const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => (initialAiAppCode ? "aiApps" : "workbench"));
+  const [activeAiAppCode, setActiveAiAppCode] = useState<AiApplication["code"]>(() => initialAiAppCode || AI_APPLICATIONS[0].code);
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
   const [conversationListNotice, setConversationListNotice] = useState("");
@@ -1310,6 +1327,18 @@ export default function AssistantApp() {
     }
     setAuth(payload);
   };
+
+  useEffect(() => {
+    const applyAiAppFromLocation = () => {
+      const code = aiApplicationCodeFromLocation();
+      if (!code) return;
+      setActiveAiAppCode(code);
+      setWorkspaceTab("aiApps");
+    };
+    applyAiAppFromLocation();
+    window.addEventListener("popstate", applyAiAppFromLocation);
+    return () => window.removeEventListener("popstate", applyAiAppFromLocation);
+  }, []);
 
   useAuthStorageSync<AuthPayload>(LS_ASSISTANT_TOKEN, (payload) => {
     if (!payload?.token) {
@@ -2223,7 +2252,15 @@ export default function AssistantApp() {
   const organizationOptions = auth
     ? organizations.length
       ? organizations
-      : [{ orgId: auth.orgId, orgName: currentOrgName, memberId: auth.memberId ?? auth.userId, roleCode: auth.roles[0] ?? "", current: true }]
+      : [
+          {
+            orgId: auth.orgId,
+            orgName: currentOrgName,
+            memberId: auth.memberId ?? auth.userId,
+            roleCode: Array.isArray(auth.roles) ? (auth.roles[0] ?? "") : "",
+            current: true,
+          },
+        ]
     : [];
   const agentUnread = (conversationsByAgent.get(activeAgent.id) ?? []).reduce((count, thread) => count + thread.unread, 0);
   const activeWorkbenchBusy = activeWorkbenchState.status !== "待命中" && activeWorkbenchState.status !== "已完成";
@@ -4516,6 +4553,8 @@ export default function AssistantApp() {
             </header>
             {activeAiApplication.code === "zhiwei-portrait" ? (
               <ZhiweiPortraitDemoApp />
+            ) : activeAiApplication.code === "customer-workbench" ? (
+              <CustomerWorkbenchApp token={auth?.token ?? ""} />
             ) : activeAiApplication.code === "customer-insight" ? (
               <CustomerInsightAppPanel token={auth?.token ?? ""} />
             ) : (

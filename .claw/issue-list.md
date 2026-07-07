@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-06-23T02:12:00Z
+updated_at: 2026-07-08T01:51:30+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -39,6 +39,15 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-07-08-cloudcc-custom-page-cli-unsupported:
+  - Symptom: TASK-171 needed a complete CloudCC CRM-side navigation path for “客户互动工作台” (`pagecomponent/html -> customPage -> page menu -> application/profile visibility`), but the Go CLI dispatcher rejected `cloudcc get customPage/custompage`, and MSAPI apply lacked `metadata:apply`.
+  - Verified facts: `platform/customPage devguide` documents `cloudcc create/get/update/delete customPage`; `platform/menu` requires a page menu to point at a `pageApi` or script tab; `platform/application` can bind menu IDs to applications. The installed `cloudcc-cli-go version: 2.1.271-msapi` supports pagecomponent publish and MSAPI application/menu domains, but customPage high-code writes were not callable through that dispatcher.
+  - Verified facts: MSAPI menu plan `pla2026E964195FlLpjf` was generated for script tab id `tab20265938D889zoxqP` opening `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`, but `cloudcc apply msapi . pla2026E964195FlLpjf` returned HTTP 403 `insufficient_scope`, missing `metadata:apply`; re-requested OpenAPI tokens did not include a scope claim.
+  - Resolution (2026-07-08): derived the direct devconsole/setup payload contracts from the legacy CloudCC CLI implementation, created customPage id `6a4d3b831b8c6d0ec6dd22ef` with pageApi `customer_interaction_workbench`, then created page menu tab id `acf2026C53BE54B9R1Iu` through `/api/customTab/tabSetDone`.
+  - Verification (2026-07-08): `pageCustomPage` readback returned customPage count `1`; `/api/customTab/queryTabList` returned the page tab with lightning page `customer_interaction_workbench#lightning`; `/api/appProgram/queryModifyPage` for Sales Cloud app `ace20220322Salesloud` returned the tab in `selectedTabList`; online high-code scan shows pagecomponent `1`, HTML component `1`, and customPage `1`.
+  - Residual note: MSAPI apply still requires a token with `metadata:apply`, and the Go CLI customPage dispatcher should still be fixed for future repeatability, but TASK-171 CRM visible navigation is no longer blocked.
+  - Status: resolved.
 
 - ISSUE-2026-06-22-platform-audit-log-query-500:
   - Symptom: production smoke for `/api/platform/audit/logs` returned backend HTTP 500 after platform login.

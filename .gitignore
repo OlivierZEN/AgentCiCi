@@ -22,6 +22,8 @@ docs/.obsidian/workspace.json
 # Temp
 tmp-*.txt
 deploy/acr.env
+cloudcc-cli.config.json
+.cloudcc-cache.json
 .playwright-cli/
 backend/data/kb-files/
 frontend/test-results/
