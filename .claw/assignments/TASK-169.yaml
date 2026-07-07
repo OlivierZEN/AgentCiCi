@@ -18,6 +18,7 @@ allowed_write_roots:
   - frontend/src/assistant/AssistantApp.tsx
   - frontend/src/assistant/cici-ui.css
   - frontend/src/assistant/customer-insight/**
+  - frontend/src/assistant/zhiwei-portrait/**
   - frontend/src/App.tsx
   - frontend/vite.config.js
   - frontend/vite.config.ts

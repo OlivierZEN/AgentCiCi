@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-06T16:08:00+08:00
+updated_at: 2026-07-07T14:12:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-06T16:08:00+08:00
+last_run_at: 2026-07-07T14:12:00+08:00
 last_run_status: success
 ---
 
@@ -14,13 +14,21 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-169 独立数据清洗与智能标注平台能力。
-- 命令：任务级门禁、assignment check、backend compile/test、KB 生命周期集成测试、frontend build、Vite proxy smoke、真实本地 backend/frontend Playwright 桌面验证、static check。
+- 命令：任务级门禁、assignment check、static check、Compose 配置渲染、frontend build、KB 生命周期集成测试、Vite proxy smoke、真实本地 backend/frontend Playwright 桌面验证、AI 应用桌面验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
 
-- TASK-169 independent data quality and annotation platform (2026-07-06T16:08:00+08:00):
+- TASK-169 independent data quality and annotation platform (2026-07-07T14:12:00+08:00):
   - Commands:
+    - `identity-current`: `dev-login.py` for `MANAGER-001` / `TASK-169` covering current changed files on `codex/TASK-169-kb-data-quality-annotation` -> **allowed**.
+    - `assignment-current`: `check-assignment.py` for current TASK-169 changed files -> **allowed**.
+    - `static-check-current`: `git diff --check` -> **success**.
+    - `compose-config-current`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task169-release.yml` -> **success**.
+    - `frontend-build-current`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `backend-focused-current-initial`: `mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **blocked by local environment**, PostgreSQL on `localhost:5432` was not listening.
+    - `local-infra-current`: `docker compose up -d --remove-orphans postgres redis rabbitmq qdrant`; `cici-postgres` became healthy and `agentcici_test` existed -> **success**.
+    - `backend-focused-current`: `SPRING_DATASOURCE_URL='jdbc:postgresql://127.0.0.1:5432/agentcici_test' SPRING_DATASOURCE_USERNAME=cici SPRING_DATASOURCE_PASSWORD=cici123 SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=3 mvn -q -Dmaven.repo.local=.m2 -Dtest=KnowledgeBaseLifecycleIntegrationTest test` in `backend/` -> **success**; Flyway validated schema at version 70.
     - `identity-manager`: `dev-login.py` for `MANAGER-001` covering FEAT-079/TASK-169 assignment and state files -> **allowed**.
     - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-169` on branch `codex/TASK-169-kb-data-quality-annotation` -> **allowed**.
     - `assignment`: `check-assignment.py` for TASK-169 implementation files, including `frontend/vite.config.js`, `frontend/vite.config.ts`, data-quality page, backend API, and assignment file -> **allowed**.
@@ -30,12 +38,17 @@ last_run_status: success
     - `vite-proxy-smoke`: `curl -i http://127.0.0.1:5173/data-quality/sources` -> **success**, returned expected unauthenticated `401` JSON through Vite proxy to backend.
     - `browser-desktop`: Playwright at `http://127.0.0.1:5173/admin/data-quality` with local backend/frontend -> **success**; admin login worked, first-level nav opened the standalone page, sources/runs/issues/rules/annotation requests returned `200`, manual scan returned `200`, page showed `COMPLETED` scan with `114` chunks and `20` open issues, browser console had 0 errors/warnings, and no horizontal overflow at 1440px.
     - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build-zhiwei`: `npm run build` in `frontend/` after making「知微画像」independent from「客户洞察」 -> **success**; existing Vite large chunk warning remains.
+    - `browser-ai-app-zhiwei`: Playwright at `http://127.0.0.1:5179/app` with mocked local auth/API -> **success**; AI 应用列表同时保留「客户洞察」并新增「知微画像」；「客户洞察」保持原组件与文案；「知微画像」使用独立 `zhiwei-portrait` 组件，展示「AI 智能打标与画像引擎」、对象列表、画像详情、标签库、AI 配置和运营看板；`.zhiwei-demo .cici-customer-insight` count was `0`; browser console had 0 errors; desktop layout had `innerWidth=1440`, `scrollWidth=1440`, `bodyScrollWidth=1440`.
+    - `browser-ai-app-zhiwei-nav`: Playwright clicked `画像详情`、`标签库`、`AI 配置`、`运营看板` inside「知微画像」 -> **success**, all views rendered with 0 console errors.
   - Artifact:
     - Desktop screenshot: `output/playwright/task169-data-quality-desktop.png` (1440x1000).
+    - AI 应用 screenshot: `output/playwright/zhiwei-portrait-ai-app.png` (1440x960).
   - Notes:
     - Standalone route `/admin/data-quality` is now the primary entry; `/data-quality/*` is the independent backend aggregation API.
     - KB and KB connector data are the first supported source adapter, with the schema and API shaped for additional data-source adapters later.
     - Cleaning writes stay behind preview/hash-guard/audit paths; annotation suggestions remain review-first.
+    - 原「客户洞察」AI 应用已保留为独立入口；「知微画像」作为新增通用智能打标与画像引擎入口，按 demo 信息架构高保真还原且不包含奔驰金融等外部品牌字样。
 
 - TASK-168 ASR WebSocket auth hotfix (2026-07-03T15:03:00+08:00):
   - Commands:

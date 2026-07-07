@@ -12,7 +12,7 @@ export function groupSections(sections: CustomerInsightSection[] | CustomerInsig
   const groups: Array<{ code: string; label: string; sections: typeof sections }> = [];
   for (const section of sections) {
     const code = "sectionGroup" in section ? section.sectionGroup : "";
-    const label = "groupLabel" in section ? section.groupLabel : code;
+    const label = section.groupLabel;
     const existing = groups.find((item) => item.code === code);
     if (existing) {
       (existing.sections as typeof sections).push(section as never);
@@ -49,6 +49,14 @@ export function compactDate(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+}
+
+export function sourceTypeLabel(sourceType: string) {
+  const normalized = (sourceType || "").toUpperCase();
+  if (normalized === "MANUAL") return "人工录入";
+  if (normalized === "CLOUDCC") return "业务系统";
+  if (normalized === "MIXED") return "混合来源";
+  return sourceType || "未标记";
 }
 
 export function inputToText(input: Record<string, unknown>) {
