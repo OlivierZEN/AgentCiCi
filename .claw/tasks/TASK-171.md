@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-171
-status: in_progress
-updated_at: 2026-07-08T01:51:30+08:00
+status: done
+updated_at: 2026-07-08T02:20:33+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -63,6 +63,12 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 - CloudCC Sales Cloud binding verification -> passed. `/api/appProgram/queryModifyPage` for `ace20220322Salesloud` returned `selectedTabList` containing tab id `acf2026C53BE54B9R1Iu` as `客户互动工作台*`; selected menu count was `17`.
 - `cloudcc scan msapi . online-highcode` after CRM page creation -> passed for pagecomponent `1`, HTML component `1`, and customPage `1`. The script endpoint still returns an unrelated 500 in the scan, and sidecar remains out of CloudCC metadata scope.
 - `git diff --check` -> passed.
+- `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task171-hotfix.yml` -> passed.
+- Production release `2.2.2` -> passed for main workbench images and tag, commit `5a4633dd0409`, backend digest `sha256:b1387ef8731a6ea0e508dcdb44b06e16832f6e3d9a83ad9a55e765d32f21c711`, frontend digest `sha256:79fb9bcfad9f50af77f888b4bd5d4615712edbc63c6811cc460f3bae20e5e0c7`.
+- Production hotfix release `2.2.3` -> passed for `/customer-workbench/*` proxy routing, commit `f0ec47509bde`, backend digest `sha256:a38b7b680b5669aac18e344d8ac4e0bb61ecda3f03945760a668d73e93adf807`, frontend digest `sha256:51eae6feea4c10af3cab007ae7b9a05a2d6002e8a909f0306210e8d6daf62d60`.
+- ECS deployment -> passed. Backup directories: `/opt/cici/backups/20260708-021020-before-2.2.2-task171-customer-workbench` and `/opt/cici/backups/20260708-021708-before-2.2.3-customer-workbench-proxy`.
+- Production health -> passed. Six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.3`, `imageTag=2.2.3`, `gitCommit=f0ec47509bde`; frontend `nginx -t` passed.
+- Production customer workbench API smoke -> passed. Login `demo-org / 13900009999` returned `ORG_ADMIN`; `GET /customer-workbench/accounts` returned JSON with 12 accounts; first detail returned 3 timeline events and 2 recommendations; `/customer-workbench/assistant` returned a risk summary.
 
 ## Changed Files
 
@@ -84,6 +90,6 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 ## Handoff
 
 - AgentCiCi 侧工作台主体、API、演示数据和技能绑定已完成并通过本地验证。
-- CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权和销售云应用绑定均已在线验证；后续从本仓库直接发布 pagecomponent 前仍需修复 CLI 打包白名单，或继续使用临时最小项目/直接 devconsole API 发布流程。
+- CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权和销售云应用绑定均已在线验证。
+- AgentCiCi 生产域名 `https://x.agentcici.com/app?aiApp=customer-workbench` 已随 `2.2.3` 可用，`/customer-workbench/*` HTTPS 代理已修复并验证。
 - MSAPI apply 仍受 `metadata:apply` scope 限制，但已不再阻塞本任务的 CRM 可见入口，因为已用 CloudCC setup/devconsole API 完成同等配置。
-- Work continues in current workspace unless a dedicated branch/worktree is created later.

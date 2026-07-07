@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-08T01:51:30+08:00
+updated_at: 2026-07-08T02:20:33+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-08T01:51:30+08:00
+last_run_at: 2026-07-08T02:20:33+08:00
 last_run_status: success
 ---
 
@@ -14,7 +14,7 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-171 客户互动工作台生产就绪。
-- 命令：任务级门禁、assignment check、CloudCC MetadataService capabilities、CloudCC pagecomponent 安全更新、CloudCC customPage/menu/Sales Cloud 绑定验证、backend compile、frontend build、Playwright 桌面直达入口验证。
+- 命令：任务级门禁、assignment check、CloudCC MetadataService capabilities、CloudCC pagecomponent 安全更新、CloudCC customPage/menu/Sales Cloud 绑定验证、backend compile、frontend build、compose config、ACR 发布、ECS 部署、生产健康检查和客户互动工作台 API smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -33,6 +33,12 @@ last_run_status: success
     - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
     - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
     - `browser-ai-app-customer-workbench-deeplink`: Playwright at `http://127.0.0.1:5173/app?aiApp=customer-workbench` with mocked local auth/API -> **success**; active AI app was “客户互动工作台”, customer queue, 老客户经营, and CRM 落地建议 rendered; browser console had 0 errors/warnings and no horizontal overflow at 1440px.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task171-hotfix.yml` -> **success**.
+    - `release-2.2.2`: `./scripts/release-acr.sh --version 2.2.2` using isolated Docker auth copied from ECS -> **success**; backend/frontend images and tag were pushed.
+    - `release-2.2.3`: `./scripts/release-acr.sh --version 2.2.3` -> **success**; hotfix includes `/customer-workbench` proxy in frontend Nginx image.
+    - `production-deploy-2.2.3`: ECS backup, image pull, infra image aliasing, compose up, and SSL vhost config sync/reload -> **success**.
+    - `production-health-2.2.3`: six compose services healthy; `/actuator/health=UP`; `/system/version` reports `version=2.2.3`, `imageTag=2.2.3`, `gitCommit=f0ec47509bde`; frontend `nginx -t` passed.
+    - `production-customer-workbench-api`: login `demo-org/13900009999` -> **success**; `/customer-workbench/accounts` returned JSON, 12 accounts; first detail returned 3 timeline events and 2 recommendations; `/customer-workbench/assistant` returned a risk summary.
   - Artifacts:
     - Desktop direct-link screenshot: `output/playwright/task171-customer-workbench-deeplink.png` (1440x900).
     - Debug screenshot from the pre-fix failure is retained at `output/playwright/task171-customer-workbench-deeplink-debug.png`.
@@ -40,6 +46,7 @@ last_run_status: success
     - Direct-link validation initially exposed a frontend runtime error when the embedded/SSO auth cache lacked `roles`; `AssistantApp` now guards `auth.roles` before reading the first role.
     - The safely published CloudCC component id is `6a4d348fe4b0a577cbba1ebf`, apiName `custc_202607Hdhm60zo`.
     - CRM menu/app/profile binding is verified through direct setup/devconsole APIs. MSAPI apply still lacks `metadata:apply`, but that path is no longer required for the current visible CRM entry.
+    - Backup directories: `/opt/cici/backups/20260708-021020-before-2.2.2-task171-customer-workbench` and `/opt/cici/backups/20260708-021708-before-2.2.3-customer-workbench-proxy`.
 
 - TASK-169 independent data quality and annotation platform (2026-07-07T14:12:00+08:00):
   - Commands:

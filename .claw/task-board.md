@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-08T01:51:30+08:00
+updated_at: 2026-07-08T02:20:33+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-171 - 客户互动工作台生产就绪
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-081-customer-interaction-workbench.md`
 - task_status_path: `.claw/tasks/TASK-171.md`
 - assignment_path: `.claw/assignments/TASK-171.yaml`
 - blocked_by: `none`
-- next_action: Rerun local validation and complete release readiness; CloudCC pagecomponent, HTML wrapper, customPage, page menu, profile visibility, and Sales Cloud app binding are verified.
+- next_action: Done in production release `2.2.3`; monitor CloudCC CRM entry and `/customer-workbench/*` production API smoke.
 
 ### TASK-170 - 安全规则平台与输入输出安全网关
 

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-07T14:18:00+08:00
+updated_at: 2026-07-08T02:20:33+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,18 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.2.3 TASK-171 customer interaction workbench release on 2026-07-08:
+  - Git commits: main workbench `5a4633dd0409`, proxy hotfix image commit `f0ec47509bde`, and source SSL vhost sync commit `0271e52` pushed to `origin/main`; annotated tags `2.2.2` and `2.2.3` were pushed to origin.
+  - Scope: 客户互动工作台 AI 应用、V72 customer workbench schema and seeded demo data, `/customer-workbench/*` APIs, built-in `customer-interaction-workbench` skill, CloudCC pagecomponent/html/customPage/menu/app binding, and production HTTPS proxy for the workbench API.
+  - Release method: `./scripts/release-acr.sh --dry-run`, `./scripts/release-acr.sh --version 2.2.2`, then hotfix `./scripts/release-acr.sh --version 2.2.3`; local Docker Desktop credential helper was bypassed by using an isolated Docker config copied from ECS registry auth.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.3`, index digest `sha256:a38b7b680b5669aac18e344d8ac4e0bb61ecda3f03945760a668d73e93adf807`, linux/amd64 manifest digest `sha256:1479fa5ee0abf2613dc93bdd7c008be211362357553b6d433f479e27496e0013`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.3`, index digest `sha256:51eae6feea4c10af3cab007ae7b9a05a2d6002e8a909f0306210e8d6daf62d60`, linux/amd64 manifest digest `sha256:7526d7d3d683327c94a7dd44f9cf7250d583e8281710a9f6ae78cfcae8ff6c6a`.
+  - Backup directories: `/opt/cici/backups/20260708-021020-before-2.2.2-task171-customer-workbench` and `/opt/cici/backups/20260708-021708-before-2.2.3-customer-workbench-proxy`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.2.3` and `CICI_APP_VERSION=2.2.3`.
+  - Deploy note: backend/frontend images were pulled from ACR; infra images were locally tagged as `2.2.3`; SSL vhost config `deploy/nginx.cici.ssl.conf` was synced and reloaded so `/customer-workbench/*` proxies to backend over HTTPS.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.3`, `imageTag=2.2.3`, and `gitCommit=f0ec47509bde`; frontend `nginx -t` passed; Flyway v72 had already applied during `2.2.2` boot.
+  - Public smoke: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-workbench` returned HTTP 200; unauthenticated `/auth/me` returned expected HTTP 401; login `demo-org / 13900009999` succeeded; `/customer-workbench/accounts` returned 12 demo accounts, detail returned timeline/recommendations, and assistant returned a risk summary.
 
 - 2.2.1 TASK-169 data quality and intelligent annotation platform release on 2026-07-07:
   - Git commit: `65364b4460c9` on `main`; annotated tag `2.2.1` was pushed to origin.

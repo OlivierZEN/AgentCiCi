@@ -6,7 +6,7 @@ status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-171
 related_decisions: FEAT-067, FEAT-079, FEAT-080
-updated_at: 2026-07-08T01:51:30+08:00
+updated_at: 2026-07-08T02:20:33+08:00
 updated_by: MANAGER-001
 ---
 
@@ -283,7 +283,7 @@ APPLIED 为终态，后续修改需要产生新建议。
 
 ## 当前实现状态
 
-更新时间：2026-07-08T01:51:30+08:00。
+更新时间：2026-07-08T02:20:33+08:00。
 
 - AgentCiCi 侧已完成首版实现：后端新增客户互动事实、CRM 落地建议和客户快照模型；初始化 12 个演示客户、36 条互动事实、24 条建议；提供客户列表、客户详情、建议采纳/落地和 AI 客户助理 API。
 - 智能体/技能侧已新增内置技能 `customer-interaction-workbench`，绑定到系统助手和销售助手，默认提示约束 AI 先读取 CRM/互动事实、再生成可确认的 CRM 落地建议。
@@ -297,6 +297,7 @@ APPLIED 为终态，后续修改需要产生新建议。
 - CloudCC CRM 菜单已通过 setup 服务创建并绑定销售云：页面菜单 id 为 `acf2026C53BE54B9R1Iu`，tab label `客户互动工作台`，lightning page `customer_interaction_workbench#lightning`，已对 6 个简档授权，并已在销售云应用 `ace20220322Salesloud` 的 `selectedTabList` 中验证可见。
 - MSAPI 菜单计划 `pla2026E964195FlLpjf` 仍因当前 OpenAPI JWT 缺少 `metadata:apply` scope 无法 apply；但本任务已通过 CloudCC setup/devconsole API 完成同等页面和菜单配置，该限制不再阻塞 CRM 可见入口。
 - 桌面端 Playwright 验收通过，截图为 `output/playwright/task171-customer-workbench-desktop.png`；直达入口验收通过，截图为 `output/playwright/task171-customer-workbench-deeplink.png`。验证工作台标题、AI 应用入口、老客户经营 tab、AI 快捷指令、CRM 落地建议、`置信度 92%`、无横向溢出和控制台 0 error/0 warning。
+- 生产发布完成：`2.2.2` 发布主功能，`2.2.3` 修复 HTTPS vhost 对 `/customer-workbench/*` 的代理。当前生产 `/system/version` 返回 `version=2.2.3`、`imageTag=2.2.3`、`gitCommit=f0ec47509bde`；认证后 `/customer-workbench/accounts` 返回 12 个演示客户，客户详情和 AI 客户助理 smoke 均通过。
 
 ## 非目标
 
