@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-08T02:20:33+08:00
+updated_at: 2026-07-08T10:26:57+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -61,6 +61,10 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 - CloudCC customPage direct creation -> passed after deriving the devconsole payload contract from the legacy CloudCC CLI implementation. Created online customPage id `6a4d3b831b8c6d0ec6dd22ef`, pageLabel `客户互动工作台`, pageApi `customer_interaction_workbench`; readback from `pageCustomPage` returned total `1`.
 - CloudCC CRM page menu creation -> passed through setup service `/api/customTab/tabSetDone`. Created tab id `acf2026C53BE54B9R1Iu`, tab label `客户互动工作台`, type `page`, pageType `customPage`, lightning page `customer_interaction_workbench#lightning`, profile authorization count `6`, and target Sales Cloud app id `ace20220322Salesloud`.
 - CloudCC Sales Cloud binding verification -> passed. `/api/appProgram/queryModifyPage` for `ace20220322Salesloud` returned `selectedTabList` containing tab id `acf2026C53BE54B9R1Iu` as `客户互动工作台*`; selected menu count was `17`.
+- CloudCC CRM menu visibility root cause check (2026-07-08) -> passed. `/api/appProgram/queryAppList` plus per-app `getAppTabs` showed tab id `acf2026C53BE54B9R1Iu` existed only in Sales Cloud before the hotfix and was unselected in the default `CloudCC` app and six other apps.
+- CloudCC CRM all-app binding hotfix (2026-07-08) -> passed. Direct setup API `/api/newApp/save` appended the existing tab id to each app's current menu list without changing app labels, default launch tabs, or profile visibility. Verification returned `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`; sequence positions: `CloudCC=13`, `销售云=17`, `市场云=12`, `服务云=16`, `商务云=11`, `客服服务云=8`, `项目管理系统=10`, `利润云=12`.
+- CloudCC CRM tab readback (2026-07-08) -> passed. `/api/customTab/queryTabList` returned tab id `acf2026C53BE54B9R1Iu`, label `客户互动工作台`, type `page`, URL `/tab.action?m=needoneapp`, and lightning page `customer_interaction_workbench#lightning`.
+- Production route smoke (2026-07-08) -> passed. `https://x.agentcici.com/app?aiApp=customer-workbench` returned HTTP `200`; unauthenticated `https://x.agentcici.com/customer-workbench/accounts` returned expected HTTP `401`.
 - `cloudcc scan msapi . online-highcode` after CRM page creation -> passed for pagecomponent `1`, HTML component `1`, and customPage `1`. The script endpoint still returns an unrelated 500 in the scan, and sidecar remains out of CloudCC metadata scope.
 - `git diff --check` -> passed.
 - `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task171-hotfix.yml` -> passed.
@@ -90,6 +94,6 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 ## Handoff
 
 - AgentCiCi 侧工作台主体、API、演示数据和技能绑定已完成并通过本地验证。
-- CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权和销售云应用绑定均已在线验证。
+- CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权和全部 8 个应用菜单绑定均已在线验证。若某个已登录用户仍看不到菜单，优先让其刷新 CRM、切换应用或重新登录以更新前端/登录态菜单缓存。
 - AgentCiCi 生产域名 `https://x.agentcici.com/app?aiApp=customer-workbench` 已随 `2.2.3` 可用，`/customer-workbench/*` HTTPS 代理已修复并验证。
 - MSAPI apply 仍受 `metadata:apply` scope 限制，但已不再阻塞本任务的 CRM 可见入口，因为已用 CloudCC setup/devconsole API 完成同等配置。

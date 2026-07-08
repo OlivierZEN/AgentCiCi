@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-08T02:20:33+08:00
+updated_at: 2026-07-08T10:26:57+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-08T02:20:33+08:00
+last_run_at: 2026-07-08T10:26:57+08:00
 last_run_status: success
 ---
 
@@ -14,13 +14,15 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-171 客户互动工作台生产就绪。
-- 命令：任务级门禁、assignment check、CloudCC MetadataService capabilities、CloudCC pagecomponent 安全更新、CloudCC customPage/menu/Sales Cloud 绑定验证、backend compile、frontend build、compose config、ACR 发布、ECS 部署、生产健康检查和客户互动工作台 API smoke。
+- 命令：任务级门禁、assignment check、CloudCC MetadataService capabilities、CloudCC pagecomponent 安全更新、CloudCC customPage/menu/all-app binding 验证、backend compile、frontend build、compose config、ACR 发布、ECS 部署、生产健康检查和客户互动工作台 API smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
 
 - TASK-171 customer interaction workbench (2026-07-08T01:21:50+08:00):
   - Commands:
+    - `identity-task-menu-hotfix`: skill-packaged `dev-login.py .claw --developer MANAGER-001 --task TASK-171 --files .claw/current-status.md .claw/tasks/TASK-171.md .claw/test-report.md .claw/issue-list.md --json` -> **allowed**.
+    - `assignment-menu-hotfix`: skill-packaged `check-assignment.py .claw --developer MANAGER-001 --task TASK-171 --files .claw/current-status.md .claw/tasks/TASK-171.md .claw/test-report.md .claw/issue-list.md --json` -> **allowed**.
     - `identity-task`: skill-packaged `dev-login.py .claw --task TASK-171 --files ... --json` for the latest deep-link/pagecomponent/spec/state files -> **allowed**.
     - `assignment`: skill-packaged `check-assignment.py .claw --developer MANAGER-001 --task TASK-171 --files ... --json` -> **allowed**.
     - `cloudcc-msapi-capabilities`: `cloudcc capabilities msapi .` -> **success**, returned 21 MetadataService domains including applications and menus.
@@ -29,6 +31,12 @@ last_run_status: success
     - `cloudcc-custom-page-create-direct`: direct devconsole API using the legacy CloudCC CLI payload contract -> **success**; created customPage id `6a4d3b831b8c6d0ec6dd22ef`, pageLabel `客户互动工作台`, pageApi `customer_interaction_workbench`, readback count `1`.
     - `cloudcc-menu-create-direct`: setup service `/api/customTab/tabSetDone` -> **success**; created page menu tab id `acf2026C53BE54B9R1Iu`, tab label `客户互动工作台`, type `page`, lightning page `customer_interaction_workbench#lightning`, six profiles authorized, target app id `ace20220322Salesloud`.
     - `cloudcc-sales-app-binding-read`: setup service `/api/appProgram/queryModifyPage` for Sales Cloud app `ace20220322Salesloud` -> **success**; `selectedTabList` contains tab id `acf2026C53BE54B9R1Iu` as `客户互动工作台*`, selected menu count `17`.
+    - `cloudcc-menu-visibility-root-cause`: setup service `/api/appProgram/queryAppList` plus per-app `getAppTabs` -> **success**; tab id `acf2026C53BE54B9R1Iu` was selected only in Sales Cloud before the hotfix and was unselected in the default `CloudCC` app and six other apps.
+    - `cloudcc-menu-all-app-binding-hotfix`: setup service `/api/newApp/save` -> **success**; appended the existing `客户互动工作台` tab to all app menu lists without changing app labels, default launch tabs, or profile visibility.
+    - `cloudcc-menu-all-app-readback`: setup service `/api/newApp/getAppTabs` for all apps -> **success**; `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`, sequence positions `CloudCC=13`, `销售云=17`, `市场云=12`, `服务云=16`, `商务云=11`, `客服服务云=8`, `项目管理系统=10`, `利润云=12`.
+    - `cloudcc-tab-readback`: setup service `/api/customTab/queryTabList` -> **success**; tab id `acf2026C53BE54B9R1Iu`, label `客户互动工作台`, type `page`, URL `/tab.action?m=needoneapp`, lightning page `customer_interaction_workbench#lightning`.
+    - `production-workbench-page-route`: `curl -I 'https://x.agentcici.com/app?aiApp=customer-workbench'` -> **success**, HTTP `200`.
+    - `production-workbench-api-auth-guard`: `curl -I https://x.agentcici.com/customer-workbench/accounts` -> **success**, expected unauthenticated HTTP `401`.
     - `cloudcc-online-highcode-scan`: `cloudcc scan msapi . online-highcode` -> **partial success**; pagecomponent count `1`, HTML component count `1`, customPage count `1`; script endpoint returned a CloudCC server-side 500 unrelated to the workbench path, and sidecar remains out of CloudCC metadata scope.
     - `backend-compile`: `mvn -q -DskipTests compile` in `backend/` -> **success**.
     - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
@@ -45,7 +53,8 @@ last_run_status: success
   - Notes:
     - Direct-link validation initially exposed a frontend runtime error when the embedded/SSO auth cache lacked `roles`; `AssistantApp` now guards `auth.roles` before reading the first role.
     - The safely published CloudCC component id is `6a4d348fe4b0a577cbba1ebf`, apiName `custc_202607Hdhm60zo`.
-    - CRM menu/app/profile binding is verified through direct setup/devconsole APIs. MSAPI apply still lacks `metadata:apply`, but that path is no longer required for the current visible CRM entry.
+    - CRM menu/app/profile binding is verified through direct setup/devconsole APIs across all 8 apps. MSAPI apply still lacks `metadata:apply`, but that path is no longer required for the current visible CRM entry.
+    - If a CRM user still cannot see the menu after this hotfix, the likely remaining cause is a user-side cached menu/login state; refresh the CRM shell, switch applications, or sign out and back in.
     - Backup directories: `/opt/cici/backups/20260708-021020-before-2.2.2-task171-customer-workbench` and `/opt/cici/backups/20260708-021708-before-2.2.3-customer-workbench-proxy`.
 
 - TASK-169 independent data quality and annotation platform (2026-07-07T14:12:00+08:00):

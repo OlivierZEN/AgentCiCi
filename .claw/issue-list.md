@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-08T01:51:30+08:00
+updated_at: 2026-07-08T10:26:57+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -39,6 +39,14 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-07-08-customer-workbench-menu-not-visible-outside-sales-cloud:
+  - Symptom: 用户反馈在 CloudCC CRM 系统中没有看到“客户互动工作台”菜单和功能。
+  - Verified root cause: CRM tab id `acf2026C53BE54B9R1Iu` 已存在，customPage/pagecomponent 链路也存在，但该 tab 只被选入 Sales Cloud `ace20220322Salesloud` 的 `selectedTabList`；在默认 `CloudCC` 应用以及市场云、服务云、商务云、客服服务云、项目管理系统、利润云中仍位于未选菜单，因此用户切换到这些应用时不可见。
+  - Resolution (2026-07-08): 使用 setup service `/api/newApp/save` 在保留各应用原菜单顺序、应用名称、默认启动页和简档可见性的前提下，把现有 tab id `acf2026C53BE54B9R1Iu` 追加到全部 8 个应用。
+  - Verification (2026-07-08): `/api/newApp/getAppTabs` 回读全部 8 个应用，返回 `appCount=8`、`selectedCount=8`、`selectedInAllApps=true`；`/api/customTab/queryTabList` 回读 tab label `客户互动工作台`、type `page`、lightning page `customer_interaction_workbench#lightning`；AgentCiCi 页面 URL 返回 HTTP `200`，未登录 API 返回预期 HTTP `401`。
+  - Residual note: 若某个已登录 CRM 用户仍看不到菜单，优先刷新 CRM、切换应用或重新登录以更新前端/登录态菜单缓存。
+  - Status: resolved.
 
 - ISSUE-2026-07-08-cloudcc-custom-page-cli-unsupported:
   - Symptom: TASK-171 needed a complete CloudCC CRM-side navigation path for “客户互动工作台” (`pagecomponent/html -> customPage -> page menu -> application/profile visibility`), but the Go CLI dispatcher rejected `cloudcc get customPage/custompage`, and MSAPI apply lacked `metadata:apply`.

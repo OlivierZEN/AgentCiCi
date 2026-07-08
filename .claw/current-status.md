@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-08T02:20:33+08:00
+updated_at: 2026-07-08T10:26:57+08:00
 updated_by: MANAGER-001
 phase: release
 active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 is production released in 2.2.3; monitor customer interaction workbench, CloudCC CRM entry, and customer-workbench API smoke."
+next_action: "TASK-171 is production released in 2.2.3; CloudCC CRM menu visibility hotfix is applied to all 8 apps, monitor user-side refresh/login cache and customer-workbench API smoke."
 read_next:
   goals: false
   decisions: false
@@ -33,7 +33,8 @@ read_next:
 - TASK-171 validation: backend `mvn -q -DskipTests compile` passed, frontend `npm run build` passed, compose config rendered, Playwright desktop and deep-link validation passed locally, CloudCC pagecomponent/html/customPage/menu/app binding passed, production release `2.2.3` is healthy, and authenticated production `/customer-workbench/accounts` smoke returned 12 demo customers.
 - TASK-171 CloudCC side: OpenAPI and MetadataService are reachable; MetadataService capabilities returned 21 domains; standard `Task`, `Event`, and `Opportunity` queries returned real CRM rows; `customer-workbench` pagecomponent plus UMD bundle were safely published and updated through a temporary minimal project. Current online pagecomponent id is `6a4d348fe4b0a577cbba1ebf`, apiName is `custc_202607Hdhm60zo`, and default component URL targets `https://x.agentcici.com/app?aiApp=customer-workbench`. Do not publish this component directly from the repository root until the CLI dependency collection whitelist is fixed.
 - TASK-171 CRM side also has an online HTML wrapper component id `6a4d37ece4b0a577cbba1ec0`, apiName `customer_interaction_workbench`, accessPath `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`.
-- TASK-171 CloudCC CRM-side visible entry is now verified through direct devconsole/setup APIs after the Go CLI `customPage` dispatcher and MSAPI apply path proved insufficient. Online customPage id is `6a4d3b831b8c6d0ec6dd22ef`, pageApi is `customer_interaction_workbench`; CRM page menu id is `acf2026C53BE54B9R1Iu`, tab label is `客户互动工作台`, lightning page is `customer_interaction_workbench#lightning`, six profiles are authorized, and Sales Cloud app `ace20220322Salesloud` has the tab in `selectedTabList`.
+- TASK-171 CloudCC CRM-side visible entry is now verified through direct devconsole/setup APIs after the Go CLI `customPage` dispatcher and MSAPI apply path proved insufficient. Online customPage id is `6a4d3b831b8c6d0ec6dd22ef`, pageApi is `customer_interaction_workbench`; CRM page menu id is `acf2026C53BE54B9R1Iu`, tab label is `客户互动工作台`, lightning page is `customer_interaction_workbench#lightning`, and six profiles are authorized.
+- TASK-171 CloudCC CRM menu visibility hotfix (2026-07-08): the tab originally existed only in Sales Cloud `selectedTabList`, so users in the default `CloudCC` app or other apps could not see it. Direct setup API update appended tab id `acf2026C53BE54B9R1Iu` to all 8 existing apps: `CloudCC`, `销售云`, `市场云`, `服务云`, `商务云`, `客服服务云`, `项目管理系统`, and `利润云`; verification returned `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`.
 - Production release notes: `2.2.2` shipped the main workbench at commit `5a4633dd0409`; `2.2.3` hotfixed production HTTPS Nginx routing for `/customer-workbench/*` at commit `f0ec47509bde`, with a follow-up source-only SSL vhost config commit `0271e52` synced to ECS and reloaded. Current `/system/version` reports `version=2.2.3`, `imageTag=2.2.3`, `gitCommit=f0ec47509bde`.
 - TASK-170 remains assigned and active but is no longer the current working focus in this thread; it covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, runtime integration, and `/admin/security-rules`.
 - FEAT-067 remains the source for existing enterprise KB readiness capabilities: parser/PDF, ACL, eval, connector skeleton, drift audit, embedding metadata, Qdrant smoke, and `/admin/kb` desktop validation.
