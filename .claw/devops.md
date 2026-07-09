@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-09T23:36:00+08:00
+updated_at: 2026-07-10T06:57:56+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.1 TASK-173 customer workbench real agent assistant hotfix on 2026-07-10:
+  - Git commit: `ff9b9cc7cc4a` on `main`; annotated tag `2.3.1` was pushed to origin.
+  - Scope: 客户互动工作台右侧 AI 助理接入真实 `cici-system` 智能体编排和大模型调用，底部麦克风复用 `/ws/asr` 阿里云实时 ASR；同时修复真实演示 org 下工作台智能体 session id 超过 `chat_session_state.session_id varchar(64)` 的生产 smoke 问题。
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.3.1`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.1`, index digest `sha256:4329dfcd50e9e13b84609437de911c69b55e876ed85567e008b2bc9f9b80e676`, linux/amd64 manifest digest `sha256:d5ff96b7570d2f1b7f92e307a572280f99a410799ebebe87644ca26ceedec960`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.1`, index digest `sha256:26fa409d1abc1ce147c14bbb8ff850a21bbf43ee6d57dde068384b61d7acf036`, linux/amd64 manifest digest `sha256:37f5dc73b64c794ffcba26fbcd67c1946b58f86ffa076447b092b35b96190618`.
+  - Backup directory: `/opt/cici/backups/20260710-065556-before-2.3.1-task173-session-id-hotfix`, containing `acr.env.before-2.3.1`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.3.1` and `CICI_APP_VERSION=2.3.1`.
+  - Deploy note: backend/frontend images were pulled from ACR and force-recreated onto `2.3.1`; ECS infra images were locally tagged as `2.3.1`, while running database/redis/rabbitmq/qdrant containers remained on healthy `2.2.10` instances.
+  - Verified after deploy: backend/frontend containers run `2.3.1`; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.3.1`, `imageTag=2.3.1`, and `gitCommit=ff9b9cc7cc4a`; frontend `nginx -t` passed; recent backend log scan after authenticated smoke had no error matches.
+  - Public smoke: `https://x.agentcici.com/`, `https://x.agentcici.com/app?aiApp=customer-workbench`, and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm` returned HTTP 200; `http://x.agentcici.com/` redirected to HTTPS; production-IP resolved `https://onechat.agentcici.com/` returned HTTP 200.
+  - Authenticated demo smoke: login org `org2sva14i4udjmi2t4s` / mobile `13900009999` returned org name `智能体平台演示环境`; `/customer-workbench/accounts` returned 10 CRM-backed accounts; first account `北京智造科技有限公司` had timeline `3`, recommendations `2`, and `crmConnection.ready=true`; `/customer-workbench/assistant` returned a real model answer with `agentId=cici-system`, `runId=run-12ad6af6-c0be-44b9-a85f-166ff727c06a`, model `deepseek-v4-pro`, and 55-character session id.
+  - Superseded release note: `2.2.12` for commit `82e32845ecc2` built, tagged, and deployed, with backup `/opt/cici/backups/20260710-064953-before-2.2.12-task173-real-agent-assistant`; authenticated assistant smoke then returned HTTP 500 due session id length overflow, so `2.2.12` was superseded immediately by `2.3.1` and should not be used as rollback target.
 
 - 2.2.11 TASK-171 customer workbench queue-row layout hotfix on 2026-07-09:
   - Git commit: `d251a2661602` on `main`; annotated tag `2.2.11` was pushed to origin.

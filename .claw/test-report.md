@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T00:15:08+08:00
+updated_at: 2026-07-10T06:57:56+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T00:15:08+08:00
+last_run_at: 2026-07-10T06:57:56+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,30 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-173 客户互动工作台真实智能体助理。
-- 命令：身份门禁、assignment check、后端编译、后端聚焦测试、前端构建、ASR hook 单测、`git diff --check`、桌面端视觉检查。
+- 范围：TASK-173 客户互动工作台真实智能体助理生产发布。
+- 命令：身份门禁、assignment check、后端编译、后端聚焦测试、前端构建、ASR hook 单测、`git diff --check`、release dry-run、镜像构建推送、ECS 备份、线上部署、健康检查、公网 smoke、认证后真实 AI 助理 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-173 production release `2.3.1` for customer workbench real agent assistant (2026-07-10T06:57:56+08:00):
+  - Commands:
+    - `backend-hotfix-unit`: `mvn -q -f backend/pom.xml -Dtest=CustomerWorkbenchServiceTest test` -> **success**.
+    - `backend-hotfix-compile`: `mvn -q -f backend/pom.xml -DskipTests compile` -> **success**.
+    - `static-check-hotfix`: `git diff --check` -> **success**.
+    - `release-dry-run-2.3.1`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.3.1`, commit `ff9b9cc7cc4a`.
+    - `release-2.3.1`: `./scripts/release-acr.sh --version 2.3.1` -> **success**; backend/frontend linux/amd64 images and Git tag were pushed.
+    - `production-backup-2.3.1`: ECS backup `/opt/cici/backups/20260710-065556-before-2.3.1-task173-session-id-hotfix` -> **success**, containing `acr.env.before-2.3.1`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `production-deploy-2.3.1`: updated `CICI_IMAGE_TAG` and `CICI_APP_VERSION` to `2.3.1`, tagged infra aliases locally, pulled backend/frontend, and force-recreated backend/frontend -> **success**.
+    - `production-health-2.3.1`: backend/frontend containers on `2.3.1`, both healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.3.1`, `imageTag=2.3.1`, `gitCommit=ff9b9cc7cc4a`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.3.1`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, `/app?aiApp=customer-workbench&embed=crm` -> HTTP `200`; `http://x.agentcici.com/` -> HTTPS `301`; production-IP resolved `https://onechat.agentcici.com/` -> HTTP `200`.
+    - `authenticated-demo-smoke-2.3.1`: login org `org2sva14i4udjmi2t4s` / mobile `13900009999` -> **success**, org name `智能体平台演示环境`; `/customer-workbench/accounts` -> 10 CRM-backed accounts; detail for `北京智造科技有限公司` -> timeline `3`, recommendations `2`, `crmConnection.ready=true`; `/customer-workbench/assistant` -> **success**, `agentId=cici-system`, `runId=run-12ad6af6-c0be-44b9-a85f-166ff727c06a`, model `deepseek-v4-pro`, session id length `55`.
+    - `production-log-scan-2.3.1`: recent backend log scan for `ERROR|Exception|value too long|DataIntegrity|failed|refused` after successful smoke -> **success**, no matches.
+  - Images:
+    - Backend index digest: `sha256:4329dfcd50e9e13b84609437de911c69b55e876ed85567e008b2bc9f9b80e676`; linux/amd64 manifest `sha256:d5ff96b7570d2f1b7f92e307a572280f99a410799ebebe87644ca26ceedec960`.
+    - Frontend index digest: `sha256:26fa409d1abc1ce147c14bbb8ff850a21bbf43ee6d57dde068384b61d7acf036`; linux/amd64 manifest `sha256:37f5dc73b64c794ffcba26fbcd67c1946b58f86ffa076447b092b35b96190618`.
+  - Notes:
+    - Earlier production release `2.2.12` for commit `82e32845ecc2` built and deployed successfully, but authenticated assistant smoke caught HTTP `500` caused by `chat_session_state.session_id varchar(64)` overflow. `2.3.1` supersedes `2.2.12` and should be used as the current good release.
 
 - TASK-173 customer workbench real agent assistant (2026-07-10T00:15:08+08:00):
   - Commands:

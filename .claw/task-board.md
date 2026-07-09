@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-09T23:39:05+08:00
+updated_at: 2026-07-10T06:57:56+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-173 - 客户互动工作台真实智能体助理
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md`
 - task_status_path: `.claw/tasks/TASK-173.md`
 - assignment_path: `.claw/assignments/TASK-173.yaml`
 - blocked_by: `none`
-- next_action: Review TASK-173 implementation; local backend compile, focused backend tests, frontend build, ASR hook tests, static check, and desktop visual check passed. Production release not yet performed.
+- next_action: Done in production release `2.3.1`; monitor customer workbench real agent assistant, `/ws/asr` microphone path, and demo org `org2sva14i4udjmi2t4s`.
 
 ### TASK-172 - 双环境真实演示数据建设
 

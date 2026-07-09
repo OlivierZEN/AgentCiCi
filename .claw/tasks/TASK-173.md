@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-173
-status: review
-updated_at: 2026-07-10T00:15:08+08:00
+status: done
+updated_at: 2026-07-10T06:57:56+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -46,6 +46,18 @@ spec_path: docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
 - `frontend-asr-hook-test`: `npm --prefix frontend run test -- useAsrVoiceInput` -> success, 3 tests passed.
 - `static-check`: `git diff --check -- ...` for TASK-173 touched files -> success.
 - `desktop-visual-check`: local preview `http://127.0.0.1:4173/app?aiApp=customer-workbench` with mocked authenticated APIs at 1440x900 -> success; `.customer-workbench__voice=0`, `.customer-workbench__quick=0`, composer microphone enabled.
+- `release-dry-run-2.2.12`: `./scripts/release-acr.sh --dry-run` -> success, resolved version `2.2.12` for commit `82e32845ecc2`.
+- `release-2.2.12`: `./scripts/release-acr.sh --version 2.2.12` -> success; backend/frontend images and Git tag were pushed.
+- `production-backup-2.2.12`: ECS backup `/opt/cici/backups/20260710-064953-before-2.2.12-task173-real-agent-assistant` -> success.
+- `production-deploy-2.2.12`: backend/frontend deployed and health checks passed, but authenticated `/customer-workbench/assistant` smoke returned HTTP 500 due `chat_session_state.session_id varchar(64)` overflow.
+- `session-id-hotfix`: `mvn -q -f backend/pom.xml -Dtest=CustomerWorkbenchServiceTest test`, `mvn -q -f backend/pom.xml -DskipTests compile`, and `git diff --check` -> success; workbench assistant session ids now use stable UUID namespaced ids of length 55.
+- `release-dry-run-2.3.1`: `./scripts/release-acr.sh --dry-run` -> success, resolved version `2.3.1` for commit `ff9b9cc7cc4a`.
+- `release-2.3.1`: `./scripts/release-acr.sh --version 2.3.1` -> success; backend/frontend images and Git tag were pushed.
+- `production-backup-2.3.1`: ECS backup `/opt/cici/backups/20260710-065556-before-2.3.1-task173-session-id-hotfix` -> success.
+- `production-deploy-2.3.1`: backend/frontend deployed; `/actuator/health` returned `UP`; `/system/version` returned `version=2.3.1`, `imageTag=2.3.1`, `gitCommit=ff9b9cc7cc4a`; frontend `nginx -t` passed.
+- `public-smoke-2.3.1`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, `/app?aiApp=customer-workbench&embed=crm` -> HTTP 200; `http://x.agentcici.com/` -> HTTPS 301; production-IP resolved `https://onechat.agentcici.com/` -> HTTP 200.
+- `authenticated-demo-smoke-2.3.1`: login org `org2sva14i4udjmi2t4s` / mobile `13900009999` returned org name `智能体平台演示环境`; `/customer-workbench/accounts` returned 10 CRM-backed accounts; first detail returned 3 timeline events, 2 recommendations, `crmConnection.ready=true`; `/customer-workbench/assistant` returned success with `agentId=cici-system`, `runId=run-12ad6af6-c0be-44b9-a85f-166ff727c06a`, model `deepseek-v4-pro`, and 55-character session id.
+- `production-log-scan-2.3.1`: `docker logs --since=5m cici-backend | grep -Ei 'ERROR|Exception|value too long|DataIntegrity|failed|refused'` -> no matches after the successful smoke.
 
 ## Changed Files
 
@@ -63,6 +75,6 @@ spec_path: docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
 
 ## Handoff
 
-- Implementation is ready for review and release planning.
-- Production deployment was not performed in this task turn.
+- TASK-173 is implemented, merged to `main`, and production released in `2.3.1`.
+- `2.2.12` was superseded by `2.3.1` after authenticated smoke found a session id length issue; do not use `2.2.12` as the rollback target.
 - The right assistant now relies on `cici-system` plus `customer-interaction-workbench`; if a tenant lacks `cici-system` grants, the runtime access-control path will reject the run as designed.

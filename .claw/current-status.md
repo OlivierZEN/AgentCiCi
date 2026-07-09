@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T00:15:08+08:00
+updated_at: 2026-07-10T06:57:56+08:00
 updated_by: MANAGER-001
-phase: customer-workbench-real-agent-review
-active_task: "TASK-173 客户互动工作台真实智能体助理"
-next_action: "Review TASK-173 and decide whether to publish a production release; production deployment has not been performed."
+phase: customer-workbench-real-agent-production
+active_task: "none"
+next_action: "Monitor production release 2.3.1 for customer workbench real agent assistant and demo data."
 read_next:
   goals: false
   decisions: false
@@ -22,12 +22,16 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.2.11` from Git commit `d251a2661602`.
-- TASK-173 implementation is ready for review: customer workbench right assistant no longer renders the crossed top voice bar or quick action button area.
-- TASK-173 backend routes `/customer-workbench/assistant` through `ChatOrchestratorService.chat(...)` with `agentId=cici-system` and `activeSkillCode=customer-interaction-workbench`; response payload includes agent/model/run audit fields.
+- Current branch: `main`; production is running release `2.3.1` from Git commit `ff9b9cc7cc4a`.
+- TASK-173 is done and production released: customer workbench right assistant no longer renders the crossed top voice bar or quick action button area.
+- TASK-173 backend routes `/customer-workbench/assistant` through `ChatOrchestratorService.chat(...)` with `agentId=cici-system` and `activeSkillCode=customer-interaction-workbench`; response payload includes agent/model/run audit fields, and workbench session ids are stable 55-character ids within the `chat_session_state.session_id` limit.
 - TASK-173 frontend microphone now reuses `useAsrVoiceInput` and `/ws/asr` with Aliyun provider instead of browser `SpeechRecognition`.
-- TASK-173 validation passed: `mvn -q -f backend/pom.xml -DskipTests compile`, `CustomerWorkbenchServiceTest`, `OrchestratorIntegrationTest#shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent`, `npm --prefix frontend run build`, `npm --prefix frontend run test -- useAsrVoiceInput`, `git diff --check`, and desktop visual check at 1440x900.
-- Production deployment for TASK-173 has not been performed.
+- TASK-173 validation passed locally and in production: focused backend tests, backend compile, frontend build, ASR hook tests, `git diff --check`, release dry-runs, production backups, production health checks, public smoke, authenticated demo-org smoke, and real `/customer-workbench/assistant` model call.
+- Production release trace:
+  - `2.2.12` was built and deployed for commit `82e32845ecc2`, but authenticated assistant smoke caught a `chat_session_state.session_id varchar(64)` overflow before closure.
+  - Hotfix `2.3.1` was built, tagged, deployed, and verified for commit `ff9b9cc7cc4a`.
+  - Current `/system/version`: `version=2.3.1`, `imageTag=2.3.1`, `gitCommit=ff9b9cc7cc4a`.
+  - Current production backup: `/opt/cici/backups/20260710-065556-before-2.3.1-task173-session-id-hotfix`.
 - TASK-172 created FEAT-082 and a reusable seed script for the dual demo environment.
 - Confirmed target environments:
   - AgentCiCi org `org2sva14i4udjmi2t4s` = “智能体平台演示环境”.
@@ -42,7 +46,7 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-173.md` - real assistant implementation task state.
+- `.claw/tasks/TASK-173.md` - real assistant implementation and release task state.
 - `.claw/assignments/TASK-173.yaml` - current authorized write scope.
 - `docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md` - real assistant feature spec.
 - `.claw/test-report.md` - latest verified commands.
