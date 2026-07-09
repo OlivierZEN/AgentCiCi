@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T15:24:00+08:00
+updated_at: 2026-07-09T21:12:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T15:24:00+08:00
+last_run_at: 2026-07-09T21:12:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,51 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 CRM clean-embed hotfix 生产发布与真实 CloudCC CRM 嵌入页验证。
-- 命令：frontend build、UMD syntax check、git diff check、release dry-run、ACR release `2.2.7`、ECS 备份/部署/健康检查、`cc-customization-expert-msapi` pagecomponent V8 发布/verify、CloudCC CRM Playwright iframe DOM 验证。
+- 范围：TASK-171 客户互动工作台新客户推进/老客户经营主模式结构调整。
+- 命令：Playwright 1496x1064 本地嵌入页截图与 DOM 断言、`rg` 文案检查、`git diff --check`、frontend build。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 customer workbench new/existing customer mode restructuring (2026-07-09T21:12:00+08:00):
+  - Commands:
+    - `copy-check`: old sales-oriented naming grep -> **success**, no matches.
+    - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `playwright-new-mode`: `http://127.0.0.1:5173/app?aiApp=customer-workbench&embed=crm` with local authenticated state and mocked APIs at 1496x1064 -> **success**; active mode `新客户推进`, queue title `新客户推进队列`, tabs `推进概览/互动时间线/推进信号/CRM 落地建议/下一步行动`, bottom panel `推进关键项`, no horizontal overflow.
+    - `playwright-existing-mode`: clicked `老客户经营` -> **success**; active mode `老客户经营`, queue title `老客户经营队列`, tabs `经营概览/互动时间线/服务问题/价值兑现/续约增购/关系地图`, bottom panel `服务与关系预警`, no horizontal overflow.
+  - Browser evidence:
+    - New-customer mode screenshot: `output/playwright/task171-workbench-mode-final-new.png`.
+    - Existing-customer mode screenshot: `output/playwright/task171-workbench-mode-final-existing.png`.
+  - Notes:
+    - `新客户推进` and `老客户经营` are now top-level mutually exclusive workbench modes; they are no longer detail tabs inside a single customer page.
+
+- TASK-171 customer workbench icon standardization and timeline line repair (2026-07-09T20:50:43+08:00):
+  - Commands:
+    - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `playwright-bootstrap-icons`: `http://127.0.0.1:5173/app?aiApp=customer-workbench&embed=crm&ssoTicket=mock3` with mocked authenticated APIs at 1496x1064 -> **success**; `svgCount=42`, `iconViewBoxes=["0 0 16 16"]`, `micTextButtons=[]`, `hasWechatIcon=true`, `hasPhoneIcon=true`, `scrollWidth=clientWidth=1496`, `errors=[]`.
+    - `playwright-timeline-line`: timeline pseudo-element assertion -> **success**; first four interaction rows have `beforeWidth=1px`, `beforeTop=30px`, `beforeBottom=-13px`, `beforeBackground=rgb(222, 210, 187)`; the final interaction row has no connector line.
+  - Browser evidence:
+    - Bootstrap icon screenshot: `output/playwright/task171-workbench-bootstrap-icons-clean.png`.
+    - Timeline line screenshot: `output/playwright/task171-workbench-bootstrap-icons-timeline-line.png`.
+  - Notes:
+    - Icon path data now comes from Bootstrap Icons v1.13.1 under MIT license; no package dependency was added because the assignment scope did not include package files.
+    - The interaction timeline connector is implemented in CSS outside the SVG icons, so future icon replacement does not remove the line.
+
+- TASK-171 customer workbench high-fidelity UI repair (2026-07-09T19:21:00+08:00):
+  - Commands:
+    - `playwright-fidelity-overview`: `http://127.0.0.1:5173/app?aiApp=customer-workbench&embed=crm` with mocked authenticated APIs at 1496x1064 -> **success**; customer queue, metrics, overview timeline, CRM recommendations, and AI assistant rendered without page overflow.
+    - `playwright-new-existing-tabs`: clicked `新客户推进` and `老客户经营` -> **success**; new-customer view returned stages `初步接触/需求确认/方案沟通/评估决策/商机推进` and sections `推进信号/建议动作/CRM 补齐项`; existing-customer view returned health blocks `续约稳定/服务响应/增购机会/关系覆盖` and sections `经营信号/风险与阻塞/客户价值动作`.
+    - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+  - Browser evidence:
+    - Overview screenshot: `output/playwright/task171-workbench-fidelity-local-v4.png`.
+    - New-customer screenshot: `output/playwright/task171-workbench-new-customer-panel.png`.
+    - Existing-customer screenshot: `output/playwright/task171-workbench-existing-customer-panel.png`.
+    - Layout metrics: `scrollWidth=clientWidth=1496`, `scrollHeight=clientHeight=1064`; both overview “查看全部” actions are visible in the first viewport.
+  - Notes:
+    - This run is local UI validation only; no production release or CloudCC pagecomponent publish was performed in this run.
 
 - TASK-171 CRM clean embed production closure (2026-07-09T15:24:00+08:00):
   - Commands:

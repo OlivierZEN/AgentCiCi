@@ -6,7 +6,7 @@ status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-171
 related_decisions: FEAT-067, FEAT-079, FEAT-080
-updated_at: 2026-07-08T02:20:33+08:00
+updated_at: 2026-07-09T19:21:00+08:00
 updated_by: MANAGER-001
 ---
 
@@ -256,8 +256,11 @@ CloudCC pagecomponent
 
 延续用户确认的三栏工作台：
 
-- 左侧：客户推进队列，含搜索、分组、筛选、客户列表和风险/建议标记。
-- 中间：客户详情，顶部为客户名、CRM 打开入口、摘要指标；主内容含概览、互动时间线、新客户推进、老客户经营、CRM 落地建议、下一步行动。
+- 顶部：`新客户推进 / 老客户经营` 为主模式切换。两者是不同客户队列之间的互斥切换，不是单个客户详情里的页签。
+- 左侧：根据当前主模式展示对应客户队列，含搜索、分组、筛选、客户列表和风险/建议标记；切换主模式时同步切换客户池和首个客户。
+- 中间：客户详情，顶部为客户名、CRM 打开入口、摘要指标；主内容根据当前主模式展示不同页签。
+  新客户推进模式含 `推进概览 / 互动时间线 / 推进信号 / CRM 落地建议 / 下一步行动`。
+  老客户经营模式含 `经营概览 / 互动时间线 / 服务问题 / 价值兑现 / 续约增购 / 关系地图`。
 - 右侧：AI 客户助理，对话、语音输入、快捷操作和页面切换指令。
 
 ### 新客户推进
@@ -287,6 +290,20 @@ CloudCC pagecomponent
 物理场景：销售或客户经理在 27 英寸办公显示器上，一边看 CRM 客户数据，一边把刚结束的电话、微信和会议内容整理成可执行行动，环境是白天办公场景，需要高密度、低疲劳、可信的业务工作台。
 
 方向：克制的企业客户经营舱。使用暖象牙底、墨色文本、香槟金结构线；客户状态用少量蓝、绿、红、琥珀语义色辅助，不使用大面积渐变、玻璃拟态或营销式 hero。
+
+### 高保真实现约束
+
+用户最新确认的 CRM 标准蓝/鎏金工作台稿是当前实现基准。工作台首屏必须保留：
+
+- 顶部 AgentCiCi 品牌与 `AI 应用 / 客户互动工作台` 面包屑、CloudCC CRM 已连接状态、通知/帮助/用户区域。
+- 顶部右侧保留 `新客户推进 / 老客户经营` 主模式切换；严禁使用旧的销售导向命名。
+- 左侧队列随主模式切换：新客户模式显示 `新客户推进队列`，含重点推进、待跟进、风险客户、待确认建议；老客户模式显示 `老客户经营队列`，含续约90天、健康下降、服务异常、增购信号。
+- 中间客户详情，包含客户名、`Account`、`Opportunity`、负责人、关注状态、最近互动、打开 CRM 客户主页按钮和 4 个摘要指标；页签必须随主模式切换，不能把 `新客户推进` 和 `老客户经营` 作为同一客户详情内的并列页签。
+- 概览首屏必须同时露出互动时间线和 CRM 落地建议，两列卡片不能被底部截断。
+- 客户区域下方必须保留业务汇总框：新客户模式为 `推进关键项`，老客户模式为 `服务与关系预警`，用于承载从工单、会议、微信和 CRM 更新中提取的关键风险/机会。
+- `新客户推进` 必须展示 5 段推进阶段、推进信号、建议动作和 CRM 补齐项。
+- `老客户经营` 必须展示续约稳定、服务响应、增购机会、关系覆盖，以及经营信号、风险与阻塞、客户价值动作。
+- 右侧 AI 客户助理必须保留语音/输入指令入口、对话区、快捷操作、输入框和 AI 内容提示。
 
 ## 演示数据
 
@@ -320,7 +337,7 @@ CloudCC pagecomponent
 
 ## 当前实现状态
 
-更新时间：2026-07-08T02:20:33+08:00。
+更新时间：2026-07-09T19:21:00+08:00。
 
 - AgentCiCi 侧已完成首版实现：后端新增客户互动事实、CRM 落地建议和客户快照模型；初始化 12 个演示客户、36 条互动事实、24 条建议；提供客户列表、客户详情、建议采纳/落地和 AI 客户助理 API。
 - 智能体/技能侧已新增内置技能 `customer-interaction-workbench`，绑定到系统助手和销售助手，默认提示约束 AI 先读取 CRM/互动事实、再生成可确认的 CRM 落地建议。
@@ -329,6 +346,7 @@ CloudCC pagecomponent
 - CloudCC CRM 侧已通过 OpenAPI 验证 `Task`、`Event`、`Opportunity` 标准对象可查询；页面组件 `customer-workbench` 和预构建 UMD bundle 已通过安全临时项目发布到 CloudCC 云端。当前线上有效组件 id 为 `6a4d348fe4b0a577cbba1ebf`，apiName 为 `custc_202607Hdhm60zo`，本地 `frontend/pagecomponents/customer-workbench/config.json` 已同步该 id。
 - CloudCC 页面组件默认工作台地址必须为 `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`，SSO `targetPath` 也必须使用同一路径。pagecomponent 自身只负责 CloudCC token 读取、换取 AgentCiCi 一次性 `ssoTicket` 和 iframe 承载，不再显示“AI 应用”“打开工作台”等 AgentCiCi 平台级头部。
 - 生产版本 `2.2.7` 和 CloudCC pagecomponent V8 已验证该嵌入形态：CRM 运行态加载 `component-customer-workbench-V8.0.js`，iframe 使用 `/app?aiApp=customer-workbench&embed=crm&ssoTicket=...`，iframe 内无 AgentCiCi 平台侧栏、无 AI 应用列表，仅显示客户互动工作台主体。
+- 最新本地高保真 UI 修复已恢复用户设计稿中的工作台细节和业务页签：Playwright 1496x1064 截图 `output/playwright/task171-workbench-fidelity-local-v4.png` 验证首屏无横向/纵向页面溢出，概览页两个“查看全部”入口完整露出；`output/playwright/task171-workbench-new-customer-panel.png` 和 `output/playwright/task171-workbench-existing-customer-panel.png` 验证 `新客户推进` 与 `老客户经营` 业务内容可用。
 - CloudCC HTML 组件已通过 devconsole API 保存，作为 CRM 内可承载的 iframe 包装页。线上 HTML 组件 id 为 `6a4d37ece4b0a577cbba1ec0`，apiName 为 `customer_interaction_workbench`，访问路径为 `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`。
 - 不得直接从当前仓库根目录执行 `cloudcc publish pagecomponent customer-workbench .`，除非先修复 CLI 的 pagecomponent 依赖收集白名单；根目录发布曾把项目配置打入 `compContentVue`，对应云端组件已立即删除。
 - CloudCC customPage 已通过 devconsole API 创建并验证：线上 customPage id 为 `6a4d3b831b8c6d0ec6dd22ef`，页面标签 `客户互动工作台`，pageApi `customer_interaction_workbench`。
