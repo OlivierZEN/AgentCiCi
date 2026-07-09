@@ -513,6 +513,12 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   padding: 16px;
+  overflow: hidden;
+}
+
+.cici-ai-apps__main--workbench {
+  grid-template-rows: minmax(0, 1fr);
+  padding: 0;
 }
 
 .cici-ai-apps__hero {
@@ -12753,11 +12759,18 @@
 .customer-workbench {
   display: flex;
   flex-direction: column;
-  min-height: 682px;
+  min-height: 0;
+  height: 100%;
   border-top: 1px solid #ded2bb;
   background: #fffdf8;
   color: #2b2217;
   font-size: 13px;
+  overflow: hidden;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench {
+  border-top: 0;
+  border-radius: 16px;
 }
 
 .cici-embedded-workbench {
@@ -12997,6 +13010,7 @@
   grid-template-columns: 336px minmax(720px, 1fr) 336px;
   min-height: 0;
   flex: 1;
+  overflow: hidden;
 }
 
 .customer-workbench__queue,
@@ -13006,13 +13020,19 @@
 }
 
 .customer-workbench__queue {
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
   border-right: 1px solid #ded2bb;
   padding: 20px 10px 12px;
+  overflow: hidden;
 }
 
 .customer-workbench__assistant {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
   border-left: 1px solid #ded2bb;
   padding: 20px 14px 12px;
+  overflow: hidden;
 }
 
 .customer-workbench__queue > header,
@@ -13141,6 +13161,8 @@
 .customer-workbench__accounts {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: auto;
 }
 
 .customer-workbench-account {
@@ -13287,9 +13309,13 @@
 }
 
 .customer-workbench__main {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
+  min-height: 0;
   padding: 24px 26px 18px;
   background: #fffdf8;
+  overflow: hidden;
 }
 
 .customer-workbench__head {
@@ -13466,6 +13492,9 @@
 }
 
 .customer-workbench__content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
   padding-top: 16px;
 }
 
@@ -13962,7 +13991,8 @@
 }
 
 .customer-workbench__chat {
-  height: 536px;
+  min-height: 0;
+  height: auto;
   overflow: auto;
   border-top: 1px solid #ded2bb;
   border-bottom: 1px solid #ded2bb;

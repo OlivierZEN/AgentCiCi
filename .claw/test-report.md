@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T21:12:00+08:00
+updated_at: 2026-07-09T22:08:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T21:12:00+08:00
+last_run_at: 2026-07-09T22:08:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,22 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 客户互动工作台新客户推进/老客户经营主模式结构调整。
-- 命令：Playwright 1496x1064 本地嵌入页截图与 DOM 断言、`rg` 文案检查、`git diff --check`、frontend build。
+- 范围：TASK-171 Agent 平台内客户互动工作台无外层滚动布局修复。
+- 命令：Playwright 1920x960 本地 Agent 平台页截图与 DOM 断言、`git diff --check`、frontend build。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 Agent platform customer workbench no-outer-scroll layout hotfix (2026-07-09T22:08:00+08:00):
+  - Commands:
+    - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `playwright-agent-platform-workbench`: `http://127.0.0.1:5173/app?aiApp=customer-workbench` with local authenticated state and mocked APIs at 1920x960 -> **success**.
+  - Browser evidence:
+    - `heroCount=0`; the outer `.cici-ai-apps__hero` is not rendered for the customer interaction workbench.
+    - `documentElement.scrollHeight=clientHeight=960` and `bodyScrollHeight=innerHeight=960`; the outer page has no root-level scrollbar.
+    - `.customer-workbench` bottom is inside the viewport; `.customer-workbench__accounts`, `.customer-workbench__content`, and `.customer-workbench__chat` are local scroll regions.
+    - Screenshot: `output/playwright/task171-agent-workbench-no-outer-scroll.png`.
 
 - TASK-171 customer workbench new/existing customer mode restructuring (2026-07-09T21:12:00+08:00):
   - Commands:

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-09T21:12:00+08:00
+updated_at: 2026-07-09T22:08:00+08:00
 updated_by: MANAGER-001
 phase: implementation-validation
 active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 客户互动工作台已按最新结构把新客户推进和老客户经营调整为顶部互斥主模式；下一步如需上线，需要按生产发布 runbook 发布新版前端并做真实 CloudCC CRM 嵌入页回归。"
+next_action: "TASK-171 Agent 平台内客户互动工作台外层 hero 移除和无外层滚动布局已完成本地验证；下一步提交推送并发布线上热修复。"
 read_next:
   goals: false
   decisions: false
@@ -24,6 +24,9 @@ read_next:
 
 - Current branch: `main`; production is running release `2.2.7` from Git commit `78fa13dd1185`.
 - TASK-171 is production-ready: Customer Interaction Workbench AI app, new-customer progression, existing-customer growth, CloudCC CRM embedded entry, and CloudCC/AgentCiCi SSO handoff are live.
+- Latest local hotfix removes the redundant AI app hero above the customer interaction workbench in the Agent platform and constrains the workbench to the remaining viewport height.
+- The outer page now has no root-level scrolling for the workbench view; customer list, center content, and AI assistant chat/composer areas use local scrolling.
+- Local browser validation at 1920x960 passed with screenshot `output/playwright/task171-agent-workbench-no-outer-scroll.png`: `heroCount=0`, document/body height equal viewport height, workbench bottom visible, and inner scroll regions active.
 - Latest local change in this thread adjusts the workbench structure so `新客户推进` and `老客户经营` are top-level mutually exclusive modes with separate customer queues, not tabs inside one customer detail.
 - New-customer mode now shows `新客户推进队列`, `推进概览 / 互动时间线 / 推进信号 / CRM 落地建议 / 下一步行动`, and the bottom `推进关键项` panel; existing-customer mode shows `老客户经营队列`, `经营概览 / 互动时间线 / 服务问题 / 价值兑现 / 续约增购 / 关系地图`, and the bottom `服务与关系预警` panel.
 - Local Playwright validation at 1496x1064 passed with screenshots `output/playwright/task171-workbench-mode-final-new.png` and `output/playwright/task171-workbench-mode-final-existing.png`; `git diff --check` and `npm run build` in `frontend/` passed.

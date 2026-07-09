@@ -4621,24 +4621,29 @@ export default function AssistantApp() {
             </div>
           </aside>
 
-          <section className="cici-ai-apps__main" aria-label={`${activeAiApplication.name}主页面`}>
-            <header className="cici-ai-apps__hero">
-              <div>
-                {activeAiApplication.code === "meeting-minutes" ? <p>{activeAiApplication.meta}</p> : null}
-                <h2>{activeAiApplication.name}</h2>
-                <span>{activeAiApplication.description}</span>
-              </div>
-              {activeAiApplication.code === "meeting-minutes" && aiMeetingShowHeroAction ? (
-                <button
-                  type="button"
-                  className="cici-ai-apps__primary"
-                  onClick={handleAiMeetingPrimaryAction}
-                  disabled={aiMeetingPrimaryDisabled}
-                >
-                  {aiMeetingPrimaryLabel}
-                </button>
-              ) : null}
-            </header>
+          <section
+            className={`cici-ai-apps__main${activeAiApplication.code === "customer-workbench" ? " cici-ai-apps__main--workbench" : ""}`}
+            aria-label={`${activeAiApplication.name}主页面`}
+          >
+            {activeAiApplication.code !== "customer-workbench" ? (
+              <header className="cici-ai-apps__hero">
+                <div>
+                  {activeAiApplication.code === "meeting-minutes" ? <p>{activeAiApplication.meta}</p> : null}
+                  <h2>{activeAiApplication.name}</h2>
+                  <span>{activeAiApplication.description}</span>
+                </div>
+                {activeAiApplication.code === "meeting-minutes" && aiMeetingShowHeroAction ? (
+                  <button
+                    type="button"
+                    className="cici-ai-apps__primary"
+                    onClick={handleAiMeetingPrimaryAction}
+                    disabled={aiMeetingPrimaryDisabled}
+                  >
+                    {aiMeetingPrimaryLabel}
+                  </button>
+                ) : null}
+              </header>
+            ) : null}
             {activeAiApplication.code === "zhiwei-portrait" ? (
               <ZhiweiPortraitDemoApp />
             ) : activeAiApplication.code === "customer-workbench" ? (
