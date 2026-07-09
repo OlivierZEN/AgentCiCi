@@ -1,5 +1,5 @@
 <template>
-  <div class="customer-workbench-embed">
+  <div class="customer-workbench-embed" :style="{ '--customer-workbench-embed-height': embedHeight }">
     <section class="customer-workbench-embed__body">
       <iframe
         v-if="embedded"
@@ -55,7 +55,10 @@ export default {
       },
       resolvedWorkspaceUrl: "",
       ssoStarted: false,
-      ssoMessage: ""
+      ssoMessage: "",
+      embedHeight: "100vh",
+      previousDocumentOverflow: null,
+      previousBodyOverflow: null
     };
   },
   computed: {
@@ -85,6 +88,17 @@ export default {
   mounted() {
     if (this.embedded) {
       this.bootstrapSso();
+    }
+    this.syncEmbedHeight();
+    window.addEventListener("resize", this.syncEmbedHeight, { passive: true });
+  },
+  beforeDestroy() {
+    window.removeEventListener("resize", this.syncEmbedHeight);
+    if (this.previousDocumentOverflow !== null && document.documentElement) {
+      document.documentElement.style.overflow = this.previousDocumentOverflow;
+    }
+    if (this.previousBodyOverflow !== null && document.body) {
+      document.body.style.overflow = this.previousBodyOverflow;
     }
   },
   methods: {
@@ -132,6 +146,34 @@ export default {
         this.ssoMessage = "";
       } catch (error) {
         this.ssoMessage = "CloudCC 身份同步异常，已切换为普通工作台入口。";
+      }
+    },
+    syncEmbedHeight() {
+      const root = this.$el;
+      if (!root || typeof window === "undefined") {
+        return;
+      }
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 720;
+      const rect = typeof root.getBoundingClientRect === "function" ? root.getBoundingClientRect() : { top: 0 };
+      const top = Math.max(0, rect.top || 0);
+      const availableHeight = Math.max(0, Math.floor(viewportHeight - top - 1));
+      this.embedHeight = `${availableHeight}px`;
+      if (root.parentElement && root.parentElement.style) {
+        root.parentElement.style.height = this.embedHeight;
+        root.parentElement.style.minHeight = "0";
+        root.parentElement.style.overflow = "hidden";
+      }
+      if (document.documentElement) {
+        if (this.previousDocumentOverflow === null) {
+          this.previousDocumentOverflow = document.documentElement.style.overflow || "";
+        }
+        document.documentElement.style.overflow = "hidden";
+      }
+      if (document.body) {
+        if (this.previousBodyOverflow === null) {
+          this.previousBodyOverflow = document.body.style.overflow || "";
+        }
+        document.body.style.overflow = "hidden";
       }
     },
     async readCloudccRuntimeToken() {
@@ -258,7 +300,8 @@ export default {
 <style lang="scss" scoped>
 .customer-workbench-embed {
   position: relative;
-  min-height: 100vh;
+  height: var(--customer-workbench-embed-height, 100vh);
+  min-height: 0;
   background: #fffdf8;
   color: #2b2217;
   overflow: hidden;
@@ -272,13 +315,15 @@ export default {
 }
 
 .customer-workbench-embed__body {
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .customer-workbench-embed iframe {
   width: 100%;
-  height: 100vh;
-  min-height: 680px;
+  height: 100%;
+  min-height: 0;
   border: 0;
   display: block;
 }

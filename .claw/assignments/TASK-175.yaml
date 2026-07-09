@@ -1,0 +1,61 @@
+task_id: TASK-175
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T10:05:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md
+task_status_path: .claw/tasks/TASK-175.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - frontend/src/assistant/**
+  - frontend/pagecomponents/customer-workbench/**
+  - frontend/build/customer-workbench.umd.min.js
+scope_files:
+  - docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md
+  - .claw/tasks/TASK-175.md
+  - .claw/assignments/TASK-175.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/pagecomponents/customer-workbench/customer-workbench.vue
+  - frontend/pagecomponents/customer-workbench/config.json
+  - frontend/build/customer-workbench.umd.min.js
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
+  - docs/specs/FEAT-084-data-insight-ai-app.md
+task_boundary:
+  - "删除客户互动工作台中心头部的“打开 CRM 客户主页”按钮。"
+  - "智能体平台端和 CRM embed 端都不得出现浏览器最右侧整页滚动条。"
+  - "只允许客户队列、中心内容、AI 对话等内部局部滚动。"
+  - "不得改动认证、SSO、模型调用、ASR、演示数据或 CloudCC 低代码元数据。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T10:05:00+08:00; user requested production scroll cleanup and CRM button removal."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created UI cleanup task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py for TASK-175 representative files before editing implementation source."

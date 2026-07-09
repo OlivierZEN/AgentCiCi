@@ -518,7 +518,10 @@
 
 .cici-ai-apps__main--workbench {
   grid-template-rows: minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
   padding: 0;
+  overflow: hidden;
 }
 
 .cici-ai-apps__hero {
@@ -13098,6 +13101,8 @@
 .cici-ai-apps__main--workbench .customer-workbench {
   border-top: 0;
   border-radius: 16px;
+  min-height: 0;
+  max-height: 100%;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__topbar {
@@ -13113,7 +13118,8 @@
 
 .cici-embedded-workbench {
   height: 100vh;
-  min-height: 100vh;
+  min-height: 0;
+  max-height: 100vh;
   background: #fffdf8;
   color: #2b2217;
   overflow: hidden;
@@ -13128,8 +13134,9 @@
 }
 
 .customer-workbench--embedded {
-  height: 100vh;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
+  max-height: 100vh;
   border-top: 0;
 }
 
@@ -13345,7 +13352,7 @@
 
 .customer-workbench__body {
   display: grid;
-  grid-template-columns: 336px minmax(720px, 1fr) 336px;
+  grid-template-columns: minmax(300px, 336px) minmax(0, 1fr) minmax(300px, 336px);
   min-height: 0;
   flex: 1;
   overflow: hidden;
@@ -14242,12 +14249,16 @@
 }
 
 .customer-workbench-recommendations footer {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .customer-workbench-recommendations footer button {
-  min-width: 76px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-inline: 8px;
   height: 32px;
 }
 

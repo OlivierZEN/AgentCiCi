@@ -512,21 +512,17 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
 
         <main className="customer-workbench__main">
           <header className="customer-workbench__head">
-          <div>
-            <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <span aria-hidden>···</span></h2>
-            <p className="customer-workbench__entity-line">
-              <em>Account</em>
-              <span>Opportunity <b>{Math.max(1, Math.round((detail?.progressScore ?? activeAccount?.progressScore ?? 0) / 24))}</b></span>
+            <div>
+              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <span aria-hidden>···</span></h2>
+              <p className="customer-workbench__entity-line">
+                <em>Account</em>
+                <span>Opportunity <b>{Math.max(1, Math.round((detail?.progressScore ?? activeAccount?.progressScore ?? 0) / 24))}</b></span>
               <span>{detail?.owner || activeAccount?.owner || "负责人"}（销售主管）</span>
-              <em>关注</em>
-              <span>最近互动：今天 09:30（微信沟通）</span>
-            </p>
-          </div>
-          <button type="button" onClick={() => setNotice("已打开 CRM 客户主页入口，演示环境使用工作台内联详情。")}>
-            打开 CRM 客户主页
-            <Icon name="external" />
-          </button>
-        </header>
+                <em>关注</em>
+                <span>最近互动：今天 09:30（微信沟通）</span>
+              </p>
+            </div>
+          </header>
 
         {notice ? <div className="customer-workbench__notice">{notice}</div> : null}
 

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T07:28:00+08:00
+updated_at: 2026-07-10T10:05:00+08:00
 updated_by: MANAGER-001
-phase: data-insight-ai-app-released
-active_task: "TASK-174"
-next_action: "Monitor production release 2.3.2 data insight dashboard and existing onechat DNS risk."
+phase: customer-workbench-scroll-cleanup
+active_task: "TASK-175"
+next_action: "Remove the CRM home button from customer workbench, eliminate outer page scrollbars in AgentCiCi and CRM embed views, validate, and publish."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,7 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.2` from Git commit `d144149168ea`.
+- TASK-175 is active: user requested removing the “打开 CRM 客户主页” button and preventing the browser-level right-side scrollbar in both AgentCiCi and CloudCC CRM embedded customer workbench views.
 - TASK-174 is done and production released: upgraded the existing customer insight AI app into “数据洞察”, added CRM data dashboard charts for leads, opportunities, customers, contract/order, sales performance, and kept no-data Mock fallback clearly labeled.
 - TASK-174 CloudCC standard-catalog scan confirmed standard CRM objects including `Account`, `Contact`, `cloudcclead`, `Opportunity`, `contract`, `cloudccorder`, `product`, `Task`, and `Event`.
 - TASK-174 local validation passed: task-scoped identity gate, assignment check, backend `CustomerInsightIntegrationTest`, frontend `npm run build`, `git diff --check`, and desktop Playwright visual/overflow check for `/app?aiApp=customer-insight`.
@@ -54,9 +55,9 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-174.md` - data insight AI app production task state.
-- `.claw/assignments/TASK-174.yaml` - current authorized write scope.
-- `docs/specs/FEAT-084-data-insight-ai-app.md` - data insight feature spec.
+- `.claw/tasks/TASK-175.md` - active customer workbench scroll cleanup task state.
+- `.claw/assignments/TASK-175.yaml` - current authorized write scope.
+- `docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md` - active feature spec.
 - `.claw/tasks/TASK-173.md` - real assistant implementation and release task state.
 - `.claw/assignments/TASK-173.yaml` - current authorized write scope.
 - `docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md` - real assistant feature spec.

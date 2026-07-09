@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T07:28:00+08:00
+updated_at: 2026-07-10T10:50:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T07:28:00+08:00
+last_run_at: 2026-07-10T10:50:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,30 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-174 数据洞察 AI 应用生产发布。
-- 命令：身份门禁、assignment check、CloudCC standard-catalog 扫描、后端聚焦集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 视觉与溢出检查、release dry-run、镜像构建推送、ECS 备份、线上部署、健康检查、公网 smoke、认证后数据洞察 API 和浏览器 smoke。
+- 范围：TASK-175 客户互动工作台外层滚动与 CRM 主页按钮清理，本地发布前验证。
+- 命令：身份门禁、assignment check、CloudCC pagecomponent 文档与 online-highcode 扫描、前端生产构建、`git diff --check`、桌面端 Playwright 平台端/CRM embed/CloudCC UMD 宿主模拟溢出检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-175 local validation for customer workbench scroll cleanup (2026-07-10T10:50:00+08:00):
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-175 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-175 --branch main --files ... --json` -> **allowed**.
+    - `cloudcc-pagecomponent-docs`: read CloudCC `platform/overview`, `platform/capabilityMap`, `platform/standardCapabilities`, and `platform/pagecomponent`.
+    - `cloudcc-online-highcode`: `cloudcc scan msapi . online-highcode` -> **success** for `pagecomponent`; online sample `component-customer-workbench` found.
+    - `frontend-build`: `npm --prefix frontend run build` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `local-browser-platform`: Playwright at `1620x900`, `http://127.0.0.1:5174/app?aiApp=customer-workbench` with production API target -> **success**; `htmlScrollHeight=900`, `bodyScrollHeight=900`, `rootScrollable=false`, `hasCrmHomeButton=false`, recommendation buttons not clipped, internal queue/content/chat containers keep `overflowY=auto`.
+    - `local-browser-embed`: Playwright at `1620x900`, `http://127.0.0.1:5174/app?aiApp=customer-workbench&embed=crm` -> **success**; `rootScrollable=false`, `hasCrmHomeButton=false`, recommendation buttons not clipped, internal containers keep `overflowY=auto`.
+    - `local-cloudcc-host-umd`: Playwright simulated CloudCC CRM host with 164px top bar and local `frontend/build/customer-workbench.umd.min.js` -> **success**; host `visibleRightScrollbar=false`, `htmlOverflowY=hidden`, `bodyOverflowY=hidden`, component/iframe height `735px` and fits remaining viewport.
+  - Browser evidence:
+    - `output/playwright/task175-local-platform-workbench-v3.png`.
+    - `output/playwright/task175-local-embed-workbench-v3.png`.
+    - `output/playwright/task175-local-cloudcc-host-umd-v3.png`.
+  - Notes:
+    - Current workspace also contains unrelated TASK-176/data-insight local changes; TASK-175 release must be built from a clean TASK-175 commit or temporary worktree so those files are not included.
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-174 production release `2.3.2` for data insight AI app (2026-07-10T07:28:00+08:00):
   - Commands:
