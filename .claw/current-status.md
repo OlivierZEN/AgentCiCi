@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-09T22:08:00+08:00
+updated_at: 2026-07-09T22:17:00+08:00
 updated_by: MANAGER-001
 phase: implementation-validation
 active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 Agent 平台内客户互动工作台外层 hero 移除和无外层滚动布局已完成本地验证；下一步提交推送并发布线上热修复。"
+next_action: "TASK-171 Agent 平台内客户互动工作台无外层滚动布局已完成 2.2.9 生产发布和线上浏览器回归；后续继续按用户反馈打磨 UI 细节。"
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,12 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.2.7` from Git commit `78fa13dd1185`.
+- Current branch: `main`; production is running release `2.2.9` from Git commit `093c8fc85951`.
 - TASK-171 is production-ready: Customer Interaction Workbench AI app, new-customer progression, existing-customer growth, CloudCC CRM embedded entry, and CloudCC/AgentCiCi SSO handoff are live.
-- Latest local hotfix removes the redundant AI app hero above the customer interaction workbench in the Agent platform and constrains the workbench to the remaining viewport height.
+- Latest production hotfix `2.2.9` removes the redundant AI app hero above the customer interaction workbench in the Agent platform and constrains the workbench to the remaining viewport height.
 - The outer page now has no root-level scrolling for the workbench view; customer list, center content, and AI assistant chat/composer areas use local scrolling.
-- Local browser validation at 1920x960 passed with screenshot `output/playwright/task171-agent-workbench-no-outer-scroll.png`: `heroCount=0`, document/body height equal viewport height, workbench bottom visible, and inner scroll regions active.
+- Local browser validation at 1920x960 passed with screenshot `output/playwright/task171-agent-workbench-no-outer-scroll.png`; production browser validation passed with screenshot `output/playwright/task171-agent-prod-2.2.9-no-outer-scroll.png`. Both verified `heroCount=0`, document/body height equal viewport height, workbench bottom visible, and inner scroll regions active.
+- Production release `2.2.9` passed: ACR backend/frontend images and Git tag were pushed; ECS backup is `/opt/cici/backups/20260709-220743-before-2.2.9-task171-workbench-layout`; six services are healthy; `/system/version` reports `version=2.2.9`, `imageTag=2.2.9`, `gitCommit=093c8fc85951`; `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, and `/app?aiApp=customer-workbench&embed=crm` return HTTP 200.
 - Latest local change in this thread adjusts the workbench structure so `新客户推进` and `老客户经营` are top-level mutually exclusive modes with separate customer queues, not tabs inside one customer detail.
 - New-customer mode now shows `新客户推进队列`, `推进概览 / 互动时间线 / 推进信号 / CRM 落地建议 / 下一步行动`, and the bottom `推进关键项` panel; existing-customer mode shows `老客户经营队列`, `经营概览 / 互动时间线 / 服务问题 / 价值兑现 / 续约增购 / 关系地图`, and the bottom `服务与关系预警` panel.
 - Local Playwright validation at 1496x1064 passed with screenshots `output/playwright/task171-workbench-mode-final-new.png` and `output/playwright/task171-workbench-mode-final-existing.png`; `git diff --check` and `npm run build` in `frontend/` passed.

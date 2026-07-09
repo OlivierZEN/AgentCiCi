@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T22:08:00+08:00
+updated_at: 2026-07-09T22:17:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T22:08:00+08:00
+last_run_at: 2026-07-09T22:17:00+08:00
 last_run_status: success
 ---
 
@@ -14,10 +14,26 @@ last_run_status: success
 
 - 状态：`success`
 - 范围：TASK-171 Agent 平台内客户互动工作台无外层滚动布局修复。
-- 命令：Playwright 1920x960 本地 Agent 平台页截图与 DOM 断言、`git diff --check`、frontend build。
+- 命令：Playwright 1920x960 本地和生产 Agent 平台页截图与 DOM 断言、`git diff --check`、frontend build、ACR release `2.2.9`、ECS 备份/部署/健康检查、公网 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 production release `2.2.9` for Agent platform workbench layout (2026-07-09T22:17:00+08:00):
+  - Commands:
+    - `release-dry-run-2.2.9`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.2.9`.
+    - `release-2.2.9`: `./scripts/release-acr.sh --version 2.2.9` -> **success**; backend/frontend linux/amd64 images and Git tag were pushed for commit `093c8fc85951`.
+    - `production-backup-2.2.9`: ECS backup `/opt/cici/backups/20260709-220743-before-2.2.9-task171-workbench-layout` -> **success**, including `acr.env.before-2.2.9`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `production-deploy-2.2.9`: updated `CICI_IMAGE_TAG` and `CICI_APP_VERSION` to `2.2.9`, pulled backend/frontend, tagged infra aliases, and restarted compose -> **success**.
+    - `production-health-2.2.9`: six services healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.2.9`, `imageTag=2.2.9`, `gitCommit=093c8fc85951`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.2.9`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, `/app?aiApp=customer-workbench&embed=crm`, and production-IP resolved `https://onechat.agentcici.com/` -> HTTP `200`.
+    - `production-agent-workbench-layout`: Playwright 1920x960 against `https://x.agentcici.com/app?aiApp=customer-workbench` with real production login -> **success**.
+  - Images:
+    - Backend index digest: `sha256:3c138e3bbece540d781054cfcc367fb5d1dfe5ac39b7865565035dff82956058`; linux/amd64 manifest `sha256:306d160ce2988df544780faeda41b2f5b9382bb520c679cb6302ebf18cdca9ea`.
+    - Frontend index digest: `sha256:31fb790e12f29be005cdb33c3d080f1616483efb5b836b860a4dc0eb4a30aecd`; linux/amd64 manifest `sha256:996cd8876b1eab4e066972b244aedd8afc17d79d2d14f76600d2a0dac4f84505`.
+  - Browser evidence:
+    - Production validation returned `heroCount=0`, `outerOverflow=false`, document/body height equal viewport height, workbench bottom visible, and local scroll regions active for customer accounts, center content, and AI chat.
+    - Screenshot: `output/playwright/task171-agent-prod-2.2.9-no-outer-scroll.png`.
 
 - TASK-171 Agent platform customer workbench no-outer-scroll layout hotfix (2026-07-09T22:08:00+08:00):
   - Commands:

@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-09T22:08:00+08:00
+updated_at: 2026-07-09T22:17:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -39,6 +39,7 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 ## Verification
 
 - Agent 平台内客户互动工作台无外层滚动布局修复验证 (2026-07-09) -> passed. 修复 Agent 平台 AI 应用页中客户互动工作台上方重复的外层介绍栏：`customer-workbench` 作为当前 AI 应用时不再渲染 `.cici-ai-apps__hero`；工作台主容器改为填满 AI 应用主面板剩余高度并隐藏外层溢出；客户列表、中心内容和 AI 客户助理对话分别改为局部滚动区域。`git diff --check` passed；`npm run build` in `frontend/` passed（保留既有 Vite large chunk warning）；Playwright 1920x960 本地验证 `heroCount=0`、document/body 无外层滚动、workbench bottom visible、`.customer-workbench__accounts`/`.customer-workbench__content`/`.customer-workbench__chat` 均为内部滚动。截图：`output/playwright/task171-agent-workbench-no-outer-scroll.png`。
+- Agent 平台内客户互动工作台无外层滚动布局生产发布验证 (2026-07-09) -> passed. 提交 `093c8fc85951` 已发布为生产版本 `2.2.9`；ECS 备份 `/opt/cici/backups/20260709-220743-before-2.2.9-task171-workbench-layout`；六个服务 healthy；`/system/version` 返回 `version=2.2.9`、`imageTag=2.2.9`、`gitCommit=093c8fc85951`；公网 `https://x.agentcici.com/`、`/app?aiApp=customer-workbench`、`/app?aiApp=customer-workbench&embed=crm` 均返回 200；生产浏览器 1920x960 使用 `demo-org/13900009999` 登录后验证 `heroCount=0`、document/body 无外层滚动、workbench bottom visible、客户列表/中心内容/AI 对话均为内部滚动。截图：`output/playwright/task171-agent-prod-2.2.9-no-outer-scroll.png`。
 - 客户互动工作台新客户/老客户主模式结构调整验证 (2026-07-09) -> passed. 按用户最新确认，新客户推进和老客户经营已调整为顶部互斥主模式，不再作为单个客户详情页签；左侧队列随模式切换为 `新客户推进队列` 或 `老客户经营队列`，中间页签分别为新客户的 `推进概览/互动时间线/推进信号/CRM 落地建议/下一步行动` 和老客户的 `经营概览/互动时间线/服务问题/价值兑现/续约增购/关系地图`；客户区域下方补回 `推进关键项` 与 `服务与关系预警` 汇总框。`rg` 验证无旧销售导向命名文案；`git diff --check` passed；`npm run build` in `frontend/` passed（保留既有 Vite large chunk warning）；Playwright 1496x1064 本地验证两种模式无横向溢出、无详情内模式页签残留。截图：`output/playwright/task171-workbench-mode-final-new.png`、`output/playwright/task171-workbench-mode-final-existing.png`。
 - 客户互动工作台时间轴垂直线补回验证 (2026-07-09) -> passed. 补回互动时间轴事件之间的 1px 垂直连接线，使用 `article:not(:last-child)::before` 按图标中心对齐，最后一条互动自然收尾；Playwright 1496x1064 验证前 4 条互动伪元素 `beforeWidth=1px`、`beforeBackground=rgb(222, 210, 187)`，最后一条无伪元素；截图：`output/playwright/task171-workbench-bootstrap-icons-timeline-line.png`。`git diff --check` passed；`npm run build` in `frontend/` passed（保留既有 Vite large chunk warning）。
 - 客户互动工作台图标级高保真修复本地验证 (2026-07-09) -> passed. 将原先文字/符号占位的队列工具、搜索、列表密度、指标、时间线来源、CRM 建议、建议动作、AI 助手标题、语音、键盘、快捷操作、输入区麦克风与发送按钮全部替换为同一套内联 SVG 图标；时间线恢复微信/电话/会议彩色圆底图标；右侧对话区恢复用户头像与 AI 机器人头像，并用原图式“总结最近三次沟通”首屏对话内容。Playwright 1496x1064 本地验证 `literalPlaceholders=null`、`micTextButtons=[]`、`svgCount=42`、`timelineIconColors=["rgb(255, 253, 248)", ...]`、`scrollWidth=clientWidth=1496`；截图：`output/playwright/task171-workbench-icons-pass-v2.png`。`git diff --check` passed；`npm run build` in `frontend/` passed（保留既有 Vite large chunk warning）。

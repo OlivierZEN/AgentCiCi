@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-09T15:24:00+08:00
+updated_at: 2026-07-09T22:17:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.2.9 TASK-171 Agent platform customer workbench layout hotfix on 2026-07-09:
+  - Git commit: `093c8fc85951` on `main`; annotated tag `2.2.9` was pushed to origin.
+  - Scope: Agent platform AI 应用页内的客户互动工作台移除重复外层介绍栏，并把工作台约束到剩余视口高度；页面外层不再出现滚动条，客户队列、中心内容和 AI 客户助理对话使用局部滚动。
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.2.9`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.9`, index digest `sha256:3c138e3bbece540d781054cfcc367fb5d1dfe5ac39b7865565035dff82956058`, linux/amd64 manifest digest `sha256:306d160ce2988df544780faeda41b2f5b9382bb520c679cb6302ebf18cdca9ea`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.9`, index digest `sha256:31fb790e12f29be005cdb33c3d080f1616483efb5b836b860a4dc0eb4a30aecd`, linux/amd64 manifest digest `sha256:996cd8876b1eab4e066972b244aedd8afc17d79d2d14f76600d2a0dac4f84505`.
+  - Backup directory: `/opt/cici/backups/20260709-220743-before-2.2.9-task171-workbench-layout`, containing `acr.env.before-2.2.9`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.2.9` and `CICI_APP_VERSION=2.2.9`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged from the previous release to `2.2.9` because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.9`, `imageTag=2.2.9`, and `gitCommit=093c8fc85951`; frontend `nginx -t` passed.
+  - Public smoke: `https://x.agentcici.com/`, `https://x.agentcici.com/app?aiApp=customer-workbench`, `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`, and production-IP resolved `https://onechat.agentcici.com/` returned HTTP 200.
+  - Browser smoke: production Agent platform customer workbench loaded with real production login; `.cici-ai-apps__hero` count was `0`, document/body had no outer scrollbar, the workbench bottom was visible, and customer accounts, center content, and AI chat were local scroll regions. Screenshot: `output/playwright/task171-agent-prod-2.2.9-no-outer-scroll.png`.
+  - Note: frontend logs contained transient upstream connection-refused entries during the service restart window for an existing `/ai/sessions/stream` client; services were healthy and later smoke tests passed.
 
 - 2.2.7 TASK-171 CRM clean embed hotfix on 2026-07-09:
   - Git commit: `78fa13dd1185` on `main`; annotated tag `2.2.7` was pushed to origin.
