@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T23:02:00+08:00
+updated_at: 2026-07-09T23:36:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T23:02:00+08:00
+last_run_at: 2026-07-09T23:36:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,37 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 Agent 平台内客户互动工作台视觉比例回归修复生产发布。
-- 命令：Playwright 1920x960 本地和生产新客户/老客户模式截图与 DOM 断言、`git diff --check`、frontend build、ACR release `2.2.10`、ECS 备份/部署/健康检查、公网 smoke。
+- 范围：TASK-171 客户互动工作台客户列表错位热修生产发布。
+- 命令：Playwright 1620x812 生产复现、本地修复验证、生产发布后验证、`git diff --check`、frontend build、ACR release `2.2.11`、ECS 备份/部署/健康检查、公网 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 production release `2.2.11` for customer workbench queue-row layout hotfix (2026-07-09T23:36:00+08:00):
+  - Root cause:
+    - Production pre-fix Playwright at 1620x812 confirmed `lastInteraction` is a summary sentence but was rendered in the right-side `time` column through `shortDate(...)`; failed date parsing returned the long summary as time text.
+    - The fixed 92px queue row plus wrapping badges caused row child overflow: `outsideCount=18` in production screenshot `output/playwright/task171-prod-list-overlap-before.png`.
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-171 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-171 --branch main --files frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx frontend/src/assistant/customer-workbench/customerWorkbenchApi.ts frontend/src/assistant/cici-ui.css --json` -> **allowed**.
+    - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `playwright-local-app`: local Vite `5174` with `VITE_BACKEND_TARGET=https://x.agentcici.com`, real production login, `/app?aiApp=customer-workbench` at 1620x812 -> **success**; `outsideCount=0`, `rowOverlaps=[]`, `titleOverflowCount=0`, `bodyOverflow=false`, `chatScrollbarVisible=false`.
+    - `playwright-local-embed`: same local frontend, `/app?aiApp=customer-workbench&embed=crm` -> **success**; `hasOuterRail=false`, `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, `workbenchBottomVisible=true`.
+    - `release-dry-run-2.2.11`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.2.11`.
+    - `release-2.2.11`: `./scripts/release-acr.sh --version 2.2.11` -> **success**; backend/frontend linux/amd64 images and Git tag were pushed for commit `d251a2661602`.
+    - `production-backup-2.2.11`: ECS backup `/opt/cici/backups/20260709-232920-before-2.2.11-task171-workbench-queue-layout` -> **success**, including `acr.env.before-2.2.11`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `production-deploy-2.2.11`: updated `CICI_IMAGE_TAG` and `CICI_APP_VERSION` to `2.2.11`, tagged infra aliases locally, pulled backend/frontend, and force-recreated backend/frontend -> **success**.
+    - `production-health-2.2.11`: backend/frontend containers on `2.2.11`, six services healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.2.11`, `imageTag=2.2.11`, `gitCommit=d251a2661602`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.2.11`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, `/app?aiApp=customer-workbench&embed=crm`, and production-IP resolved `https://onechat.agentcici.com/` -> HTTP `200`; local DNS for `onechat.agentcici.com` still returned NXDOMAIN as a known DNS risk.
+    - `production-browser-embed`: Playwright against `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm` with real production login at 1620x812 -> **success**; `hasOuterRail=false`, `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, `workbenchBottomVisible=true`, `chatScrollbarVisible=false`.
+    - `production-browser-app`: Playwright against `https://x.agentcici.com/app?aiApp=customer-workbench` with real production login at 1620x812 -> **success**; `hasOuterRail=true`, `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, `chatScrollbarVisible=false`.
+  - Images:
+    - Backend index digest: `sha256:21deac5bab876122d1efa7044458f37d7941e44bc9826a0ce0dbe06fedde3264`; linux/amd64 manifest `sha256:d00f64f76508925f9d47f0f8cbc9771f2ec646172b39393a6816be9dd4242bd1`.
+    - Frontend index digest: `sha256:6fded834c5cea51396686998eb3ddf69819c0ba69728cc3692175df6364014ca`; linux/amd64 manifest `sha256:78071167a7a6094fc1a3cd7c2131f51f558bc6e10e92555ece00a3c7a02fe281`.
+  - Browser evidence:
+    - Local screenshots: `output/playwright/task171-local-list-layout-after.png`, `output/playwright/task171-local-list-layout-embed-after.png`.
+    - Production screenshots: `output/playwright/task171-prod-2.2.11-queue-layout.png`, `output/playwright/task171-prod-2.2.11-queue-layout-app.png`.
 
 - TASK-171 production release `2.2.10` for Agent platform workbench visual repair (2026-07-09T23:02:00+08:00):
   - Commands:

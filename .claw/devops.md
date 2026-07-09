@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-09T23:02:00+08:00
+updated_at: 2026-07-09T23:36:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.2.11 TASK-171 customer workbench queue-row layout hotfix on 2026-07-09:
+  - Git commit: `d251a2661602` on `main`; annotated tag `2.2.11` was pushed to origin.
+  - Scope: 修复客户互动工作台客户列表错位。生产根因是 `lastInteraction` 为互动摘要句子但被当作右侧 `time` 列渲染，固定行高和换行标签导致列表项内容溢出和视觉叠压；前端已改为 `updatedAt` 显示紧凑时间，`lastInteraction` 显示为行内两行摘要，并稳定行网格。
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.2.11`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.11`, index digest `sha256:21deac5bab876122d1efa7044458f37d7941e44bc9826a0ce0dbe06fedde3264`, linux/amd64 manifest digest `sha256:d00f64f76508925f9d47f0f8cbc9771f2ec646172b39393a6816be9dd4242bd1`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.11`, index digest `sha256:6fded834c5cea51396686998eb3ddf69819c0ba69728cc3692175df6364014ca`, linux/amd64 manifest digest `sha256:78071167a7a6094fc1a3cd7c2131f51f558bc6e10e92555ece00a3c7a02fe281`.
+  - Backup directory: `/opt/cici/backups/20260709-232920-before-2.2.11-task171-workbench-queue-layout`, containing `acr.env.before-2.2.11`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.2.11` and `CICI_APP_VERSION=2.2.11`.
+  - Deploy note: backend/frontend images were pulled from ACR and force-recreated onto `2.2.11`; ECS infra images were locally tagged as `2.2.11`, while the running database/redis/rabbitmq/qdrant containers were left on their already healthy `2.2.10` instances to avoid unnecessary stateful restarts.
+  - Verified after deploy: backend/frontend containers run `2.2.11`; all six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.11`, `imageTag=2.2.11`, and `gitCommit=d251a2661602`; frontend `nginx -t` passed.
+  - Public smoke: `https://x.agentcici.com/`, `https://x.agentcici.com/app?aiApp=customer-workbench`, `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`, and production-IP resolved `https://onechat.agentcici.com/` returned HTTP 200. Local DNS still could not resolve `onechat.agentcici.com`, matching the existing DNS risk.
+  - Browser smoke: production customer workbench loaded with real production login at 1620x812; `embed=crm` returned `hasOuterRail=false`, `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, `workbenchBottomVisible=true`, and `chatScrollbarVisible=false`; normal AI app route returned `hasOuterRail=true`, `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, and `chatScrollbarVisible=false`. Screenshots: `output/playwright/task171-prod-2.2.11-queue-layout.png`, `output/playwright/task171-prod-2.2.11-queue-layout-app.png`.
 
 - 2.2.10 TASK-171 Agent platform customer workbench visual repair on 2026-07-09:
   - Git commit: `8a003121df0c` on `main`; annotated tag `2.2.10` was pushed to origin.
