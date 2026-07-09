@@ -13044,7 +13044,7 @@
 
 .customer-workbench__assistant {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   border-left: 1px solid #ded2bb;
   padding: 20px 14px 12px;
   overflow: hidden;
@@ -13055,7 +13055,7 @@
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__assistant {
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   padding: 14px 12px 10px;
 }
 
@@ -14032,42 +14032,6 @@
   color: #7c6d59;
 }
 
-.customer-workbench__voice {
-  display: grid;
-  grid-template-columns: 40px 1fr 24px;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: 68px;
-  border: 1px solid #d7bc84;
-  border-radius: 8px;
-  background: #fffdf8;
-  color: #7b5a22;
-  text-align: left;
-  padding: 0 12px;
-  font-weight: 700;
-}
-
-.cici-ai-apps__main--workbench .customer-workbench__voice {
-  min-height: 56px;
-}
-
-.customer-workbench__voice span {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 999px;
-  background: #bd842a;
-  color: #fffdf8;
-}
-
-.customer-workbench__voice b {
-  display: grid;
-  place-items: center;
-  color: #7c6d59;
-}
-
 .customer-workbench__chat {
   min-height: 0;
   height: auto;
@@ -14075,7 +14039,6 @@
   scrollbar-width: none;
   border-top: 1px solid #ded2bb;
   border-bottom: 1px solid #ded2bb;
-  margin-top: 18px;
   padding: 15px 0;
 }
 
@@ -14168,47 +14131,12 @@
   font-weight: 800;
 }
 
-.customer-workbench__quick {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin: 16px 0;
-}
-
-.cici-ai-apps__main--workbench .customer-workbench__quick {
-  gap: 8px;
-  margin: 10px 0;
-}
-
-.customer-workbench__quick button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 46px;
-  border: 1px solid #ded2bb;
-  border-radius: 6px;
-  background: #fffdf8;
-  color: #5f523f;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.cici-ai-apps__main--workbench .customer-workbench__quick button {
-  min-height: 40px;
-}
-
-.customer-workbench__quick button .customer-workbench-icon {
-  width: 15px;
-  height: 15px;
-  color: #6b604f;
-}
-
 .customer-workbench__composer {
   border: 1px solid #ded2bb;
   border-radius: 7px;
   background: #fffdf8;
   padding: 10px;
+  margin-top: 12px;
 }
 
 .customer-workbench__composer textarea {
@@ -14227,7 +14155,7 @@
   min-height: 48px;
 }
 
-.customer-workbench__composer div {
+.customer-workbench__composer-actions {
   display: flex;
   justify-content: space-between;
   gap: 8px;
@@ -14242,6 +14170,16 @@
   border-color: transparent;
   background: #f7f0e5;
   color: #6b604f;
+}
+
+.customer-workbench__composer .customer-workbench__composer-icon.is-recording {
+  background: #bd842a;
+  color: #fffdf8;
+}
+
+.customer-workbench__composer .customer-workbench__composer-icon:disabled {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 .customer-workbench__composer .customer-workbench__send {

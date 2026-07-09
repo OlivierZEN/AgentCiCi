@@ -1,0 +1,61 @@
+task_id: TASK-173
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T00:02:53+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
+task_status_path: .claw/tasks/TASK-173.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - frontend/src/assistant/**
+  - frontend/src/shared/**
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+scope_files:
+  - docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
+  - .claw/tasks/TASK-173.md
+  - .claw/assignments/TASK-173.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/customer-workbench/customerWorkbenchApi.ts
+  - frontend/src/assistant/cici-ui.css
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/service/CustomerWorkbenchService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/service/CustomerWorkbenchServiceTest.java
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-082-demo-environment-real-data.md
+  - frontend/src/shared/useAsrVoiceInput.ts
+task_boundary:
+  - "清理客户互动工作台右侧 AI 助理中用户截图划掉的大语音条和快捷按钮。"
+  - "AI 助理必须通过 AgentCiCi 智能体编排调用真实大模型，不得继续使用规则拼接作为最终回复。"
+  - "语音录入必须复用现有 /ws/asr 链路，默认走阿里云实时 ASR。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T00:02:53+08:00; user requested production-ready real agent and voice input for customer workbench assistant."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created implementation task for customer workbench real agent assistant. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-173 representative files before editing source or state."

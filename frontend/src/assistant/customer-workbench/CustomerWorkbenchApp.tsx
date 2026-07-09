@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useAsrVoiceInput } from "../../shared/useAsrVoiceInput";
 import {
   acceptCustomerRecommendation,
   applyCustomerRecommendation,
@@ -253,6 +254,8 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
     },
   ]);
   const recommendationRef = useRef<HTMLDivElement | null>(null);
+  const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession } = useAsrVoiceInput();
 
   useEffect(() => {
     if (!token) return;
@@ -377,22 +380,35 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
     }
   };
 
-  const startVoice = () => {
-    const SpeechRecognition = (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).SpeechRecognition
-      || (window as unknown as { SpeechRecognition?: any; webkitSpeechRecognition?: any }).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setNotice("当前浏览器不支持语音识别，可直接输入指令。");
+  const startVoice = async () => {
+    if (listening) {
+      stopAsrSession();
+      setNotice("正在结束语音录入...");
       return;
     }
-    const recognition = new SpeechRecognition();
-    recognition.lang = "zh-CN";
-    recognition.interimResults = false;
-    recognition.onresult = (event: any) => {
-      const text = event.results?.[0]?.[0]?.transcript ?? "";
-      setAssistantInput(text);
-    };
-    recognition.onerror = () => setNotice("语音识别失败，请检查麦克风权限。");
-    recognition.start();
+    if (!speechSupported) {
+      setNotice("当前浏览器不支持录音，可直接输入指令。");
+      return;
+    }
+    const prefixBeforeSpeech = assistantInput;
+    await startAsrSession({
+      token,
+      provider: "aliyun",
+      speakerDiarization: false,
+      getPrefix: () => prefixBeforeSpeech,
+      onLiveText: setAssistantInput,
+      onNotice: setNotice,
+      onFinished: async ({ asrText, fullText }) => {
+        if (asrText) {
+          setAssistantInput(fullText);
+          setNotice("语音录入完成，内容已生成到输入框。");
+        } else {
+          setNotice("未识别到有效语音内容。");
+        }
+        window.setTimeout(() => composerInputRef.current?.focus(), 0);
+      },
+      autoStopAfterNoSpeechMs: 5000,
+    });
   };
 
   if (!token) {
@@ -568,11 +584,6 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
             <button type="button" aria-label="关闭"><Icon name="close" /></button>
           </div>
         </header>
-        <button type="button" className="customer-workbench__voice" onClick={startVoice}>
-          <span aria-hidden><Icon name="mic" /></span>
-          按住说话或输入指令
-          <b aria-hidden><Icon name="keyboard" /></b>
-        </button>
         <div className="customer-workbench__chat">
           <div className="customer-workbench__dayline">今天</div>
           {assistantMessages.map((message, index) => (
@@ -586,23 +597,18 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
             </div>
           ))}
         </div>
-        <div className="customer-workbench__quick">
-          {[
-            ["生成跟进任务", "calendar"],
-            ["查看风险", "alert"],
-            ["整理微信记录", "inbox"],
-            ["切到下个客户", "swap"],
-          ].map(([item, icon]) => (
-            <button key={item} type="button" onClick={() => void submitAssistant(item)}>
-              <Icon name={icon as IconName} />
-              <span>{item}</span>
-            </button>
-          ))}
-        </div>
         <div className="customer-workbench__composer">
-          <textarea value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="输入问题或指令..." />
-          <div>
-            <button type="button" className="customer-workbench__composer-icon" onClick={startVoice} aria-label="语音输入"><Icon name="mic" /></button>
+          <textarea ref={composerInputRef} value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="输入问题或指令..." />
+          <div className="customer-workbench__composer-actions">
+            <button
+              type="button"
+              className={`customer-workbench__composer-icon${listening ? " is-recording" : ""}`}
+              onClick={() => void startVoice()}
+              aria-label={listening ? "停止语音输入" : "语音输入"}
+              disabled={!speechSupported}
+            >
+              <Icon name="mic" />
+            </button>
             <button type="button" className="customer-workbench__send" onClick={() => void submitAssistant()} aria-label="发送"><Icon name="send" /></button>
           </div>
         </div>

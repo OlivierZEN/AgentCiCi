@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-09T23:36:00+08:00
+updated_at: 2026-07-10T00:15:08+08:00
 updated_by: MANAGER-001
-phase: production-validated
-active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 客户互动工作台客户列表错位热修已发布为 2.2.11，并完成生产健康、公网 smoke 与线上浏览器验证。"
+phase: customer-workbench-real-agent-review
+active_task: "TASK-173 客户互动工作台真实智能体助理"
+next_action: "Review TASK-173 and decide whether to publish a production release; production deployment has not been performed."
 read_next:
   goals: false
   decisions: false
@@ -23,27 +23,28 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.2.11` from Git commit `d251a2661602`.
-- TASK-171 remains the active customer interaction workbench delivery thread.
-- User reported the customer interaction workbench customer list was visually broken: queue rows overlapped, badges and recent interaction text spilled out of the red-boxed left list.
-- Root cause verified in production before the fix: backend list field `lastInteraction` is a summary sentence, but the frontend rendered it in the row's right-side `time` grid column through `shortDate(...)`; when parsing failed, the long summary became the time text. The fixed 92px row height plus wrapping badges produced `outsideCount=18` at 1620x812.
-- Fix is live: customer rows now render `updatedAt` as the compact time and render `lastInteraction` as a clamped in-row summary; the row grid no longer has a long right column and has stable badge/summary bounds.
-- Local verification passed:
-  - `git diff --check` passed.
-  - `npm run build` in `frontend/` passed with the existing Vite large chunk warning.
-  - Playwright 1620x812 with real production data through local frontend proxy passed for `/app?aiApp=customer-workbench` and `/app?aiApp=customer-workbench&embed=crm`: `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, `chatScrollbarVisible=false`; screenshots `output/playwright/task171-local-list-layout-after.png` and `output/playwright/task171-local-list-layout-embed-after.png`.
-- Production release `2.2.11` passed:
-  - `./scripts/release-acr.sh --dry-run` resolved `2.2.11`; `./scripts/release-acr.sh --version 2.2.11` pushed backend/frontend images and Git tag for commit `d251a2661602`.
-  - ECS backup: `/opt/cici/backups/20260709-232920-before-2.2.11-task171-workbench-queue-layout`.
-  - Backend/frontend containers run `2.2.11`; six services healthy; `/system/version` returned `version=2.2.11`, `imageTag=2.2.11`, `gitCommit=d251a2661602`; frontend `nginx -t` passed.
-  - Public smoke: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, `/app?aiApp=customer-workbench&embed=crm`, and production-IP resolved `https://onechat.agentcici.com/` returned HTTP 200.
-  - Production browser screenshots: `output/playwright/task171-prod-2.2.11-queue-layout.png`, `output/playwright/task171-prod-2.2.11-queue-layout-app.png`; assertions included `outsideCount=0`, `rowOverlaps=[]`, `bodyOverflow=false`, `chatScrollbarVisible=false`.
+- TASK-173 implementation is ready for review: customer workbench right assistant no longer renders the crossed top voice bar or quick action button area.
+- TASK-173 backend routes `/customer-workbench/assistant` through `ChatOrchestratorService.chat(...)` with `agentId=cici-system` and `activeSkillCode=customer-interaction-workbench`; response payload includes agent/model/run audit fields.
+- TASK-173 frontend microphone now reuses `useAsrVoiceInput` and `/ws/asr` with Aliyun provider instead of browser `SpeechRecognition`.
+- TASK-173 validation passed: `mvn -q -f backend/pom.xml -DskipTests compile`, `CustomerWorkbenchServiceTest`, `OrchestratorIntegrationTest#shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent`, `npm --prefix frontend run build`, `npm --prefix frontend run test -- useAsrVoiceInput`, `git diff --check`, and desktop visual check at 1440x900.
+- Production deployment for TASK-173 has not been performed.
+- TASK-172 created FEAT-082 and a reusable seed script for the dual demo environment.
+- Confirmed target environments:
+  - AgentCiCi org `org2sva14i4udjmi2t4s` = “智能体平台演示环境”.
+  - CloudCC CRM org `org0720f814430017229`.
+- CloudCC standard-catalog verified standard objects including `Account`, `Contact`, `cloudcclead`, `Opportunity`, `Task`, and `Event`.
+- Seed script `scripts/seed-demo-environment.py` created/reused real CRM records for batch `TASK-172-DEMO-V1`: 10 accounts, 10 contacts, 6 leads, 10 opportunities, 10 tasks, and 20 events.
+- AgentCiCi production PostgreSQL backup before local aggregate refresh: `/opt/cici/backups/20260709-153648-before-task172-demo-data`.
+- AgentCiCi workbench aggregate tables for org `org2sva14i4udjmi2t4s` now contain 10 CRM-backed snapshots, 30 interaction events, and 20 recommendations; old `demo-account-xxx` workbench rows were removed for that org.
+- Common demo login `13900009999` is now the single AgentCiCi member bound to the CloudCC demo user; the previous member binding was cleared to avoid SSO ambiguity.
+- Verification passed: login to `https://x.agentcici.com` as `org2sva14i4udjmi2t4s / 13900009999` returns org name “智能体平台演示环境”; `/customer-workbench/accounts` returns 10 accounts with real CRM ids (`001...`) and no `demo-account` ids; account detail reports `crmConnection.ready=true`.
 
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-171.md` - current customer interaction workbench task state.
-- `.claw/assignments/TASK-171.yaml` - current authorized write scope.
-- `docs/specs/FEAT-081-customer-interaction-workbench.md` - customer interaction workbench feature spec.
+- `.claw/tasks/TASK-173.md` - real assistant implementation task state.
+- `.claw/assignments/TASK-173.yaml` - current authorized write scope.
+- `docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md` - real assistant feature spec.
 - `.claw/test-report.md` - latest verified commands.
 - `.claw/issue-list.md` - CloudCC skill and operations findings.
 - `.claw/devops.md` - latest production release evidence.

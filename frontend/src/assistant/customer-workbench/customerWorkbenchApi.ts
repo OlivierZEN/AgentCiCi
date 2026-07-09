@@ -57,6 +57,12 @@ export type CustomerAssistantResult = {
   reply: string;
   action: "NONE" | "SWITCH_ACCOUNT" | "FOCUS_RECOMMENDATIONS" | string;
   actionPayload?: { accountId?: string };
+  agentId?: string;
+  sessionId?: string;
+  runId?: string;
+  model?: Record<string, unknown>;
+  resolvedSkills?: string[];
+  activeSkillCode?: string;
 };
 
 async function requestJson<T>(token: string, input: string, init?: RequestInit): Promise<T> {

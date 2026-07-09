@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-09T15:24:00+08:00
+updated_at: 2026-07-09T23:39:05+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,28 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-173 - 客户互动工作台真实智能体助理
+
+- status: `review`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md`
+- task_status_path: `.claw/tasks/TASK-173.md`
+- assignment_path: `.claw/assignments/TASK-173.yaml`
+- blocked_by: `none`
+- next_action: Review TASK-173 implementation; local backend compile, focused backend tests, frontend build, ASR hook tests, static check, and desktop visual check passed. Production release not yet performed.
+
+### TASK-172 - 双环境真实演示数据建设
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-082-demo-environment-real-data.md`
+- task_status_path: `.claw/tasks/TASK-172.md`
+- assignment_path: `.claw/assignments/TASK-172.yaml`
+- blocked_by: `none`
+- next_action: Done; monitor AgentCiCi `org2sva14i4udjmi2t4s` and CloudCC CRM `org0720f814430017229` demo data before customer demos.
 
 ### TASK-171 - 客户互动工作台生产就绪
 

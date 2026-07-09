@@ -1,5 +1,7 @@
 package com.codehouse.ciciassistant.customer.service;
 
+import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
+import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationEntity;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerWorkbenchService {
 
     public static final String SKILL_CODE = "customer-interaction-workbench";
+    public static final String ASSISTANT_AGENT_ID = "cici-system";
 
     private static final TypeReference<Map<String, Object>> MAP_REF = new TypeReference<>() {};
 
@@ -33,6 +36,8 @@ public class CustomerWorkbenchService {
     private final CustomerWorkbenchRecommendationRepository recommendationRepository;
     private final CloudccAccessTokenService cloudccAccessTokenService;
     private final SkillDefinitionService skillDefinitionService;
+    private final AgentDefinitionService agentDefinitionService;
+    private final ChatOrchestratorService chatOrchestratorService;
     private final ObjectMapper objectMapper;
 
     public CustomerWorkbenchService(CustomerWorkbenchSnapshotRepository snapshotRepository,
@@ -40,12 +45,16 @@ public class CustomerWorkbenchService {
                                     CustomerWorkbenchRecommendationRepository recommendationRepository,
                                     CloudccAccessTokenService cloudccAccessTokenService,
                                     SkillDefinitionService skillDefinitionService,
+                                    AgentDefinitionService agentDefinitionService,
+                                    ChatOrchestratorService chatOrchestratorService,
                                     ObjectMapper objectMapper) {
         this.snapshotRepository = snapshotRepository;
         this.eventRepository = eventRepository;
         this.recommendationRepository = recommendationRepository;
         this.cloudccAccessTokenService = cloudccAccessTokenService;
         this.skillDefinitionService = skillDefinitionService;
+        this.agentDefinitionService = agentDefinitionService;
+        this.chatOrchestratorService = chatOrchestratorService;
         this.objectMapper = objectMapper;
     }
 
@@ -105,48 +114,84 @@ public class CustomerWorkbenchService {
         return view;
     }
 
-    @Transactional
     public Map<String, Object> assistant(String orgId, String userId, AssistantCommand command) {
         ensureDemoData(orgId, userId);
+        agentDefinitionService.warmupBuiltinAgents(orgId);
+        skillDefinitionService.ensurePhaseOneDefaults(orgId);
         String text = command == null || command.message() == null ? "" : command.message().trim();
         String accountId = command == null ? "" : blankToEmpty(command.accountId());
         CustomerWorkbenchSnapshotEntity snapshot = accountId.isBlank()
                 ? snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream().findFirst().orElseThrow()
                 : requireSnapshot(orgId, accountId);
-        Map<String, Object> snapshotMap = readMap(snapshot.getSnapshotJson());
-        String lower = text.toLowerCase(Locale.ROOT);
-        String reply;
-        String action = "NONE";
-        Map<String, Object> actionPayload = new LinkedHashMap<>();
-        if (text.contains("下一个") || lower.contains("next")) {
-            List<CustomerWorkbenchSnapshotEntity> accounts = snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId);
-            int index = Math.max(0, accounts.indexOf(snapshot));
-            CustomerWorkbenchSnapshotEntity next = accounts.get((index + 1) % accounts.size());
-            reply = "已切换到 " + next.getAccountName() + "。我会优先看最近互动、风险和可落地建议。";
-            action = "SWITCH_ACCOUNT";
-            actionPayload.put("accountId", next.getCrmAccountId());
-        } else if (text.contains("风险")) {
-            reply = snapshot.getAccountName() + " 当前风险数为 " + snapshot.getRiskCount()
-                    + "。主要风险：" + joinList(snapshotMap.get("risks")) + "。建议先处理置信度最高的 CRM 落地建议。";
-        } else if (text.contains("老客户") || text.contains("经营") || text.contains("续约")) {
-            reply = snapshot.getAccountName() + " 的老客户经营重点：健康度 " + snapshot.getHealthScore()
-                    + "，续约/增购线索为 " + joinList(snapshotMap.get("existingCustomerSignals")) + "。";
-        } else if (text.contains("新客户") || text.contains("推进") || text.contains("商机")) {
-            reply = snapshot.getAccountName() + " 的新客户推进重点：推进分 " + snapshot.getProgressScore()
-                    + "，下一步建议：" + joinList(snapshotMap.get("nextActions")) + "。";
-        } else if (text.contains("任务") || text.contains("跟进")) {
-            reply = "我已整理出可创建的跟进任务建议。请在中间栏 CRM 落地建议中点击采纳，再确认写入 CRM。";
-            action = "FOCUS_RECOMMENDATIONS";
-        } else {
-            reply = "我可以帮你总结互动、查看风险、切换客户、生成跟进任务建议，或分别分析新客户推进和老客户经营。";
-        }
-        return mapOf(
-                "reply", reply,
-                "action", action,
-                "actionPayload", actionPayload,
-                "account", accountListView(orgId, snapshot),
-                "crmConnection", crmConnectionView(orgId, userId)
+        Map<String, Object> crmConnection = crmConnectionView(orgId, userId);
+        String sessionId = "customer-workbench:" + userId + ":" + snapshot.getCrmAccountId();
+        String prompt = buildAssistantPrompt(orgId, userId, text, snapshot, crmConnection);
+        Map<String, Object> agentResult = chatOrchestratorService.chat(
+                orgId,
+                userId,
+                sessionId,
+                prompt,
+                List.of(),
+                ASSISTANT_AGENT_ID,
+                SKILL_CODE,
+                Map.of("source", "customer-workbench", "crmAccountId", snapshot.getCrmAccountId())
         );
+        Object answer = agentResult.get("answer");
+        return mapOf(
+                "reply", answer == null || String.valueOf(answer).isBlank() ? "智能体暂未生成有效回复，请重试。" : String.valueOf(answer),
+                "action", "NONE",
+                "actionPayload", Map.of(),
+                "account", accountListView(orgId, snapshot),
+                "crmConnection", crmConnection,
+                "agentId", agentResult.getOrDefault("agentId", ASSISTANT_AGENT_ID),
+                "sessionId", agentResult.getOrDefault("sessionId", sessionId),
+                "runId", agentResult.getOrDefault("runId", ""),
+                "model", agentResult.getOrDefault("model", Map.of()),
+                "resolvedSkills", agentResult.getOrDefault("resolvedSkills", List.of()),
+                "activeSkillCode", agentResult.getOrDefault("activeSkillCode", SKILL_CODE)
+        );
+    }
+
+    private String buildAssistantPrompt(String orgId,
+                                        String userId,
+                                        String userMessage,
+                                        CustomerWorkbenchSnapshotEntity snapshot,
+                                        Map<String, Object> crmConnection) {
+        Map<String, Object> customer = new LinkedHashMap<>(snapshotView(snapshot));
+        customer.put("pendingRecommendationCount", recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(
+                orgId, snapshot.getCrmAccountId(), CustomerWorkbenchRecommendationEntity.STATUS_PENDING));
+        List<Map<String, Object>> recentTimeline = timeline(orgId, snapshot.getCrmAccountId()).stream()
+                .limit(6)
+                .toList();
+        List<Map<String, Object>> pendingRecommendations = recommendations(orgId, snapshot.getCrmAccountId()).stream()
+                .limit(6)
+                .toList();
+        return """
+                [客户互动工作台上下文]
+                当前用户：%s
+                当前客户 CRM Account Id：%s
+                当前客户快照 JSON：%s
+                最近互动 JSON：%s
+                CRM 落地建议 JSON：%s
+                CRM 连接状态 JSON：%s
+
+                [回答要求]
+                1. 你必须以客户互动工作台 AI 客户助理身份回答。
+                2. 只能基于上方工作台上下文、已授权 CRM 查询工具或用户输入回答；缺少事实时写“待确认”，不要编造。
+                3. 输出中文，结构紧凑，优先覆盖事实、推断、风险/机会、下一步行动、待确认项。
+                4. 涉及 CRM 写回、价格承诺、合同解释、服务责任归因、关键人判断或客户敏感信息外发时，只能形成建议并要求用户确认。
+                5. 如果用户要求生成跟进任务、整理微信记录、查看风险或分析新/老客户经营，请直接给出可落地建议，不要说自己只是规则助手。
+
+                [用户问题]
+                %s
+                """.formatted(
+                userId,
+                snapshot.getCrmAccountId(),
+                toJson(customer),
+                toJson(recentTimeline),
+                toJson(pendingRecommendations),
+                toJson(crmConnection),
+                userMessage == null || userMessage.isBlank() ? "请根据当前客户互动上下文给出推进建议。" : userMessage);
     }
 
     @Transactional

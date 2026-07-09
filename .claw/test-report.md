@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T23:36:00+08:00
+updated_at: 2026-07-10T00:15:08+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T23:36:00+08:00
+last_run_at: 2026-07-10T00:15:08+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,52 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 客户互动工作台客户列表错位热修生产发布。
-- 命令：Playwright 1620x812 生产复现、本地修复验证、生产发布后验证、`git diff --check`、frontend build、ACR release `2.2.11`、ECS 备份/部署/健康检查、公网 smoke。
+- 范围：TASK-173 客户互动工作台真实智能体助理。
+- 命令：身份门禁、assignment check、后端编译、后端聚焦测试、前端构建、ASR hook 单测、`git diff --check`、桌面端视觉检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-173 customer workbench real agent assistant (2026-07-10T00:15:08+08:00):
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-173 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-173 --branch main --files ... --json` -> **allowed**.
+    - `backend-compile`: `mvn -q -f backend/pom.xml -DskipTests compile` -> **success**.
+    - `backend-agent-orchestrator-smoke`: `mvn -q -f backend/pom.xml -Dtest=OrchestratorIntegrationTest#shouldExposeCloudccDiscoveryToolsForDefaultCiciAgent test` -> **success**.
+    - `backend-customer-assistant-unit`: `mvn -q -f backend/pom.xml -Dtest=CustomerWorkbenchServiceTest test` -> **success**.
+    - `frontend-build`: `npm --prefix frontend run build` -> **success**; existing Vite large chunk warning remains.
+    - `frontend-asr-hook-test`: `npm --prefix frontend run test -- useAsrVoiceInput` -> **success**, 3 tests passed.
+    - `static-check`: `git diff --check -- ...` for TASK-173 touched files -> **success**.
+    - `desktop-visual-check`: local preview `http://127.0.0.1:4173/app?aiApp=customer-workbench` with mocked authenticated APIs at 1440x900 -> **success**.
+  - Browser evidence:
+    - Right assistant DOM counts: `.customer-workbench__voice=0`, `.customer-workbench__quick=0`.
+    - The bottom composer microphone was enabled in the rendered desktop page.
+    - Screenshot inspection confirmed the crossed top voice bar and four quick action buttons were absent.
+  - Notes:
+    - `/customer-workbench/assistant` now calls `ChatOrchestratorService.chat(...)` with `agentId=cici-system` and `activeSkillCode=customer-interaction-workbench`.
+    - The bottom microphone now reuses `useAsrVoiceInput` and `/ws/asr` with `provider=aliyun`; browser `SpeechRecognition` is no longer used by the workbench.
+    - Production deployment was not performed in this run.
+
+- TASK-172 dual demo environment real data seed (2026-07-09T23:39:05+08:00):
+  - Target environments:
+    - AgentCiCi org `org2sva14i4udjmi2t4s` / `智能体平台演示环境`.
+    - CloudCC CRM org `org0720f814430017229`.
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-172 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-172 --branch main --files ... --json` -> **allowed**.
+    - `cloudcc-standard-catalog`: `cloudcc scan msapi . standard-catalog` -> **success**; standard objects include `Account`, `Contact`, `cloudcclead`, `Opportunity`, `Task`, `Event`, `contract`, and `product`.
+    - `cloudcc-create-probe`: OpenAPI `create Account` temporary probe -> **success**; `cloudcc-delete-probe` -> **success**.
+    - `script-static`: `python3 -m py_compile scripts/seed-demo-environment.py` -> **success**; `git diff --check -- docs/specs/FEAT-082-demo-environment-real-data.md .claw/tasks/TASK-172.md .claw/assignments/TASK-172.yaml scripts/seed-demo-environment.py` -> **success**.
+    - `dual-seed`: `python3 scripts/seed-demo-environment.py` -> **success**; CloudCC records ready: accounts `10`, contacts `10`, leads `6`, opportunities `10`, tasks `10`, events `20`.
+    - `agentcici-backup`: production PostgreSQL backup `/opt/cici/backups/20260709-153648-before-task172-demo-data` -> **success**.
+    - `agentcici-aggregate-refresh`: org `org2sva14i4udjmi2t4s` workbench rows now have snapshots `10`, events `30`, recommendations `20` -> **success**.
+    - `cloudcc-readback`: OpenAPI `pageQuery Account` found `10` accounts with `beizhu` prefix `TASK-172-DEMO-V1` -> **success**.
+    - `agentcici-api-readback`: production login for org `org2sva14i4udjmi2t4s` returned `智能体平台演示环境`; `/customer-workbench/accounts` returned `10` accounts, no `demo-account` ids, first account `北京智造科技有限公司` with CRM id prefix `001` -> **success**.
+    - `agentcici-binding-readback`: `13900009999` is the only demo-org member with CloudCC binding; previous member binding cleared -> **success**.
+    - `workbench-detail-readback`: first account detail returned timeline `3`, recommendations `2`, `crmConnection.ready=true` -> **success**.
+    - `assistant-smoke`: `/customer-workbench/assistant` for `北京智造科技有限公司` returned the expected risk summary -> **success**.
+  - Notes:
+    - Execution logs did not record reusable tokens, passwords, cookies, or CloudCC secret values.
 
 - TASK-171 production release `2.2.11` for customer workbench queue-row layout hotfix (2026-07-09T23:36:00+08:00):
   - Root cause:
