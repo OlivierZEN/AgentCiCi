@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T12:59:43+08:00
+updated_at: 2026-07-09T13:05:59+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T12:59:43+08:00
+last_run_at: 2026-07-09T13:05:59+08:00
 last_run_status: success
 ---
 
@@ -13,13 +13,13 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 线上对话 `get_object_list` 后误停止工具规划修复。
-- 命令：生产 trace 只读定位、任务级门禁、assignment 授权检查、聚焦后端测试、backend compile、git diff check。
+- 范围：TASK-171 线上对话 `get_object_list` 后误停止工具规划修复与 `2.2.5` 生产发布。
+- 命令：生产 trace 只读定位、任务级门禁、assignment 授权检查、聚焦后端测试、backend compile、git diff check、ACR dry-run/release、ECS 部署、生产健康检查、生产登录/chat smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
 
-- TASK-171 CloudCC 对象列表后续查询收口修复 (2026-07-09T12:59:43+08:00):
+- TASK-171 CloudCC 对象列表后续查询收口修复与生产发布 (2026-07-09T13:05:59+08:00):
   - Production trace:
     - `trace_id=3c271ef5-c0c3-4977-8068-108c74e756d5` 对应用户截图，开始时间 `2026-07-09T03:17:55Z` / 北京时间 `2026-07-09 11:17:55`。
     - 该轮问题是 `查一下最近的潜在客户。`，只调用了 `get_object_list`，成功返回标准对象列表 152 条并包含 `潜在客户 / cloudcclead`。
@@ -30,9 +30,17 @@ last_run_status: success
     - `backend-focused`: `mvn -q -f backend/pom.xml -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**.
     - `backend-compile`: `mvn -q -f backend/pom.xml -DskipTests compile` -> **success**.
     - `static-check`: `git diff --check` -> **success**.
+    - `release-dry-run`: `./scripts/release-acr.sh --dry-run` -> **success**; next production version resolved to `2.2.5`.
+    - `release-2.2.5`: `./scripts/release-acr.sh --version 2.2.5` -> **success**; backend/frontend images and Git tag were pushed for commit `e14a056b0790`.
+    - `production-backup`: ECS backup `/opt/cici/backups/20260709-130258-before-2.2.5-tool-planning-hotfix` -> **success**; included `acr.env.before-2.2.5` and PostgreSQL dump.
+    - `production-deploy-2.2.5`: updated `CICI_IMAGE_TAG` / `CICI_APP_VERSION` to `2.2.5`, pulled backend/frontend images, and restarted backend/frontend compose services -> **success**.
+    - `production-health-2.2.5`: backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.2.5`, `imageTag=2.2.5`, `gitCommit=e14a056b0790`; backend/frontend containers are healthy.
+    - `production-login-smoke`: `POST https://x.agentcici.com/auth/password/login` with `demo-org / 13900009999` -> **success**, roles include `ORG_ADMIN`.
+    - `production-chat-smoke`: `POST https://x.agentcici.com/ai/chat` with `demo-org / cici-system / 查一下最近的潜在客户。` -> **success**; response correctly reported that this demo account has no CloudCC binding, so this smoke confirms the production chat path is healthy but does not fully replay the original org5 CloudCC MCP tool chain.
   - Notes:
     - `get_object_list` now matches the metadata-tool guard through `object_list`, so data-query intents such as “查一下最近的潜在客户” will not skip the second planning round after object discovery.
     - Metadata-only intents such as “列出标准对象列表” still allow the single-tool fast path.
+    - Full production replay of the original org `org5nszpgj99jaysxv6y` requires the same bound CloudCC account/session; the code-level regression is covered by `ChatOrchestratorServiceModelIdentityTest`.
 
 - TASK-171 CloudCC/AgentCiCi 双向登录本地实现 (2026-07-09T11:18:03+08:00):
   - Commands:

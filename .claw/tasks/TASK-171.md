@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-09T12:59:43+08:00
+updated_at: 2026-07-09T13:05:59+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -38,7 +38,7 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 
 ## Verification
 
-- 线上对话 `get_object_list` 后误停止工具规划修复 (2026-07-09) -> passed locally. Production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` confirmed the user screenshot flow only called `get_object_list` and then hit `tool_planning_stop_skipped`; `get_object_list` is now treated as object metadata, so record-query intents keep the next planning round while metadata-only requests can still use the fast path. `mvn -q -f backend/pom.xml -Dtest=ChatOrchestratorServiceModelIdentityTest test`, `mvn -q -f backend/pom.xml -DskipTests compile`, and `git diff --check` passed.
+- 线上对话 `get_object_list` 后误停止工具规划修复 (2026-07-09) -> passed and production released in `2.2.5`. Production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` confirmed the user screenshot flow only called `get_object_list` and then hit `tool_planning_stop_skipped`; `get_object_list` is now treated as object metadata, so record-query intents keep the next planning round while metadata-only requests can still use the fast path. `mvn -q -f backend/pom.xml -Dtest=ChatOrchestratorServiceModelIdentityTest test`, `mvn -q -f backend/pom.xml -DskipTests compile`, `git diff --check`, release `2.2.5`, ECS deployment, production health, production login smoke, and production chat smoke passed. The demo chat smoke did not fully replay org5 because `demo-org/13900009999` has no CloudCC binding.
 - `dev-login.py` for `MANAGER-001` setup files -> allowed.
 - CloudCC OpenAPI token + MetadataService capabilities/standard-catalog direct HTTP -> passed before task setup.
 - `dev-login.py --task TASK-171` and `check-assignment.py --task TASK-171` for representative backend/frontend/spec/CloudCC files -> allowed.
@@ -78,8 +78,10 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 - `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config >/tmp/cici-compose-check-task171-hotfix.yml` -> passed.
 - Production release `2.2.2` -> passed for main workbench images and tag, commit `5a4633dd0409`, backend digest `sha256:b1387ef8731a6ea0e508dcdb44b06e16832f6e3d9a83ad9a55e765d32f21c711`, frontend digest `sha256:79fb9bcfad9f50af77f888b4bd5d4615712edbc63c6811cc460f3bae20e5e0c7`.
 - Production hotfix release `2.2.3` -> passed for `/customer-workbench/*` proxy routing, commit `f0ec47509bde`, backend digest `sha256:a38b7b680b5669aac18e344d8ac4e0bb61ecda3f03945760a668d73e93adf807`, frontend digest `sha256:51eae6feea4c10af3cab007ae7b9a05a2d6002e8a909f0306210e8d6daf62d60`.
+- Production hotfix release `2.2.5` -> passed for CloudCC object-list tool planning, commit `e14a056b0790`, backend index digest `sha256:af44274bf8c3649d2fe279fdbb5042c80824f5e23d7d80324344d63a93be850b`, frontend index digest `sha256:1aef1b1b19c5224c7414db5c540916545050ad91a378474dca6ca103b536e1a3`.
 - ECS deployment -> passed. Backup directories: `/opt/cici/backups/20260708-021020-before-2.2.2-task171-customer-workbench` and `/opt/cici/backups/20260708-021708-before-2.2.3-customer-workbench-proxy`.
 - Production health -> passed. Six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.3`, `imageTag=2.2.3`, `gitCommit=f0ec47509bde`; frontend `nginx -t` passed.
+- Production hotfix deployment `2.2.5` -> passed. Backup directory `/opt/cici/backups/20260709-130258-before-2.2.5-tool-planning-hotfix`; backend/frontend containers healthy; `/system/version` returned `version=2.2.5`, `imageTag=2.2.5`, `gitCommit=e14a056b0790`; demo org login and chat smoke passed.
 - Production customer workbench API smoke -> passed. Login `demo-org / 13900009999` returned `ORG_ADMIN`; `GET /customer-workbench/accounts` returned JSON with 12 accounts; first detail returned 3 timeline events and 2 recommendations; `/customer-workbench/assistant` returned a risk summary.
 
 ## Changed Files
@@ -107,4 +109,5 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 - 双向登录代码已补齐本地实现：CRM runtime token 只做身份校验，AgentCiCi JWT 只做平台登录，CloudCC MCP/OpenAPI 继续使用平台后端按绑定信息生成的 CloudCC accessToken。上线前还需要用 cc-customization-expert 的 pagecomponent 发布流程把新版 CRM 组件发布到 CloudCC CDN，并用真实 CRM Web 登录验证 iframe 可通过 `ssoTicket` 自动进入工作台。
 - 本次白页复盘和 `cc-customization-expert-msapi` 技能缺口/修复建议已沉淀到 `docs/specs/FEAT-081-cloudcc-customization-expert-msapi-gap-report.md`，后续应优先把 customPage high-code resource、pagecomponent 绑定和 injection runtime 验收能力回灌到技能。
 - AgentCiCi 生产域名 `https://x.agentcici.com/app?aiApp=customer-workbench` 已随 `2.2.3` 可用，`/customer-workbench/*` HTTPS 代理已修复并验证。
+- 线上对话工具规划热修已随 `2.2.5` 部署；原始 org5 账号再次提问“查一下最近的潜在客户。”时应继续进入 `get_object_data` 一类数据查询，而不是停在 `get_object_list` 对象列表摘要。
 - MSAPI apply 仍受 `metadata:apply` scope 限制，但已不再阻塞本任务的 CRM 可见入口，因为已用 CloudCC setup/devconsole API 完成同等配置。

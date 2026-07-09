@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-09T12:59:43+08:00
+updated_at: 2026-07-09T13:05:59+08:00
 updated_by: MANAGER-001
 phase: release
 active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 已本地修复 CloudCC 对象列表后误停止工具规划问题；下一步发布后用线上同一问题“查一下最近的潜在客户”复测应继续调用数据查询工具。"
+next_action: "TASK-171 CloudCC 对象列表后误停止工具规划问题已随 2.2.5 生产发布；若用户在原 org5 账号再次提问“查一下最近的潜在客户”，应观察到继续规划数据查询工具而非停在对象列表。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.2.4` from Git commit `9b673c4076e6`.
+- Current branch: `main`; production is running release `2.2.5` from Git commit `e14a056b0790`.
 - User explicitly chose the larger standalone platform direction: new `/admin/data-quality`, facing all data sources; KB and KB connectors are the first adapter.
 - TASK-169 is done in production release `2.2.1`: data-source aggregation, quality scan, duplicate/invalid data detection, regex cleaning preview/apply, manual review queue, annotation suggestions, audited apply flow, standalone `/admin/data-quality`, and independent「知微画像」AI 应用 are live.
 - Latest TASK-169 validation: assignment and identity gates passed, `git diff --check` passed, production compose config rendered, frontend build passed, backend `KnowledgeBaseLifecycleIntegrationTest` passed against local `agentcici_test`, real local backend/frontend Playwright desktop validation of `/admin/data-quality` passed, scan `POST /data-quality/knowledge-bases/{kbId}/runs` returned `200`, browser console had 0 errors/warnings, no horizontal overflow at 1440px, and screenshot is `output/playwright/task169-data-quality-desktop.png`.
@@ -37,8 +37,8 @@ read_next:
 - TASK-171 CloudCC CRM menu visibility hotfix (2026-07-08): the tab originally existed only in Sales Cloud `selectedTabList`, so users in the default `CloudCC` app or other apps could not see it. Direct setup API update appended tab id `acf2026C53BE54B9R1Iu` to all 8 existing apps: `CloudCC`, `销售云`, `市场云`, `服务云`, `商务云`, `客服服务云`, `项目管理系统`, and `利润云`; verification returned `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`.
 - TASK-171 CloudCC CRM white-page hotfix (2026-07-08): browser self-test with the supplied CloudCC account reproduced a blank `/injectionComponent?page=customer_interaction_workbench&button=Home`; root cause was the customPage still pointing at old pagecomponent `6a4d348fe4b0a577cbba1ebf`/`embedded=false`, whose UMD exposed a Vue component object but did not auto-mount into the injected custom element. The fix published pagecomponent `6a4db950e4b0a577cbba1eca` with auto-mount fallback and `embedded=true`, then updated customPage `customer_interaction_workbench` to V2.0 through devconsole developer-token API. Playwright reload now loads `component-customer-workbench-V5.0.js`, renders the iframe to `https://x.agentcici.com/app?aiApp=customer-workbench`, and screenshot is `output/playwright/task171-cloudcc-injection-fixed.png`.
 - TASK-171 双向登录本地实现 (2026-07-09): added `/auth/cloudcc-sso/ticket` and `/auth/cloudcc-sso/consume`; CloudCC CRM runtime token is used only for server-side identity validation, AgentCiCi login token is issued from the mapped `organization_member`, and CloudCC OpenAPI/MCP calls remain constrained to `CloudccAccessTokenService` generated CloudCC accessToken. CRM pagecomponent source and prebuilt UMD now attempt CCDK token/user handoff and inject only a 60-second one-time `ssoTicket` into the iframe URL. Local backend `mvn -q -f backend/pom.xml -DskipTests compile`, frontend `npm run build`, `node --check frontend/build/customer-workbench.umd.min.js`, and `git diff --check` passed; CloudCC CDN/pagecomponent publication and real CRM embedded SSO browser verification remain next.
-- TASK-171 CloudCC 对象列表工具收口修复 (2026-07-09): production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` for “查一下最近的潜在客户。” showed only `get_object_list` ran, then `tool_planning_stop_skipped` stopped the second planning round before `get_object_data`. Local fix treats `get_object_list` as metadata lookup so record-query intents continue tool planning; `ChatOrchestratorServiceModelIdentityTest`, backend compile, and `git diff --check` passed. This hotfix is not yet production released.
-- Production release notes: `2.2.2` shipped the main workbench at commit `5a4633dd0409`; `2.2.3` hotfixed production HTTPS Nginx routing for `/customer-workbench/*` at commit `f0ec47509bde`; `2.2.4` shipped CloudCC SSO handoff at commit `9b673c4076e6`. Current `/system/version` reports `version=2.2.4`, `imageTag=2.2.4`, `gitCommit=9b673c4076e6`.
+- TASK-171 CloudCC 对象列表工具收口修复 (2026-07-09): production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` for “查一下最近的潜在客户。” showed only `get_object_list` ran, then `tool_planning_stop_skipped` stopped the second planning round before `get_object_data`. The fix treats `get_object_list` as metadata lookup so record-query intents continue tool planning; `ChatOrchestratorServiceModelIdentityTest`, backend compile, and `git diff --check` passed.
+- Production release notes: `2.2.2` shipped the main workbench at commit `5a4633dd0409`; `2.2.3` hotfixed production HTTPS Nginx routing for `/customer-workbench/*` at commit `f0ec47509bde`; `2.2.4` shipped CloudCC SSO handoff at commit `9b673c4076e6`; `2.2.5` shipped the `get_object_list` tool-planning hotfix at commit `e14a056b0790`. Current `/system/version` reports `version=2.2.5`, `imageTag=2.2.5`, `gitCommit=e14a056b0790`; production login and chat smoke passed, with the demo account correctly stopping at the no-CloudCC-binding message.
 - TASK-170 remains assigned and active but is no longer the current working focus in this thread; it covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, runtime integration, and `/admin/security-rules`.
 - FEAT-067 remains the source for existing enterprise KB readiness capabilities: parser/PDF, ACL, eval, connector skeleton, drift audit, embedding metadata, Qdrant smoke, and `/admin/kb` desktop validation.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
