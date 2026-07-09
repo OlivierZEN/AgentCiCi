@@ -47,7 +47,12 @@ function formatConfidence(value: number) {
   return `${Math.round(percent)}%`;
 }
 
-export function CustomerWorkbenchApp({ token }: { token: string }) {
+type CustomerWorkbenchAppProps = {
+  token: string;
+  embedded?: boolean;
+};
+
+export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbenchAppProps) {
   const [accounts, setAccounts] = useState<CustomerWorkbenchAccount[]>([]);
   const [activeAccountId, setActiveAccountId] = useState("");
   const [detail, setDetail] = useState<CustomerWorkbenchDetail | null>(null);
@@ -175,7 +180,7 @@ export function CustomerWorkbenchApp({ token }: { token: string }) {
   }
 
   return (
-    <section className="customer-workbench">
+    <section className={`customer-workbench${embedded ? " customer-workbench--embedded" : ""}`}>
       <aside className="customer-workbench__queue" aria-label="客户推进队列">
         <header>
           <strong>客户推进队列</strong>

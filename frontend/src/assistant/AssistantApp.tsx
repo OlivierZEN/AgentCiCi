@@ -761,6 +761,20 @@ function aiApplicationCodeFromLocation(): AiApplication["code"] | "" {
   return AI_APPLICATIONS.some((item) => item.code === code) ? (code as AiApplication["code"]) : "";
 }
 
+function cloudccSsoTicketFromLocation() {
+  if (typeof window === "undefined") return "";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("ssoTicket")?.trim() || params.get("ccSsoTicket")?.trim() || "";
+}
+
+function isCustomerWorkbenchEmbedLocation() {
+  if (typeof window === "undefined") return false;
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get("aiApp")?.trim();
+  const embed = (params.get("embed")?.trim() || params.get("mode")?.trim() || "").toLowerCase();
+  return code === "customer-workbench" && ["crm", "embedded", "true"].includes(embed);
+}
+
 function createInitialWorkbenchMessages() {
   return Object.fromEntries(
     WORKBENCH_DOCK_AGENTS.map((agent) => [agent.key, agent.messages.map((message) => ({ ...message }))]),
@@ -1228,6 +1242,7 @@ function HumanModeStaticLogin() {
 
 export default function AssistantApp() {
   const initialAiAppCode = aiApplicationCodeFromLocation();
+  const initialCustomerWorkbenchEmbedded = isCustomerWorkbenchEmbedLocation();
   const [mobile, setMobile] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
   const [organizationName, setOrganizationName] = useState("");
@@ -1270,6 +1285,7 @@ export default function AssistantApp() {
   const [activeChannel, setActiveChannel] = useState<"all" | ConversationThread["channel"]>("all");
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => (initialAiAppCode ? "aiApps" : "workbench"));
   const [activeAiAppCode, setActiveAiAppCode] = useState<AiApplication["code"]>(() => initialAiAppCode || AI_APPLICATIONS[0].code);
+  const [customerWorkbenchEmbedded, setCustomerWorkbenchEmbedded] = useState(initialCustomerWorkbenchEmbedded);
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
   const [conversationListNotice, setConversationListNotice] = useState("");
@@ -1332,9 +1348,13 @@ export default function AssistantApp() {
   useEffect(() => {
     const applyAiAppFromLocation = () => {
       const code = aiApplicationCodeFromLocation();
+      const embedded = isCustomerWorkbenchEmbedLocation();
+      setCustomerWorkbenchEmbedded(embedded);
       if (!code) return;
       setActiveAiAppCode(code);
-      setWorkspaceTab("aiApps");
+      if (!embedded) {
+        setWorkspaceTab("aiApps");
+      }
     };
     applyAiAppFromLocation();
     window.addEventListener("popstate", applyAiAppFromLocation);
@@ -2456,8 +2476,7 @@ export default function AssistantApp() {
     if (cloudccSsoAttemptedRef.current) {
       return;
     }
-    const params = new URLSearchParams(window.location.search);
-    const ticket = params.get("ssoTicket")?.trim() || params.get("ccSsoTicket")?.trim();
+    const ticket = cloudccSsoTicketFromLocation();
     if (!ticket) {
       return;
     }
@@ -3638,10 +3657,26 @@ export default function AssistantApp() {
     </>
   );
 
+  if (customerWorkbenchEmbedded && authStatus === "checking") {
+    return (
+      <main className="cici-embedded-workbench cici-embedded-workbench--loading">
+        <p>正在校验客户互动工作台登录状态...</p>
+      </main>
+    );
+  }
+
   if (auth && authStatus === "checking") {
     return (
       <main className="login-root">
         <p className="subtle">校验登录状态...</p>
+      </main>
+    );
+  }
+
+  if (customerWorkbenchEmbedded && !auth) {
+    return (
+      <main className="cici-embedded-workbench cici-embedded-workbench--loading">
+        <p>{cloudccSsoTicketFromLocation() ? "正在通过 CloudCC CRM 进入客户互动工作台..." : "请从 CloudCC CRM 重新打开客户互动工作台。"}</p>
       </main>
     );
   }
@@ -3689,6 +3724,14 @@ export default function AssistantApp() {
             </div>
           </section>
         </div>
+      </main>
+    );
+  }
+
+  if (customerWorkbenchEmbedded) {
+    return (
+      <main className="cici-embedded-workbench" aria-label="客户互动工作台">
+        <CustomerWorkbenchApp token={auth.token} embedded />
       </main>
     );
   }

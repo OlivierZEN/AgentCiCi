@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T14:24:00+08:00
+updated_at: 2026-07-09T15:16:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T14:24:00+08:00
+last_run_at: 2026-07-09T15:16:00+08:00
 last_run_status: success
 ---
 
@@ -13,8 +13,8 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 CloudCC/AgentCiCi SSO 生产发布、`2.2.6` org-scoped demo seed 修复、真实 CloudCC CRM 嵌入页验证。
-- 命令：任务级门禁、assignment 授权检查、backend compile、git diff check、ACR dry-run/release、ECS 备份/部署、生产健康检查、CloudCC skill pagecomponent publish/verify、CloudCC Web 登录与嵌入页 Playwright 验证。
+- 范围：TASK-171 CRM clean-embed hotfix，本地实现 CloudCC CRM 专用轻量入口，移除 AgentCiCi 平台侧栏、AI 应用列表和 pagecomponent 外层头部。
+- 命令：任务级门禁、assignment 授权检查、frontend build、UMD syntax check、git diff check、`cc-customization-expert-msapi` pagecomponent dry-run、Playwright DOM 验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -5496,6 +5496,26 @@ last_run_status: success
   - Command: `mvn -q -Dtest='AgentRunTraceIntegrationTest,ModelProviderServiceIntegrationTest,PlatformModelProviderIntegrationTest,com.codehouse.ciciassistant.wecom.**.*Test' test` in `backend/`
   - Result: success after the constructor injection merge fix.
   - Notes: covers ops trace visibility, platform model-provider governance, and WeCom customer-service client/config behavior on the local `agentcici_test` database.
+
+## 2026-07-09 TASK-171 CRM Clean Embed
+
+- CRM 纯嵌入模式本地验证:
+  - Command: `npm run build` in `frontend/`
+  - Result: success
+  - Notes: verifies the AgentCiCi `embed=crm` route compile; existing Vite large chunk warning remains.
+- UMD/static checks:
+  - Command: `node --check frontend/build/customer-workbench.umd.min.js && git diff --check`
+  - Result: success
+  - Notes: verifies the CloudCC runtime bundle remains syntactically valid and the patch has no whitespace errors.
+- CloudCC pagecomponent dry-run through `cc-customization-expert-msapi`:
+  - Command: `cloudcc package pagecomponent customer-workbench --dry-run`
+  - Result: success
+  - Notes: recognizes `frontend/build/customer-workbench.umd.min.js` and safe pagecomponent files; no direct CRM write was attempted in this local gate.
+- Browser DOM validation:
+  - Command: Vite dev server plus Playwright at `http://127.0.0.1:5173/app?aiApp=customer-workbench&embed=crm` with mocked authenticated APIs.
+  - Result: success
+  - Evidence: `.playwright-cli/page-2026-07-09T07-11-39-914Z.png`.
+  - Notes: DOM assertion returned `hasRail=false`, `hasAiApps=false`, `hasEmbedded=true`; rendered text starts from the customer queue and workbench content, not AgentCiCi platform navigation.
 
 ## 2026-07-08 TASK-171 Customer Interaction Workbench
 

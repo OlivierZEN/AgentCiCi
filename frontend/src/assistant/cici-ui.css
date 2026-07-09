@@ -12759,6 +12759,26 @@
   color: #2b2217;
 }
 
+.cici-embedded-workbench {
+  min-height: 100vh;
+  background: #fffdf8;
+  color: #2b2217;
+}
+
+.cici-embedded-workbench--loading {
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #7c6d59;
+  font-size: 14px;
+}
+
+.customer-workbench--embedded {
+  min-height: 100vh;
+  border-top: 0;
+  grid-template-columns: minmax(260px, 286px) minmax(540px, 1fr) minmax(292px, 318px);
+}
+
 .customer-workbench-empty {
   padding: 28px;
   color: #7c6d59;

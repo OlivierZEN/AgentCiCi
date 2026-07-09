@@ -1,13 +1,5 @@
 <template>
   <div class="customer-workbench-embed">
-    <header>
-      <div>
-        <span>AI 应用</span>
-        <h2>客户互动工作台</h2>
-        <p>从客户互动事实进入新客户推进、老客户经营和 CRM 落地建议。</p>
-      </div>
-      <button type="button" @click="openWorkspace">打开工作台</button>
-    </header>
     <section class="customer-workbench-embed__body">
       <iframe
         v-if="embedded"
@@ -17,7 +9,7 @@
       ></iframe>
       <p v-if="embedded && ssoMessage" class="customer-workbench-embed__status">{{ ssoMessage }}</p>
       <div v-else class="customer-workbench-embed__placeholder">
-        <strong>已准备在 CRM 中嵌入 AgentCiCi 工作台</strong>
+        <strong>已准备在 CRM 中嵌入客户互动工作台</strong>
         <p>建议把该组件挂载到客户主页或销售应用菜单。用户点击后将进入客户互动工作台，并在 AgentCiCi 内完成 AI 分析和确认式 CRM 落地。</p>
         <ul>
           <li>新客户推进：需求、预算、决策链、商机动作。</li>
@@ -47,7 +39,7 @@ export default {
         loadModel: "lazy"
       },
       propObj: {
-        workspaceUrl: "https://x.agentcici.com/app?aiApp=customer-workbench",
+        workspaceUrl: "https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm",
         agentOrgId: "org2sva14i4udjmi2t4s",
         enableSso: true
       },
@@ -128,7 +120,7 @@ export default {
             cloudccAccessToken: token,
             cloudccUser: user,
             parentOrigin: window.location.origin,
-            targetPath: "/app?aiApp=customer-workbench"
+            targetPath: "/app?aiApp=customer-workbench&embed=crm"
           })
         });
         const body = await response.json().catch(() => null);
@@ -265,34 +257,11 @@ export default {
 
 <style lang="scss" scoped>
 .customer-workbench-embed {
-  min-height: 620px;
+  position: relative;
+  min-height: 100vh;
   background: #fffdf8;
-  border: 1px solid #ded2bb;
-  border-radius: 8px;
   color: #2b2217;
   overflow: hidden;
-}
-
-.customer-workbench-embed header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 18px 20px;
-  border-bottom: 1px solid #ded2bb;
-  background: #faf4e8;
-}
-
-.customer-workbench-embed span {
-  color: #876223;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.customer-workbench-embed h2 {
-  margin: 4px 0 6px;
-  font-size: 22px;
-  color: #2b2217;
 }
 
 .customer-workbench-embed p,
@@ -302,27 +271,24 @@ export default {
   line-height: 1.7;
 }
 
-.customer-workbench-embed button {
-  height: 34px;
-  border: 1px solid #a67c2f;
-  border-radius: 8px;
-  background: #a67c2f;
-  color: #fffdf8;
-  padding: 0 14px;
-  font-weight: 700;
-}
-
 .customer-workbench-embed__body {
-  min-height: 540px;
+  min-height: 100vh;
 }
 
 .customer-workbench-embed iframe {
   width: 100%;
-  height: 620px;
+  height: 100vh;
+  min-height: 680px;
+  border: 0;
+  display: block;
 }
 
 .customer-workbench-embed__status {
-  margin: -40px 20px 16px;
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  top: 16px;
+  margin: 0;
   padding: 10px 12px;
   border: 1px solid #d7c299;
   border-radius: 8px;
