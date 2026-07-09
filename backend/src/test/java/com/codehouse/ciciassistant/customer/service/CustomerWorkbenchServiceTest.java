@@ -22,10 +22,12 @@ import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService
 import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
@@ -53,6 +55,8 @@ class CustomerWorkbenchServiceTest {
         String orgId = "org-demo";
         String userId = "user-demo";
         String accountId = "001-demo";
+        String expectedSessionId = "customer-workbench:" + UUID.nameUUIDFromBytes(
+                (userId + ":" + accountId).getBytes(StandardCharsets.UTF_8));
         CustomerWorkbenchSnapshotEntity snapshot = new CustomerWorkbenchSnapshotEntity(
                 "cw-1",
                 orgId,
@@ -109,7 +113,7 @@ class CustomerWorkbenchServiceTest {
                 .thenReturn(Map.of(
                         "answer", "真实智能体回复",
                         "agentId", CustomerWorkbenchService.ASSISTANT_AGENT_ID,
-                        "sessionId", "customer-workbench:user-demo:001-demo",
+                        "sessionId", expectedSessionId,
                         "runId", "run-1",
                         "model", Map.of("modelName", "qwen3.5-plus"),
                         "resolvedSkills", List.of(CustomerWorkbenchService.SKILL_CODE),
@@ -131,7 +135,7 @@ class CustomerWorkbenchServiceTest {
         verify(chatOrchestratorService).chat(
                 eq(orgId),
                 eq(userId),
-                eq("customer-workbench:user-demo:001-demo"),
+                eq(expectedSessionId),
                 promptCaptor.capture(),
                 eq(List.of()),
                 eq(CustomerWorkbenchService.ASSISTANT_AGENT_ID),
@@ -142,5 +146,6 @@ class CustomerWorkbenchServiceTest {
                 .contains("北京智造科技有限公司")
                 .contains("客户关注实施周期和 MES 集成能力")
                 .contains("查看风险");
+        assertThat(expectedSessionId).hasSizeLessThanOrEqualTo(64);
     }
 }

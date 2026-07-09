@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -124,7 +125,7 @@ public class CustomerWorkbenchService {
                 ? snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream().findFirst().orElseThrow()
                 : requireSnapshot(orgId, accountId);
         Map<String, Object> crmConnection = crmConnectionView(orgId, userId);
-        String sessionId = "customer-workbench:" + userId + ":" + snapshot.getCrmAccountId();
+        String sessionId = assistantSessionId(userId, snapshot);
         String prompt = buildAssistantPrompt(orgId, userId, text, snapshot, crmConnection);
         Map<String, Object> agentResult = chatOrchestratorService.chat(
                 orgId,
@@ -150,6 +151,11 @@ public class CustomerWorkbenchService {
                 "resolvedSkills", agentResult.getOrDefault("resolvedSkills", List.of()),
                 "activeSkillCode", agentResult.getOrDefault("activeSkillCode", SKILL_CODE)
         );
+    }
+
+    private String assistantSessionId(String userId, CustomerWorkbenchSnapshotEntity snapshot) {
+        String seed = blankToEmpty(userId) + ":" + blankToEmpty(snapshot.getCrmAccountId());
+        return "customer-workbench:" + UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
     }
 
     private String buildAssistantPrompt(String orgId,
