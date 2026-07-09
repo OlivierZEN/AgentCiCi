@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T22:17:00+08:00
+updated_at: 2026-07-09T22:42:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T22:17:00+08:00
+last_run_at: 2026-07-09T22:42:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 Agent 平台内客户互动工作台无外层滚动布局修复。
-- 命令：Playwright 1920x960 本地和生产 Agent 平台页截图与 DOM 断言、`git diff --check`、frontend build、ACR release `2.2.9`、ECS 备份/部署/健康检查、公网 smoke。
+- 范围：TASK-171 Agent 平台内客户互动工作台视觉比例回归修复。
+- 命令：Playwright 1920x960 本地新客户/老客户模式截图与 DOM 断言、`git diff --check`、frontend build。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 Agent platform customer workbench visual repair (2026-07-09T22:42:00+08:00):
+  - Commands:
+    - `static-check`: `git diff --check` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `playwright-new-mode-visual-repair`: `http://127.0.0.1:5173/app?aiApp=customer-workbench` with local authenticated state and mocked APIs at 1920x960 -> **success**.
+    - `playwright-existing-mode-visual-repair`: switched to `老客户经营` at the same viewport -> **success**.
+  - Browser evidence:
+    - New-customer mode returned `heroCount=0`, `outerOverflow=false`, `.customer-workbench` bottom inside viewport, `brandVisible=false`, `verticalBadges=[]`, and `chatScrollbarVisible=false`.
+    - Right-side AI customer assistant chat keeps hidden scrollbar styling (`scrollbar-width: none`) while preserving the bottom composer and quick actions.
+    - Existing-customer mode returned `hasExistingQueue=true`, `hasRiskPanel=true`, `outerOverflow=false`, `chatScrollbarVisible=false`, and `bottomVisible=true`.
+    - Screenshots: `output/playwright/task171-agent-workbench-repair-local.png`, `output/playwright/task171-agent-workbench-repair-existing-local.png`.
+  - Notes:
+    - The fix is intentionally CSS-only: Agent platform mode hides the duplicate inner brand/breadcrumb, restores workbench grid proportions, prevents account badges from vertical wrapping, and removes the visible AI assistant scrollbar.
 
 - TASK-171 production release `2.2.9` for Agent platform workbench layout (2026-07-09T22:17:00+08:00):
   - Commands:

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-09T22:17:00+08:00
+updated_at: 2026-07-09T22:42:00+08:00
 updated_by: MANAGER-001
 phase: implementation-validation
 active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 Agent 平台内客户互动工作台无外层滚动布局已完成 2.2.9 生产发布和线上浏览器回归；后续继续按用户反馈打磨 UI 细节。"
+next_action: "TASK-171 Agent 平台客户互动工作台视觉比例回归修复已完成本地验证，下一步提交推送并发布生产版本。"
 read_next:
   goals: false
   decisions: false
@@ -23,25 +23,15 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.2.9` from Git commit `093c8fc85951`.
-- TASK-171 is production-ready: Customer Interaction Workbench AI app, new-customer progression, existing-customer growth, CloudCC CRM embedded entry, and CloudCC/AgentCiCi SSO handoff are live.
-- Latest production hotfix `2.2.9` removes the redundant AI app hero above the customer interaction workbench in the Agent platform and constrains the workbench to the remaining viewport height.
-- The outer page now has no root-level scrolling for the workbench view; customer list, center content, and AI assistant chat/composer areas use local scrolling.
-- Local browser validation at 1920x960 passed with screenshot `output/playwright/task171-agent-workbench-no-outer-scroll.png`; production browser validation passed with screenshot `output/playwright/task171-agent-prod-2.2.9-no-outer-scroll.png`. Both verified `heroCount=0`, document/body height equal viewport height, workbench bottom visible, and inner scroll regions active.
-- Production release `2.2.9` passed: ACR backend/frontend images and Git tag were pushed; ECS backup is `/opt/cici/backups/20260709-220743-before-2.2.9-task171-workbench-layout`; six services are healthy; `/system/version` reports `version=2.2.9`, `imageTag=2.2.9`, `gitCommit=093c8fc85951`; `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, and `/app?aiApp=customer-workbench&embed=crm` return HTTP 200.
-- Latest local change in this thread adjusts the workbench structure so `新客户推进` and `老客户经营` are top-level mutually exclusive modes with separate customer queues, not tabs inside one customer detail.
-- New-customer mode now shows `新客户推进队列`, `推进概览 / 互动时间线 / 推进信号 / CRM 落地建议 / 下一步行动`, and the bottom `推进关键项` panel; existing-customer mode shows `老客户经营队列`, `经营概览 / 互动时间线 / 服务问题 / 价值兑现 / 续约增购 / 关系地图`, and the bottom `服务与关系预警` panel.
-- Local Playwright validation at 1496x1064 passed with screenshots `output/playwright/task171-workbench-mode-final-new.png` and `output/playwright/task171-workbench-mode-final-existing.png`; `git diff --check` and `npm run build` in `frontend/` passed.
-- Latest TASK-171 release: `2.2.7` adds the CRM clean-embed route so CloudCC CRM embeds only the customer interaction workbench body, not the full AgentCiCi platform shell.
-- Production release `2.2.7` passed: ACR backend/frontend images and Git tag were pushed; ECS backup is `/opt/cici/backups/20260709-151814-before-2.2.7-task171-clean-embed`; six services are healthy; `/system/version` reports `version=2.2.7`, `imageTag=2.2.7`, `gitCommit=78fa13dd1185`; `https://x.agentcici.com/` and `/app?aiApp=customer-workbench&embed=crm` return HTTP 200.
-- CloudCC CRM real embedded SSO verification passed on 2026-07-09 using the supplied CRM web account: CRM loads `component-customer-workbench-V7.0.js`; iframe URL includes a one-time `ssoTicket`; `/auth/cloudcc-sso/ticket`, `/auth/cloudcc-sso/consume`, `/auth/me`, `/customer-workbench/accounts`, and customer detail requests returned HTTP 200; screenshot is `output/playwright/task171-cloudcc-sso-final.png`.
-- User reported the V7 CRM embedded page was functionally visible but visually wrong because it embedded the full AgentCiCi platform shell. The fix adds `/app?aiApp=customer-workbench&embed=crm`, renders only `CustomerWorkbenchApp`, removes the pagecomponent outer header, and points CloudCC SSO `targetPath` to the clean embed route.
-- CloudCC pagecomponent V8 was published through `cc-customization-expert-msapi` as id `6a4f4be8e4b0a577cbba1f70`, apiName `custc_202607F3INXE0S`; real CRM runtime loaded `component-customer-workbench-V8.0.js` and iframe `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm&ssoTicket=...`.
-- Real CRM iframe verification passed: inside the AgentCiCi iframe `hasRail=false`, `hasAiApps=false`, `hasEmbedded=true`, and the visible content starts from the customer queue/workbench body. Screenshot: `output/playwright/task171-cloudcc-clean-embed-v8.png`.
-- CloudCC high-code operations in the latest SSO closure used `cc-customization-expert-msapi`: `package pagecomponent --dry-run`, `publish pagecomponent`, `verify injectionPage`, and readback. The process did not bypass the skill after `bind pagecomponent` and `update customPage` failed.
-- Remaining CloudCC skill gap: `cloudcc bind pagecomponent . customer_interaction_workbench 6a4f4be8e4b0a577cbba1f70 --embedded true --workspace-url ...` still fails with `系统发生异常`. `verify injectionPage --expected-component-id 6a4f4be8e4b0a577cbba1f70 --stale-policy warning` correctly reports warning issues for stale `actualComponentIds=["6a4db950e4b0a577cbba1eca"]`; runtime still loads V8 by component name. Track this in `ISSUE-2026-07-09-cloudcc-custompage-bind-skill-gap`.
-- Production release history for TASK-171: `2.2.2` main workbench, `2.2.3` HTTPS proxy, `2.2.4` CloudCC SSO handoff, `2.2.5` CloudCC object-list planning hotfix, `2.2.6` org-scoped workbench demo seed fix, `2.2.7` CRM clean embed.
-- TASK-170 remains assigned and active but is not the current working focus in this thread; it covers FEAT-080 security rules platform and runtime safety gateway.
-- Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
+- TASK-171 is the active focus: customer interaction workbench for AgentCiCi and CloudCC CRM, covering new-customer progression, existing-customer growth, clean CRM embed, and SSO handoff.
+- User reported the `2.2.9` Agent platform workbench layout looked poor: the workbench was visually squeezed, account badges wrapped badly, and the right AI customer assistant showed a visible internal scrollbar.
+- Local CSS-only repair is complete: Agent platform mode hides the duplicate inner brand/breadcrumb, restores three-column proportions, prevents account badges from vertical wrapping, and hides the visible scrollbar in the right AI customer assistant chat.
+- Local verification passed at 1920x960:
+  - `git diff --check` passed.
+  - `npm run build` in `frontend/` passed with the existing Vite large chunk warning.
+  - New-customer mode screenshot: `output/playwright/task171-agent-workbench-repair-local.png`; assertions included `heroCount=0`, `outerOverflow=false`, `brandVisible=false`, `verticalBadges=[]`, `chatScrollbarVisible=false`, and workbench bottom visible.
+  - Existing-customer mode screenshot: `output/playwright/task171-agent-workbench-repair-existing-local.png`; assertions included `hasExistingQueue=true`, `hasRiskPanel=true`, `outerOverflow=false`, `chatScrollbarVisible=false`, and `bottomVisible=true`.
+- Production release source of truth remains `docs/production-release-runbook.md`; use `scripts/release-acr.sh` for numeric versions and keep `CICI_APP_VERSION`, `VITE_CICI_APP_VERSION`, `CICI_IMAGE_TAG`, and Git tag aligned.
 
 ## Read Next
 

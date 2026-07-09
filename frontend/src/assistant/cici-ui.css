@@ -12773,6 +12773,17 @@
   border-radius: 16px;
 }
 
+.cici-ai-apps__main--workbench .customer-workbench__topbar {
+  min-height: 42px;
+  justify-content: flex-end;
+  padding: 0 14px;
+  background: #fffdf8;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__brand {
+  display: none;
+}
+
 .cici-embedded-workbench {
   height: 100vh;
   min-height: 100vh;
@@ -13013,6 +13024,10 @@
   overflow: hidden;
 }
 
+.cici-ai-apps__main--workbench .customer-workbench__body {
+  grid-template-columns: 326px minmax(0, 1fr) 320px;
+}
+
 .customer-workbench__queue,
 .customer-workbench__assistant {
   min-width: 0;
@@ -13033,6 +13048,15 @@
   border-left: 1px solid #ded2bb;
   padding: 20px 14px 12px;
   overflow: hidden;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__queue {
+  padding: 14px 10px 10px;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__assistant {
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  padding: 14px 12px 10px;
 }
 
 .customer-workbench__queue > header,
@@ -13220,6 +13244,7 @@
 }
 
 .customer-workbench-account strong {
+  min-width: 0;
   overflow: hidden;
   color: #2b2217;
   font-size: 13px;
@@ -13244,6 +13269,7 @@
   padding: 0 6px;
   font-size: 11px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .customer-workbench-account__title em {
@@ -13316,6 +13342,10 @@
   padding: 24px 26px 18px;
   background: #fffdf8;
   overflow: hidden;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__main {
+  padding: 18px 24px 14px;
 }
 
 .customer-workbench__head {
@@ -13419,6 +13449,15 @@
   border-right: 1px solid #eadcc4;
 }
 
+.cici-ai-apps__main--workbench .customer-workbench__metrics {
+  margin-top: 14px;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__metrics div {
+  min-height: 68px;
+  padding: 10px 18px;
+}
+
 .customer-workbench__metrics div:last-child {
   border-right: 0;
 }
@@ -13472,6 +13511,10 @@
   border-bottom: 1px solid #ded2bb;
 }
 
+.cici-ai-apps__main--workbench .customer-workbench__tabs {
+  margin-top: 14px;
+}
+
 .customer-workbench__tabs button,
 .customer-workbench-panel header button {
   appearance: none;
@@ -13496,6 +13539,10 @@
   min-height: 0;
   overflow: auto;
   padding-top: 16px;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__content {
+  padding-top: 12px;
 }
 
 .customer-workbench-overview-wrap {
@@ -13974,6 +14021,10 @@
   font-weight: 700;
 }
 
+.cici-ai-apps__main--workbench .customer-workbench__voice {
+  min-height: 56px;
+}
+
 .customer-workbench__voice span {
   display: grid;
   place-items: center;
@@ -13994,10 +14045,20 @@
   min-height: 0;
   height: auto;
   overflow: auto;
+  scrollbar-width: none;
   border-top: 1px solid #ded2bb;
   border-bottom: 1px solid #ded2bb;
   margin-top: 18px;
   padding: 15px 0;
+}
+
+.customer-workbench__chat::-webkit-scrollbar {
+  display: none;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__chat {
+  margin-top: 10px;
+  padding: 10px 0;
 }
 
 .customer-workbench__dayline {
@@ -14087,6 +14148,11 @@
   margin: 16px 0;
 }
 
+.cici-ai-apps__main--workbench .customer-workbench__quick {
+  gap: 8px;
+  margin: 10px 0;
+}
+
 .customer-workbench__quick button {
   display: inline-flex;
   align-items: center;
@@ -14099,6 +14165,10 @@
   color: #5f523f;
   font-size: 13px;
   font-weight: 700;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__quick button {
+  min-height: 40px;
 }
 
 .customer-workbench__quick button .customer-workbench-icon {
@@ -14124,6 +14194,10 @@
   padding: 0;
   font-size: 13px;
   outline: 0;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__composer textarea {
+  min-height: 48px;
 }
 
 .customer-workbench__composer div {
@@ -14163,6 +14237,10 @@
   color: #9a8b73;
   text-align: center;
   font-size: 12px;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__ai-note {
+  margin-top: 8px;
 }
 
 .customer-workbench__muted {
