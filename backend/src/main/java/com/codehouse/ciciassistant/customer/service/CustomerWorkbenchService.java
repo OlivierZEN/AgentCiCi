@@ -176,9 +176,10 @@ public class CustomerWorkbenchService {
             return;
         }
         List<DemoAccount> accounts = demoAccounts();
+        String publicIdPrefix = publicIdPrefix(orgId);
         for (DemoAccount account : accounts) {
             snapshotRepository.save(new CustomerWorkbenchSnapshotEntity(
-                    "cw_" + account.id(),
+                    publicIdPrefix + "_cw_" + account.id(),
                     orgId,
                     account.id(),
                     account.name(),
@@ -205,7 +206,7 @@ public class CustomerWorkbenchService {
             for (String interaction : account.interactions()) {
                 i++;
                 eventRepository.save(new CustomerInteractionEventEntity(
-                        "cwe_" + account.id() + "_" + i,
+                        publicIdPrefix + "_cwe_" + account.id() + "_" + i,
                         orgId,
                         account.id(),
                         "contact-" + account.id(),
@@ -219,17 +220,18 @@ public class CustomerWorkbenchService {
                         account.segment().equals("NEW") ? "NEW_CUSTOMER" : (account.segment().equals("EXISTING") ? "EXISTING_CUSTOMER" : "MIXED")
                 ));
             }
-            seedRecommendation(orgId, account.id(), "CREATE_TASK", "创建下一次跟进任务",
+            seedRecommendation(publicIdPrefix, orgId, account.id(), "CREATE_TASK", "创建下一次跟进任务",
                     "最近互动中出现明确待办，建议写入 CRM 任务并设置截止时间。",
                     0.91, mapOf("objectApiName", "Task", "subject", "跟进 " + account.name(), "accountId", account.id()));
-            seedRecommendation(orgId, account.id(), account.segment().equals("NEW") ? "CREATE_OPPORTUNITY" : "UPDATE_RISK",
+            seedRecommendation(publicIdPrefix, orgId, account.id(), account.segment().equals("NEW") ? "CREATE_OPPORTUNITY" : "UPDATE_RISK",
                     account.segment().equals("NEW") ? "创建商机推进记录" : "更新客户经营风险",
                     account.segment().equals("NEW") ? "客户已出现预算、需求或决策链信号。" : "客户服务或续约信号需要主管关注。",
                     0.82, mapOf("accountId", account.id(), "source", "customer-interaction-workbench"));
         }
     }
 
-    private void seedRecommendation(String orgId,
+    private void seedRecommendation(String publicIdPrefix,
+                                    String orgId,
                                     String accountId,
                                     String type,
                                     String title,
@@ -237,7 +239,7 @@ public class CustomerWorkbenchService {
                                     double confidence,
                                     Map<String, Object> payload) {
         recommendationRepository.save(new CustomerWorkbenchRecommendationEntity(
-                "cwr_" + accountId + "_" + type.toLowerCase(Locale.ROOT),
+                publicIdPrefix + "_cwr_" + accountId + "_" + type.toLowerCase(Locale.ROOT),
                 orgId,
                 accountId,
                 type,
@@ -246,6 +248,14 @@ public class CustomerWorkbenchService {
                 BigDecimal.valueOf(confidence),
                 toJson(payload)
         ));
+    }
+
+    private String publicIdPrefix(String orgId) {
+        String normalized = orgId == null ? "" : orgId.replaceAll("[^A-Za-z0-9]", "").toLowerCase(Locale.ROOT);
+        if (normalized.isBlank()) {
+            return "org_unknown";
+        }
+        return "org_" + (normalized.length() > 12 ? normalized.substring(0, 12) : normalized);
     }
 
     private Map<String, Object> accountListView(String orgId, CustomerWorkbenchSnapshotEntity item) {
