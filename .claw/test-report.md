@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T11:18:03+08:00
+updated_at: 2026-07-09T12:59:43+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T11:18:03+08:00
+last_run_at: 2026-07-09T12:59:43+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 客户互动工作台双向登录本地实现。
-- 命令：任务级门禁、assignment 授权扩展、backend compile、frontend build、pagecomponent bundle syntax check、git diff check。
+- 范围：TASK-171 线上对话 `get_object_list` 后误停止工具规划修复。
+- 命令：生产 trace 只读定位、任务级门禁、assignment 授权检查、聚焦后端测试、backend compile、git diff check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 CloudCC 对象列表后续查询收口修复 (2026-07-09T12:59:43+08:00):
+  - Production trace:
+    - `trace_id=3c271ef5-c0c3-4977-8068-108c74e756d5` 对应用户截图，开始时间 `2026-07-09T03:17:55Z` / 北京时间 `2026-07-09 11:17:55`。
+    - 该轮问题是 `查一下最近的潜在客户。`，只调用了 `get_object_list`，成功返回标准对象列表 152 条并包含 `潜在客户 / cloudcclead`。
+    - 后续 `modelCalls` 出现 `tool_planning_stop_skipped`，说明后端把 `get_object_list` 误判成可直接最终回复的单个只读查询，未允许模型继续调用 `get_object_data` 查询记录。
+  - Commands:
+    - `identity-task`: skill-packaged `dev-login.py .claw --developer MANAGER-001 --task TASK-171 --files backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java .claw/tasks/TASK-171.md .claw/test-report.md --json` -> **allowed**.
+    - `assignment`: skill-packaged `check-assignment.py .claw --developer MANAGER-001 --task TASK-171 --files backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java .claw/tasks/TASK-171.md .claw/test-report.md --json` -> **allowed**.
+    - `backend-focused`: `mvn -q -f backend/pom.xml -Dtest=ChatOrchestratorServiceModelIdentityTest test` -> **success**.
+    - `backend-compile`: `mvn -q -f backend/pom.xml -DskipTests compile` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - `get_object_list` now matches the metadata-tool guard through `object_list`, so data-query intents such as “查一下最近的潜在客户” will not skip the second planning round after object discovery.
+    - Metadata-only intents such as “列出标准对象列表” still allow the single-tool fast path.
 
 - TASK-171 CloudCC/AgentCiCi 双向登录本地实现 (2026-07-09T11:18:03+08:00):
   - Commands:

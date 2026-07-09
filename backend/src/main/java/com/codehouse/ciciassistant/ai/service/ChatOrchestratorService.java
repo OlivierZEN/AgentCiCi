@@ -1985,6 +1985,7 @@ public class ChatOrchestratorService {
                 || lower.contains("standard_objects")
                 || lower.contains("customobjects")
                 || lower.contains("custom_objects")
+                || lower.contains("object_list")
                 || "get_objects".equals(lower)
                 || "list_objects".equals(lower);
     }

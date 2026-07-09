@@ -211,6 +211,15 @@ class ChatOrchestratorServiceModelIdentityTest {
                 List.of(new ToolCallInfo("call_1", "get_object_fields", "{\"objprefix\":\"00Q\"}")),
                 List.of(Map.of("role", "tool", "content", "对象字段列表（标准字段 10 条，自定义字段 41 条）：{\"result\":true}"))))
                 .isFalse();
+
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "查一下最近的潜在客户。",
+                List.of(new ToolCallInfo("call_1", "get_object_list", "{\"object_type\":\"standard\"}")),
+                List.of(Map.of("role", "tool", "content", """
+                        标准对象列表（共 152 条）：
+                        [{"id":"lead","label":"潜在客户","objapi":"cloudcclead","objprefix":"004"}]
+                        """))))
+                .isFalse();
     }
 
     @Test
@@ -219,6 +228,15 @@ class ChatOrchestratorServiceModelIdentityTest {
                 "列出线索对象字段",
                 List.of(new ToolCallInfo("call_1", "get_object_fields", "{\"objprefix\":\"00Q\"}")),
                 List.of(Map.of("role", "tool", "content", "对象字段列表（标准字段 10 条，自定义字段 41 条）：{\"result\":true}"))))
+                .isTrue();
+
+        assertThat(ChatOrchestratorService.shouldSkipToolPlanningStop(
+                "列出标准对象列表",
+                List.of(new ToolCallInfo("call_1", "get_object_list", "{\"object_type\":\"standard\"}")),
+                List.of(Map.of("role", "tool", "content", """
+                        标准对象列表（共 152 条）：
+                        [{"id":"lead","label":"潜在客户","objapi":"cloudcclead","objprefix":"004"}]
+                        """))))
                 .isTrue();
     }
 

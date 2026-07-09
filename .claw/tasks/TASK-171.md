@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-09T11:18:03+08:00
+updated_at: 2026-07-09T12:59:43+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -38,6 +38,7 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 
 ## Verification
 
+- 线上对话 `get_object_list` 后误停止工具规划修复 (2026-07-09) -> passed locally. Production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` confirmed the user screenshot flow only called `get_object_list` and then hit `tool_planning_stop_skipped`; `get_object_list` is now treated as object metadata, so record-query intents keep the next planning round while metadata-only requests can still use the fast path. `mvn -q -f backend/pom.xml -Dtest=ChatOrchestratorServiceModelIdentityTest test`, `mvn -q -f backend/pom.xml -DskipTests compile`, and `git diff --check` passed.
 - `dev-login.py` for `MANAGER-001` setup files -> allowed.
 - CloudCC OpenAPI token + MetadataService capabilities/standard-catalog direct HTTP -> passed before task setup.
 - `dev-login.py --task TASK-171` and `check-assignment.py --task TASK-171` for representative backend/frontend/spec/CloudCC files -> allowed.
