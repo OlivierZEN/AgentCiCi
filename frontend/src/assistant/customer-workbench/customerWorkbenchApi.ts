@@ -13,6 +13,7 @@ export type CustomerWorkbenchAccount = {
   lastInteraction: string;
   stage: string;
   tags: string[];
+  updatedAt?: string;
 };
 
 export type CustomerInteractionEvent = {

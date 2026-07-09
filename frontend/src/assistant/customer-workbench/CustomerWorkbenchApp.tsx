@@ -472,14 +472,17 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
                     <strong>{item.name}</strong>
                     <em className={queueStatusClass(item)}>{queueStatus(item)}</em>
                   </span>
-                  <small>{item.owner} · {item.stage}</small>
+                  <span className="customer-workbench-account__meta">
+                    <small>{item.owner} · {item.stage}</small>
+                    <time>{shortDate(item.updatedAt || "") || "今天 09:30"}</time>
+                  </span>
                   <span className="customer-workbench-account__badges">
                     {workbenchMode === "new" ? <em>商机 {Math.max(1, Math.round(item.progressScore / 28))}</em> : <em>健康 {item.healthScore}</em>}
                     {item.riskCount ? <em className="is-risk">{workbenchMode === "new" ? "风险信号" : "关系风险"} {item.riskCount}</em> : null}
                     {item.pendingRecommendationCount ? <em className="is-warn">{workbenchMode === "new" ? "未确认建议" : "经营动作"} {item.pendingRecommendationCount}</em> : null}
                   </span>
+                  {item.lastInteraction ? <span className="customer-workbench-account__last">{item.lastInteraction}</span> : null}
                 </span>
-                <time>{shortDate(item.lastInteraction) || "今天 09:30"}</time>
               </button>
             ))}
             {loading ? <p className="customer-workbench__muted">正在加载客户...</p> : null}

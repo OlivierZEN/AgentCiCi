@@ -13192,10 +13192,11 @@
 .customer-workbench-account {
   position: relative;
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
   width: 100%;
-  min-height: 92px;
+  min-height: 118px;
   border: 0;
   border-bottom: 1px solid #eadcc4;
   border-radius: 6px;
@@ -13204,6 +13205,7 @@
   padding: 11px 10px;
   color: #2b2217;
   box-shadow: none;
+  box-sizing: border-box;
 }
 
 .customer-workbench-account.is-active {
@@ -13226,13 +13228,15 @@
 .customer-workbench-account__dot.is-risk { background: #d63c3c; }
 
 .customer-workbench-account__body {
+  display: grid;
+  gap: 5px;
   min-width: 0;
 }
 
 .customer-workbench-account__title {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 8px;
 }
 
@@ -13253,11 +13257,23 @@
   white-space: nowrap;
 }
 
+.customer-workbench-account__meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
 .customer-workbench-account small {
   display: block;
-  margin-top: 4px;
+  min-width: 0;
+  overflow: hidden;
   color: #5f523f;
   font-size: 12px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .customer-workbench-account__title em,
@@ -13298,7 +13314,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 5px;
-  margin-top: 7px;
+  max-height: 45px;
+  overflow: hidden;
 }
 
 .customer-workbench-account__badges em {
@@ -13315,6 +13332,16 @@
   color: #5f523f;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.customer-workbench-account__last {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #5f523f;
+  font-size: 12px;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .customer-workbench__pager {
