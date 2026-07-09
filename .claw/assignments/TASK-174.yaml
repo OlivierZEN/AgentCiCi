@@ -1,0 +1,68 @@
+task_id: TASK-174
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T09:30:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-084-data-insight-ai-app.md
+task_status_path: .claw/tasks/TASK-174.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - frontend/src/assistant/**
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/**
+  - backend/src/main/java/com/codehouse/ciciassistant/customerinsight/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customerinsight/**
+scope_files:
+  - docs/specs/FEAT-084-data-insight-ai-app.md
+  - .claw/tasks/TASK-174.md
+  - .claw/assignments/TASK-174.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/assistant/customer-insight/CustomerInsightAppPanel.tsx
+  - frontend/src/assistant/customer-insight/CustomerInsightReportPreview.tsx
+  - frontend/src/assistant/customer-insight/customerInsightApi.ts
+  - frontend/src/assistant/customer-insight/customerInsightTypes.ts
+  - frontend/src/assistant/customer-insight/customerInsightSections.ts
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/CustomerInteractionEventRepository.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/CustomerWorkbenchRecommendationRepository.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customerinsight/api/CustomerInsightController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customerinsight/service/CustomerInsightService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/customerinsight/CustomerInsightIntegrationTest.java
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-033-assistant-ai-apps-workspace.md
+  - docs/specs/FEAT-034-customer-insight-ai-app.md
+  - docs/specs/FEAT-082-demo-environment-real-data.md
+task_boundary:
+  - "将现有客户洞察 AI 应用升级为数据洞察入口和 CRM 仪表板。"
+  - "仪表板优先使用已有真实 CRM id 聚合演示数据，无数据组织允许 Mock 样例并显式标注。"
+  - "不在本任务内新增 CloudCC 自定义对象或低代码元数据写入。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T09:30:00+08:00; user requested production-ready data insight AI app and release."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created implementation task for data insight AI app. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py for TASK-174 representative files before editing source or state."

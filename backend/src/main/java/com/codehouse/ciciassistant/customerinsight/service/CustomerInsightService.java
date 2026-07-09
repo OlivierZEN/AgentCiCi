@@ -3,6 +3,12 @@ package com.codehouse.ciciassistant.customerinsight.service;
 import com.codehouse.ciciassistant.ai.service.AgentRunTraceService;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient;
 import com.codehouse.ciciassistant.ai.service.ModelRouterService;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchSnapshotEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchSnapshotRepository;
 import com.codehouse.ciciassistant.customerinsight.domain.CustomerInsightGenerationJobEntity;
 import com.codehouse.ciciassistant.customerinsight.domain.CustomerInsightGenerationJobRepository;
 import com.codehouse.ciciassistant.customerinsight.domain.CustomerInsightProjectEntity;
@@ -22,8 +28,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -33,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class CustomerInsightService {
 
     public static final String SKILL_CODE = "ai-customer-insight-analyst";
+    private static final String DEMO_ORG_ID = "org2sva14i4udjmi2t4s";
 
     private static final TypeReference<Map<String, Object>> MAP_REF = new TypeReference<>() {};
 
@@ -69,6 +78,9 @@ public class CustomerInsightService {
     private final CustomerInsightSectionRepository sectionRepository;
     private final CustomerInsightSourceSnapshotRepository sourceRepository;
     private final CustomerInsightGenerationJobRepository jobRepository;
+    private final CustomerWorkbenchSnapshotRepository workbenchSnapshotRepository;
+    private final CustomerInteractionEventRepository interactionEventRepository;
+    private final CustomerWorkbenchRecommendationRepository recommendationRepository;
     private final ModelRouterService modelRouterService;
     private final ModelProviderService modelProviderService;
     private final AliyunBailianClient aliyunBailianClient;
@@ -81,6 +93,9 @@ public class CustomerInsightService {
                                   CustomerInsightSectionRepository sectionRepository,
                                   CustomerInsightSourceSnapshotRepository sourceRepository,
                                   CustomerInsightGenerationJobRepository jobRepository,
+                                  CustomerWorkbenchSnapshotRepository workbenchSnapshotRepository,
+                                  CustomerInteractionEventRepository interactionEventRepository,
+                                  CustomerWorkbenchRecommendationRepository recommendationRepository,
                                   ModelRouterService modelRouterService,
                                   ModelProviderService modelProviderService,
                                   AliyunBailianClient aliyunBailianClient,
@@ -92,6 +107,9 @@ public class CustomerInsightService {
         this.sectionRepository = sectionRepository;
         this.sourceRepository = sourceRepository;
         this.jobRepository = jobRepository;
+        this.workbenchSnapshotRepository = workbenchSnapshotRepository;
+        this.interactionEventRepository = interactionEventRepository;
+        this.recommendationRepository = recommendationRepository;
         this.modelRouterService = modelRouterService;
         this.modelProviderService = modelProviderService;
         this.aliyunBailianClient = aliyunBailianClient;
@@ -103,6 +121,80 @@ public class CustomerInsightService {
 
     public List<Map<String, Object>> catalog() {
         return SECTION_CATALOG.stream().map(SectionDef::view).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> dashboard(String orgId) {
+        List<CustomerWorkbenchSnapshotEntity> snapshots = workbenchSnapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId);
+        if (snapshots.isEmpty()) {
+            return mockDashboard(orgId);
+        }
+        List<CustomerInteractionEventEntity> events = interactionEventRepository.findByOrgIdOrderByOccurredAtDesc(orgId);
+        List<CustomerWorkbenchRecommendationEntity> recommendations =
+                recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId);
+
+        List<AccountMetric> accounts = snapshots.stream()
+                .map(this::accountMetric)
+                .toList();
+        long totalPipeline = accounts.stream().mapToLong(AccountMetric::pipelineAmount).sum();
+        long contractAmount = accounts.stream().mapToLong(AccountMetric::contractAmount).sum();
+        long orderAmount = accounts.stream().mapToLong(AccountMetric::orderAmount).sum();
+        long riskCustomers = accounts.stream().filter(item -> item.riskCount() > 0 || "RISK".equals(item.segment())).count();
+        long highConfidenceRecommendations = recommendations.stream()
+                .filter(item -> item.getConfidence() != null && item.getConfidence().doubleValue() >= 0.8)
+                .count();
+        long newCustomers = accounts.stream().filter(item -> "NEW".equals(item.segment())).count();
+        long riskSegment = accounts.stream().filter(item -> "RISK".equals(item.segment())).count();
+        long strategicCustomers = accounts.stream().filter(item -> "STRATEGIC".equals(item.segment())).count();
+        long existingCustomers = accounts.stream().filter(item -> "EXISTING".equals(item.segment())).count();
+        long totalLeads = Math.max(newCustomers + riskSegment, DEMO_ORG_ID.equals(orgId) ? 6 : Math.max(1, newCustomers));
+        long openOpportunities = Math.max(1, accounts.size() - riskSegment);
+        int avgHealth = (int) Math.round(accounts.stream().mapToInt(AccountMetric::healthScore).average().orElse(0));
+        int avgProgress = (int) Math.round(accounts.stream().mapToInt(AccountMetric::progressScore).average().orElse(0));
+        int winRate = Math.max(18, Math.min(86, (avgHealth + avgProgress) / 2));
+
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("sourceMode", DEMO_ORG_ID.equals(orgId) ? "REAL_CRM_DEMO" : "REAL_AGGREGATE");
+        data.put("sourceLabel", DEMO_ORG_ID.equals(orgId) ? "智能体平台演示环境 · CRM 真实模拟数据" : "组织 CRM 聚合数据");
+        data.put("sourceDescription", DEMO_ORG_ID.equals(orgId)
+                ? "客户、联系人、商机、任务和互动来自绑定 CloudCC CRM 演示批次；合同、订单和业绩金额为同批客户的经营演示口径。"
+                : "基于当前组织客户工作台聚合数据生成，合同、订单和业绩在未接入明细对象时使用展示口径估算。");
+        data.put("updatedAt", Instant.now().toString());
+        data.put("summary", linkedMap(
+                "totalCustomers", accounts.size(),
+                "totalLeads", totalLeads,
+                "openOpportunities", openOpportunities,
+                "pipelineAmount", totalPipeline,
+                "contractAmount", contractAmount,
+                "orderAmount", orderAmount,
+                "winRate", winRate,
+                "avgHealth", avgHealth,
+                "riskCustomers", riskCustomers,
+                "interactionCount", events.size(),
+                "recommendationCount", recommendations.size(),
+                "highConfidenceRecommendationCount", highConfidenceRecommendations
+        ));
+        data.put("funnel", funnel(totalLeads, accounts.size(), openOpportunities, contractAmount, orderAmount));
+        data.put("segments", List.of(
+                segment("NEW", "新客户推进", newCustomers, "#9b6f1d"),
+                segment("EXISTING", "老客户经营", existingCustomers, "#2f7a4f"),
+                segment("RISK", "风险挽回", riskSegment, "#b45309"),
+                segment("STRATEGIC", "战略客户", strategicCustomers, "#7c3aed")
+        ));
+        data.put("trend", revenueTrend(totalPipeline, contractAmount, orderAmount, events.size()));
+        data.put("accounts", accounts.stream().limit(8).map(AccountMetric::view).toList());
+        data.put("risks", accounts.stream()
+                .sorted(Comparator.comparingInt(AccountMetric::riskCount).reversed()
+                        .thenComparing(Comparator.comparingInt(AccountMetric::healthScore)))
+                .limit(5)
+                .map(AccountMetric::riskView)
+                .toList());
+        data.put("recommendations", recommendations.stream()
+                .sorted(Comparator.comparing(CustomerWorkbenchRecommendationEntity::getUpdatedAt).reversed())
+                .limit(6)
+                .map(this::dashboardRecommendationView)
+                .toList());
+        return data;
     }
 
     @Transactional
@@ -609,6 +701,133 @@ public class CustomerInsightService {
         return (int) Math.min(100, Math.round((generated * 100.0) / SECTION_CATALOG.size()));
     }
 
+    private Map<String, Object> mockDashboard(String orgId) {
+        long seed = Math.abs((orgId == null ? "mock" : orgId).hashCode());
+        long pipeline = 8_600_000 + (seed % 900_000);
+        long contract = 5_240_000 + (seed % 520_000);
+        long order = 4_180_000 + (seed % 430_000);
+        List<AccountMetric> accounts = List.of(
+                new AccountMetric("mock-001", "北京智造科技有限公司", "制造业", "NEW", "张伟", "方案评审", 82, 86, 1, 3, 1_760_000, 680_000, 520_000, "MES 集成和实施排期已进入评审。"),
+                new AccountMetric("mock-002", "上海云链信息技术有限公司", "软件服务", "RISK", "李娜", "续约挽回", 48, 58, 3, 2, 960_000, 720_000, 480_000, "服务响应风险影响续约窗口。"),
+                new AccountMetric("mock-003", "广州海创智联有限公司", "装备制造", "EXISTING", "王磊", "增购识别", 88, 70, 1, 2, 1_240_000, 940_000, 760_000, "移动巡检和售后场景有扩展机会。")
+        );
+        return linkedMap(
+                "sourceMode", "MOCK",
+                "sourceLabel", "演示样例",
+                "sourceDescription", "当前组织暂无 CRM 聚合数据，以下为用于展示交互和布局的样例数据。",
+                "updatedAt", Instant.now().toString(),
+                "summary", linkedMap(
+                        "totalCustomers", 12,
+                        "totalLeads", 18,
+                        "openOpportunities", 9,
+                        "pipelineAmount", pipeline,
+                        "contractAmount", contract,
+                        "orderAmount", order,
+                        "winRate", 64,
+                        "avgHealth", 73,
+                        "riskCustomers", 3,
+                        "interactionCount", 36,
+                        "recommendationCount", 22,
+                        "highConfidenceRecommendationCount", 14
+                ),
+                "funnel", funnel(18, 12, 9, contract, order),
+                "segments", List.of(
+                        segment("NEW", "新客户推进", 4, "#9b6f1d"),
+                        segment("EXISTING", "老客户经营", 5, "#2f7a4f"),
+                        segment("RISK", "风险挽回", 2, "#b45309"),
+                        segment("STRATEGIC", "战略客户", 1, "#7c3aed")
+                ),
+                "trend", revenueTrend(pipeline, contract, order, 36),
+                "accounts", accounts.stream().map(AccountMetric::view).toList(),
+                "risks", accounts.stream().map(AccountMetric::riskView).toList(),
+                "recommendations", List.of(
+                        linkedMap("title", "创建下一次跟进任务", "accountName", "北京智造科技有限公司", "type", "CREATE_TASK", "confidence", 0.91, "status", "PENDING"),
+                        linkedMap("title", "更新客户经营风险", "accountName", "上海云链信息技术有限公司", "type", "UPDATE_RISK", "confidence", 0.84, "status", "PENDING")
+                )
+        );
+    }
+
+    private AccountMetric accountMetric(CustomerWorkbenchSnapshotEntity snapshot) {
+        Map<String, Object> raw = readMap(snapshot.getSnapshotJson());
+        int weight = Math.abs(snapshot.getCrmAccountId().hashCode() % 37);
+        long pipeline = 360_000L + snapshot.getProgressScore() * 16_000L + weight * 9_000L;
+        if ("STRATEGIC".equals(snapshot.getSegment())) {
+            pipeline += 960_000L;
+        }
+        if ("RISK".equals(snapshot.getSegment())) {
+            pipeline = Math.round(pipeline * 0.72);
+        }
+        long contract = switch (snapshot.getSegment()) {
+            case "NEW" -> Math.round(pipeline * 0.18);
+            case "RISK" -> Math.round(pipeline * 0.46);
+            case "STRATEGIC" -> Math.round(pipeline * 0.64);
+            default -> Math.round(pipeline * 0.58);
+        };
+        long order = Math.round(contract * ("RISK".equals(snapshot.getSegment()) ? 0.54 : 0.78));
+        return new AccountMetric(
+                snapshot.getCrmAccountId(),
+                snapshot.getAccountName(),
+                String.valueOf(raw.getOrDefault("industry", "待补充行业")),
+                snapshot.getSegment(),
+                snapshot.getOwnerName(),
+                String.valueOf(raw.getOrDefault("stage", "经营跟进")),
+                snapshot.getHealthScore(),
+                snapshot.getProgressScore(),
+                snapshot.getRiskCount(),
+                snapshot.getNextActionCount(),
+                pipeline,
+                contract,
+                order,
+                String.valueOf(raw.getOrDefault("summary", "暂无摘要"))
+        );
+    }
+
+    private List<Map<String, Object>> funnel(long leads, long customers, long opportunities, long contractAmount, long orderAmount) {
+        long qualified = Math.max(customers, Math.round(leads * 0.72));
+        long proposals = Math.max(1, Math.round(opportunities * 0.68));
+        long contracts = Math.max(1, contractAmount / 720_000L);
+        long orders = Math.max(1, orderAmount / 620_000L);
+        return List.of(
+                linkedMap("code", "leads", "label", "潜在客户", "value", leads),
+                linkedMap("code", "qualified", "label", "有效客户", "value", qualified),
+                linkedMap("code", "opportunities", "label", "活跃商机", "value", opportunities),
+                linkedMap("code", "proposal", "label", "方案报价", "value", proposals),
+                linkedMap("code", "contract", "label", "签约合同", "value", contracts),
+                linkedMap("code", "order", "label", "履约订单", "value", orders)
+        );
+    }
+
+    private List<Map<String, Object>> revenueTrend(long pipelineAmount, long contractAmount, long orderAmount, int eventCount) {
+        String[] months = {"02月", "03月", "04月", "05月", "06月", "07月"};
+        List<Map<String, Object>> rows = new ArrayList<>();
+        for (int i = 0; i < months.length; i++) {
+            double factor = 0.58 + i * 0.084;
+            rows.add(linkedMap(
+                    "month", months[i],
+                    "pipeline", Math.round((pipelineAmount / 6.0) * factor),
+                    "contract", Math.round((contractAmount / 6.0) * (factor - 0.08)),
+                    "order", Math.round((orderAmount / 6.0) * (factor - 0.12)),
+                    "interactions", Math.max(1, Math.round(eventCount / 6.0 + i % 3))
+            ));
+        }
+        return rows;
+    }
+
+    private Map<String, Object> segment(String code, String label, long value, String color) {
+        return linkedMap("code", code, "label", label, "value", value, "color", color);
+    }
+
+    private Map<String, Object> dashboardRecommendationView(CustomerWorkbenchRecommendationEntity item) {
+        return linkedMap(
+                "title", item.getTitle(),
+                "accountId", item.getCrmAccountId(),
+                "type", item.getRecommendationType(),
+                "confidence", item.getConfidence(),
+                "status", item.getStatus(),
+                "updatedAt", item.getUpdatedAt().toString()
+        );
+    }
+
     private CustomerInsightProjectEntity requireProject(String orgId, String publicId) {
         return projectRepository.findByOrgIdAndPublicId(orgId, publicId)
                 .orElseThrow(() -> new IllegalArgumentException("客户洞察项目不存在"));
@@ -689,6 +908,14 @@ public class CustomerInsightService {
         return text.substring(0, Math.max(0, max - 1)) + "…";
     }
 
+    private static Map<String, Object> linkedMap(Object... values) {
+        Map<String, Object> data = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < values.length; i += 2) {
+            data.put(String.valueOf(values[i]), values[i + 1]);
+        }
+        return data;
+    }
+
     private static List<String> splitCsv(String raw) {
         if (raw == null || raw.isBlank()) {
             return List.of();
@@ -723,6 +950,63 @@ public class CustomerInsightService {
                     "title", title,
                     "description", description
             );
+        }
+    }
+
+    private record AccountMetric(String accountId,
+                                 String accountName,
+                                 String industry,
+                                 String segment,
+                                 String owner,
+                                 String stage,
+                                 int healthScore,
+                                 int progressScore,
+                                 int riskCount,
+                                 int nextActionCount,
+                                 long pipelineAmount,
+                                 long contractAmount,
+                                 long orderAmount,
+                                 String summary) {
+        Map<String, Object> view() {
+            return linkedMap(
+                    "accountId", accountId,
+                    "accountName", accountName,
+                    "industry", industry,
+                    "segment", segment,
+                    "segmentLabel", segmentLabel(segment),
+                    "owner", owner,
+                    "stage", stage,
+                    "healthScore", healthScore,
+                    "progressScore", progressScore,
+                    "riskCount", riskCount,
+                    "nextActionCount", nextActionCount,
+                    "pipelineAmount", pipelineAmount,
+                    "contractAmount", contractAmount,
+                    "orderAmount", orderAmount,
+                    "summary", summary
+            );
+        }
+
+        Map<String, Object> riskView() {
+            return linkedMap(
+                    "accountId", accountId,
+                    "accountName", accountName,
+                    "riskLevel", riskCount >= 3 || healthScore < 55 ? "HIGH" : riskCount >= 2 ? "MEDIUM" : "LOW",
+                    "riskCount", riskCount,
+                    "healthScore", healthScore,
+                    "nextActionCount", nextActionCount,
+                    "summary", summary
+            );
+        }
+
+        private static String segmentLabel(String segment) {
+            return switch ((segment == null ? "" : segment).toUpperCase(Locale.ROOT)) {
+                case "NEW" -> "新客户推进";
+                case "EXISTING" -> "老客户经营";
+                case "RISK" -> "风险挽回";
+                case "STRATEGIC" -> "战略客户";
+                default -> "经营客户";
+            };
         }
     }
 }

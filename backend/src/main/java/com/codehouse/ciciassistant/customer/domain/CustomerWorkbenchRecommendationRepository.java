@@ -8,6 +8,8 @@ public interface CustomerWorkbenchRecommendationRepository extends JpaRepository
 
     List<CustomerWorkbenchRecommendationEntity> findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(String orgId, String crmAccountId);
 
+    List<CustomerWorkbenchRecommendationEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+
     Optional<CustomerWorkbenchRecommendationEntity> findByOrgIdAndPublicId(String orgId, String publicId);
 
     long countByOrgIdAndCrmAccountIdAndStatus(String orgId, String crmAccountId, String status);

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T06:57:56+08:00
+updated_at: 2026-07-10T07:18:26+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T06:57:56+08:00
+last_run_at: 2026-07-10T07:18:26+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,26 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-173 客户互动工作台真实智能体助理生产发布。
-- 命令：身份门禁、assignment check、后端编译、后端聚焦测试、前端构建、ASR hook 单测、`git diff --check`、release dry-run、镜像构建推送、ECS 备份、线上部署、健康检查、公网 smoke、认证后真实 AI 助理 smoke。
+- 范围：TASK-174 数据洞察 AI 应用本地生产就绪验证。
+- 命令：身份门禁、assignment check、CloudCC standard-catalog 扫描、后端聚焦集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 视觉与溢出检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-174 data insight AI app local readiness (2026-07-10T07:18:26+08:00):
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-174 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-174 --branch main --files ... --json` -> **allowed**.
+    - `cloudcc-standard-catalog`: `cloudcc scan msapi . standard-catalog` -> **success**; standard objects include `Account`, `Contact`, `cloudcclead`, `Opportunity`, `contract`, `cloudccorder`, `product`, `Task`, and `Event`.
+    - `backend-customer-insight-integration`: `mvn -q -Dtest=com.codehouse.ciciassistant.customerinsight.CustomerInsightIntegrationTest test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `desktop-visual-check`: local Vite `/app?aiApp=customer-insight` with mocked authenticated APIs and dashboard payload -> **success**; page title `数据洞察`, dashboard rendered, main panel `scrollWidth=clientWidth=966`, no overflow offenders.
+  - Browser evidence:
+    - Screenshot: `output/playwright/data-insight-desktop-refined.png`.
+  - Notes:
+    - The dashboard source label distinguishes demo org real CRM-backed aggregate data from generic aggregate data and Mock fallback.
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-173 production release `2.3.1` for customer workbench real agent assistant (2026-07-10T06:57:56+08:00):
   - Commands:

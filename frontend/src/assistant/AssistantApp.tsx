@@ -737,12 +737,12 @@ const AI_APPLICATIONS: AiApplication[] = [
   },
   {
     code: "customer-insight",
-    name: "客户洞察",
-    shortName: "客",
+    name: "数据洞察",
+    shortName: "数",
     status: "内置",
-    summary: "客户画像、合同订单、服务体验和一客一策分析。",
-    description: "汇总 CRM、合同订单、客户服务和人工补充事实，形成可编辑的客户洞察报告。",
-    meta: "CRM 洞察 · 业务闭环",
+    summary: "潜客、商机、客户、合同订单和销售业绩仪表板。",
+    description: "汇总 CRM 客户、商机、合同订单、销售业绩和人工补充事实，动态生成经营仪表板与可编辑洞察报告。",
+    meta: "CRM 数据 · 经营洞察",
   },
   {
     code: "zhiwei-portrait",

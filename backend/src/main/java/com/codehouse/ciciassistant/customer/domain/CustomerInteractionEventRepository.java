@@ -7,5 +7,7 @@ public interface CustomerInteractionEventRepository extends JpaRepository<Custom
 
     List<CustomerInteractionEventEntity> findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(String orgId, String crmAccountId);
 
+    List<CustomerInteractionEventEntity> findByOrgIdOrderByOccurredAtDesc(String orgId);
+
     long countByOrgId(String orgId);
 }

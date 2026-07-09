@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T06:57:56+08:00
+updated_at: 2026-07-10T07:18:26+08:00
 updated_by: MANAGER-001
-phase: customer-workbench-real-agent-production
-active_task: "none"
-next_action: "Monitor production release 2.3.1 for customer workbench real agent assistant and demo data."
+phase: data-insight-ai-app-production
+active_task: "TASK-174"
+next_action: "Commit TASK-174 and run production release dry-run, image release, backup, deploy, health checks, and smoke tests."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,10 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.1` from Git commit `ff9b9cc7cc4a`.
+- TASK-174 implementation is in review: upgraded the existing customer insight AI app into “数据洞察”, added CRM data dashboard charts for leads, opportunities, customers, contract/order, sales performance, and kept no-data Mock fallback clearly labeled.
+- TASK-174 CloudCC standard-catalog scan confirmed standard CRM objects including `Account`, `Contact`, `cloudcclead`, `Opportunity`, `contract`, `cloudccorder`, `product`, `Task`, and `Event`.
+- TASK-174 local validation passed: task-scoped identity gate, assignment check, backend `CustomerInsightIntegrationTest`, frontend `npm run build`, `git diff --check`, and desktop Playwright visual/overflow check for `/app?aiApp=customer-insight`.
+- TASK-174 dashboard source behavior: demo org `org2sva14i4udjmi2t4s` uses CRM-backed AgentCiCi aggregate rows and labels the source as real demo CRM data; other organizations use aggregate data when present, otherwise clearly labeled Mock display data.
 - TASK-173 is done and production released: customer workbench right assistant no longer renders the crossed top voice bar or quick action button area.
 - TASK-173 backend routes `/customer-workbench/assistant` through `ChatOrchestratorService.chat(...)` with `agentId=cici-system` and `activeSkillCode=customer-interaction-workbench`; response payload includes agent/model/run audit fields, and workbench session ids are stable 55-character ids within the `chat_session_state.session_id` limit.
 - TASK-173 frontend microphone now reuses `useAsrVoiceInput` and `/ws/asr` with Aliyun provider instead of browser `SpeechRecognition`.
@@ -46,6 +50,9 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
+- `.claw/tasks/TASK-174.md` - data insight AI app production task state.
+- `.claw/assignments/TASK-174.yaml` - current authorized write scope.
+- `docs/specs/FEAT-084-data-insight-ai-app.md` - data insight feature spec.
 - `.claw/tasks/TASK-173.md` - real assistant implementation and release task state.
 - `.claw/assignments/TASK-173.yaml` - current authorized write scope.
 - `docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md` - real assistant feature spec.
