@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-09T13:05:59+08:00
+updated_at: 2026-07-09T14:24:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -38,6 +38,10 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 
 ## Verification
 
+- CloudCC SSO production release `2.2.4` (2026-07-09) -> passed. `./scripts/release-acr.sh --version 2.2.4` pushed backend/frontend images and Git tag for commit `9b673c4076e6`; ECS backup `/opt/cici/backups/20260709-125320-before-2.2.4-task171-cloudcc-sso`; six services healthy; `/system/version` returned `version=2.2.4`, `imageTag=2.2.4`, `gitCommit=9b673c4076e6`; public `https://x.agentcici.com/` and `/app?aiApp=customer-workbench` returned HTTP 200.
+- CloudCC pagecomponent SSO publication through `cc-customization-expert-msapi` (2026-07-09) -> passed for package/publish/verify, blocked for bind/update. `cloudcc package pagecomponent customer-workbench . --dry-run` passed with safe dependency policy; `cloudcc publish pagecomponent customer-workbench .` published V7 id `6a4f2c24e4b0a577cbba1f4c`; `cloudcc verify injectionPage . customer_interaction_workbench --expected-component component-customer-workbench` returned `status=passed`. `cloudcc bind pagecomponent ...` and `cloudcc update customPage ...` both returned `系统发生异常`, so no direct CloudCC metadata bypass was used in this closure.
+- CloudCC CRM real embedded SSO browser verification (2026-07-09) -> passed. Playwright logged in through `https://accounts.cloudcc.cn/#/login` with the supplied CRM test account, opened `https://ap6.lightning.cloudcc.cn/#/injectionComponent?page=customer_interaction_workbench&button=Home`, observed `component-customer-workbench-V7.0.js`, iframe `https://x.agentcici.com/app?aiApp=customer-workbench&ssoTicket=...`, AgentCiCi org `智能体平台演示环境`, version badge `2.2.6`, and customer queue with 12 customers. Requests `/auth/cloudcc-sso/ticket`, `/auth/cloudcc-sso/consume`, `/auth/me`, `/customer-workbench/accounts`, and `/customer-workbench/accounts/demo-account-012` returned HTTP 200; console error count was 0. Screenshot: `output/playwright/task171-cloudcc-sso-final.png`.
+- Customer workbench org-scoped demo seed fix and production release `2.2.6` (2026-07-09) -> passed. Root cause was globally unique `customer_workbench_snapshot.public_id` using unscoped demo ids such as `cw_<accountId>` when the CloudCC SSO org first accessed the workbench. Fix prefixes new seed snapshot/event/recommendation ids with an org-derived prefix while preserving existing org data. `mvn -q -f backend/pom.xml -DskipTests compile`, `git diff --check`, `./scripts/release-acr.sh --dry-run`, `./scripts/release-acr.sh --version 2.2.6`, ECS backup `/opt/cici/backups/20260709-131149-before-2.2.6-task171-cloudcc-sso-seed`, production deploy, health, version, public smoke, and real CRM embedded browser retest all passed.
 - 线上对话 `get_object_list` 后误停止工具规划修复 (2026-07-09) -> passed and production released in `2.2.5`. Production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` confirmed the user screenshot flow only called `get_object_list` and then hit `tool_planning_stop_skipped`; `get_object_list` is now treated as object metadata, so record-query intents keep the next planning round while metadata-only requests can still use the fast path. `mvn -q -f backend/pom.xml -Dtest=ChatOrchestratorServiceModelIdentityTest test`, `mvn -q -f backend/pom.xml -DskipTests compile`, `git diff --check`, release `2.2.5`, ECS deployment, production health, production login smoke, and production chat smoke passed. The demo chat smoke did not fully replay org5 because `demo-org/13900009999` has no CloudCC binding.
 - `dev-login.py` for `MANAGER-001` setup files -> allowed.
 - CloudCC OpenAPI token + MetadataService capabilities/standard-catalog direct HTTP -> passed before task setup.
@@ -105,8 +109,8 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 
 - AgentCiCi 侧工作台主体、API、演示数据和技能绑定已完成并通过本地验证。
 - CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权、全部 8 个应用菜单绑定和真实 CRM Web 注入页均已在线验证。若某个已登录用户仍看不到菜单，优先让其刷新 CRM、切换应用或重新登录以更新前端/登录态菜单缓存。
-- 白页修复后，CRM 注入容器会正常显示 AgentCiCi iframe；未建立 AgentCiCi 会话时 iframe 显示 AgentCiCi 登录页。后续若要做到从 CloudCC CRM 免登录进入工作台，应单独补 SSO/token handoff 设计与实现。
-- 双向登录代码已补齐本地实现：CRM runtime token 只做身份校验，AgentCiCi JWT 只做平台登录，CloudCC MCP/OpenAPI 继续使用平台后端按绑定信息生成的 CloudCC accessToken。上线前还需要用 cc-customization-expert 的 pagecomponent 发布流程把新版 CRM 组件发布到 CloudCC CDN，并用真实 CRM Web 登录验证 iframe 可通过 `ssoTicket` 自动进入工作台。
+- 白页修复与双向登录均已在线闭环：CRM 注入容器加载 V7 组件后会用 CloudCC runtime token 换取 AgentCiCi 一次性 `ssoTicket`，iframe 可免登录进入客户互动工作台；CloudCC MCP/OpenAPI 仍遵守规则，继续使用平台后端按绑定信息生成的 CloudCC accessToken。
+- `cc-customization-expert-msapi` 仍有一个未解决缺口：V7 pagecomponent 发布成功后，customPage 运行时能加载最新 `component-customer-workbench-V7.0.js`，但 skill 的 `bind pagecomponent` / `update customPage` 写入路径失败，且 `verify injectionPage` 没有把 stale component id 识别为失败。后续应把 `ISSUE-2026-07-09-cloudcc-custompage-bind-skill-gap` 回灌到技能。
 - 本次白页复盘和 `cc-customization-expert-msapi` 技能缺口/修复建议已沉淀到 `docs/specs/FEAT-081-cloudcc-customization-expert-msapi-gap-report.md`，后续应优先把 customPage high-code resource、pagecomponent 绑定和 injection runtime 验收能力回灌到技能。
 - AgentCiCi 生产域名 `https://x.agentcici.com/app?aiApp=customer-workbench` 已随 `2.2.3` 可用，`/customer-workbench/*` HTTPS 代理已修复并验证。
 - 线上对话工具规划热修已随 `2.2.5` 部署；原始 org5 账号再次提问“查一下最近的潜在客户。”时应继续进入 `get_object_data` 一类数据查询，而不是停在 `get_object_list` 对象列表摘要。

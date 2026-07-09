@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-08T02:20:33+08:00
+ updated_at: 2026-07-09T14:24:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-171.md`
 - assignment_path: `.claw/assignments/TASK-171.yaml`
 - blocked_by: `none`
-- next_action: Done in production release `2.2.3`; monitor CloudCC CRM entry and `/customer-workbench/*` production API smoke.
+- next_action: Done through production release `2.2.6`; real CloudCC CRM embedded SSO passed, with only the cc-customization-expert-msapi customPage bind/update skill gap left for follow-up.
 
 ### TASK-170 - 安全规则平台与输入输出安全网关
 

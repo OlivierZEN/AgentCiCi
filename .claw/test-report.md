@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T13:05:59+08:00
+updated_at: 2026-07-09T14:24:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T13:05:59+08:00
+last_run_at: 2026-07-09T14:24:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,39 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 线上对话 `get_object_list` 后误停止工具规划修复与 `2.2.5` 生产发布。
-- 命令：生产 trace 只读定位、任务级门禁、assignment 授权检查、聚焦后端测试、backend compile、git diff check、ACR dry-run/release、ECS 部署、生产健康检查、生产登录/chat smoke。
+- 范围：TASK-171 CloudCC/AgentCiCi SSO 生产发布、`2.2.6` org-scoped demo seed 修复、真实 CloudCC CRM 嵌入页验证。
+- 命令：任务级门禁、assignment 授权检查、backend compile、git diff check、ACR dry-run/release、ECS 备份/部署、生产健康检查、CloudCC skill pagecomponent publish/verify、CloudCC Web 登录与嵌入页 Playwright 验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 CloudCC/AgentCiCi SSO production closure (2026-07-09T14:24:00+08:00):
+  - Commands:
+    - `identity-state-update`: `dev-login.py .claw --developer MANAGER-001 --task TASK-171 --files .claw/current-status.md .claw/tasks/TASK-171.md .claw/test-report.md .claw/issue-list.md .claw/devops.md .claw/task-board.md --json` -> **allowed**.
+    - `assignment-state-update`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-171 --files .claw/current-status.md .claw/tasks/TASK-171.md .claw/test-report.md .claw/issue-list.md .claw/devops.md .claw/task-board.md --json` -> **allowed**.
+    - `backend-compile-seed-fix`: `mvn -q -f backend/pom.xml -DskipTests compile` -> **success**.
+    - `static-check-seed-fix`: `git diff --check` -> **success**.
+    - `release-dry-run-2.2.6`: `./scripts/release-acr.sh --dry-run` -> **success**; next production version resolved to `2.2.6`.
+    - `release-2.2.6`: `./scripts/release-acr.sh --version 2.2.6` -> **success**; backend/frontend images and Git tag were pushed for commit `3ed80e1873bf`.
+    - `production-backup-2.2.6`: ECS backup `/opt/cici/backups/20260709-131149-before-2.2.6-task171-cloudcc-sso-seed` -> **success**, including `acr.env.before-release`, PostgreSQL dump, kb files, and Qdrant archive.
+    - `production-deploy-2.2.6`: updated `CICI_IMAGE_TAG` / `CICI_APP_VERSION` to `2.2.6`, tagged infra images locally, pulled backend/frontend, and restarted compose -> **success**.
+    - `production-health-2.2.6`: six services healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.2.6`, `imageTag=2.2.6`, `gitCommit=3ed80e1873bf`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.2.6`: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-workbench` -> HTTP `200`.
+    - `cloudcc-skill-verify-injection`: `cloudcc verify injectionPage . customer_interaction_workbench --expected-component component-customer-workbench` -> **passed**, with residual stale `actualComponentIds=["6a4db950e4b0a577cbba1eca"]`.
+    - `cloudcc-real-crm-embedded-sso`: Playwright login to CloudCC CRM with supplied test account and open `#/injectionComponent?page=customer_interaction_workbench&button=Home` -> **success**.
+  - CloudCC skill evidence:
+    - `cc-customization-expert-msapi` version `2.1.274-msapi` was used for pagecomponent packaging/publishing and injection verification.
+    - Published pagecomponent V7 id `6a4f2c24e4b0a577cbba1f4c`; CRM runtime loaded `https://res.lightning.cloudcc.cn/customjs/org0720f814430017229/component-customer-workbench-V7.0.js`.
+    - `bind pagecomponent` and `update customPage` both failed with `系统发生异常`; no direct CloudCC write bypass was used after those failures.
+  - Browser evidence:
+    - iframe URL was `https://x.agentcici.com/app?aiApp=customer-workbench&ssoTicket=...`.
+    - Requests returned HTTP `200`: `/auth/cloudcc-sso/ticket`, `/auth/cloudcc-sso/consume`, `/auth/me`, `/customer-workbench/accounts`, `/customer-workbench/accounts/demo-account-012`.
+    - Snapshot showed organization `智能体平台演示环境`, version badge `2.2.6`, AI 应用 `客户互动工作台`, 12-customer queue, and AI 客户助理 `CloudCC CRM 已连接`.
+    - Browser console errors: `0`.
+    - Screenshot: `output/playwright/task171-cloudcc-sso-final.png`.
+  - Notes:
+    - The `2.2.6` backend fix scopes newly seeded demo public IDs by org, avoiding global `customer_workbench_snapshot_public_id_key` collisions for CRM SSO orgs.
+    - `verify injectionPage` currently validates component name but does not fail stale component id references; this is tracked as a CloudCC skill gap.
 
 - TASK-171 CloudCC 对象列表后续查询收口修复与生产发布 (2026-07-09T13:05:59+08:00):
   - Production trace:

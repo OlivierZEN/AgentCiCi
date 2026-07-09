@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-09T13:05:59+08:00
+updated_at: 2026-07-09T14:24:00+08:00
 updated_by: MANAGER-001
 phase: release
 active_task: "TASK-171 客户互动工作台生产就绪"
-next_action: "TASK-171 CloudCC 对象列表后误停止工具规划问题已随 2.2.5 生产发布；若用户在原 org5 账号再次提问“查一下最近的潜在客户”，应观察到继续规划数据查询工具而非停在对象列表。"
+next_action: "TASK-171 已完成 2.2.6 生产发布和真实 CloudCC CRM 嵌入页 SSO 验证；后续仅需把 cc-customization-expert-msapi 的 customPage bind/update 失败与 stale component id 校验缺口回灌到技能。"
 read_next:
   goals: false
   decisions: false
@@ -13,7 +13,7 @@ read_next:
   task_board: true
   active_task_status: true
   test_report: true
-  devops: false
+  devops: true
 ---
 
 # Project Current Status
@@ -22,25 +22,15 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.2.5` from Git commit `e14a056b0790`.
-- User explicitly chose the larger standalone platform direction: new `/admin/data-quality`, facing all data sources; KB and KB connectors are the first adapter.
-- TASK-169 is done in production release `2.2.1`: data-source aggregation, quality scan, duplicate/invalid data detection, regex cleaning preview/apply, manual review queue, annotation suggestions, audited apply flow, standalone `/admin/data-quality`, and independent「知微画像」AI 应用 are live.
-- Latest TASK-169 validation: assignment and identity gates passed, `git diff --check` passed, production compose config rendered, frontend build passed, backend `KnowledgeBaseLifecycleIntegrationTest` passed against local `agentcici_test`, real local backend/frontend Playwright desktop validation of `/admin/data-quality` passed, scan `POST /data-quality/knowledge-bases/{kbId}/runs` returned `200`, browser console had 0 errors/warnings, no horizontal overflow at 1440px, and screenshot is `output/playwright/task169-data-quality-desktop.png`.
-- Production release `2.2.1` was built and deployed on 2026-07-07: backend/frontend ACR images and Git tag were pushed, ECS backup is `/opt/cici/backups/20260707-141611-before-2.2.1-task169-data-quality`, six services are healthy, `/system/version` reports `version=2.2.1`, `imageTag=2.2.1`, `gitCommit=65364b4460c9`, and `x.agentcici.com` plus authenticated core APIs passed smoke.
-- Front AI app follow-up: original `客户洞察` AI 应用 is preserved as a separate app; new `知微画像` AI 应用 now uses an independent `zhiwei-portrait` module and high-fidelity CDP demo structure with 对象列表、画像详情、标签库、AI 配置、运营看板. Desktop Playwright validation passed with 0 console errors and no horizontal overflow; screenshot is `output/playwright/zhiwei-portrait-ai-app.png`.
-- TASK-171 is done and production released in `2.2.3`: Customer Interaction Workbench AI app with new-customer progression, existing-customer growth, CloudCC CRM integration/module linkage, supporting skill content, demo data, and CRM embedded entry.
-- TASK-171 AgentCiCi-side implementation is functionally complete in local workspace: backend models/API/demo data, built-in `customer-interaction-workbench` skill binding, AI app entry, three-column workbench UI, new-customer progression, existing-customer growth, CRM landing suggestions, and AI assistant interactions are implemented.
-- TASK-171 validation: backend `mvn -q -DskipTests compile` passed, frontend `npm run build` passed, compose config rendered, Playwright desktop and deep-link validation passed locally, CloudCC pagecomponent/html/customPage/menu/app binding passed, production release `2.2.3` is healthy, and authenticated production `/customer-workbench/accounts` smoke returned 12 demo customers.
-- TASK-171 CloudCC side: OpenAPI and MetadataService are reachable; MetadataService capabilities returned 21 domains; standard `Task`, `Event`, and `Opportunity` queries returned real CRM rows; `customer-workbench` pagecomponent plus UMD bundle were safely published and updated through a temporary minimal project. Current online pagecomponent id is `6a4db950e4b0a577cbba1eca`, apiName is `custc_2026079sRcX7wv`, version is `5`, and default component URL targets `https://x.agentcici.com/app?aiApp=customer-workbench`. Do not publish this component directly from the repository root until the CLI dependency collection whitelist is fixed.
-- TASK-171 CRM side also has an online HTML wrapper component id `6a4d37ece4b0a577cbba1ec0`, apiName `customer_interaction_workbench`, accessPath `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`.
-- TASK-171 CloudCC CRM-side visible entry is now verified through direct devconsole/setup APIs after the Go CLI `customPage` dispatcher and MSAPI apply path proved insufficient. Online customPage id is `6a4dbc0ce4b0a577cbba1ecb`, pageApi is `customer_interaction_workbench`, renderVersion is `V2.0`; CRM page menu id is `acf2026C53BE54B9R1Iu`, tab label is `客户互动工作台`, lightning page is `customer_interaction_workbench#lightning`, and six profiles are authorized.
-- TASK-171 CloudCC CRM menu visibility hotfix (2026-07-08): the tab originally existed only in Sales Cloud `selectedTabList`, so users in the default `CloudCC` app or other apps could not see it. Direct setup API update appended tab id `acf2026C53BE54B9R1Iu` to all 8 existing apps: `CloudCC`, `销售云`, `市场云`, `服务云`, `商务云`, `客服服务云`, `项目管理系统`, and `利润云`; verification returned `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`.
-- TASK-171 CloudCC CRM white-page hotfix (2026-07-08): browser self-test with the supplied CloudCC account reproduced a blank `/injectionComponent?page=customer_interaction_workbench&button=Home`; root cause was the customPage still pointing at old pagecomponent `6a4d348fe4b0a577cbba1ebf`/`embedded=false`, whose UMD exposed a Vue component object but did not auto-mount into the injected custom element. The fix published pagecomponent `6a4db950e4b0a577cbba1eca` with auto-mount fallback and `embedded=true`, then updated customPage `customer_interaction_workbench` to V2.0 through devconsole developer-token API. Playwright reload now loads `component-customer-workbench-V5.0.js`, renders the iframe to `https://x.agentcici.com/app?aiApp=customer-workbench`, and screenshot is `output/playwright/task171-cloudcc-injection-fixed.png`.
-- TASK-171 双向登录本地实现 (2026-07-09): added `/auth/cloudcc-sso/ticket` and `/auth/cloudcc-sso/consume`; CloudCC CRM runtime token is used only for server-side identity validation, AgentCiCi login token is issued from the mapped `organization_member`, and CloudCC OpenAPI/MCP calls remain constrained to `CloudccAccessTokenService` generated CloudCC accessToken. CRM pagecomponent source and prebuilt UMD now attempt CCDK token/user handoff and inject only a 60-second one-time `ssoTicket` into the iframe URL. Local backend `mvn -q -f backend/pom.xml -DskipTests compile`, frontend `npm run build`, `node --check frontend/build/customer-workbench.umd.min.js`, and `git diff --check` passed; CloudCC CDN/pagecomponent publication and real CRM embedded SSO browser verification remain next.
-- TASK-171 CloudCC 对象列表工具收口修复 (2026-07-09): production trace `3c271ef5-c0c3-4977-8068-108c74e756d5` for “查一下最近的潜在客户。” showed only `get_object_list` ran, then `tool_planning_stop_skipped` stopped the second planning round before `get_object_data`. The fix treats `get_object_list` as metadata lookup so record-query intents continue tool planning; `ChatOrchestratorServiceModelIdentityTest`, backend compile, and `git diff --check` passed.
-- Production release notes: `2.2.2` shipped the main workbench at commit `5a4633dd0409`; `2.2.3` hotfixed production HTTPS Nginx routing for `/customer-workbench/*` at commit `f0ec47509bde`; `2.2.4` shipped CloudCC SSO handoff at commit `9b673c4076e6`; `2.2.5` shipped the `get_object_list` tool-planning hotfix at commit `e14a056b0790`. Current `/system/version` reports `version=2.2.5`, `imageTag=2.2.5`, `gitCommit=e14a056b0790`; production login and chat smoke passed, with the demo account correctly stopping at the no-CloudCC-binding message.
-- TASK-170 remains assigned and active but is no longer the current working focus in this thread; it covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, runtime integration, and `/admin/security-rules`.
-- FEAT-067 remains the source for existing enterprise KB readiness capabilities: parser/PDF, ACL, eval, connector skeleton, drift audit, embedding metadata, Qdrant smoke, and `/admin/kb` desktop validation.
+- Current branch: `main`; production is running release `2.2.6` from Git commit `3ed80e1873bf`.
+- TASK-171 is production-ready: Customer Interaction Workbench AI app, new-customer progression, existing-customer growth, CloudCC CRM embedded entry, and CloudCC/AgentCiCi SSO handoff are live.
+- Latest TASK-171 release: `2.2.6` fixed org-scoped customer-workbench demo seed IDs after CRM SSO exposed a duplicate `customer_workbench_snapshot.public_id` collision for org `org2sva14i4udjmi2t4s`.
+- Production release `2.2.6` passed: ACR backend/frontend images and Git tag were pushed; ECS backup is `/opt/cici/backups/20260709-131149-before-2.2.6-task171-cloudcc-sso-seed`; six services are healthy; `/system/version` reports `version=2.2.6`, `imageTag=2.2.6`, `gitCommit=3ed80e1873bf`; `https://x.agentcici.com/` and `/app?aiApp=customer-workbench` return HTTP 200.
+- CloudCC CRM real embedded SSO verification passed on 2026-07-09 using the supplied CRM web account: CRM loads `component-customer-workbench-V7.0.js`; iframe URL includes a one-time `ssoTicket`; `/auth/cloudcc-sso/ticket`, `/auth/cloudcc-sso/consume`, `/auth/me`, `/customer-workbench/accounts`, and customer detail requests returned HTTP 200; screenshot is `output/playwright/task171-cloudcc-sso-final.png`.
+- CloudCC high-code operations in the latest SSO closure used `cc-customization-expert-msapi`: `package pagecomponent --dry-run`, `publish pagecomponent`, `verify injectionPage`, and readback. The process did not bypass the skill after `bind pagecomponent` and `update customPage` failed.
+- Remaining CloudCC skill gap: `cloudcc bind pagecomponent . customer_interaction_workbench ...` and `cloudcc update customPage . customer_interaction_workbench @...` both fail with `系统发生异常`; `verify injectionPage` passes by component name while still reporting stale `actualComponentIds=["6a4db950e4b0a577cbba1eca"]` after V7 publish. Track this in `ISSUE-2026-07-09-cloudcc-custompage-bind-skill-gap`.
+- Production release history for TASK-171: `2.2.2` main workbench, `2.2.3` HTTPS proxy, `2.2.4` CloudCC SSO handoff, `2.2.5` CloudCC object-list planning hotfix, `2.2.6` org-scoped workbench demo seed fix.
+- TASK-170 remains assigned and active but is not the current working focus in this thread; it covers FEAT-080 security rules platform and runtime safety gateway.
 - Production release source of truth remains `docs/production-release-runbook.md`; `scripts/release-acr.sh` owns numeric production versions and production-based beta test versions.
 
 ## Read Next
@@ -49,10 +39,6 @@ read_next:
 - `.claw/tasks/TASK-171.md` - current customer interaction workbench task state.
 - `.claw/assignments/TASK-171.yaml` - current authorized write scope.
 - `docs/specs/FEAT-081-customer-interaction-workbench.md` - customer interaction workbench feature spec.
-- `.claw/tasks/TASK-170.md` - active security rules platform task state.
-- `.claw/assignments/TASK-170.yaml` - active security rules platform write scope.
-- `docs/specs/FEAT-080-security-rules-platform.md` - security rules platform feature spec.
-- `.claw/tasks/TASK-169.md` - completed data cleaning and annotation task state.
-- `docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md` - existing KB platform readiness source.
 - `.claw/test-report.md` - latest verified commands.
-- `.claw/issue-list.md` - latest CloudCC customPage/menu automation findings for TASK-171.
+- `.claw/issue-list.md` - CloudCC skill and operations findings.
+- `.claw/devops.md` - latest production release evidence.

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-08T02:20:33+08:00
+updated_at: 2026-07-09T14:24:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,19 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.2.6 TASK-171 CloudCC SSO seed hotfix on 2026-07-09:
+  - Git commit: `3ed80e1873bf` on `main`; annotated tag `2.2.6` was pushed to origin.
+  - Scope: org-scoped customer workbench demo seed IDs after CloudCC SSO org `org2sva14i4udjmi2t4s` exposed a duplicate `customer_workbench_snapshot.public_id` collision.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.2.6`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.6`, index digest `sha256:23093c7de619dd88f1b5fe1fdc67cb17e9ceb03f03728095f3ee007bdfe2c49c`, linux/amd64 manifest digest `sha256:8ef7c7c92b6629f07c9675dac9999c42fc2a4f6d8c85f7cc76003b5472acb4ff`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.6`, index digest `sha256:32e06acd70ac623cfbb761496db4d990c0d0d38740c09a5f5b2062299418bbc5`, linux/amd64 manifest digest `sha256:b870534d4f890cd760ff23106912f79e71a50066b3d88480f45342cbde6eb06d`.
+  - Backup directory: `/opt/cici/backups/20260709-131149-before-2.2.6-task171-cloudcc-sso-seed`, containing `acr.env.before-release`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.2.6` and `CICI_APP_VERSION=2.2.6`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged as `2.2.6` because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.6`, `imageTag=2.2.6`, and `gitCommit=3ed80e1873bf`; frontend `nginx -t` passed.
+  - Public smoke: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-workbench` returned HTTP 200.
+  - Real CRM embedded smoke: CloudCC CRM page loaded `component-customer-workbench-V7.0.js`; iframe used an AgentCiCi `ssoTicket`; SSO ticket, consume, auth/me, customer list, and customer detail requests all returned HTTP 200; screenshot `output/playwright/task171-cloudcc-sso-final.png`.
 
 - 2.2.3 TASK-171 customer interaction workbench release on 2026-07-08:
   - Git commits: main workbench `5a4633dd0409`, proxy hotfix image commit `f0ec47509bde`, and source SSL vhost sync commit `0271e52` pushed to `origin/main`; annotated tags `2.2.2` and `2.2.3` were pushed to origin.
