@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T07:18:26+08:00
+updated_at: 2026-07-10T07:28:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-174 - 数据洞察 AI 应用生产发布
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `project-manager`
 - spec_path: `docs/specs/FEAT-084-data-insight-ai-app.md`
 - task_status_path: `.claw/tasks/TASK-174.md`
 - assignment_path: `.claw/assignments/TASK-174.yaml`
 - blocked_by: `none`
-- next_action: Local backend/frontend/desktop validation passed; prepare commit and run production release.
+- next_action: Done in production release `2.3.2`; monitor 数据洞察 dashboard, demo org `REAL_CRM_DEMO` source labeling, and onechat DNS risk.
 
 ### TASK-173 - 客户互动工作台真实智能体助理
 

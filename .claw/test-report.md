@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T07:18:26+08:00
+updated_at: 2026-07-10T07:28:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T07:18:26+08:00
+last_run_at: 2026-07-10T07:28:00+08:00
 last_run_status: success
 ---
 
@@ -13,13 +13,13 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-174 数据洞察 AI 应用本地生产就绪验证。
-- 命令：身份门禁、assignment check、CloudCC standard-catalog 扫描、后端聚焦集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 视觉与溢出检查。
+- 范围：TASK-174 数据洞察 AI 应用生产发布。
+- 命令：身份门禁、assignment check、CloudCC standard-catalog 扫描、后端聚焦集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 视觉与溢出检查、release dry-run、镜像构建推送、ECS 备份、线上部署、健康检查、公网 smoke、认证后数据洞察 API 和浏览器 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
 
-- TASK-174 data insight AI app local readiness (2026-07-10T07:18:26+08:00):
+- TASK-174 production release `2.3.2` for data insight AI app (2026-07-10T07:28:00+08:00):
   - Commands:
     - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-174 --branch main --files ... --json` -> **allowed**.
     - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-174 --branch main --files ... --json` -> **allowed**.
@@ -28,8 +28,20 @@ last_run_status: success
     - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
     - `static-check`: `git diff --check` -> **success**.
     - `desktop-visual-check`: local Vite `/app?aiApp=customer-insight` with mocked authenticated APIs and dashboard payload -> **success**; page title `数据洞察`, dashboard rendered, main panel `scrollWidth=clientWidth=966`, no overflow offenders.
+    - `release-dry-run-2.3.2`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.3.2`, commit `d144149168ea`.
+    - `release-2.3.2`: `./scripts/release-acr.sh --version 2.3.2` -> **success**; backend/frontend linux/amd64 images and Git tag were pushed.
+    - `production-backup-2.3.2`: ECS backup `/opt/cici/backups/20260710-072126-before-2.3.2-task174-data-insight` -> **success**, containing `acr.env.before-2.3.2`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `production-deploy-2.3.2`: updated `CICI_IMAGE_TAG` and `CICI_APP_VERSION` to `2.3.2`, tagged infra aliases locally, pulled backend/frontend, and force-recreated all six services -> **success**. An initial compose command inherited stale shell env `2.3.1`; rerun with cleared compose interpolation env rendered all images as `2.3.2` and replaced the containers.
+    - `production-health-2.3.2`: backend/frontend and infra containers on `2.3.2`, all healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.3.2`, `imageTag=2.3.2`, `gitCommit=d144149168ea`; frontend `nginx -t` -> **success**; recent backend error scan after deploy -> **success**, no matches.
+    - `public-smoke-2.3.2`: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-insight` -> HTTP `200`; `http://x.agentcici.com/` -> HTTPS `301`; production-IP resolved `https://onechat.agentcici.com/` -> HTTP `200`; local DNS for `onechat.agentcici.com` still returned NXDOMAIN.
+    - `authenticated-data-insight-smoke-2.3.2`: login org `org2sva14i4udjmi2t4s` returned `智能体平台演示环境`; `/ai/customer-insights/dashboard` -> `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`, open opportunities `8`, visible account rows `8`, funnel rows `6`, risk rows `5`.
+    - `production-browser-data-insight-2.3.2`: Playwright against `https://x.agentcici.com/app?aiApp=customer-insight` at 1620x920 with real production login -> **success**; page contains `数据洞察` and `CRM 演示数据`; main panel `scrollWidth=clientWidth=1306`; dashboard `offenderCount=0`.
+  - Images:
+    - Backend index digest: `sha256:bbde5cd14b60298ae2eae403e05be056c3dad0ac1842736ec517dba495af612c`; linux/amd64 manifest `sha256:3d8ca58e3a0ac295f522639f6cb3ec9e3de0b876eb21cf425d1a035246031929`.
+    - Frontend index digest: `sha256:c54004dd9d37610dce33ada518b026fa9e796eafb1945bb535faa3411040699d`; linux/amd64 manifest `sha256:71dba59506b3a34c01499ce05489e24d920f7ec2ff22153300ffe02dd88b2936`.
   - Browser evidence:
     - Screenshot: `output/playwright/data-insight-desktop-refined.png`.
+    - Production screenshot: `output/playwright/task174-prod-data-insight-2.3.2.png`.
   - Notes:
     - The dashboard source label distinguishes demo org real CRM-backed aggregate data from generic aggregate data and Mock fallback.
     - No reusable credentials, tokens, cookies, or secret values are recorded in this report.

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T06:57:56+08:00
+updated_at: 2026-07-10T07:28:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.2 TASK-174 数据洞察 AI 应用生产发布 on 2026-07-10:
+  - Git commit: `d144149168ea` on `main`; annotated tag `2.3.2` was pushed to origin.
+  - Scope: 智能体平台 AI 应用列表新增/升级“数据洞察”，面向 CRM 潜在客户、商机、客户、合同订单和销售业绩展示精细仪表板；演示组织优先使用 CRM-backed aggregate data，其他无数据组织使用明确标注的 Mock fallback。
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.3.2`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.2`, index digest `sha256:bbde5cd14b60298ae2eae403e05be056c3dad0ac1842736ec517dba495af612c`, linux/amd64 manifest digest `sha256:3d8ca58e3a0ac295f522639f6cb3ec9e3de0b876eb21cf425d1a035246031929`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.2`, index digest `sha256:c54004dd9d37610dce33ada518b026fa9e796eafb1945bb535faa3411040699d`, linux/amd64 manifest digest `sha256:71dba59506b3a34c01499ce05489e24d920f7ec2ff22153300ffe02dd88b2936`.
+  - Backup directory: `/opt/cici/backups/20260710-072126-before-2.3.2-task174-data-insight`, containing `acr.env.before-2.3.2`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.3.2` and `CICI_APP_VERSION=2.3.2`.
+  - Deploy note: backend/frontend images were pulled from ACR and all six services were force-recreated onto `2.3.2`; ECS infra images were locally tagged as `2.3.2`. An initial compose run inherited stale shell env `2.3.1` and was immediately corrected by rerunning compose with cleared interpolation env, after which rendered images and running containers all showed `2.3.2`.
+  - Verified after deploy: all six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.3.2`, `imageTag=2.3.2`, and `gitCommit=d144149168ea`; frontend `nginx -t` passed; recent backend log scan had no error matches.
+  - Public smoke: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-insight` returned HTTP 200; `http://x.agentcici.com/` redirected to HTTPS; production-IP resolved `https://onechat.agentcici.com/` returned HTTP 200. Local DNS still could not resolve `onechat.agentcici.com`, matching the existing DNS risk.
+  - Authenticated data insight smoke: demo org `org2sva14i4udjmi2t4s` returned org name `智能体平台演示环境`; `/ai/customer-insights/dashboard` returned `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`, open opportunities `8`, visible accounts `8`, funnel rows `6`, and risk rows `5`.
+  - Browser smoke: production `https://x.agentcici.com/app?aiApp=customer-insight` loaded with real production login at 1620x920; `数据洞察` and `CRM 演示数据` were visible, main panel `scrollWidth=clientWidth=1306`, and dashboard `offenderCount=0`. Screenshot: `output/playwright/task174-prod-data-insight-2.3.2.png`.
 
 - 2.3.1 TASK-173 customer workbench real agent assistant hotfix on 2026-07-10:
   - Git commit: `ff9b9cc7cc4a` on `main`; annotated tag `2.3.1` was pushed to origin.

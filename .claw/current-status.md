@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T07:18:26+08:00
+updated_at: 2026-07-10T07:28:00+08:00
 updated_by: MANAGER-001
-phase: data-insight-ai-app-production
+phase: data-insight-ai-app-released
 active_task: "TASK-174"
-next_action: "Commit TASK-174 and run production release dry-run, image release, backup, deploy, health checks, and smoke tests."
+next_action: "Monitor production release 2.3.2 data insight dashboard and existing onechat DNS risk."
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,15 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.3.1` from Git commit `ff9b9cc7cc4a`.
-- TASK-174 implementation is in review: upgraded the existing customer insight AI app into “数据洞察”, added CRM data dashboard charts for leads, opportunities, customers, contract/order, sales performance, and kept no-data Mock fallback clearly labeled.
+- Current branch: `main`; production is running release `2.3.2` from Git commit `d144149168ea`.
+- TASK-174 is done and production released: upgraded the existing customer insight AI app into “数据洞察”, added CRM data dashboard charts for leads, opportunities, customers, contract/order, sales performance, and kept no-data Mock fallback clearly labeled.
 - TASK-174 CloudCC standard-catalog scan confirmed standard CRM objects including `Account`, `Contact`, `cloudcclead`, `Opportunity`, `contract`, `cloudccorder`, `product`, `Task`, and `Event`.
 - TASK-174 local validation passed: task-scoped identity gate, assignment check, backend `CustomerInsightIntegrationTest`, frontend `npm run build`, `git diff --check`, and desktop Playwright visual/overflow check for `/app?aiApp=customer-insight`.
 - TASK-174 dashboard source behavior: demo org `org2sva14i4udjmi2t4s` uses CRM-backed AgentCiCi aggregate rows and labels the source as real demo CRM data; other organizations use aggregate data when present, otherwise clearly labeled Mock display data.
+- TASK-174 production release `2.3.2` passed: ACR image release, Git tag push, ECS backup, deployment, six-container health, `/system/version`, public smoke, authenticated dashboard API smoke, and production browser UI smoke.
+- Current production backup: `/opt/cici/backups/20260710-072126-before-2.3.2-task174-data-insight`.
+- Production browser evidence: `output/playwright/task174-prod-data-insight-2.3.2.png`; main panel `scrollWidth=clientWidth=1306`, dashboard offender count `0`.
+- Known DNS risk remains: local workstation DNS cannot resolve `onechat.agentcici.com`; production-IP resolved smoke for `onechat.agentcici.com` returned HTTP 200.
 - TASK-173 is done and production released: customer workbench right assistant no longer renders the crossed top voice bar or quick action button area.
 - TASK-173 backend routes `/customer-workbench/assistant` through `ChatOrchestratorService.chat(...)` with `agentId=cici-system` and `activeSkillCode=customer-interaction-workbench`; response payload includes agent/model/run audit fields, and workbench session ids are stable 55-character ids within the `chat_session_state.session_id` limit.
 - TASK-173 frontend microphone now reuses `useAsrVoiceInput` and `/ws/asr` with Aliyun provider instead of browser `SpeechRecognition`.
