@@ -173,10 +173,11 @@ export function useAsrVoiceInput() {
     clearSilenceTimer();
     setListening(false);
     const websocket = asrWsRef.current;
+    asrReadyRef.current = false;
+    disconnectAudio();
     if (websocket && websocket.readyState === 1) {
       websocket.send(JSON.stringify({ type: "stop" }));
     }
-    disconnectAudio();
     if (websocket) {
       window.setTimeout(() => {
         if (websocket.readyState === 0 || websocket.readyState === 1) {
@@ -194,6 +195,7 @@ export function useAsrVoiceInput() {
       /* ignore */
     }
     asrWsRef.current = null;
+    asrReadyRef.current = false;
     disconnectAudio();
     setListening(false);
   }, [clearSilenceTimer, disconnectAudio]);

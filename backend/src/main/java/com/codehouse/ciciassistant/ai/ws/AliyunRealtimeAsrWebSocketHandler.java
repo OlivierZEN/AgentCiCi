@@ -127,6 +127,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     startAliyunTask(ctx, sampleRate);
                 }
             } else if ("stop".equalsIgnoreCase(type)) {
+                ctx.started = false;
                 if (ctx.aliyunClient != null) {
                     ctx.aliyunClient.finishTask();
                 }
@@ -445,6 +446,8 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         private final String taskId;
         private final int sampleRate;
         private final StringBuilder textBuffer = new StringBuilder();
+        private CompletableFuture<WebSocket> sendChain = CompletableFuture.completedFuture(null);
+        private volatile boolean finishing;
         private WebSocket ws;
 
         private AliyunWsClient(SessionCtx ctx, String taskId, int sampleRate) {
@@ -462,12 +465,21 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         }
 
         void sendAudio(ByteBuffer audioPcm16le) {
-            if (ws == null) return;
-            ws.sendBinary(audioPcm16le, true);
+            if (ws == null || finishing) return;
+            ByteBuffer copy = ByteBuffer.allocate(audioPcm16le.remaining());
+            copy.put(audioPcm16le);
+            copy.flip();
+            synchronized (this) {
+                if (finishing) return;
+                sendChain = sendChain
+                        .exceptionally(error -> ws)
+                        .thenCompose(ignored -> ws.sendBinary(copy, true));
+            }
         }
 
         void finishTask() {
-            if (ws == null) return;
+            if (ws == null || finishing) return;
+            finishing = true;
             try {
                 Map<String, Object> finish = Map.of(
                         "header", Map.of(
@@ -477,7 +489,12 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                         ),
                         "payload", Map.of("input", Map.of())
                 );
-                ws.sendText(objectMapper.writeValueAsString(finish), true);
+                String payload = objectMapper.writeValueAsString(finish);
+                synchronized (this) {
+                    sendChain = sendChain
+                            .exceptionally(error -> ws)
+                            .thenCompose(ignored -> ws.sendText(payload, true));
+                }
             } catch (Exception e) {
                 sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", e.getMessage()));
             }
@@ -571,10 +588,12 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                     return;
                 }
                 if ("task-finished".equals(event)) {
+                    ctx.started = false;
                     sendClientEvent(ctx.clientSession, Map.of("type", "finished"));
                     return;
                 }
                 if ("task-failed".equals(event)) {
+                    ctx.started = false;
                     String err = header.path("error_message").asText("task failed");
                     sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", err));
                 }
