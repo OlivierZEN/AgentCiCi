@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T15:16:00+08:00
+updated_at: 2026-07-09T15:24:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T15:16:00+08:00
+last_run_at: 2026-07-09T15:24:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,34 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 CRM clean-embed hotfix，本地实现 CloudCC CRM 专用轻量入口，移除 AgentCiCi 平台侧栏、AI 应用列表和 pagecomponent 外层头部。
-- 命令：任务级门禁、assignment 授权检查、frontend build、UMD syntax check、git diff check、`cc-customization-expert-msapi` pagecomponent dry-run、Playwright DOM 验证。
+- 范围：TASK-171 CRM clean-embed hotfix 生产发布与真实 CloudCC CRM 嵌入页验证。
+- 命令：frontend build、UMD syntax check、git diff check、release dry-run、ACR release `2.2.7`、ECS 备份/部署/健康检查、`cc-customization-expert-msapi` pagecomponent V8 发布/verify、CloudCC CRM Playwright iframe DOM 验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 CRM clean embed production closure (2026-07-09T15:24:00+08:00):
+  - Commands:
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `umd-static`: `node --check frontend/build/customer-workbench.umd.min.js && git diff --check` -> **success**.
+    - `cloudcc-pagecomponent-dry-run`: `cloudcc package pagecomponent customer-workbench --dry-run` through `cc-customization-expert-msapi` -> **success**.
+    - `local-embed-dom`: Playwright at `http://127.0.0.1:5173/app?aiApp=customer-workbench&embed=crm` with mocked APIs -> **success**, `hasRail=false`, `hasAiApps=false`, `hasEmbedded=true`.
+    - `release-dry-run-2.2.7`: `./scripts/release-acr.sh --dry-run` -> **success**; next production version resolved to `2.2.7`.
+    - `release-2.2.7`: `./scripts/release-acr.sh --version 2.2.7` -> **success**; backend/frontend images and Git tag were pushed for commit `78fa13dd1185`.
+    - `production-backup-2.2.7`: ECS backup `/opt/cici/backups/20260709-151814-before-2.2.7-task171-clean-embed` -> **success**, including env, PostgreSQL dump, kb files, and Qdrant archive.
+    - `production-deploy-2.2.7`: updated `CICI_IMAGE_TAG` / `CICI_APP_VERSION` to `2.2.7`, tagged infra aliases from `2.2.6`, pulled backend/frontend, and restarted compose -> **success**.
+    - `production-health-2.2.7`: six services healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.2.7`, `imageTag=2.2.7`, `gitCommit=78fa13dd1185`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.2.7`: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm` -> HTTP `200`.
+    - `cloudcc-publish-v8`: `cloudcc publish pagecomponent customer-workbench .` through `cc-customization-expert-msapi` -> **success**, published V8 id `6a4f4be8e4b0a577cbba1f70`, apiName `custc_202607F3INXE0S`.
+    - `cloudcc-bind-v8`: `cloudcc bind pagecomponent . customer_interaction_workbench 6a4f4be8e4b0a577cbba1f70 --embedded true --workspace-url ...` -> **failed** with CloudCC `系统发生异常`; no direct write bypass was used.
+    - `cloudcc-verify-v8`: `cloudcc verify injectionPage . customer_interaction_workbench --expected-component component-customer-workbench --expected-component-id 6a4f4be8e4b0a577cbba1f70 --stale-policy warning` -> **warning**, correctly reported stale `actualComponentIds=["6a4db950e4b0a577cbba1eca"]` while resolving expected V8.
+    - `cloudcc-real-crm-clean-embed`: Playwright login to CloudCC CRM and open `#/injectionComponent?page=customer_interaction_workbench&button=Home` -> **success**.
+  - Browser evidence:
+    - CRM runtime loaded `https://res.lightning.cloudcc.cn/customjs/org0720f814430017229/component-customer-workbench-V8.0.js`.
+    - iframe URL was `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm&ssoTicket=...`.
+    - Inside iframe DOM assertion returned `hasRail=false`, `hasAiApps=false`, `hasEmbedded=true`.
+    - Visible iframe content starts from `客户推进队列` and the customer interaction workbench body; no AgentCiCi platform rail or AI 应用列表 is rendered inside the iframe.
+    - Screenshot: `output/playwright/task171-cloudcc-clean-embed-v8.png`.
 
 - TASK-171 CloudCC/AgentCiCi SSO production closure (2026-07-09T14:24:00+08:00):
   - Commands:

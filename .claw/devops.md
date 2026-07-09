@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-09T14:24:00+08:00
+updated_at: 2026-07-09T15:24:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.2.7 TASK-171 CRM clean embed hotfix on 2026-07-09:
+  - Git commit: `78fa13dd1185` on `main`; annotated tag `2.2.7` was pushed to origin.
+  - Scope: CloudCC CRM embeds only the customer interaction workbench body via `/app?aiApp=customer-workbench&embed=crm`, removing the AgentCiCi platform rail, AI 应用列表, and pagecomponent outer header from the embedded experience.
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.2.7`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.2.7`, index digest `sha256:f4f420668947d1b63f0f57792aa191361e64ea174aa50bd3f514e547089cbbfa`, linux/amd64 manifest digest `sha256:eeb1c1d344f0bbc8be36169b361bb3bfe2d66f06f7c6b873e1609b2a163f43d2`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.2.7`, index digest `sha256:68bbbb2b3881b7d50568bd8933eacf6df7e6bb612a9f1c2e4a766b795d86317f`, linux/amd64 manifest digest `sha256:d6cb7c349d2cbb02261b5047bd0ad8860a255a1ada8059825118fc5f446835b2`.
+  - Backup directory: `/opt/cici/backups/20260709-151814-before-2.2.7-task171-clean-embed`, containing `acr.env.before-2.2.7`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.2.7` and `CICI_APP_VERSION=2.2.7`.
+  - Deploy note: backend/frontend images were pulled from ACR successfully; ECS infra images were locally tagged from `2.2.6` to `2.2.7` because Compose uses the shared `CICI_IMAGE_TAG` for all six services.
+  - Verified after deploy: six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.2.7`, `imageTag=2.2.7`, and `gitCommit=78fa13dd1185`; frontend `nginx -t` passed.
+  - Public smoke: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm` returned HTTP 200.
+  - CloudCC publish and real CRM smoke: `cc-customization-expert-msapi` published pagecomponent V8 id `6a4f4be8e4b0a577cbba1f70`, apiName `custc_202607F3INXE0S`; real CRM runtime loaded `component-customer-workbench-V8.0.js`; iframe used `embed=crm&ssoTicket=...`; iframe DOM returned `hasRail=false`, `hasAiApps=false`, `hasEmbedded=true`; screenshot `output/playwright/task171-cloudcc-clean-embed-v8.png`.
+  - Remaining skill gap: `cloudcc bind pagecomponent ...` still returns `系统发生异常`; runtime succeeds by loading latest V8 by component name, but customPage readback remains stale and should be fixed in `cc-customization-expert-msapi`.
 
 - 2.2.6 TASK-171 CloudCC SSO seed hotfix on 2026-07-09:
   - Git commit: `3ed80e1873bf` on `main`; annotated tag `2.2.6` was pushed to origin.

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-09T15:16:00+08:00
+updated_at: 2026-07-09T15:24:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-171.md`
 - assignment_path: `.claw/assignments/TASK-171.yaml`
 - blocked_by: `none`
-- next_action: CRM clean-embed hotfix implemented and locally verified; next publish AgentCiCi `2.2.7`, publish CloudCC pagecomponent through `cc-customization-expert-msapi`, and retest the real CRM embedded page.
+- next_action: Done through production release `2.2.7` and CloudCC pagecomponent V8 real CRM validation; continue tracking the `cc-customization-expert-msapi` bind pagecomponent write failure as a skill gap.
 
 ### TASK-170 - 安全规则平台与输入输出安全网关
 

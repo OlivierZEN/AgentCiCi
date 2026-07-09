@@ -328,6 +328,7 @@ CloudCC pagecomponent
 - AgentCiCi `/app?aiApp=customer-workbench` 仍作为平台内 AI 应用直达入口；CloudCC CRM 嵌入必须使用 `/app?aiApp=customer-workbench&embed=crm`。`embed=crm` 是 CRM 专用轻量入口，只渲染客户互动工作台主体，不渲染 AgentCiCi 左侧平台栏、AI 应用列表、主页 header 或其他平台无关内容。
 - CloudCC CRM 侧已通过 OpenAPI 验证 `Task`、`Event`、`Opportunity` 标准对象可查询；页面组件 `customer-workbench` 和预构建 UMD bundle 已通过安全临时项目发布到 CloudCC 云端。当前线上有效组件 id 为 `6a4d348fe4b0a577cbba1ebf`，apiName 为 `custc_202607Hdhm60zo`，本地 `frontend/pagecomponents/customer-workbench/config.json` 已同步该 id。
 - CloudCC 页面组件默认工作台地址必须为 `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`，SSO `targetPath` 也必须使用同一路径。pagecomponent 自身只负责 CloudCC token 读取、换取 AgentCiCi 一次性 `ssoTicket` 和 iframe 承载，不再显示“AI 应用”“打开工作台”等 AgentCiCi 平台级头部。
+- 生产版本 `2.2.7` 和 CloudCC pagecomponent V8 已验证该嵌入形态：CRM 运行态加载 `component-customer-workbench-V8.0.js`，iframe 使用 `/app?aiApp=customer-workbench&embed=crm&ssoTicket=...`，iframe 内无 AgentCiCi 平台侧栏、无 AI 应用列表，仅显示客户互动工作台主体。
 - CloudCC HTML 组件已通过 devconsole API 保存，作为 CRM 内可承载的 iframe 包装页。线上 HTML 组件 id 为 `6a4d37ece4b0a577cbba1ec0`，apiName 为 `customer_interaction_workbench`，访问路径为 `/oss/html/org0720f814430017229/customer_interaction_workbench-v1.html`。
 - 不得直接从当前仓库根目录执行 `cloudcc publish pagecomponent customer-workbench .`，除非先修复 CLI 的 pagecomponent 依赖收集白名单；根目录发布曾把项目配置打入 `compContentVue`，对应云端组件已立即删除。
 - CloudCC customPage 已通过 devconsole API 创建并验证：线上 customPage id 为 `6a4d3b831b8c6d0ec6dd22ef`，页面标签 `客户互动工作台`，pageApi `customer_interaction_workbench`。
