@@ -147,16 +147,30 @@ export default {
       if (!tokenApi) {
         return "";
       }
-      const tokenValue = await this.callCcdk((done) => {
+      const openApiTokenValue = await this.callCcdk((done) => {
         if (typeof tokenApi.getOpenApiToken === "function") {
           return tokenApi.getOpenApiToken(done);
         }
+        return "";
+      });
+      const openApiToken = this.firstString(openApiTokenValue, [
+        "accessToken",
+        "token",
+        "data.accessToken",
+        "data.token",
+        "result.accessToken",
+        "result.token"
+      ]);
+      if (openApiToken) {
+        return openApiToken;
+      }
+      const runtimeTokenValue = await this.callCcdk((done) => {
         if (typeof tokenApi.getToken === "function") {
           return tokenApi.getToken(done);
         }
         return "";
       });
-      return this.firstString(tokenValue, [
+      return this.firstString(runtimeTokenValue, [
         "accessToken",
         "token",
         "data.accessToken",
