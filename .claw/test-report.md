@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-09T22:42:00+08:00
+updated_at: 2026-07-09T23:02:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-09T22:42:00+08:00
+last_run_at: 2026-07-09T23:02:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,31 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 Agent 平台内客户互动工作台视觉比例回归修复。
-- 命令：Playwright 1920x960 本地新客户/老客户模式截图与 DOM 断言、`git diff --check`、frontend build。
+- 范围：TASK-171 Agent 平台内客户互动工作台视觉比例回归修复生产发布。
+- 命令：Playwright 1920x960 本地和生产新客户/老客户模式截图与 DOM 断言、`git diff --check`、frontend build、ACR release `2.2.10`、ECS 备份/部署/健康检查、公网 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 production release `2.2.10` for Agent platform workbench visual repair (2026-07-09T23:02:00+08:00):
+  - Commands:
+    - `release-dry-run-2.2.10`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.2.10`.
+    - `release-2.2.10`: `./scripts/release-acr.sh --version 2.2.10` -> **success**; backend/frontend linux/amd64 images and Git tag were pushed for commit `8a003121df0c`.
+    - `production-backup-2.2.10`: ECS backup `/opt/cici/backups/20260709-225131-before-2.2.10-task171-workbench-visual-repair` -> **success**, including `acr.env.before-2.2.10`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `production-deploy-2.2.10`: updated `CICI_IMAGE_TAG` and `CICI_APP_VERSION` to `2.2.10`, pulled backend/frontend, tagged infra aliases, and restarted compose -> **success**.
+    - `production-health-2.2.10`: six services healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.2.10`, `imageTag=2.2.10`, `gitCommit=8a003121df0c`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.2.10`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, `/app?aiApp=customer-workbench&embed=crm`, and production-IP resolved `https://onechat.agentcici.com/` -> HTTP `200`.
+    - `production-agent-workbench-visual-new`: Playwright 1920x960 against `https://x.agentcici.com/app?aiApp=customer-workbench` with real production login -> **success**.
+    - `production-agent-workbench-visual-existing`: switched to `老客户经营` on the same production page -> **success**.
+  - Images:
+    - Backend index digest: `sha256:d52997b7c5145ab9e42170cedc43c87b54af8ac0f4cf11bab8e1e7292a2ecc93`; linux/amd64 manifest `sha256:9894d1257205969a315b118b0f4ee65e29a17ce3fa52db967af78a0cd9651507`.
+    - Frontend index digest: `sha256:b14bf2b878e24bb54accbb1346cdeee07393ac08832d43dc9f02c00f6eacef80`; linux/amd64 manifest `sha256:61308bfd176b343d6ead05c9e7f4eb5ee4bd1685d71254cc0d5098f65d537fb5`.
+  - Browser evidence:
+    - New-customer mode returned `versionText=2.2.10`, `heroCount=0`, `outerOverflow=false`, `brandVisible=false`, `chatScrollbarVisible=false`, `verticalBadges=[]`, `bottomVisible=true`, `hasNewQueue=true`, `hasAssistant=true`, and `hasBottomPanel=true`.
+    - Existing-customer mode returned `versionText=2.2.10`, `hasExistingQueue=true`, `hasRiskPanel=true`, `outerOverflow=false`, `chatScrollbarVisible=false`, and `bottomVisible=true`.
+    - Screenshots: `output/playwright/task171-agent-prod-2.2.10-visual-repair.png`, `output/playwright/task171-agent-prod-2.2.10-existing-visual-repair.png`.
+  - Notes:
+    - Frontend logs contained transient upstream connection-refused entries during restart for an existing `/ai/sessions/stream` client; all services were healthy and public/browser smokes passed after deployment.
 
 - TASK-171 Agent platform customer workbench visual repair (2026-07-09T22:42:00+08:00):
   - Commands:
