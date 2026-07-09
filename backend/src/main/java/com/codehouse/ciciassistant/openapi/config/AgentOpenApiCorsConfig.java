@@ -36,6 +36,7 @@ public class AgentOpenApiCorsConfig {
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/openapi/v1/**", configuration);
+        source.registerCorsConfiguration("/auth/cloudcc-sso/**", configuration);
 
         FilterRegistrationBean<CorsFilter> registration = new FilterRegistrationBean<>(new CorsFilter(source));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE);

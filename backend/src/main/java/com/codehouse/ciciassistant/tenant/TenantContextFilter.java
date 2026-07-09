@@ -152,6 +152,8 @@ public class TenantContextFilter extends OncePerRequestFilter {
                 || "/auth/sms/login".equals(path)
                 || "/auth/password/login".equals(path)
                 || "/auth/register".equals(path)
+                || "/auth/cloudcc-sso/ticket".equals(path)
+                || "/auth/cloudcc-sso/consume".equals(path)
                 || "/auth/platform/password/login".equals(path)
                 || "/actuator/health".equals(path)
                 || "/system/health".equals(path)

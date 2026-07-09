@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-08T10:26:57+08:00
+updated_at: 2026-07-08T10:56:26+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -39,6 +39,13 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-07-08-customer-workbench-injection-whitepage:
+  - Symptom: 用户反馈 CloudCC CRM 菜单“客户互动工作台”已经可见，但打开 `#/injectionComponent?page=customer_interaction_workbench&button=Home` 后页面主体为空白。
+  - Verified root cause: 真实 CRM Web 登录自测复现白页；`detailCustomPage` 显示 customPage 仍指向旧 pagecomponent `6a4d348fe4b0a577cbba1ebf`，且 pageContent 中 `embedded=false`；页面加载的 `component-customer-workbench-V4.0.js` 仅暴露 `window["component-customer-workbench"]`，没有在 CRM 注入容器的 `<component-customer-workbench>` 标签上自动挂载 Vue 组件。
+  - Resolution (2026-07-08): 发布 pagecomponent V5，线上组件 id `6a4db950e4b0a577cbba1eca`、apiName `custc_2026079sRcX7wv`，UMD bundle 增加自动挂载与 DOM iframe fallback，组件默认 `embedded=true`；再通过 devconsole developer-token API 更新 customPage `customer_interaction_workbench` 到 id `6a4dbc0ce4b0a577cbba1ecb`、renderVersion `V2.0`，页面内容指向新组件 id 并设为 `embedded=true`。
+  - Verification (2026-07-08): Playwright/Chrome 使用用户提供的 CloudCC Web 账号登录后重开同一路由，页面加载 `component-customer-workbench-V5.0.js`，自定义元素和 iframe `https://x.agentcici.com/app?aiApp=customer-workbench` 正常渲染；截图 `output/playwright/task171-cloudcc-injection-fixed.png`。无 AgentCiCi 会话时 iframe 显示 AgentCiCi 登录页，这是后续 SSO/login handoff 问题，不属于 CloudCC 白页。
+  - Status: resolved.
 
 - ISSUE-2026-07-08-customer-workbench-menu-not-visible-outside-sales-cloud:
   - Symptom: 用户反馈在 CloudCC CRM 系统中没有看到“客户互动工作台”菜单和功能。

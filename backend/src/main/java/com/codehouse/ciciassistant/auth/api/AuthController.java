@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.auth.api;
 
 import com.codehouse.ciciassistant.auth.service.AuthService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
+import com.codehouse.ciciassistant.auth.service.CloudccSsoService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
@@ -23,9 +24,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final CloudccSsoService cloudccSsoService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, CloudccSsoService cloudccSsoService) {
         this.authService = authService;
+        this.cloudccSsoService = cloudccSsoService;
     }
 
     @PostMapping("/sms/send")
@@ -46,6 +49,20 @@ public class AuthController {
     @PostMapping("/register")
     public ApiResponse<Map<String, Object>> register(@Valid @RequestBody RegisterRequest request) {
         return ApiResponse.ok(authService.register(request.mobile(), request.password(), request.organizationName()), "Register success");
+    }
+
+    @PostMapping("/cloudcc-sso/ticket")
+    public ApiResponse<Map<String, Object>> cloudccSsoTicket(@Valid @RequestBody CloudccSsoTicketRequest request) {
+        return ApiResponse.ok(cloudccSsoService.issueTicket(
+                request.agentOrgId(),
+                request.cloudccAccessToken(),
+                request.cloudccUser(),
+                request.targetPath()), "SSO ticket issued");
+    }
+
+    @PostMapping("/cloudcc-sso/consume")
+    public ApiResponse<Map<String, Object>> cloudccSsoConsume(@Valid @RequestBody CloudccSsoConsumeRequest request) {
+        return ApiResponse.ok(cloudccSsoService.consumeTicket(request.ticket()), "Login success");
     }
 
     @GetMapping("/organizations")
@@ -145,6 +162,18 @@ public class AuthController {
             @NotBlank String password,
             @NotBlank String organizationName
     ) {
+    }
+
+    public record CloudccSsoTicketRequest(
+            @NotBlank String agentOrgId,
+            @NotBlank String cloudccAccessToken,
+            Map<String, Object> cloudccUser,
+            String parentOrigin,
+            String targetPath
+    ) {
+    }
+
+    public record CloudccSsoConsumeRequest(@NotBlank String ticket) {
     }
 
     public record SwitchOrganizationRequest(@NotBlank String orgId) {

@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-08T10:26:57+08:00
+updated_at: 2026-07-09T11:18:03+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -64,6 +64,13 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 - CloudCC CRM menu visibility root cause check (2026-07-08) -> passed. `/api/appProgram/queryAppList` plus per-app `getAppTabs` showed tab id `acf2026C53BE54B9R1Iu` existed only in Sales Cloud before the hotfix and was unselected in the default `CloudCC` app and six other apps.
 - CloudCC CRM all-app binding hotfix (2026-07-08) -> passed. Direct setup API `/api/newApp/save` appended the existing tab id to each app's current menu list without changing app labels, default launch tabs, or profile visibility. Verification returned `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`; sequence positions: `CloudCC=13`, `销售云=17`, `市场云=12`, `服务云=16`, `商务云=11`, `客服服务云=8`, `项目管理系统=10`, `利润云=12`.
 - CloudCC CRM tab readback (2026-07-08) -> passed. `/api/customTab/queryTabList` returned tab id `acf2026C53BE54B9R1Iu`, label `客户互动工作台`, type `page`, URL `/tab.action?m=needoneapp`, and lightning page `customer_interaction_workbench#lightning`.
+- CloudCC CRM web login self-test (2026-07-08) -> passed. Playwright/Chrome logged in through `https://accounts.cloudcc.cn/#/login` with the supplied test user and reproduced the original blank page at `https://ap6.lightning.cloudcc.cn/#/injectionComponent?page=customer_interaction_workbench&button=Home`; screenshot: `output/playwright/task171-cloudcc-injection-whitepage.png`.
+- CloudCC CRM injection white-page root cause (2026-07-08) -> confirmed. `detailCustomPage` returned pageApi `customer_interaction_workbench` with pageContent `comId=6a4d348fe4b0a577cbba1ebf` and `embedded=false`; the loaded remote script was `component-customer-workbench-V4.0.js`, which only exposed `window["component-customer-workbench"]` and did not auto-mount into the `<component-customer-workbench>` element.
+- CloudCC pagecomponent V5 update (2026-07-08) -> passed. Published pagecomponent id `6a4db950e4b0a577cbba1eca`, apiName `custc_2026079sRcX7wv`, version `5`, with default `embedded=true`, workspace URL `https://x.agentcici.com/app?aiApp=customer-workbench`, and an auto-mount/fallback block in the UMD bundle for CRM injection containers.
+- CloudCC customPage V2.0 update (2026-07-08) -> passed. Direct devconsole developer-token API updated pageApi `customer_interaction_workbench` to customPage id `6a4dbc0ce4b0a577cbba1ecb`, renderVersion `V2.0`, `comId=6a4db950e4b0a577cbba1eca`, and `embedded=true`.
+- CloudCC CRM injection browser verification (2026-07-08) -> passed. Reloading the same CRM menu route now loads `https://res.lightning.cloudcc.cn/customjs/org0720f814430017229/component-customer-workbench-V5.0.js`, renders the custom element and iframe `https://x.agentcici.com/app?aiApp=customer-workbench` at about `1394x620`; screenshot: `output/playwright/task171-cloudcc-injection-fixed.png`. The iframe currently shows the AgentCiCi login page when no AgentCiCi session exists, which is a separate SSO/login handoff concern rather than the CloudCC white-page defect.
+- AgentCiCi/CloudCC 双向登录本地实现 (2026-07-09) -> passed locally. Added public `/auth/cloudcc-sso/ticket` and `/auth/cloudcc-sso/consume`, 60 秒一次性 ticket、CloudCC runtime token 服务端校验、CloudCC 页面用户与 token 用户交叉校验、`cc_username` 到同组织启用成员映射、以及 AgentCiCi 生成 CloudCC accessToken 能力检查。主应用支持消费 `ssoTicket` 并覆盖当前平台登录态；CRM pagecomponent source 和 prebuilt UMD bundle 支持通过 CCDK 获取 CloudCC token/user 后换票进入 iframe。
+- AgentCiCi/CloudCC 双向登录编译验证 (2026-07-09) -> passed. `mvn -q -f backend/pom.xml -DskipTests compile` passed; `npm run build` in `frontend/` passed with the existing Vite large chunk warning; `node --check frontend/build/customer-workbench.umd.min.js` passed; `git diff --check` passed. CloudCC pagecomponent CDN publication and真实 CRM 嵌入 SSO 浏览器验证尚未执行。
 - Production route smoke (2026-07-08) -> passed. `https://x.agentcici.com/app?aiApp=customer-workbench` returned HTTP `200`; unauthenticated `https://x.agentcici.com/customer-workbench/accounts` returned expected HTTP `401`.
 - `cloudcc scan msapi . online-highcode` after CRM page creation -> passed for pagecomponent `1`, HTML component `1`, and customPage `1`. The script endpoint still returns an unrelated 500 in the scan, and sidecar remains out of CloudCC metadata scope.
 - `git diff --check` -> passed.
@@ -94,6 +101,9 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 ## Handoff
 
 - AgentCiCi 侧工作台主体、API、演示数据和技能绑定已完成并通过本地验证。
-- CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权和全部 8 个应用菜单绑定均已在线验证。若某个已登录用户仍看不到菜单，优先让其刷新 CRM、切换应用或重新登录以更新前端/登录态菜单缓存。
+- CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权、全部 8 个应用菜单绑定和真实 CRM Web 注入页均已在线验证。若某个已登录用户仍看不到菜单，优先让其刷新 CRM、切换应用或重新登录以更新前端/登录态菜单缓存。
+- 白页修复后，CRM 注入容器会正常显示 AgentCiCi iframe；未建立 AgentCiCi 会话时 iframe 显示 AgentCiCi 登录页。后续若要做到从 CloudCC CRM 免登录进入工作台，应单独补 SSO/token handoff 设计与实现。
+- 双向登录代码已补齐本地实现：CRM runtime token 只做身份校验，AgentCiCi JWT 只做平台登录，CloudCC MCP/OpenAPI 继续使用平台后端按绑定信息生成的 CloudCC accessToken。上线前还需要用 cc-customization-expert 的 pagecomponent 发布流程把新版 CRM 组件发布到 CloudCC CDN，并用真实 CRM Web 登录验证 iframe 可通过 `ssoTicket` 自动进入工作台。
+- 本次白页复盘和 `cc-customization-expert-msapi` 技能缺口/修复建议已沉淀到 `docs/specs/FEAT-081-cloudcc-customization-expert-msapi-gap-report.md`，后续应优先把 customPage high-code resource、pagecomponent 绑定和 injection runtime 验收能力回灌到技能。
 - AgentCiCi 生产域名 `https://x.agentcici.com/app?aiApp=customer-workbench` 已随 `2.2.3` 可用，`/customer-workbench/*` HTTPS 代理已修复并验证。
 - MSAPI apply 仍受 `metadata:apply` scope 限制，但已不再阻塞本任务的 CRM 可见入口，因为已用 CloudCC setup/devconsole API 完成同等配置。

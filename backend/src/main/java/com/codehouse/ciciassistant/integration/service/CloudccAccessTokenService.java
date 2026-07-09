@@ -131,6 +131,55 @@ public class CloudccAccessTokenService {
         }
     }
 
+    public Optional<ValidatedCloudccToken> validateRuntimeAccessToken(String orgId, String accessToken) {
+        if (orgId == null || orgId.isBlank() || accessToken == null || accessToken.isBlank()) {
+            return Optional.empty();
+        }
+        if (accessToken.length() > 8192) {
+            return Optional.empty();
+        }
+        try {
+            CloudccGatewayContext gateway = getConfiguredGateway(orgId).orElse(null);
+            if (gateway == null || gateway.setupSvc().isBlank()) {
+                return Optional.empty();
+            }
+            String url = trimTrailingSlash(gateway.setupSvc()) + "/api/customObject/standardObjList";
+            HttpRequest req = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .timeout(HTTP_TIMEOUT)
+                    .header("Content-Type", "application/json")
+                    .header("accessToken", accessToken.trim())
+                    .POST(HttpRequest.BodyPublishers.ofString("{}", StandardCharsets.UTF_8))
+                    .build();
+            HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
+            if (resp.statusCode() < 200 || resp.statusCode() >= 300 || resp.body() == null || resp.body().isBlank()) {
+                return Optional.empty();
+            }
+            JsonNode root = objectMapper.readTree(resp.body());
+            if (!looksLikeSuccessfulCloudccValidation(root)) {
+                return Optional.empty();
+            }
+            JsonNode jwtPayload = parseJwtPayload(accessToken).orElse(null);
+            String actor = firstText(root,
+                    "actorId", "userId", "userid", "username", "userName", "loginName", "login_name", "email",
+                    "data.actorId", "data.userId", "data.userid", "data.username", "data.userName", "data.loginName", "data.login_name", "data.email",
+                    "userInfo.actorId", "userInfo.userId", "userInfo.userid", "userInfo.username", "userInfo.userName", "userInfo.loginName", "userInfo.login_name", "userInfo.email");
+            if (actor.isBlank() && jwtPayload != null) {
+                actor = firstText(jwtPayload,
+                        "actorId", "userId", "userid", "username", "userName", "loginName", "login_name", "email", "sub");
+            }
+            String cloudccOrgId = firstText(root,
+                    "orgId", "organizationId", "data.orgId", "data.organizationId", "userInfo.orgId", "userInfo.organizationId");
+            if (cloudccOrgId.isBlank() && jwtPayload != null) {
+                cloudccOrgId = firstText(jwtPayload, "orgId", "organizationId");
+            }
+            return Optional.of(new ValidatedCloudccToken(actor, cloudccOrgId, gateway.setupSvc()));
+        } catch (Exception ex) {
+            log.debug("Failed to validate CloudCC runtime token for org={}: {}", orgId, ex.getMessage());
+            return Optional.empty();
+        }
+    }
+
     private Optional<CloudccSessionContext> fetchAndCacheToken(String orgId, String userId, String cacheKey) throws Exception {
         IntegrationAppEntity app = integrationAppRepository.findByOrgIdAndAppCode(orgId, APP_CODE).orElse(null);
         if (app == null || !app.isEnabled()) {
@@ -271,24 +320,65 @@ public class CloudccAccessTokenService {
     }
 
     private Optional<Instant> parseJwtExp(String token) {
+        return parseJwtPayload(token)
+                .filter(payload -> payload.has("exp"))
+                .map(payload -> payload.path("exp").asLong(0L))
+                .filter(expSeconds -> expSeconds > 0L)
+                .map(Instant::ofEpochSecond);
+    }
+
+    private Optional<JsonNode> parseJwtPayload(String token) {
         try {
             String[] parts = token.split("\\.");
             if (parts.length < 2) {
                 return Optional.empty();
             }
             byte[] bytes = Base64.getUrlDecoder().decode(parts[1]);
-            JsonNode payload = objectMapper.readTree(bytes);
-            if (!payload.has("exp")) {
-                return Optional.empty();
-            }
-            long expSeconds = payload.path("exp").asLong(0L);
-            if (expSeconds <= 0L) {
-                return Optional.empty();
-            }
-            return Optional.of(Instant.ofEpochSecond(expSeconds));
+            return Optional.of(objectMapper.readTree(bytes));
         } catch (Exception e) {
             return Optional.empty();
         }
+    }
+
+    private boolean looksLikeSuccessfulCloudccValidation(JsonNode root) {
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return false;
+        }
+        if (root.has("result") && root.path("result").isBoolean()) {
+            return root.path("result").asBoolean(false);
+        }
+        if (root.has("success") && root.path("success").isBoolean()) {
+            return root.path("success").asBoolean(false);
+        }
+        if (root.has("valid") && root.path("valid").isBoolean()) {
+            return root.path("valid").asBoolean(false);
+        }
+        String code = firstText(root, "code", "status", "returnCode");
+        return !code.isBlank()
+                && ("0".equals(code) || "1".equals(code) || "200".equals(code) || "SUCCESS".equalsIgnoreCase(code));
+    }
+
+    private String firstText(JsonNode root, String... paths) {
+        if (root == null || paths == null) {
+            return "";
+        }
+        for (String path : paths) {
+            JsonNode current = root;
+            for (String segment : path.split("\\.")) {
+                if (segment == null || segment.isBlank()) {
+                    current = null;
+                    break;
+                }
+                current = current == null ? null : current.path(segment);
+            }
+            if (current != null && !current.isMissingNode() && !current.isNull()) {
+                String value = current.asText("");
+                if (value != null && !value.isBlank()) {
+                    return value.trim();
+                }
+            }
+        }
+        return "";
     }
 
     private Map<String, Object> readConfig(String json) {
@@ -376,6 +466,8 @@ public class CloudccAccessTokenService {
     private record CachedToken(String token, String baseUrl, String setupSvc, Instant expiresAt) {}
 
     public record CloudccGatewayContext(String baseUrl, String setupSvc) {}
+
+    public record ValidatedCloudccToken(String actorId, String cloudccOrgId, String setupSvc) {}
 
     private record CloudccSessionOverride(String orgId, String userId, CloudccSessionContext sessionContext) {}
 }

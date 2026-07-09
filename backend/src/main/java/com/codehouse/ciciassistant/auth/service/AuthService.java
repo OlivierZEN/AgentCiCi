@@ -159,6 +159,16 @@ public class AuthService {
         return issueLoginForMember(owner);
     }
 
+    @Transactional
+    public Map<String, Object> loginAsMember(String orgId, String userId) {
+        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+                .orElseThrow(() -> new UnauthorizedException("No active organization membership"));
+        if (!UserEntity.STATUS_ACTIVE.equals(user.getMemberStatus())) {
+            throw new UnauthorizedException("No active organization membership");
+        }
+        return issueLoginForMember(user);
+    }
+
     private Map<String, Object> loginWithoutOrganization(UserAccountEntity account) {
         List<UserEntity> members = userRepository
                 .findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(account.getId(), UserEntity.STATUS_ACTIVE)

@@ -35,4 +35,9 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     Optional<UserEntity> findByIdAndOrg_Id(String id, String orgId);
 
     Optional<UserEntity> findByCcUsername(String ccUsername);
+
+    Optional<UserEntity> findByOrg_IdAndCcUsernameIgnoreCaseAndMemberStatus(
+            String orgId,
+            String ccUsername,
+            String memberStatus);
 }

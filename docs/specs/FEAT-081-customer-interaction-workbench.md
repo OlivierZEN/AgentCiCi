@@ -176,6 +176,43 @@ APPLIED 为终态，后续修改需要产生新建议。
 
 ## API 设计
 
+### 双向登录与身份一致性
+
+客户互动工作台必须遵循以下 token 边界：
+
+- CloudCC CRM 页面运行态 token 只作为 CloudCC 当前登录用户的身份入口和服务端校验凭据，不得作为 AgentCiCi 登录 token 使用。
+- AgentCiCi 登录 token 只用于访问 AgentCiCi 工作台和平台 API，不得作为 CloudCC OpenAPI 或 CloudCC MCP 调用凭据。
+- CloudCC OpenAPI / CloudCC MCP 调用必须统一使用 AgentCiCi 后端通过当前 AgentCiCi 用户绑定信息生成的 CloudCC accessToken，即 `CloudccAccessTokenService` 产出的 `CloudccSessionContext.accessToken`。
+- 同一个 CloudCC 用户无论从 CloudCC CRM 嵌入页进入，还是从 AgentCiCi AI 应用列表进入，都必须映射到同一个 AgentCiCi `organization_member`；否则客户数据权限会漂移。
+- 首版不做自动创建 AgentCiCi 用户。CRM 免登录进入时，必须能在当前 AgentCiCi 组织中找到 `cc_username` 匹配的已启用成员，并且该成员已有可生成 CloudCC accessToken 的绑定信息；找不到时返回“请先绑定 CloudCC 账号”。
+
+推荐登录链路：
+
+```text
+CloudCC pagecomponent
+  -> $CCDK.CCToken.getOpenApiToken()/getToken + $CCDK.CCUser.getUserInfo()
+  -> POST /auth/cloudcc-sso/ticket
+  -> AgentCiCi 服务端校验 CloudCC token 可被 CloudCC setup read endpoint 接受
+  -> 按 orgId + ccUsername 映射 AgentCiCi 成员
+  -> 确认可通过 CloudccAccessTokenService 生成 CloudCC accessToken
+  -> 返回 60 秒一次性 ssoTicket
+  -> iframe 打开 /app?aiApp=customer-workbench&ssoTicket=...
+  -> POST /auth/cloudcc-sso/consume
+  -> 写入 AgentCiCi 登录态
+```
+
+接口：
+
+- `POST /auth/cloudcc-sso/ticket`
+  - public endpoint。
+  - 请求体包含 `agentOrgId`、`cloudccAccessToken`、`cloudccUser`、`parentOrigin`、`targetPath`。
+  - 后端不得信任前端传入的用户名；必须先校验 CloudCC token，再与用户映射结果交叉校验。
+  - 返回一次性 `ticket`、`expiresAt`、`targetUrl`。
+- `POST /auth/cloudcc-sso/consume`
+  - public endpoint。
+  - 请求体包含一次性 `ticket`。
+  - 成功后返回与 `/auth/password/login` 一致的登录 payload。
+
 ### 工作台 API
 
 - `GET /customer-workbench/accounts`

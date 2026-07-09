@@ -1310,6 +1310,7 @@ export default function AssistantApp() {
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | HTMLInputElement | null>(null);
   const chatLoadingStaleTimerRef = useRef<number | null>(null);
+  const cloudccSsoAttemptedRef = useRef(false);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
   const activeConversationIdRef = useRef("");
   const workspaceTabRef = useRef<WorkspaceTab>("workbench");
@@ -2419,6 +2420,50 @@ export default function AssistantApp() {
     await loadOrganizations(payload.token);
     setNotice(message);
   };
+
+  const clearCloudccSsoTicketFromUrl = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("ssoTicket");
+    url.searchParams.delete("ccSsoTicket");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+  };
+
+  const consumeCloudccSsoTicket = async (ticket: string) => {
+    try {
+      setNotice("正在通过 CloudCC CRM 进入工作台...");
+      const response = await fetch("/auth/cloudcc-sso/consume", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticket }),
+      });
+      const { body } = await safeFetchJson<LoginPayload>(response);
+      if (!response.ok || !body?.success) {
+        setNotice(`CloudCC 登录失败：${body?.message ?? `HTTP ${response.status}`}`);
+        return;
+      }
+      if (!body.data?.token) {
+        setNotice("CloudCC 登录失败：服务端未返回 token");
+        return;
+      }
+      clearCloudccSsoTicketFromUrl();
+      await completeLogin(body.data, "已通过 CloudCC CRM 进入客户互动工作台。");
+    } catch (error) {
+      setNotice(`CloudCC 登录失败：${error instanceof Error ? error.message : String(error)}`);
+    }
+  };
+
+  useEffect(() => {
+    if (cloudccSsoAttemptedRef.current) {
+      return;
+    }
+    const params = new URLSearchParams(window.location.search);
+    const ticket = params.get("ssoTicket")?.trim() || params.get("ccSsoTicket")?.trim();
+    if (!ticket) {
+      return;
+    }
+    cloudccSsoAttemptedRef.current = true;
+    void consumeCloudccSsoTicket(ticket);
+  }, []);
 
   const login = async () => {
     if (loginSubmitting) {

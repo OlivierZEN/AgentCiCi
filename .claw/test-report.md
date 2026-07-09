@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-08T10:26:57+08:00
+updated_at: 2026-07-09T11:18:03+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-08T10:26:57+08:00
+last_run_at: 2026-07-09T11:18:03+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-171 客户互动工作台生产就绪。
-- 命令：任务级门禁、assignment check、CloudCC MetadataService capabilities、CloudCC pagecomponent 安全更新、CloudCC customPage/menu/all-app binding 验证、backend compile、frontend build、compose config、ACR 发布、ECS 部署、生产健康检查和客户互动工作台 API smoke。
+- 范围：TASK-171 客户互动工作台双向登录本地实现。
+- 命令：任务级门禁、assignment 授权扩展、backend compile、frontend build、pagecomponent bundle syntax check、git diff check。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 CloudCC/AgentCiCi 双向登录本地实现 (2026-07-09T11:18:03+08:00):
+  - Commands:
+    - `identity-assignment-update`: skill-packaged `dev-login.py .claw --developer MANAGER-001 --task TASK-171 --files .claw/assignments/TASK-171.yaml --json` -> **allowed**.
+    - `identity-task`: skill-packaged `dev-login.py .claw --developer MANAGER-001 --task TASK-171 --files backend/src/main/java/com/codehouse/ciciassistant/auth/api/AuthController.java backend/src/main/java/com/codehouse/ciciassistant/auth/service/AuthService.java backend/src/main/java/com/codehouse/ciciassistant/auth/service/CloudccSsoService.java backend/src/main/java/com/codehouse/ciciassistant/integration/service/CloudccAccessTokenService.java frontend/src/assistant/AssistantApp.tsx frontend/pagecomponents/customer-workbench/customer-workbench.vue docs/specs/FEAT-081-customer-interaction-workbench.md .claw/tasks/TASK-171.md --json` -> **allowed**.
+    - `backend-compile`: `mvn -q -f backend/pom.xml -DskipTests compile` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `pagecomponent-bundle-syntax`: `node --check frontend/build/customer-workbench.umd.min.js` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - `/auth/cloudcc-sso/ticket` now validates the CloudCC CRM runtime token against CloudCC setup read API, cross-checks token actor with CCDK reported user, maps to the same AgentCiCi organization member by `cc_username`, verifies the member can generate an AgentCiCi-owned CloudCC accessToken, then issues a 60-second one-time ticket.
+    - `/auth/cloudcc-sso/consume` consumes the one-time ticket and returns the same login payload shape as password login.
+    - `AssistantApp` consumes `ssoTicket` from `/app?aiApp=customer-workbench&ssoTicket=...` and stores the AgentCiCi login state.
+    - CRM pagecomponent source and prebuilt UMD bundle now attempt CCDK token/user handoff and append only the one-time ticket to the iframe URL. CloudCC pagecomponent CDN publication and real CRM embedded SSO browser validation remain pending.
 
 - TASK-171 customer interaction workbench (2026-07-08T01:21:50+08:00):
   - Commands:
@@ -35,6 +49,11 @@ last_run_status: success
     - `cloudcc-menu-all-app-binding-hotfix`: setup service `/api/newApp/save` -> **success**; appended the existing `客户互动工作台` tab to all app menu lists without changing app labels, default launch tabs, or profile visibility.
     - `cloudcc-menu-all-app-readback`: setup service `/api/newApp/getAppTabs` for all apps -> **success**; `appCount=8`, `selectedCount=8`, `selectedInAllApps=true`, sequence positions `CloudCC=13`, `销售云=17`, `市场云=12`, `服务云=16`, `商务云=11`, `客服服务云=8`, `项目管理系统=10`, `利润云=12`.
     - `cloudcc-tab-readback`: setup service `/api/customTab/queryTabList` -> **success**; tab id `acf2026C53BE54B9R1Iu`, label `客户互动工作台`, type `page`, URL `/tab.action?m=needoneapp`, lightning page `customer_interaction_workbench#lightning`.
+    - `cloudcc-crm-web-login`: Playwright/Chrome login through `https://accounts.cloudcc.cn/#/login` with the supplied CloudCC test user -> **success**; landed in `https://ap6.lightning.cloudcc.cn/`.
+    - `cloudcc-injection-whitepage-repro`: opened `https://ap6.lightning.cloudcc.cn/#/injectionComponent?page=customer_interaction_workbench&button=Home` before the fix -> **reproduced**; custom element existed but had empty content, loaded `component-customer-workbench-V4.0.js`, and screenshot is `output/playwright/task171-cloudcc-injection-whitepage.png`.
+    - `cloudcc-pagecomponent-v5-publish`: safe temporary-project `cloudcc publish pagecomponent customer-workbench <tmpProject>` -> **success**; latest pagecomponent id `6a4db950e4b0a577cbba1eca`, apiName `custc_2026079sRcX7wv`, version `5`, with `embedded=true` and UMD auto-mount fallback.
+    - `cloudcc-custompage-v2-update`: direct devconsole developer-token API `/devconsole/custom/pc/1.0/post/insertCustomPage` -> **success**; pageApi `customer_interaction_workbench` now has customPage id `6a4dbc0ce4b0a577cbba1ecb`, renderVersion `V2.0`, `comId=6a4db950e4b0a577cbba1eca`, and `embedded=true`.
+    - `cloudcc-injection-fixed-browser`: reloaded the same CRM route -> **success**; loaded `component-customer-workbench-V5.0.js`, rendered custom element and iframe `https://x.agentcici.com/app?aiApp=customer-workbench`, screenshot `output/playwright/task171-cloudcc-injection-fixed.png`. The iframe shows AgentCiCi login when no AgentCiCi session exists.
     - `production-workbench-page-route`: `curl -I 'https://x.agentcici.com/app?aiApp=customer-workbench'` -> **success**, HTTP `200`.
     - `production-workbench-api-auth-guard`: `curl -I https://x.agentcici.com/customer-workbench/accounts` -> **success**, expected unauthenticated HTTP `401`.
     - `cloudcc-online-highcode-scan`: `cloudcc scan msapi . online-highcode` -> **partial success**; pagecomponent count `1`, HTML component count `1`, customPage count `1`; script endpoint returned a CloudCC server-side 500 unrelated to the workbench path, and sidecar remains out of CloudCC metadata scope.
@@ -50,9 +69,11 @@ last_run_status: success
   - Artifacts:
     - Desktop direct-link screenshot: `output/playwright/task171-customer-workbench-deeplink.png` (1440x900).
     - Debug screenshot from the pre-fix failure is retained at `output/playwright/task171-customer-workbench-deeplink-debug.png`.
+    - CloudCC CRM pre-fix white-page screenshot: `output/playwright/task171-cloudcc-injection-whitepage.png`.
+    - CloudCC CRM fixed injection screenshot: `output/playwright/task171-cloudcc-injection-fixed.png`.
   - Notes:
     - Direct-link validation initially exposed a frontend runtime error when the embedded/SSO auth cache lacked `roles`; `AssistantApp` now guards `auth.roles` before reading the first role.
-    - The safely published CloudCC component id is `6a4d348fe4b0a577cbba1ebf`, apiName `custc_202607Hdhm60zo`.
+    - The safely published CloudCC component id is `6a4db950e4b0a577cbba1eca`, apiName `custc_2026079sRcX7wv`.
     - CRM menu/app/profile binding is verified through direct setup/devconsole APIs across all 8 apps. MSAPI apply still lacks `metadata:apply`, but that path is no longer required for the current visible CRM entry.
     - If a CRM user still cannot see the menu after this hotfix, the likely remaining cause is a user-side cached menu/login state; refresh the CRM shell, switch applications, or sign out and back in.
     - Backup directories: `/opt/cici/backups/20260708-021020-before-2.2.2-task171-customer-workbench` and `/opt/cici/backups/20260708-021708-before-2.2.3-customer-workbench-proxy`.

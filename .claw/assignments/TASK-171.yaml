@@ -10,6 +10,10 @@ branch: main
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/integration/**
   - backend/src/main/java/com/codehouse/ciciassistant/customer/**
   - backend/src/test/java/com/codehouse/ciciassistant/customer/**
   - backend/src/main/java/com/codehouse/ciciassistant/cloudcc/**
@@ -74,6 +78,8 @@ task_boundary:
   - "构建客户互动工作台 AI 应用，覆盖新客户推进和老客户经营。"
   - "AgentCiCi 侧实现工作台 UI、后端 API、技能/智能体支撑和演示数据。"
   - "CloudCC 侧复用标准对象，补充必要模块入口和演示数据，所有写入动作需可确认和可审计。"
+  - "实现客户互动工作台双向登录：CloudCC CRM 运行态 token 只作为身份入口，AgentCiCi 后端生成的 CloudCC accessToken 才能用于 CloudCC OpenAPI/MCP 调用。"
+  - "确保同一 CloudCC 用户无论从 CRM 嵌入页还是 AgentCiCi 平台进入，都映射到同一 AgentCiCi 用户，从而保持客户数据权限一致。"
   - "不得重建 CRM 客户、联系人、商机、任务等标准对象。"
   - "不得新增移动端专属适配。"
 change_manifest_required: true
