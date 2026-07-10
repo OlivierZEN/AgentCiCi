@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { getDataInsightDashboard } from "./dataInsightApi";
-import { compactDateTime, compactMoney, compactNumber, segmentLabel, sourceTypeLabel } from "./dataInsightSections";
+import { compactMoney, compactNumber, segmentLabel } from "./dataInsightSections";
 import type { DataInsightDashboard } from "./dataInsightTypes";
 
 type Props = {
@@ -71,19 +71,6 @@ export function DataInsightAppPanel({ token }: Props) {
 
   return (
     <section className="cici-data-board" aria-label="数据洞察">
-      <header className="cici-data-board__bar">
-        <strong>{dashboard.context.userName}</strong>
-        <span>{dashboard.context.orgName}</span>
-        <time>{compactDateTime(dashboard.updatedAt)}</time>
-        <span>币种：{dashboard.context.currency}</span>
-        <div className="cici-data-board__bar-actions">
-          <button type="button" title="刷新" onClick={() => void getDataInsightDashboard(token).then(setDashboard).catch((err) => setError(err instanceof Error ? err.message : "刷新失败"))}>
-            ↻
-          </button>
-          <span>{dashboard.context.dashboardName}</span>
-        </div>
-      </header>
-
       <nav className="cici-data-board__tabs" aria-label="仪表板分类">
         {CATEGORY_LABELS.map((item) => (
           <button
@@ -95,7 +82,14 @@ export function DataInsightAppPanel({ token }: Props) {
             {item.label}
           </button>
         ))}
-        <em>{sourceTypeLabel(dashboard.sourceMode)}</em>
+        <button
+          type="button"
+          className="cici-data-board__refresh"
+          title="刷新"
+          onClick={() => void getDataInsightDashboard(token).then(setDashboard).catch((err) => setError(err instanceof Error ? err.message : "刷新失败"))}
+        >
+          刷新
+        </button>
       </nav>
 
       <div className={`cici-data-board__grid is-${activeCategory}`}>
@@ -306,18 +300,20 @@ function AccountTile({ title, items }: { title: string; items: DataInsightDashbo
   return (
     <section className="cici-data-card cici-data-card--table">
       <h3>{title}</h3>
-      <table>
-        <tbody>
-          {items.slice(0, 6).map((item) => (
-            <tr key={item.accountId}>
-              <td>{item.accountName}</td>
-              <td>{item.stage}</td>
-              <td>{compactMoney(item.pipelineAmount)}</td>
-              <td>{item.healthScore}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="cici-data-table-wrap">
+        <table>
+          <tbody>
+            {items.slice(0, 6).map((item) => (
+              <tr key={item.accountId}>
+                <td>{item.accountName}</td>
+                <td>{item.stage}</td>
+                <td>{compactMoney(item.pipelineAmount)}</td>
+                <td>{item.healthScore}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }
@@ -326,12 +322,14 @@ function RiskTile({ title, items }: { title: string; items: DataInsightDashboard
   return (
     <section className="cici-data-card cici-data-card--risk">
       <h3>{title}</h3>
-      {items.slice(0, 5).map((item) => (
-        <div key={item.accountId}>
-          <strong>{item.accountName}</strong>
-          <span>{item.riskLevel === "HIGH" ? "高" : item.riskLevel === "MEDIUM" ? "中" : "低"} · {item.nextActionCount} 动作</span>
-        </div>
-      ))}
+      <div className="cici-data-risk-list">
+        {items.slice(0, 5).map((item) => (
+          <div key={item.accountId}>
+            <strong>{item.accountName}</strong>
+            <span>{item.riskLevel === "HIGH" ? "高" : item.riskLevel === "MEDIUM" ? "中" : "低"} · {item.nextActionCount} 动作</span>
+          </div>
+        ))}
+      </div>
     </section>
   );
 }

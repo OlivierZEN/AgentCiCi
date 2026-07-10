@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T08:22:00+08:00
+updated_at: 2026-07-10T08:25:49+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T08:22:00+08:00
+last_run_at: 2026-07-10T08:25:49+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,25 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-175 客户互动工作台外层滚动与 CRM 主页按钮清理，生产与 CloudCC CRM 自定义页闭环验证。
-- 命令：CloudCC pagecomponent/customPage 回读与更新、CloudCC injectionPage 校验、生产登录 Playwright 平台端与 embed 端截图/DOM 验收、公开页面 smoke。
+- 范围：TASK-177 数据洞察仪表盘 UI 热修复，本地发布前验证。
+- 命令：身份门禁、assignment check、前端生产构建、`git diff --check`、桌面端 Playwright 四分类截图/DOM 验收。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-177 data insight dashboard UI hotfix (2026-07-10T08:25:49+08:00):
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-177 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-177 --branch main --files ... --json` -> **allowed**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `static-copy-scan`: data insight frontend scan for `cici-data-board__bar`, `dashboard.context`, `compactDateTime`, `sourceTypeLabel`, `销售云主页`, `币种`, and `CRM 演示数据` -> **success**, no matches.
+    - `local-browser-data-insight-hotfix`: Playwright with local Vite and mocked authenticated APIs at `2048x1000`, `/app?aiApp=data-insight`, switching `销售业绩` / `客户` / `商机` / `订单回款` -> **success**; no old context bar, no old org/currency/dashboard/source labels, no customer insight panel, no horizontal overflow.
+  - Browser evidence:
+    - `output/playwright/task177-data-insight-dashboard-hotfix-local.png`.
+  - Notes:
+    - 本地验证刻意在 mock payload 中保留旧 context 和 source 字段，确认这些字段不会再出现在数据洞察 UI。
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-175 production closure for customer workbench scroll cleanup (2026-07-10T08:22:00+08:00):
   - Commands:

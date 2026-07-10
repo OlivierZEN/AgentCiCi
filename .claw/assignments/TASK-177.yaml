@@ -1,0 +1,52 @@
+task_id: TASK-177
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T08:24:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-087-data-insight-dashboard-ui-hotfix.md
+task_status_path: .claw/tasks/TASK-177.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - frontend/src/assistant/**
+scope_files:
+  - docs/specs/FEAT-087-data-insight-dashboard-ui-hotfix.md
+  - .claw/tasks/TASK-177.md
+  - .claw/assignments/TASK-177.yaml
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/assistant/data-insight/DataInsightAppPanel.tsx
+  - frontend/src/assistant/data-insight/dataInsightSections.ts
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-086-data-insight-decoupling-hotfix.md
+task_boundary:
+  - "删除数据洞察顶部旧系统信息条，不再显示用户、组织、时间、币种或销售云主页。"
+  - "修复数据洞察仪表盘卡片内容越界和页面溢出。"
+  - "不得修改客户洞察应用结构或 customer-workbench pagecomponent 配置。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge required before source edits; user requested immediate production UI hotfix."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "UI hotfix assignment for data insight dashboard only. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
