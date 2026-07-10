@@ -1,20 +1,20 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T11:31:43+08:00
+updated_at: 2026-07-10T11:40:48+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T11:31:43+08:00
-last_run_status: partial
+last_run_at: 2026-07-10T11:40:48+08:00
+last_run_status: success
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`partial`（TASK-179 定向门禁通过；全量后端基线存在非本任务失败）
-- 范围：TASK-179 AI 听记实时发言人分离热修，本地实现与桌面端验收。
-- 命令：身份门禁、assignment check、后端 provider/parser 测试、前端 ASR/transcript 测试、前端生产构建、本地真实工作台 AI 听记启动/停止与浏览器检查。
+- 状态：`success`（TASK-179 定向门禁与生产发布通过；全量后端基线失败单独保留）
+- 范围：TASK-179 AI 听记实时发言人分离热修，本地验证、生产 `2.3.7` 发布与真实工作台验收。
+- 命令：身份门禁、assignment check、后端 provider/parser 测试、前端 ASR/transcript 测试、前端生产构建、Compose 校验、发布 dry-run、ACR/Git tag、生产备份/部署/健康、公网与浏览器 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -32,11 +32,21 @@ last_run_status: partial
     - `local-browser-meeting`: authenticated desktop workbench command “开始会议纪要” -> **success**; unconfigured organization entered recording state and displayed the explicit “本次无法自动区分发言人” fallback notice; stop released recording state.
     - `browser-console`: error log count `0`.
     - `static-check`: `git diff --check` -> **success**.
+    - `release-dry-run-2.3.7`: `./scripts/release-acr.sh --dry-run` -> **success**, version `2.3.7`, commit `01a5df8cb919`.
+    - `release-2.3.7`: `./scripts/release-acr.sh --version 2.3.7` -> **success**; backend/frontend linux/amd64 images, inspect, latest aliases, and Git tag push passed.
+    - `production-backup-2.3.7`: `/opt/cici/backups/20260710-113712-before-2.3.7-task179-ai-minutes-speaker` -> **success**, PostgreSQL/env/KB/Qdrant artifacts are non-empty.
+    - `production-deploy-2.3.7`: backend/frontend recreated and healthy; infra services remained healthy on `2.3.4`; `/actuator/health=UP`; `/system/version` returned `version=imageTag=2.3.7`, `gitCommit=01a5df8cb919`; Nginx config passed.
+    - `public-smoke`: `https://x.agentcici.com/` and `/app` -> HTTP `200`; `http://x.agentcici.com/` -> HTTPS `301`.
+    - `production-browser-meeting`: authenticated demo organization on version `2.3.7` -> **success**; AI 听记 entered recording with no Iflytek setup error and no Aliyun diarization fallback notice, then stopped cleanly; console error count `0`.
   - Notes:
     - Configured organizations select the existing Iflytek `role_type=2` route; unconfigured organizations preserve Aliyun realtime transcription and no longer silently imply speaker separation.
     - Ordinary input-field voice capture remains explicitly on Aliyun with diarization disabled.
     - Release quality uses the passing task-focused backend/frontend tests, build, compose validation, and browser flow; the unrelated full-suite baseline failures are recorded rather than hidden.
+    - Production post-smoke logs contained two non-ASR stale-session `Session not found` 404 events; no ASR/Iflytek failure was found.
     - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
+  - Images:
+    - Backend index digest: `sha256:49cd893480060b5bfe996d0051539485f29ed5309bc399f06dd4deeb83d13a28`; linux/amd64 manifest `sha256:b129f11ffe390a8e64034edf1671f4ebf85ae07a57589b21750a3dac00987116`.
+    - Frontend index digest: `sha256:f6a9e969f83fe94971e7202f80ee23f33b334fbe1f60788516d2ef5ecf2efe4e`; linux/amd64 manifest `sha256:5cc3052da66ba3a89865269d5dc4767f36ff09719c76ba4494b710557922b658`.
 
 - TASK-178 CRM embedded workbench voice input hotfix (2026-07-10T08:55:00+08:00):
   - Commands:

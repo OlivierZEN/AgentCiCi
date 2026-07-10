@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T08:55:00+08:00
+updated_at: 2026-07-10T11:40:48+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.7 TASK-179 AI 听记实时发言人分离热修复 on 2026-07-10:
+  - Git commit: `01a5df8cb919` on `main`; annotated tag `2.3.7` was pushed to origin.
+  - Scope: AI 听记会议实时 ASR 改为自动 provider 选择；已配置讯飞的组织启用 `role_type=2` 角色分离，未配置组织继续使用阿里云实时转写并显示明确降级提示；普通语音输入保持阿里云行为。
+  - Quality gate: assignment/login gates, 7 backend provider/parser tests, 7 frontend ASR/transcript tests, frontend build, compose config, local backend health, local desktop start/stop flow, release dry-run, and production browser smoke passed. Full backend baseline ran 212 tests with 12 failures and 7 errors outside TASK-179; fixture drift and PostgreSQL connection exhaustion are recorded in `.claw/test-report.md`.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.7`, index digest `sha256:49cd893480060b5bfe996d0051539485f29ed5309bc399f06dd4deeb83d13a28`, linux/amd64 manifest digest `sha256:b129f11ffe390a8e64034edf1671f4ebf85ae07a57589b21750a3dac00987116`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.7`, index digest `sha256:f6a9e969f83fe94971e7202f80ee23f33b334fbe1f60788516d2ef5ecf2efe4e`, linux/amd64 manifest digest `sha256:5cc3052da66ba3a89865269d5dc4767f36ff09719c76ba4494b710557922b658`.
+  - Backup directory: `/opt/cici/backups/20260710-113712-before-2.3.7-task179-ai-minutes-speaker`, containing `acr.env.before-2.3.7`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` has `CICI_IMAGE_TAG=2.3.7` and `CICI_APP_VERSION=2.3.7`.
+  - Deploy note: backend/frontend were pulled and force-recreated on `2.3.7`; database, Redis, RabbitMQ, and Qdrant remained healthy on existing `2.3.4` images.
+  - Verified after deploy: backend/frontend healthy; `/actuator/health=UP`; `/system/version` returned `version=2.3.7`, `imageTag=2.3.7`, `gitCommit=01a5df8cb919`; frontend `nginx -t` passed.
+  - Public smoke: `https://x.agentcici.com/` and `/app` returned HTTP 200; HTTP root redirected to HTTPS.
+  - Browser smoke: production demo organization displayed `2.3.7`; AI 听记 entered recording without Iflytek setup errors or Aliyun diarization fallback, proving configured Iflytek auto-selection; stop released recording and console error count was zero.
+  - Known log noise: two non-ASR stale-session `Session not found` 404 events appeared after browser smoke; no ASR/Iflytek failure was present.
 
 - 2.3.6 TASK-177 数据洞察仪表盘 UI 热修复 on 2026-07-10:
   - Git commit: `aac3080c103c` on `main`; annotated tag `2.3.6` was pushed to origin.

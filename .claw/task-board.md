@@ -28,14 +28,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-179 - AI 听记实时发言人分离热修
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-089-ai-minutes-speaker-diarization-hotfix.md`
 - task_status_path: `.claw/tasks/TASK-179.md`
 - assignment_path: `.claw/assignments/TASK-179.yaml`
 - blocked_by: `none`
-- next_action: Local implementation and desktop validation passed; commit, run release dry-run, publish the next production version, and verify production AI 听记 provider/status behavior.
+- next_action: Done in production `2.3.7`; monitor real multi-speaker meetings, configured Iflytek auto-selection, and explicit Aliyun fallback notices for unconfigured organizations.
 
 ### TASK-178 - CRM 嵌入客户互动工作台语音输入热修
 

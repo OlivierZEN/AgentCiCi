@@ -2,10 +2,10 @@
 kind: feature-spec
 id: FEAT-089
 title: AI 听记实时发言人分离热修
-status: review
+status: done
 owner: MANAGER-001
 created_at: 2026-07-10T11:24:00+08:00
-updated_at: 2026-07-10T11:31:43+08:00
+updated_at: 2026-07-10T11:40:48+08:00
 ---
 
 # FEAT-089 - AI 听记实时发言人分离热修
@@ -63,4 +63,5 @@ updated_at: 2026-07-10T11:31:43+08:00
 - 已实现会议实时 ASR `auto` provider 选择，显式 provider 语义保持不变。
 - 已将助手工作台和嵌入式 AI 听记入口切换为 `auto + speakerDiarization=true`。
 - 已实现未配置讯飞时的阿里云降级状态事件和前端可见提示。
-- 本地定向测试、前端生产构建、真实工作台触发/停止听记和桌面视觉检查通过；待完成生产发布与生产 smoke。
+- 本地定向测试、前端生产构建、真实工作台触发/停止听记和桌面视觉检查通过。
+- 已发布生产 `2.3.7`；生产演示组织自动选择已配置讯飞分支，录音启动/停止正常，无 diarization 降级提示和浏览器错误。

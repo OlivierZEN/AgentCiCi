@@ -22,10 +22,10 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.3.6` from Git commit `aac3080c103c`.
+- Current branch: `main`; production is running release `2.3.7` from Git commit `01a5df8cb919`.
 - TASK-180 is active: user requested an AI 应用 page UI refactor from screenshot, with a floating vertical AI app menu, fewer outer borders, tighter customer workbench density, and scrollbars hidden until user interaction.
-- TASK-179 local implementation and desktop validation passed: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
-- TASK-179 verified local gates: backend 7 tests, frontend 7 tests, frontend production build, real local start/stop listening flow, fallback notice visibility, and zero browser console errors.
+- TASK-179 is done in production `2.3.7`: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
+- TASK-179 evidence: backend 7 focused tests, frontend 7 tests, production build, compose validation, local fallback flow, production configured-Iflytek flow, health/version/public smoke, and zero browser console errors passed. Full backend baseline has unrelated fixture/connection failures recorded in `.claw/test-report.md`.
 - TASK-178 is done in production `2.3.5`: CRM embedded customer-workbench microphone permission and ASR startup-error reporting were fixed.
 - TASK-175/TASK-176 are done in production `2.3.4`: customer-workbench scroll cleanup and customer/data insight separation.
 - TASK-174 data insight is done in production `2.3.2`; demo organization `org2sva14i4udjmi2t4s` uses real CRM-backed aggregate rows.
