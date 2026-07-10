@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T13:08:00+08:00
+updated_at: 2026-07-10T14:18:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.9 TASK-181 客户互动工作台客户列表排版修复 on 2026-07-10:
+  - Git commit: `0c8f66e94d15` on `main`; annotated tag `2.3.9` was pushed to origin.
+  - Scope: 修复 AI 应用页内客户互动工作台左侧客户列表排版混乱问题；队列标题字号规则不再误伤客户名称；客户行固定为标题/状态、负责人阶段/时间、标签、摘要四层结构，标签和摘要单行截断，避免半行裁切和行间重叠。
+  - Quality gate: assignment/login gates, frontend build, compose config, local browser account-list check, release dry-run, production backup/deploy/health/public smoke, authenticated production browser account-list check for org `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Backend code was unchanged; release script performed the standard backend package with skipped tests.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.9`, index digest `sha256:8e82c836f99847e88dee908601b6e8512c63355d13f725ecbafc5a2cde4a5f1c`, linux/amd64 manifest digest `sha256:9f36559e32786d2847ad70c467dcbfd9e1989ff3dce952cbb3ba96e17159fa1e`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.9`, index digest `sha256:4b56bfce1811ff18258ae8b0f2955e1dea6850d571c00d9dbe13103a1f9f572f`, linux/amd64 manifest digest `sha256:eed8c85e837599e4630bee093ad828b576967291cbda0d3acd4837dfcd568703`.
+  - Backup directory: `/opt/cici/backups/20260710-141251-before-2.3.9-task181-account-list-alignment`, containing `acr.env.before-2.3.9`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` has `CICI_IMAGE_TAG=2.3.9` and `CICI_APP_VERSION=2.3.9`.
+  - Deploy note: backend/frontend were pulled and force-recreated on `2.3.9`; database, Redis, RabbitMQ, and Qdrant remained healthy on existing `2.3.4` images. Existing healthy infra images were locally tagged as `2.3.9` before compose operations because compose shares `CICI_IMAGE_TAG`.
+  - Verified after deploy: backend/frontend healthy; `/actuator/health=UP`; `/system/version` returned `version=2.3.9`, `imageTag=2.3.9`, `gitCommit=0c8f66e94d15`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` and `/app?aiApp=customer-workbench` returned HTTP 200; HTTP root redirected to HTTPS.
+  - Browser smoke: production `https://x.agentcici.com/app?aiApp=customer-workbench` at `2048x1000` with org `org2sva14i4udjmi2t4s` returned account rows `6`, row height `104px`, no row-level overflow, no adjacent overlap, no document/body outer scrollbar, no visible right-edge scrollbar, and console error count `0`. Screenshot: `output/playwright/task181-prod-account-list-2.3.9.png`.
+  - Authenticated API smoke: org `org2sva14i4udjmi2t4s` `/customer-workbench/accounts` returned `10` accounts; first detail returned timeline `3`, recommendations `2`, and `crmConnection.ready=true`.
 
 - 2.3.8 TASK-180 AI 应用页与客户互动工作台 UI 重构 on 2026-07-10:
   - Git commit: `a811e974f203` on `main`; annotated tag `2.3.8` was pushed to origin.
