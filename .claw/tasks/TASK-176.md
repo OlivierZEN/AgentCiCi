@@ -7,7 +7,7 @@ owner_role: project-manager
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-086-data-insight-decoupling-hotfix.md
 assignment_path: .claw/assignments/TASK-176.yaml
-updated_at: 2026-07-10T08:04:21+08:00
+updated_at: 2026-07-10T08:12:31+08:00
 updated_by: MANAGER-001
 ---
 
@@ -25,6 +25,7 @@ updated_by: MANAGER-001
 - 已新增独立数据洞察入口、前端模块和 `/ai/data-insights/dashboard` API。
 - 已移除客户洞察 dashboard API，并补充数据洞察独立集成测试。
 - 已完成前端生产构建、后端目标集成测试、`git diff --check` 和桌面端 Playwright 截图检查。
+- 已发布生产版本 `2.3.4`，并完成生产健康检查、公开/认证/API/浏览器 smoke。
 
 ## 计划
 
@@ -32,7 +33,7 @@ updated_by: MANAGER-001
 2. 新建数据洞察前端模块和 `data-insight` 应用入口。`completed`
 3. 新建数据洞察后端 API，移除客户洞察 dashboard API。`completed`
 4. 跑后端测试、前端构建和桌面端浏览器检查。`completed`
-5. 提交、推送并发布热修复。`in_progress`
+5. 提交、推送并发布热修复。`completed`
 
 ## 验证记录
 
@@ -42,3 +43,5 @@ updated_by: MANAGER-001
 - `frontend-build`: `npm run build` -> success; existing Vite large chunk warning remains.
 - `static-check`: `git diff --check` -> success.
 - `local-browser-check`: Playwright verified `/app?aiApp=data-insight` dashboard categories and `/app?aiApp=customer-insight` independence -> success.
+- `release-2.3.4`: ACR images and Git tag pushed -> success.
+- `production-smoke-2.3.4`: health/version/public/authenticated API/production browser checks -> success.

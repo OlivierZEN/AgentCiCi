@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T07:28:00+08:00
+updated_at: 2026-07-10T08:12:31+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.4 TASK-176 数据洞察与客户洞察解耦热修复 on 2026-07-10:
+  - Git commit: `22f91cc38a3e` on `main`; annotated tag `2.3.4` was pushed to origin.
+  - Scope: 恢复“客户洞察”为独立客户洞察项目/报告编辑应用；新增独立“数据洞察”AI 应用和 `/ai/data-insights/dashboard` API；移除错误挂在 `/ai/customer-insights/dashboard` 下的仪表盘，避免两个应用继续混淆。
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.3.4`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.4`, index digest `sha256:d6c895eae9cbf0f2bb44ca697166682bcc15df4a26f30550920f56b481190836`, linux/amd64 manifest digest `sha256:0b1c752758bf3a4f42ae63f026b583e8e9b99ff1df45cbc0f52eb316c854877a`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.4`, index digest `sha256:93cd48b9fb61584b2c8fb4a6dd0f0a342111862162984763dd5598f4d06f1239`, linux/amd64 manifest digest `sha256:35fdd4fdb9c949b7f2f05979fc71b34f9047ad550b35479b33cf55fb02c86f3a`.
+  - Backup directory: `/opt/cici/backups/20260710-080814-before-2.3.4-task176-data-insight-decoupling`, containing `acr.env.before-2.3.4`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.3.4` and `CICI_APP_VERSION=2.3.4`.
+  - Deploy note: backend/frontend images were pulled from ACR and compose was force-recreated onto `2.3.4`; stateful service volumes were preserved. Infra services also restarted under locally tagged `2.3.4` aliases because compose uses the shared image tag.
+  - Verified after deploy: all six compose services healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.3.4`, `imageTag=2.3.4`, and `gitCommit=22f91cc38a3e`; frontend `nginx -t` passed; recent backend log scan had no error matches beyond normal Flyway startup info.
+  - Public smoke: `https://x.agentcici.com/`, `https://x.agentcici.com/app?aiApp=data-insight`, and `https://x.agentcici.com/app?aiApp=customer-insight` returned HTTP 200; `http://x.agentcici.com/` redirected to HTTPS.
+  - Authenticated smoke: demo org `org2sva14i4udjmi2t4s` returned org name `智能体平台演示环境`; `/ai/data-insights/dashboard` returned `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`; removed `/ai/customer-insights/dashboard` returned HTTP 404.
+  - Browser smoke: production `https://x.agentcici.com/app?aiApp=data-insight` loaded with real production login at 1620x920; `.cici-data-board=1`, `.cici-customer-insight=0`, hero count `0`, no horizontal overflow. Production `https://x.agentcici.com/app?aiApp=customer-insight` loaded with `.cici-customer-insight=1`, `.cici-data-board=0`, no horizontal overflow. Screenshots: `output/playwright/task176-prod-data-insight-2.3.4.png`, `output/playwright/task176-prod-customer-insight-2.3.4.png`.
 
 - 2.3.2 TASK-174 数据洞察 AI 应用生产发布 on 2026-07-10:
   - Git commit: `d144149168ea` on `main`; annotated tag `2.3.2` was pushed to origin.

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T08:04:21+08:00
+updated_at: 2026-07-10T08:12:31+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T08:04:21+08:00
+last_run_at: 2026-07-10T08:12:31+08:00
 last_run_status: success
 ---
 
@@ -13,8 +13,8 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-176 数据洞察与客户洞察解耦热修，本地发布前验证。
-- 命令：身份门禁、assignment check、后端集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 数据洞察/客户洞察独立性与视觉检查。
+- 范围：TASK-176 数据洞察与客户洞察解耦热修，生产发布与发布后验证。
+- 命令：身份门禁、assignment check、后端集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 数据洞察/客户洞察独立性检查、ACR 发布、生产备份、生产部署、健康检查、公开/认证/API/浏览器 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
@@ -29,10 +29,21 @@ last_run_status: success
     - `local-browser-data-insight-sales`: Playwright with local Vite and mocked authenticated APIs at `1496x980`, `/app?aiApp=data-insight` -> **success**; `.cici-data-board=1`, `.cici-customer-insight=0`, hero count `0`, dashboard cards `>=7`, no horizontal overflow.
     - `local-browser-data-insight-customer`: switched to `客户` category -> **success**; `客户分布图` and `客户结构` visible, no horizontal overflow.
     - `local-browser-customer-insight`: `/app?aiApp=customer-insight` -> **success**; `.cici-customer-insight=1`, `.cici-data-board=0`, customer insight project/report flow visible, no horizontal overflow.
+    - `release-dry-run-2.3.4`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.3.4`, commit `22f91cc38a3e`.
+    - `release-2.3.4`: `./scripts/release-acr.sh --version 2.3.4` -> **success**; backend/frontend linux/amd64 images and Git tag were pushed.
+    - `production-backup-2.3.4`: ECS backup `/opt/cici/backups/20260710-080814-before-2.3.4-task176-data-insight-decoupling` -> **success**, containing `acr.env.before-2.3.4`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+    - `production-deploy-2.3.4`: updated `CICI_IMAGE_TAG` and `CICI_APP_VERSION` to `2.3.4`, pulled backend/frontend, tagged infra aliases, and force-recreated compose services -> **success**.
+    - `production-health-2.3.4`: all six compose services healthy; backend `/actuator/health` -> `UP`; `/system/version` -> `version=2.3.4`, `imageTag=2.3.4`, `gitCommit=22f91cc38a3e`; frontend `nginx -t` -> **success**.
+    - `public-smoke-2.3.4`: `https://x.agentcici.com/`, `/app?aiApp=data-insight`, `/app?aiApp=customer-insight` -> HTTP `200`; `http://x.agentcici.com/` -> HTTPS `301`.
+    - `authenticated-api-smoke-2.3.4`: demo org `/ai/data-insights/dashboard` -> `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`; removed `/ai/customer-insights/dashboard` -> HTTP `404`.
+    - `production-browser-smoke-2.3.4`: Playwright production data insight and customer insight pages at `1620x920` -> **success**; data insight `.cici-data-board=1`, customer insight `.cici-data-board=0`, no horizontal overflow.
+    - `production-log-scan-2.3.4`: recent backend log scan after smoke -> **success**, no error matches beyond normal Flyway startup info.
   - Browser evidence:
     - `output/playwright/task176-data-insight-sales-dashboard.png`.
     - `output/playwright/task176-data-insight-customer-dashboard.png`.
     - `output/playwright/task176-customer-insight-independent.png`.
+    - `output/playwright/task176-prod-data-insight-2.3.4.png`.
+    - `output/playwright/task176-prod-customer-insight-2.3.4.png`.
   - Notes:
     - 客户洞察保留独立项目/报告编辑结构；数据洞察新增独立 `/ai/data-insights/dashboard` 与 `frontend/src/assistant/data-insight/**`，不再复用或挂载到 `/ai/customer-insights/dashboard`。
     - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
