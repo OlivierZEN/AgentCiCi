@@ -1,0 +1,70 @@
+task_id: TASK-179
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T11:24:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-089-ai-minutes-speaker-diarization-hotfix.md
+task_status_path: .claw/tasks/TASK-179.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/ws/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/ws/**
+  - frontend/src/shared/**
+  - frontend/src/assistant/**
+  - frontend/src/embed/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-089-ai-minutes-speaker-diarization-hotfix.md
+  - .claw/tasks/TASK-179.md
+  - .claw/assignments/TASK-179.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/ws/AliyunRealtimeAsrWebSocketHandler.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/ws/RealtimeAsrProviderSelectionTest.java
+  - frontend/src/shared/useAsrVoiceInput.ts
+  - frontend/src/shared/useAsrVoiceInput.test.ts
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/meetingTranscript.ts
+  - frontend/src/assistant/meetingTranscript.test.ts
+  - frontend/src/embed/EmbedMeetingMinutesPage.tsx
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-029-meeting-minutes-live-transcription.md
+  - docs/specs/FEAT-054-ai-minutes-local-audio-upload.md
+  - docs/specs/FEAT-059-ai-minutes-local-asr.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+task_boundary:
+  - "修复 AI 听记实时录音无法区分发言人的回归。"
+  - "允许在 AI 听记场景自动选择已配置的讯飞 provider 并开启 speaker diarization。"
+  - "未配置讯飞时保留阿里云实时转写，并向用户明确提示说话人分离降级。"
+  - "不得改变普通聊天和客户工作台输入框语音输入的 provider 行为。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T11:24:00+08:00; user reported AI 听记 cannot distinguish speakers."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created production hotfix task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py for TASK-179 representative files before implementation edits."
