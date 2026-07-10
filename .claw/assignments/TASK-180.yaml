@@ -1,0 +1,58 @@
+task_id: TASK-180
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T12:05:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md
+task_status_path: .claw/tasks/TASK-180.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md
+  - .claw/tasks/TASK-180.md
+  - .claw/assignments/TASK-180.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/cici-ui.css
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
+task_boundary:
+  - "重构 AI 应用页的菜单交互和客户互动工作台的桌面 UI 密度。"
+  - "减少外框线、常驻面板占位和滚动条视觉噪音。"
+  - "保留现有客户互动工作台业务 API、CRM 绑定、智能体调用链路和 ASR 行为。"
+  - "仅做桌面端产品质量门，不新增移动端适配或移动端自动化测试。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T12:05:00+08:00; user requested AI apps UI refactor from screenshot."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created UI refactor task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py for TASK-180 representative files before implementation edits."

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T11:31:43+08:00
+updated_at: 2026-07-10T12:05:00+08:00
 updated_by: MANAGER-001
-phase: ai-minutes-speaker-diarization-release-ready
-active_task: "TASK-179"
-next_action: "Commit TASK-179 locally verified implementation, run release dry-run, then publish and verify the next production version."
+phase: ai-apps-workbench-ui-refactor
+active_task: "TASK-180"
+next_action: "Implement TASK-180 compact AI apps shell and customer workbench desktop UI refactor, then run desktop visual validation."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,7 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.6` from Git commit `aac3080c103c`.
+- TASK-180 is active: user requested an AI 应用 page UI refactor from screenshot, with a floating vertical AI app menu, fewer outer borders, tighter customer workbench density, and scrollbars hidden until user interaction.
 - TASK-179 local implementation and desktop validation passed: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
 - TASK-179 verified local gates: backend 7 tests, frontend 7 tests, frontend production build, real local start/stop listening flow, fallback notice visibility, and zero browser console errors.
 - TASK-178 is done in production `2.3.5`: CRM embedded customer-workbench microphone permission and ASR startup-error reporting were fixed.
@@ -35,9 +36,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact task index.
-- `.claw/tasks/TASK-179.md` - active hotfix state.
-- `.claw/assignments/TASK-179.yaml` - authorized write scope.
-- `docs/specs/FEAT-089-ai-minutes-speaker-diarization-hotfix.md` - design and acceptance criteria.
-- `docs/specs/FEAT-029-meeting-minutes-live-transcription.md` - existing realtime diarization contract.
+- `.claw/tasks/TASK-180.md` - active UI refactor task state.
+- `.claw/assignments/TASK-180.yaml` - authorized write scope.
+- `docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md` - design and acceptance criteria.
 - `.claw/test-report.md` - latest verified commands.
 - `.claw/devops.md` and `docs/production-release-runbook.md` - production release facts if release is executed.

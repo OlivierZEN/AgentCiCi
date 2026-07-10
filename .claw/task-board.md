@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T11:31:43+08:00
+updated_at: 2026-07-10T12:05:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-180 - AI 应用页与客户互动工作台 UI 重构
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md`
+- task_status_path: `.claw/tasks/TASK-180.md`
+- assignment_path: `.claw/assignments/TASK-180.yaml`
+- blocked_by: `none`
+- next_action: Implement compact floating AI app menu, reduce workbench chrome, and run desktop visual validation.
 
 ### TASK-179 - AI 听记实时发言人分离热修
 
