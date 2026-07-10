@@ -1,23 +1,42 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T08:55:00+08:00
+updated_at: 2026-07-10T11:31:43+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T08:55:00+08:00
-last_run_status: success
+last_run_at: 2026-07-10T11:31:43+08:00
+last_run_status: partial
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`
-- 范围：TASK-178 CRM 嵌入客户互动工作台 AI 助手语音输入热修复，生产发布与 CloudCC CRM 绑定验收。
-- 命令：身份门禁、assignment check、ASR hook 测试、前端生产构建、CloudCC pagecomponent 打包/发布/自定义页绑定、生产部署健康检查、桌面端 Playwright 回归。
+- 状态：`partial`（TASK-179 定向门禁通过；全量后端基线存在非本任务失败）
+- 范围：TASK-179 AI 听记实时发言人分离热修，本地实现与桌面端验收。
+- 命令：身份门禁、assignment check、后端 provider/parser 测试、前端 ASR/transcript 测试、前端生产构建、本地真实工作台 AI 听记启动/停止与浏览器检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-179 AI 听记 realtime speaker diarization local closure (2026-07-10T11:31:43+08:00):
+  - Commands:
+    - `identity-gate`: generic MANAGER-001 login and task-scoped `dev-login.py .claw --developer MANAGER-001 --task TASK-179 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-179 --branch main --files ... --json` -> **allowed**.
+    - `backend-asr-tests`: `mvn -Dmaven.repo.local=.m2 -Dtest=RealtimeAsrProviderSelectionTest,IflytekAsrResultParserTest test` -> **success**, 7 tests passed.
+    - `frontend-asr-tests`: `npm test -- useAsrVoiceInput.test.ts meetingTranscript.test.ts` -> **success**, 7 tests passed.
+    - `frontend-build`: `npm run build` -> **success**; existing Vite large chunk warning remains.
+    - `backend-full-suite`: `mvn -q -Dmaven.repo.local=.m2 test` -> **failed outside TASK-179 scope**, 212 tests ran, 12 failures and 7 errors; failures include pre-existing auth/skill/billing fixture assertions, a disabled model-provider fixture, schema fixture drift, and PostgreSQL `too many clients already`. No TASK-179 provider/parser test failed.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` -> **success**.
+    - `local-health`: backend `/actuator/health` and Vite frontend started successfully.
+    - `local-browser-meeting`: authenticated desktop workbench command “开始会议纪要” -> **success**; unconfigured organization entered recording state and displayed the explicit “本次无法自动区分发言人” fallback notice; stop released recording state.
+    - `browser-console`: error log count `0`.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Configured organizations select the existing Iflytek `role_type=2` route; unconfigured organizations preserve Aliyun realtime transcription and no longer silently imply speaker separation.
+    - Ordinary input-field voice capture remains explicitly on Aliyun with diarization disabled.
+    - Release quality uses the passing task-focused backend/frontend tests, build, compose validation, and browser flow; the unrelated full-suite baseline failures are recorded rather than hidden.
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-178 CRM embedded workbench voice input hotfix (2026-07-10T08:55:00+08:00):
   - Commands:

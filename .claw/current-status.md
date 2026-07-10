@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T11:24:00+08:00
+updated_at: 2026-07-10T11:31:43+08:00
 updated_by: MANAGER-001
-phase: ai-minutes-speaker-diarization-hotfix
+phase: ai-minutes-speaker-diarization-release-ready
 active_task: "TASK-179"
-next_action: "Run TASK-179 identity and assignment gates, implement auto provider selection, then verify real speaker event routing."
+next_action: "Commit TASK-179 locally verified implementation, run release dry-run, then publish and verify the next production version."
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.3.5` from Git commit `aac3080c103c`.
-- TASK-179 is the active critical hotfix: AI 听记 realtime entry points currently force Aliyun with speaker diarization disabled, so every segment falls back to “发言人 1”.
-- TASK-179 design decision: meeting realtime ASR uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
+- Current branch: `main`; production is running release `2.3.6` from Git commit `aac3080c103c`.
+- TASK-179 local implementation and desktop validation passed: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
+- TASK-179 verified local gates: backend 7 tests, frontend 7 tests, frontend production build, real local start/stop listening flow, fallback notice visibility, and zero browser console errors.
 - TASK-178 is done in production `2.3.5`: CRM embedded customer-workbench microphone permission and ASR startup-error reporting were fixed.
 - TASK-175/TASK-176 are done in production `2.3.4`: customer-workbench scroll cleanup and customer/data insight separation.
 - TASK-174 data insight is done in production `2.3.2`; demo organization `org2sva14i4udjmi2t4s` uses real CRM-backed aggregate rows.

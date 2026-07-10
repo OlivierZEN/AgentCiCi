@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T11:24:00+08:00
+updated_at: 2026-07-10T11:31:43+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-179 - AI 听记实时发言人分离热修
 
-- status: `ready`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-089-ai-minutes-speaker-diarization-hotfix.md`
 - task_status_path: `.claw/tasks/TASK-179.md`
 - assignment_path: `.claw/assignments/TASK-179.yaml`
 - blocked_by: `none`
-- next_action: Run task-scoped identity/assignment gates, then restore configured realtime speaker diarization with an explicit fallback for unconfigured organizations.
+- next_action: Local implementation and desktop validation passed; commit, run release dry-run, publish the next production version, and verify production AI 听记 provider/status behavior.
 
 ### TASK-178 - CRM 嵌入客户互动工作台语音输入热修
 

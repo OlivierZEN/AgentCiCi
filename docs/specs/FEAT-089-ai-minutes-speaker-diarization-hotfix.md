@@ -2,10 +2,10 @@
 kind: feature-spec
 id: FEAT-089
 title: AI 听记实时发言人分离热修
-status: ready
+status: review
 owner: MANAGER-001
 created_at: 2026-07-10T11:24:00+08:00
-updated_at: 2026-07-10T11:24:00+08:00
+updated_at: 2026-07-10T11:31:43+08:00
 ---
 
 # FEAT-089 - AI 听记实时发言人分离热修
@@ -57,3 +57,10 @@ updated_at: 2026-07-10T11:24:00+08:00
 - 既有设计事实源：`docs/specs/FEAT-029-meeting-minutes-live-transcription.md`。
 - 阿里云官方语音模型能力表：实时 Fun-ASR 不支持说话人分离，非实时 Fun-ASR 支持。
 - 讯飞官方实时语音转写文档：`role_type=2` 开启实时角色分离。
+
+## 实现进展
+
+- 已实现会议实时 ASR `auto` provider 选择，显式 provider 语义保持不变。
+- 已将助手工作台和嵌入式 AI 听记入口切换为 `auto + speakerDiarization=true`。
+- 已实现未配置讯飞时的阿里云降级状态事件和前端可见提示。
+- 本地定向测试、前端生产构建、真实工作台触发/停止听记和桌面视觉检查通过；待完成生产发布与生产 smoke。

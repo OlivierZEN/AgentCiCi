@@ -74,6 +74,13 @@ export function isAsrStartedMessage(message: AsrWsMessage): boolean {
   return message.type === "status" && message.message === "started";
 }
 
+export function asrStatusNotice(message: AsrWsMessage): string {
+  if (message.type === "status" && message.message === "speaker-diarization-unavailable") {
+    return "实时听写中...（当前组织未配置讯飞实时转写，本次无法自动区分发言人）";
+  }
+  return "";
+}
+
 export type AsrTranscriptEvent = {
   type: "partial" | "final";
   text: string;
@@ -93,7 +100,7 @@ export type AsrVoiceStartOptions = {
   onFinished?: (p: { asrText: string; fullText: string }) => void | Promise<void>;
   /** Stop automatically after this many milliseconds without audible input. */
   autoStopAfterNoSpeechMs?: number;
-  provider?: "aliyun" | "iflytek";
+  provider?: "aliyun" | "iflytek" | "auto";
   speakerDiarization?: boolean;
 };
 
@@ -120,6 +127,7 @@ export function useAsrVoiceInput() {
   const finishHandlerRef = useRef<(p: { asrText: string; fullText: string }) => void | Promise<void>>(async () => {});
   const asrReadyRef = useRef(false);
   const finishCallbackEnabledRef = useRef(false);
+  const sessionStatusNoticeRef = useRef("");
 
   useEffect(() => {
     try {
@@ -242,6 +250,7 @@ export function useAsrVoiceInput() {
       partialAsrTextRef.current = "";
       asrReadyRef.current = false;
       finishCallbackEnabledRef.current = false;
+      sessionStatusNoticeRef.current = "";
 
       try {
         const websocket = new WebSocket(
@@ -283,6 +292,12 @@ export function useAsrVoiceInput() {
               noticeHandlerRef.current(`实时识别失败：${message.message ?? "unknown"}`);
             } else if (isAsrStartedMessage(message)) {
               asrReadyRef.current = true;
+            } else if (message.type === "status") {
+              const statusNotice = asrStatusNotice(message);
+              if (statusNotice) {
+                sessionStatusNoticeRef.current = statusNotice;
+                noticeHandlerRef.current(statusNotice);
+              }
             } else if (message.type === "finished") {
               stop();
             }
@@ -378,7 +393,7 @@ export function useAsrVoiceInput() {
 
         finishCallbackEnabledRef.current = true;
         setListening(true);
-        noticeHandlerRef.current("实时听写中...（边说边出字）");
+        noticeHandlerRef.current(sessionStatusNoticeRef.current || "实时听写中...（边说边出字）");
         armSilenceTimer();
       } catch (error) {
         noticeHandlerRef.current(`实时语音启动失败：${error instanceof Error ? error.message : String(error)}`);

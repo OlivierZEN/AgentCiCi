@@ -7,7 +7,7 @@ owner_role: shared
 task_ids: TASK-141
 related_decisions: none
 related_issues: none
-updated_at: 2026-05-27T00:00:00Z
+updated_at: 2026-07-10T11:31:43+08:00
 updated_by: MANAGER-001
 ---
 
@@ -154,6 +154,7 @@ FunASR 对本项目推荐链路的“免费”应拆开理解：
 - 本地 ASR 应复用现有 transcript segment：`speakerId`、`speakerName`、`text`、`startMs`、`endMs`。
 - 本地模型服务与业务后端分进程部署，避免 Python/模型依赖污染 Spring Boot 打包、启动和内存模型。
 - 2026-06-17 `TASK-152` 本地热修确认：在本地和未启用讯飞的组织中，前端 AI 听记启动不得硬绑 `iflytek`；默认走现有阿里云实时 provider，避免“开始听记”因禁用的讯飞配置进入超时/失败路径。WebSocket 连接失败应即时反馈真实连接失败或超时原因。
+- 2026-07-10 `TASK-179` 在不回退上述可用性约束的前提下补充会议专用 `provider=auto`：已配置讯飞且请求说话人分离时选择讯飞 `role_type=2`；未配置时继续使用阿里云实时转写，并明确提示本次无法自动区分发言人。普通语音输入仍显式使用阿里云。
 - 2026-07-09 追加约束：阿里云实时 ASR 的音频 binary 帧必须早于 `finish-task` 有序发送；用户点击“生成纪要”或停止听记时，后端需要先阻止继续转发音频，并把已排队音频发送完成后再发送 `finish-task`，避免上游在任务结束后收到尾部音频而返回 `Missing required parameter 'payload.task_group'`。
 
 ## 方案设计

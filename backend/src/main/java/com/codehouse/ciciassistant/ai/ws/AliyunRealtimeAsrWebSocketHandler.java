@@ -118,12 +118,28 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             String type = j.path("type").asText("");
             if ("start".equalsIgnoreCase(type)) {
                 int sampleRate = j.path("sampleRate").asInt(16000);
-                String provider = firstNonBlank(j.path("provider").asText(""), queryParam(session, "provider"));
+                String requestedProvider = firstNonBlank(j.path("provider").asText(""), queryParam(session, "provider"));
                 boolean speakerDiarization = j.path("speakerDiarization").asBoolean(
                         "true".equalsIgnoreCase(queryParam(session, "speakerDiarization")));
-                if ("iflytek".equalsIgnoreCase(provider) || "xunfei".equalsIgnoreCase(provider)) {
-                    startIflytekTask(ctx, sampleRate, speakerDiarization);
+                boolean needsIflytekConfig = "iflytek".equalsIgnoreCase(requestedProvider)
+                        || "xunfei".equalsIgnoreCase(requestedProvider)
+                        || ("auto".equalsIgnoreCase(requestedProvider) && speakerDiarization);
+                IflytekRuntimeConfig iflytekConfig = needsIflytekConfig ? resolveIflytekConfig(ctx.orgId) : null;
+                String provider = selectRealtimeProvider(
+                        requestedProvider,
+                        speakerDiarization,
+                        isIflytekAvailable(iflytekConfig));
+                if ("iflytek".equals(provider)) {
+                    startIflytekTask(ctx, sampleRate, speakerDiarization, iflytekConfig);
                 } else {
+                    if ("auto".equalsIgnoreCase(requestedProvider) && speakerDiarization) {
+                        sendClientEvent(ctx.clientSession, Map.of(
+                                "type", "status",
+                                "message", "speaker-diarization-unavailable",
+                                "provider", "aliyun",
+                                "speakerDiarization", false
+                        ));
+                    }
                     startAliyunTask(ctx, sampleRate);
                 }
             } else if ("stop".equalsIgnoreCase(type)) {
@@ -174,14 +190,20 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         if (ctx.aliyunClient != null) {
             ctx.aliyunClient.close();
         }
+        if (ctx.iflytekClient != null) {
+            ctx.iflytekClient.close();
+            ctx.iflytekClient = null;
+        }
         String taskId = UUID.randomUUID().toString();
         AliyunWsClient client = new AliyunWsClient(ctx, taskId, Math.max(8000, sampleRate));
         ctx.aliyunClient = client;
         client.connect();
     }
 
-    private void startIflytekTask(SessionCtx ctx, int sampleRate, boolean speakerDiarization) throws Exception {
-        IflytekRuntimeConfig config = resolveIflytekConfig(ctx.orgId);
+    private void startIflytekTask(SessionCtx ctx,
+                                  int sampleRate,
+                                  boolean speakerDiarization,
+                                  IflytekRuntimeConfig config) throws Exception {
         if (!config.enabled()) {
             sendClientEvent(ctx.clientSession, Map.of("type", "error", "message", "Iflytek realtime ASR is disabled"));
             return;
@@ -201,6 +223,27 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         IflytekWsClient client = new IflytekWsClient(ctx, sessionId, Math.max(8000, sampleRate), speakerDiarization, config);
         ctx.iflytekClient = client;
         client.connect();
+    }
+
+    static String selectRealtimeProvider(String requestedProvider,
+                                         boolean speakerDiarization,
+                                         boolean iflytekAvailable) {
+        String normalized = requestedProvider == null ? "" : requestedProvider.trim().toLowerCase();
+        if ("iflytek".equals(normalized) || "xunfei".equals(normalized)) {
+            return "iflytek";
+        }
+        if ("auto".equals(normalized) && speakerDiarization && iflytekAvailable) {
+            return "iflytek";
+        }
+        return "aliyun";
+    }
+
+    private static boolean isIflytekAvailable(IflytekRuntimeConfig config) {
+        return config != null
+                && config.enabled()
+                && !config.appId().isBlank()
+                && !config.accessKeyId().isBlank()
+                && !config.accessKeySecret().isBlank();
     }
 
     private void sendClientEvent(WebSocketSession session, Map<String, Object> payload) {

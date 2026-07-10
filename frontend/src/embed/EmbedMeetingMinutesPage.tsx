@@ -210,8 +210,8 @@ export default function EmbedMeetingMinutesPage() {
     setTranscript([]);
     await start({
       token,
-      provider: "aliyun",
-      speakerDiarization: false,
+      provider: "auto",
+      speakerDiarization: true,
       getPrefix: () => "",
       onLiveText: () => {},
       onNotice: (message) => {

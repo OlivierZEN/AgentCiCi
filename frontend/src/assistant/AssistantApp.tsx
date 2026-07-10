@@ -2967,8 +2967,8 @@ export default function AssistantApp() {
 
     await startAsrSession({
       token: auth.token,
-      provider: "aliyun",
-      speakerDiarization: false,
+      provider: "auto",
+      speakerDiarization: true,
       getPrefix: () => "",
       onLiveText: () => {},
       onNotice: (message) => {

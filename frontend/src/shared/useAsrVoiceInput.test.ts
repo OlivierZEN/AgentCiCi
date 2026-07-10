@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractAsrMessageText, isAsrStartedMessage, mergePrefixAsr } from "./useAsrVoiceInput";
+import { asrStatusNotice, extractAsrMessageText, isAsrStartedMessage, mergePrefixAsr } from "./useAsrVoiceInput";
 
 describe("useAsrVoiceInput helpers", () => {
   it("merges existing prefix and recognized speech text", () => {
@@ -25,5 +25,12 @@ describe("useAsrVoiceInput helpers", () => {
   it("detects ASR started status exactly", () => {
     expect(isAsrStartedMessage({ type: "status", message: "started" })).toBe(true);
     expect(isAsrStartedMessage({ type: "status", message: "connected" })).toBe(false);
+  });
+
+  it("explains when realtime speaker diarization is unavailable", () => {
+    expect(asrStatusNotice({ type: "status", message: "speaker-diarization-unavailable" })).toContain(
+      "无法自动区分发言人",
+    );
+    expect(asrStatusNotice({ type: "status", message: "connected" })).toBe("");
   });
 });
