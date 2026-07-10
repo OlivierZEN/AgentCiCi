@@ -19,6 +19,7 @@ import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
 import { CustomerInsightAppPanel } from "./customer-insight/CustomerInsightAppPanel";
+import { DataInsightAppPanel } from "./data-insight/DataInsightAppPanel";
 import { CustomerWorkbenchApp } from "./customer-workbench/CustomerWorkbenchApp";
 import { ZhiweiPortraitDemoApp } from "./zhiwei-portrait/ZhiweiPortraitDemoApp";
 import {
@@ -203,7 +204,7 @@ type PublishedAgentPayload = {
 type WorkbenchMetric = { label: string; value: string };
 
 type AiApplication = {
-  code: "meeting-minutes" | "customer-insight" | "zhiwei-portrait" | "customer-workbench";
+  code: "meeting-minutes" | "customer-insight" | "data-insight" | "zhiwei-portrait" | "customer-workbench";
   name: string;
   shortName: string;
   status: string;
@@ -737,12 +738,21 @@ const AI_APPLICATIONS: AiApplication[] = [
   },
   {
     code: "customer-insight",
+    name: "客户洞察",
+    shortName: "客",
+    status: "内置",
+    summary: "客户画像、合同订单、服务体验和一客一策分析。",
+    description: "汇总 CRM、合同订单、客户服务和人工补充事实，形成可编辑的客户洞察报告。",
+    meta: "CRM 洞察 · 业务闭环",
+  },
+  {
+    code: "data-insight",
     name: "数据洞察",
     shortName: "数",
     status: "内置",
-    summary: "潜客、商机、客户、合同订单和销售业绩仪表板。",
-    description: "汇总 CRM 客户、商机、合同订单、销售业绩和人工补充事实，动态生成经营仪表板与可编辑洞察报告。",
-    meta: "CRM 数据 · 经营洞察",
+    summary: "潜客、客户、商机、订单回款和销售业绩仪表板。",
+    description: "按销售业绩、客户、商机和订单回款分类展示 CRM 经营仪表板。",
+    meta: "CRM 数据 · 仪表板",
   },
   {
     code: "zhiwei-portrait",
@@ -4622,10 +4632,10 @@ export default function AssistantApp() {
           </aside>
 
           <section
-            className={`cici-ai-apps__main${activeAiApplication.code === "customer-workbench" ? " cici-ai-apps__main--workbench" : ""}`}
+            className={`cici-ai-apps__main${activeAiApplication.code === "customer-workbench" ? " cici-ai-apps__main--workbench" : ""}${activeAiApplication.code === "data-insight" ? " cici-ai-apps__main--data-board" : ""}`}
             aria-label={`${activeAiApplication.name}主页面`}
           >
-            {activeAiApplication.code !== "customer-workbench" ? (
+            {activeAiApplication.code !== "customer-workbench" && activeAiApplication.code !== "data-insight" ? (
               <header className="cici-ai-apps__hero">
                 <div>
                   {activeAiApplication.code === "meeting-minutes" ? <p>{activeAiApplication.meta}</p> : null}
@@ -4650,6 +4660,8 @@ export default function AssistantApp() {
               <CustomerWorkbenchApp token={auth?.token ?? ""} />
             ) : activeAiApplication.code === "customer-insight" ? (
               <CustomerInsightAppPanel token={auth?.token ?? ""} />
+            ) : activeAiApplication.code === "data-insight" ? (
+              <DataInsightAppPanel token={auth?.token ?? ""} />
             ) : (
               <section className="cici-ai-apps__meeting-panel">
                 <MeetingMinutesPanel

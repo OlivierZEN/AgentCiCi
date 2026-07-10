@@ -34,11 +34,6 @@ public class CustomerInsightController {
         return ApiResponse.ok(customerInsightService.catalog());
     }
 
-    @GetMapping("/dashboard")
-    public ApiResponse<Map<String, Object>> dashboard() {
-        return ApiResponse.ok(customerInsightService.dashboard(TenantContext.requireOrgId()));
-    }
-
     @GetMapping("/projects")
     public ApiResponse<List<Map<String, Object>>> listProjects() {
         return ApiResponse.ok(customerInsightService.listProjects(TenantContext.requireOrgId()));

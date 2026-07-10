@@ -1,0 +1,74 @@
+task_id: TASK-176
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T10:20:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-086-data-insight-decoupling-hotfix.md
+task_status_path: .claw/tasks/TASK-176.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - frontend/src/assistant/**
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/**
+  - backend/src/main/java/com/codehouse/ciciassistant/customerinsight/**
+  - backend/src/main/java/com/codehouse/ciciassistant/datainsight/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customerinsight/**
+  - backend/src/test/java/com/codehouse/ciciassistant/datainsight/**
+scope_files:
+  - docs/specs/FEAT-086-data-insight-decoupling-hotfix.md
+  - docs/specs/FEAT-084-data-insight-ai-app.md
+  - .claw/tasks/TASK-176.md
+  - .claw/assignments/TASK-176.yaml
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/assistant/customer-insight/CustomerInsightAppPanel.tsx
+  - frontend/src/assistant/customer-insight/customerInsightApi.ts
+  - frontend/src/assistant/customer-insight/customerInsightTypes.ts
+  - frontend/src/assistant/customer-insight/customerInsightSections.ts
+  - frontend/src/assistant/data-insight/DataInsightAppPanel.tsx
+  - frontend/src/assistant/data-insight/dataInsightApi.ts
+  - frontend/src/assistant/data-insight/dataInsightTypes.ts
+  - frontend/src/assistant/data-insight/dataInsightSections.ts
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/CustomerInteractionEventRepository.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/CustomerWorkbenchRecommendationRepository.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customerinsight/api/CustomerInsightController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customerinsight/service/CustomerInsightService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/datainsight/api/DataInsightController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/datainsight/service/DataInsightService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/customerinsight/CustomerInsightIntegrationTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/datainsight/DataInsightIntegrationTest.java
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-033-assistant-ai-apps-workspace.md
+  - docs/specs/FEAT-034-customer-insight-ai-app.md
+  - docs/specs/FEAT-084-data-insight-ai-app.md
+task_boundary:
+  - "恢复客户洞察为独立 AI 应用，不得保留数据洞察仪表盘或数据洞察文案。"
+  - "新增独立数据洞察 AI 应用，使用 data-insight code、data-insight 前端目录和 /ai/data-insights/* API。"
+  - "移除 customer-insight 与数据洞察 dashboard 的耦合。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T10:20:00+08:00; user requested immediate decoupling hotfix."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Hotfix assignment to correct TASK-174 coupling mistake. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."

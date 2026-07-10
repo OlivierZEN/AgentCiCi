@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T10:50:00+08:00
+updated_at: 2026-07-10T08:04:21+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T10:50:00+08:00
+last_run_at: 2026-07-10T08:04:21+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,29 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-175 客户互动工作台外层滚动与 CRM 主页按钮清理，本地发布前验证。
-- 命令：身份门禁、assignment check、CloudCC pagecomponent 文档与 online-highcode 扫描、前端生产构建、`git diff --check`、桌面端 Playwright 平台端/CRM embed/CloudCC UMD 宿主模拟溢出检查。
+- 范围：TASK-176 数据洞察与客户洞察解耦热修，本地发布前验证。
+- 命令：身份门禁、assignment check、后端集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 数据洞察/客户洞察独立性与视觉检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-176 data insight decoupling hotfix (2026-07-10T08:04:21+08:00):
+  - Commands:
+    - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-176 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-176 --branch main --files ... --json` -> **allowed**.
+    - `backend-data-customer-insight`: `mvn -q -Dtest='com.codehouse.ciciassistant.customerinsight.CustomerInsightIntegrationTest,com.codehouse.ciciassistant.datainsight.DataInsightIntegrationTest' test` in `backend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `local-browser-data-insight-sales`: Playwright with local Vite and mocked authenticated APIs at `1496x980`, `/app?aiApp=data-insight` -> **success**; `.cici-data-board=1`, `.cici-customer-insight=0`, hero count `0`, dashboard cards `>=7`, no horizontal overflow.
+    - `local-browser-data-insight-customer`: switched to `客户` category -> **success**; `客户分布图` and `客户结构` visible, no horizontal overflow.
+    - `local-browser-customer-insight`: `/app?aiApp=customer-insight` -> **success**; `.cici-customer-insight=1`, `.cici-data-board=0`, customer insight project/report flow visible, no horizontal overflow.
+  - Browser evidence:
+    - `output/playwright/task176-data-insight-sales-dashboard.png`.
+    - `output/playwright/task176-data-insight-customer-dashboard.png`.
+    - `output/playwright/task176-customer-insight-independent.png`.
+  - Notes:
+    - 客户洞察保留独立项目/报告编辑结构；数据洞察新增独立 `/ai/data-insights/dashboard` 与 `frontend/src/assistant/data-insight/**`，不再复用或挂载到 `/ai/customer-insights/dashboard`。
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-175 local validation for customer workbench scroll cleanup (2026-07-10T10:50:00+08:00):
   - Commands:

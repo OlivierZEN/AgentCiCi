@@ -1,7 +1,6 @@
 import { safeFetchJson } from "../../utils/http";
 import type {
   CustomerInsightGenerateResult,
-  CustomerInsightDashboard,
   CustomerInsightProject,
   CustomerInsightSection,
   CustomerInsightSectionCatalogItem,
@@ -33,10 +32,6 @@ export function getCustomerInsightProject(token: string, projectId: string) {
 
 export function getCustomerInsightCatalog(token: string) {
   return requestJson<CustomerInsightSectionCatalogItem[]>(token, "/ai/customer-insights/catalog");
-}
-
-export function getCustomerInsightDashboard(token: string) {
-  return requestJson<CustomerInsightDashboard>(token, "/ai/customer-insights/dashboard");
 }
 
 export function createCustomerInsightProject(

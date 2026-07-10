@@ -66,14 +66,6 @@ class CustomerInsightIntegrationTest {
                 .andExpect(jsonPath("$.data[19].sectionCode").value("signed_contracts"))
                 .andExpect(jsonPath("$.data[19].groupLabel").value("业务闭环"));
 
-        mockMvc.perform(get("/ai/customer-insights/dashboard")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.sourceMode").value("MOCK"))
-                .andExpect(jsonPath("$.data.summary.totalLeads").isNumber())
-                .andExpect(jsonPath("$.data.funnel[0].label").value("潜在客户"))
-                .andExpect(jsonPath("$.data.accounts[0].accountName").isString());
-
         MvcResult createResult = mockMvc.perform(post("/ai/customer-insights/projects")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
