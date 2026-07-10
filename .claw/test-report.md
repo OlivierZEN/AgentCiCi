@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T08:25:49+08:00
+updated_at: 2026-07-10T08:55:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T08:25:49+08:00
+last_run_at: 2026-07-10T08:55:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,37 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-177 数据洞察仪表盘 UI 热修复，本地发布前验证。
-- 命令：身份门禁、assignment check、前端生产构建、`git diff --check`、桌面端 Playwright 四分类截图/DOM 验收。
+- 范围：TASK-178 CRM 嵌入客户互动工作台 AI 助手语音输入热修复，生产发布与 CloudCC CRM 绑定验收。
+- 命令：身份门禁、assignment check、ASR hook 测试、前端生产构建、CloudCC pagecomponent 打包/发布/自定义页绑定、生产部署健康检查、桌面端 Playwright 回归。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-178 CRM embedded workbench voice input hotfix (2026-07-10T08:55:00+08:00):
+  - Commands:
+    - `identity-gate`: generic MANAGER-001 dev-login and task-scoped `dev-login.py .claw --developer MANAGER-001 --task TASK-178 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-178 --branch main --files ... --json` -> **allowed**.
+    - `frontend-asr-test`: `npm --prefix frontend test -- useAsrVoiceInput.test.ts` -> **success**, 3 tests passed.
+    - `umd-syntax`: `node --check frontend/build/customer-workbench.umd.min.js` -> **success**.
+    - `iframe-allow-static`: `rg` confirmed `allow="microphone; clipboard-write"` in Vue and UMD render/fallback paths.
+    - `cloudcc-package-dry-run`: `cloudcc package pagecomponent customer-workbench . --dry-run` -> **success**, safe file count `2`.
+    - `frontend-build`: `npm --prefix frontend run build` -> **success**; existing Vite large chunk warning remains.
+    - `local-umd-host`: Playwright simulated CRM host -> **success**; iframe `allow=microphone; clipboard-write`, no outer right scrollbar.
+    - `release-dry-run-2.3.5`: `./scripts/release-acr.sh --dry-run` -> **success**, resolved version `2.3.5`, commit `aac3080c103c`.
+    - `release-2.3.5`: `./scripts/release-acr.sh --version 2.3.5` -> **success**; backend/frontend images and Git tag `2.3.5` were pushed.
+    - `production-backup-2.3.5`: ECS backup `/opt/cici/backups/20260710-083254-before-2.3.5-task178-crm-workbench-voice` -> **success**.
+    - `production-deploy-2.3.5`: backend/frontend recreated on `2.3.5`; backend and frontend healthy; `/actuator/health=UP`; `/system/version` returned `version=2.3.5`, `imageTag=2.3.5`, `gitCommit=aac3080c103c`; frontend `nginx -t` passed; recent backend error scan was empty.
+    - `cloudcc-pagecomponent-publish`: `cloudcc publish pagecomponent customer-workbench .` -> **success**; published `component-customer-workbench` id `6a503defe4b0a577cbba1f8a`, apiName `custc_202607y6ji407v`, version `10`, payload contains iframe microphone allow.
+    - `cloudcc-custompage-update`: `cloudcc update customPage . customer_interaction_workbench @/tmp/task178-custompage-string-payload.json` -> **success**; current custom page id `6a503e1ee4b0a577cbba1f8b`, `renderVersion=V4.0`, component ref id `6a503defe4b0a577cbba1f8a`.
+    - `cloudcc-verify`: `cloudcc verify injectionPage . customer_interaction_workbench --expected-component-id 6a503defe4b0a577cbba1f8a --stale-policy warning` -> **passed**, issues `[]`.
+    - `public-smoke`: `https://x.agentcici.com/` and `/app?aiApp=customer-workbench&embed=crm` -> HTTP `200`.
+    - `prod-browser-mic-denied-regression`: Playwright production embed page with mocked `getUserMedia` rejection -> **success**; startup failure notice remained visible, `hasEmptySpeechNotice=false`, `rootScrollable=false`.
+  - Browser evidence:
+    - `output/playwright/task178-local-umd-microphone-allow.png`.
+    - `output/playwright/task178-prod-embed-mic-denied-debug.png`.
+  - Notes:
+    - 本任务修复两处根因：CRM iframe 增加麦克风授权；ASR 启动失败或主动 abort 不再触发空识别完成回调，因此真实启动/权限错误不会再被覆盖成“未识别到有效语音内容”。
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-177 data insight dashboard UI hotfix (2026-07-10T08:25:49+08:00):
   - Commands:

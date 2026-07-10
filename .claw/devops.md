@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T08:22:00+08:00
+updated_at: 2026-07-10T08:55:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.5 TASK-178 CRM 嵌入客户互动工作台语音输入热修复 on 2026-07-10:
+  - Git commit: `aac3080c103c` on `main`; annotated tag `2.3.5` was pushed to origin.
+  - Scope: 修复 CloudCC CRM 嵌入客户互动工作台 AI 助手语音输入点击后误报“未识别到有效的语音内容”的问题；pagecomponent iframe 增加麦克风授权，ASR 启动失败不再被空完成回调覆盖。
+  - Release method: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.3.5`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.5`, index digest `sha256:5c060d77ccfcea496e5b28669e8bd76fc95b2624d95ed85f6cf9561c16cfc808`, linux/amd64 manifest digest `sha256:340d95bf65e5613a9dadff56319153929d4450afa4f961ca699dbfabf7c417f9`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.5`, index digest `sha256:e524eef3155551b675a48a1db986222c95a5625520fd319b5ed16f98b5e004bf`, linux/amd64 manifest digest `sha256:951d3004765e63b3e824579fa08a4eb609e5c6d7ec74b5573c79e42de2bb37ce`.
+  - Backup directory: `/opt/cici/backups/20260710-083254-before-2.3.5-task178-crm-workbench-voice`, containing `acr.env.before-2.3.5`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.3.5` and `CICI_APP_VERSION=2.3.5`.
+  - Deploy note: backend/frontend images were pulled from ACR and force-recreated onto `2.3.5`; stateful service containers remained healthy on their prior infra images.
+  - Verified after deploy: backend/frontend healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.3.5`, `imageTag=2.3.5`, and `gitCommit=aac3080c103c`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm` returned HTTP 200.
+  - CloudCC CRM publish: pagecomponent `component-customer-workbench` was published as id `6a503defe4b0a577cbba1f8a`, apiName `custc_202607y6ji407v`, version `10`; custom page `customer_interaction_workbench` was updated to id `6a503e1ee4b0a577cbba1f8b`, `renderVersion=V4.0`, component ref id `6a503defe4b0a577cbba1f8a`; `cloudcc verify injectionPage` passed with no issues.
+  - Browser smoke: local UMD CRM-host simulation confirmed iframe `allow="microphone; clipboard-write"` and no outer right scrollbar; production embed page with mocked microphone denial kept the startup failure notice and did not show the empty speech notice. Screenshots: `output/playwright/task178-local-umd-microphone-allow.png`, `output/playwright/task178-prod-embed-mic-denied-debug.png`.
 
 - 2.3.4 TASK-176 数据洞察与客户洞察解耦热修复 on 2026-07-10:
   - Git commit: `22f91cc38a3e` on `main`; annotated tag `2.3.4` was pushed to origin.

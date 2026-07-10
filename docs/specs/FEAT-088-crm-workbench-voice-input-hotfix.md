@@ -2,10 +2,10 @@
 kind: feature-spec
 id: FEAT-088
 title: CRM 嵌入客户互动工作台语音输入热修
-status: active
+status: done
 owner: MANAGER-001
 created_at: 2026-07-10T08:35:00+08:00
-updated_at: 2026-07-10T08:35:00+08:00
+updated_at: 2026-07-10T08:55:00+08:00
 ---
 
 # FEAT-088 - CRM 嵌入客户互动工作台语音输入热修

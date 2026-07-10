@@ -2,9 +2,9 @@
   "compDesc": "嵌入 AgentCiCi 客户互动工作台",
   "compName": "客户互动",
   "component": "component-customer-workbench",
-  "apiName": "custc_202607YmKkL7PO",
-  "devid": "6a50377ce4b0a577cbba1f86",
-  "id": "6a50377ce4b0a577cbba1f86",
+  "apiName": "custc_202607y6ji407v",
+  "devid": "6a503defe4b0a577cbba1f8a",
+  "id": "6a503defe4b0a577cbba1f8a",
   "loadModel": "lazy",
   "prebuiltBundlePath": "frontend/build/customer-workbench.umd.min.js"
 }
