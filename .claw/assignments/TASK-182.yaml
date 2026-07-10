@@ -1,0 +1,84 @@
+task_id: TASK-182
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T15:26:34Z
+expires_at: none
+spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
+task_status_path: .claw/tasks/TASK-182.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/main/java/com/codehouse/ciciassistant/cloudcc/**
+  - backend/src/test/java/com/codehouse/ciciassistant/cloudcc/**
+  - backend/src/main/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/test/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/db/migration/**
+  - frontend/src/assistant/**
+  - frontend/src/components/**
+  - frontend/src/hooks/**
+  - frontend/src/utils/**
+  - frontend/pagecomponents/customer-workbench/**
+  - frontend/build/customer-workbench.umd.min.js
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - .claw/tasks/TASK-182.md
+  - .claw/assignments/TASK-182.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/goals.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - .claw/issue-list.md
+  - backend/src/main/resources/db/migration/V73__customer_workbench_production_readiness.sql
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/assistant/customer-workbench/**
+  - frontend/pagecomponents/customer-workbench/**
+  - frontend/build/customer-workbench.umd.min.js
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/goals.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "补齐 FEAT-081 当前生产差距，完成客户互动工作台端到端生产闭环。"
+  - "CloudCC 是客户主数据和 CRM 业务对象事实源；AgentCiCi 保存互动、信号、建议、确认和审计。"
+  - "真实 CRM 写入必须经过建议、编辑、确认、权限校验、幂等执行、回读验证和审计。"
+  - "同一 CloudCC 用户在 AgentCiCi 与 CRM 嵌入入口必须保持身份和记录权限一致。"
+  - "CloudCC 元数据和 pagecomponent/customPage 操作必须通过 cc-customization-expert-msapi 技能 CLI。"
+  - "仅做桌面端产品质量门，不新增移动端适配。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T15:26:34Z; user explicitly opened goal mode for FEAT-081 production readiness and online release."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production closure task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py for representative TASK-182 files before implementation edits."

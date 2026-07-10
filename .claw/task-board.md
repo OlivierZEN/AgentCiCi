@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T14:18:00+08:00
+updated_at: 2026-07-10T15:26:34Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-182 - 客户互动工作台生产闭环
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-081-customer-interaction-workbench.md`
+- task_status_path: `.claw/tasks/TASK-182.md`
+- assignment_path: `.claw/assignments/TASK-182.yaml`
+- blocked_by: `none`
+- next_action: Scan CloudCC standard objects and current contracts, then implement the P0 real-data and CRM-writeback foundation.
 
 ### TASK-181 - 客户互动工作台客户列表排版修复
 

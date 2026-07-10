@@ -1,23 +1,31 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T14:18:00+08:00
+updated_at: 2026-07-10T08:40:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T14:18:00+08:00
-last_run_status: success
+last_run_at: 2026-07-10T08:40:00Z
+last_run_status: partial
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`success`（TASK-181 客户列表排版修复已发布生产 `2.3.9`）
-- 范围：TASK-181 客户互动工作台左侧客户列表排版修复，本地验证、生产 `2.3.9` 发布与指定演示组织线上验收。
-- 命令：身份门禁、assignment check、前端生产构建、本地浏览器客户列表排版验证、release dry-run、ACR/Git tag、生产备份/部署/健康、公网 smoke、生产浏览器和接口 smoke。
+- 状态：`partial`（FEAT-081 生产功能设计与差距审计文档验证通过；全仓状态校验受既有治理债务阻塞）
+- 范围：TASK-171 客户互动工作台逐元素代码审计、生产差距矩阵、详细设计、规格与热状态一致性。
+- 命令：身份门禁、assignment check、`git diff --check`、`validate-state.py .claw`、规格关键章节与文件行数检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-171 客户互动工作台生产功能设计与差距审计 (2026-07-10T08:40:00Z):
+  - `identity-gate`: TASK-171 对 FEAT-081、TASK-171、current-status 和 test-report 的写入范围均为 **allowed**。
+  - `assignment-check`: 上述文件均通过 TASK-171 assignment 范围检查。
+  - `static-check`: `git diff --check` -> **success**。
+  - `spec-check`: FEAT-081 已包含生产基线、逐元素功能设计、总体架构、API、数据模型、CloudCC 映射、技能拆分、权限安全、错误状态、32 项差距矩阵、阶段计划和生产验收标准；TASK-171 为 `119` 行，current-status 为 `46` 行。
+  - `state-validation`: `validate-state.py .claw` -> **blocked by pre-existing repository state**。本次修改的 FEAT-081、TASK-171 和 current-status 未再出现字段、状态枚举、时间格式或行数错误；剩余错误来自既有 task-board 终态任务仍位于 Active Tasks、旧 spec/front matter、旧时区时间格式等治理债务。
+  - 本轮未修改运行代码，未执行应用构建、浏览器或 CRM 写入验证。
 
 - TASK-181 客户互动工作台客户列表排版修复生产发布 (2026-07-10T14:18:00+08:00):
   - Commands:

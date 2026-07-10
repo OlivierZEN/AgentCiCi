@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T14:18:00+08:00
+updated_at: 2026-07-10T15:26:34Z
 updated_by: MANAGER-001
-phase: customer-workbench-account-list-alignment-released
-active_task: "TASK-181"
-next_action: "TASK-181 is live in production 2.3.9; monitor customer workbench account list row alignment."
+phase: customer-workbench-production-closure
+active_task: "TASK-182"
+next_action: "Run TASK-182 identity/assignment gates, scan CloudCC standard objects and fields, and implement the real-data/writeback foundation."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,8 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.9` from Git commit `0c8f66e94d15`.
+- TASK-182 is active for FEAT-081 production closure and online release. Its scope covers real CRM-backed queues, complete recommendation/writeback audit, real metrics/signals, all business tabs, structured AI actions, browser/CRM verification, and production deployment.
+- FEAT-081 production feature audit is complete against release `2.3.9` and current code. The spec is now `in_implementation`: SSO/embed, real agent chat, ASR, snapshot/detail reads, and recommendation acceptance work; the CRM write path is still simulated and several visible controls/metrics/signals remain static or frontend-derived. The full element-level design, gap matrix, priorities, APIs, data model, and acceptance criteria are in `docs/specs/FEAT-081-customer-interaction-workbench.md`.
 - TASK-181 is done in production `2.3.9`: customer workbench left customer list alignment hotfix passed local and production desktop Chrome validation. Rows are stable at `104px`, with no row overflow, no adjacent overlap, no outer document/body scrollbar, and console errors `0`.
 - TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.
 - TASK-180 evidence: assignment/login gates, local frontend build, compose config, release dry-run, ACR image push, Git tag, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png` / `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.
@@ -38,8 +40,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact task index.
-- `.claw/tasks/TASK-181.md` - active customer list alignment hotfix task state.
-- `.claw/assignments/TASK-181.yaml` - authorized write scope.
-- `docs/specs/FEAT-091-customer-workbench-account-list-alignment.md` - design and acceptance criteria.
+- `.claw/tasks/TASK-182.md` - active customer workbench production closure state.
+- `.claw/assignments/TASK-182.yaml` - authorized write scope.
+- `docs/specs/FEAT-081-customer-interaction-workbench.md` - design, gap matrix, APIs, data model, and acceptance criteria.
 - `.claw/test-report.md` - latest verified commands.
 - `.claw/devops.md` and `docs/production-release-runbook.md` - production release facts if release is executed.

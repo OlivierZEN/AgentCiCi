@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-171
 status: done
-updated_at: 2026-07-09T23:36:00+08:00
+updated_at: 2026-07-10T08:40:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -101,22 +101,13 @@ spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 
 ## Changed Files
 
-- `docs/specs/FEAT-081-customer-interaction-workbench.md`
-- `.claw/tasks/TASK-171.md`
-- `.claw/assignments/TASK-171.yaml`
-- `.claw/task-board.md`
-- `.claw/current-status.md`
-- `backend/src/main/resources/db/migration/V72__customer_interaction_workbench.sql`
-- `backend/src/main/java/com/codehouse/ciciassistant/customer/**`
-- `backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillDefinitionService.java`
-- `frontend/src/assistant/AssistantApp.tsx`
-- `frontend/src/assistant/customer-workbench/**`
-- `frontend/src/assistant/cici-ui.css`
-- `frontend/pagecomponents/customer-workbench/**`
-- `frontend/build/customer-workbench.umd.min.js`
-- `html/customer_interaction_workbench/**`
+- 详细范围见本任务 assignment 与 FEAT-081，主要覆盖客户工作台前后端、CloudCC 嵌入资产、规格和任务状态。
 
 ## Handoff
+
+- 2026-07-10 完成生产功能逐元素审计，结论已写入 `docs/specs/FEAT-081-customer-interaction-workbench.md` 的“生产版详细功能设计与差距审计”。审计基线为生产 `2.3.9` 与当前代码，FEAT-081 状态调整为 `in_implementation`。
+- 已确认的最高优先级缺口是：客户队列仍依赖本地快照、CRM 写回仍为 `demo-crm-*` 模拟结果、建议确认状态机不完整、页面指标与关键项存在前端公式/固定文案、智能体结构化页面动作尚未实现。
+- TASK-171 的首版交付与历史验证保持 `done`；后续生产闭环应依据 FEAT-081 的 P0/P1/P2 差距矩阵另行创建实施任务，避免把新一轮实现历史继续堆入本任务。
 
 - AgentCiCi 侧工作台主体、API、演示数据和技能绑定已完成并通过本地验证。
 - CloudCC CRM 侧页面组件、HTML 承载页、customPage、页面菜单、简档授权、全部 8 个应用菜单绑定和真实 CRM Web 注入页均已在线验证。若某个已登录用户仍看不到菜单，优先让其刷新 CRM、切换应用或重新登录以更新前端/登录态菜单缓存。

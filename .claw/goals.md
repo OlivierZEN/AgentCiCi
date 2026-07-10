@@ -1,12 +1,18 @@
 ---
 kind: goals
 version: 3
-updated_at: 2026-05-09T02:08:30Z
-updated_by: ai
+updated_at: 2026-07-10T15:26:34Z
+updated_by: MANAGER-001
 status: active
 ---
 
 # Goals
+
+## 当前交付目标
+
+- 完成 FEAT-081 客户互动工作台的 32 项生产差距，覆盖真实 CloudCC 数据权限、CRM 确认写回与回读审计、真实指标信号、新客户推进、老客户经营、结构化 AI 动作和完整异常状态。
+- 完成 AgentCiCi、CloudCC CRM 嵌入、真实 CRM 写入和桌面浏览器端到端验证，提交推送并按生产 runbook 发布线上版本。
+- 当前执行任务：`TASK-182`。
 
 ## Product Goal
 
