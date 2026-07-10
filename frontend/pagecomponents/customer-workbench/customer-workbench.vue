@@ -6,6 +6,7 @@
         :src="iframeUrl"
         title="客户互动工作台"
         frameborder="0"
+        allow="microphone; clipboard-write"
       ></iframe>
       <p v-if="embedded && ssoMessage" class="customer-workbench-embed__status">{{ ssoMessage }}</p>
       <div v-else class="customer-workbench-embed__placeholder">

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T08:22:00+08:00
+updated_at: 2026-07-10T08:35:00+08:00
 updated_by: MANAGER-001
-phase: customer-workbench-scroll-cleanup-done
-active_task: "TASK-170"
-next_action: "Resume TASK-170 security rules platform unless a newer production hotfix arrives."
+phase: crm-workbench-voice-input-hotfix
+active_task: "TASK-178"
+next_action: "Fix CRM embedded customer workbench voice input by adding iframe microphone permission and preserving ASR startup errors."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,7 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.4` from Git commit `22f91cc38a3e`.
+- TASK-178 is active: user reported CloudCC CRM embedded customer workbench AI assistant voice input shows “未识别到有效的语音内容”; suspected causes are missing cross-origin iframe microphone permission and ASR startup errors being overwritten by empty completion.
 - TASK-175 is done: removed the “打开 CRM 客户主页” button and prevented browser-level right-side scrolling in both AgentCiCi and CloudCC CRM embedded customer workbench views.
 - TASK-175 production evidence: release `2.3.3` carried the implementation, later release `2.3.4` includes it; authenticated Playwright at `https://x.agentcici.com/app?aiApp=customer-workbench` and `...&embed=crm` returned `documentScrollable=false`, `bodyScrollable=false`, `hasCrmHomeButton=false`, with internal workbench regions still locally scrollable.
 - TASK-175 CloudCC evidence: pagecomponent `component-customer-workbench` published as id `6a50377ce4b0a577cbba1f86`, apiName `custc_202607YmKkL7PO`, version `9`; custom page `customer_interaction_workbench` updated to id `6a503a55e4b0a577cbba1f87`, `renderVersion=V3.0`, component ref id `6a50377ce4b0a577cbba1f86`.
@@ -60,6 +61,9 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
+- `.claw/tasks/TASK-178.md` - active CRM embedded workbench voice input hotfix task state.
+- `.claw/assignments/TASK-178.yaml` - current authorized write scope.
+- `docs/specs/FEAT-088-crm-workbench-voice-input-hotfix.md` - active hotfix spec.
 - `.claw/tasks/TASK-175.md` - completed customer workbench scroll cleanup task state.
 - `.claw/assignments/TASK-175.yaml` - current authorized write scope.
 - `docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md` - active feature spec.

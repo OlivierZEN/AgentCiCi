@@ -119,6 +119,7 @@ export function useAsrVoiceInput() {
   const transcriptHandlerRef = useRef<(event: AsrTranscriptEvent) => void>(() => {});
   const finishHandlerRef = useRef<(p: { asrText: string; fullText: string }) => void | Promise<void>>(async () => {});
   const asrReadyRef = useRef(false);
+  const finishCallbackEnabledRef = useRef(false);
 
   useEffect(() => {
     try {
@@ -189,6 +190,7 @@ export function useAsrVoiceInput() {
 
   const abort = useCallback(() => {
     clearSilenceTimer();
+    finishCallbackEnabledRef.current = false;
     try {
       asrWsRef.current?.close();
     } catch {
@@ -239,6 +241,7 @@ export function useAsrVoiceInput() {
       finalAsrTextRef.current = "";
       partialAsrTextRef.current = "";
       asrReadyRef.current = false;
+      finishCallbackEnabledRef.current = false;
 
       try {
         const websocket = new WebSocket(
@@ -295,6 +298,11 @@ export function useAsrVoiceInput() {
           disconnectAudio();
           asrWsRef.current = null;
           setListening(false);
+          const shouldRunFinished = finishCallbackEnabledRef.current;
+          finishCallbackEnabledRef.current = false;
+          if (!shouldRunFinished) {
+            return;
+          }
           const asrText = (finalAsrTextRef.current + partialAsrTextRef.current).trim();
           const fullText = mergePrefixAsr(prefixSnapshotRef.current, asrText);
           if (fullText) {
@@ -368,6 +376,7 @@ export function useAsrVoiceInput() {
         source.connect(processor);
         processor.connect(context.destination);
 
+        finishCallbackEnabledRef.current = true;
         setListening(true);
         noticeHandlerRef.current("实时听写中...（边说边出字）");
         armSilenceTimer();

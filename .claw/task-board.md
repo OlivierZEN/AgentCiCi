@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T08:22:00+08:00
+updated_at: 2026-07-10T08:35:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-178 - CRM 嵌入客户互动工作台语音输入热修
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-088-crm-workbench-voice-input-hotfix.md`
+- task_status_path: `.claw/tasks/TASK-178.md`
+- assignment_path: `.claw/assignments/TASK-178.yaml`
+- blocked_by: `none`
+- next_action: Add iframe microphone permission, fix ASR startup failure reporting, validate, then publish.
 
 ### TASK-175 - 客户互动工作台外层滚动与 CRM 主页按钮清理
 

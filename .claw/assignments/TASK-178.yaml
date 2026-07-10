@@ -1,0 +1,62 @@
+task_id: TASK-178
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T08:35:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-088-crm-workbench-voice-input-hotfix.md
+task_status_path: .claw/tasks/TASK-178.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - frontend/src/shared/**
+  - frontend/pagecomponents/customer-workbench/**
+  - frontend/build/customer-workbench.umd.min.js
+scope_files:
+  - docs/specs/FEAT-088-crm-workbench-voice-input-hotfix.md
+  - .claw/tasks/TASK-178.md
+  - .claw/assignments/TASK-178.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/shared/useAsrVoiceInput.ts
+  - frontend/src/shared/useAsrVoiceInput.test.ts
+  - frontend/pagecomponents/customer-workbench/customer-workbench.vue
+  - frontend/pagecomponents/customer-workbench/config.json
+  - frontend/build/customer-workbench.umd.min.js
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-083-customer-workbench-real-agent-assistant.md
+  - docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md
+task_boundary:
+  - "修复 CloudCC CRM 嵌入客户互动工作台 AI 助手语音输入不可用或误报空语音的问题。"
+  - "允许修改 ASR hook 的启动失败/abort 回调语义。"
+  - "允许修改 CloudCC pagecomponent iframe 权限和 UMD bundle。"
+  - "不得修改 TASK-177 数据洞察相关文件。"
+  - "不得输出、提交或记录密码、token、secret、cookie 或可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T08:35:00+08:00; user reported CRM embedded customer workbench voice input failure."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Production hotfix assignment for CRM embedded customer workbench voice input. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py for TASK-178 representative files before editing implementation source."
