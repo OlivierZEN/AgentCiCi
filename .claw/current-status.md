@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T10:05:00+08:00
+updated_at: 2026-07-10T08:22:00+08:00
 updated_by: MANAGER-001
-phase: customer-workbench-scroll-cleanup
-active_task: "TASK-175"
-next_action: "Remove the CRM home button from customer workbench, eliminate outer page scrollbars in AgentCiCi and CRM embed views, validate, and publish."
+phase: customer-workbench-scroll-cleanup-done
+active_task: "TASK-170"
+next_action: "Resume TASK-170 security rules platform unless a newer production hotfix arrives."
 read_next:
   goals: false
   decisions: false
@@ -22,8 +22,13 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.3.2` from Git commit `d144149168ea`.
-- TASK-175 is active: user requested removing the “打开 CRM 客户主页” button and preventing the browser-level right-side scrollbar in both AgentCiCi and CloudCC CRM embedded customer workbench views.
+- Current branch: `main`; production is running release `2.3.4` from Git commit `22f91cc38a3e`.
+- TASK-175 is done: removed the “打开 CRM 客户主页” button and prevented browser-level right-side scrolling in both AgentCiCi and CloudCC CRM embedded customer workbench views.
+- TASK-175 production evidence: release `2.3.3` carried the implementation, later release `2.3.4` includes it; authenticated Playwright at `https://x.agentcici.com/app?aiApp=customer-workbench` and `...&embed=crm` returned `documentScrollable=false`, `bodyScrollable=false`, `hasCrmHomeButton=false`, with internal workbench regions still locally scrollable.
+- TASK-175 CloudCC evidence: pagecomponent `component-customer-workbench` published as id `6a50377ce4b0a577cbba1f86`, apiName `custc_202607YmKkL7PO`, version `9`; custom page `customer_interaction_workbench` updated to id `6a503a55e4b0a577cbba1f87`, `renderVersion=V3.0`, component ref id `6a50377ce4b0a577cbba1f86`.
+- TASK-175 CloudCC operational note: `cloudcc bind pagecomponent` and object-array customPage update returned CloudCC `500`; saving succeeded only after sending service-required stringified `pageContent`.
+- TASK-175 production browser screenshots: `output/playwright/task175-prod-platform-workbench-2.3.4.png`, `output/playwright/task175-prod-embed-workbench-2.3.4.png`.
+- TASK-176 is done and production released: decoupled customer insight from data insight in release `2.3.4`.
 - TASK-174 is done and production released: upgraded the existing customer insight AI app into “数据洞察”, added CRM data dashboard charts for leads, opportunities, customers, contract/order, sales performance, and kept no-data Mock fallback clearly labeled.
 - TASK-174 CloudCC standard-catalog scan confirmed standard CRM objects including `Account`, `Contact`, `cloudcclead`, `Opportunity`, `contract`, `cloudccorder`, `product`, `Task`, and `Event`.
 - TASK-174 local validation passed: task-scoped identity gate, assignment check, backend `CustomerInsightIntegrationTest`, frontend `npm run build`, `git diff --check`, and desktop Playwright visual/overflow check for `/app?aiApp=customer-insight`.
@@ -55,7 +60,7 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact index for live tasks.
-- `.claw/tasks/TASK-175.md` - active customer workbench scroll cleanup task state.
+- `.claw/tasks/TASK-175.md` - completed customer workbench scroll cleanup task state.
 - `.claw/assignments/TASK-175.yaml` - current authorized write scope.
 - `docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md` - active feature spec.
 - `.claw/tasks/TASK-173.md` - real assistant implementation and release task state.

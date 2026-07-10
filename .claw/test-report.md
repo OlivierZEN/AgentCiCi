@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T08:12:31+08:00
+updated_at: 2026-07-10T08:22:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T08:12:31+08:00
+last_run_at: 2026-07-10T08:22:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,30 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-176 数据洞察与客户洞察解耦热修，生产发布与发布后验证。
-- 命令：身份门禁、assignment check、后端集成测试、前端生产构建、`git diff --check`、桌面端 Playwright 数据洞察/客户洞察独立性检查、ACR 发布、生产备份、生产部署、健康检查、公开/认证/API/浏览器 smoke。
+- 范围：TASK-175 客户互动工作台外层滚动与 CRM 主页按钮清理，生产与 CloudCC CRM 自定义页闭环验证。
+- 命令：CloudCC pagecomponent/customPage 回读与更新、CloudCC injectionPage 校验、生产登录 Playwright 平台端与 embed 端截图/DOM 验收、公开页面 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-175 production closure for customer workbench scroll cleanup (2026-07-10T08:22:00+08:00):
+  - Commands:
+    - `release-2.3.3`: `./scripts/release-acr.sh --dry-run`, then `./scripts/release-acr.sh --version 2.3.3` from clean worktree commit `88b15b7723a4` -> **success**; backend/frontend images and Git tag `2.3.3` were pushed.
+    - `production-deploy-2.3.3`: production backup `/opt/cici/backups/20260710-080427-before-2.3.3-task175-workbench-scroll-cleanup`, deploy backend/frontend `2.3.3`, backend health and `/system/version` -> **success**.
+    - `production-forward-inclusion`: later TASK-176 release `2.3.4` from commit `22f91cc38a3e` includes TASK-175 changes on `main`; final browser validation used production `2.3.4`.
+    - `cloudcc-pagecomponent-publish`: `cloudcc publish pagecomponent customer-workbench .` -> **success**; published `component-customer-workbench` id `6a50377ce4b0a577cbba1f86`, apiName `custc_202607YmKkL7PO`, version `9`.
+    - `cloudcc-bind-probe`: `cloudcc bind pagecomponent ...` and customPage update with object-array `pageContent` returned CloudCC `500`; this identified a service protocol mismatch.
+    - `cloudcc-custompage-update`: `cloudcc update customPage . customer_interaction_workbench @/tmp/task175-custompage-string-payload.json` -> **success** after sending service-required stringified `pageContent`; current custom page id `6a503a55e4b0a577cbba1f87`, `renderVersion=V3.0`, `componentRefs[0].comId=6a50377ce4b0a577cbba1f86`.
+    - `cloudcc-verify`: `cloudcc verify injectionPage . customer_interaction_workbench --expected-component-id 6a50377ce4b0a577cbba1f86 --stale-policy warning` -> **passed**, issues `[]`.
+    - `public-smoke`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, and `/app?aiApp=customer-workbench&embed=crm` -> HTTP `200`.
+    - `prod-browser-platform`: Playwright real production login at `1620x900`, `/app?aiApp=customer-workbench` -> **success**; `documentScrollable=false`, `bodyScrollable=false`, `hasCrmHomeButton=false`, `hasWorkbench=true`, `hasAssistant=true`, internal queue/content/chat regions keep local scrolling.
+    - `prod-browser-embed`: Playwright real production login at `1620x900`, `/app?aiApp=customer-workbench&embed=crm` -> **success**; `documentScrollable=false`, `bodyScrollable=false`, `hasCrmHomeButton=false`, internal queue/content/chat regions keep local scrolling.
+  - Browser evidence:
+    - `output/playwright/task175-prod-platform-workbench-2.3.4.png`.
+    - `output/playwright/task175-prod-embed-workbench-2.3.4.png`.
+  - Notes:
+    - 公网 `/actuator/health` and `/system/version` routes currently fall back to the SPA through Nginx; production health for this closure uses the prior ECS deploy health checks plus functional login/API/browser evidence.
+    - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-176 data insight decoupling hotfix (2026-07-10T08:04:21+08:00):
   - Commands:

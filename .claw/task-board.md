@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T10:05:00+08:00
+updated_at: 2026-07-10T08:22:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-175 - 客户互动工作台外层滚动与 CRM 主页按钮清理
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-085-customer-workbench-scroll-cleanup.md`
 - task_status_path: `.claw/tasks/TASK-175.md`
 - assignment_path: `.claw/assignments/TASK-175.yaml`
 - blocked_by: `none`
-- next_action: Remove CRM home button, constrain outer page overflow for AgentCiCi and CRM embed workbench, then verify and publish.
+- next_action: Done in production `2.3.4`; monitor customer workbench platform/embed outer scrolling and CloudCC custom page `V3.0` component binding.
 
 ### TASK-174 - 数据洞察 AI 应用生产发布
 

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T08:12:31+08:00
+updated_at: 2026-07-10T08:22:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -30,6 +30,8 @@ status: active
   - Public smoke: `https://x.agentcici.com/`, `https://x.agentcici.com/app?aiApp=data-insight`, and `https://x.agentcici.com/app?aiApp=customer-insight` returned HTTP 200; `http://x.agentcici.com/` redirected to HTTPS.
   - Authenticated smoke: demo org `org2sva14i4udjmi2t4s` returned org name `智能体平台演示环境`; `/ai/data-insights/dashboard` returned `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`; removed `/ai/customer-insights/dashboard` returned HTTP 404.
   - Browser smoke: production `https://x.agentcici.com/app?aiApp=data-insight` loaded with real production login at 1620x920; `.cici-data-board=1`, `.cici-customer-insight=0`, hero count `0`, no horizontal overflow. Production `https://x.agentcici.com/app?aiApp=customer-insight` loaded with `.cici-customer-insight=1`, `.cici-data-board=0`, no horizontal overflow. Screenshots: `output/playwright/task176-prod-data-insight-2.3.4.png`, `output/playwright/task176-prod-customer-insight-2.3.4.png`.
+  - TASK-175 forward-inclusion note: customer workbench scroll cleanup released in `2.3.3` is included in this `2.3.4` production frontend. Post-release authenticated browser smoke for `/app?aiApp=customer-workbench` and `/app?aiApp=customer-workbench&embed=crm` returned `documentScrollable=false`, `bodyScrollable=false`, and `hasCrmHomeButton=false`; screenshots: `output/playwright/task175-prod-platform-workbench-2.3.4.png`, `output/playwright/task175-prod-embed-workbench-2.3.4.png`.
+  - TASK-175 CloudCC CRM note: pagecomponent `component-customer-workbench` was published as id `6a50377ce4b0a577cbba1f86`, apiName `custc_202607YmKkL7PO`, version `9`; custom page `customer_interaction_workbench` was updated to id `6a503a55e4b0a577cbba1f87`, `renderVersion=V3.0`, and now references that component id. The successful customPage update required stringified `pageContent`; object-array payloads and `bind pagecomponent` returned CloudCC `500`.
 
 - 2.3.2 TASK-174 数据洞察 AI 应用生产发布 on 2026-07-10:
   - Git commit: `d144149168ea` on `main`; annotated tag `2.3.2` was pushed to origin.
