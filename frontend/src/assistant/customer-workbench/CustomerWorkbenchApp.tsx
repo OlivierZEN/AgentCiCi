@@ -4,8 +4,18 @@ import {
   acceptCustomerRecommendation,
   applyCustomerRecommendation,
   askCustomerWorkbenchAssistant,
+  confirmCustomerRecommendation,
+  dismissCustomerRecommendation,
+  getCustomerWorkbenchIntegrationStatus,
+  getCustomerAssistantHistory,
+  getCustomerWorkbenchNotifications,
+  getCustomerWorkbenchSupervisorSummary,
+  getCustomerWorkbenchQueue,
   getCustomerWorkbenchDetail,
-  listCustomerWorkbenchAccounts,
+  setCustomerFollowed,
+  saveCustomerInteraction,
+  submitCustomerRecommendationFeedback,
+  updateCustomerRecommendation,
   type CustomerAssistantResult,
   type CustomerRecommendation,
   type CustomerWorkbenchAccount,
@@ -29,7 +39,7 @@ type DetailTab =
   | "value"
   | "renewal"
   | "relationship";
-type RecommendationAction = "accept" | "apply";
+type RecommendationAction = "accept" | "edit" | "dismiss" | "confirm" | "apply";
 type IconName =
   | "alert"
   | "bot"
@@ -65,13 +75,13 @@ const segmentLabels: Record<string, string> = {
 
 const modeFilterOptions: Record<WorkbenchMode, Array<[string, string]>> = {
   new: [
-    ["all", "重点推进"],
+    ["focus", "重点推进"],
     ["follow", "待跟进"],
     ["risk", "风险客户"],
     ["recommendations", "待确认建议"],
   ],
   existing: [
-    ["all", "续约90天"],
+    ["renewal", "续约90天"],
     ["health", "健康下降"],
     ["service", "服务异常"],
     ["expansion", "增购信号"],
@@ -101,8 +111,19 @@ function nowTime() {
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 }
 
+function chatTime(value: string) {
+  if (!value) return nowTime();
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return nowTime();
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 function segmentLabel(segment: string) {
   return segmentLabels[segment] ?? segment;
+}
+
+function roleLabel(role: string) {
+  return ({ OWNER: "组织负责人", ORG_ADMIN: "组织管理员", ORG_USER: "业务用户" } as Record<string, string>)[role] ?? role;
 }
 
 function shortDate(value: string) {
@@ -125,6 +146,11 @@ function formatConfidence(value: number) {
   return `${Math.round(percent)}%`;
 }
 
+function metricValue(detail: CustomerWorkbenchDetail | null, key: string, fallback: number) {
+  const value = Number(detail?.metrics?.[key]?.value);
+  return Number.isFinite(value) ? value : fallback;
+}
+
 function queueStatus(account: CustomerWorkbenchAccount) {
   if (account.segment === "RISK") return "风险";
   if (account.pendingRecommendationCount > 0) return "关注";
@@ -142,9 +168,10 @@ function queueStatusClass(account: CustomerWorkbenchAccount) {
 
 function lifecycleSourceLabel(value: string) {
   if (!value) return "客户互动";
-  if (value.includes("微信")) return "微信";
-  if (value.includes("电话")) return "通话录音";
-  if (value.includes("会议")) return "会议纪要";
+  const normalized = value.toUpperCase();
+  if (value.includes("微信") || normalized.includes("WECHAT")) return "微信";
+  if (value.includes("电话") || normalized.includes("PHONE")) return "通话录音";
+  if (value.includes("会议") || normalized.includes("MEETING") || normalized.includes("EVENT")) return "会议纪要";
   return value;
 }
 
@@ -169,6 +196,13 @@ function recommendationIconName(type: string, index: number): IconName {
   if (normalized.includes("CONTACT")) return "people";
   if (normalized.includes("DEMAND")) return "document";
   return ["task", "alert", "people", "document"][index % 4] as IconName;
+}
+
+function evidenceLabel(value: unknown) {
+  if (typeof value === "string") return value;
+  if (!value || typeof value !== "object") return "CRM 事实";
+  const item = value as Record<string, unknown>;
+  return String(item.title || item.detail || item.subject || item.source || "CRM 事实");
 }
 
 function Icon({ name, className = "" }: { name: IconName; className?: string }) {
@@ -232,123 +266,184 @@ function Icon({ name, className = "" }: { name: IconName; className?: string }) 
 type CustomerWorkbenchAppProps = {
   token: string;
   embedded?: boolean;
+  userName?: string;
+  userRole?: string;
 };
 
-export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbenchAppProps) {
+export function CustomerWorkbenchApp({ token, embedded = false, userName = "我", userRole = "当前用户" }: CustomerWorkbenchAppProps) {
+  const initialParams = new URLSearchParams(window.location.search);
+  const initialAccountId = initialParams.get("accountId")?.trim() || "";
+  const initialMode: WorkbenchMode = initialParams.get("mode") === "existing" ? "existing" : "new";
   const [accounts, setAccounts] = useState<CustomerWorkbenchAccount[]>([]);
-  const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>("new");
-  const [activeAccountId, setActiveAccountId] = useState("");
+  const [workbenchMode, setWorkbenchMode] = useState<WorkbenchMode>(initialMode);
+  const [activeAccountId, setActiveAccountId] = useState(initialAccountId);
   const [detail, setDetail] = useState<CustomerWorkbenchDetail | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState(initialMode === "new" ? "focus" : "renewal");
+  const [sort, setSort] = useState("priority");
+  const [page, setPage] = useState(1);
+  const [queueMeta, setQueueMeta] = useState({ totalElements: 0, totalPages: 0, filterCounts: {} as Record<string, number>, dataAsOf: "" });
+  const [integration, setIntegration] = useState<{ ready: boolean; label: string; baseUrl?: string; message?: string }>({ ready: false, label: "正在连接 CRM" });
+  const [notifications, setNotifications] = useState<Array<{ accountId: string; accountName: string; title: string; customerMode?: string }>>([]);
+  const [supervisorSummary, setSupervisorSummary] = useState<{ visibleAccounts: number; riskAccounts: number; pendingRecommendations: number; writeSuccessRate: number } | null>(null);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showQueueSettings, setShowQueueSettings] = useState(false);
+  const [compactQueue, setCompactQueue] = useState(false);
+  const [pageSize, setPageSize] = useState(12);
+  const [assistantOpen, setAssistantOpen] = useState(true);
+  const [assistantPinned, setAssistantPinned] = useState(true);
+  const [editingRecommendation, setEditingRecommendation] = useState<CustomerRecommendation | null>(null);
+  const [interactionEditorOpen, setInteractionEditorOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [assistantInput, setAssistantInput] = useState("");
   const [assistantMessages, setAssistantMessages] = useState<ChatMessage[]>([
-    { role: "user", text: "总结这个客户最近三次沟通", time: "09:35" },
-    {
-      role: "assistant",
-      text: "好的，这是北京智造科技有限公司最近三次沟通的总结：\n\n1. 方案评审会（04-01 14:00）\n技术和采购团队参与，确定方案架构，建议增加数据分层和权限管理。\n\n2. 电话回访（04-02 16:20）\n客户对报价和服务条款有疑问，需内部评估后回复。\n\n3. 微信沟通（04-03 09:30）\n关注实施周期和与现有 MES 系统集成能力。\n\n需要我帮你生成跟进任务或查看风险信号吗？",
-      time: "09:35",
-    },
+    { role: "assistant", text: "我可以根据当前工作台数据总结互动、查看风险、切换客户，或形成待确认的 CRM 落地建议。", time: nowTime() },
   ]);
   const recommendationRef = useRef<HTMLDivElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
+  const deepLinkedAccountIdRef = useRef(initialAccountId);
+  const previousAssistantAccountRef = useRef("");
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession } = useAsrVoiceInput();
 
   useEffect(() => {
     if (!token) return;
     let ignore = false;
-    setLoading(true);
-    listCustomerWorkbenchAccounts(token)
-      .then((items) => {
-        if (ignore) return;
-        setAccounts(items);
-        setActiveAccountId((current) => current || items[0]?.accountId || "");
-      })
-      .catch((error) => setNotice(error instanceof Error ? error.message : String(error)))
-      .finally(() => !ignore && setLoading(false));
+    const timer = window.setTimeout(() => {
+      setLoading(true);
+      getCustomerWorkbenchQueue(token, { mode: workbenchMode, filter, sort, direction: "desc", query, page, size: pageSize })
+        .then((result) => {
+          if (ignore) return;
+          setAccounts(result.items);
+          setQueueMeta({ totalElements: result.totalElements, totalPages: result.totalPages, filterCounts: result.filterCounts, dataAsOf: result.dataAsOf || "" });
+          setActiveAccountId((current) => {
+            if (deepLinkedAccountIdRef.current && current === deepLinkedAccountIdRef.current) return current;
+            return result.items.some((item) => item.accountId === current) ? current : result.items[0]?.accountId || "";
+          });
+        })
+        .catch((error) => setNotice(error instanceof Error ? error.message : String(error)))
+        .finally(() => !ignore && setLoading(false));
+    }, 220);
     return () => {
       ignore = true;
+      window.clearTimeout(timer);
     };
+  }, [filter, page, pageSize, query, sort, token, workbenchMode]);
+
+  useEffect(() => {
+    if (!token) return;
+    Promise.all([getCustomerWorkbenchIntegrationStatus(token), getCustomerWorkbenchNotifications(token)])
+      .then(([status, items]) => { setIntegration(status); setNotifications(items); })
+      .catch((error) => setIntegration({ ready: false, label: "CRM 连接异常", message: error instanceof Error ? error.message : String(error) }));
+    getCustomerWorkbenchSupervisorSummary(token).then(setSupervisorSummary).catch(() => setSupervisorSummary(null));
   }, [token]);
 
   useEffect(() => {
     if (!token || !activeAccountId) return;
     let ignore = false;
+    setDetail(null);
     getCustomerWorkbenchDetail(token, activeAccountId)
       .then((item) => {
-        if (!ignore) setDetail(item);
+        if (!ignore) {
+          setDetail(item);
+          if (deepLinkedAccountIdRef.current === item.accountId) deepLinkedAccountIdRef.current = "";
+        }
       })
-      .catch((error) => setNotice(error instanceof Error ? error.message : String(error)));
+      .catch((error) => {
+        deepLinkedAccountIdRef.current = "";
+        setNotice(error instanceof Error ? error.message : String(error));
+      });
     return () => {
       ignore = true;
     };
   }, [token, activeAccountId]);
 
-  const modeBaseAccounts = useMemo(() => {
-    const matched = accounts.filter((item) => {
-      if (workbenchMode === "new") return item.segment === "NEW" || item.segment === "RISK";
-      return item.segment === "EXISTING" || item.segment === "STRATEGIC";
-    });
-    return matched.length ? matched : accounts;
-  }, [accounts, workbenchMode]);
+  const activeAccount = useMemo(() => accounts.find((item) => item.accountId === activeAccountId) ?? accounts[0], [accounts, activeAccountId]);
 
   useEffect(() => {
-    if (!modeBaseAccounts.length) return;
-    if (!modeBaseAccounts.some((item) => item.accountId === activeAccountId)) {
-      setActiveAccountId(modeBaseAccounts[0].accountId);
-    }
-  }, [activeAccountId, modeBaseAccounts]);
+    const previous = previousAssistantAccountRef.current;
+    previousAssistantAccountRef.current = activeAccountId;
+    if (previous && previous !== activeAccountId && !assistantPinned) setAssistantOpen(false);
+  }, [activeAccountId, assistantPinned]);
 
-  const filteredAccounts = useMemo(() => {
-    const text = query.trim().toLowerCase();
-    return modeBaseAccounts.filter((item) => {
-      if (workbenchMode === "new") {
-        if (filter === "follow" && item.nextActionCount < 1) return false;
-        if (filter === "risk" && item.segment !== "RISK" && item.riskCount < 1) return false;
-        if (filter === "recommendations" && item.pendingRecommendationCount < 1) return false;
-      } else {
-        if (filter === "health" && item.healthScore >= 78 && item.riskCount < 1) return false;
-        if (filter === "service" && item.riskCount < 1) return false;
-        if (filter === "expansion" && item.progressScore < 70 && item.pendingRecommendationCount < 1) return false;
-      }
-      if (!text) return true;
-      return `${item.name} ${item.owner} ${item.stage} ${item.tags?.join(" ")}`.toLowerCase().includes(text);
-    });
-  }, [filter, modeBaseAccounts, query, workbenchMode]);
-
-  const activeAccount = modeBaseAccounts.find((item) => item.accountId === activeAccountId) ?? modeBaseAccounts[0] ?? accounts[0];
+  useEffect(() => {
+    if (!token || !activeAccountId) return;
+    let ignore = false;
+    const accountName = activeAccount?.name || "当前客户";
+    setAssistantMessages([{ role: "assistant", text: `已进入${accountName}。可以查询互动、风险和 CRM 建议。`, time: nowTime() }]);
+    getCustomerAssistantHistory(token, activeAccountId)
+      .then((items) => {
+        if (ignore || !items.length) return;
+        setAssistantMessages(items.map((item) => ({
+          role: item.role === "user" ? "user" : "assistant",
+          text: item.content,
+          time: chatTime(item.createdAt),
+        })));
+      })
+      .catch(() => undefined);
+    return () => { ignore = true; };
+  }, [activeAccount?.name, activeAccountId, token]);
 
   const switchMode = (mode: WorkbenchMode) => {
     setWorkbenchMode(mode);
-    setFilter("all");
+    setFilter(mode === "new" ? "focus" : "renewal");
+    setPage(1);
     setActiveTab("overview");
-    const nextAccount = accounts.find((item) => (
-      mode === "new"
-        ? item.segment === "NEW" || item.segment === "RISK"
-        : item.segment === "EXISTING" || item.segment === "STRATEGIC"
-    ));
-    if (nextAccount) setActiveAccountId(nextAccount.accountId);
+    deepLinkedAccountIdRef.current = "";
+    setActiveAccountId("");
   };
 
   const reloadDetail = async () => {
     if (!token || !activeAccountId) return;
     setDetail(await getCustomerWorkbenchDetail(token, activeAccountId));
-    setAccounts(await listCustomerWorkbenchAccounts(token));
+    const result = await getCustomerWorkbenchQueue(token, { mode: workbenchMode, filter, sort, direction: "desc", query, page, size: pageSize, refresh: true });
+    setAccounts(result.items);
+    setQueueMeta({ totalElements: result.totalElements, totalPages: result.totalPages, filterCounts: result.filterCounts, dataAsOf: result.dataAsOf || "" });
   };
 
   const handleRecommendation = async (item: CustomerRecommendation, action: RecommendationAction) => {
     if (!token) return;
     try {
-      if (action === "accept") {
+      if (action === "edit") {
+        setEditingRecommendation(item);
+        return;
+      } else if (action === "accept") {
         await acceptCustomerRecommendation(token, item.recommendationId);
-        setNotice("建议已采纳，确认后可继续落地到 CRM。");
+        setNotice("建议已采纳，请核对字段后确认执行。");
+      } else if (action === "confirm") {
+        await confirmCustomerRecommendation(token, item.recommendationId);
+        setNotice("建议已确认，现在可以写入 CRM。");
+      } else if (action === "dismiss") {
+        await dismissCustomerRecommendation(token, item.recommendationId, "用户在客户互动工作台选择忽略");
+        setNotice("建议已忽略，未写入 CRM。");
       } else {
         const result = await applyCustomerRecommendation(token, item.recommendationId);
-        setNotice(result.message || "CRM 落地动作已记录。");
+        setNotice(result.message || "CRM 落地动作已完成。");
       }
+      await reloadDetail();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const saveRecommendationEdit = async (draft: Partial<CustomerRecommendation>) => {
+    if (!token || !editingRecommendation) return;
+    try {
+      await updateCustomerRecommendation(token, editingRecommendation.recommendationId, draft);
+      setEditingRecommendation(null);
+      setNotice("建议已更新，请重新采纳并确认后执行。");
+      await reloadDetail();
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const handleRecommendationFeedback = async (item: CustomerRecommendation, rating: "HELPFUL" | "NOT_HELPFUL") => {
+    try {
+      await submitCustomerRecommendationFeedback(token, item.recommendationId, rating);
+      setNotice(rating === "HELPFUL" ? "已记录：该建议有帮助。" : "已记录：该建议需要改进。");
       await reloadDetail();
     } catch (error) {
       setNotice(error instanceof Error ? error.message : String(error));
@@ -364,6 +459,13 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
       setActiveTab("recommendations");
       window.setTimeout(() => recommendationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
     }
+    if (result.action === "SWITCH_MODE" && result.actionPayload?.mode) switchMode(result.actionPayload.mode);
+    if (result.action === "OPEN_TAB" && result.actionPayload?.tab) setActiveTab(result.actionPayload.tab as DetailTab);
+    if (result.action === "SELECT_NEXT_ACCOUNT" && accounts.length) {
+      const index = accounts.findIndex((item) => item.accountId === activeAccountId);
+      setActiveAccountId(accounts[(index + 1) % accounts.length].accountId);
+    }
+    if (result.action === "PROPOSE_RECOMMENDATION") setActiveTab("recommendations");
   };
 
   const submitAssistant = async (preset?: string) => {
@@ -430,18 +532,45 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
             <button type="button" className={workbenchMode === "new" ? "is-active" : ""} onClick={() => switchMode("new")}>新客户推进</button>
             <button type="button" className={workbenchMode === "existing" ? "is-active" : ""} onClick={() => switchMode("existing")}>老客户经营</button>
           </div>
-          <button type="button" className="customer-workbench__crm-state"><span aria-hidden />CloudCC CRM 已连接</button>
-          <button type="button" className="customer-workbench__icon-button customer-workbench__icon-button--bell" aria-label="通知" />
-          <button type="button" className="customer-workbench__icon-button customer-workbench__icon-button--help" aria-label="帮助" />
+          <button type="button" className="customer-workbench__crm-state" onClick={() => void reloadDetail()} title={integration.message || "刷新 CRM 数据"}>
+            <span aria-hidden className={integration.ready ? "is-ready" : "is-error"} />{integration.label}
+          </button>
+          <div className="customer-workbench__notification-wrap">
+            <button type="button" className="customer-workbench__icon-button customer-workbench__icon-button--bell" aria-label="通知" onClick={() => setShowNotifications((value) => !value)} />
+            {notifications.length ? <b className="customer-workbench__notification-count">{notifications.length}</b> : null}
+            {showNotifications ? (
+              <div className="customer-workbench__notification-popover">
+                <strong>客户提醒</strong>
+                {supervisorSummary ? <div className="customer-workbench__supervisor-summary">
+                  <span>可见客户<b>{supervisorSummary.visibleAccounts}</b></span>
+                  <span>风险客户<b>{supervisorSummary.riskAccounts}</b></span>
+                  <span>待处理建议<b>{supervisorSummary.pendingRecommendations}</b></span>
+                  <span>写回成功率<b>{supervisorSummary.writeSuccessRate}%</b></span>
+                </div> : null}
+                {notifications.length ? notifications.map((item) => (
+                  <button key={`${item.accountId}-${item.title}`} type="button" onClick={() => {
+                    const targetMode: WorkbenchMode = item.customerMode === "EXISTING" ? "existing" : "new";
+                    if (targetMode !== workbenchMode) switchMode(targetMode);
+                    deepLinkedAccountIdRef.current = item.accountId;
+                    setActiveAccountId(item.accountId);
+                    setShowNotifications(false);
+                  }}>
+                    <span>{item.accountName}</span><small>{item.title}</small>
+                  </button>
+                )) : <p>暂无待处理提醒</p>}
+              </div>
+            ) : null}
+          </div>
+          <button type="button" className="customer-workbench__icon-button customer-workbench__icon-button--help" aria-label="帮助" onClick={() => setNotice("数据来自当前用户有权访问的 CloudCC CRM；任何写回都需先确认。")}/>
           <div className="customer-workbench__profile">
-            <i aria-hidden>张</i>
-            <span>张伟</span>
-            <small>销售主管</small>
+            <i aria-hidden>{userName.trim().slice(0, 1) || "我"}</i>
+            <span>{userName}</span>
+            <small>{roleLabel(userRole)}</small>
           </div>
         </div>
       </header>
 
-      <div className="customer-workbench__body">
+      <div className={`customer-workbench__body${assistantOpen ? "" : " is-assistant-closed"}`}>
         <aside className="customer-workbench__queue" aria-label={workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}>
           <header>
             <div className="customer-workbench__queue-title">
@@ -449,33 +578,46 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
               <strong>{workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}</strong>
             </div>
             <div className="customer-workbench__queue-tools" aria-label="队列工具">
-              <button type="button" aria-label="筛选"><Icon name="sliders" /></button>
-              <button type="button" aria-label="列表设置"><Icon name="list" /></button>
+              <button type="button" aria-label="筛选" onClick={() => searchInputRef.current?.focus()}><Icon name="sliders" /></button>
+              <button type="button" aria-label="列表设置" className={showQueueSettings ? "is-active" : ""} onClick={() => setShowQueueSettings((value) => !value)}><Icon name="list" /></button>
             </div>
           </header>
+          {showQueueSettings ? (
+            <div className="customer-workbench__queue-settings">
+              <label><input type="checkbox" checked={compactQueue} onChange={(event) => setCompactQueue(event.target.checked)} />紧凑列表</label>
+              <label>每页<select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value="8">8</option><option value="12">12</option><option value="20">20</option></select></label>
+              <button type="button" onClick={() => void reloadDetail()}>刷新 CRM 数据</button>
+            </div>
+          ) : null}
           <label className="customer-workbench__search">
             <span aria-hidden><Icon name="search" /></span>
             <input
+              ref={searchInputRef}
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => { setQuery(event.target.value); setPage(1); }}
               placeholder="搜索客户名称 / 负责人 / 关键字"
               aria-label="搜索客户"
             />
           </label>
           <nav aria-label="客户筛选">
             {modeFilterOptions[workbenchMode].map(([key, label]) => (
-              <button key={key} type="button" className={filter === key ? "is-active" : ""} onClick={() => setFilter(key)}>
-                {label}
+              <button key={key} type="button" className={filter === key ? "is-active" : ""} onClick={() => { setFilter(key); setPage(1); }}>
+                {label}{queueMeta.filterCounts[key] !== undefined ? <small>{queueMeta.filterCounts[key]}</small> : null}
               </button>
             ))}
           </nav>
           <div className="customer-workbench__sortline">
-            <button type="button">{workbenchMode === "new" ? "推进优先" : "风险优先"}⌄</button>
-            <span>共 {Math.max(modeBaseAccounts.length, workbenchMode === "new" ? 38 : 26)} 位客户</span>
+            <select value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }} aria-label="客户排序">
+              {workbenchMode === "new" ? <option value="priority">推进优先</option> : <option value="risk">风险优先</option>}
+              <option value="interaction">最近互动</option>
+              <option value="health">健康度</option>
+              {workbenchMode === "existing" ? <option value="renewal">续约日期</option> : null}
+            </select>
+            <span>共 {queueMeta.totalElements} 位客户</span>
             <button type="button" aria-label="列表密度"><Icon name="list" /></button>
           </div>
-          <div className="customer-workbench__accounts">
-            {filteredAccounts.map((item) => (
+          <div className={`customer-workbench__accounts${compactQueue ? " is-compact" : ""}`}>
+            {accounts.map((item) => (
               <button
                 key={item.accountId}
                 type="button"
@@ -493,7 +635,7 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
                     <time>{shortDate(item.updatedAt || "") || "今天 09:30"}</time>
                   </span>
                   <span className="customer-workbench-account__badges">
-                    {workbenchMode === "new" ? <em>商机 {Math.max(1, Math.round(item.progressScore / 28))}</em> : <em>健康 {item.healthScore}</em>}
+                    {workbenchMode === "new" ? <em>商机 {item.opportunityCount ?? 0}</em> : <em>健康 {item.healthScore}</em>}
                     {item.riskCount ? <em className="is-risk">{workbenchMode === "new" ? "风险信号" : "关系风险"} {item.riskCount}</em> : null}
                     {item.pendingRecommendationCount ? <em className="is-warn">{workbenchMode === "new" ? "未确认建议" : "经营动作"} {item.pendingRecommendationCount}</em> : null}
                   </span>
@@ -504,24 +646,40 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
             {loading ? <p className="customer-workbench__muted">正在加载客户...</p> : null}
           </div>
           <footer className="customer-workbench__pager">
-            <button type="button">‹</button>
-            <span>1 / 5</span>
-            <button type="button">›</button>
+            <button type="button" disabled={page <= 1} onClick={() => setPage((value) => Math.max(1, value - 1))}>‹</button>
+            <span>{queueMeta.totalPages ? page : 0} / {queueMeta.totalPages}</span>
+            <button type="button" disabled={page >= queueMeta.totalPages} onClick={() => setPage((value) => value + 1)}>›</button>
           </footer>
         </aside>
 
         <main className="customer-workbench__main">
           <header className="customer-workbench__head">
             <div>
-              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <span aria-hidden>···</span></h2>
+              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu" aria-label="客户更多操作" onClick={async () => {
+                const link = new URL(window.location.href);
+                if (!embedded) link.searchParams.set("aiApp", "customer-workbench");
+                link.searchParams.set("accountId", activeAccountId);
+                link.searchParams.set("mode", workbenchMode);
+                await navigator.clipboard.writeText(link.toString());
+                setNotice("客户工作台链接已复制。");
+              }}>···</button></h2>
               <p className="customer-workbench__entity-line">
                 <em>Account</em>
-                <span>Opportunity <b>{Math.max(1, Math.round((detail?.progressScore ?? activeAccount?.progressScore ?? 0) / 24))}</b></span>
-              <span>{detail?.owner || activeAccount?.owner || "负责人"}（销售主管）</span>
-                <em>关注</em>
-                <span>最近互动：今天 09:30（微信沟通）</span>
+                <button type="button" onClick={() => setActiveTab(workbenchMode === "new" ? "signals" : "renewal")}>Opportunity <b>{detail?.opportunityCount ?? activeAccount?.opportunityCount ?? 0}</b></button>
+                <span>{detail?.owner || activeAccount?.owner || "负责人"}</span>
+                <button type="button" className={detail?.followed ? "is-followed" : ""} onClick={async () => {
+                  if (!activeAccountId) return;
+                  try { await setCustomerFollowed(token, activeAccountId, !detail?.followed); await reloadDetail(); }
+                  catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
+                }}>{detail?.followed ? "已关注" : "关注"}</button>
+                <span>最近互动：{shortDate(detail?.updatedAt || activeAccount?.updatedAt || "")}（{lifecycleSourceLabel(detail?.lastInteractionType || "CRM")}）</span>
               </p>
             </div>
+            <button type="button" className="customer-workbench__open-crm" disabled={!integration.baseUrl || !activeAccountId} onClick={() => {
+              if (!integration.baseUrl || !activeAccountId) return;
+              window.open(`${integration.baseUrl.replace(/\/$/, "")}/#/commonObjects/detail/${encodeURIComponent(activeAccountId)}/DETAIL`, "_blank", "noopener,noreferrer");
+            }}>打开 CRM 客户主页 <Icon name="external" /></button>
+            {!assistantOpen ? <button type="button" onClick={() => setAssistantOpen(true)}>打开 AI 助理</button> : null}
           </header>
 
         {notice ? <div className="customer-workbench__notice">{notice}</div> : null}
@@ -529,17 +687,17 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
         <section className="customer-workbench__metrics" aria-label="客户指标">
           {workbenchMode === "new" ? (
             <>
-              <Metric label="未确认建议" value={detail?.pendingRecommendationCount ?? activeAccount?.pendingRecommendationCount ?? 0} suffix="" />
-              <Metric label="风险信号" value={detail?.riskCount ?? activeAccount?.riskCount ?? 0} suffix="" />
-              <Metric label="下一步任务" value={detail?.nextActionCount ?? activeAccount?.nextActionCount ?? 0} suffix="" />
-              <Metric label="最近互动" value={Math.max(12, detail?.timeline?.length ?? 0)} suffix="" />
+              <Metric label="未确认建议" value={metricValue(detail, "pendingRecommendations", detail?.pendingRecommendationCount ?? 0)} suffix="" onClick={() => setActiveTab("recommendations")} />
+              <Metric label="风险信号" value={metricValue(detail, "risks", detail?.riskCount ?? 0)} suffix="" onClick={() => setActiveTab("signals")} />
+              <Metric label="下一步任务" value={metricValue(detail, "nextActions", detail?.nextActionCount ?? 0)} suffix="" onClick={() => setActiveTab("actions")} />
+              <Metric label="最近互动" value={metricValue(detail, "interactions", detail?.timeline?.length ?? 0)} suffix="" onClick={() => setActiveTab("timeline")} />
             </>
           ) : (
             <>
-              <Metric label="客户健康度" value={detail?.healthScore ?? activeAccount?.healthScore ?? 0} suffix="" />
-              <Metric label="续约倒计时" value={Math.max(21, 90 - (detail?.riskCount ?? activeAccount?.riskCount ?? 0) * 16)} suffix="天" />
-              <Metric label="未闭环问题" value={Math.max(1, (detail?.riskCount ?? activeAccount?.riskCount ?? 0) + 3)} suffix="" />
-              <Metric label="增购信号" value={Math.max(1, detail?.pendingRecommendationCount ?? activeAccount?.pendingRecommendationCount ?? 0)} suffix="" />
+              <Metric label="客户健康度" value={metricValue(detail, "health", detail?.healthScore ?? 0)} suffix="" onClick={() => setActiveTab("overview")} />
+              <Metric label="续约倒计时" value={metricValue(detail, "renewalDays", detail?.renewalDays ?? -1) < 0 ? "待确认" : metricValue(detail, "renewalDays", detail?.renewalDays ?? -1)} suffix={metricValue(detail, "renewalDays", detail?.renewalDays ?? -1) < 0 ? "" : "天"} onClick={() => setActiveTab("renewal")} />
+              <Metric label="未闭环问题" value={metricValue(detail, "openIssues", 0)} suffix="" onClick={() => setActiveTab("service")} />
+              <Metric label="增购信号" value={metricValue(detail, "expansionSignals", 0)} suffix="" onClick={() => setActiveTab("renewal")} />
             </>
           )}
         </section>
@@ -553,7 +711,7 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
         </nav>
 
         <section className="customer-workbench__content">
-          {activeTab === "overview" ? <Overview detail={detail} mode={workbenchMode} onAction={handleRecommendation} onNotice={setNotice} /> : null}
+          {activeTab === "overview" ? <Overview detail={detail} mode={workbenchMode} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} onOpenTab={setActiveTab} /> : null}
           {activeTab === "timeline" ? <Timeline detail={detail} /> : null}
           {activeTab === "signals" ? <NewCustomerPanel detail={detail} /> : null}
           {activeTab === "service" ? <ExistingCustomerPanel detail={detail} focus="service" /> : null}
@@ -562,22 +720,22 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
           {activeTab === "relationship" ? <ExistingCustomerPanel detail={detail} focus="relationship" /> : null}
           {activeTab === "recommendations" ? (
             <div ref={recommendationRef}>
-              <Recommendations detail={detail} onAction={handleRecommendation} onNotice={setNotice} />
+              <Recommendations detail={detail} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} />
             </div>
           ) : null}
-          {activeTab === "actions" ? <NextActionPanel detail={detail} /> : null}
+          {activeTab === "actions" ? <NextActionPanel detail={detail} onAction={handleRecommendation} /> : null}
         </section>
       </main>
 
-      <aside className="customer-workbench__assistant" aria-label="AI 客户助理">
+      {assistantOpen ? <aside className="customer-workbench__assistant" aria-label="AI 客户助理">
         <header>
           <div>
             <strong>AI 客户助理</strong>
             <Icon name="info" />
           </div>
           <div className="customer-workbench__assistant-tools">
-            <button type="button" aria-label="固定"><Icon name="pin" /></button>
-            <button type="button" aria-label="关闭"><Icon name="close" /></button>
+            <button type="button" aria-label={assistantPinned ? "取消固定" : "固定"} className={assistantPinned ? "is-active" : ""} onClick={() => setAssistantPinned((value) => !value)}><Icon name="pin" /></button>
+            <button type="button" aria-label="关闭" onClick={() => setAssistantOpen(false)}><Icon name="close" /></button>
           </div>
         </header>
         <div className="customer-workbench__chat">
@@ -589,9 +747,15 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
                 <p>{message.text}</p>
                 <span>{message.time}</span>
               </div>
-              {message.role === "user" ? <span className="customer-workbench-message__avatar is-user" aria-hidden>张</span> : null}
+              {message.role === "user" ? <span className="customer-workbench-message__avatar is-user" aria-hidden>{userName.trim().slice(0, 1) || "我"}</span> : null}
             </div>
           ))}
+        </div>
+        <div className="customer-workbench__quick-actions">
+          <button type="button" onClick={() => void submitAssistant("为当前客户生成跟进任务建议")}>生成跟进任务</button>
+          <button type="button" onClick={() => void submitAssistant("查看当前客户的风险信号")}>查看风险</button>
+          <button type="button" onClick={() => setInteractionEditorOpen(true)}>整理互动记录</button>
+          <button type="button" onClick={() => void submitAssistant("切换到下一个客户")}>切换下个客户</button>
         </div>
         <div className="customer-workbench__composer">
           <textarea ref={composerInputRef} value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="输入问题或指令..." />
@@ -609,20 +773,38 @@ export function CustomerWorkbenchApp({ token, embedded = false }: CustomerWorkbe
           </div>
         </div>
         <p className="customer-workbench__ai-note">AI 生成内容仅供参考，请结合实际情况判断</p>
-      </aside>
+      </aside> : null}
       </div>
+      {editingRecommendation ? (
+        <RecommendationEditor key={editingRecommendation.recommendationId} item={editingRecommendation}
+          onClose={() => setEditingRecommendation(null)} onSave={saveRecommendationEdit} />
+      ) : null}
+      {interactionEditorOpen ? (
+        <InteractionEditor onClose={() => setInteractionEditorOpen(false)} onSave={async (draft) => {
+          if (!activeAccountId) return;
+          try {
+            const saved = await saveCustomerInteraction(token, activeAccountId, draft);
+            setInteractionEditorOpen(false);
+            setNotice(saved.deduplicated ? "该互动记录已存在，未重复保存。" : "互动记录已确认并进入时间线。");
+            await reloadDetail();
+            setActiveTab("timeline");
+          } catch (error) {
+            setNotice(error instanceof Error ? error.message : String(error));
+          }
+        }} />
+      ) : null}
     </section>
   );
 }
 
-function Metric({ label, value, suffix }: { label: string; value: number; suffix: string }) {
+function Metric({ label, value, suffix, onClick }: { label: string; value: number | string; suffix: string; onClick: () => void }) {
   return (
-    <div>
+    <button type="button" onClick={onClick}>
       <i aria-hidden><Icon name={metricIconName(label)} /></i>
       <span>{label}</span>
       <strong>{value}<small>{suffix}</small></strong>
       <em aria-hidden>›</em>
-    </div>
+    </button>
   );
 }
 
@@ -630,12 +812,16 @@ function Overview({
   detail,
   mode,
   onAction,
+  onFeedback,
   onNotice,
+  onOpenTab,
 }: {
   detail: CustomerWorkbenchDetail | null;
   mode: WorkbenchMode;
   onAction: (item: CustomerRecommendation, action: RecommendationAction) => void;
+  onFeedback: (item: CustomerRecommendation, rating: "HELPFUL" | "NOT_HELPFUL") => void;
   onNotice: (message: string) => void;
+  onOpenTab: (tab: DetailTab) => void;
 }) {
   return (
     <div className="customer-workbench-overview-wrap">
@@ -643,18 +829,18 @@ function Overview({
         <section className="customer-workbench-panel customer-workbench-panel--timeline">
           <header>
             <h3>{mode === "new" ? "新客户互动时间线" : "老客户互动时间线"}</h3>
-            <button type="button">全部类型⌄</button>
+            <button type="button" onClick={() => onOpenTab("timeline")}>全部类型⌄</button>
           </header>
           <TimelineCards detail={detail} compact />
-          <button type="button" className="customer-workbench__more">查看全部互动记录 ›</button>
+          <button type="button" className="customer-workbench__more" onClick={() => onOpenTab("timeline")}>查看全部互动记录 ›</button>
         </section>
         <section className="customer-workbench-panel customer-workbench-panel--recommendations">
           <header>
             <h3>{mode === "new" ? "CRM 落地建议" : "老客户经营动作"}（{detail?.recommendations?.length ?? 0}）</h3>
-            <button type="button">{mode === "new" ? "全部建议" : "按影响排序"}⌄</button>
+            <button type="button" onClick={() => onOpenTab("recommendations")}>{mode === "new" ? "全部建议" : "按影响排序"}⌄</button>
           </header>
-          <Recommendations detail={detail} onAction={onAction} onNotice={onNotice} compact />
-          <button type="button" className="customer-workbench__more">{mode === "new" ? "查看全部建议" : "查看全部经营动作"} ›</button>
+          <Recommendations detail={detail} onAction={onAction} onFeedback={onFeedback} onNotice={onNotice} compact />
+          <button type="button" className="customer-workbench__more" onClick={() => onOpenTab("recommendations")}>{mode === "new" ? "查看全部建议" : "查看全部经营动作"} ›</button>
         </section>
       </div>
       <WorkbenchBottomPanel detail={detail} mode={mode} />
@@ -663,7 +849,23 @@ function Overview({
 }
 
 function Timeline({ detail }: { detail: CustomerWorkbenchDetail | null }) {
-  return <TimelineCards detail={detail} />;
+  const [source, setSource] = useState("all");
+  const events = detail?.timeline ?? [];
+  return (
+    <div className="customer-workbench-timeline-page">
+      <header><h3>互动时间线</h3><select aria-label="互动来源" value={source} onChange={(event) => setSource(event.target.value)}>
+        <option value="all">全部类型</option>
+        <option value="wechat">微信</option><option value="phone">电话</option><option value="meeting">会议</option><option value="task">CRM 任务</option>
+      </select></header>
+      <TimelineCards detail={{ ...detail, timeline: source === "all" ? events : events.filter((item) => {
+        const normalized = item.sourceType.toUpperCase();
+        if (source === "wechat") return normalized.includes("WECHAT");
+        if (source === "phone") return normalized.includes("PHONE");
+        if (source === "meeting") return normalized.includes("MEETING") || normalized.includes("EVENT");
+        return normalized.includes("TASK");
+      }) } as CustomerWorkbenchDetail} />
+    </div>
+  );
 }
 
 function TimelineCards({ detail, compact = false }: { detail: CustomerWorkbenchDetail | null; compact?: boolean }) {
@@ -691,6 +893,7 @@ function NewCustomerPanel({ detail }: { detail: CustomerWorkbenchDetail | null }
   const score = detail?.progressScore ?? 0;
   const signals = detail?.newCustomerSignals ?? [];
   const actions = detail?.nextActions ?? [];
+  const gaps = (detail?.signals ?? []).filter((item) => item.type.includes("GAP") || item.type.includes("OVERDUE"));
   return (
     <div className="customer-workbench-signals">
       <header>
@@ -716,7 +919,7 @@ function NewCustomerPanel({ detail }: { detail: CustomerWorkbenchDetail | null }
         </section>
         <section>
           <h4>CRM 补齐项</h4>
-          <List items={["补齐预算范围", "确认决策人和评审时间", "创建或更新商机阶段"]} empty="暂无补齐项" />
+          <List items={gaps.map((item) => item.detail)} empty="当前 CRM 关键字段无明显缺口" />
         </section>
       </div>
     </div>
@@ -731,14 +934,20 @@ function ExistingCustomerPanel({
   focus?: "service" | "value" | "renewal" | "relationship";
 }) {
   const score = detail?.healthScore ?? 0;
-  const signals = detail?.existingCustomerSignals ?? [];
-  const risks = detail?.risks ?? [];
   const focusCopy = {
     service: ["服务问题", "聚焦未闭环工单、服务压力和异常反馈。"],
     value: ["价值兑现", "对照客户承诺、使用反馈和业务收益沉淀复盘材料。"],
     renewal: ["续约增购", "关注续约倒计时、合同风险、增购触发信号。"],
     relationship: ["关系地图", "检查关键人覆盖、角色缺口和沟通频率。"],
   }[focus];
+  const focusItems: Array<{ title: string; detail: string; meta: string }> = focus === "service"
+    ? (detail?.serviceIssues ?? []).map((item) => ({ title: item.title || item.number, detail: item.description || "CRM 个案未填写问题描述", meta: `${item.status || "待处理"} · ${item.priority || "普通"}` }))
+    : focus === "value"
+      ? (detail?.valueItems ?? []).map((item) => ({ title: item.title, detail: `金额 ${Number(item.amount || 0).toLocaleString("zh-CN")}`, meta: `${item.source} · ${item.status || "状态待确认"}` }))
+      : focus === "renewal"
+        ? [...(detail?.renewal?.contracts ?? []).map((item) => ({ title: item.title, detail: `合同状态：${item.status || "待确认"}`, meta: `距最近到期 ${detail?.renewal?.days ?? -1} 天` })),
+            ...(detail?.renewal?.opportunities ?? []).map((item) => ({ title: String(item.name || "业务机会"), detail: String(item.nextStep || "下一步待补齐"), meta: String(item.stage || "阶段待确认") }))]
+        : (detail?.relationshipMap ?? []).map((item) => ({ title: item.name, detail: `${item.title || "职务待补"} · ${item.role || "角色待补"}`, meta: item.lastContactAt ? `最近联系 ${shortDate(item.lastContactAt)}` : "最近联系待补" }));
   return (
     <div className="customer-workbench-signals">
       <header>
@@ -749,41 +958,21 @@ function ExistingCustomerPanel({
         <strong>{score}<small>分</small></strong>
       </header>
       <div className="customer-workbench-health-grid">
-        <strong>续约稳定<small>{Math.max(62, score)}%</small></strong>
-        <strong>服务响应<small>{Math.max(58, score - 8)}%</small></strong>
-        <strong>增购机会<small>{Math.max(42, Math.round((detail?.progressScore ?? 0) * .9))}%</small></strong>
-        <strong>关系覆盖<small>{detail?.contact ? "2 人" : "待补"}</small></strong>
+        <strong>健康度<small>{metricValue(detail, "health", score)} 分</small></strong>
+        <strong>未闭环服务<small>{metricValue(detail, "openIssues", 0)} 个</small></strong>
+        <strong>增购机会<small>{metricValue(detail, "expansionSignals", 0)} 个</small></strong>
+        <strong>关系覆盖<small>{detail?.relationshipMap?.length ?? 0} 人</small></strong>
       </div>
-      <div className="customer-workbench-signal-grid">
-        <section>
-          <h4>经营信号</h4>
-          <List items={signals} empty="暂无经营信号" />
-        </section>
-        <section>
-          <h4>风险与阻塞</h4>
-          <List items={risks} empty="暂无高风险" />
-        </section>
-        <section>
-          <h4>客户价值动作</h4>
-          <List items={["安排季度复盘", "补齐关键联系人", "沉淀服务改进任务"]} empty="暂无动作" />
-        </section>
+      <div className="customer-workbench-record-grid">
+        {focusItems.map((item, index) => <article key={`${item.title}-${index}`}><strong>{item.title}</strong><p>{item.detail}</p><span>{item.meta}</span></article>)}
+        {!focusItems.length ? <p className="customer-workbench__muted">当前用户可见的 CRM 数据中暂无相关记录。</p> : null}
       </div>
     </div>
   );
 }
 
 function WorkbenchBottomPanel({ detail, mode }: { detail: CustomerWorkbenchDetail | null; mode: WorkbenchMode }) {
-  const items = mode === "new"
-    ? [
-        ["决策链待确认", "技术负责人已参与，但采购负责人和最终审批人仍需确认。", "决策风险"],
-        ["预算边界不清", "报价条款存在疑问，需要补充 ROI、实施成本和付款方案。", "预算待定"],
-        ["集成方案缺口", "客户重点关注 MES 集成，需要沉淀接口边界和权限方案。", "方案补齐"],
-      ]
-    : [
-        ["关键联系人覆盖不足", "技术负责人参与频繁，但采购负责人近 45 天无互动。", "关系风险"],
-        ["服务闭环压力上升", "本月 3 个工单，其中 1 个已升级，2 个临近 SLA。", "服务风险"],
-        ["价值证明材料缺口", "客户认可效率提升，但缺少面向管理层的量化报告。", "QBR待补"],
-      ];
+  const items = (detail?.signals ?? []).filter((item) => mode === "new" ? item.mode === "NEW" : item.mode === "EXISTING").slice(0, 3);
   return (
     <section className="customer-workbench-bottom-panel" aria-label={mode === "new" ? "推进关键项" : "服务与关系预警"}>
       <header>
@@ -791,27 +980,29 @@ function WorkbenchBottomPanel({ detail, mode }: { detail: CustomerWorkbenchDetai
         <span>AI 从工单、会议、微信和 CRM 更新中提取</span>
       </header>
       <div>
-        {items.map(([title, text, tag]) => (
-          <article key={title}>
-            <strong>{title}</strong>
-            <p>{text}</p>
-            <em>{tag}</em>
+        {items.map((item) => (
+          <article key={item.type}>
+            <strong>{item.title}</strong>
+            <p>{item.detail}</p>
+            <em>{item.severity === "HIGH" ? "高优先级" : item.severity === "MEDIUM" ? "需关注" : "信息"}</em>
           </article>
         ))}
+        {!items.length ? <p className="customer-workbench__muted">当前没有需要提示的关键项。</p> : null}
       </div>
       {detail?.summary ? <p className="customer-workbench-bottom-panel__summary">{detail.summary}</p> : null}
     </section>
   );
 }
 
-function NextActionPanel({ detail }: { detail: CustomerWorkbenchDetail | null }) {
+function NextActionPanel({ detail, onAction }: { detail: CustomerWorkbenchDetail | null; onAction: (item: CustomerRecommendation, action: RecommendationAction) => void }) {
+  const taskRecommendation = detail?.recommendations?.find((item) => item.type === "CREATE_TASK" && item.status !== "APPLIED" && item.status !== "DISMISSED");
   return (
     <div className="customer-workbench-actions">
       {(detail?.nextActions ?? []).map((item, index) => (
         <article key={`${item}-${index}`}>
           <strong>{item}</strong>
           <p>建议负责人在 24 小时内确认并同步到 CRM 任务。</p>
-          <button type="button">生成跟进任务</button>
+          <button type="button" disabled={!taskRecommendation} onClick={() => taskRecommendation && onAction(taskRecommendation, "accept")}>形成待确认任务</button>
         </article>
       ))}
       {detail?.nextActions?.length ? null : <p className="customer-workbench__muted">暂无下一步行动。</p>}
@@ -822,15 +1013,18 @@ function NextActionPanel({ detail }: { detail: CustomerWorkbenchDetail | null })
 function Recommendations({
   detail,
   onAction,
+  onFeedback,
   onNotice,
   compact = false,
 }: {
   detail: CustomerWorkbenchDetail | null;
   onAction: (item: CustomerRecommendation, action: RecommendationAction) => void;
+  onFeedback: (item: CustomerRecommendation, rating: "HELPFUL" | "NOT_HELPFUL") => void;
   onNotice: (message: string) => void;
   compact?: boolean;
 }) {
   const items = detail?.recommendations ?? [];
+  const [expandedEvidenceId, setExpandedEvidenceId] = useState("");
   return (
     <div className={`customer-workbench-recommendations${compact ? " is-compact" : ""}`}>
       {items.slice(0, compact ? 4 : undefined).map((item, index) => (
@@ -844,14 +1038,106 @@ function Recommendations({
               <span>{item.rationale}</span>
             </div>
           </header>
-          <p><b>置信度</b>{formatConfidence(item.confidence)} <span>依据：通话录音、微信记录（2条）</span></p>
+          <p><b>置信度</b>{formatConfidence(item.confidence)} <span>依据：{item.evidence?.length ? String(item.evidence.length) + " 条 CRM 事实" : "当前客户 CRM 数据"}</span></p>
+          {!compact && item.evidence?.length ? <div className="customer-workbench-recommendation__evidence">
+            <button type="button" onClick={() => setExpandedEvidenceId((current) => current === item.recommendationId ? "" : item.recommendationId)}>
+              {expandedEvidenceId === item.recommendationId ? "收起依据" : `查看依据 (${item.evidence.length})`}
+            </button>
+            {expandedEvidenceId === item.recommendationId ? <ul>{item.evidence.map((evidence, evidenceIndex) => <li key={`${item.recommendationId}-${evidenceIndex}`}>{evidenceLabel(evidence)}</li>)}</ul> : null}
+          </div> : null}
+          {item.lastErrorMessage ? <p className="customer-workbench-recommendation__error">上次执行失败：{item.lastErrorMessage}</p> : null}
           <footer>
-            <button type="button" onClick={() => onAction(item, "accept")} disabled={item.status === "APPLIED"}><Icon name="check" />采纳</button>
-            <button type="button" onClick={() => onNotice("已进入建议修改状态，可在后续版本打开内联编辑。")}><Icon name="edit" />修改</button>
-            <button type="button" onClick={() => onNotice("已忽略该建议，本次不写入 CRM。")}><Icon name="close" />忽略</button>
+            {item.status === "PENDING" ? <button type="button" onClick={() => onAction(item, "accept")}><Icon name="check" />采纳</button> : null}
+            {item.status === "ACCEPTED" ? <button type="button" onClick={() => onAction(item, "confirm")}><Icon name="check" />确认</button> : null}
+            {item.status === "CONFIRMED" || item.status === "FAILED" ? <button type="button" onClick={() => onAction(item, "apply")}><Icon name="check" />{item.status === "FAILED" ? "重试" : "写入 CRM"}</button> : null}
+            {item.status === "APPLYING" ? <button type="button" disabled><Icon name="check" />执行中</button> : null}
+            {item.status === "APPLIED" ? <button type="button" disabled><Icon name="check" />已写入</button> : null}
+            {item.status !== "APPLIED" && item.status !== "APPLYING" && item.status !== "DISMISSED" ? <button type="button" onClick={() => onAction(item, "edit")}><Icon name="edit" />修改</button> : null}
+            {item.status !== "APPLIED" && item.status !== "APPLYING" && item.status !== "DISMISSED" ? <button type="button" onClick={() => onAction(item, "dismiss")}><Icon name="close" />忽略</button> : null}
+            {item.status === "DISMISSED" ? <span>已忽略</span> : null}
           </footer>
+          {!compact ? <div className="customer-workbench-recommendation__feedback">
+            <span>这条建议是否有帮助？</span>
+            <button type="button" className={item.feedback?.rating === "HELPFUL" ? "is-active" : ""} onClick={() => onFeedback(item, "HELPFUL")}>有帮助</button>
+            <button type="button" className={item.feedback?.rating === "NOT_HELPFUL" ? "is-active" : ""} onClick={() => onFeedback(item, "NOT_HELPFUL")}>需改进</button>
+          </div> : null}
         </article>
       ))}
+      {!items.length ? <p className="customer-workbench__muted">当前没有 CRM 落地建议。</p> : null}
+    </div>
+  );
+}
+
+function RecommendationEditor({ item, onClose, onSave }: {
+  item: CustomerRecommendation;
+  onClose: () => void;
+  onSave: (draft: Partial<CustomerRecommendation>) => Promise<void>;
+}) {
+  const [title, setTitle] = useState(item.title);
+  const [rationale, setRationale] = useState(item.rationale);
+  const targetObject = item.targetObject || (item.type.includes("OPPORTUNITY") ? "Opportunity" : "Task");
+  const [recordName, setRecordName] = useState(String(item.crmPayload?.name || item.crmPayload?.subject || item.title));
+  const [expiredate, setExpiredate] = useState(String(item.crmPayload?.expiredate || ""));
+  const [stage, setStage] = useState(String(item.crmPayload?.jieduan || "1-发现机会"));
+  const [nextStep, setNextStep] = useState(String(item.crmPayload?.xyb || item.rationale));
+  return (
+    <div className="customer-workbench-dialog" role="dialog" aria-modal="true" aria-labelledby="recommendation-editor-title">
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        void onSave({
+          title,
+          rationale,
+          targetObject: item.targetObject,
+          targetRecordId: item.targetRecordId,
+          crmPayload: targetObject === "Opportunity"
+            ? { ...item.crmPayload, name: recordName, jieduan: stage, xyb: nextStep }
+            : { ...item.crmPayload, subject: recordName, ...(expiredate ? { expiredate } : {}) },
+        });
+      }}>
+        <header>
+          <h3 id="recommendation-editor-title">修改 CRM 落地建议</h3>
+          <button type="button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button>
+        </header>
+        <label>建议标题<input value={title} onChange={(event) => setTitle(event.target.value)} required /></label>
+        <label>建议依据<textarea value={rationale} onChange={(event) => setRationale(event.target.value)} required /></label>
+        <label>{targetObject === "Opportunity" ? "业务机会名称" : "CRM 任务主题"}<input value={recordName} onChange={(event) => setRecordName(event.target.value)} required /></label>
+        {targetObject === "Opportunity" ? <>
+          <label>业务机会阶段<input value={stage} onChange={(event) => setStage(event.target.value)} required /></label>
+          <label>下一步<textarea value={nextStep} onChange={(event) => setNextStep(event.target.value)} required /></label>
+        </> : <label>到期日期<input type="date" value={expiredate} onChange={(event) => setExpiredate(event.target.value)} /></label>}
+        <footer><button type="button" onClick={onClose}>取消</button><button type="submit">保存修改</button></footer>
+      </form>
+    </div>
+  );
+}
+
+function InteractionEditor({ onClose, onSave }: {
+  onClose: () => void;
+  onSave: (draft: { sourceType: "WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK"; subject: string; content: string; occurredAt: string }) => Promise<void>;
+}) {
+  const [sourceType, setSourceType] = useState<"WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK">("WECHAT");
+  const [subject, setSubject] = useState("");
+  const [content, setContent] = useState("");
+  const [occurredAt, setOccurredAt] = useState(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  });
+  return (
+    <div className="customer-workbench-dialog" role="dialog" aria-modal="true" aria-labelledby="interaction-editor-title">
+      <form onSubmit={(event) => {
+        event.preventDefault();
+        void onSave({ sourceType, subject, content, occurredAt: new Date(occurredAt).toISOString() });
+      }}>
+        <header><h3 id="interaction-editor-title">整理互动记录</h3><button type="button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button></header>
+        <label>互动来源<select value={sourceType} onChange={(event) => setSourceType(event.target.value as typeof sourceType)}>
+          <option value="WECHAT">微信</option><option value="PHONE">电话</option><option value="MEETING">会议</option><option value="CUSTOMER_FEEDBACK">客户反馈</option>
+        </select></label>
+        <label>发生时间<input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} required /></label>
+        <label>主题<input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="可留空，由系统按来源生成" /></label>
+        <label>互动内容<textarea value={content} onChange={(event) => setContent(event.target.value)} minLength={10} maxLength={10000} required placeholder="粘贴微信聊天、电话纪要、会议摘要或客户反馈" /></label>
+        <footer><button type="button" onClick={onClose}>取消</button><button type="submit">确认保存</button></footer>
+      </form>
     </div>
   );
 }

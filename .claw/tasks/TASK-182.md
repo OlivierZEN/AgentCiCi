@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 assignment_path: .claw/assignments/TASK-182.yaml
-updated_at: 2026-07-10T15:26:34Z
+updated_at: 2026-07-10T17:06:00Z
 updated_by: MANAGER-001
 ---
 
@@ -19,10 +19,12 @@ updated_by: MANAGER-001
 
 ## 当前进展
 
-- 用户已明确开启 goal 模式并要求达到生产就绪后发布线上版本。
-- FEAT-081 已完成逐元素详细设计、P0/P1/P2 差距矩阵、API/数据模型和验收标准。
-- 当前生产基线为 `2.3.9`；首要缺口是本地快照队列、模拟 CRM 写回、前端推导指标和不完整建议状态机。
-- 已建立任务范围，下一步执行 CloudCC 标准对象/字段扫描与现有实现契约审计。
+- FEAT-081 P0/P1/P2 代码闭环与本地验收已完成，当前生产基线仍为 `2.3.9`，待发布版本为 `2.3.10`。
+- CloudCC 当前用户权限范围内的 Account/Contact/Opportunity/Task/Event/Case/Contract 已成为运行时事实源；新客户推进与老客户经营使用服务端互斥队列、筛选、排序、分页和真实指标/信号。
+- 建议已具备编辑、忽略、采纳、确认、真实 Task/Opportunity 写入、权限范围回读、幂等审计、失败重试与用户反馈；V73/V74 本地迁移通过。
+- AI 助理已支持客户级历史恢复、结构化页面动作、语音回填、互动确认录入/去重和主管概览；AgentCiCi 与 CRM 嵌入共享用户和客户级上下文。
+- 技能 CLI 已完成真实标准目录、记录权限、临时 Task/Opportunity 创建/回读/删除、pagecomponent/customPage 和注入页核验；验证数据已清理。
+- 聚焦后端测试、前端 50 项测试、生产构建、Compose 配置及 1920x1000 页面功能/布局验收通过。下一步是提交推送、备份、发布和线上双入口验收。
 
 ## 执行计划
 

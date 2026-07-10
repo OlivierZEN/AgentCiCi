@@ -3742,7 +3742,7 @@ export default function AssistantApp() {
   if (customerWorkbenchEmbedded) {
     return (
       <main className="cici-embedded-workbench" aria-label="客户互动工作台">
-        <CustomerWorkbenchApp token={auth.token} embedded />
+        <CustomerWorkbenchApp token={auth.token} embedded userName={me?.displayName || me?.nickname || me?.mobile || "我"} userRole={auth.roles?.[0] || "当前用户"} />
       </main>
     );
   }
@@ -4679,7 +4679,7 @@ export default function AssistantApp() {
             {activeAiApplication.code === "zhiwei-portrait" ? (
               <ZhiweiPortraitDemoApp />
             ) : activeAiApplication.code === "customer-workbench" ? (
-              <CustomerWorkbenchApp token={auth?.token ?? ""} />
+              <CustomerWorkbenchApp token={auth?.token ?? ""} userName={me?.displayName || me?.nickname || me?.mobile || "我"} userRole={auth?.roles?.[0] || "当前用户"} />
             ) : activeAiApplication.code === "customer-insight" ? (
               <CustomerInsightAppPanel token={auth?.token ?? ""} />
             ) : activeAiApplication.code === "data-insight" ? (

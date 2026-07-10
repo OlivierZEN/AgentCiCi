@@ -1,23 +1,38 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T08:40:00Z
+updated_at: 2026-07-10T17:06:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T08:40:00Z
-last_run_status: partial
+last_run_at: 2026-07-10T17:06:00Z
+last_run_status: passed
 ---
 
 # Test Report
 
 ## Latest Run Summary
 
-- 状态：`partial`（FEAT-081 生产功能设计与差距审计文档验证通过；全仓状态校验受既有治理债务阻塞）
-- 范围：TASK-171 客户互动工作台逐元素代码审计、生产差距矩阵、详细设计、规格与热状态一致性。
-- 命令：身份门禁、assignment check、`git diff --check`、`validate-state.py .claw`、规格关键章节与文件行数检查。
+- 状态：`passed`（TASK-182 工作台范围的代码、迁移、聚焦测试、前端构建、浏览器和 CloudCC 真实契约验证通过；全仓后端既有失败单独记录）
+- 范围：TASK-182 客户互动工作台生产闭环本地验收与 CloudCC 真实对象/写入契约验证。
+- 命令：身份/assignment 门禁、聚焦 Maven 测试、Vitest、Vite build、Compose config、桌面浏览器、技能 CLI 标准目录/高代码/临时写入回滚、`git diff --check`。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-182 客户互动工作台生产闭环本地验收 (2026-07-11T01:06:00+08:00):
+  - `identity-gate` / `assignment-check`: `MANAGER-001` 对后端、前端、V73/V74、规格与状态文件的 TASK-182 写入范围均为 **allowed**。
+  - `backend-focused-tests`: `CustomerWorkbenchServiceTest,CustomerCrmProjectionServiceTest,CloudccOpenApiServiceTest` -> **success**，覆盖当前用户权限投影、建议确认门、Task/Opportunity 写回回读、幂等审计和新老客户分流。
+  - `frontend-tests`: Vitest `11` 个文件、`50` 项测试 -> **success**。
+  - `frontend-build`: TypeScript + Vite production build -> **success**；保留既有大 chunk 警告。
+  - `compose-config`: ACR Compose config -> **success**；`git diff --check` -> **success**。
+  - `flyway`: 本地 PostgreSQL V73/V74 均成功，Hibernate schema validate 通过。
+  - `browser-functional`: 1920x1000 真实本地登录 -> **success**；新客户推进/老客户经营互斥队列、客户深链、互动录入与哈希去重、AI 风险回答与历史恢复、建议依据展开/反馈、主管概览和断连降级均通过。
+  - `browser-layout`: `html/body/customer-workbench` 无外层纵向溢出；AI 对话区 `scrollbar-width:none`；时间线连接线实际为 `1px`；控制台 error `0`。
+  - `cloudcc-catalog`: 技能 CLI 返回应用 `8`、菜单 `142`、对象 `192`、字段 `4854`；当前用户可见 Account `110`、Contact `48`、Opportunity `58`、Task `41`、Event `41`、Case `36`、Contract `48`。
+  - `cloudcc-write-contract`: 严格通过 `cc-customization-expert-msapi` 临时创建、权限范围回读并删除 Task 与 Opportunity；数量分别 `41→42→41`、`58→59→58`，未留下验证记录。
+  - `cloudcc-embed-assets`: pagecomponent V10、customPage V4 和组件 id `6a503defe4b0a577cbba1f8a` 一致；安全打包白名单通过。注入页校验仍因同一 ID 缺版本数组误报 stale warning，已记入技能缺口文档。
+  - `backend-full-suite`: 工作台相关测试通过；全仓套件仍受本任务外既有 SQL fixture 缺少 `skill_definition.source_type`、模型厂商状态夹具不一致等失败影响，不以全仓结果替代本任务验收。
+  - Browser evidence: `output/playwright/task182-local-final-production-ready.png`、`output/playwright/task182-local-final-overview.png`。
 
 - TASK-171 客户互动工作台生产功能设计与差距审计 (2026-07-10T08:40:00Z):
   - `identity-gate`: TASK-171 对 FEAT-081、TASK-171、current-status 和 test-report 的写入范围均为 **allowed**。

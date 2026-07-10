@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T15:26:34Z
+updated_at: 2026-07-10T17:06:00Z
 updated_by: MANAGER-001
 phase: customer-workbench-production-closure
 active_task: "TASK-182"
-next_action: "Run TASK-182 identity/assignment gates, scan CloudCC standard objects and fields, and implement the real-data/writeback foundation."
+next_action: "Commit and publish TASK-182, then run production AgentCiCi and real CloudCC CRM embedded acceptance."
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,11 @@ read_next:
 
 ## Snapshot
 
-- Current branch: `main`; production is running release `2.3.9` from Git commit `0c8f66e94d15`.
-- TASK-182 is active for FEAT-081 production closure and online release. Its scope covers real CRM-backed queues, complete recommendation/writeback audit, real metrics/signals, all business tabs, structured AI actions, browser/CRM verification, and production deployment.
-- FEAT-081 production feature audit is complete against release `2.3.9` and current code. The spec is now `in_implementation`: SSO/embed, real agent chat, ASR, snapshot/detail reads, and recommendation acceptance work; the CRM write path is still simulated and several visible controls/metrics/signals remain static or frontend-derived. The full element-level design, gap matrix, priorities, APIs, data model, and acceptance criteria are in `docs/specs/FEAT-081-customer-interaction-workbench.md`.
+- Current branch: `main`; production is running release `2.3.9` from Git commit `0c8f66e94d15`; TASK-182 code and local acceptance are complete and awaiting the `2.3.10` release commit/deploy.
+- TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
+- Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
+- Local acceptance passed focused backend tests, 50 frontend tests, production build, Compose validation, 1920x1000 browser layout/interaction checks, CloudCC standard-object catalog audit, and temporary Task/Opportunity create-read-delete verification through `cc-customization-expert-msapi`. No validation records remain in CRM.
+- Remaining work is operational only: commit/push, release dry-run, backup/deploy, production AgentCiCi smoke and real CRM embedded acceptance. The skill gap report records a same-component-ID `stale_component_reference` false positive, nested create-ID parsing, unreliable expression lookup and unrelated script-scan 500 scoping.
 - TASK-181 is done in production `2.3.9`: customer workbench left customer list alignment hotfix passed local and production desktop Chrome validation. Rows are stable at `104px`, with no row overflow, no adjacent overlap, no outer document/body scrollbar, and console errors `0`.
 - TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.
 - TASK-180 evidence: assignment/login gates, local frontend build, compose config, release dry-run, ACR image push, Git tag, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png` / `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.

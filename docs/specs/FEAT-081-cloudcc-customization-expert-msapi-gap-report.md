@@ -1,5 +1,53 @@
 # cc-customization-expert-msapi 技能缺口复盘：CloudCC CRM 自定义页面嵌入白页
 
+## 2026-07-11 真实复核结论（2.1.276-msapi）
+
+本轮 TASK-182 再次严格使用技能内置 `tools/bin/cloudcc` 对同一租户做真实复核。原报告中的 customPage 读写、pagecomponent 绑定、安全打包和注入页验证命令已经进入 CLI，核心能力不再需要项目脚本绕行。
+
+已通过：
+
+- `scan msapi . online-highcode` 能读取 pagecomponent、HTML 和 customPage；线上 pagecomponent 为 V10，id `6a503defe4b0a577cbba1f8a`。
+- `detail customPage . customer_interaction_workbench` 能回读 V4 页面，引用组件 id 与 V10 pagecomponent id 完全一致，`embedded=true`。
+- `package pagecomponent customer-workbench . --dry-run` 只采集页面组件目录和预构建 bundle，明确排除配置、环境文件和 token cache。
+- OpenAPI 角色权限写入验证已通过：Task、Opportunity 均完成创建、当前用户回读、删除和总数恢复。
+
+仍需反馈给技能维护方的问题：
+
+### GAP-007：同一组件 ID 被误报 stale_component_reference
+
+执行：
+
+```bash
+cloudcc verify injectionPage . customer_interaction_workbench \
+  --expected-component component-customer-workbench \
+  --stale-policy warning
+```
+
+事实：
+
+- `expectedComponentId=6a503defe4b0a577cbba1f8a`
+- `actualComponentIds=[6a503defe4b0a577cbba1f8a]`
+- pagecomponent 当前版本为 10
+- customPage 引用结构不提供版本字段，因此 `actualVersions=[]`
+
+当前结果仍为 `warning/stale_component_reference`。当预期与实际组件 ID 完全一致且 customPage 协议本身没有版本字段时，不应仅因 `actualVersions` 为空判定 stale。建议规则改为：组件 ID 一致时版本缺失记为 `version_unavailable` 信息项；只有 ID 不一致，或运行态快照明确加载旧 CDN 版本时才判 stale。
+
+### GAP-008：OpenAPI 写入返回 ID 的结构需要标准化
+
+真实 `insertWithRoleRight` 返回 ID 位于嵌套结构 `data.ids[].id`。调用方若只解析 `data[].id` 会出现“写入成功但没有 ID”，无法回读和审计。建议 CLI 对 create/update/upsert 统一输出顶层 `recordIds`，兼容字符串化 data、`ids`、`records` 和嵌套 data。
+
+### GAP-009：pageQuery expressions 在目标租户行为不一致
+
+使用文档中的复数参数 `expressions` 按记录 ID 查询返回空结果，而不带条件的权限分页查询可以看到该记录；使用单数 `expression` 又被服务端忽略并返回全量。建议：
+
+- CLI 增加基于权限分页并本地精确匹配的 `getById/verifyReadback` helper。
+- 在 doctor 或契约测试中检测租户是否正确执行 expressions，并明确输出 `server_filter_unreliable`。
+- 写后回读命令优先使用返回 ID，必要时自动降级为分页精确匹配，禁止把空结果直接解释为写入失败。
+
+### GAP-010：online-highcode 的 script 单域 500 不应污染整体结论
+
+本轮 `script` 的 `/devconsole/script/pageClientScript` 返回 HTTP 500，但 pagecomponent、customPage、HTML 等目标域均通过。CLI 已按域报告，建议再提供 `--domains pagecomponent,customPage,html` 或目标链路预设，使发布门能够区分“目标嵌入链路通过”和“不相关高代码域异常”。
+
 ## 文档目的
 
 本文记录 TASK-171「客户互动工作台」在 CloudCC CRM 嵌入上线过程中暴露出的 `cc-customization-expert-msapi` 技能缺口，并给出可落地的技能修复建议、CLI 能力增强设计和回归验收用例。

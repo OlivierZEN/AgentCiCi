@@ -1,9 +1,11 @@
 package com.codehouse.ciciassistant.customer.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -12,8 +14,12 @@ import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.customer.domain.CustomerCrmWriteAuditEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerCrmWriteAuditRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerRecommendationFeedbackRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchSnapshotEntity;
@@ -38,6 +44,10 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchSnapshotRepository snapshotRepository = mock(CustomerWorkbenchSnapshotRepository.class);
         CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
         CustomerWorkbenchRecommendationRepository recommendationRepository = mock(CustomerWorkbenchRecommendationRepository.class);
+        CustomerRecommendationFeedbackRepository recommendationFeedbackRepository = mock(CustomerRecommendationFeedbackRepository.class);
+        CustomerCrmWriteAuditRepository writeAuditRepository = mock(CustomerCrmWriteAuditRepository.class);
+        CustomerCrmProjectionService crmProjectionService = mock(CustomerCrmProjectionService.class);
+        CloudccOpenApiService cloudccOpenApiService = mock(CloudccOpenApiService.class);
         CloudccAccessTokenService cloudccAccessTokenService = mock(CloudccAccessTokenService.class);
         SkillDefinitionService skillDefinitionService = mock(SkillDefinitionService.class);
         AgentDefinitionService agentDefinitionService = mock(AgentDefinitionService.class);
@@ -46,6 +56,10 @@ class CustomerWorkbenchServiceTest {
                 snapshotRepository,
                 eventRepository,
                 recommendationRepository,
+                recommendationFeedbackRepository,
+                writeAuditRepository,
+                crmProjectionService,
+                cloudccOpenApiService,
                 cloudccAccessTokenService,
                 skillDefinitionService,
                 agentDefinitionService,
@@ -147,5 +161,126 @@ class CustomerWorkbenchServiceTest {
                 .contains("客户关注实施周期和 MES 集成能力")
                 .contains("查看风险");
         assertThat(expectedSessionId).hasSizeLessThanOrEqualTo(64);
+    }
+
+    @Test
+    void recommendationRequiresConfirmationBeforeApplying() {
+        CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
+                "rec-state", "org-demo", "001-demo", "CREATE_TASK", "跟进客户", "存在待办",
+                BigDecimal.valueOf(.9), "{}");
+        recommendation.configureTarget("Task", "", "[]");
+
+        assertThatThrownBy(() -> recommendation.confirm("user-demo"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("先采纳");
+        assertThatThrownBy(recommendation::markApplying)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("确认");
+        recommendation.accept();
+        recommendation.confirm("user-demo");
+        recommendation.markApplying();
+        recommendation.apply("task-001");
+
+        assertThat(recommendation.getStatus()).isEqualTo(CustomerWorkbenchRecommendationEntity.STATUS_APPLIED);
+        assertThat(recommendation.getAppliedCrmId()).isEqualTo("task-001");
+        assertThat(recommendation.getConfirmedBy()).isEqualTo("user-demo");
+    }
+
+    @Test
+    void confirmedRecommendationWritesAndReadsBackWithCurrentUserToken() {
+        CustomerWorkbenchSnapshotRepository snapshotRepository = mock(CustomerWorkbenchSnapshotRepository.class);
+        CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
+        CustomerWorkbenchRecommendationRepository recommendationRepository = mock(CustomerWorkbenchRecommendationRepository.class);
+        CustomerRecommendationFeedbackRepository recommendationFeedbackRepository = mock(CustomerRecommendationFeedbackRepository.class);
+        CustomerCrmWriteAuditRepository writeAuditRepository = mock(CustomerCrmWriteAuditRepository.class);
+        CustomerCrmProjectionService crmProjectionService = mock(CustomerCrmProjectionService.class);
+        CloudccOpenApiService cloudccOpenApiService = mock(CloudccOpenApiService.class);
+        CloudccAccessTokenService cloudccAccessTokenService = mock(CloudccAccessTokenService.class);
+        SkillDefinitionService skillDefinitionService = mock(SkillDefinitionService.class);
+        AgentDefinitionService agentDefinitionService = mock(AgentDefinitionService.class);
+        ChatOrchestratorService chatOrchestratorService = mock(ChatOrchestratorService.class);
+        CustomerWorkbenchService service = new CustomerWorkbenchService(
+                snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
+                crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, skillDefinitionService,
+                agentDefinitionService, chatOrchestratorService, new ObjectMapper());
+        CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
+                "rec-write", "org-demo", "001-demo", "CREATE_TASK", "创建跟进任务", "客户要求三日内反馈",
+                BigDecimal.valueOf(.92), """
+                        {"subject":"反馈方案","expiredate":"2026-07-13"}
+                        """);
+        recommendation.configureTarget("Task", "", "[]");
+        recommendation.accept();
+        recommendation.confirm("user-demo");
+
+        when(recommendationRepository.findByOrgIdAndPublicId("org-demo", "rec-write")).thenReturn(Optional.of(recommendation));
+        when(recommendationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cloudccAccessTokenService.getSessionContext("org-demo", "user-demo")).thenReturn(Optional.of(
+                new CloudccAccessTokenService.CloudccSessionContext("token", "https://ap6.lightning.cloudcc.cn", "")));
+        when(writeAuditRepository.findByOrgIdAndUserIdAndIdempotencyKey(eq("org-demo"), eq("user-demo"), any()))
+                .thenReturn(Optional.empty());
+        when(cloudccOpenApiService.writeRecords(eq("org-demo"), eq("user-demo"), eq("INSERT"), eq("Task"), anyList()))
+                .thenReturn(new CloudccOpenApiService.WriteResult("insertWithRoleRight", "Task", List.of("task-001"), "0", "success"));
+        when(cloudccOpenApiService.queryRecordById(eq("org-demo"), eq("user-demo"), eq("Task"), any(), eq("task-001")))
+                .thenReturn(Optional.of(Map.of("id", "task-001", "subject", "反馈方案")));
+        when(writeAuditRepository.save(any(CustomerCrmWriteAuditEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Map<String, Object> result = service.applyRecommendation("org-demo", "user-demo", "rec-write");
+
+        assertThat(result)
+                .containsEntry("status", CustomerWorkbenchRecommendationEntity.STATUS_APPLIED)
+                .containsEntry("appliedCrmId", "task-001")
+                .containsEntry("verified", true)
+                .containsEntry("writeMode", "CLOUDCC_LIVE");
+        verify(cloudccOpenApiService).writeRecords(eq("org-demo"), eq("user-demo"), eq("INSERT"), eq("Task"), anyList());
+        verify(crmProjectionService).detail("org-demo", "user-demo", "001-demo", false);
+        verify(writeAuditRepository, times(2)).save(any(CustomerCrmWriteAuditEntity.class));
+        verify(crmProjectionService).invalidate("org-demo", "user-demo");
+    }
+
+    @Test
+    void interactionIngestionDeduplicatesAndAssistantHistoryHidesInternalContext() {
+        CustomerWorkbenchSnapshotRepository snapshotRepository = mock(CustomerWorkbenchSnapshotRepository.class);
+        CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
+        CustomerWorkbenchRecommendationRepository recommendationRepository = mock(CustomerWorkbenchRecommendationRepository.class);
+        CustomerRecommendationFeedbackRepository recommendationFeedbackRepository = mock(CustomerRecommendationFeedbackRepository.class);
+        CustomerCrmWriteAuditRepository writeAuditRepository = mock(CustomerCrmWriteAuditRepository.class);
+        CustomerCrmProjectionService crmProjectionService = mock(CustomerCrmProjectionService.class);
+        CloudccOpenApiService cloudccOpenApiService = mock(CloudccOpenApiService.class);
+        CloudccAccessTokenService cloudccAccessTokenService = mock(CloudccAccessTokenService.class);
+        SkillDefinitionService skillDefinitionService = mock(SkillDefinitionService.class);
+        AgentDefinitionService agentDefinitionService = mock(AgentDefinitionService.class);
+        ChatOrchestratorService chatOrchestratorService = mock(ChatOrchestratorService.class);
+        CustomerWorkbenchService service = new CustomerWorkbenchService(
+                snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
+                crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, skillDefinitionService,
+                agentDefinitionService, chatOrchestratorService, new ObjectMapper());
+        CustomerWorkbenchSnapshotEntity snapshot = new CustomerWorkbenchSnapshotEntity(
+                "cw-history", "org-demo", "001-demo", "客户甲", "王销售", "NEW",
+                80, 70, 1, 1, "{\"stage\":\"需求确认\",\"risks\":[\"预算待确认\"]}");
+        when(cloudccAccessTokenService.getSessionContext("org-demo", "user-demo")).thenReturn(Optional.empty());
+        when(snapshotRepository.findByOrgIdAndCrmAccountId("org-demo", "001-demo")).thenReturn(Optional.of(snapshot));
+        when(chatOrchestratorService.sessionMessages(eq("org-demo"), eq("user-demo"), anyString())).thenReturn(List.of(
+                Map.of("role", "user", "content", "[客户互动工作台上下文]\n内部客户 JSON\n[用户问题]\n请查看风险", "createdAt", "2026-07-10T10:00:00Z"),
+                Map.of("role", "assistant", "content", "存在预算风险。", "createdAt", "2026-07-10T10:00:01Z")));
+        when(eventRepository.findByOrgIdAndPublicId(eq("org-demo"), anyString())).thenReturn(Optional.empty());
+        when(eventRepository.save(any(CustomerInteractionEventEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        CustomerWorkbenchRecommendationEntity feedbackRecommendation = new CustomerWorkbenchRecommendationEntity(
+                "rec-feedback", "org-demo", "001-demo", "CREATE_TASK", "跟进客户", "预算需要确认",
+                BigDecimal.valueOf(.8), "{}");
+        when(recommendationRepository.findByOrgIdAndPublicId("org-demo", "rec-feedback"))
+                .thenReturn(Optional.of(feedbackRecommendation));
+        when(recommendationFeedbackRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+        assertThat(service.assistantHistory("org-demo", "user-demo", "001-demo"))
+                .extracting(item -> item.get("content"))
+                .containsExactly("请查看风险", "存在预算风险。");
+        Map<String, Object> saved = service.saveInteraction("org-demo", "user-demo", "001-demo",
+                new CustomerWorkbenchService.InteractionCommand("WECHAT", "预算沟通", "客户确认预算需要财务负责人再次审批。", "2026-07-10T09:30:00Z"));
+
+        assertThat(saved).containsEntry("sourceType", "WECHAT").containsEntry("deduplicated", false);
+        assertThat(service.recommendationFeedback("org-demo", "user-demo", "rec-feedback",
+                new CustomerWorkbenchService.RecommendationFeedbackCommand("HELPFUL", "建议明确")))
+                .containsEntry("rating", "HELPFUL").containsEntry("comment", "建议明确");
+        verify(eventRepository).save(any(CustomerInteractionEventEntity.class));
     }
 }

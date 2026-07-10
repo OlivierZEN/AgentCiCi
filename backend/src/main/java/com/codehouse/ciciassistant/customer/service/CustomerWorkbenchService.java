@@ -2,8 +2,16 @@ package com.codehouse.ciciassistant.customer.service;
 
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService.CloudccApiException;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService.WriteResult;
+import com.codehouse.ciciassistant.common.error.ConflictException;
+import com.codehouse.ciciassistant.customer.domain.CustomerCrmWriteAuditEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerCrmWriteAuditRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerRecommendationFeedbackEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerRecommendationFeedbackRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchSnapshotEntity;
@@ -14,15 +22,20 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class CustomerWorkbenchService {
@@ -35,6 +48,10 @@ public class CustomerWorkbenchService {
     private final CustomerWorkbenchSnapshotRepository snapshotRepository;
     private final CustomerInteractionEventRepository eventRepository;
     private final CustomerWorkbenchRecommendationRepository recommendationRepository;
+    private final CustomerRecommendationFeedbackRepository recommendationFeedbackRepository;
+    private final CustomerCrmWriteAuditRepository writeAuditRepository;
+    private final CustomerCrmProjectionService crmProjectionService;
+    private final CloudccOpenApiService cloudccOpenApiService;
     private final CloudccAccessTokenService cloudccAccessTokenService;
     private final SkillDefinitionService skillDefinitionService;
     private final AgentDefinitionService agentDefinitionService;
@@ -44,6 +61,10 @@ public class CustomerWorkbenchService {
     public CustomerWorkbenchService(CustomerWorkbenchSnapshotRepository snapshotRepository,
                                     CustomerInteractionEventRepository eventRepository,
                                     CustomerWorkbenchRecommendationRepository recommendationRepository,
+                                    CustomerRecommendationFeedbackRepository recommendationFeedbackRepository,
+                                    CustomerCrmWriteAuditRepository writeAuditRepository,
+                                    CustomerCrmProjectionService crmProjectionService,
+                                    CloudccOpenApiService cloudccOpenApiService,
                                     CloudccAccessTokenService cloudccAccessTokenService,
                                     SkillDefinitionService skillDefinitionService,
                                     AgentDefinitionService agentDefinitionService,
@@ -52,6 +73,10 @@ public class CustomerWorkbenchService {
         this.snapshotRepository = snapshotRepository;
         this.eventRepository = eventRepository;
         this.recommendationRepository = recommendationRepository;
+        this.recommendationFeedbackRepository = recommendationFeedbackRepository;
+        this.writeAuditRepository = writeAuditRepository;
+        this.crmProjectionService = crmProjectionService;
+        this.cloudccOpenApiService = cloudccOpenApiService;
         this.cloudccAccessTokenService = cloudccAccessTokenService;
         this.skillDefinitionService = skillDefinitionService;
         this.agentDefinitionService = agentDefinitionService;
@@ -59,74 +84,335 @@ public class CustomerWorkbenchService {
         this.objectMapper = objectMapper;
     }
 
-    @Transactional
-    public List<Map<String, Object>> listAccounts(String orgId, String userId) {
+    public Map<String, Object> queue(String orgId, String userId, CustomerCrmProjectionService.QueueQuery query) {
+        if (isCrmReady(orgId, userId)) {
+            return crmProjectionService.queue(orgId, userId, query);
+        }
         ensureDemoData(orgId, userId);
-        return snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
-                .map(item -> accountListView(orgId, item))
+        List<Map<String, Object>> modeItems = snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+                .map(item -> accountListView(orgId, item)).toList();
+        if ("new".equalsIgnoreCase(query.mode())) {
+            modeItems = modeItems.stream().filter(item -> List.of("NEW", "RISK").contains(String.valueOf(item.get("segment")))).toList();
+        } else if ("existing".equalsIgnoreCase(query.mode())) {
+            modeItems = modeItems.stream().filter(item -> List.of("EXISTING", "STRATEGIC").contains(String.valueOf(item.get("segment")))).toList();
+        }
+        Map<String, Long> counts = mapOfLong(
+                "all", modeItems.size(),
+                "focus", modeItems.stream().filter(item -> intValue(item.get("progressScore")) >= 70).count(),
+                "follow", modeItems.stream().filter(item -> intValue(item.get("nextActionCount")) > 0).count(),
+                "risk", modeItems.stream().filter(item -> intValue(item.get("riskCount")) > 0).count(),
+                "recommendations", modeItems.stream().filter(item -> intValue(item.get("pendingRecommendationCount")) > 0).count(),
+                "renewal", modeItems.stream().filter(item -> String.valueOf(item.get("stage")).contains("续约")).count(),
+                "health", modeItems.stream().filter(item -> intValue(item.get("healthScore")) < 75).count(),
+                "service", modeItems.stream().filter(item -> intValue(item.get("riskCount")) > 0).count(),
+                "expansion", modeItems.stream().filter(item -> String.valueOf(item.get("stage")).contains("增购")).count());
+        String needle = blankToEmpty(query.query()).toLowerCase(Locale.ROOT);
+        List<Map<String, Object>> filtered = modeItems.stream()
+                .filter(item -> demoFilterMatches(item, query.filter()))
+                .filter(item -> needle.isBlank() || (item.get("name") + " " + item.get("owner") + " " + item.get("stage"))
+                        .toLowerCase(Locale.ROOT).contains(needle))
                 .toList();
+        int size = Math.max(1, Math.min(100, query.size()));
+        int page = Math.max(1, query.page());
+        int from = Math.min(filtered.size(), (page - 1) * size);
+        int to = Math.min(filtered.size(), from + size);
+        int totalPages = filtered.isEmpty() ? 0 : (int) Math.ceil((double) filtered.size() / size);
+        return mapOf("items", filtered.subList(from, to), "page", page, "size", size,
+                "totalElements", filtered.size(), "totalPages", totalPages, "filterCounts", counts,
+                "source", "DEMO_FALLBACK", "mode", query.mode());
+    }
+
+    public List<Map<String, Object>> listAccounts(String orgId, String userId) {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> items = (List<Map<String, Object>>) queue(orgId, userId,
+                new CustomerCrmProjectionService.QueueQuery("all", "all", "priority", "desc", "", 1, 100, false))
+                .get("items");
+        return items;
     }
 
     @Transactional
     public Map<String, Object> accountDetail(String orgId, String userId, String accountId) {
+        if (isCrmReady(orgId, userId)) {
+            Map<String, Object> view = new LinkedHashMap<>(crmProjectionService.detail(orgId, userId, accountId, false));
+            ensureLiveRecommendations(orgId, accountId, view);
+            view.put("recommendations", recommendations(orgId, userId, accountId));
+            return view;
+        }
         ensureDemoData(orgId, userId);
         CustomerWorkbenchSnapshotEntity snapshot = requireSnapshot(orgId, accountId);
         Map<String, Object> view = new LinkedHashMap<>(snapshotView(snapshot));
-        view.put("timeline", timeline(orgId, accountId));
-        view.put("recommendations", recommendations(orgId, accountId));
+        view.put("timeline", timeline(orgId, userId, accountId));
+        view.put("recommendations", recommendations(orgId, userId, accountId));
         view.put("crmConnection", crmConnectionView(orgId, userId));
+        view.put("source", "DEMO_FALLBACK");
+        return view;
+    }
+
+    public List<Map<String, Object>> timeline(String orgId, String userId, String accountId) {
+        if (isCrmReady(orgId, userId)) {
+            return crmProjectionService.timeline(orgId, userId, accountId, false);
+        }
+        return eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
+                .map(this::eventView).toList();
+    }
+
+    public List<Map<String, String>> assistantHistory(String orgId, String userId, String accountId) {
+        assertAccountAccess(orgId, userId, accountId);
+        try {
+            return chatOrchestratorService.sessionMessages(orgId, userId, assistantSessionId(userId, accountId)).stream()
+                    .map(item -> Map.of(
+                            "role", item.getOrDefault("role", "assistant"),
+                            "content", sanitizeAssistantHistoryContent(item.getOrDefault("content", "")),
+                            "createdAt", item.getOrDefault("createdAt", "")))
+                    .filter(item -> !item.get("content").isBlank())
+                    .toList();
+        } catch (ResponseStatusException ex) {
+            if (ex.getStatusCode().value() == 404) return List.of();
+            throw ex;
+        }
+    }
+
+    @Transactional
+    public Map<String, Object> saveInteraction(String orgId, String userId, String accountId, InteractionCommand command) {
+        assertAccountAccess(orgId, userId, accountId);
+        String sourceType = normalizeInteractionSource(command == null ? "" : command.sourceType());
+        String content = command == null ? "" : blankToEmpty(command.content());
+        if (content.length() < 10 || content.length() > 10_000) {
+            throw new IllegalArgumentException("互动内容长度需在 10 到 10000 个字符之间");
+        }
+        String subject = command == null ? "" : blankToEmpty(command.subject());
+        if (subject.isBlank()) subject = switch (sourceType) {
+            case "WECHAT" -> "微信沟通记录";
+            case "PHONE" -> "电话沟通记录";
+            case "MEETING" -> "客户会议记录";
+            default -> "客户反馈记录";
+        };
+        if (subject.length() > 256) subject = subject.substring(0, 256);
+        Instant occurredAt = parseInteractionTime(command == null ? null : command.occurredAt());
+        String publicId = "cwi_" + sha256(orgId + ":" + accountId + ":" + sourceType + ":" + content).substring(0, 40);
+        var existing = eventRepository.findByOrgIdAndPublicId(orgId, publicId);
+        if (existing.isPresent()) {
+            Map<String, Object> view = new LinkedHashMap<>(eventView(existing.get()));
+            view.put("deduplicated", true);
+            return view;
+        }
+        Map<String, Object> account = isCrmReady(orgId, userId)
+                ? crmProjectionService.detail(orgId, userId, accountId, false)
+                : snapshotView(requireSnapshot(orgId, accountId));
+        String lifecycle = "EXISTING".equals(account.get("customerMode")) ? "EXISTING_CUSTOMER" : "NEW_CUSTOMER";
+        List<String> tags = extractInteractionTags(content);
+        CustomerInteractionEventEntity saved = eventRepository.save(new CustomerInteractionEventEntity(
+                publicId, orgId, accountId, "", sourceType, occurredAt, subject, content,
+                summarizeInteraction(content), content.contains("投诉") || content.contains("风险") ? "NEGATIVE" : "NEUTRAL",
+                toJson(tags), lifecycle));
+        Map<String, Object> view = new LinkedHashMap<>(eventView(saved));
+        view.put("deduplicated", false);
         return view;
     }
 
     @Transactional
-    public List<Map<String, Object>> timeline(String orgId, String accountId) {
-        return eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
-                .map(this::eventView)
-                .toList();
-    }
-
-    @Transactional
-    public List<Map<String, Object>> recommendations(String orgId, String accountId) {
+    public List<Map<String, Object>> recommendations(String orgId, String userId, String accountId) {
+        assertAccountAccess(orgId, userId, accountId);
         return recommendationRepository.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId).stream()
-                .map(this::recommendationView)
+                .map(item -> recommendationView(item, userId))
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> acceptRecommendation(String orgId, String publicId) {
+    public Map<String, Object> recommendationFeedback(String orgId, String userId, String publicId,
+                                                      RecommendationFeedbackCommand command) {
         CustomerWorkbenchRecommendationEntity recommendation = requireRecommendation(orgId, publicId);
-        recommendation.accept();
+        assertRecommendationAccess(orgId, userId, recommendation);
+        String rating = command == null ? "" : blankToEmpty(command.rating()).toUpperCase(Locale.ROOT);
+        if (!List.of("HELPFUL", "NOT_HELPFUL").contains(rating)) {
+            throw new IllegalArgumentException("建议反馈仅支持有帮助或需改进");
+        }
+        String comment = command == null ? "" : blankToEmpty(command.comment());
+        if (comment.length() > 1000) throw new IllegalArgumentException("反馈说明不能超过 1000 个字符");
+        CustomerRecommendationFeedbackEntity feedback = recommendationFeedbackRepository
+                .findByOrgIdAndUserIdAndRecommendationId(orgId, userId, publicId)
+                .orElseGet(() -> new CustomerRecommendationFeedbackEntity(orgId, userId, publicId, rating, comment));
+        feedback.update(rating, comment);
+        feedback = recommendationFeedbackRepository.save(feedback);
+        return mapOf("recommendationId", publicId, "rating", feedback.getRating(),
+                "comment", feedback.getCommentText(), "updatedAt", feedback.getUpdatedAt().toString());
+    }
+
+    public Map<String, Object> supervisorSummary(String orgId, String userId) {
+        List<Map<String, Object>> accounts = new ArrayList<>();
+        int page = 1;
+        int totalPages;
+        do {
+            Map<String, Object> result = queue(orgId, userId,
+                    new CustomerCrmProjectionService.QueueQuery("all", "all", "risk", "desc", "", page, 100, false));
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> items = (List<Map<String, Object>>) result.getOrDefault("items", List.of());
+            accounts.addAll(items);
+            totalPages = intValue(result.get("totalPages"));
+            page++;
+        } while (page <= totalPages);
+        Set<String> visibleAccountIds = accounts.stream().map(item -> String.valueOf(item.get("accountId")))
+                .collect(java.util.stream.Collectors.toSet());
+        List<CustomerWorkbenchRecommendationEntity> recommendations = recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+                .filter(item -> visibleAccountIds.contains(item.getCrmAccountId())).toList();
+        List<CustomerCrmWriteAuditEntity> audits = writeAuditRepository.findByOrgIdAndUserIdOrderByCreatedAtDesc(orgId, userId);
+        long writeSucceeded = audits.stream().filter(item -> "SUCCEEDED".equals(item.getStatus())).count();
+        long writeFailed = audits.stream().filter(item -> List.of("FAILED", "UNKNOWN").contains(item.getStatus())).count();
+        long completedWrites = writeSucceeded + writeFailed;
+        return mapOf(
+                "visibleAccounts", accounts.size(),
+                "riskAccounts", accounts.stream().filter(item -> intValue(item.get("riskCount")) > 0).count(),
+                "followedAccounts", accounts.stream().filter(item -> Boolean.parseBoolean(String.valueOf(item.get("followed")))).count(),
+                "openActions", accounts.stream().mapToInt(item -> intValue(item.get("nextActionCount"))).sum(),
+                "pendingRecommendations", recommendations.stream().filter(item -> List.of(
+                        CustomerWorkbenchRecommendationEntity.STATUS_PENDING,
+                        CustomerWorkbenchRecommendationEntity.STATUS_ACCEPTED,
+                        CustomerWorkbenchRecommendationEntity.STATUS_CONFIRMED).contains(item.getStatus())).count(),
+                "writeSucceeded", writeSucceeded,
+                "writeFailed", writeFailed,
+                "writeSuccessRate", completedWrites == 0 ? 0 : Math.round(writeSucceeded * 1000D / completedWrites) / 10D,
+                "dataAsOf", Instant.now().toString());
+    }
+
+    @Transactional
+    public Map<String, Object> acceptRecommendation(String orgId, String userId, String publicId) {
+        CustomerWorkbenchRecommendationEntity recommendation = requireRecommendation(orgId, publicId);
+        assertRecommendationAccess(orgId, userId, recommendation);
+        try {
+            recommendation.accept();
+        } catch (IllegalStateException ex) {
+            throw new ConflictException(ex.getMessage());
+        }
         return recommendationView(recommendationRepository.save(recommendation));
     }
 
     @Transactional
+    public Map<String, Object> updateRecommendation(String orgId, String userId, String publicId, RecommendationDraft command) {
+        CustomerWorkbenchRecommendationEntity recommendation = requireRecommendation(orgId, publicId);
+        assertRecommendationAccess(orgId, userId, recommendation);
+        Map<String, Object> payload = command == null || command.crmPayload() == null
+                ? readMap(recommendation.getCrmPayload()) : command.crmPayload();
+        try {
+            recommendation.updateDraft(
+                    command == null || blankToEmpty(command.title()).isBlank() ? recommendation.getTitle() : command.title().trim(),
+                    command == null || blankToEmpty(command.rationale()).isBlank() ? recommendation.getRationale() : command.rationale().trim(),
+                    command == null || command.confidence() == null ? recommendation.getConfidence() : command.confidence(),
+                    toJson(payload),
+                    command == null || blankToEmpty(command.targetObject()).isBlank() ? recommendation.getTargetObject() : command.targetObject().trim(),
+                    command == null || blankToEmpty(command.targetRecordId()).isBlank() ? recommendation.getTargetRecordId() : command.targetRecordId().trim());
+        } catch (IllegalStateException ex) {
+            throw new ConflictException(ex.getMessage());
+        }
+        return recommendationView(recommendationRepository.save(recommendation));
+    }
+
+    @Transactional
+    public Map<String, Object> dismissRecommendation(String orgId, String userId, String publicId, RecommendationDismiss command) {
+        CustomerWorkbenchRecommendationEntity recommendation = requireRecommendation(orgId, publicId);
+        assertRecommendationAccess(orgId, userId, recommendation);
+        try {
+            recommendation.dismiss(command == null || blankToEmpty(command.reason()).isBlank() ? "用户选择忽略" : command.reason().trim());
+        } catch (IllegalStateException ex) {
+            throw new ConflictException(ex.getMessage());
+        }
+        return recommendationView(recommendationRepository.save(recommendation));
+    }
+
+    @Transactional
+    public Map<String, Object> confirmRecommendation(String orgId, String userId, String publicId) {
+        CustomerWorkbenchRecommendationEntity recommendation = requireRecommendation(orgId, publicId);
+        assertRecommendationAccess(orgId, userId, recommendation);
+        try {
+            recommendation.confirm(userId);
+        } catch (IllegalStateException ex) {
+            throw new ConflictException(ex.getMessage());
+        }
+        return recommendationView(recommendationRepository.save(recommendation));
+    }
+
     public Map<String, Object> applyRecommendation(String orgId, String userId, String publicId) {
         CustomerWorkbenchRecommendationEntity recommendation = requireRecommendation(orgId, publicId);
-        if (!CustomerWorkbenchRecommendationEntity.STATUS_ACCEPTED.equals(recommendation.getStatus())
-                && !CustomerWorkbenchRecommendationEntity.STATUS_APPLIED.equals(recommendation.getStatus())) {
-            recommendation.accept();
+        assertRecommendationAccess(orgId, userId, recommendation);
+        if (CustomerWorkbenchRecommendationEntity.STATUS_APPLIED.equals(recommendation.getStatus())) {
+            Map<String, Object> existing = recommendationView(recommendation);
+            existing.put("message", "该建议已执行，未重复写入 CRM。");
+            existing.put("idempotent", true);
+            return existing;
         }
-        String simulatedCrmId = "demo-crm-" + recommendation.getRecommendationType().toLowerCase(Locale.ROOT)
-                + "-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-        recommendation.apply(simulatedCrmId);
-        Map<String, Object> view = recommendationView(recommendationRepository.save(recommendation));
-        view.put("writeMode", cloudccAccessTokenService.getSessionContext(orgId, userId).isPresent() ? "CRM_READY_SIMULATED" : "DEMO_SIMULATED");
-        view.put("message", "建议已进入确认后的 CRM 落地流程；当前演示环境写入为可审计模拟结果。");
-        return view;
+        if (!isCrmReady(orgId, userId)) throw new ConflictException("CloudCC CRM 未连接，禁止执行写回");
+        if (!CustomerWorkbenchRecommendationEntity.STATUS_CONFIRMED.equals(recommendation.getStatus())
+                && !CustomerWorkbenchRecommendationEntity.STATUS_FAILED.equals(recommendation.getStatus())) {
+            throw new ConflictException("建议必须先确认，才能写入 CRM");
+        }
+        String targetObject = firstNonBlank(recommendation.getTargetObject(), targetObject(recommendation.getRecommendationType()));
+        Map<String, Object> crmPayload = normalizedCrmPayload(recommendation, targetObject);
+        String operation = blankToEmpty(recommendation.getTargetRecordId()).isBlank() ? "INSERT" : "UPDATE";
+        if ("UPDATE".equals(operation)) crmPayload.put("id", recommendation.getTargetRecordId());
+        String requestHash = sha256(toJson(crmPayload));
+        String idempotencyKey = recommendation.getPublicId() + ":" + requestHash.substring(0, 16);
+        var prior = writeAuditRepository.findByOrgIdAndUserIdAndIdempotencyKey(orgId, userId, idempotencyKey);
+        if (prior.isPresent() && "SUCCEEDED".equals(prior.get().getStatus())) {
+            recommendation.apply(prior.get().getRemoteRecordId());
+            Map<String, Object> view = recommendationView(recommendationRepository.save(recommendation));
+            view.put("message", "已根据幂等审计恢复此前的 CRM 写入结果。");
+            view.put("idempotent", true);
+            return view;
+        }
+        if (prior.isPresent() && ("STARTED".equals(prior.get().getStatus()) || "UNKNOWN".equals(prior.get().getStatus()))) {
+            throw new ConflictException("上次 CRM 写入结果未知，已禁止重复执行；请先在 CRM 中核对或修改建议后重试");
+        }
+        CustomerCrmWriteAuditEntity audit = prior.orElseGet(() -> new CustomerCrmWriteAuditEntity(
+                auditId(orgId, idempotencyKey), orgId, userId, recommendation.getPublicId(), idempotencyKey,
+                targetObject, operation, "STARTED", requestHash, null, null, null, toJson(crmPayload), "{}"));
+        audit.markStarted();
+        writeAuditRepository.save(audit);
+        recommendation.markApplying();
+        recommendationRepository.save(recommendation);
+        try {
+            WriteResult result = cloudccOpenApiService.writeRecords(orgId, userId, operation, targetObject, List.of(crmPayload));
+            String remoteId = result.remoteIds().stream().findFirst().orElse(blankToEmpty(recommendation.getTargetRecordId()));
+            if (remoteId.isBlank()) throw new IllegalStateException("CloudCC 写入成功但未返回记录 ID，无法完成回读校验");
+            Map<String, Object> readback = cloudccOpenApiService.queryRecordById(orgId, userId, targetObject,
+                    readbackFields(targetObject), remoteId).orElse(Map.of());
+            boolean verified = !readback.isEmpty();
+            audit.markSucceeded(remoteId, toJson(mapOf("result", result, "readback", readback)));
+            writeAuditRepository.save(audit);
+            recommendation.apply(remoteId);
+            crmProjectionService.invalidate(orgId, userId);
+            Map<String, Object> view = recommendationView(recommendationRepository.save(recommendation));
+            view.put("writeMode", "CLOUDCC_LIVE");
+            view.put("verified", verified);
+            view.put("readback", readback);
+            view.put("message", verified ? "已写入 CloudCC CRM 并完成回读校验。" : "已写入 CloudCC CRM，但当前用户无权回读该记录。");
+            return view;
+        } catch (RuntimeException ex) {
+            String code = ex instanceof CloudccApiException cloudccEx ? cloudccEx.code() : ex.getClass().getSimpleName();
+            recommendation.markFailed(code, ex.getMessage());
+            boolean resultUnknown = ex.getMessage() != null && (ex.getMessage().contains("timed out")
+                    || ex.getMessage().contains("timeout") || ex.getMessage().contains("连接重置"));
+            audit.markFailed(code, ex.getMessage(), resultUnknown);
+            writeAuditRepository.save(audit);
+            Map<String, Object> view = recommendationView(recommendationRepository.save(recommendation));
+            view.put("writeMode", "CLOUDCC_LIVE");
+            view.put("message", "CRM 写入失败：" + ex.getMessage());
+            return view;
+        }
     }
 
     public Map<String, Object> assistant(String orgId, String userId, AssistantCommand command) {
-        ensureDemoData(orgId, userId);
         agentDefinitionService.warmupBuiltinAgents(orgId);
         skillDefinitionService.ensurePhaseOneDefaults(orgId);
         String text = command == null || command.message() == null ? "" : command.message().trim();
         String accountId = command == null ? "" : blankToEmpty(command.accountId());
-        CustomerWorkbenchSnapshotEntity snapshot = accountId.isBlank()
-                ? snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream().findFirst().orElseThrow()
-                : requireSnapshot(orgId, accountId);
+        if (accountId.isBlank()) {
+            List<Map<String, Object>> accounts = listAccounts(orgId, userId);
+            if (accounts.isEmpty()) throw new IllegalArgumentException("当前用户没有可见客户");
+            accountId = String.valueOf(accounts.get(0).get("accountId"));
+        }
+        Map<String, Object> customer = accountDetail(orgId, userId, accountId);
         Map<String, Object> crmConnection = crmConnectionView(orgId, userId);
-        String sessionId = assistantSessionId(userId, snapshot);
-        String prompt = buildAssistantPrompt(orgId, userId, text, snapshot, crmConnection);
+        String sessionId = assistantSessionId(userId, accountId);
+        String prompt = buildAssistantPrompt(userId, text, customer, crmConnection);
         Map<String, Object> agentResult = chatOrchestratorService.chat(
                 orgId,
                 userId,
@@ -135,14 +421,16 @@ public class CustomerWorkbenchService {
                 List.of(),
                 ASSISTANT_AGENT_ID,
                 SKILL_CODE,
-                Map.of("source", "customer-workbench", "crmAccountId", snapshot.getCrmAccountId())
+                Map.of("source", "customer-workbench", "crmAccountId", accountId)
         );
         Object answer = agentResult.get("answer");
+        Map<String, Object> uiAction = resolveUiAction(text, customer);
         return mapOf(
                 "reply", answer == null || String.valueOf(answer).isBlank() ? "智能体暂未生成有效回复，请重试。" : String.valueOf(answer),
-                "action", "NONE",
-                "actionPayload", Map.of(),
-                "account", accountListView(orgId, snapshot),
+                "action", uiAction.get("type"),
+                "actionPayload", uiAction.get("payload"),
+                "uiActions", List.of(uiAction),
+                "account", customer,
                 "crmConnection", crmConnection,
                 "agentId", agentResult.getOrDefault("agentId", ASSISTANT_AGENT_ID),
                 "sessionId", agentResult.getOrDefault("sessionId", sessionId),
@@ -153,25 +441,50 @@ public class CustomerWorkbenchService {
         );
     }
 
-    private String assistantSessionId(String userId, CustomerWorkbenchSnapshotEntity snapshot) {
-        String seed = blankToEmpty(userId) + ":" + blankToEmpty(snapshot.getCrmAccountId());
+    private String assistantSessionId(String userId, String accountId) {
+        String seed = blankToEmpty(userId) + ":" + blankToEmpty(accountId);
         return "customer-workbench:" + UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8));
     }
 
-    private String buildAssistantPrompt(String orgId,
-                                        String userId,
+    private String sanitizeAssistantHistoryContent(String content) {
+        int marker = content.lastIndexOf("[用户问题]");
+        return marker >= 0 ? content.substring(marker + "[用户问题]".length()).trim() : content.trim();
+    }
+
+    private String normalizeInteractionSource(String sourceType) {
+        return switch (blankToEmpty(sourceType).toUpperCase(Locale.ROOT)) {
+            case "WECHAT", "PHONE", "MEETING", "CUSTOMER_FEEDBACK" -> blankToEmpty(sourceType).toUpperCase(Locale.ROOT);
+            default -> throw new IllegalArgumentException("互动来源仅支持微信、电话、会议或客户反馈");
+        };
+    }
+
+    private Instant parseInteractionTime(String raw) {
+        if (raw == null || raw.isBlank()) return Instant.now();
+        try { return Instant.parse(raw); }
+        catch (DateTimeParseException ex) { throw new IllegalArgumentException("互动时间格式不正确"); }
+    }
+
+    private String summarizeInteraction(String content) {
+        String normalized = content.replaceAll("\\s+", " ").trim();
+        return normalized.length() <= 240 ? normalized : normalized.substring(0, 237) + "...";
+    }
+
+    private List<String> extractInteractionTags(String content) {
+        List<String> tags = new ArrayList<>();
+        if (content.contains("预算") || content.contains("报价")) tags.add("预算商务");
+        if (content.contains("需求") || content.contains("方案")) tags.add("需求方案");
+        if (content.contains("风险") || content.contains("投诉")) tags.add("风险反馈");
+        if (content.contains("续约") || content.contains("增购")) tags.add("续约增购");
+        if (tags.isEmpty()) tags.add("客户互动");
+        return List.copyOf(tags);
+    }
+
+    private String buildAssistantPrompt(String userId,
                                         String userMessage,
-                                        CustomerWorkbenchSnapshotEntity snapshot,
+                                        Map<String, Object> customer,
                                         Map<String, Object> crmConnection) {
-        Map<String, Object> customer = new LinkedHashMap<>(snapshotView(snapshot));
-        customer.put("pendingRecommendationCount", recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(
-                orgId, snapshot.getCrmAccountId(), CustomerWorkbenchRecommendationEntity.STATUS_PENDING));
-        List<Map<String, Object>> recentTimeline = timeline(orgId, snapshot.getCrmAccountId()).stream()
-                .limit(6)
-                .toList();
-        List<Map<String, Object>> pendingRecommendations = recommendations(orgId, snapshot.getCrmAccountId()).stream()
-                .limit(6)
-                .toList();
+        Object recentTimeline = customer.getOrDefault("timeline", List.of());
+        Object pendingRecommendations = customer.getOrDefault("recommendations", List.of());
         return """
                 [客户互动工作台上下文]
                 当前用户：%s
@@ -192,12 +505,149 @@ public class CustomerWorkbenchService {
                 %s
                 """.formatted(
                 userId,
-                snapshot.getCrmAccountId(),
+                customer.get("accountId"),
                 toJson(customer),
                 toJson(recentTimeline),
                 toJson(pendingRecommendations),
                 toJson(crmConnection),
                 userMessage == null || userMessage.isBlank() ? "请根据当前客户互动上下文给出推进建议。" : userMessage);
+    }
+
+    public Map<String, Object> integrationStatus(String orgId, String userId) {
+        if (!isCrmReady(orgId, userId)) return crmConnectionView(orgId, userId);
+        Map<String, Object> status = new LinkedHashMap<>(crmProjectionService.integrationStatus(orgId, userId));
+        cloudccAccessTokenService.getSessionContext(orgId, userId).ifPresent(context -> status.put("baseUrl", context.baseUrl()));
+        return status;
+    }
+
+    public Map<String, Object> follow(String orgId, String userId, String accountId, boolean followed) {
+        if (!isCrmReady(orgId, userId)) throw new ConflictException("CloudCC CRM 未连接，无法保存关注状态");
+        return crmProjectionService.follow(orgId, userId, accountId, followed);
+    }
+
+    public List<Map<String, Object>> notifications(String orgId, String userId) {
+        return isCrmReady(orgId, userId) ? crmProjectionService.notifications(orgId, userId) : List.of();
+    }
+
+    private boolean isCrmReady(String orgId, String userId) {
+        return cloudccAccessTokenService.getSessionContext(orgId, userId).isPresent();
+    }
+
+    private void assertRecommendationAccess(String orgId, String userId,
+                                            CustomerWorkbenchRecommendationEntity recommendation) {
+        assertAccountAccess(orgId, userId, recommendation.getCrmAccountId());
+    }
+
+    private void assertAccountAccess(String orgId, String userId, String accountId) {
+        if (isCrmReady(orgId, userId)) {
+            crmProjectionService.detail(orgId, userId, accountId, false);
+            return;
+        }
+        requireSnapshot(orgId, accountId);
+    }
+
+    @Transactional
+    protected void ensureLiveRecommendations(String orgId, String accountId, Map<String, Object> detail) {
+        if (!recommendationRepository.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId).isEmpty()) return;
+        String name = String.valueOf(detail.getOrDefault("name", "客户"));
+        List<?> signals = detail.get("signals") instanceof List<?> list ? list : List.of();
+        Object firstSignalDetail = signals.isEmpty() || !(signals.get(0) instanceof Map<?, ?> firstSignal)
+                ? null : firstSignal.get("detail");
+        String rationale = firstSignalDetail == null ? "当前客户没有明确的下一步 CRM 任务，建议由负责人确认跟进安排。"
+                : String.valueOf(firstSignalDetail);
+        CustomerWorkbenchRecommendationEntity task = new CustomerWorkbenchRecommendationEntity(
+                stableRecommendationId(orgId, accountId, "CREATE_TASK"), orgId, accountId, "CREATE_TASK",
+                "创建下一次跟进任务", rationale, BigDecimal.valueOf(0.88),
+                toJson(mapOf("subject", "跟进 " + name, "relateid", accountId, "relateobj", "Account",
+                        "status", "未开始", "priority", "普通", "expiredate", LocalDate.now().plusDays(3).toString(),
+                        "remark", rationale)));
+        task.configureTarget("Task", "", toJson(signals.stream().limit(3).toList()));
+        recommendationRepository.save(task);
+        Object opportunityCount = detail.getOrDefault("opportunityCount", 0);
+        if (Integer.parseInt(String.valueOf(opportunityCount)) == 0) {
+            CustomerWorkbenchRecommendationEntity opportunity = new CustomerWorkbenchRecommendationEntity(
+                    stableRecommendationId(orgId, accountId, "CREATE_OPPORTUNITY"), orgId, accountId, "CREATE_OPPORTUNITY",
+                    "创建业务机会并补齐推进信息", "当前客户没有可见业务机会，建议确认名称、阶段和下一步后写入 CRM。",
+                    BigDecimal.valueOf(0.76), toJson(mapOf("name", name + " 新业务机会", "khmc", accountId,
+                            "jieduan", "1-发现机会", "xyb", "确认需求、预算和关键决策人")));
+            opportunity.configureTarget("Opportunity", "", "[]");
+            recommendationRepository.save(opportunity);
+        }
+    }
+
+    private String stableRecommendationId(String orgId, String accountId, String type) {
+        String seed = orgId + ":" + accountId + ":" + type;
+        return "cwr_" + UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString().replace("-", "");
+    }
+
+    private String targetObject(String type) {
+        return switch (blankToEmpty(type).toUpperCase(Locale.ROOT)) {
+            case "CREATE_OPPORTUNITY", "UPDATE_OPPORTUNITY" -> "Opportunity";
+            case "UPDATE_CASE" -> "cloudcccase";
+            default -> "Task";
+        };
+    }
+
+    private Map<String, Object> normalizedCrmPayload(CustomerWorkbenchRecommendationEntity recommendation, String targetObject) {
+        Map<String, Object> source = readMap(recommendation.getCrmPayload());
+        source.remove("objectApiName");
+        source.remove("operation");
+        source.remove("accountId");
+        if ("Task".equals(targetObject)) {
+            source.putIfAbsent("subject", recommendation.getTitle());
+            source.putIfAbsent("relateid", recommendation.getCrmAccountId());
+            source.putIfAbsent("relateobj", "Account");
+            source.putIfAbsent("status", "未开始");
+            source.putIfAbsent("priority", "普通");
+            source.putIfAbsent("expiredate", LocalDate.now().plusDays(3).toString());
+            source.putIfAbsent("remark", recommendation.getRationale());
+        } else if ("Opportunity".equals(targetObject)) {
+            source.putIfAbsent("khmc", recommendation.getCrmAccountId());
+            source.putIfAbsent("name", recommendation.getTitle());
+            source.putIfAbsent("jieduan", "1-发现机会");
+            source.putIfAbsent("xyb", recommendation.getRationale());
+        }
+        return new LinkedHashMap<>(source);
+    }
+
+    private String readbackFields(String targetObject) {
+        return switch (targetObject) {
+            case "Opportunity" -> "id,name,khmc,jieduan,xyb,lastmodifydate";
+            case "cloudcccase" -> "id,name,khmc,zhuangtai,yxj,zhuti,lastmodifydate";
+            default -> "id,name,subject,relateid,status,priority,expiredate,remark,lastmodifydate";
+        };
+    }
+
+    private String auditId(String orgId, String idempotencyKey) {
+        return "cwa_" + UUID.nameUUIDFromBytes((orgId + ":" + idempotencyKey).getBytes(StandardCharsets.UTF_8))
+                .toString().replace("-", "");
+    }
+
+    private String sha256(String text) {
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256").digest(text.getBytes(StandardCharsets.UTF_8));
+            return java.util.HexFormat.of().formatHex(digest);
+        } catch (Exception ex) {
+            throw new IllegalStateException("无法生成写入幂等摘要", ex);
+        }
+    }
+
+    private Map<String, Object> resolveUiAction(String text, Map<String, Object> customer) {
+        String input = blankToEmpty(text);
+        if (input.contains("老客户") || input.contains("客户经营"))
+            return mapOf("type", "SWITCH_MODE", "payload", Map.of("mode", "existing"), "requiresConfirmation", false);
+        if (input.contains("新客户") || input.contains("客户推进"))
+            return mapOf("type", "SWITCH_MODE", "payload", Map.of("mode", "new"), "requiresConfirmation", false);
+        if (input.contains("下一个客户"))
+            return mapOf("type", "SELECT_NEXT_ACCOUNT", "payload", Map.of(), "requiresConfirmation", false);
+        if (input.contains("建议") || input.contains("落地"))
+            return mapOf("type", "OPEN_TAB", "payload", Map.of("tab", "recommendations"), "requiresConfirmation", false);
+        if (input.contains("风险") || input.contains("信号"))
+            return mapOf("type", "OPEN_TAB", "payload", Map.of("tab", "signals"), "requiresConfirmation", false);
+        if (input.contains("任务") || input.contains("写入"))
+            return mapOf("type", "PROPOSE_RECOMMENDATION", "payload", Map.of("accountId", customer.get("accountId"),
+                    "recommendationType", "CREATE_TASK"), "requiresConfirmation", true);
+        return mapOf("type", "NONE", "payload", Map.of(), "requiresConfirmation", false);
     }
 
     @Transactional
@@ -311,17 +761,21 @@ public class CustomerWorkbenchService {
 
     private Map<String, Object> accountListView(String orgId, CustomerWorkbenchSnapshotEntity item) {
         Map<String, Object> snapshot = readMap(item.getSnapshotJson());
+        boolean existing = List.of("EXISTING", "STRATEGIC").contains(item.getSegment());
         return mapOf(
                 "accountId", item.getCrmAccountId(),
                 "name", item.getAccountName(),
                 "owner", item.getOwnerName(),
                 "segment", item.getSegment(),
+                "customerMode", existing ? "EXISTING" : "NEW",
                 "healthScore", item.getHealthScore(),
                 "progressScore", item.getProgressScore(),
                 "riskCount", item.getRiskCount(),
                 "nextActionCount", item.getNextActionCount(),
                 "pendingRecommendationCount", recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(
                         orgId, item.getCrmAccountId(), CustomerWorkbenchRecommendationEntity.STATUS_PENDING),
+                "opportunityCount", existing ? 0 : 1,
+                "renewalDays", String.valueOf(snapshot.getOrDefault("stage", "")).contains("续约") ? 60 : -1,
                 "lastInteraction", snapshot.getOrDefault("lastInteraction", ""),
                 "stage", snapshot.getOrDefault("stage", ""),
                 "tags", snapshot.getOrDefault("tags", List.of()),
@@ -331,17 +785,85 @@ public class CustomerWorkbenchService {
 
     private Map<String, Object> snapshotView(CustomerWorkbenchSnapshotEntity item) {
         Map<String, Object> snapshot = readMap(item.getSnapshotJson());
+        boolean existing = List.of("EXISTING", "STRATEGIC").contains(item.getSegment());
+        List<String> risks = stringList(snapshot.get("risks"));
+        List<String> newSignals = stringList(snapshot.get("newCustomerSignals"));
+        List<String> existingSignals = stringList(snapshot.get("existingCustomerSignals"));
+        List<String> nextActions = stringList(snapshot.get("nextActions"));
+        int renewalDays = String.valueOf(snapshot.getOrDefault("stage", "")).contains("续约") ? 60 : -1;
+        List<Map<String, Object>> signals = demoSignals(existing ? "EXISTING" : "NEW", risks,
+                existing ? existingSignals : newSignals);
+        String contact = String.valueOf(snapshot.getOrDefault("contact", ""));
+        String[] contactParts = contact.trim().split("\\s+", 2);
         snapshot.putAll(mapOf(
                 "accountId", item.getCrmAccountId(),
                 "name", item.getAccountName(),
                 "owner", item.getOwnerName(),
                 "segment", item.getSegment(),
+                "customerMode", existing ? "EXISTING" : "NEW",
                 "healthScore", item.getHealthScore(),
                 "progressScore", item.getProgressScore(),
                 "riskCount", item.getRiskCount(),
-                "nextActionCount", item.getNextActionCount()
+                "nextActionCount", item.getNextActionCount(),
+                "pendingRecommendationCount", recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(
+                        item.getOrgId(), item.getCrmAccountId(), CustomerWorkbenchRecommendationEntity.STATUS_PENDING),
+                "opportunityCount", existing ? 0 : 1,
+                "renewalDays", renewalDays,
+                "signals", signals,
+                "metrics", mapOf(
+                        "health", demoMetric(item.getHealthScore(), "客户健康度演示规则", "DEMO", "overview", item.getUpdatedAt()),
+                        "risks", demoMetric(risks.size(), "未关闭风险信号", "DEMO", existing ? "service" : "signals", item.getUpdatedAt()),
+                        "nextActions", demoMetric(nextActions.size(), "待执行行动", "DEMO", "actions", item.getUpdatedAt()),
+                        "renewalDays", demoMetric(renewalDays, "最近合同到期日", "DEMO", "renewal", item.getUpdatedAt()),
+                        "openIssues", demoMetric(risks.size(), "演示服务风险", "DEMO", "service", item.getUpdatedAt()),
+                        "expansionSignals", demoMetric(existingSignals.stream().filter(value -> value.contains("增购") || value.contains("扩展")).count(), "增购信号", "DEMO", "renewal", item.getUpdatedAt())
+                ),
+                "serviceIssues", risks.stream().map(value -> mapOf("id", stableDemoId(item, value), "number", "演示服务项",
+                        "title", value, "status", "待处理", "priority", "中", "dueAt", "", "description", value)).toList(),
+                "valueItems", existingSignals.stream().map(value -> mapOf("id", stableDemoId(item, value), "title", value,
+                        "status", "待复盘", "amount", 0, "source", "演示客户经营事实")).toList(),
+                "relationshipMap", contact.isBlank() ? List.of() : List.of(mapOf("id", "demo-contact-" + item.getCrmAccountId(),
+                        "name", contactParts[0], "title", contactParts.length > 1 ? contactParts[1] : "职务待补",
+                        "role", "关键联系人", "owner", item.getOwnerName(), "lastContactAt", item.getUpdatedAt().toString())),
+                "renewal", mapOf("days", renewalDays,
+                        "contracts", renewalDays < 0 ? List.of() : List.of(mapOf("id", "demo-contract-" + item.getCrmAccountId(),
+                                "title", item.getAccountName() + " 续约合同", "status", "续约准备", "amount", 0, "source", "演示合同")),
+                        "opportunities", existingSignals.stream().filter(value -> value.contains("增购") || value.contains("扩展"))
+                                .map(value -> mapOf("name", value, "stage", "机会培育", "nextStep", "确认范围、预算和负责人")).toList()),
+                "opportunities", existing ? List.of() : newSignals.stream().limit(1)
+                        .map(value -> mapOf("id", "demo-opportunity-" + item.getCrmAccountId(), "name", value,
+                                "stage", snapshot.getOrDefault("stage", "机会培育"), "nextStep", nextActions.isEmpty() ? "待确认" : nextActions.get(0))).toList(),
+                "dataAsOf", item.getUpdatedAt().toString()
         ));
         return snapshot;
+    }
+
+    private List<Map<String, Object>> demoSignals(String mode, List<String> risks, List<String> facts) {
+        List<Map<String, Object>> out = new ArrayList<>();
+        for (int i = 0; i < risks.size(); i++) {
+            out.add(mapOf("mode", mode, "type", "DEMO_RISK_" + i, "title", risks.get(i), "detail", risks.get(i),
+                    "severity", "HIGH", "evidence", List.of("演示客户互动事实")));
+        }
+        for (int i = 0; i < facts.size(); i++) {
+            out.add(mapOf("mode", mode, "type", "DEMO_SIGNAL_" + i, "title", facts.get(i), "detail", facts.get(i),
+                    "severity", "MEDIUM", "evidence", List.of("演示客户互动事实")));
+        }
+        return List.copyOf(out);
+    }
+
+    private Map<String, Object> demoMetric(Number value, String definition, String source, String target, Instant calculatedAt) {
+        return mapOf("value", value, "definition", definition, "source", source,
+                "lastCalculatedAt", calculatedAt.toString(), "drilldownTarget", target);
+    }
+
+    private String stableDemoId(CustomerWorkbenchSnapshotEntity item, String value) {
+        return "demo_" + UUID.nameUUIDFromBytes((item.getCrmAccountId() + ":" + value).getBytes(StandardCharsets.UTF_8))
+                .toString().replace("-", "");
+    }
+
+    private List<String> stringList(Object value) {
+        if (!(value instanceof List<?> list)) return List.of();
+        return list.stream().map(String::valueOf).filter(item -> !item.isBlank()).toList();
     }
 
     private Map<String, Object> eventView(CustomerInteractionEventEntity item) {
@@ -359,6 +881,10 @@ public class CustomerWorkbenchService {
     }
 
     private Map<String, Object> recommendationView(CustomerWorkbenchRecommendationEntity item) {
+        Object evidence = readJson(item.getEvidenceJson());
+        if (!(evidence instanceof List<?> list) || list.isEmpty()) {
+            evidence = List.of(mapOf("title", "建议生成依据", "detail", item.getRationale(), "source", "推荐规则"));
+        }
         return mapOf(
                 "recommendationId", item.getPublicId(),
                 "accountId", item.getCrmAccountId(),
@@ -369,8 +895,26 @@ public class CustomerWorkbenchService {
                 "status", item.getStatus(),
                 "crmPayload", readMap(item.getCrmPayload()),
                 "appliedCrmId", item.getAppliedCrmId(),
+                "targetObject", item.getTargetObject(),
+                "targetRecordId", item.getTargetRecordId(),
+                "evidence", evidence,
+                "dismissalReason", item.getDismissalReason(),
+                "confirmedBy", item.getConfirmedBy(),
+                "confirmedAt", item.getConfirmedAt() == null ? "" : item.getConfirmedAt().toString(),
+                "appliedAt", item.getAppliedAt() == null ? "" : item.getAppliedAt().toString(),
+                "lastErrorCode", item.getLastErrorCode(),
+                "lastErrorMessage", item.getLastErrorMessage(),
+                "version", item.getVersion(),
                 "updatedAt", item.getUpdatedAt().toString()
         );
+    }
+
+    private Map<String, Object> recommendationView(CustomerWorkbenchRecommendationEntity item, String userId) {
+        Map<String, Object> view = new LinkedHashMap<>(recommendationView(item));
+        recommendationFeedbackRepository.findByOrgIdAndUserIdAndRecommendationId(item.getOrgId(), userId, item.getPublicId())
+                .ifPresent(feedback -> view.put("feedback", mapOf("rating", feedback.getRating(),
+                        "comment", feedback.getCommentText(), "updatedAt", feedback.getUpdatedAt().toString())));
+        return view;
     }
 
     private Map<String, Object> crmConnectionView(String orgId, String userId) {
@@ -439,6 +983,35 @@ public class CustomerWorkbenchService {
 
     private static String blankToEmpty(String value) {
         return value == null ? "" : value.trim();
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) if (value != null && !value.isBlank()) return value;
+        return "";
+    }
+
+    private boolean demoFilterMatches(Map<String, Object> item, String filter) {
+        return switch (blankToEmpty(filter)) {
+            case "focus" -> intValue(item.get("progressScore")) >= 70;
+            case "follow" -> intValue(item.get("nextActionCount")) > 0;
+            case "risk", "service" -> intValue(item.get("riskCount")) > 0;
+            case "recommendations" -> intValue(item.get("pendingRecommendationCount")) > 0;
+            case "health" -> intValue(item.get("healthScore")) < 75;
+            case "renewal" -> String.valueOf(item.get("stage")).contains("续约");
+            case "expansion" -> String.valueOf(item.get("stage")).contains("增购");
+            default -> true;
+        };
+    }
+
+    private static int intValue(Object value) {
+        try { return Integer.parseInt(String.valueOf(value)); }
+        catch (Exception ignored) { return 0; }
+    }
+
+    private static Map<String, Long> mapOfLong(Object... values) {
+        Map<String, Long> map = new LinkedHashMap<>();
+        for (int i = 0; i + 1 < values.length; i += 2) map.put(String.valueOf(values[i]), ((Number) values[i + 1]).longValue());
+        return map;
     }
 
     private static Map<String, Object> mapOf(Object... values) {
@@ -591,6 +1164,11 @@ public class CustomerWorkbenchService {
         }
     }
 
-    public record AssistantCommand(String accountId, String message) {
-    }
+    public record AssistantCommand(String accountId, String message) {}
+    public record InteractionCommand(String sourceType, String subject, String content, String occurredAt) {}
+    public record RecommendationFeedbackCommand(String rating, String comment) {}
+    public record RecommendationDraft(String title, String rationale, BigDecimal confidence,
+                                      Map<String, Object> crmPayload, String targetObject, String targetRecordId) {}
+    public record RecommendationDismiss(String reason) {}
+    public record FollowCommand(boolean followed) {}
 }

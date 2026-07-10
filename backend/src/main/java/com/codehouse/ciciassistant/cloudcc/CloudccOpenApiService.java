@@ -10,7 +10,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -39,6 +42,195 @@ public class CloudccOpenApiService {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
+    }
+
+    public PageRecords pageQueryRecords(String orgId,
+                                        String userId,
+                                        String objectApiName,
+                                        String fields,
+                                        String expressions,
+                                        int pageNum,
+                                        int pageSize) {
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("serviceName", "pageQuery");
+        body.put("objectApiName", objectApiName);
+        body.put("fields", fields == null || fields.isBlank() ? "id,name" : fields);
+        if (expressions != null && !expressions.isBlank()) {
+            body.put("expressions", expressions);
+        }
+        body.put("pageNUM", Math.max(1, pageNum));
+        body.put("pageSize", Math.max(1, Math.min(200, pageSize)));
+        JsonNode root = callCommon(orgId, userId, body);
+        JsonNode data = root.path("data");
+        if (data.isTextual() && !data.asText().isBlank()) {
+            try {
+                data = objectMapper.readTree(data.asText());
+            } catch (Exception ex) {
+                throw new IllegalArgumentException("CloudCC 返回了无法解析的数据", ex);
+            }
+        }
+        List<Map<String, Object>> records = new ArrayList<>();
+        if (data.isArray()) {
+            for (JsonNode item : data) {
+                records.add(objectMapper.convertValue(item, Map.class));
+            }
+        }
+        return new PageRecords(
+                List.copyOf(records),
+                root.path("pageNUM").asInt(pageNum),
+                root.path("pageCount").asInt(records.isEmpty() ? 0 : 1),
+                root.path("totalCount").asInt(records.size()));
+    }
+
+    public List<Map<String, Object>> queryAllRecords(String orgId,
+                                                     String userId,
+                                                     String objectApiName,
+                                                     String fields,
+                                                     String expressions) {
+        List<Map<String, Object>> records = new ArrayList<>();
+        int page = 1;
+        while (page <= 50) {
+            PageRecords result = pageQueryRecords(orgId, userId, objectApiName, fields, expressions, page, 200);
+            records.addAll(result.records());
+            if (result.pageCount() <= page || result.records().isEmpty()) {
+                break;
+            }
+            page++;
+        }
+        return List.copyOf(records);
+    }
+
+    public Optional<Map<String, Object>> queryRecordById(String orgId,
+                                                         String userId,
+                                                         String objectApiName,
+                                                         String fields,
+                                                         String recordId) {
+        if (recordId == null || !recordId.matches("[A-Za-z0-9_-]{3,128}")) {
+            return Optional.empty();
+        }
+        // Some CloudCC tenants currently ignore or inconsistently evaluate the OpenAPI
+        // expression parameter. A write readback must be definitive, so page through the
+        // current user's permission-scoped records and match the returned id locally.
+        return queryAllRecords(orgId, userId, objectApiName, fields, "").stream()
+                .filter(item -> recordId.equals(String.valueOf(item.get("id"))))
+                .findFirst();
+    }
+
+    public WriteResult writeRecords(String orgId,
+                                    String userId,
+                                    String operation,
+                                    String objectApiName,
+                                    List<Map<String, Object>> data) {
+        String serviceName = switch (operation == null ? "" : operation.toUpperCase()) {
+            case "INSERT", "CREATE" -> "insertWithRoleRight";
+            case "UPDATE" -> "updateWithRoleRight";
+            case "DELETE" -> "deleteWithRoleRight";
+            case "UPSERT" -> "upsertWithRoleRight";
+            default -> throw new IllegalArgumentException("不支持的 CloudCC 写入操作: " + operation);
+        };
+        if (objectApiName == null || objectApiName.isBlank() || data == null || data.isEmpty()) {
+            throw new IllegalArgumentException("CloudCC 写入对象和数据不能为空");
+        }
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("serviceName", serviceName);
+        body.put("objectApiName", objectApiName);
+        try {
+            body.put("data", objectMapper.writeValueAsString(data));
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("CloudCC 写入数据序列化失败", ex);
+        }
+        JsonNode root = callCommon(orgId, userId, body);
+        return new WriteResult(serviceName, objectApiName, extractIds(root.path("data")),
+                root.path("returnCode").asText(""), root.path("returnInfo").asText(""));
+    }
+
+    private JsonNode callCommon(String orgId, String userId, ObjectNode body) {
+        CloudccAccessTokenService.CloudccSessionContext context = tokenService.getSessionContext(orgId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("无法获取 CloudCC 访问令牌，请确认已绑定当前用户账号。"));
+        JsonNode root = sendCommon(context.baseUrl(), context.accessToken(), body);
+        if (root.path("_httpStatus").asInt(200) == 401) {
+            tokenService.invalidateSessionContext(orgId, userId);
+            context = tokenService.getSessionContext(orgId, userId)
+                    .orElseThrow(() -> new IllegalArgumentException("CloudCC 令牌刷新失败，请重新绑定账号。"));
+            root = sendCommon(context.baseUrl(), context.accessToken(), body);
+        }
+        int status = root.path("_httpStatus").asInt(200);
+        if (status >= 400 || !root.path("result").asBoolean(false)) {
+            throw new CloudccApiException(root.path("returnCode").asText(String.valueOf(status)),
+                    root.path("returnInfo").asText("CloudCC API 调用失败"));
+        }
+        return root;
+    }
+
+    private JsonNode sendCommon(String baseUrl, String accessToken, ObjectNode body) {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(ensureBaseUrl(baseUrl) + "/openApi/common"))
+                    .header("Content-Type", "application/json")
+                    .header("accessToken", accessToken)
+                    .timeout(Duration.ofSeconds(30))
+                    .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(body), StandardCharsets.UTF_8))
+                    .build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            ObjectNode root = response.body() == null || response.body().isBlank()
+                    ? objectMapper.createObjectNode()
+                    : (ObjectNode) objectMapper.readTree(response.body());
+            root.put("_httpStatus", response.statusCode());
+            return root;
+        } catch (CloudccApiException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("调用 CloudCC API 失败: " + ex.getMessage(), ex);
+        }
+    }
+
+    List<String> extractIds(JsonNode raw) {
+        JsonNode data = raw;
+        if (data.isTextual() && !data.asText().isBlank()) {
+            try {
+                data = objectMapper.readTree(data.asText());
+            } catch (Exception ignored) {
+                return List.of();
+            }
+        }
+        List<String> ids = new ArrayList<>();
+        collectIds(ids, data);
+        return ids.stream().distinct().toList();
+    }
+
+    private void collectIds(List<String> ids, JsonNode item) {
+        if (item == null || item.isNull() || item.isMissingNode()) return;
+        if (item.isTextual() && !item.asText().isBlank()) {
+            ids.add(item.asText());
+            return;
+        }
+        if (item.isArray()) {
+            for (JsonNode child : item) collectIds(ids, child);
+            return;
+        }
+        String id = item.path("id").asText(item.path("Id").asText(""));
+        if (!id.isBlank()) {
+            ids.add(id);
+            return;
+        }
+        for (String key : List.of("ids", "records", "data")) {
+            if (item.has(key)) collectIds(ids, item.path(key));
+        }
+    }
+
+    public record PageRecords(List<Map<String, Object>> records, int pageNum, int pageCount, int totalCount) {}
+    public record WriteResult(String serviceName, String objectApiName, List<String> remoteIds,
+                              String returnCode, String returnInfo) {}
+
+    public static class CloudccApiException extends RuntimeException {
+        private final String code;
+
+        public CloudccApiException(String code, String message) {
+            super(message);
+            this.code = code;
+        }
+
+        public String code() { return code; }
     }
 
     /**

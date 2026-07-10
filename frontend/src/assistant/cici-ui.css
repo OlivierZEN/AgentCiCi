@@ -13413,6 +13413,7 @@
   appearance: none;
 }
 .customer-workbench {
+  position: relative;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -13695,6 +13696,7 @@
 }
 
 .customer-workbench__queue {
+  position: relative;
   display: grid;
   grid-template-rows: auto auto auto auto minmax(0, 1fr) auto;
   border-right: 1px solid #ded2bb;
@@ -13704,7 +13706,7 @@
 
 .customer-workbench__assistant {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   border-left: 1px solid #ded2bb;
   padding: 20px 14px 12px;
   overflow: hidden;
@@ -13715,7 +13717,7 @@
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__assistant {
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto;
   padding: 14px 12px 10px;
 }
 
@@ -14148,7 +14150,7 @@
   background: #fffaf1;
 }
 
-.customer-workbench__metrics div {
+.customer-workbench__metrics > button {
   position: relative;
   display: grid;
   grid-template-columns: 30px 1fr auto;
@@ -14158,18 +14160,25 @@
   min-height: 82px;
   padding: 12px 20px;
   border-right: 1px solid #eadcc4;
+  border-top: 0;
+  border-bottom: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__metrics {
   margin-top: 14px;
 }
 
-.cici-ai-apps__main--workbench .customer-workbench__metrics div {
+.cici-ai-apps__main--workbench .customer-workbench__metrics > button {
   min-height: 68px;
   padding: 10px 18px;
 }
 
-.customer-workbench__metrics div:last-child {
+.customer-workbench__metrics > button:last-child {
   border-right: 0;
 }
 
@@ -15011,7 +15020,7 @@
   background: transparent;
 }
 
-.cici-ai-apps__main--workbench .customer-workbench__metrics div {
+.cici-ai-apps__main--workbench .customer-workbench__metrics > button {
   min-height: 58px;
   padding: 8px 14px;
 }
@@ -15161,6 +15170,408 @@
 
 .cici-ai-apps__main--workbench .customer-workbench__ai-note {
   margin-top: 6px;
+}
+
+.customer-workbench__crm-state span.is-error {
+  background: #c8463f;
+}
+
+.customer-workbench__notification-wrap {
+  position: relative;
+}
+
+.customer-workbench__notification-count {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  place-items: center;
+  min-width: 15px;
+  height: 15px;
+  border-radius: 999px;
+  background: #c8463f;
+  color: #fff;
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.customer-workbench__notification-popover {
+  position: absolute;
+  z-index: 40;
+  top: 38px;
+  right: 0;
+  width: 286px;
+  max-height: 360px;
+  overflow: auto;
+  border: 1px solid #ded2bb;
+  border-radius: 7px;
+  background: #fffdf8;
+  box-shadow: 0 12px 30px rgba(58, 43, 22, .16);
+  padding: 10px;
+}
+
+.customer-workbench__body.is-assistant-closed {
+  grid-template-columns: minmax(300px, 336px) minmax(0, 1fr);
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__body.is-assistant-closed {
+  grid-template-columns: minmax(278px, 308px) minmax(620px, 1fr);
+}
+
+.customer-workbench__queue-settings {
+  position: absolute;
+  z-index: 12;
+  top: 58px;
+  right: 8px;
+  display: grid;
+  gap: 8px;
+  width: 210px;
+  border: 1px solid #ded2bb;
+  border-radius: 7px;
+  background: #fffdf8;
+  box-shadow: 0 10px 24px rgba(58, 43, 22, .14);
+  padding: 10px;
+}
+
+.customer-workbench__queue-settings label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: #5f523f;
+  font-size: 12px;
+}
+
+.customer-workbench__queue-settings select,
+.customer-workbench__queue-settings button {
+  height: 28px;
+  border: 1px solid #ded2bb;
+  border-radius: 5px;
+  background: #fffdf8;
+  color: #5f523f;
+}
+
+.customer-workbench__accounts.is-compact .customer-workbench-account {
+  min-height: 82px;
+}
+
+.customer-workbench__accounts.is-compact .customer-workbench-account__body {
+  grid-template-rows: 19px 18px 22px;
+}
+
+.customer-workbench__accounts.is-compact .customer-workbench-account__last {
+  display: none;
+}
+
+.customer-workbench__head .customer-workbench__more-menu {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: #7c6d59;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.customer-workbench-timeline-page > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.customer-workbench-timeline-page > header select {
+  height: 30px;
+  border: 1px solid #ded2bb;
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #5f523f;
+  padding: 0 8px;
+}
+
+.customer-workbench__quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 9px;
+}
+
+.customer-workbench__quick-actions button {
+  min-width: 0;
+  min-height: 31px;
+  border: 1px solid #ded2bb;
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #5f523f;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.customer-workbench__notification-popover > strong {
+  display: block;
+  padding: 4px 6px 10px;
+  font-size: 14px;
+}
+
+.customer-workbench__top-actions .customer-workbench__notification-popover button {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 0;
+  border-top: 1px solid #eadcc4;
+  border-radius: 0;
+  padding: 9px 6px;
+  text-align: left;
+}
+
+.customer-workbench__notification-popover button span,
+.customer-workbench__notification-popover button small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-workbench__notification-popover button small {
+  margin-top: 3px;
+  color: #7c6d59;
+}
+
+.customer-workbench__queue nav button small {
+  margin-left: 4px;
+  color: inherit;
+  font-size: 10px;
+}
+
+.customer-workbench__sortline select {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: #5f523f;
+  font: inherit;
+  font-weight: 600;
+  outline: 0;
+}
+
+.customer-workbench__pager button:disabled {
+  opacity: .35;
+}
+
+.customer-workbench__entity-line button {
+  min-height: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 4px;
+  background: #fff2d3;
+  color: #a36e10;
+  padding: 2px 7px;
+  font-size: 12px;
+}
+
+.customer-workbench__entity-line button.is-followed {
+  background: #e8f6e9;
+  color: #287b37;
+}
+
+.customer-workbench__open-crm {
+  flex: 0 0 auto;
+}
+
+.customer-workbench__open-crm:disabled {
+  opacity: .5;
+}
+
+.customer-workbench-record-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.customer-workbench-record-grid article {
+  min-width: 0;
+  border: 1px solid #eadcc4;
+  border-radius: 7px;
+  background: #fffdf8;
+  padding: 12px;
+}
+
+.customer-workbench-record-grid article strong,
+.customer-workbench-record-grid article span {
+  display: block;
+}
+
+.customer-workbench-record-grid article p {
+  margin: 6px 0;
+  color: #5f523f;
+}
+
+.customer-workbench-record-grid article span {
+  color: #876223;
+  font-size: 12px;
+}
+
+.customer-workbench-recommendations .customer-workbench-recommendation__error {
+  color: #be3d32;
+  white-space: normal;
+}
+
+.customer-workbench-recommendations footer > span {
+  display: flex;
+  align-items: center;
+  color: #7c6d59;
+  font-size: 12px;
+}
+
+.customer-workbench-dialog {
+  position: absolute;
+  z-index: 60;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(43, 34, 23, .24);
+  padding: 24px;
+}
+
+.customer-workbench-dialog form {
+  width: min(520px, 100%);
+  border: 1px solid #ded2bb;
+  border-radius: 7px;
+  background: #fffdf8;
+  box-shadow: 0 20px 48px rgba(58, 43, 22, .2);
+  padding: 18px;
+}
+
+.customer-workbench-dialog form > header,
+.customer-workbench-dialog form > footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customer-workbench-dialog form > header {
+  margin-bottom: 14px;
+}
+
+.customer-workbench-dialog form > header button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: #5f523f;
+}
+
+.customer-workbench-dialog label {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: #5f523f;
+  font-weight: 700;
+}
+
+.customer-workbench-dialog input,
+.customer-workbench-dialog select,
+.customer-workbench-dialog textarea {
+  width: 100%;
+  border: 1px solid #ded2bb;
+  border-radius: 6px;
+  background: #fff;
+  color: #2b2217;
+  padding: 9px 10px;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.customer-workbench-dialog textarea {
+  min-height: 88px;
+  resize: vertical;
+}
+
+.customer-workbench-dialog form > footer {
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.customer-workbench-dialog form > footer button {
+  height: 34px;
+  border: 1px solid #d7bc84;
+  border-radius: 6px;
+  background: #fffdf8;
+  color: #876223;
+  padding: 0 16px;
+  font-weight: 700;
+}
+
+.customer-workbench-dialog form > footer button:last-child {
+  background: #bd842a;
+  color: #fffdf8;
+}
+
+.customer-workbench__supervisor-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 8px 0;
+  border-bottom: 1px solid #e5dac5;
+  padding-bottom: 9px;
+}
+
+.customer-workbench__supervisor-summary span {
+  display: flex;
+  justify-content: space-between;
+  color: #6f604c;
+  font-size: 11px;
+}
+
+.customer-workbench__supervisor-summary b {
+  color: #2b2217;
+}
+
+.customer-workbench-recommendation__evidence {
+  margin: 6px 0;
+  border-top: 1px dashed #e2d6be;
+  padding-top: 6px;
+}
+
+.customer-workbench-recommendation__evidence > button,
+.customer-workbench-recommendation__feedback button {
+  border: 0;
+  background: transparent;
+  color: #9b6a1f;
+  padding: 2px 0;
+  font: inherit;
+}
+
+.customer-workbench-recommendation__evidence ul {
+  margin: 5px 0 0;
+  padding-left: 18px;
+  color: #675947;
+  font-size: 11px;
+}
+
+.customer-workbench-recommendation__feedback {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+  border-top: 1px solid #eee4d2;
+  padding-top: 7px;
+  color: #7c6d59;
+  font-size: 11px;
+}
+
+.customer-workbench-recommendation__feedback button.is-active {
+  color: #176d32;
+  font-weight: 700;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench-record-grid article {
+  border-radius: 6px;
+  padding: 10px;
 }
 
 .cici-ai-apps-flyout__list,

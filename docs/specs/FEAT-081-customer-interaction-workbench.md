@@ -6,7 +6,7 @@ status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-171, TASK-182
 related_decisions: FEAT-067, FEAT-079, FEAT-080
-updated_at: 2026-07-10T15:26:34Z
+updated_at: 2026-07-10T16:56:00Z
 updated_by: MANAGER-001
 ---
 
@@ -159,9 +159,11 @@ AI app -> agent/skill/tool bindings -> CloudCC integration session
 ### AI 建议状态
 
 ```text
-PENDING -> ACCEPTED -> APPLIED
-PENDING -> DISMISSED
-ACCEPTED -> PENDING (用户撤销采纳)
+PENDING -> ACCEPTED -> CONFIRMED -> APPLYING -> APPLIED
+PENDING/ACCEPTED/CONFIRMED/FAILED -> DISMISSED
+ACCEPTED/CONFIRMED/FAILED -> PENDING（用户修改草稿）
+APPLYING -> FAILED（明确失败，可重试）
+APPLYING -> UNKNOWN（网络超时等结果未知，禁止盲目重试）
 APPLIED 为终态，后续修改需要产生新建议。
 ```
 
@@ -226,7 +228,7 @@ CloudCC pagecomponent
 - `POST /customer-workbench/recommendations/{id}/accept`
   - 采纳建议。
 - `POST /customer-workbench/recommendations/{id}/apply`
-  - 写入 CloudCC CRM。
+  - 仅允许 `CONFIRMED` / 可重试 `FAILED` 状态，使用当前 AgentCiCi 用户绑定生成的 CloudCC accessToken 写入并回读。
 - `POST /customer-workbench/interaction-drafts`
   - 从文本/语音转写内容生成互动草稿和建议。
 - `POST /customer-workbench/assistant`
@@ -330,7 +332,7 @@ CloudCC pagecomponent
 - 客户列表能加载 CRM/演示客户，并能进入客户详情。
 - 新客户推进和老客户经营两个主视图可用。
 - 右侧 AI 客户助理能根据用户指令切换客户、查询风险、总结互动、生成跟进任务建议。
-- 采纳建议后能进入确认流程，确认后能写入 CloudCC CRM 或在演示模式下写入本地模拟结果。
+- 采纳建议后能进入确认流程，确认后能写入 CloudCC CRM；演示/断连模式必须禁止写回并给出明确提示，不得生成模拟 CRM 成功 ID。
 - CloudCC MetadataService/OpenAPI 连通验证通过。
 - 演示数据初始化后页面有完整可讲述故事线。
 - 后端测试、前端构建和桌面端 Playwright 验证通过。
@@ -354,6 +356,90 @@ CloudCC pagecomponent
 - MSAPI 菜单计划 `pla2026E964195FlLpjf` 仍因当前 OpenAPI JWT 缺少 `metadata:apply` scope 无法 apply；但本任务已通过 CloudCC setup/devconsole API 完成同等页面和菜单配置，该限制不再阻塞 CRM 可见入口。
 - 桌面端 Playwright 验收通过，截图为 `output/playwright/task171-customer-workbench-desktop.png`；直达入口验收通过，截图为 `output/playwright/task171-customer-workbench-deeplink.png`。验证工作台标题、AI 应用入口、老客户经营 tab、AI 快捷指令、CRM 落地建议、`置信度 92%`、无横向溢出和控制台 0 error/0 warning。
 - 生产发布完成：`2.2.2` 发布主功能，`2.2.3` 修复 HTTPS vhost 对 `/customer-workbench/*` 的代理。当前生产 `/system/version` 返回 `version=2.2.3`、`imageTag=2.2.3`、`gitCommit=f0ec47509bde`；认证后 `/customer-workbench/accounts` 返回 12 个演示客户，客户详情和 AI 客户助理 smoke 均通过。
+
+## TASK-182 生产闭环实现
+
+更新时间：2026-07-11T00:16:00+08:00。当前代码已完成，生产发布与真实 CRM 嵌入验收待本任务后续步骤回写。
+
+### CloudCC 标准能力真实审计
+
+本轮严格使用 `cc-customization-expert-msapi` 技能 CLI 完成标准目录与 OpenAPI 只读验证，没有绕过技能创建同义元数据。
+
+- 目标租户目录：8 个应用、142 个菜单、192 个对象、4854 个字段，其中 190 个标准对象、158 个标准业务对象。
+- 当前用户 OpenAPI 可见记录：Account 110、Contact 48、Opportunity 58、Task 41、Event 41、Case 36、Contract 48。
+- 已验证工作台字段：Account 的负责人/行业/最近联系，Contact 的客户关联/职务/角色，Opportunity 的阶段/金额/下一步，Task/Event 的客户关联/状态/时间/备注，Case 的状态/优先级/问题，Contract 的状态/起止日期/金额。
+- 字段权限真实生效：无权字段查询会被 CloudCC 拒绝。工作台对 Account 使用必需对象降级字段，对辅助对象使用按数据域降级，避免一个无权字段导致整页白屏。
+
+### 运行时事实源
+
+- 客户队列和详情主路径已改为 `CustomerCrmProjectionService`，所有 CloudCC 查询使用当前 AgentCiCi 用户的 `CloudccSessionContext.accessToken`。
+- Account、Contact、Opportunity、Task、Event、`cloudcccase`、`contract` 通过 45 秒用户级缓存聚合；并发首屏请求按 `orgId:userId` 合并加载。
+- 新客户/老客户归属、搜索、筛选、排序、分页和筛选计数由服务端返回；页面不再伪造 38/26 客户数或固定 1/5 页码。
+- 指标统一返回 `value/definition/source/lastCalculatedAt/drilldownTarget`；前端不再使用固定下限或分数换算生成商机数、互动数、续约天数和服务问题数。
+- 未绑定 CRM 时使用明确的 `DEMO_FALLBACK` 只读降级；页面显示演示模式，写回、关注等需要 CRM 身份的动作返回 409，不冒充生产成功。
+
+### V73/V74 数据与审计模型
+
+`V73__customer_workbench_production_readiness.sql` 新增或扩展：
+
+- `customer_workbench_recommendation`：乐观锁版本、目标对象/记录、证据、忽略原因、确认人/时间、执行时间和最近错误。
+- `customer_signal`：客户信号、严重度、证据、状态、责任人和来源更新时间；每次投影刷新现有信号并自动关闭已消失信号。
+- `customer_follow_subscription`：当前用户的客户关注订阅。
+- `customer_crm_write_audit`：幂等键、请求摘要、目标对象、操作、状态、远端 ID、错误和回读摘要；不保存 accessToken。
+
+`V74__customer_recommendation_feedback.sql` 新增当前组织、当前用户、建议维度的 `HELPFUL/NOT_HELPFUL` 反馈，支持建议质量治理并保持每位用户每条建议最多一条有效反馈。
+
+写回审计状态：
+
+    STARTED -> SUCCEEDED
+    STARTED -> FAILED   （CloudCC 明确拒绝，可显式重试）
+    STARTED -> UNKNOWN  （超时/连接重置，禁止盲目重试，先人工核对）
+
+审计 `STARTED`、建议 `APPLYING`、远端调用、回读与最终状态分步持久化。进程在远端成功后异常退出时，后续请求会被 `STARTED/UNKNOWN` 挡住，避免重复创建 CRM 记录。
+
+### 正式 API 契约
+
+| 方法 | 路径 | 已实现行为 |
+|---|---|---|
+| GET | `/customer-workbench/queue` | 模式、筛选、排序、搜索、分页、刷新、真实计数 |
+| GET | `/customer-workbench/accounts/{id}` | 当前用户权限下的客户、指标、时间线、信号、个案、合同、联系人、机会和建议 |
+| GET | `/customer-workbench/integration-status` | 当前用户 CRM 连接、数据时间和安全 baseUrl |
+| GET | `/customer-workbench/notifications` | 关注客户和风险客户提醒 |
+| POST | `/customer-workbench/accounts/{id}/follow` | 关注/取消关注 |
+| PATCH | `/customer-workbench/recommendations/{id}` | 修改标题、依据、目标和 CRM payload，回到待确认 |
+| POST | `/customer-workbench/recommendations/{id}/accept` | 采纳 |
+| POST | `/customer-workbench/recommendations/{id}/dismiss` | 忽略并保存原因 |
+| POST | `/customer-workbench/recommendations/{id}/confirm` | 记录当前确认用户和时间 |
+| POST | `/customer-workbench/recommendations/{id}/apply` | 真实 CloudCC 写入、幂等审计、回读和失败状态 |
+| POST | `/customer-workbench/assistant` | 真实智能体回答与 `SWITCH_MODE/SELECT_NEXT_ACCOUNT/OPEN_TAB/PROPOSE_RECOMMENDATION` 页面动作 |
+
+### 页面逐元素完成情况
+
+- 顶部：模式切换、CRM 状态刷新、通知弹层、帮助提示、用户区。
+- 队列：模式互斥客户池、搜索、防抖、筛选真实数量、排序、分页、列表密度、每页数量和刷新。
+- 客户标题：真实客户/机会/负责人/最近互动、关注、复制工作台链接、CRM 客户主页深链。
+- 指标：四个指标均可下钻到对应页签。
+- 时间线：微信/电话/会议/CRM 图标和竖线、来源筛选、查看全部导航。
+- 建议：采纳、编辑、忽略、确认、写入、失败重试、已执行和明确错误提示。
+- 老客户页签：服务问题读取 Case，价值兑现读取 Contract/成交 Opportunity，续约增购读取合同到期/增购机会，关系地图读取 Contact。
+- AI 助理：客户级会话、语音回填、四个快捷指令、固定/取消固定、关闭/重新打开和结构化页面动作；语音不自动执行 CRM 动作。
+- 互动录入：右侧“整理互动记录”支持微信、电话、会议和客户反馈，用户确认后按内容哈希去重保存并进入当前客户时间线；重复提交不新增记录。
+- 会话恢复：会话 ID 按当前用户与 CRM 客户稳定生成，AgentCiCi 入口与 CRM 嵌入入口复用同一历史；历史回显只保留用户问题和助手回复，不暴露内部上下文提示或客户 JSON。
+- 建议治理：完整建议页支持证据展开和“有帮助/需改进”持久反馈；通知弹层提供当前用户权限范围内的客户、风险、待处理建议和 CRM 写回成功率概览。
+- 深链：复制链接同时保存 `accountId` 与 `mode`，重新打开老客户链接不会错误落入新客户视图；CRM 客户详情使用 CloudCC 前端真实路由 `#/commonObjects/detail/{id}/DETAIL`。
+
+### 本地质量证据
+
+- Flyway 在本地 PostgreSQL 从 V72 正向迁移到 V73，Hibernate `ddl-auto=validate` 通过。
+- `CustomerWorkbenchServiceTest` 与 `CustomerCrmProjectionServiceTest` 通过，覆盖建议确认门、真实写回/回读/审计和新老客户投影分流。
+- 前端 50 项 Vitest 通过，TypeScript/Vite 生产构建通过，Compose 配置检查通过。
+- 1920x1000 浏览器验证：无页面外层滚动、客户行无溢出、时间线竖线和规范渠道图标存在、AI 对话无可见滚动条、新老客户互斥切换、建议编辑/采纳/确认和断连写回提示可用。
+- 截图：`output/playwright/task182-local-new-production-workbench.png`、`output/playwright/task182-local-complete-workbench.png`。
+- 最终桌面证据：`output/playwright/task182-local-production-ready-final.png`；`body/html/workbench` 均无外层纵向溢出，AI 对话历史可内部滚动但无可见滚动条，时间线伪元素实际渲染为 1px 结构线。
+- 浏览器真实功能验证：业务机会编辑器提交 `name/jieduan/xyb` 而不是 Task 字段；老客户服务、续约、关系页签有记录；客户深链恢复；互动保存与去重；真实模型风险回答；刷新后会话恢复且内部上下文未泄漏；建议反馈持久化；主管概览可见。
+- CloudCC 真实写入契约验证：通过技能 CLI 分别创建 Task 与 Opportunity，按返回 ID 在当前用户权限范围内回读字段，再删除并确认总数恢复；Task 41→42→41，Opportunity 58→59→58，未留下验证脏数据。
+- `cc-customization-expert-msapi` 2.1.276 复核：pagecomponent V10、customPage V4、组件 ID `6a503defe4b0a577cbba1f8a` 和安全依赖白名单通过；`verify injectionPage` 因 customPage 不携带版本号而对同一组件 ID误报 stale warning，已写入技能缺口复盘。
+- 仓库全量后端测试的工作台相关测试通过；全量套件仍有本任务外的既有失败，包括历史 SQL 测试夹具未提供 `skill_definition.source_type` 及模型厂商测试状态不一致，已如实记录，不作为本任务功能通过的替代证据。
 
 ## 非目标
 

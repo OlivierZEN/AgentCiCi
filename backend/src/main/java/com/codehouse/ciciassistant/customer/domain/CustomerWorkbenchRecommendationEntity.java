@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.math.BigDecimal;
 import java.time.Instant;
 
@@ -15,8 +16,11 @@ public class CustomerWorkbenchRecommendationEntity {
 
     public static final String STATUS_PENDING = "PENDING";
     public static final String STATUS_ACCEPTED = "ACCEPTED";
+    public static final String STATUS_CONFIRMED = "CONFIRMED";
+    public static final String STATUS_APPLYING = "APPLYING";
     public static final String STATUS_DISMISSED = "DISMISSED";
     public static final String STATUS_APPLIED = "APPLIED";
+    public static final String STATUS_FAILED = "FAILED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -52,6 +56,37 @@ public class CustomerWorkbenchRecommendationEntity {
     @Column(name = "applied_crm_id", length = 128)
     private String appliedCrmId;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;
+
+    @Column(name = "target_object", length = 64)
+    private String targetObject;
+
+    @Column(name = "target_record_id", length = 128)
+    private String targetRecordId;
+
+    @Column(name = "evidence_json", nullable = false, columnDefinition = "TEXT")
+    private String evidenceJson;
+
+    @Column(name = "dismissal_reason", columnDefinition = "TEXT")
+    private String dismissalReason;
+
+    @Column(name = "confirmed_by", length = 64)
+    private String confirmedBy;
+
+    @Column(name = "confirmed_at")
+    private Instant confirmedAt;
+
+    @Column(name = "applied_at")
+    private Instant appliedAt;
+
+    @Column(name = "last_error_code", length = 128)
+    private String lastErrorCode;
+
+    @Column(name = "last_error_message", columnDefinition = "TEXT")
+    private String lastErrorMessage;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -78,6 +113,9 @@ public class CustomerWorkbenchRecommendationEntity {
         this.confidence = confidence;
         this.status = STATUS_PENDING;
         this.crmPayload = crmPayload;
+        this.version = 0L;
+        this.targetObject = "";
+        this.evidenceJson = "[]";
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -95,17 +133,90 @@ public class CustomerWorkbenchRecommendationEntity {
     public String getAppliedCrmId() { return appliedCrmId; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+    public Long getVersion() { return version; }
+    public String getTargetObject() { return targetObject; }
+    public String getTargetRecordId() { return targetRecordId; }
+    public String getEvidenceJson() { return evidenceJson; }
+    public String getDismissalReason() { return dismissalReason; }
+    public String getConfirmedBy() { return confirmedBy; }
+    public Instant getConfirmedAt() { return confirmedAt; }
+    public Instant getAppliedAt() { return appliedAt; }
+    public String getLastErrorCode() { return lastErrorCode; }
+    public String getLastErrorMessage() { return lastErrorMessage; }
+
+    public void configureTarget(String targetObject, String targetRecordId, String evidenceJson) {
+        this.targetObject = targetObject;
+        this.targetRecordId = targetRecordId;
+        this.evidenceJson = evidenceJson == null || evidenceJson.isBlank() ? "[]" : evidenceJson;
+        this.updatedAt = Instant.now();
+    }
 
     public void accept() {
-        if (!STATUS_APPLIED.equals(this.status)) {
-            this.status = STATUS_ACCEPTED;
-            this.updatedAt = Instant.now();
+        if (!STATUS_PENDING.equals(this.status)) {
+            throw new IllegalStateException("只有待处理建议可以采纳");
         }
+        this.status = STATUS_ACCEPTED;
+        this.dismissalReason = null;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateDraft(String title, String rationale, BigDecimal confidence, String crmPayload,
+                            String targetObject, String targetRecordId) {
+        if (STATUS_APPLIED.equals(status) || STATUS_APPLYING.equals(status)) {
+            throw new IllegalStateException("已执行建议不能修改");
+        }
+        this.title = title;
+        this.rationale = rationale;
+        this.confidence = confidence;
+        this.crmPayload = crmPayload;
+        this.targetObject = targetObject;
+        this.targetRecordId = targetRecordId;
+        this.status = STATUS_PENDING;
+        this.updatedAt = Instant.now();
+    }
+
+    public void dismiss(String reason) {
+        if (STATUS_APPLIED.equals(status) || STATUS_APPLYING.equals(status)) {
+            throw new IllegalStateException("执行中的建议不能忽略");
+        }
+        this.status = STATUS_DISMISSED;
+        this.dismissalReason = reason;
+        this.updatedAt = Instant.now();
+    }
+
+    public void confirm(String userId) {
+        if (!STATUS_ACCEPTED.equals(status)) {
+            throw new IllegalStateException("建议必须先采纳，才能确认");
+        }
+        this.status = STATUS_CONFIRMED;
+        this.confirmedBy = userId;
+        this.confirmedAt = Instant.now();
+        this.lastErrorCode = null;
+        this.lastErrorMessage = null;
+        this.updatedAt = this.confirmedAt;
+    }
+
+    public void markApplying() {
+        if (!STATUS_CONFIRMED.equals(status) && !STATUS_FAILED.equals(status)) {
+            throw new IllegalStateException("建议必须确认后才能执行");
+        }
+        this.status = STATUS_APPLYING;
+        this.updatedAt = Instant.now();
     }
 
     public void apply(String appliedCrmId) {
         this.status = STATUS_APPLIED;
         this.appliedCrmId = appliedCrmId;
+        this.appliedAt = Instant.now();
+        this.lastErrorCode = null;
+        this.lastErrorMessage = null;
+        this.updatedAt = this.appliedAt;
+    }
+
+    public void markFailed(String errorCode, String errorMessage) {
+        this.status = STATUS_FAILED;
+        this.lastErrorCode = errorCode;
+        this.lastErrorMessage = errorMessage;
         this.updatedAt = Instant.now();
     }
 }
