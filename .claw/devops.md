@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T11:40:48+08:00
+updated_at: 2026-07-10T13:08:00+08:00
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,20 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.3.8 TASK-180 AI 应用页与客户互动工作台 UI 重构 on 2026-07-10:
+  - Git commit: `a811e974f203` on `main`; annotated tag `2.3.8` was pushed to origin.
+  - Scope: AI 应用页常驻大列表改为点击一级侧栏触发的悬浮纵向窄列表；客户互动工作台在 AI 应用页内释放横向主区域，减少外框线和嵌套卡片感，收紧指标、tab、时间线、建议和 AI 助理密度；外层页面不显示滚动条，内部滚动区按交互显示局部滚动条。
+  - Quality gate: assignment/login gates, local frontend build, static check, compose config, local browser workbench/flyout checks, release dry-run, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for org `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Backend code was unchanged; release script performed the standard backend package with skipped tests.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.8`, index digest `sha256:7f96a6ac27afdd14e0eb3a34fb09ee2167cf62da481dbc1311f24d8317a7cccf`, linux/amd64 manifest digest `sha256:623f8d0719b3cc133dc2f9d3b8499efd5aa45cf297998c111f757ba7b7602c7a`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.8`, index digest `sha256:9f3d0f46f9027793989b19dbd8e24f4d0ed9c11bceba730683280a2b9424b009`, linux/amd64 manifest digest `sha256:279ba2a4d2b8af7b96bd18179b6d5a997ec9123cec82d21e1f0b990e955bcf58`.
+  - Backup directory: `/opt/cici/backups/20260710-120051-before-2.3.8-task180-ai-apps-ui`, containing `acr.env.before-2.3.8`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` has `CICI_IMAGE_TAG=2.3.8` and `CICI_APP_VERSION=2.3.8`.
+  - Deploy note: backend/frontend were pulled and force-recreated on `2.3.8`; database, Redis, RabbitMQ, and Qdrant remained healthy on existing `2.3.4` images. Existing healthy infra images were locally tagged as `2.3.8` before compose operations because compose shares `CICI_IMAGE_TAG`.
+  - Verified after deploy: backend/frontend healthy; `/actuator/health=UP`; `/system/version` returned `version=2.3.8`, `imageTag=2.3.8`, `gitCommit=a811e974f203`; frontend `nginx -t` passed; recent backend error scan was empty.
+  - Public smoke: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, and `/app?aiApp=customer-workbench&embed=crm` returned HTTP 200; HTTP root redirected to HTTPS.
+  - Browser smoke: production `https://x.agentcici.com/app?aiApp=customer-workbench` at `2048x1000` with org `org2sva14i4udjmi2t4s` returned no persistent `.cici-ai-apps__list`, no document/body horizontal or vertical overflow, no visible right-edge scrollbar, floating AI 应用 menu with `5` items, and console error count `0`. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png`, `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.
+  - Authenticated API smoke: org `org2sva14i4udjmi2t4s` `/customer-workbench/accounts` returned `10` accounts; first detail returned timeline `3`, recommendations `2`, and `crmConnection.ready=true`.
 
 - 2.3.7 TASK-179 AI 听记实时发言人分离热修复 on 2026-07-10:
   - Git commit: `01a5df8cb919` on `main`; annotated tag `2.3.7` was pushed to origin.

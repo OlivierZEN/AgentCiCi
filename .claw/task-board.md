@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T12:38:00+08:00
+updated_at: 2026-07-10T13:08:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-180 - AI 应用页与客户互动工作台 UI 重构
 
-- status: `review`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md`
 - task_status_path: `.claw/tasks/TASK-180.md`
 - assignment_path: `.claw/assignments/TASK-180.yaml`
 - blocked_by: `none`
-- next_action: Local implementation and desktop validation passed; await product review or release request. Production has not been released for TASK-180.
+- next_action: Done in production `2.3.8`; monitor AI 应用悬浮菜单、客户互动工作台外层滚动条和演示组织工作台数据。
 
 ### TASK-179 - AI 听记实时发言人分离热修
 

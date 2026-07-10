@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T12:38:00+08:00
+updated_at: 2026-07-10T13:08:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T12:38:00+08:00
+last_run_at: 2026-07-10T13:08:00+08:00
 last_run_status: success
 ---
 
@@ -12,14 +12,14 @@ last_run_status: success
 
 ## Latest Run Summary
 
-- 状态：`success`（TASK-180 本地 UI 重构验证通过；生产仍停留在 `2.3.7`）
-- 范围：TASK-180 AI 应用页与客户互动工作台 UI 重构，本地构建、静态检查、桌面 Chrome 截图和交互验证。
-- 命令：身份门禁、assignment check、前端生产构建、静态检查、本地浏览器工作台/flyout 验证。
+- 状态：`success`（TASK-180 UI 重构已发布生产 `2.3.8`）
+- 范围：TASK-180 AI 应用页与客户互动工作台 UI 重构，本地验证、生产 `2.3.8` 发布与指定演示组织线上验收。
+- 命令：身份门禁、assignment check、前端生产构建、静态检查、本地浏览器工作台/flyout 验证、release dry-run、ACR/Git tag、生产备份/部署/健康、公网 smoke、生产浏览器和接口 smoke。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
 
-- TASK-180 AI 应用页与客户互动工作台 UI 重构本地验证 (2026-07-10T12:38:00+08:00):
+- TASK-180 AI 应用页与客户互动工作台 UI 重构生产发布 (2026-07-10T13:08:00+08:00):
   - Commands:
     - `identity-gate`: generic MANAGER-001 login and task-scoped `dev-login.py .claw --developer MANAGER-001 --task TASK-180 --branch main --files ... --json` -> **allowed**.
     - `assignment-check`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-180 --branch main --files ... --json` -> **allowed**.
@@ -27,12 +27,25 @@ last_run_status: success
     - `static-check`: `git diff --check` -> **success**.
     - `local-browser-workbench`: Chrome at `2048x1000`, mocked authenticated local APIs, `/app?aiApp=customer-workbench` -> **success**; persistent AI app list absent, document/body have no horizontal or vertical overflow, no visible right-edge scrollbar, metrics outer border and radius removed, local scroll regions default to `scrollbar-width: none`, console errors `0`.
     - `local-browser-flyout`: click left rail AI 应用 entry -> **success**; floating vertical list appears with `5` app items; selecting 客户洞察 closes the list and switches main page.
+    - `compose-config`: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` -> **success**.
+    - `release-dry-run-2.3.8`: `./scripts/release-acr.sh --dry-run` -> **success**, version `2.3.8`, commit `a811e974f203`.
+    - `release-2.3.8`: `./scripts/release-acr.sh --version 2.3.8` -> **success**; backend/frontend linux/amd64 images were pushed to ACR and Git tag `2.3.8` was pushed after one transient network retry.
+    - `production-backup-2.3.8`: `/opt/cici/backups/20260710-120051-before-2.3.8-task180-ai-apps-ui` -> **success**, PostgreSQL/env/KB/Qdrant artifacts are non-empty.
+    - `production-deploy-2.3.8`: backend/frontend recreated and healthy; infra services remained healthy on `2.3.4`; backend `/actuator/health=UP`; `/system/version` returned `version=2.3.8`, `imageTag=2.3.8`, `gitCommit=a811e974f203`; frontend `nginx -t` passed; recent backend error scan was empty.
+    - `public-smoke`: `https://x.agentcici.com/`, `/app?aiApp=customer-workbench`, and `/app?aiApp=customer-workbench&embed=crm` -> HTTP `200`; `http://x.agentcici.com/` -> HTTPS `301`.
+    - `production-browser-workbench`: authenticated production browser at `2048x1000` with org `org2sva14i4udjmi2t4s` -> **success**; persistent AI app list absent, floating app list has `5` items, document/body have no horizontal or vertical overflow, no visible right-edge scrollbar, version `2.3.8` visible, console errors `0`.
+    - `production-api-workbench`: org `org2sva14i4udjmi2t4s` `/customer-workbench/accounts` -> **success**, `10` accounts; first detail -> timeline `3`, recommendations `2`, `crmConnection.ready=true`.
   - Browser evidence:
     - `output/playwright/task180-ai-apps-workbench-local.png`.
     - `output/playwright/task180-ai-apps-flyout-local.png`.
+    - `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png`.
+    - `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.
+  - Images:
+    - Backend index digest: `sha256:7f96a6ac27afdd14e0eb3a34fb09ee2167cf62da481dbc1311f24d8317a7cccf`; linux/amd64 manifest `sha256:623f8d0719b3cc133dc2f9d3b8499efd5aa45cf297998c111f757ba7b7602c7a`.
+    - Frontend index digest: `sha256:9f3d0f46f9027793989b19dbd8e24f4d0ed9c11bceba730683280a2b9424b009`; linux/amd64 manifest `sha256:279ba2a4d2b8af7b96bd18179b6d5a997ec9123cec82d21e1f0b990e955bcf58`.
   - Notes:
-    - Browser validation used mocked non-secret local API responses and did not use or record reusable credentials.
-    - TASK-180 has not been released to production; production remains release `2.3.7` until a release runbook is executed.
+    - Production browser validation used the fixed demo login path only to obtain a temporary token; no reusable credentials, tokens, cookies, or secret values are recorded.
+    - Public `/system/version` is handled by SPA fallback; release version validation uses ECS-local backend `http://127.0.0.1:8080/system/version`.
 
 - TASK-179 AI 听记 realtime speaker diarization local closure (2026-07-10T11:31:43+08:00):
   - Commands:
