@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T13:08:00+08:00
+updated_at: 2026-07-10T13:20:00+08:00
 updated_by: MANAGER-001
-phase: ai-apps-workbench-ui-refactor-released
-active_task: "TASK-180"
-next_action: "TASK-180 is live in production 2.3.8; monitor AI 应用悬浮菜单 and customer workbench outer-scroll behavior."
+phase: customer-workbench-account-list-alignment
+active_task: "TASK-181"
+next_action: "Fix TASK-181 customer list row alignment and validate with desktop browser screenshots."
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,7 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.8` from Git commit `a811e974f203`.
+- TASK-181 is active: user reported production screenshot issue where the customer workbench left customer list remains visually disordered. Scope is a desktop UI hotfix for row alignment, truncation, tag constraints, and stable list density.
 - TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.
 - TASK-180 evidence: assignment/login gates, local frontend build, compose config, release dry-run, ACR image push, Git tag, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png` / `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.
 - TASK-179 is done in production `2.3.7`: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
@@ -37,8 +38,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact task index.
-- `.claw/tasks/TASK-180.md` - active UI refactor task state.
-- `.claw/assignments/TASK-180.yaml` - authorized write scope.
-- `docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md` - design and acceptance criteria.
+- `.claw/tasks/TASK-181.md` - active customer list alignment hotfix task state.
+- `.claw/assignments/TASK-181.yaml` - authorized write scope.
+- `docs/specs/FEAT-091-customer-workbench-account-list-alignment.md` - design and acceptance criteria.
 - `.claw/test-report.md` - latest verified commands.
 - `.claw/devops.md` and `docs/production-release-runbook.md` - production release facts if release is executed.

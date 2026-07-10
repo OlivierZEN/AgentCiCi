@@ -1,0 +1,58 @@
+task_id: TASK-181
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-10T13:20:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-091-customer-workbench-account-list-alignment.md
+task_status_path: .claw/tasks/TASK-181.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-091-customer-workbench-account-list-alignment.md
+  - .claw/tasks/TASK-181.md
+  - .claw/assignments/TASK-181.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/cici-ui.css
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md
+task_boundary:
+  - "修复客户互动工作台左侧客户列表排版、截断、对齐和行高问题。"
+  - "保持现有业务数据、筛选、选择、CRM 绑定、智能体调用链路和 ASR 行为不变。"
+  - "仅做桌面端产品质量门，不新增移动端适配或移动端自动化测试。"
+  - "如发布生产，只更新 backend/frontend 镜像与发布事实源，不输出或记录凭证。"
+change_manifest_required: true
+signature: "MANAGER-001 local ssh challenge allowed 2026-07-10T13:20:00+08:00; user reported production customer list alignment issue from screenshot."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created UI hotfix task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py for TASK-181 representative files before implementation edits."
