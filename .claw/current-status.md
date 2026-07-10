@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T13:20:00+08:00
+updated_at: 2026-07-10T13:34:00+08:00
 updated_by: MANAGER-001
 phase: customer-workbench-account-list-alignment
 active_task: "TASK-181"
-next_action: "Fix TASK-181 customer list row alignment and validate with desktop browser screenshots."
+next_action: "Commit and push TASK-181 local customer-list alignment hotfix, then release production."
 read_next:
   goals: false
   decisions: false
@@ -23,7 +23,7 @@ read_next:
 ## Snapshot
 
 - Current branch: `main`; production is running release `2.3.8` from Git commit `a811e974f203`.
-- TASK-181 is active: user reported production screenshot issue where the customer workbench left customer list remains visually disordered. Scope is a desktop UI hotfix for row alignment, truncation, tag constraints, and stable list density.
+- TASK-181 is in review locally: customer workbench left customer list alignment hotfix passed local build and desktop Chrome validation. Rows are stable at `104px`, with no row overflow, no adjacent overlap, no outer document/body scrollbar, and console errors `0`.
 - TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.
 - TASK-180 evidence: assignment/login gates, local frontend build, compose config, release dry-run, ACR image push, Git tag, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png` / `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.
 - TASK-179 is done in production `2.3.7`: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.

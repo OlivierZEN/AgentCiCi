@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T13:08:00+08:00
+updated_at: 2026-07-10T13:34:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T13:08:00+08:00
+last_run_at: 2026-07-10T13:34:00+08:00
 last_run_status: success
 ---
 
@@ -12,12 +12,24 @@ last_run_status: success
 
 ## Latest Run Summary
 
-- 状态：`success`（TASK-180 UI 重构已发布生产 `2.3.8`）
-- 范围：TASK-180 AI 应用页与客户互动工作台 UI 重构，本地验证、生产 `2.3.8` 发布与指定演示组织线上验收。
-- 命令：身份门禁、assignment check、前端生产构建、静态检查、本地浏览器工作台/flyout 验证、release dry-run、ACR/Git tag、生产备份/部署/健康、公网 smoke、生产浏览器和接口 smoke。
+- 状态：`success`（TASK-181 本地 UI 热修验证通过；生产仍为 `2.3.8`）
+- 范围：TASK-181 客户互动工作台左侧客户列表排版修复，本地构建和桌面 Chrome 截图验证。
+- 命令：身份门禁、assignment check、前端生产构建、本地浏览器客户列表排版验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-181 客户互动工作台客户列表排版修复本地验证 (2026-07-10T13:34:00+08:00):
+  - Commands:
+    - `identity-gate`: generic MANAGER-001 login and task-scoped `dev-login.py .claw --developer MANAGER-001 --task TASK-181 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-181 --branch main --files ... --json` -> **allowed**.
+    - `frontend-build`: `npm --prefix frontend run build` -> **success**; existing Vite large chunk warning remains.
+    - `local-browser-account-list`: Chrome at `2048x1000`, mocked authenticated local APIs, `/app?aiApp=customer-workbench` -> **success**; account rows `4`, all row heights `104px`, no adjacent overlap, no row-level horizontal or vertical overflow, account name font `14px`, queue title font `15px`, no document/body outer scrollbar, visible right scrollbar `false`, console errors `0`.
+  - Browser evidence:
+    - `output/playwright/task181-account-list-local.png`.
+  - Notes:
+    - Browser validation used mocked non-secret local API responses and did not use or record reusable credentials.
+    - TASK-181 has not yet been released to production; production remains release `2.3.8` until the release runbook is executed.
 
 - TASK-180 AI 应用页与客户互动工作台 UI 重构生产发布 (2026-07-10T13:08:00+08:00):
   - Commands:

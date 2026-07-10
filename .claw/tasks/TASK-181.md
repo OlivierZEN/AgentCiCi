@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-181
 title: 客户互动工作台客户列表排版修复
-status: in_progress
+status: review
 owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-091-customer-workbench-account-list-alignment.md
 assignment_path: .claw/assignments/TASK-181.yaml
-updated_at: 2026-07-10T13:20:00+08:00
+updated_at: 2026-07-10T13:34:00+08:00
 updated_by: MANAGER-001
 ---
 
@@ -21,18 +21,23 @@ updated_by: MANAGER-001
 
 - 已读取项目产品和设计事实源。
 - 已确认根因集中在客户列表行的 grid/flex-wrap 截断和 AI 应用页窄队列覆盖规则。
-- 待完成任务授权检查后进入前端热修。
+- 已完成任务授权检查和前端 CSS 热修。
+- 已完成本地构建和桌面 Chrome 截图验证；待提交推送后发布生产。
 
 ## 计划
 
-1. 创建 FEAT-091、TASK-181 和授权边界。`in_progress`
-2. 调整客户列表行结构与 CSS 截断、行高、标签约束。`pending`
-3. 本地构建与桌面端浏览器截图验证。`pending`
-4. 提交推送，并按需要发布生产与回写发布证据。`pending`
+1. 创建 FEAT-091、TASK-181 和授权边界。`done`
+2. 调整客户列表行结构与 CSS 截断、行高、标签约束。`done`
+3. 本地构建与桌面端浏览器截图验证。`done`
+4. 提交推送，并按需要发布生产与回写发布证据。`in_progress`
 
 ## 验证记录
 
-- 待补充。
+- `identity-gate`: generic MANAGER-001 login and task-scoped `dev-login.py .claw --developer MANAGER-001 --task TASK-181 --branch main --files ... --json` -> **allowed**。
+- `assignment-check`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-181 --branch main --files ... --json` -> **allowed**。
+- `frontend-build`: `npm --prefix frontend run build` -> **success**；保留既有 Vite large chunk warning。
+- `local-browser-account-list`: Chrome at `2048x1000`, mocked authenticated local APIs, `/app?aiApp=customer-workbench` -> **success**；客户行 `4` 条，高度均为 `104px`，无相邻重叠、无行级横向/纵向溢出、客户名称未被队列标题字号规则误伤，document/body 无外层滚动条，console errors `0`。
+- 截图证据：`output/playwright/task181-account-list-local.png`。
 
 ## 变更文件
 

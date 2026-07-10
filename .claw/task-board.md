@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T13:20:00+08:00
+updated_at: 2026-07-10T13:34:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-181 - 客户互动工作台客户列表排版修复
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-091-customer-workbench-account-list-alignment.md`
 - task_status_path: `.claw/tasks/TASK-181.md`
 - assignment_path: `.claw/assignments/TASK-181.yaml`
 - blocked_by: `none`
-- next_action: Fix customer list row alignment, truncation, and density, then run desktop browser validation.
+- next_action: Local implementation and desktop validation passed; commit, push, and release production hotfix.
 
 ### TASK-180 - AI 应用页与客户互动工作台 UI 重构
 

@@ -13852,26 +13852,28 @@
 .customer-workbench-account {
   position: relative;
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
+  grid-template-columns: 9px minmax(0, 1fr);
   align-items: start;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
-  min-height: 118px;
+  min-height: 112px;
   border: 0;
   border-bottom: 1px solid #eadcc4;
   border-radius: 6px;
   background: transparent;
   text-align: left;
-  padding: 11px 10px;
+  padding: 10px 9px;
   color: #2b2217;
   box-shadow: none;
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .customer-workbench-account.is-active {
   border: 1px solid #d5a646;
   background: #fff8e8;
   box-shadow: inset 0 0 0 1px rgba(213, 166, 70, .08);
+  padding: 9px 8px;
 }
 
 .customer-workbench-account__dot {
@@ -13889,15 +13891,18 @@
 
 .customer-workbench-account__body {
   display: grid;
-  gap: 5px;
+  grid-template-rows: 19px 18px 22px 18px;
+  gap: 4px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .customer-workbench-account__title {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: start;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  align-items: center;
   gap: 8px;
+  min-width: 0;
 }
 
 .customer-workbench-account strong,
@@ -13908,10 +13913,11 @@
 }
 
 .customer-workbench-account strong {
+  display: block;
   min-width: 0;
   overflow: hidden;
   color: #2b2217;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -13919,7 +13925,7 @@
 
 .customer-workbench-account__meta {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 72px;
   align-items: center;
   gap: 8px;
   min-width: 0;
@@ -13940,18 +13946,23 @@
 .customer-workbench-account__badges em {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   min-height: 20px;
   border-radius: 3px;
   padding: 0 6px;
   font-size: 11px;
   font-weight: 700;
+  line-height: 20px;
   white-space: nowrap;
 }
 
 .customer-workbench-account__title em {
   flex: 0 0 auto;
+  max-width: 48px;
+  overflow: hidden;
   background: #fff2d3;
   color: #a36e10;
+  text-overflow: ellipsis;
 }
 
 .customer-workbench-account__title em.is-risk,
@@ -13972,15 +13983,21 @@
 
 .customer-workbench-account__badges {
   display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  max-height: 45px;
+  flex-wrap: nowrap;
+  gap: 6px;
+  min-width: 0;
+  height: 22px;
+  max-height: 22px;
   overflow: hidden;
 }
 
 .customer-workbench-account__badges em {
+  flex: 0 0 auto;
+  max-width: 96px;
+  overflow: hidden;
   background: #eaf3ff;
   color: #2875b8;
+  text-overflow: ellipsis;
 }
 
 .customer-workbench-account__badges em.is-warn {
@@ -13989,19 +14006,26 @@
 }
 
 .customer-workbench-account time {
-  color: #5f523f;
-  font-size: 12px;
-  white-space: nowrap;
-}
-
-.customer-workbench-account__last {
-  display: -webkit-box;
+  display: block;
+  min-width: 0;
   overflow: hidden;
   color: #5f523f;
   font-size: 12px;
   line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-workbench-account__last {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: #5f523f;
+  font-size: 12px;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .customer-workbench__pager {
@@ -14901,7 +14925,7 @@
   margin-bottom: 9px;
 }
 
-.cici-ai-apps__main--workbench .customer-workbench__queue strong,
+.cici-ai-apps__main--workbench .customer-workbench__queue-title strong,
 .cici-ai-apps__main--workbench .customer-workbench__assistant strong {
   font-size: 15px;
 }
@@ -14931,22 +14955,29 @@
 }
 
 .cici-ai-apps__main--workbench .customer-workbench-account {
-  min-height: 94px;
+  min-height: 104px;
   border-radius: 0;
-  padding: 9px 8px;
+  padding: 8px 8px;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench-account.is-active {
   border-color: #d5a646;
   border-radius: 6px;
+  padding: 7px;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench-account__body {
+  grid-template-rows: 19px 18px 22px 18px;
+  gap: 3px;
+}
+
+.cici-ai-apps__main--workbench .customer-workbench-account strong {
+  font-size: 14px;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench-account__badges {
-  max-height: 24px;
-}
-
-.cici-ai-apps__main--workbench .customer-workbench-account__last {
-  -webkit-line-clamp: 1;
+  height: 22px;
+  max-height: 22px;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__pager {
