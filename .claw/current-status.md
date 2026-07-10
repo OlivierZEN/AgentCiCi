@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-10T17:16:00Z
+updated_at: 2026-07-10T17:36:00Z
 updated_by: MANAGER-001
 phase: customer-workbench-production-closure
 active_task: "TASK-182"
-next_action: "Publish the existing-customer empty-filter hotfix as 2.3.11, then finish AgentCiCi and real CloudCC CRM embedded acceptance."
+next_action: "Test and publish the CRM write optimistic-lock/idempotent-recovery hotfix, recover the production recommendation without duplicate write, then close production acceptance."
 read_next:
   goals: false
   decisions: false
@@ -27,6 +27,7 @@ read_next:
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Local acceptance passed focused backend tests, 50 frontend tests, production build, Compose validation, 1920x1000 browser layout/interaction checks, CloudCC standard-object catalog audit, and temporary Task/Opportunity create-read-delete verification through `cc-customization-expert-msapi`. No validation records remain in CRM.
 - Release `2.3.10` is healthy, but its first real-data browser acceptance exposed an existing-customer default-filter edge: tenants with no contracts inside 90 days saw an empty old-customer queue and stale new-customer detail. A scoped frontend hotfix now defaults old-customer mode to all visible customers and clears detail on empty results; `2.3.11` release and dual-entry revalidation remain.
+- `2.3.11` fixed the existing-customer queue and passed AgentCiCi/CRM embedded verification. A real recommendation write then exposed a backend optimistic-lock continuation bug: CloudCC created the Task and audit retained its remote ID, while the recommendation remained `APPLYING`. The current hotfix recovers that exact record by ID without a second write and preserves fresh entity versions between state transitions.
 - The skill gap report records a same-component-ID `stale_component_reference` false positive, nested create-ID parsing, unreliable expression lookup and unrelated script-scan 500 scoping.
 - TASK-181 is done in production `2.3.9`: customer workbench left customer list alignment hotfix passed local and production desktop Chrome validation. Rows are stable at `104px`, with no row overflow, no adjacent overlap, no outer document/body scrollbar, and console errors `0`.
 - TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.

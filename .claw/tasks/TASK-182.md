@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 assignment_path: .claw/assignments/TASK-182.yaml
-updated_at: 2026-07-10T17:16:00Z
+updated_at: 2026-07-10T17:36:00Z
 updated_by: MANAGER-001
 ---
 
@@ -26,6 +26,7 @@ updated_by: MANAGER-001
 - 技能 CLI 已完成真实标准目录、记录权限、临时 Task/Opportunity 创建/回读/删除、pagecomponent/customPage 和注入页核验；验证数据已清理。
 - 聚焦后端测试、前端 50 项测试、生产构建、Compose 配置及 1920x1000 页面功能/布局验收通过。下一步是提交推送、备份、发布和线上双入口验收。
 - `2.3.10` 首次线上真实数据验收发现老客户模式默认“续约90天”在无近期合同租户会返回空队列，并残留上一位新客户详情；热修已改为老客户默认展示全部可见客户、筛选仅在用户主动选择后生效，空队列立即清空详情，待发布 `2.3.11` 复验。
+- `2.3.11` 真实建议写回验收发现 repository `save` 后继续使用旧乐观锁版本，远端 Task 已创建但建议卡在 `APPLYING`。审计已保留远端 ID；修复增加 save 返回实体接续、成功写入后的本地状态保存隔离，以及 `APPLYING/FAILED audit + remote ID` 幂等回读恢复，确保不重复创建。
 
 ## 执行计划
 

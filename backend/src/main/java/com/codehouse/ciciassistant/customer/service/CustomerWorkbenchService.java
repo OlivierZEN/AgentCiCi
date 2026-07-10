@@ -340,10 +340,6 @@ public class CustomerWorkbenchService {
             return existing;
         }
         if (!isCrmReady(orgId, userId)) throw new ConflictException("CloudCC CRM 未连接，禁止执行写回");
-        if (!CustomerWorkbenchRecommendationEntity.STATUS_CONFIRMED.equals(recommendation.getStatus())
-                && !CustomerWorkbenchRecommendationEntity.STATUS_FAILED.equals(recommendation.getStatus())) {
-            throw new ConflictException("建议必须先确认，才能写入 CRM");
-        }
         String targetObject = firstNonBlank(recommendation.getTargetObject(), targetObject(recommendation.getRecommendationType()));
         Map<String, Object> crmPayload = normalizedCrmPayload(recommendation, targetObject);
         String operation = blankToEmpty(recommendation.getTargetRecordId()).isBlank() ? "INSERT" : "UPDATE";
@@ -358,33 +354,48 @@ public class CustomerWorkbenchService {
             view.put("idempotent", true);
             return view;
         }
-        if (prior.isPresent() && ("STARTED".equals(prior.get().getStatus()) || "UNKNOWN".equals(prior.get().getStatus()))) {
-            throw new ConflictException("上次 CRM 写入结果未知，已禁止重复执行；请先在 CRM 中核对或修改建议后重试");
-        }
-        CustomerCrmWriteAuditEntity audit = prior.orElseGet(() -> new CustomerCrmWriteAuditEntity(
-                auditId(orgId, idempotencyKey), orgId, userId, recommendation.getPublicId(), idempotencyKey,
-                targetObject, operation, "STARTED", requestHash, null, null, null, toJson(crmPayload), "{}"));
-        audit.markStarted();
-        writeAuditRepository.save(audit);
-        recommendation.markApplying();
-        recommendationRepository.save(recommendation);
-        try {
-            WriteResult result = cloudccOpenApiService.writeRecords(orgId, userId, operation, targetObject, List.of(crmPayload));
-            String remoteId = result.remoteIds().stream().findFirst().orElse(blankToEmpty(recommendation.getTargetRecordId()));
-            if (remoteId.isBlank()) throw new IllegalStateException("CloudCC 写入成功但未返回记录 ID，无法完成回读校验");
+        if (prior.isPresent() && !blankToEmpty(prior.get().getRemoteRecordId()).isBlank()) {
+            CustomerCrmWriteAuditEntity audit = prior.get();
+            String remoteId = audit.getRemoteRecordId();
             Map<String, Object> readback = cloudccOpenApiService.queryRecordById(orgId, userId, targetObject,
                     readbackFields(targetObject), remoteId).orElse(Map.of());
-            boolean verified = !readback.isEmpty();
-            audit.markSucceeded(remoteId, toJson(mapOf("result", result, "readback", readback)));
+            audit.markSucceeded(remoteId, toJson(mapOf("recovered", true, "readback", readback)));
             writeAuditRepository.save(audit);
             recommendation.apply(remoteId);
             crmProjectionService.invalidate(orgId, userId);
             Map<String, Object> view = recommendationView(recommendationRepository.save(recommendation));
             view.put("writeMode", "CLOUDCC_LIVE");
-            view.put("verified", verified);
+            view.put("verified", !readback.isEmpty());
             view.put("readback", readback);
-            view.put("message", verified ? "已写入 CloudCC CRM 并完成回读校验。" : "已写入 CloudCC CRM，但当前用户无权回读该记录。");
+            view.put("message", "已根据审计中的 CRM 记录 ID 恢复写入结果，未重复创建记录。");
+            view.put("idempotent", true);
             return view;
+        }
+        if (prior.isPresent() && ("STARTED".equals(prior.get().getStatus()) || "UNKNOWN".equals(prior.get().getStatus()))) {
+            throw new ConflictException("上次 CRM 写入结果未知，已禁止重复执行；请先在 CRM 中核对或修改建议后重试");
+        }
+        if (!CustomerWorkbenchRecommendationEntity.STATUS_CONFIRMED.equals(recommendation.getStatus())
+                && !CustomerWorkbenchRecommendationEntity.STATUS_FAILED.equals(recommendation.getStatus())
+                && !CustomerWorkbenchRecommendationEntity.STATUS_APPLYING.equals(recommendation.getStatus())) {
+            throw new ConflictException("建议必须先确认，才能写入 CRM");
+        }
+        CustomerCrmWriteAuditEntity audit = prior.isPresent() ? prior.get() : new CustomerCrmWriteAuditEntity(
+                auditId(orgId, idempotencyKey), orgId, userId, recommendation.getPublicId(), idempotencyKey,
+                targetObject, operation, "STARTED", requestHash, null, null, null, toJson(crmPayload), "{}");
+        audit.markStarted();
+        audit = writeAuditRepository.save(audit);
+        recommendation.markApplying();
+        recommendation = recommendationRepository.save(recommendation);
+        WriteResult result;
+        String remoteId;
+        Map<String, Object> readback;
+        try {
+            result = cloudccOpenApiService.writeRecords(orgId, userId, operation, targetObject, List.of(crmPayload));
+            remoteId = result.remoteIds().stream().findFirst().orElse(blankToEmpty(recommendation.getTargetRecordId()));
+            if (remoteId.isBlank()) throw new IllegalStateException("CloudCC 写入成功但未返回记录 ID，无法完成回读校验");
+            audit.markSucceeded(remoteId, toJson(mapOf("result", result)));
+            readback = cloudccOpenApiService.queryRecordById(orgId, userId, targetObject,
+                    readbackFields(targetObject), remoteId).orElse(Map.of());
         } catch (RuntimeException ex) {
             String code = ex instanceof CloudccApiException cloudccEx ? cloudccEx.code() : ex.getClass().getSimpleName();
             recommendation.markFailed(code, ex.getMessage());
@@ -397,6 +408,17 @@ public class CustomerWorkbenchService {
             view.put("message", "CRM 写入失败：" + ex.getMessage());
             return view;
         }
+        boolean verified = !readback.isEmpty();
+        audit.markSucceeded(remoteId, toJson(mapOf("result", result, "readback", readback)));
+        writeAuditRepository.save(audit);
+        recommendation.apply(remoteId);
+        crmProjectionService.invalidate(orgId, userId);
+        Map<String, Object> view = recommendationView(recommendationRepository.save(recommendation));
+        view.put("writeMode", "CLOUDCC_LIVE");
+        view.put("verified", verified);
+        view.put("readback", readback);
+        view.put("message", verified ? "已写入 CloudCC CRM 并完成回读校验。" : "已写入 CloudCC CRM，但当前用户无权回读该记录。");
+        return view;
     }
 
     public Map<String, Object> assistant(String orgId, String userId, AssistantCommand command) {

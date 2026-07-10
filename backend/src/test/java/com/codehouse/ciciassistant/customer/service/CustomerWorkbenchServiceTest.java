@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -235,6 +236,54 @@ class CustomerWorkbenchServiceTest {
         verify(crmProjectionService).detail("org-demo", "user-demo", "001-demo", false);
         verify(writeAuditRepository, times(2)).save(any(CustomerCrmWriteAuditEntity.class));
         verify(crmProjectionService).invalidate("org-demo", "user-demo");
+    }
+
+    @Test
+    void applyingRecommendationRecoversRemoteRecordFromFailedAuditWithoutDuplicateWrite() {
+        CustomerWorkbenchSnapshotRepository snapshotRepository = mock(CustomerWorkbenchSnapshotRepository.class);
+        CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
+        CustomerWorkbenchRecommendationRepository recommendationRepository = mock(CustomerWorkbenchRecommendationRepository.class);
+        CustomerRecommendationFeedbackRepository recommendationFeedbackRepository = mock(CustomerRecommendationFeedbackRepository.class);
+        CustomerCrmWriteAuditRepository writeAuditRepository = mock(CustomerCrmWriteAuditRepository.class);
+        CustomerCrmProjectionService crmProjectionService = mock(CustomerCrmProjectionService.class);
+        CloudccOpenApiService cloudccOpenApiService = mock(CloudccOpenApiService.class);
+        CloudccAccessTokenService cloudccAccessTokenService = mock(CloudccAccessTokenService.class);
+        CustomerWorkbenchService service = new CustomerWorkbenchService(
+                snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
+                crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, mock(SkillDefinitionService.class),
+                mock(AgentDefinitionService.class), mock(ChatOrchestratorService.class), new ObjectMapper());
+        CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
+                "rec-recover", "org-demo", "001-demo", "CREATE_TASK", "创建跟进任务", "客户要求反馈",
+                BigDecimal.valueOf(.92), "{\"subject\":\"反馈方案\"}");
+        recommendation.configureTarget("Task", "", "[]");
+        recommendation.accept();
+        recommendation.confirm("user-demo");
+        recommendation.markApplying();
+        CustomerCrmWriteAuditEntity audit = new CustomerCrmWriteAuditEntity(
+                "audit-recover", "org-demo", "user-demo", "rec-recover", "rec-recover:hash",
+                "Task", "INSERT", "FAILED", "hash", "task-existing", "OptimisticLock", "stale",
+                "{}", "{}");
+
+        when(recommendationRepository.findByOrgIdAndPublicId("org-demo", "rec-recover")).thenReturn(Optional.of(recommendation));
+        when(recommendationRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cloudccAccessTokenService.getSessionContext("org-demo", "user-demo")).thenReturn(Optional.of(
+                new CloudccAccessTokenService.CloudccSessionContext("token", "https://ap6.lightning.cloudcc.cn", "")));
+        when(writeAuditRepository.findByOrgIdAndUserIdAndIdempotencyKey(eq("org-demo"), eq("user-demo"), any()))
+                .thenReturn(Optional.of(audit));
+        when(writeAuditRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(cloudccOpenApiService.queryRecordById(eq("org-demo"), eq("user-demo"), eq("Task"), any(), eq("task-existing")))
+                .thenReturn(Optional.of(Map.of("id", "task-existing", "subject", "反馈方案")));
+
+        Map<String, Object> result = service.applyRecommendation("org-demo", "user-demo", "rec-recover");
+
+        assertThat(result)
+                .containsEntry("status", CustomerWorkbenchRecommendationEntity.STATUS_APPLIED)
+                .containsEntry("appliedCrmId", "task-existing")
+                .containsEntry("idempotent", true)
+                .containsEntry("verified", true);
+        verify(cloudccOpenApiService, never()).writeRecords(anyString(), anyString(), anyString(), anyString(), anyList());
+        verify(writeAuditRepository).save(audit);
+        assertThat(audit.getStatus()).isEqualTo("SUCCEEDED");
     }
 
     @Test
