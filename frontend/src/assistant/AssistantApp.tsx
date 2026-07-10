@@ -1295,6 +1295,7 @@ export default function AssistantApp() {
   const [activeChannel, setActiveChannel] = useState<"all" | ConversationThread["channel"]>("all");
   const [workspaceTab, setWorkspaceTab] = useState<WorkspaceTab>(() => (initialAiAppCode ? "aiApps" : "workbench"));
   const [activeAiAppCode, setActiveAiAppCode] = useState<AiApplication["code"]>(() => initialAiAppCode || AI_APPLICATIONS[0].code);
+  const [aiAppsMenuOpen, setAiAppsMenuOpen] = useState(false);
   const [customerWorkbenchEmbedded, setCustomerWorkbenchEmbedded] = useState(initialCustomerWorkbenchEmbedded);
   const [conversationMessages, setConversationMessages] = useState<Record<string, ChatBubble[]>>({});
   const [conversationListLoading, setConversationListLoading] = useState(false);
@@ -3767,7 +3768,10 @@ export default function AssistantApp() {
         <div className="cici-rail__nav">
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "workbench" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("workbench")}
+            onClick={() => {
+              setAiAppsMenuOpen(false);
+              setWorkspaceTab("workbench");
+            }}
             data-menu-label="会话工作台"
             aria-label="会话工作台"
           >
@@ -3777,7 +3781,10 @@ export default function AssistantApp() {
           </button>
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "customers" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("customers")}
+            onClick={() => {
+              setAiAppsMenuOpen(false);
+              setWorkspaceTab("customers");
+            }}
             data-menu-label="客户会话"
             aria-label="客户会话"
           >
@@ -3790,9 +3797,17 @@ export default function AssistantApp() {
           </button>
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "aiApps" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("aiApps")}
+            onClick={() => {
+              if (workspaceTab === "aiApps") {
+                setAiAppsMenuOpen((open) => !open);
+                return;
+              }
+              setWorkspaceTab("aiApps");
+              setAiAppsMenuOpen(true);
+            }}
             data-menu-label="AI应用"
             aria-label="AI应用"
+            aria-expanded={workspaceTab === "aiApps" ? aiAppsMenuOpen : undefined}
           >
             <svg viewBox="0 0 24 24">
               <rect x="4" y="4" width="6" height="6" rx="1.5" />
@@ -3804,7 +3819,10 @@ export default function AssistantApp() {
           </button>
           <button
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "crm" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("crm")}
+            onClick={() => {
+              setAiAppsMenuOpen(false);
+              setWorkspaceTab("crm");
+            }}
             data-menu-label="CRM 系统"
             aria-label="CRM 系统"
           >
@@ -3819,7 +3837,10 @@ export default function AssistantApp() {
           <button
             type="button"
             className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "settings" ? " is-active" : ""}`}
-            onClick={() => setWorkspaceTab("settings")}
+            onClick={() => {
+              setAiAppsMenuOpen(false);
+              setWorkspaceTab("settings");
+            }}
             data-menu-label="设置"
             aria-label="设置"
           >
@@ -3888,6 +3909,37 @@ export default function AssistantApp() {
             })}
           </div>
         </div>
+      ) : null}
+      {workspaceTab === "aiApps" && aiAppsMenuOpen ? (
+        <aside className="cici-ai-apps-flyout" aria-label="AI应用列表">
+          <header className="cici-ai-apps-flyout__head">
+            <span>AI应用</span>
+            <button type="button" onClick={() => setAiAppsMenuOpen(false)} aria-label="收起 AI 应用列表">×</button>
+          </header>
+          <div className="cici-ai-apps-flyout__list">
+            {AI_APPLICATIONS.map((app) => {
+              const isActive = app.code === activeAiAppCode;
+              return (
+                <button
+                  key={app.code}
+                  type="button"
+                  className={`cici-ai-apps-flyout__item${isActive ? " is-active" : ""}`}
+                  onClick={() => {
+                    setActiveAiAppCode(app.code);
+                    setAiAppsMenuOpen(false);
+                  }}
+                  aria-current={isActive ? "page" : undefined}
+                >
+                  <span className="cici-ai-apps-flyout__mark" aria-hidden>{app.shortName}</span>
+                  <span className="cici-ai-apps-flyout__text">
+                    <strong>{app.name}</strong>
+                    <small>{app.status}</small>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </aside>
       ) : null}
       {quickCommandDialogOpen ? (
         <div
@@ -4601,36 +4653,6 @@ export default function AssistantApp() {
         </main>
       ) : workspaceTab === "aiApps" ? (
         <main className="cici-ai-apps">
-          <aside className="cici-ai-apps__list" aria-label="AI应用列表">
-            <header className="cici-ai-apps__list-head">
-              <p>AI APPS</p>
-              <h1>AI应用</h1>
-            </header>
-            <div className="cici-ai-apps__cards">
-              {AI_APPLICATIONS.map((app) => {
-                const isActive = app.code === activeAiAppCode;
-                return (
-                  <button
-                    key={app.code}
-                    type="button"
-                    className={`cici-ai-app-card${isActive ? " is-active" : ""}`}
-                    onClick={() => setActiveAiAppCode(app.code)}
-                    aria-pressed={isActive}
-                  >
-                    <span className="cici-ai-app-card__mark" aria-hidden>{app.shortName}</span>
-                    <span className="cici-ai-app-card__body">
-                      <span className="cici-ai-app-card__title">
-                        <strong>{app.name}</strong>
-                        <small>{app.status}</small>
-                      </span>
-                      <span className="cici-ai-app-card__summary">{app.summary}</span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-
           <section
             className={`cici-ai-apps__main${activeAiApplication.code === "customer-workbench" ? " cici-ai-apps__main--workbench" : ""}${activeAiApplication.code === "data-insight" ? " cici-ai-apps__main--data-board" : ""}`}
             aria-label={`${activeAiApplication.name}主页面`}

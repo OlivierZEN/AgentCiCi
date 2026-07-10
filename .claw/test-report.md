@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T11:40:48+08:00
+updated_at: 2026-07-10T12:38:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T11:40:48+08:00
+last_run_at: 2026-07-10T12:38:00+08:00
 last_run_status: success
 ---
 
@@ -12,12 +12,27 @@ last_run_status: success
 
 ## Latest Run Summary
 
-- 状态：`success`（TASK-179 定向门禁与生产发布通过；全量后端基线失败单独保留）
-- 范围：TASK-179 AI 听记实时发言人分离热修，本地验证、生产 `2.3.7` 发布与真实工作台验收。
-- 命令：身份门禁、assignment check、后端 provider/parser 测试、前端 ASR/transcript 测试、前端生产构建、Compose 校验、发布 dry-run、ACR/Git tag、生产备份/部署/健康、公网与浏览器 smoke。
+- 状态：`success`（TASK-180 本地 UI 重构验证通过；生产仍停留在 `2.3.7`）
+- 范围：TASK-180 AI 应用页与客户互动工作台 UI 重构，本地构建、静态检查、桌面 Chrome 截图和交互验证。
+- 命令：身份门禁、assignment check、前端生产构建、静态检查、本地浏览器工作台/flyout 验证。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-180 AI 应用页与客户互动工作台 UI 重构本地验证 (2026-07-10T12:38:00+08:00):
+  - Commands:
+    - `identity-gate`: generic MANAGER-001 login and task-scoped `dev-login.py .claw --developer MANAGER-001 --task TASK-180 --branch main --files ... --json` -> **allowed**.
+    - `assignment-check`: `check-assignment.py .claw --developer MANAGER-001 --task TASK-180 --branch main --files ... --json` -> **allowed**.
+    - `frontend-build`: `npm --prefix frontend run build` -> **success**; existing Vite large chunk warning remains.
+    - `static-check`: `git diff --check` -> **success**.
+    - `local-browser-workbench`: Chrome at `2048x1000`, mocked authenticated local APIs, `/app?aiApp=customer-workbench` -> **success**; persistent AI app list absent, document/body have no horizontal or vertical overflow, no visible right-edge scrollbar, metrics outer border and radius removed, local scroll regions default to `scrollbar-width: none`, console errors `0`.
+    - `local-browser-flyout`: click left rail AI 应用 entry -> **success**; floating vertical list appears with `5` app items; selecting 客户洞察 closes the list and switches main page.
+  - Browser evidence:
+    - `output/playwright/task180-ai-apps-workbench-local.png`.
+    - `output/playwright/task180-ai-apps-flyout-local.png`.
+  - Notes:
+    - Browser validation used mocked non-secret local API responses and did not use or record reusable credentials.
+    - TASK-180 has not been released to production; production remains release `2.3.7` until a release runbook is executed.
 
 - TASK-179 AI 听记 realtime speaker diarization local closure (2026-07-10T11:31:43+08:00):
   - Commands:
