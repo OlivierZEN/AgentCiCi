@@ -17,6 +17,20 @@ status: active
 
 ## Latest Release
 
+- 2.3.6 TASK-177 数据洞察仪表盘 UI 热修复 on 2026-07-10:
+  - Git commit: `aac3080c103c` on `main`; annotated tag `2.3.6` was pushed to origin.
+  - Scope: 数据洞察 AI 应用移除顶部无效旧 CRM 系统信息条，避免出现组织/时间/币种/销售云主页等与数据洞察无关内容；收紧仪表盘网格和卡片边界，防止表格与风险列表向外漂出；客户洞察继续保持独立应用结构。
+  - Release method: because production tag `2.3.5` had already been used by TASK-178 and the main worktree contained unrelated TASK-178 dirty changes, release was built from a clean detached worktree at `aac3080c103c` with `./scripts/release-acr.sh --version 2.3.6`; backend/frontend linux/amd64 images and Git tag were pushed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.3.6`, index digest `sha256:cd7d4718def63a97b11c5d233611eb994f0ecc0161bfa07639f882a98f492202`, linux/amd64 manifest digest `sha256:f77c0d55938e57f7cf5975b99b4ddf8d53d7d11ed974f569d8c1eac4b9ce8daf`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.3.6`, index digest `sha256:0552ff05c868a0cdd4f07f95bcd127b39082fde237a955d75750487e5c1352a3`, linux/amd64 manifest digest `sha256:1e9c63b8d51701aeabd3ccc22330fd9fb25cac8198585a20ab4a472a895de451`.
+  - Backup directory: `/opt/cici/backups/20260710-083717-before-2.3.6-task177-data-insight-ui-hotfix`, containing `acr.env.before-2.3.6`, `postgres.dump`, `kb-files.tgz`, and `qdrant.tgz`.
+  - Remote env: `/opt/cici/deploy/acr.env` now has `CICI_IMAGE_TAG=2.3.6` and `CICI_APP_VERSION=2.3.6`.
+  - Deploy note: backend/frontend images were pulled from ACR and recreated with `--no-deps --force-recreate`; database, Redis, RabbitMQ, and Qdrant remained healthy on existing `2.3.4` infra containers.
+  - Verified after deploy: backend/frontend healthy; backend `/actuator/health` returned `UP`; `/system/version` returned `version=2.3.6`, `imageTag=2.3.6`, and `gitCommit=aac3080c103c`; frontend `nginx -t` passed.
+  - Public smoke: `https://x.agentcici.com/` and `https://x.agentcici.com/app?aiApp=data-insight` returned HTTP 200; `http://x.agentcici.com/` redirected to HTTPS.
+  - Authenticated data insight smoke: demo org `org2sva14i4udjmi2t4s` returned `/ai/data-insights/dashboard` with `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`, open opportunities `8`, orders `18`, risk rows `8`.
+  - Browser smoke: production `https://x.agentcici.com/app?aiApp=data-insight` at `2048x1000` switched `销售业绩` / `客户` / `商机` / `订单回款`; `.cici-data-board=1`, `.cici-data-board__bar=0`, `.cici-customer-insight=0`, hero count `0`, no old CRM context text, no document/main/board/grid horizontal overflow, and no card leakage. Screenshot: `output/playwright/task177-prod-data-insight-2.3.6.png`.
+
 - 2.3.5 TASK-178 CRM 嵌入客户互动工作台语音输入热修复 on 2026-07-10:
   - Git commit: `aac3080c103c` on `main`; annotated tag `2.3.5` was pushed to origin.
   - Scope: 修复 CloudCC CRM 嵌入客户互动工作台 AI 助手语音输入点击后误报“未识别到有效的语音内容”的问题；pagecomponent iframe 增加麦克风授权，ASR 启动失败不再被空完成回调覆盖。

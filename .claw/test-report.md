@@ -45,7 +45,7 @@ last_run_status: success
     - 本任务修复两处根因：CRM iframe 增加麦克风授权；ASR 启动失败或主动 abort 不再触发空识别完成回调，因此真实启动/权限错误不会再被覆盖成“未识别到有效语音内容”。
     - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
-- TASK-177 data insight dashboard UI hotfix (2026-07-10T08:25:49+08:00):
+- TASK-177 data insight dashboard UI hotfix and production release (2026-07-10T08:43:19+08:00):
   - Commands:
     - `identity-gate`: skill `dev-login.py .claw --developer MANAGER-001 --task TASK-177 --branch main --files ... --json` -> **allowed**.
     - `assignment-check`: skill `check-assignment.py .claw --developer MANAGER-001 --task TASK-177 --branch main --files ... --json` -> **allowed**.
@@ -53,10 +53,18 @@ last_run_status: success
     - `static-check`: `git diff --check` -> **success**.
     - `static-copy-scan`: data insight frontend scan for `cici-data-board__bar`, `dashboard.context`, `compactDateTime`, `sourceTypeLabel`, `销售云主页`, `币种`, and `CRM 演示数据` -> **success**, no matches.
     - `local-browser-data-insight-hotfix`: Playwright with local Vite and mocked authenticated APIs at `2048x1000`, `/app?aiApp=data-insight`, switching `销售业绩` / `客户` / `商机` / `订单回款` -> **success**; no old context bar, no old org/currency/dashboard/source labels, no customer insight panel, no horizontal overflow.
+    - `release-clean-worktree-2.3.6`: release was built from clean detached worktree at `aac3080c103c` because tag `2.3.5` was already used by TASK-178 and the main worktree contained unrelated TASK-178 dirty files -> **success**; backend/frontend images and Git tag `2.3.6` were pushed.
+    - `production-backup-2.3.6`: ECS backup `/opt/cici/backups/20260710-083717-before-2.3.6-task177-data-insight-ui-hotfix` -> **success**.
+    - `production-deploy-2.3.6`: backend/frontend recreated on `2.3.6`; backend and frontend healthy; `/actuator/health=UP`; `/system/version` returned `version=2.3.6`, `imageTag=2.3.6`, `gitCommit=aac3080c103c`; frontend `nginx -t` passed.
+    - `public-smoke`: `https://x.agentcici.com/` and `/app?aiApp=data-insight` -> HTTP `200`; `http://x.agentcici.com/` -> HTTPS `301`.
+    - `production-api-data-insight`: `/ai/data-insights/dashboard` for demo org `org2sva14i4udjmi2t4s` -> **success**, `sourceMode=REAL_CRM_DEMO`, customers `10`, leads `6`, open opportunities `8`, orders `18`, risk rows `8`.
+    - `production-browser-data-insight`: Playwright CLI at `2048x1000`, `/app?aiApp=data-insight`, switching `销售业绩` / `客户` / `商机` / `订单回款` -> **success**; `.cici-data-board=1`, `.cici-data-board__bar=0`, `.cici-customer-insight=0`, hero count `0`, no invalid CRM context text, and no document/main/board/grid horizontal overflow.
   - Browser evidence:
     - `output/playwright/task177-data-insight-dashboard-hotfix-local.png`.
+    - `output/playwright/task177-prod-data-insight-2.3.6.png`.
   - Notes:
     - 本地验证刻意在 mock payload 中保留旧 context 和 source 字段，确认这些字段不会再出现在数据洞察 UI。
+    - 生产版本 `2.3.6` 包含本任务提交 `16eb701`，同时基于其后续主线提交 `aac3080c103c` 发布，避免回退 TASK-178 已合入内容。
     - No reusable credentials, tokens, cookies, or secret values are recorded in this report.
 
 - TASK-175 production closure for customer workbench scroll cleanup (2026-07-10T08:22:00+08:00):
