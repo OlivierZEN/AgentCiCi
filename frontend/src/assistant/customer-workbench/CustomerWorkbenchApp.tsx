@@ -106,6 +106,10 @@ const modeTabs: Record<WorkbenchMode, Array<[DetailTab, string]>> = {
   ],
 };
 
+export function defaultCustomerQueueFilter(mode: WorkbenchMode) {
+  return mode === "new" ? "focus" : "";
+}
+
 function nowTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -280,7 +284,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [detail, setDetail] = useState<CustomerWorkbenchDetail | null>(null);
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState(initialMode === "new" ? "focus" : "renewal");
+  const [filter, setFilter] = useState(defaultCustomerQueueFilter(initialMode));
   const [sort, setSort] = useState("priority");
   const [page, setPage] = useState(1);
   const [queueMeta, setQueueMeta] = useState({ totalElements: 0, totalPages: 0, filterCounts: {} as Record<string, number>, dataAsOf: "" });
@@ -341,7 +345,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   }, [token]);
 
   useEffect(() => {
-    if (!token || !activeAccountId) return;
+    if (!token || !activeAccountId) {
+      setDetail(null);
+      return;
+    }
     let ignore = false;
     setDetail(null);
     getCustomerWorkbenchDetail(token, activeAccountId)
@@ -388,7 +395,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
 
   const switchMode = (mode: WorkbenchMode) => {
     setWorkbenchMode(mode);
-    setFilter(mode === "new" ? "focus" : "renewal");
+    setFilter(defaultCustomerQueueFilter(mode));
     setPage(1);
     setActiveTab("overview");
     deepLinkedAccountIdRef.current = "";
