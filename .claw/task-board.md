@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T06:09:47Z
+updated_at: 2026-07-11T06:36:11Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-189 - 客户互动多模态采集与确认归集
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-097-multimodal-interaction-ingestion.md`
+- task_status_path: `.claw/tasks/TASK-189.md`
+- assignment_path: `.claw/assignments/TASK-189.yaml`
+- blocked_by: `none`
+- next_action: Implement immutable source batches, extraction/analysis APIs, multimodal UI and production acceptance.
 
 ### TASK-188 - 客户互动工作台标题与静态链接控件修复
 
