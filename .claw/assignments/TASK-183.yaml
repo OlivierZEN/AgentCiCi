@@ -1,0 +1,65 @@
+task_id: TASK-183
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-11T03:12:54Z
+expires_at: none
+spec_path: docs/specs/FEAT-092-customer-workbench-ui-streaming.md
+task_status_path: .claw/tasks/TASK-183.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - frontend/src/assistant/customer-workbench/**
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/components/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-092-customer-workbench-ui-streaming.md
+  - .claw/tasks/TASK-183.md
+  - .claw/assignments/TASK-183.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/api/CustomerWorkbenchController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/service/CustomerWorkbenchService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/service/CustomerWorkbenchServiceTest.java
+  - frontend/src/assistant/customer-workbench/**
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/components/ChatMarkdown.tsx
+  - frontend/package.json
+  - frontend/package-lock.json
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-092-customer-workbench-ui-streaming.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "规范客户互动工作台队列工具、连接状态、图标和助理回复，不改变 CRM 数据与权限模型。"
+  - "AI 助理流式接口复用现有 ChatOrchestratorService SSE 链路，并保留阻塞接口兼容。"
+  - "CloudCC 页面组件不做元数据写入；真实注入页验收必须通过 cc-customization-expert-msapi。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-11T03:12:54Z; user explicitly requested screenshot-driven UI and streaming assistant fixes."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; do not record credentials, bearer tokens, cookies, or reusable secrets."
+hard_gate_notes: "Run task-scoped dev-login.py and check-assignment.py for all representative implementation files before editing code."

@@ -1,17 +1,17 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T00:45:00Z
+updated_at: 2026-07-11T03:12:54Z
 updated_by: MANAGER-001
-phase: customer-workbench-production-ready
-active_task: "none"
-next_action: "Monitor release 2.4.1 and resume the next prioritized task after the customer workbench production acceptance window."
+phase: customer-workbench-ui-streaming-fix
+active_task: "TASK-183"
+next_action: "Implement FEAT-092 standard icons, UI cleanup, explicit demo status, and SSE streaming assistant, then verify and publish."
 read_next:
   goals: false
   decisions: false
   issue_list: false
   task_board: true
-  active_task_status: false
+  active_task_status: true
   test_report: true
   devops: true
 ---
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-183 is active for screenshot-driven UI cleanup and customer-assistant streaming. FEAT-092 defines the single queue-settings control, explicit CRM demo status, removal of nonfunctional controls, Lucide icons, SSE phases/deltas, and safe Markdown rendering.
 - Current branch: `main`; production is running release `2.4.1` from Git commit `146b6fde4ec2`; TASK-182 is complete and FEAT-081 is production ready.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
