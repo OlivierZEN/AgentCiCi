@@ -40,6 +40,7 @@ public class CloudccAccessTokenService {
             .build();
 
     private final ConcurrentHashMap<String, CachedToken> tokenCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Object> tokenRefreshLocks = new ConcurrentHashMap<>();
     private final ThreadLocal<CloudccSessionOverride> requestOverride = new ThreadLocal<>();
 
     public CloudccAccessTokenService(
@@ -82,6 +83,15 @@ public class CloudccAccessTokenService {
         tokenCache.remove(orgId + "::" + userId);
     }
 
+    public void invalidateSessionContext(String orgId, String userId, String rejectedToken) {
+        if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
+            return;
+        }
+        String cacheKey = orgId + "::" + userId;
+        tokenCache.computeIfPresent(cacheKey, (ignored, cached) ->
+                rejectedToken != null && rejectedToken.equals(cached.token()) ? null : cached);
+    }
+
     public Optional<CloudccSessionContext> getSessionContext(String orgId, String userId) {
         if (orgId == null || orgId.isBlank() || userId == null || userId.isBlank()) {
             return Optional.empty();
@@ -92,17 +102,27 @@ public class CloudccAccessTokenService {
         }
         String cacheKey = orgId + "::" + userId;
         CachedToken cached = tokenCache.get(cacheKey);
-        if (cached != null && cached.expiresAt().isAfter(Instant.now().plusSeconds(30))) {
+        if (isUsable(cached)) {
             return Optional.of(new CloudccSessionContext(cached.token(), cached.baseUrl(), cached.setupSvc()));
         }
-        try {
-            Optional<CloudccSessionContext> fresh = fetchAndCacheToken(orgId, userId, cacheKey);
-            fresh.ifPresent(t -> log.debug("CloudCC token refreshed for org={}, user={}", orgId, userId));
-            return fresh;
-        } catch (Exception e) {
-            log.warn("Failed to obtain CloudCC token for org={}, user={}: {}", orgId, userId, e.getMessage());
-            return Optional.empty();
+        synchronized (tokenRefreshLocks.computeIfAbsent(cacheKey, ignored -> new Object())) {
+            cached = tokenCache.get(cacheKey);
+            if (isUsable(cached)) {
+                return Optional.of(new CloudccSessionContext(cached.token(), cached.baseUrl(), cached.setupSvc()));
+            }
+            try {
+                Optional<CloudccSessionContext> fresh = fetchAndCacheToken(orgId, userId, cacheKey);
+                fresh.ifPresent(t -> log.debug("CloudCC token refreshed for org={}, user={}", orgId, userId));
+                return fresh;
+            } catch (Exception e) {
+                log.warn("Failed to obtain CloudCC token for org={}, user={}: {}", orgId, userId, e.getMessage());
+                return Optional.empty();
+            }
         }
+    }
+
+    private boolean isUsable(CachedToken cached) {
+        return cached != null && cached.expiresAt().isAfter(Instant.now().plusSeconds(30));
     }
 
     public Optional<CloudccGatewayContext> getConfiguredGateway(String orgId) {

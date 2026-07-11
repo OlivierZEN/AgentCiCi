@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService.CloudccApiException;
 import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,6 +71,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ApiResponse<Void>> handleForbidden(ForbiddenException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(CloudccApiException.class)
+    public ResponseEntity<ApiResponse<Void>> handleCloudccApi(CloudccApiException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ApiResponse.fail(ex.getMessage()));
     }
 
     @ExceptionHandler(Exception.class)

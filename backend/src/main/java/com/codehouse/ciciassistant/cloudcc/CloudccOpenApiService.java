@@ -148,18 +148,43 @@ public class CloudccOpenApiService {
         CloudccAccessTokenService.CloudccSessionContext context = tokenService.getSessionContext(orgId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("无法获取 CloudCC 访问令牌，请确认已绑定当前用户账号。"));
         JsonNode root = sendCommon(context.baseUrl(), context.accessToken(), body);
-        if (root.path("_httpStatus").asInt(200) == 401) {
-            tokenService.invalidateSessionContext(orgId, userId);
+        if (isAuthenticationFailure(root)) {
+            tokenService.invalidateSessionContext(orgId, userId, context.accessToken());
             context = tokenService.getSessionContext(orgId, userId)
                     .orElseThrow(() -> new IllegalArgumentException("CloudCC 令牌刷新失败，请重新绑定账号。"));
             root = sendCommon(context.baseUrl(), context.accessToken(), body);
         }
         int status = root.path("_httpStatus").asInt(200);
+        if (isAuthenticationFailure(root)) {
+            throw new CloudccApiException(root.path("returnCode").asText(String.valueOf(status)),
+                    "CloudCC CRM 登录会话已失效，自动刷新失败，请重新进入客户互动工作台");
+        }
         if (status >= 400 || !root.path("result").asBoolean(false)) {
             throw new CloudccApiException(root.path("returnCode").asText(String.valueOf(status)),
                     root.path("returnInfo").asText("CloudCC API 调用失败"));
         }
         return root;
+    }
+
+    static boolean isAuthenticationFailure(JsonNode root) {
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return false;
+        }
+        if (root.path("_httpStatus").asInt(200) == 401) {
+            return true;
+        }
+        if (root.path("result").asBoolean(false)) {
+            return false;
+        }
+        String code = root.path("returnCode").asText("").trim().toLowerCase();
+        String message = root.path("returnInfo").asText("").trim().toLowerCase();
+        return code.contains("unauthorized")
+                || code.contains("invalid_token")
+                || code.contains("invalid_session")
+                || message.contains("登录失败")
+                || message.contains("重新登录")
+                || message.contains("access token")
+                || message.contains("访问令牌");
     }
 
     private JsonNode sendCommon(String baseUrl, String accessToken, ObjectNode body) {
