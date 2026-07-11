@@ -634,12 +634,8 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   return (
     <section className={`customer-workbench${embedded ? " customer-workbench--embedded" : ""}`}>
       <header className="customer-workbench__topbar">
-        <div className="customer-workbench__brand">
-          <span className="customer-workbench__brand-mark" aria-hidden />
-          <strong>AgentCiCi</strong>
-          <em>AI 应用</em>
-          <span>/</span>
-          <b>客户互动工作台</b>
+        <div className="customer-workbench__app-title">
+          <h1>客户互动工作台</h1>
         </div>
         <div className="customer-workbench__top-actions">
           <div className="customer-workbench__mode-switch cici-product-mode-switch" aria-label="客户互动工作台模式">
@@ -771,7 +767,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         <main className="customer-workbench__main">
           <header className="customer-workbench__head">
             <div>
-              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu cici-product-icon-button" aria-label="复制客户工作台链接" title="复制客户工作台链接" onClick={async () => {
+              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu customer-workbench__copy-link cici-product-icon-button" aria-label="复制客户工作台链接" title="复制客户工作台链接" onClick={async () => {
                 const link = new URL(window.location.href);
                 if (!embedded) link.searchParams.set("aiApp", "customer-workbench");
                 link.searchParams.set("accountId", activeAccountId);

@@ -13471,13 +13471,9 @@
 
 .cici-ai-apps__main--workbench .customer-workbench__topbar {
   min-height: 42px;
-  justify-content: flex-end;
+  justify-content: space-between;
   padding: 0 14px;
   background: #fffdf8;
-}
-
-.cici-ai-apps__main--workbench .customer-workbench__brand {
-  display: none;
 }
 
 .cici-embedded-workbench {
@@ -13526,7 +13522,7 @@
   background: #fffdf8;
 }
 
-.customer-workbench__brand,
+.customer-workbench__app-title,
 .customer-workbench__top-actions {
   display: flex;
   align-items: center;
@@ -13556,49 +13552,13 @@
   color: #fffdf8;
 }
 
-.customer-workbench__brand-mark {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  background: linear-gradient(135deg, #f4dfb6, #d5a646);
-}
-
-.customer-workbench__brand-mark::before,
-.customer-workbench__brand-mark::after {
-  content: "";
-  position: absolute;
-  bottom: 6px;
-  width: 5px;
-  border-radius: 5px 5px 2px 2px;
-  background: rgba(255, 253, 248, .86);
-}
-
-.customer-workbench__brand-mark::before {
-  left: 8px;
-  height: 11px;
-}
-
-.customer-workbench__brand-mark::after {
-  right: 8px;
-  height: 16px;
-}
-
-.customer-workbench__brand strong {
-  font-size: 21px;
-  line-height: 1;
-}
-
-.customer-workbench__brand em,
-.customer-workbench__brand span {
-  color: #7c6d59;
-  font-style: normal;
-}
-
-.customer-workbench__brand b {
+.customer-workbench__app-title h1 {
+  margin: 0;
+  color: #2b2217;
   font-size: 14px;
+  line-height: 1;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .customer-workbench__top-actions button {
@@ -15504,6 +15464,28 @@
   color: #7c6d59;
   padding: 0;
   vertical-align: middle;
+}
+
+.customer-workbench__head .customer-workbench__copy-link,
+.customer-workbench__head .customer-workbench__copy-link:hover:not(:disabled),
+.customer-workbench__head .customer-workbench__copy-link:focus,
+.customer-workbench__head .customer-workbench__copy-link:focus-visible,
+.customer-workbench__head .customer-workbench__copy-link:active {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #7c6d59;
+  padding: 0;
+  box-shadow: none;
+  transform: none;
+  transition: none;
+}
+
+.customer-workbench__head .customer-workbench__copy-link:focus-visible {
+  outline: 1px solid #b99652;
+  outline-offset: 1px;
 }
 
 .customer-workbench-timeline-page > header {
