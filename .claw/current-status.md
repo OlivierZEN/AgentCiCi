@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T05:12:37Z
+updated_at: 2026-07-11T05:29:43Z
 updated_by: MANAGER-001
-phase: customer-workbench-control-chrome-cleanup
-active_task: "TASK-186"
-next_action: "Remove duplicate mode-switch and icon-button chrome, verify desktop states, and release production."
+phase: customer-workbench-control-chrome-production
+active_task: "none"
+next_action: "Monitor production 2.4.5 and require shared frameless control primitives on future product pages."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-186 is in progress: establish reusable frameless icon/mode controls, audit the full customer workbench, and remove inherited button chrome without changing behavior.
+- TASK-186 is done in production `2.4.5`: shared frameless icon/mode controls are documented and implemented; AgentCiCi and CloudCC iframe computed-style audits found zero raised-button offenders and no outer overflow.
+- TASK-186 evidence: 57 frontend tests/build, release backup/health/public routes, dual-entry screenshots, CloudCC skill verification and clean 60-second post-warmup logs passed. Release commit/tag/image/version is `b615cf417601` / `2.4.5`.
 - TASK-185 is done in production `2.4.4`: Pin behavior is removed; standard panel expand/restore transfers the queue width to the assistant while the center remains fixed. AgentCiCi measured `1214px` before/after; CloudCC iframe measured `1213px`, assistant `327px -> 653px`, and exact restoration.
 - TASK-185 evidence: 57 frontend tests/build, six-service health, public routes, AgentCiCi/CloudCC browser clicks, injection verification `issues=[]` and post-warmup logs passed. Release commit/tag/image/version is `f69d2191ed3b` / `2.4.4`.
 - TASK-184 is done in production `2.4.3`. Border-box sizing and a four-column adaptive filter grid keep the queue at `277/277` on 712px, `307/307` on 1920px and `335/335` in the real CloudCC iframe; all filter labels and customer rows fit without clipping.
@@ -30,7 +31,7 @@ read_next:
 - TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.
 - TASK-183 local gates passed 56 frontend tests, Vite build, focused backend tests/compile, 1920x960 browser interaction checks and zero console errors. The browser exposed and verified a seven-row queue-grid fix when settings are expanded; send showed a processing state within 60ms and the completed long conversation remained exactly at the bottom.
 - TASK-183 production evidence: release commit/tag/image/version `49402ae8f3a0` / `2.4.2`; six services healthy; V72-V74 successful; public routes 200; SSE emitted 40 deltas without error; AgentCiCi and real CloudCC iframe both showed immediate status/input clearing and stayed at the latest message; injection verification returned `issues=[]`.
-- Current branch: `main`; production is running release `2.4.4` from Git commit `f69d2191ed3b`; TASK-182 through TASK-185 are complete and FEAT-081/FEAT-092/FEAT-093 are production ready.
+- Current branch: `main`; production is running release `2.4.5` from Git commit `b615cf417601`; TASK-182 through TASK-186 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094 are production ready.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-094
 title: 产品控件去框化与客户互动工作台全页治理
-status: in_implementation
+status: verified
 owner_role: frontend-agent
 task_ids: TASK-186
 related_decisions: FEAT-093
 related_issues: none
-updated_at: 2026-07-11T05:21:13Z
+updated_at: 2026-07-11T05:29:43Z
 updated_by: MANAGER-001
 ---
 
@@ -49,3 +49,7 @@ updated_by: MANAGER-001
 - 客户互动工作台提醒、队列设置、工作台链接、助理展开/关闭和编辑弹窗关闭控件已接入公共原语。
 - 工作台全页原生按钮已阻断旧全局 `box-shadow` 与 `translateY`；非浮层区域的剩余按钮阴影已清零。
 - 57 项前端测试、Vite 生产构建、JSON 解析与 diff 检查通过；待生产发布和双入口截图验收。
+- 已发布生产 `2.4.5`（提交 `b615cf417601`）。AgentCiCi 和 CloudCC iframe 的模式容器计算样式均为 `border: 0`、透明背景、`box-shadow: none`、`padding: 0`。
+- 两个入口中的客户提醒、列表设置、工作台链接、助理展开和关闭按钮均为透明单层热区，计算样式无边框、阴影、渐变和位移。
+- 两个入口全页按钮计算样式审计 `offenderCount=0`，无 document/root 外层溢出。截图：`output/playwright/task186-prod-agent-control-chrome.png`、`output/playwright/task186-prod-cloudcc-control-chrome.png`。
+- CloudCC 实施专家技能无预设组件校验 `issues=[]`；携带预期组件名时仍因 customPage 不暴露版本数组产生已知 `stale_component_reference` warning，不影响同组件 ID 的真实 iframe 加载。

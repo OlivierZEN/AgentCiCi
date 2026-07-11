@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T04:35:00Z
+updated_at: 2026-07-11T05:29:43Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.5 TASK-186 产品控件去框化与客户互动工作台全页治理 on 2026-07-11:
+  - Git commit/tag `b615cf417601` / `2.4.5`. Added shared frameless icon and mode-switch primitives, removed duplicate mode-switch frame, and blocked legacy raised-button chrome across the workbench.
+  - Images: backend index `sha256:cfb559ea1d557485c0886661fb4a51bc8f5b2169407705f3eb35ea6df4b798d2`; frontend index `sha256:6b255faa24fa261439c0e574e3b75dfa2f8cea15f38052d23814bd577d3ea14f`.
+  - Backup: `/opt/cici/backups/20260711-132342-before-2.4.5-task186-control-chrome`; env `1646`, PostgreSQL `2593585`, KB `196338`, Qdrant `1574403` bytes.
+  - Backend/frontend recreated on `2.4.5`; database, Redis, RabbitMQ and Qdrant remained healthy on `2.3.4`. Six services healthy; health `UP`; version `2.4.5 / b615cf417601`; Nginx valid; public routes `200`; final 60-second logs clean.
+  - AgentCiCi and real CloudCC iframe computed-style audits both returned zero button shadow/transform offenders and no outer overflow. Screenshots: `output/playwright/task186-prod-agent-control-chrome.png`, `output/playwright/task186-prod-cloudcc-control-chrome.png`.
 
 - 2.4.4 TASK-185 客户互动工作台 AI 助理展开模式 on 2026-07-11:
   - Git commit/tag `f69d2191ed3b` / `2.4.4`. Removed Pin behavior; added standard panel expand/restore, equal-width track transfer, hidden/inert queue, stable center and reduced-motion handling.

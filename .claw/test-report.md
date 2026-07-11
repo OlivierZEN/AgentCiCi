@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T04:35:00Z
+updated_at: 2026-07-11T05:29:43Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T04:35:00Z
+last_run_at: 2026-07-11T05:29:43Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,20 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-183 已在生产 `2.4.2` 完成代码、SSE、双入口浏览器与发布验收）
-- 范围：TASK-183 客户互动工作台界面规范化、标准图标与 AI 客户助理 SSE 流式回复。
-- 命令：身份/assignment 门禁、聚焦 Maven 测试与编译、Vitest、Vite build、`git diff --check`、本地与生产双入口浏览器、技能 CLI、发布 dry-run、ACR 发布、备份、部署和健康检查。
+- 状态：`passed`（TASK-186 已在生产 `2.4.5` 完成公共控件规则、工作台全页审计和双入口验收）
+- 范围：TASK-186 产品裸图标/模式切换公共原语、客户互动工作台去框化与生产发布。
+- 命令：身份/assignment 门禁、Vitest、Vite build、JSON/diff 检查、发布 dry-run、ACR 清单校验、备份、部署、健康检查、生产双入口 computed-style/截图和技能 CLI。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-186 产品控件去框化生产验收 (2026-07-11T13:29:43+08:00):
+  - `frontend`: Vitest 12 个文件、57 项 -> **success**；Vite production build、DESIGN.json 解析和 `git diff --check` -> **success**。
+  - `release`: `2.4.5 / b615cf417601`，backend index `sha256:cfb559ea1d557485c0886661fb4a51bc8f5b2169407705f3eb35ea6df4b798d2`，frontend index `sha256:6b255faa24fa261439c0e574e3b75dfa2f8cea15f38052d23814bd577d3ea14f`。首次 ACR manifest inspect TLS 超时，重试清单检查成功后补全 tag 并部署。
+  - `backup/deploy`: `/opt/cici/backups/20260711-132342-before-2.4.5-task186-control-chrome` 四类文件非空；backend/frontend `2.4.5` healthy，四个状态服务保持 `2.3.4` healthy；健康 `UP`、版本 `2.4.5 / b615cf417601`、Nginx 通过、公开三入口 `200`。
+  - `agent-browser`: 模式容器 `border=0/background=transparent/shadow=none/padding=0`；5 类公共图标按钮均 `border=0/shadow=none/transform=none`；全页按钮 `offenderCount=0`，document/body 无外层溢出。
+  - `crm-browser`: 真实 CloudCC iframe 同样为 5 类图标按钮零套框，全页 `offenderCount=0`、root 无溢出。截图：`output/playwright/task186-prod-agent-control-chrome.png`、`output/playwright/task186-prod-cloudcc-control-chrome.png`。
+  - `skill/logs`: `cc-customization-expert-msapi 2.1.276-msapi verify injectionPage` 无预设组件时 `issues=[]`；预设组件名会产生既有同 ID 版本数组缺失 warning。浏览器旧会话曾触发 3 条 `Session not found` 404，关闭验收页后最近 60 秒前后端错误扫描为空。
 
 - TASK-185 生产发布与双入口展开验收 (2026-07-11T12:35:00+08:00):
   - `release`: `2.4.4` dry-run/正式发布 -> **success**；提交 `f69d2191ed3b`，backend index digest `sha256:d0bc2a926d718b6de5ae267439c7f7877b03121e92c6b6b1ce97f6826cf6c136`，frontend index digest `sha256:43a1bcb9610029399690362861a90830662f71fda20b825f0b615a98e82d6d3c`。
