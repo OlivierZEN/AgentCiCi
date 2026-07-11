@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-099
 title: CloudCC 嵌入页重复刷新稳定性
-status: ready
+status: production
 owner_role: fullstack-agent
 task_ids: TASK-191
 related_decisions: FEAT-081,FEAT-098
 related_issues: none
-updated_at: 2026-07-11T15:26:48Z
+updated_at: 2026-07-11T16:27:00Z
 updated_by: MANAGER-001
 ---
 
@@ -31,3 +31,9 @@ updated_by: MANAGER-001
 - 宿主清空并复用同一组件节点后能够重新挂载。
 - 同一客户多路并发信号持久化不触发唯一键异常。
 - 真实 CRM 页面连续刷新至少三次均显示工作台，且页面不再出现 `Unexpected server error`。
+
+## 生产结果
+
+- CloudCC pagecomponent V11、customPage V5 已通过技能发布和绑定。
+- AgentCiCi `2.4.12 / 4d00d417dcf3` 已上线；仓储 UPSERT 集成测试在真实 PostgreSQL 上验证事务、单行幂等和更新语义。
+- 真实 CloudCC 登录后连续三次刷新均重新出现 iframe、客户列表、`CloudCC CRM 已连接` 和助理历史；发布后未再出现唯一键冲突、`TransactionRequiredException` 或 `Unexpected server error`。

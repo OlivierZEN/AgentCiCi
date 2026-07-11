@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T14:59:42Z
+updated_at: 2026-07-11T16:27:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.12 TASK-191 CloudCC 嵌入重复刷新与信号原子写入 on 2026-07-12:
+  - Git commit/tag `4d00d417dcf3` / `2.4.12`; pagecomponent V11 handles delayed/reused host nodes, and customer signal UPSERT has a repository-level transaction.
+  - Images: backend index `sha256:b60f4bead39d06831a846c3efbcf3368aba21e0b23d80fb3f6a7020cceede51c`, amd64 `sha256:f8c0bdd0a2bbf9fa801ef3e8b8947ae6cdca63ce10b0535b4eb111131524fabb`; frontend index `sha256:ba02632b8b61f812ca9b2244b89f319f0b6b4e9e3986af7a32016be8f089649e`, amd64 `sha256:3c06f289c786eeb7ccf8620e3321ea5f7f923d121af3f0acd6366b0fe2a94e3e`.
+  - Backup: `/opt/cici/backups/20260712-001641-before-2.4.12-task191-transaction`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend recreated on `2.4.12`; state services remained healthy on `2.3.4`. Six services healthy; health `UP`; version `2.4.12 / 4d00d417dcf3`; Nginx valid.
+  - Real CloudCC page passed three consecutive refreshes with CRM data and assistant history present; post-release target error scan is empty. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
+  - Releases `2.4.10` and `2.4.11` were superseded during TASK-191 verification and are not rollback targets.
 
 - 2.4.9 TASK-190 CloudCC 嵌入端会话失效自动恢复 on 2026-07-11:
   - Git commit/tag `052bf118fc1e` / `2.4.9`; added per-user single-flight Token acquisition, conditional rejected-token invalidation, HTTP-200 authentication-failure refresh/retry and explicit CloudCC gateway errors.

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T15:26:48Z
+updated_at: 2026-07-11T16:27:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-099-cloudcc-embed-remount-signal-idempotency.md`
 - task_status_path: `.claw/tasks/TASK-191.md`
 - assignment_path: `.claw/assignments/TASK-191.yaml`
 - blocked_by: `none`
-- next_action: Implement remount observation and per-account signal persistence serialization, then publish through the CloudCC skill.
+- next_action: Done in production `2.4.12`; monitor repeated CRM refresh and customer signal write errors.
 
 ### TASK-190 - CloudCC 嵌入端会话失效自动恢复
 

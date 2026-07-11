@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T15:26:48Z
+updated_at: 2026-07-11T16:27:00Z
 updated_by: MANAGER-001
-phase: cloudcc-refresh-stability
-active_task: "TASK-191"
-next_action: "Fix CloudCC component remount and customer-signal insert concurrency, publish through the customization skill, and validate repeated refresh."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Resume the security rules platform after completing the CloudCC refresh stability production hotfix."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-191 is in progress: the repeated-refresh white screen occurs before the AgentCiCi iframe request, while the remaining `Unexpected server error` is a verified duplicate `customer_signal.public_id` insert race during concurrent customer detail projection.
+- TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
+- TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
 - TASK-190 is done in production `2.4.9`: per-user single-flight Token acquisition, conditional stale-token invalidation, HTTP-200 business authentication failure refresh/retry and explicit CloudCC API errors are live.
 - TASK-190 production evidence: mapped `CCAdmin` concurrent integration/queue/notifications/supervisor requests all returned 200; integration is connected with 110 visible accounts, existing queue has 48 accounts, and stable backend logs are clean.
@@ -42,7 +43,7 @@ read_next:
 - TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.
 - TASK-183 local gates passed 56 frontend tests, Vite build, focused backend tests/compile, 1920x960 browser interaction checks and zero console errors. The browser exposed and verified a seven-row queue-grid fix when settings are expanded; send showed a processing state within 60ms and the completed long conversation remained exactly at the bottom.
 - TASK-183 production evidence: release commit/tag/image/version `49402ae8f3a0` / `2.4.2`; six services healthy; V72-V74 successful; public routes 200; SSE emitted 40 deltas without error; AgentCiCi and real CloudCC iframe both showed immediate status/input clearing and stayed at the latest message; injection verification returned `issues=[]`.
-- Current branch: `main`; production is running release `2.4.9` from Git commit `052bf118fc1e`; TASK-182 through TASK-190 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098 are production ready.
+- Current branch: `main`; production is running release `2.4.12` from Git commit `4d00d417dcf3`; TASK-182 through TASK-191 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099 are production ready.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

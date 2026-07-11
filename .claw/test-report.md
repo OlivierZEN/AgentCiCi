@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T14:59:42Z
+updated_at: 2026-07-11T16:27:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T14:59:42Z
+last_run_at: 2026-07-11T16:27:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-191 CloudCC 重复刷新稳定性生产验收（2026-07-12）
+
+- `root-cause`: 白屏发生在 AgentCiCi iframe 请求之前，CloudCC 重用并清空已标记 mounted 的 pagecomponent 宿主节点；`Unexpected server error` 先后暴露确定性信号 ID 并发插入冲突，以及原子 UPSERT 缺少实际事务边界。
+- `component`: UMD 延迟节点 fixture 在 900ms 插入组件、1800ms 清空同一节点，1300ms/3000ms 均为一个 iframe；`node --check` 和技能 package dry-run 通过。通过 `cc-customization-expert-msapi` 发布 pagecomponent V11、绑定 customPage V5。
+- `backend`: `CustomerSignalRepositoryIntegrationTest,CustomerCrmProjectionServiceTest,CustomerWorkbenchServiceTest` 共 8 项通过；真实 PostgreSQL 验证同一 ID 两次 UPSERT 仅保留一行并更新最新内容。
+- `release`: dry-run、前后端构建、ACR 推送和 Git tag `2.4.12` 通过；运行版本 `2.4.12 / 4d00d417dcf3`。backend index `sha256:b60f4bead39d06831a846c3efbcf3368aba21e0b23d80fb3f6a7020cceede51c`，frontend index `sha256:ba02632b8b61f812ca9b2244b89f319f0b6b4e9e3986af7a32016be8f089649e`。
+- `backup/deploy`: `/opt/cici/backups/20260712-001641-before-2.4.12-task191-transaction` 四类文件非空；backend/frontend `2.4.12` healthy，状态服务保持 `2.3.4` healthy；健康 `UP`，Nginx 配置有效。
+- `production-browser`: 真实 CloudCC Web 登录并进入客户互动工作台，连续三次刷新均重新加载 iframe、真实客户数据、`CloudCC CRM 已连接` 和助理历史；未出现白屏或 `Unexpected server error`。截图：`output/playwright/task191-prod-cloudcc-refresh-stable.png`。
+- `production-logs`: 发布后目标请求未再出现 duplicate key、`TransactionRequiredException`、连接池超时或通用服务器错误；部署切换期间旧 SSE 会话产生的两条 `Session not found` 404 与本修复无关，16:23Z 后错误扫描为空。
 
 ## TASK-190 CloudCC 嵌入端会话恢复生产验收（2026-07-11）
 
