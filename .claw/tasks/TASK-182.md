@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-182
 title: 客户互动工作台生产闭环
-status: in_progress
+status: done
 owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
 assignment_path: .claw/assignments/TASK-182.yaml
-updated_at: 2026-07-10T17:36:00Z
+updated_at: 2026-07-11T00:45:00Z
 updated_by: MANAGER-001
 ---
 
@@ -19,14 +19,16 @@ updated_by: MANAGER-001
 
 ## 当前进展
 
-- FEAT-081 P0/P1/P2 代码闭环与本地验收已完成，当前生产基线仍为 `2.3.9`，待发布版本为 `2.3.10`。
+- FEAT-081 P0/P1/P2 已在生产 `2.4.1` 完成闭环，运行提交为 `146b6fde4ec2`。
 - CloudCC 当前用户权限范围内的 Account/Contact/Opportunity/Task/Event/Case/Contract 已成为运行时事实源；新客户推进与老客户经营使用服务端互斥队列、筛选、排序、分页和真实指标/信号。
 - 建议已具备编辑、忽略、采纳、确认、真实 Task/Opportunity 写入、权限范围回读、幂等审计、失败重试与用户反馈；V73/V74 本地迁移通过。
 - AI 助理已支持客户级历史恢复、结构化页面动作、语音回填、互动确认录入/去重和主管概览；AgentCiCi 与 CRM 嵌入共享用户和客户级上下文。
 - 技能 CLI 已完成真实标准目录、记录权限、临时 Task/Opportunity 创建/回读/删除、pagecomponent/customPage 和注入页核验；验证数据已清理。
-- 聚焦后端测试、前端 50 项测试、生产构建、Compose 配置及 1920x1000 页面功能/布局验收通过。下一步是提交推送、备份、发布和线上双入口验收。
-- `2.3.10` 首次线上真实数据验收发现老客户模式默认“续约90天”在无近期合同租户会返回空队列，并残留上一位新客户详情；热修已改为老客户默认展示全部可见客户、筛选仅在用户主动选择后生效，空队列立即清空详情，待发布 `2.3.11` 复验。
-- `2.3.11` 真实建议写回验收发现 repository `save` 后继续使用旧乐观锁版本，远端 Task 已创建但建议卡在 `APPLYING`。审计已保留远端 ID；修复增加 save 返回实体接续、成功写入后的本地状态保存隔离，以及 `APPLYING/FAILED audit + remote ID` 幂等回读恢复，确保不重复创建。
+- 聚焦后端测试、前端 54 项测试、生产构建、Compose 配置及桌面页面功能/布局验收通过。
+- `2.3.10` 完成真实 CRM 数据和写回主链；`2.3.11` 修复老客户默认空队列；`2.3.12` 修复 CRM 已成功但本地乐观锁失败的幂等恢复，未产生重复 Task。
+- 真实生产建议写回两条 CloudCC Task 均为 `APPLIED` 且回读一致：`bfa20267174CD4EL9Qjr`（准备增购方案）与 `bfa2026450C1935N4yKT`（补充 TCO 对比）。
+- AgentCiCi 与真实 CRM 嵌入入口均以同一 CloudCC 用户 `CCAdmin` 验证；新客户重点队列 2 位，老客户默认可见 48 位，CRM iframe 无平台侧栏、无外层滚动且权限范围一致。
+- `2.4.1` 修复语音发送后转写回调把文本写回输入框的竞态，并在用户消息、AI 回复及后续流式内容变化时自动滚到最新消息。真实 CRM iframe 验证发送后输入为空，长回复后消息区精确位于底部。
 
 ## 执行计划
 

@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-081
 title: 客户互动工作台
-status: in_implementation
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-171, TASK-182
 related_decisions: FEAT-067, FEAT-079, FEAT-080
-updated_at: 2026-07-10T16:56:00Z
+updated_at: 2026-07-11T00:45:00Z
 updated_by: MANAGER-001
 ---
 
@@ -359,7 +359,7 @@ CloudCC pagecomponent
 
 ## TASK-182 生产闭环实现
 
-更新时间：2026-07-11T00:16:00+08:00。当前代码已完成，生产发布与真实 CRM 嵌入验收待本任务后续步骤回写。
+更新时间：2026-07-11T08:45:00+08:00。代码、生产发布、真实 CRM 写回和双入口验收均已完成。
 
 ### CloudCC 标准能力真实审计
 
@@ -441,6 +441,16 @@ CloudCC pagecomponent
 - `cc-customization-expert-msapi` 2.1.276 复核：pagecomponent V10、customPage V4、组件 ID `6a503defe4b0a577cbba1f8a` 和安全依赖白名单通过；`verify injectionPage` 因 customPage 不携带版本号而对同一组件 ID误报 stale warning，已写入技能缺口复盘。
 - 仓库全量后端测试的工作台相关测试通过；全量套件仍有本任务外的既有失败，包括历史 SQL 测试夹具未提供 `skill_definition.source_type` 及模型厂商测试状态不一致，已如实记录，不作为本任务功能通过的替代证据。
 
+### 生产闭环结论
+
+- 生产版本：`2.4.1`，运行提交 `146b6fde4ec2`。`2.3.10` 完成生产主链，`2.3.11` 修复老客户默认队列，`2.3.12` 修复远端成功后的乐观锁与幂等恢复，`2.4.1` 完成 AI 对话输入清空和自动滚动体验。
+- 真实数据：同一 CloudCC 用户从 AgentCiCi 与 CRM 嵌入入口看到相同权限范围；新客户重点队列 2 位，老客户默认可见 48 位。
+- 真实写回：两条验收 Task 均由建议状态机确认后创建或恢复，状态 `APPLIED`、回读 `verified=true`，没有重复记录。
+- 真实嵌入：CRM iframe 仅包含工作台主体，无 AgentCiCi 平台侧栏和 AI 应用列表；页面无外层滚动，AI 对话内部滚动但不显示滚动条。
+- AI 对话：发送时先冻结待发送文本、失效并中止当前语音会话，再清空输入框；过期 ASR 回调不能重新写回。用户消息、AI 回复和后续流式内容每次变化后自动滚动到最新位置。生产实测长回复后 `scrollHeight=2020`、`clientHeight=560`、`scrollTop=1460`。
+- CloudCC 实施：注入页最终通过 `cc-customization-expert-msapi 2.1.276-msapi` 验证，customPage V4 与组件 ID `6a503defe4b0a577cbba1f8a` 一致，`issues=[]`。
+- 质量门：工作台聚焦后端测试、54 项前端测试、生产构建、迁移、生产备份、六服务健康、公开入口、真实 CRM iframe 和 OpenAPI 回读通过。全仓后端既有夹具失败保留为独立治理债务。
+
 ## 非目标
 
 - 不在首版实现移动端专属适配。
@@ -462,14 +472,14 @@ CloudCC pagecomponent
 - 底部麦克风接入服务端实时 ASR，识别文本先回填输入框，由用户确认后发送。
 - 建议“采纳”状态可以持久化到 AgentCiCi 数据库。
 
-当前仍未达到业务生产闭环的核心原因：
+以下内容是 2026-07-10 生产版本 `2.3.9` 的审计基线，保留用于说明 TASK-182 的立项依据；这些差距已由上文生产闭环实现消除：
 
 - 客户队列、互动、指标和建议的运行时事实源仍主要是 AgentCiCi 本地快照，不是持续同步的 CloudCC CRM 与外部互动事实。
 - 建议“落地 CRM”仍生成 `demo-crm-*` 模拟 ID，没有创建或更新真实 CloudCC 记录。
 - 智能体能真实回答，但返回的页面动作恒为 `NONE`，无法可靠切换客户、聚焦页签、生成草稿或发起确认流程。
 - 多数视觉控件没有对应后端能力，部分数字和业务判断由前端固定公式或固定文案生成。
 
-因此本特性状态从 `implemented` 调整为 `in_implementation`。当前版本适合产品演示和交互验证，不应宣称已经完成生产业务闭环。
+该历史审计当时将特性调整为 `in_implementation`。TASK-182 完成后，当前特性状态已恢复为 `implemented`，生产事实以上文 `2.4.1` 验收结论为准。
 
 ### 2. 产品目标与业务边界
 
@@ -808,6 +818,8 @@ AI 只能生成候选信号。需要用户确认或由确定性 CRM 规则验证
 | 无互动 | 提供粘贴记录、上传纪要或创建 CRM 活动的明确入口 |
 
 ### 12. 当前生产差距矩阵
+
+本矩阵是 `2.3.9` 审计快照，不代表 `2.4.1` 当前实现状态；逐项闭环结果见“TASK-182 生产闭环实现”和“生产闭环结论”。
 
 | 优先级 | 功能 | 当前代码事实 | 生产目标 | 判定 |
 |---|---|---|---|---|

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-10T14:18:00+08:00
+updated_at: 2026-07-11T00:45:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,18 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.1 TASK-182 客户互动工作台生产闭环与 AI 对话修复 on 2026-07-11:
+  - Git commit: `146b6fde4ec2` on `main`; annotated tag `2.4.1` was pushed to origin. Releases `2.3.10`/`2.3.11`/`2.3.12` respectively delivered the production data path, existing-customer queue hotfix and CRM write idempotent recovery before this final UX release.
+  - Scope: 发送客户助理消息时使当前语音会话失效并中止剩余 ASR 回调，保证输入框立即清空且不会被结束回调回填；用户消息、AI 回复和后续流式内容更新后自动滚到最新消息。
+  - Quality gate: TASK-182 identity/assignment checks, focused backend tests, 54 frontend tests, Vite build, release dry-run, real CRM iframe conversation check, CloudCC injection verification, production backup/deploy/health/log/public smoke passed.
+  - Backend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-backend:2.4.1`, index digest `sha256:1b5815b01200e0594521d82df0d25120463a911e324c3225c71cb4d3368c8e1d`, linux/amd64 manifest `sha256:cf69320faa46da1b158b58b64951b860f85b9da797d2c00f1a050586124bb311`.
+  - Frontend image: `op-registry.cloudcc.cn/cloudcc-ai-native/cici-frontend:2.4.1`, index digest `sha256:1205899908a43751b3da616c81bf9eb94ca3c0609cab0a75518faca03ba97906`, linux/amd64 manifest `sha256:c826e6792a6c9a7ecb79d207a62416c582316432d70b4ee15d9c0d0ccfbb2845`.
+  - Backup: `/opt/cici/backups/20260711-083920-before-2.4.1-task182-assistant-conversation`; env `1648` bytes, PostgreSQL `2557047` bytes, KB `196338` bytes, Qdrant `1574403` bytes.
+  - Deploy: backend/frontend were recreated on `2.4.1`; database, Redis, RabbitMQ and Qdrant remained healthy on running `2.3.4` containers, with local `2.4.1` aliases prepared for compose compatibility.
+  - Verification: six services healthy; `/actuator/health=UP`; `/system/version` returned `version=2.4.1`, `imageTag=2.4.1`, `gitCommit=146b6fde4ec2`; V73/V74 successful; `nginx -t` passed; post-warmup error scans empty.
+  - Public smoke: `https://x.agentcici.com/`, AgentCiCi workbench and CRM embed routes returned 200; HTTP redirected 301; production-IP resolved `https://onechat.agentcici.com/` returned 200.
+  - Real CRM browser: composer cleared immediately after send and remained empty after reply; message view was exactly at bottom after a long AI response. `cc-customization-expert-msapi verify injectionPage` passed with `issues=[]`.
 
 - 2.3.9 TASK-181 客户互动工作台客户列表排版修复 on 2026-07-10:
   - Git commit: `0c8f66e94d15` on `main`; annotated tag `2.3.9` was pushed to origin.

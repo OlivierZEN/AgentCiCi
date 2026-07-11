@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-10T17:06:00Z
+updated_at: 2026-07-11T00:45:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-10T17:06:00Z
+last_run_at: 2026-07-11T00:45:00Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,24 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-182 工作台范围的代码、迁移、聚焦测试、前端构建、浏览器和 CloudCC 真实契约验证通过；全仓后端既有失败单独记录）
-- 范围：TASK-182 客户互动工作台生产闭环本地验收与 CloudCC 真实对象/写入契约验证。
-- 命令：身份/assignment 门禁、聚焦 Maven 测试、Vitest、Vite build、Compose config、桌面浏览器、技能 CLI 标准目录/高代码/临时写入回滚、`git diff --check`。
+- 状态：`passed`（TASK-182 已在生产 `2.4.1` 完成代码、迁移、真实 CRM 写回、双入口、AI 对话和发布验收；全仓后端既有失败单独记录）
+- 范围：TASK-182 客户互动工作台生产闭环与 AI 客户助理语音发送/自动滚动热修复。
+- 命令：身份/assignment 门禁、聚焦 Maven 测试、Vitest、Vite build、Compose config、真实 CRM 浏览器、技能 CLI 注入页验证、发布 dry-run、ACR 发布、生产备份/部署/健康检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-182 生产发布与 AI 客户助理对话修复 (2026-07-11T08:45:00+08:00):
+  - `identity-gate` / `assignment-check`: TASK-182 前端、测试、规格和状态文件范围均为 **allowed**。
+  - `frontend-targeted-tests`: `CustomerWorkbenchApp.test.ts` 4 项 -> **success**，覆盖语音会话失效保护与滚动到底部。
+  - `frontend-full-tests`: Vitest 12 个文件、54 项 -> **success**；TypeScript/Vite production build -> **success**，仅保留既有大 chunk 警告。
+  - `backend-focused-tests`: `CustomerWorkbenchServiceTest,CustomerCrmProjectionServiceTest,CloudccOpenApiServiceTest` -> **success**；包含 `APPLYING + FAILED audit + remote_record_id` 不重复写入恢复测试。
+  - `crm-write-production`: 两条真实 Task 建议均为 `APPLIED`、`verified=true`，CloudCC 当前用户 OpenAPI 回读 ID、客户、主题、状态、截止日期一致；首次乐观锁失败记录通过 `2.3.12` 幂等恢复，没有重复创建。
+  - `dual-entry-production`: AgentCiCi 新客户重点队列 2 位；老客户默认 48 位；CRM iframe 无 AgentCiCi 平台 rail/AI 应用列表，CloudCC 已连接、用户 `CCAdmin`、无外层溢出，两个入口权限范围一致。
+  - `assistant-conversation-production`: 真实 CRM iframe 发送“请简要总结当前客户最近互动，并说明下一步建议”；发送后输入值为空、消息数 `1→2`；AI 回复后消息数 `3`、输入仍为空，消息区 `scrollHeight=2020`、`clientHeight=560`、`scrollTop=1460`、`atBottom=true`。
+  - `cloudcc-injection`: `cc-customization-expert-msapi 2.1.276-msapi` 执行 `verify injectionPage` -> **passed**，customPage V4、组件 ID `6a503defe4b0a577cbba1f8a`、`issues=[]`。
+  - `release`: dry-run 自动解析 `2.4.1`；前后端 linux/amd64 镜像与 Git tag 推送成功；生产备份四类文件非空；六个服务健康；`/actuator/health=UP`；`/system/version` 返回 `2.4.1 / 146b6fde4ec2`；V73/V74 成功；Nginx 配置通过；warmup 后前后端错误扫描为空；公开入口 200、HTTP 到 HTTPS 301。
+  - `known-baseline`: 全仓后端既有 SQL fixture `skill_definition.source_type`、模型厂商状态夹具等失败未由本任务引入；工作台聚焦后端测试和生产行为均通过。
 
 - TASK-182 客户互动工作台生产闭环本地验收 (2026-07-11T01:06:00+08:00):
   - `identity-gate` / `assignment-check`: `MANAGER-001` 对后端、前端、V73/V74、规格与状态文件的 TASK-182 写入范围均为 **allowed**。

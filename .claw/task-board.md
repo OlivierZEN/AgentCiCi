@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-10T17:06:00Z
+updated_at: 2026-07-11T00:45:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-182 - 客户互动工作台生产闭环
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-081-customer-interaction-workbench.md`
 - task_status_path: `.claw/tasks/TASK-182.md`
 - assignment_path: `.claw/assignments/TASK-182.yaml`
 - blocked_by: `none`
-- next_action: Commit and release `2.3.10`, then complete production AgentCiCi and real CRM embedded acceptance.
+- next_action: Done in production `2.4.1`; monitor real-user CRM writes, assistant latency and recommendation quality.
 
 ### TASK-181 - 客户互动工作台客户列表排版修复
 
