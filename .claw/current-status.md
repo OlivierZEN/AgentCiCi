@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T04:35:00Z
+updated_at: 2026-07-11T05:12:37Z
 updated_by: MANAGER-001
-phase: customer-assistant-expand-production
-active_task: "none"
-next_action: "Monitor production 2.4.4 assistant expansion usage and continue customer-workbench functional completion."
+phase: customer-workbench-control-chrome-cleanup
+active_task: "TASK-186"
+next_action: "Remove duplicate mode-switch and icon-button chrome, verify desktop states, and release production."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-186 is in progress: establish reusable frameless icon/mode controls, audit the full customer workbench, and remove inherited button chrome without changing behavior.
 - TASK-185 is done in production `2.4.4`: Pin behavior is removed; standard panel expand/restore transfers the queue width to the assistant while the center remains fixed. AgentCiCi measured `1214px` before/after; CloudCC iframe measured `1213px`, assistant `327px -> 653px`, and exact restoration.
 - TASK-185 evidence: 57 frontend tests/build, six-service health, public routes, AgentCiCi/CloudCC browser clicks, injection verification `issues=[]` and post-warmup logs passed. Release commit/tag/image/version is `f69d2191ed3b` / `2.4.4`.
 - TASK-184 is done in production `2.4.3`. Border-box sizing and a four-column adaptive filter grid keep the queue at `277/277` on 712px, `307/307` on 1920px and `335/335` in the real CloudCC iframe; all filter labels and customer rows fit without clipping.

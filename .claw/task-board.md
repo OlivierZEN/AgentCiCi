@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T04:35:00Z
+updated_at: 2026-07-11T05:12:37Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-186 - 产品控件去框化与客户互动工作台全页治理
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-094-customer-workbench-control-chrome-cleanup.md`
+- task_status_path: `.claw/tasks/TASK-186.md`
+- assignment_path: `.claw/assignments/TASK-186.yaml`
+- blocked_by: `none`
+- next_action: Establish reusable control primitives, audit the full workbench, verify interactive states, and release production.
 
 ### TASK-185 - 客户互动工作台 AI 助理展开模式
 

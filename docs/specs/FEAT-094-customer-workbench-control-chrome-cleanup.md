@@ -1,0 +1,44 @@
+---
+kind: feature-spec
+feature_id: FEAT-094
+title: 产品控件去框化与客户互动工作台全页治理
+status: in_implementation
+owner_role: frontend-agent
+task_ids: TASK-186
+related_decisions: FEAT-093
+related_issues: none
+updated_at: 2026-07-11T05:12:37Z
+updated_by: MANAGER-001
+---
+
+# FEAT-094 - 产品控件去框化与客户互动工作台全页治理
+
+## 背景
+
+客户互动工作台顶部模式切换同时存在外层分段容器边框和内层按钮外观，形成重复框线。提醒、AI 助理展开和关闭按钮虽然使用标准图标，但局部样式没有完整重置全局按钮的圆角、阴影、transform 和 appearance，导致图标下方出现不规则的按钮套层。该问题来自项目通用按钮基线与局部控件规则的职责冲突，不能只修截图中的三个按钮。
+
+## 设计
+
+- “新客户推进 / 老客户经营”保留双模式切换能力，移除外层容器的边框、底色、圆角和内边距。
+- 两个模式按钮继续承担清晰的选中/未选中状态；控件只保留一层视觉，不使用外层卡片、阴影或内阴影。
+- 客户提醒、AI 助理展开/恢复和关闭统一为裸图标按钮：默认无边框、无背景、无阴影、无 transform、无浏览器默认外观。
+- hover 与键盘 focus 仅使用克制的暖金浅底和前景色变化，不能生成第二层边框或阴影。
+- AI 助理展开态通过图标语义、`aria-pressed` 和前景色表达，不增加持续底板。
+- 不改变提醒弹层、模式切换、AI 助理展开/关闭和 CRM 刷新的业务行为。
+- 全页审查客户互动工作台中的图标工具、文本 tab、筛选、分页、主次操作和弹窗关闭按钮，确保每类控件只有一层视觉语义。
+- 在公共样式中新增可复用的产品裸图标按钮与无外框模式切换基础类；新页面必须使用公共基础类，不再依赖带渐变、阴影和位移的无范围全局 `button` 外观。
+- 将上述约束写入 `DESIGN.json` 与 `DESIGN.md`，作为以后新页面的实现和截图验收规则。
+
+## 根因
+
+- 模式切换外层 `.customer-workbench__mode-switch` 明确设置了 `border/background/padding`，其内部按钮又有独立圆角和选中底色，因此必然形成双层框。
+- 全局 `button` 规则带有圆角、阴影和 hover 位移；工作台的 `.customer-workbench__icon-button` 与 `.customer-workbench__assistant-tools button` 只覆盖了部分属性，未重置 `box-shadow/transform/appearance/outline/border-radius` 的完整状态矩阵。
+
+## 验收标准
+
+- 模式切换外层不存在可见边框、背景、阴影和额外内边距。
+- 默认、hover、focus、active、expanded 五种状态下，提醒、展开/恢复和关闭图标均只有单层点击热区，不出现不规则套框或阴影。
+- 客户互动工作台所有原生按钮的 computed style 审查中，除明确的弹层/浮层容器外不得出现按钮 `box-shadow` 或 hover `transform`。
+- 新增的公共裸图标按钮和无外框模式切换基础类具备完整 default/hover/focus/active/selected 状态重置，可被后续产品页面直接复用。
+- 图标按钮保持至少 28px 点击区，图标为 16px，`aria-label` 和 tooltip 保留。
+- AgentCiCi 主入口与 CloudCC CRM iframe 的桌面端截图均符合去框化效果，无新增外层滚动条、布局位移或控制重叠。

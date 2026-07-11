@@ -1,0 +1,57 @@
+task_id: TASK-186
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-11T05:12:37Z
+expires_at: none
+spec_path: docs/specs/FEAT-094-customer-workbench-control-chrome-cleanup.md
+task_status_path: .claw/tasks/TASK-186.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-094-customer-workbench-control-chrome-cleanup.md
+  - .claw/tasks/TASK-186.md
+  - .claw/assignments/TASK-186.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - DESIGN.md
+  - DESIGN.json
+  - frontend/src/styles.css
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - output/playwright/task186-local-control-chrome.png
+  - output/playwright/task186-prod-agent-control-chrome.png
+  - output/playwright/task186-prod-cloudcc-control-chrome.png
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-093-customer-assistant-expand-mode.md
+  - docs/specs/FEAT-094-customer-workbench-control-chrome-cleanup.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "移除客户互动工作台模式切换和顶部图标按钮的重复视觉套层，不改变业务行为。"
+  - "建立后续产品页面可复用的裸图标和无外框模式切换公共规则，并完成客户互动工作台全页控件审查。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-11T05:12:37Z; user explicitly requested control chrome cleanup."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; do not record credentials, bearer tokens, cookies, or reusable secrets."
