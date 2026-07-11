@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T08:33:33Z
+updated_at: 2026-07-11T14:59:42Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.9 TASK-190 CloudCC 嵌入端会话失效自动恢复 on 2026-07-11:
+  - Git commit/tag `052bf118fc1e` / `2.4.9`; added per-user single-flight Token acquisition, conditional rejected-token invalidation, HTTP-200 authentication-failure refresh/retry and explicit CloudCC gateway errors.
+  - Images: backend index `sha256:1c525991db9a36db2fa01cef89b986ae0d3445c7a6a60fe56b6494acde68d2c6`, amd64 `sha256:cd32e1b44d57b2e100075b3e5a63125f924d78cda8047211e78505e61ab8f558`; frontend index `sha256:3a4cb09facf34ac7364a7524e622794345375b3774bf2c1a7b25211bb8812865`, amd64 `sha256:6a3d841ac61ae7b60154e4dd8b308fa2c4ea7e2904897c2c0445c8b7ffe239cc`.
+  - Backup: `/opt/cici/backups/20260711-224930-before-2.4.9-task190-cloudcc-session`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend recreated on `2.4.9`; state services remained healthy on `2.3.4`. Six services healthy; health `UP`; version `2.4.9 / 052bf118fc1e`; Nginx valid; public routes `200`.
+  - Production authenticated API: six concurrent startup requests returned 200; `CCAdmin` integration returned `CONNECTED`, visible accounts `110`; existing-customer queue returned `48` total and `12` first-page rows; post-smoke errors were empty.
 
 - 2.4.8 TASK-189 客户互动多模态采集与确认归集 on 2026-07-11:
   - Git commit/tag `530ba01263b9` / `2.4.8`; added immutable multimodal batches, secured original assets, ASR/OCR/document extraction, structured AI analysis, recovery scheduling, human confirmation and the two-column capture/review UI.

@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T08:33:33Z
+updated_at: 2026-07-11T14:59:42Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T08:33:33Z
+last_run_at: 2026-07-11T14:59:42Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-190 CloudCC 嵌入端会话恢复生产验收（2026-07-11）
+
+- `root-cause`: 真实 CRM 嵌入页的 `CCAdmin` 调用 CloudCC Account 查询时，CloudCC 以 HTTP 200 返回 `result=false` 和“登录失败，请再次尝试重新登录”；旧实现只刷新 HTTP 401，且同一用户缓存未命中时可能并发申请 Token。
+- `backend-focused-tests`: `CloudccAccessTokenServiceTest,CloudccOpenApiServiceTest,CustomerWorkbenchServiceTest` -> **success**。8 路并发只触发 1 次 Token 请求；HTTP-200 登录失效刷新后重试成功；普通业务错误不误判。
+- `release`: dry-run、前后端构建、ACR 推送、镜像 inspect 和 Git tag `2.4.9` -> **success**；运行版本 `2.4.9 / 052bf118fc1e`。
+- `backup/deploy`: `/opt/cici/backups/20260711-224930-before-2.4.9-task190-cloudcc-session` 四类文件非空；backend/frontend 健康，四个状态服务保持 `2.3.4` 健康；Nginx 与公开三入口通过。
+- `production-concurrency`: 真实映射成员 `CCAdmin` 的 integration、queue、notifications、supervisor 六路并发请求全部 HTTP 200。
+- `production-readback`: integration `CONNECTED / ready=true / visibleAccounts=110`；老客户队列 `totalElements=48 / firstPage=12`；发布后未发现 CloudCC 登录失败、Token 获取失败或通用服务器错误。
+- `cloudcc-skill`: pagecomponent V10 与 customPage V4 的组件 ID 均为 `6a503defe4b0a577cbba1f8a`；`actualVersions=[]` 仍触发既有 stale warning，属于已记录技能误报警。
 
 ## TASK-189 客户互动多模态采集生产验收（2026-07-11）
 
