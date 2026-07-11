@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T03:40:00Z
+updated_at: 2026-07-11T03:53:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T03:40:00Z
+last_run_at: 2026-07-11T03:53:00Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,21 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-183 本地代码、测试与真实浏览器验收通过，待生产发布与 CloudCC 注入页复验）
+- 状态：`passed`（TASK-183 已在生产 `2.4.2` 完成代码、SSE、双入口浏览器与发布验收）
 - 范围：TASK-183 客户互动工作台界面规范化、标准图标与 AI 客户助理 SSE 流式回复。
-- 命令：身份/assignment 门禁、聚焦 Maven 测试与编译、Vitest、Vite build、`git diff --check`、本地真实登录桌面浏览器交互与控制台检查。
+- 命令：身份/assignment 门禁、聚焦 Maven 测试与编译、Vitest、Vite build、`git diff --check`、本地与生产双入口浏览器、技能 CLI、发布 dry-run、ACR 发布、备份、部署和健康检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-183 生产发布与双入口流式验收 (2026-07-11T11:53:00+08:00):
+  - `release`: dry-run 和正式发布 `2.4.2` -> **success**；提交 `49402ae8f3a0`，backend index digest `sha256:7bf22552e8aaac27b65c627f87bf1acb863b6f5b87d2f726e76f870d47346f62`，frontend index digest `sha256:3af8fc2b046c91bca9055de48ccb6163a7f735f590bdffaceb3c6408dca0b0ea`。
+  - `backup/deploy`: 备份 `/opt/cici/backups/20260711-114126-before-2.4.2-task183-streaming` 四类文件均非空；backend/frontend 更新到 `2.4.2`，六服务 healthy，`/system/version=2.4.2 / 49402ae8f3a0`，Nginx 配置通过。
+  - `public-sse`: 工作台账户 `12`；一次生产请求得到 workbench `1`、phase `6`、delta `40`、done `1`、error `0`，响应 `3537` bytes。
+  - `agent-browser`: 真实组织 `智能体平台演示环境`、CRM 已连接、版本 `2.4.2`；发送后 60ms 为“正在准备回答”，500ms 为“正在分析客户信息”，输入立即为空，最终 Markdown 已渲染、无原始标记，消息区距底部 `0`，页面 `1920x960` 无外层溢出。
+  - `crm-browser`: CloudCC `CCAdmin` 真实注入页 iframe 无 AgentCiCi 平台 AI 应用按钮；发送后 60ms 出现状态且输入为空，最终回答完成并距底部 `0`。截图：`output/playwright/task183-prod-cloudcc-embed-streaming-2.4.2.png`。
+  - `cloudcc-injection`: `cc-customization-expert-msapi verify injectionPage` -> **passed**，customPage V4、组件 id `6a503defe4b0a577cbba1f8a`、`issues=[]`。
+  - `post-warmup`: 最近 60 秒前后端 error/exception/failed 扫描为空；V72/V73/V74 均 `success=true`。浏览器换页时既有 `/ai/sessions/stream` 客户端断连曾记录 broken pipe，与本次 `/customer-workbench/assistant/stream` 正常完成链路无关。
 
 - TASK-183 客户互动工作台界面规范化与流式助理本地验收 (2026-07-11T11:40:00+08:00):
   - `frontend-full-tests`: Vitest 12 个文件、56 项 -> **success**；TypeScript/Vite production build -> **success**，仅保留既有大 chunk 警告。

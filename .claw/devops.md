@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T00:45:00Z
+updated_at: 2026-07-11T03:53:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.2 TASK-183 客户互动工作台界面规范化与流式助理 on 2026-07-11:
+  - Git commit: `49402ae8f3a0` on `main`; annotated tag `2.4.2` pushed. Scope: standard Lucide icons, single inline queue settings, explicit read-only demo status, removal of nonfunctional entries, SSE phases/deltas, safe Markdown and automatic latest-message following.
+  - Images: backend index `sha256:7bf22552e8aaac27b65c627f87bf1acb863b6f5b87d2f726e76f870d47346f62`; frontend index `sha256:3af8fc2b046c91bca9055de48ccb6163a7f735f590bdffaceb3c6408dca0b0ea`.
+  - Backup: `/opt/cici/backups/20260711-114126-before-2.4.2-task183-streaming`; env `1646`, PostgreSQL `2581668`, KB `196338`, Qdrant `1574403` bytes.
+  - Deploy: backend/frontend recreated on `2.4.2`; stateful services remained healthy on `2.3.4` with local `2.4.2` aliases. Six services healthy; health `UP`; version `2.4.2 / 49402ae8f3a0`; Nginx valid; V72-V74 successful; post-warmup error scan empty.
+  - Public and browser: x.agentcici.com root/workbench/embed routes `200` and HTTP redirect `301`; production SSE emitted 40 deltas without error. AgentCiCi and real CloudCC `CCAdmin` iframe both showed a processing state within 60ms, cleared input immediately, rendered Markdown and ended exactly at the latest message. Skill CLI injection check returned `issues=[]`.
+  - Evidence: `output/playwright/task183-prod-workbench-streaming-2.4.2.png`, `output/playwright/task183-prod-settings-streaming-2.4.2.png`, `output/playwright/task183-prod-cloudcc-embed-streaming-2.4.2.png`.
 
 - 2.4.1 TASK-182 客户互动工作台生产闭环与 AI 对话修复 on 2026-07-11:
   - Git commit: `146b6fde4ec2` on `main`; annotated tag `2.4.1` was pushed to origin. Releases `2.3.10`/`2.3.11`/`2.3.12` respectively delivered the production data path, existing-customer queue hotfix and CRM write idempotent recovery before this final UX release.

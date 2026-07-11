@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T03:40:00Z
+updated_at: 2026-07-11T03:53:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-183 - 客户互动工作台界面规范化与流式助理
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-092-customer-workbench-ui-streaming.md`
 - task_status_path: `.claw/tasks/TASK-183.md`
 - assignment_path: `.claw/assignments/TASK-183.yaml`
 - blocked_by: `none`
-- next_action: Local implementation and browser gates passed; commit, publish the next production release, and verify AgentCiCi plus CloudCC iframe.
+- next_action: Done in production `2.4.2`; monitor streaming completion, disconnect noise and assistant response quality.
 
 ### TASK-182 - 客户互动工作台生产闭环
 

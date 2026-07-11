@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-183
 title: 客户互动工作台界面规范化与流式助理
-status: in_progress
+status: done
 owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-092-customer-workbench-ui-streaming.md
 assignment_path: .claw/assignments/TASK-183.yaml
-updated_at: 2026-07-11T03:40:00Z
+updated_at: 2026-07-11T03:53:00Z
 updated_by: MANAGER-001
 ---
 
@@ -26,6 +26,8 @@ updated_by: MANAGER-001
 - 已完成 Lucide 标准图标、单一列表设置入口、明确演示数据状态和无效入口移除。
 - 本地浏览器发现并修复设置展开态网格行数错误；1920x960 复验无外层溢出，提醒、固定、关闭/恢复均可操作，控制台错误为 0。
 - 前端 56 项测试与生产构建、后端聚焦测试与编译、`git diff --check` 均通过。
+- 已发布生产 `2.4.2`，提交/标签/镜像/版本接口统一为 `49402ae8f3a0` / `2.4.2`。
+- 公网 SSE、AgentCiCi 真实浏览器、CloudCC `CCAdmin` iframe、技能 CLI 注入页、六服务健康、公开入口、迁移和静置日志均通过。
 
 ## 执行计划
 
@@ -33,7 +35,7 @@ updated_by: MANAGER-001
 2. 新增客户助理 SSE 适配和测试。
 3. 接入标准图标、队列设置、连接状态和 Markdown 流式 UI。
 4. 已完成前后端测试和本地桌面浏览器验收。
-5. 正在按运行手册发布生产版本并复验 AgentCiCi 与真实 CRM iframe。
+5. 已按运行手册发布生产版本并复验 AgentCiCi 与真实 CRM iframe。
 
 ## 验收门
 

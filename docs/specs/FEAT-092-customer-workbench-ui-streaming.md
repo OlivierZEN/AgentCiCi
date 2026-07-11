@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-092
 title: 客户互动工作台界面规范化与流式助理
-status: implemented_pending_production
+status: production
 owner_role: fullstack-agent
 task_ids: TASK-183
 related_decisions: FEAT-081
 related_issues: none
-updated_at: 2026-07-11T03:40:00Z
+updated_at: 2026-07-11T03:53:00Z
 updated_by: MANAGER-001
 ---
 
@@ -96,4 +96,5 @@ updated_by: MANAGER-001
 - 浏览器复测发现并修复设置区展开后队列从 6 行变为 7 行但网格未同步的缺陷；展开后客户列表继续占据剩余高度，不再被推到底部。
 - 本地 1920x960 真实登录验收：发送后 60ms 出现“正在准备回答”，500ms 显示“相关资料已就绪”；输入框立即清空，长回复结束时消息区距底部为 0；Markdown 已渲染且无原始标题/表格标记，页面无外层滚动，控制台错误为 0。
 - 前端 12 个测试文件、56 项测试和 Vite build 通过；后端聚焦测试与编译通过。
-- 待完成生产发布、AgentCiCi 线上入口和 CloudCC 真实注入页复验。
+- 已发布生产版本 `2.4.2`（提交 `49402ae8f3a0`）。公网 SSE 实测得到 workbench `1`、phase `6`、delta `40`、done `1`、error `0`。
+- AgentCiCi 与 CloudCC 真实 iframe 均验证发送后 60ms 出现处理状态、输入立即清空、最终距底部为 0；CRM iframe 无平台侧栏/AI 应用按钮，连接身份为 `CCAdmin`。技能 CLI 注入页校验 `issues=[]`。
