@@ -7,7 +7,7 @@ owner_role: frontend-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-094-customer-workbench-control-chrome-cleanup.md
 assignment_path: .claw/assignments/TASK-186.yaml
-updated_at: 2026-07-11T05:12:37Z
+updated_at: 2026-07-11T05:21:13Z
 updated_by: MANAGER-001
 ---
 
@@ -28,3 +28,6 @@ updated_by: MANAGER-001
 
 - 已确认模式切换为外层容器和内部按钮双层框。
 - 已确认图标按钮只做局部透明覆盖，未完整重置全局按钮 chrome。
+- 已新增公共裸图标按钮和无外框模式切换原语，工作台全页按钮已阻断旧全局阴影和上浮。
+- 已移除品牌标记、选中客户和活动 tab 的非必要内阴影；浮层与 modal 合理层级阴影保留。
+- 57 项前端测试、生产构建、JSON 解析和 `git diff --check` 通过；本地浏览器因 localhost 没有有效登录态停在登录页，生产浏览器验收将在发布后完成。

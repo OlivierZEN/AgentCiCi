@@ -17679,3 +17679,58 @@ td.skills-data-table__actions > * {
     display: none;
   }
 }
+
+/* Shared product control primitives. Keep native buttons from inheriting legacy raised chrome. */
+.cici-product-icon-button,
+.cici-product-icon-button:hover:not(:disabled),
+.cici-product-icon-button:focus,
+.cici-product-icon-button:focus-visible,
+.cici-product-icon-button:active,
+.cici-product-icon-button[aria-pressed="true"] {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #5f523f;
+  box-shadow: none;
+  transform: none;
+  appearance: none;
+}
+
+.cici-product-icon-button:hover:not(:disabled),
+.cici-product-icon-button:focus-visible {
+  background: #faf4e8;
+  color: #876223;
+}
+
+.cici-product-icon-button:focus-visible {
+  outline: 1px solid #b99652;
+  outline-offset: 1px;
+}
+
+.cici-product-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.cici-product-mode-switch > button,
+.cici-product-mode-switch > button:hover:not(:disabled),
+.cici-product-mode-switch > button:focus,
+.cici-product-mode-switch > button:focus-visible,
+.cici-product-mode-switch > button:active {
+  box-shadow: none;
+  transform: none;
+  appearance: none;
+}

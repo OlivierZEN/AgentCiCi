@@ -639,7 +639,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           <b>客户互动工作台</b>
         </div>
         <div className="customer-workbench__top-actions">
-          <div className="customer-workbench__mode-switch" aria-label="客户互动工作台模式">
+          <div className="customer-workbench__mode-switch cici-product-mode-switch" aria-label="客户互动工作台模式">
             <button type="button" className={workbenchMode === "new" ? "is-active" : ""} onClick={() => switchMode("new")}>新客户推进</button>
             <button type="button" className={workbenchMode === "existing" ? "is-active" : ""} onClick={() => switchMode("existing")}>老客户经营</button>
           </div>
@@ -647,7 +647,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             <span aria-hidden className={integration.ready ? "is-ready" : "is-error"} />{integration.label}<Icon name="refresh" />
           </button>
           <div className="customer-workbench__notification-wrap">
-            <button type="button" className="customer-workbench__icon-button" aria-label="客户提醒" title="客户提醒" onClick={() => setShowNotifications((value) => !value)}><Icon name="bell" /></button>
+            <button type="button" className="customer-workbench__icon-button cici-product-icon-button" aria-label="客户提醒" title="客户提醒" onClick={() => setShowNotifications((value) => !value)}><Icon name="bell" /></button>
             {notifications.length ? <b className="customer-workbench__notification-count">{notifications.length}</b> : null}
             {showNotifications ? (
               <div className="customer-workbench__notification-popover">
@@ -693,7 +693,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               <strong>{workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}</strong>
             </div>
             <div className="customer-workbench__queue-tools" aria-label="队列工具">
-              <button type="button" aria-label="列表设置" title="列表设置" aria-expanded={showQueueSettings} className={showQueueSettings ? "is-active" : ""} onClick={() => setShowQueueSettings((value) => !value)}><Icon name="sliders" /></button>
+              <button type="button" aria-label="列表设置" title="列表设置" aria-expanded={showQueueSettings} className={`cici-product-icon-button${showQueueSettings ? " is-active" : ""}`} onClick={() => setShowQueueSettings((value) => !value)}><Icon name="sliders" /></button>
             </div>
           </header>
           {showQueueSettings ? (
@@ -768,7 +768,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         <main className="customer-workbench__main">
           <header className="customer-workbench__head">
             <div>
-              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu" aria-label="复制客户工作台链接" title="复制客户工作台链接" onClick={async () => {
+              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu cici-product-icon-button" aria-label="复制客户工作台链接" title="复制客户工作台链接" onClick={async () => {
                 const link = new URL(window.location.href);
                 if (!embedded) link.searchParams.set("aiApp", "customer-workbench");
                 link.searchParams.set("accountId", activeAccountId);
@@ -848,10 +848,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               aria-label={assistantExpanded ? "恢复 AI 助理默认宽度" : "展开 AI 助理"}
               title={assistantExpanded ? "恢复默认宽度" : "展开 AI 助理"}
               aria-pressed={assistantExpanded}
-              className={assistantExpanded ? "is-active" : ""}
+              className={`cici-product-icon-button${assistantExpanded ? " is-active" : ""}`}
               onClick={() => setAssistantExpanded((value) => !value)}
             ><Icon name={assistantExpanded ? "panelRestore" : "panelExpand"} /></button>
-            <button type="button" aria-label="关闭 AI 助理" title="关闭" onClick={() => { setAssistantExpanded(false); setAssistantOpen(false); }}><Icon name="close" /></button>
+            <button type="button" className="cici-product-icon-button" aria-label="关闭 AI 助理" title="关闭" onClick={() => { setAssistantExpanded(false); setAssistantOpen(false); }}><Icon name="close" /></button>
           </div>
         </header>
         <div className="customer-workbench__chat" ref={assistantChatRef}>
@@ -1218,7 +1218,7 @@ function RecommendationEditor({ item, onClose, onSave }: {
       }}>
         <header>
           <h3 id="recommendation-editor-title">修改 CRM 落地建议</h3>
-          <button type="button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button>
+          <button type="button" className="cici-product-icon-button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button>
         </header>
         <label>建议标题<input value={title} onChange={(event) => setTitle(event.target.value)} required /></label>
         <label>建议依据<textarea value={rationale} onChange={(event) => setRationale(event.target.value)} required /></label>
@@ -1251,7 +1251,7 @@ function InteractionEditor({ onClose, onSave }: {
         event.preventDefault();
         void onSave({ sourceType, subject, content, occurredAt: new Date(occurredAt).toISOString() });
       }}>
-        <header><h3 id="interaction-editor-title">整理互动记录</h3><button type="button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button></header>
+        <header><h3 id="interaction-editor-title">整理互动记录</h3><button type="button" className="cici-product-icon-button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button></header>
         <label>互动来源<select value={sourceType} onChange={(event) => setSourceType(event.target.value as typeof sourceType)}>
           <option value="WECHAT">微信</option><option value="PHONE">电话</option><option value="MEETING">会议</option><option value="CUSTOMER_FEEDBACK">客户反馈</option>
         </select></label>

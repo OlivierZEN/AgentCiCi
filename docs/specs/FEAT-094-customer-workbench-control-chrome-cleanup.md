@@ -7,7 +7,7 @@ owner_role: frontend-agent
 task_ids: TASK-186
 related_decisions: FEAT-093
 related_issues: none
-updated_at: 2026-07-11T05:12:37Z
+updated_at: 2026-07-11T05:21:13Z
 updated_by: MANAGER-001
 ---
 
@@ -42,3 +42,10 @@ updated_by: MANAGER-001
 - 新增的公共裸图标按钮和无外框模式切换基础类具备完整 default/hover/focus/active/selected 状态重置，可被后续产品页面直接复用。
 - 图标按钮保持至少 28px 点击区，图标为 16px，`aria-label` 和 tooltip 保留。
 - AgentCiCi 主入口与 CloudCC CRM iframe 的桌面端截图均符合去框化效果，无新增外层滚动条、布局位移或控制重叠。
+
+## 实现进展
+
+- 公共 `cici-product-icon-button` 和 `cici-product-mode-switch` 已建立，并写入设计事实源。
+- 客户互动工作台提醒、队列设置、工作台链接、助理展开/关闭和编辑弹窗关闭控件已接入公共原语。
+- 工作台全页原生按钮已阻断旧全局 `box-shadow` 与 `translateY`；非浮层区域的剩余按钮阴影已清零。
+- 57 项前端测试、Vite 生产构建、JSON 解析与 diff 检查通过；待生产发布和双入口截图验收。

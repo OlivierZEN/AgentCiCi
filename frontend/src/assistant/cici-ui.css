@@ -13425,6 +13425,16 @@
   overflow: hidden;
 }
 
+/* Workbench-wide guard against the legacy global raised-button baseline. */
+.customer-workbench button,
+.customer-workbench button:hover:not(:disabled),
+.customer-workbench button:focus,
+.customer-workbench button:focus-visible,
+.customer-workbench button:active {
+  box-shadow: none;
+  transform: none;
+}
+
 .cici-ai-apps__main--workbench .customer-workbench {
   border-top: 0;
   border-radius: 16px;
@@ -13498,22 +13508,15 @@
 }
 
 .customer-workbench__mode-switch {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 34px;
-  border: 1px solid #ded2bb;
-  border-radius: 7px;
-  background: #fffdf8;
-  padding: 3px;
+  gap: 6px;
 }
 
 .customer-workbench__mode-switch button {
-  height: 26px;
+  height: 32px;
   min-width: 82px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
+  border: 1px solid #ded2bb;
+  border-radius: 6px;
+  background: #fffdf8;
   color: #5f523f;
   padding: 0 10px;
   font-size: 12px;
@@ -13521,6 +13524,7 @@
 }
 
 .customer-workbench__mode-switch button.is-active {
+  border-color: #bd842a;
   background: #bd842a;
   color: #fffdf8;
 }
@@ -13533,7 +13537,6 @@
   height: 26px;
   border-radius: 6px;
   background: linear-gradient(135deg, #f4dfb6, #d5a646);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
 }
 
 .customer-workbench__brand-mark::before,
@@ -13580,12 +13583,33 @@
   padding: 0 10px;
 }
 
+.customer-workbench .cici-product-icon-button,
+.customer-workbench .cici-product-icon-button:hover:not(:disabled),
+.customer-workbench .cici-product-icon-button:focus,
+.customer-workbench .cici-product-icon-button:focus-visible,
+.customer-workbench .cici-product-icon-button:active,
+.customer-workbench .cici-product-icon-button[aria-pressed="true"] {
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+.customer-workbench .cici-product-icon-button:hover:not(:disabled),
+.customer-workbench .cici-product-icon-button:focus-visible {
+  background: #faf4e8;
+  color: #876223;
+}
+
+.customer-workbench .cici-product-icon-button:focus-visible {
+  outline: 1px solid #b99652;
+  outline-offset: 1px;
+}
+
 .customer-workbench__top-actions .customer-workbench__icon-button {
   position: relative;
-  width: 32px;
-  padding: 0;
-  border-color: transparent;
-  background: transparent;
 }
 
 .customer-workbench__crm-state {
@@ -13733,13 +13757,9 @@
 
 .customer-workbench__queue-tools button,
 .customer-workbench__assistant-tools button {
-  display: grid;
-  place-items: center;
   width: 28px;
   height: 28px;
-  border: 0;
-  background: transparent;
-  color: #5f523f;
+  min-width: 28px;
 }
 
 .customer-workbench__queue-tools button:hover,
@@ -13866,7 +13886,6 @@
 .customer-workbench-account.is-active {
   border: 1px solid #d5a646;
   background: #fff8e8;
-  box-shadow: inset 0 0 0 1px rgba(213, 166, 70, .08);
   padding: 9px 8px;
 }
 
@@ -14249,7 +14268,8 @@
 
 .customer-workbench__tabs button.is-active {
   color: #876223;
-  box-shadow: inset 0 -2px 0 #c7963c;
+  border-bottom: 2px solid #c7963c;
+  padding-bottom: 7px;
 }
 
 .customer-workbench__content {
@@ -15356,7 +15376,7 @@
 
 .customer-workbench__assistant-tools button.is-active {
   color: #876223;
-  background: #faf4e8;
+  background: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {
