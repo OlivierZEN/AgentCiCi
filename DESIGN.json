@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-11T05:12:37Z",
+  "generatedAt": "2026-07-11T05:42:34Z",
   "title": "Design System: AgentCiCi Product Surfaces",
   "extensions": {
     "colorMeta": {
@@ -149,6 +149,14 @@
         "Bare icon buttons may use one subtle warm-ivory hover/focus background and a restrained keyboard-only outline; they must never render a second nested frame or persistent selected background.",
         "Mode switches must reuse the shared cici-product-mode-switch primitive. The container stays transparent and frameless; only the direct mode buttons may carry one intentional state layer.",
         "Desktop screenshot review for new product pages must inspect computed styles for toolbar and icon buttons and reject inherited box-shadow or hover translateY."
+      ],
+      "shellNavigation": [
+        "Primary rail controls must keep identical width, height, padding, border width, and bounding box in default, hover, focus, active, and selected states.",
+        "Primary rail controls must explicitly reset inherited button transform and box-shadow in every state; hover scale, translate, raised treatment, and transition:all are prohibited.",
+        "An application launcher control opens or closes the application picker without replacing the current workspace canvas.",
+        "The workspace canvas changes only after the user selects a concrete application from the picker; closing the picker must preserve the underlying workspace.",
+        "Product application canvases own their internal padding. The shell must not add a second decorative gutter between the primary rail and the application canvas.",
+        "Application picker close controls must reuse cici-product-icon-button and a standard Lucide icon, with no text-glyph close button or inherited shadow layer."
       ],
       "modals": [
         "Any popup, chooser, editor, confirmation, import preview, or publish dialog is a modal window by default unless a feature spec explicitly requires a popover, drawer, toast, or inline disclosure.",

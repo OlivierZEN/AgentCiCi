@@ -7,7 +7,7 @@ owner_role: frontend-agent
 task_ids: TASK-187
 related_decisions: FEAT-090, FEAT-094
 related_issues: none
-updated_at: 2026-07-11T05:38:44Z
+updated_at: 2026-07-11T05:42:34Z
 updated_by: MANAGER-001
 ---
 
@@ -43,3 +43,9 @@ AI 应用主区域与一级侧栏之间存在额外画布间距；侧栏图标�
 - 两个概览筛选按钮的箭头图标与文字中心线对齐，无文本字符 `⌄`。
 - 1920x960 桌面端无 document/body 外层滚动和控件重叠。
 
+## 实现进展
+
+- AI 应用一级入口已改为纯菜单开关；具体应用项负责设置活动应用并切换 `workspaceTab`。
+- AI 应用画布外层 padding 已归零；一级侧栏按钮全状态清除 transform/box-shadow，头像 hover scale 已移除。
+- 菜单关闭使用 Lucide `X` 与公共裸图标原语；工作台概览筛选使用 `ChevronDown` 和中心对齐布局。
+- 57 项前端测试、Vite 生产构建、DESIGN.json 解析与 diff 检查通过；待生产发布和真实浏览器验收。

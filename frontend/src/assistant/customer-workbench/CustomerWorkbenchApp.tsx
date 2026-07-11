@@ -6,6 +6,7 @@ import {
   Bot,
   CalendarDays,
   Check,
+  ChevronDown,
   ClipboardCheck,
   ClipboardList,
   ExternalLink,
@@ -108,6 +109,7 @@ type IconName =
   | "bot"
   | "calendar"
   | "check"
+  | "chevronDown"
   | "clipboard"
   | "close"
   | "document"
@@ -138,6 +140,7 @@ const workbenchIcons: Record<IconName, LucideIcon> = {
   bot: Bot,
   calendar: CalendarDays,
   check: Check,
+  chevronDown: ChevronDown,
   clipboard: ClipboardCheck,
   close: X,
   document: FileText,
@@ -951,7 +954,7 @@ function Overview({
         <section className="customer-workbench-panel customer-workbench-panel--timeline">
           <header>
             <h3>{mode === "new" ? "新客户互动时间线" : "老客户互动时间线"}</h3>
-            <button type="button" onClick={() => onOpenTab("timeline")}>全部类型⌄</button>
+            <button type="button" className="customer-workbench__panel-filter" onClick={() => onOpenTab("timeline")}><span>全部类型</span><Icon name="chevronDown" /></button>
           </header>
           <TimelineCards detail={detail} compact />
           <button type="button" className="customer-workbench__more" onClick={() => onOpenTab("timeline")}>查看全部互动记录 ›</button>
@@ -959,7 +962,7 @@ function Overview({
         <section className="customer-workbench-panel customer-workbench-panel--recommendations">
           <header>
             <h3>{mode === "new" ? "CRM 落地建议" : "老客户经营动作"}（{detail?.recommendations?.length ?? 0}）</h3>
-            <button type="button" onClick={() => onOpenTab("recommendations")}>{mode === "new" ? "全部建议" : "按影响排序"}⌄</button>
+            <button type="button" className="customer-workbench__panel-filter" onClick={() => onOpenTab("recommendations")}><span>{mode === "new" ? "全部建议" : "按影响排序"}</span><Icon name="chevronDown" /></button>
           </header>
           <Recommendations detail={detail} onAction={onAction} onFeedback={onFeedback} onNotice={onNotice} compact />
           <button type="button" className="customer-workbench__more" onClick={() => onOpenTab("recommendations")}>{mode === "new" ? "查看全部建议" : "查看全部经营动作"} ›</button>

@@ -1,4 +1,5 @@
 import { FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { X } from "lucide-react";
 import {
   streamAiChat,
   streamSessionUpdates,
@@ -3796,18 +3797,11 @@ export default function AssistantApp() {
             </svg>
           </button>
           <button
-            className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "aiApps" ? " is-active" : ""}`}
-            onClick={() => {
-              if (workspaceTab === "aiApps") {
-                setAiAppsMenuOpen((open) => !open);
-                return;
-              }
-              setWorkspaceTab("aiApps");
-              setAiAppsMenuOpen(true);
-            }}
+            className={`cici-rail__nav-item cici-rail__menu-btn${workspaceTab === "aiApps" || aiAppsMenuOpen ? " is-active" : ""}`}
+            onClick={() => setAiAppsMenuOpen((open) => !open)}
             data-menu-label="AI应用"
             aria-label="AI应用"
-            aria-expanded={workspaceTab === "aiApps" ? aiAppsMenuOpen : undefined}
+            aria-expanded={aiAppsMenuOpen}
           >
             <svg viewBox="0 0 24 24">
               <rect x="4" y="4" width="6" height="6" rx="1.5" />
@@ -3910,11 +3904,11 @@ export default function AssistantApp() {
           </div>
         </div>
       ) : null}
-      {workspaceTab === "aiApps" && aiAppsMenuOpen ? (
+      {aiAppsMenuOpen ? (
         <aside className="cici-ai-apps-flyout" aria-label="AI应用列表">
           <header className="cici-ai-apps-flyout__head">
             <span>AI应用</span>
-            <button type="button" onClick={() => setAiAppsMenuOpen(false)} aria-label="收起 AI 应用列表">×</button>
+            <button type="button" className="cici-ai-apps-flyout__close cici-product-icon-button" onClick={() => setAiAppsMenuOpen(false)} aria-label="收起 AI 应用列表"><X aria-hidden /></button>
           </header>
           <div className="cici-ai-apps-flyout__list">
             {AI_APPLICATIONS.map((app) => {
@@ -3926,6 +3920,7 @@ export default function AssistantApp() {
                   className={`cici-ai-apps-flyout__item${isActive ? " is-active" : ""}`}
                   onClick={() => {
                     setActiveAiAppCode(app.code);
+                    setWorkspaceTab("aiApps");
                     setAiAppsMenuOpen(false);
                   }}
                   aria-current={isActive ? "page" : undefined}
