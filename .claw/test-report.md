@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T00:45:00Z
+updated_at: 2026-07-11T03:40:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T00:45:00Z
+last_run_at: 2026-07-11T03:40:00Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,20 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-182 已在生产 `2.4.1` 完成代码、迁移、真实 CRM 写回、双入口、AI 对话和发布验收；全仓后端既有失败单独记录）
-- 范围：TASK-182 客户互动工作台生产闭环与 AI 客户助理语音发送/自动滚动热修复。
-- 命令：身份/assignment 门禁、聚焦 Maven 测试、Vitest、Vite build、Compose config、真实 CRM 浏览器、技能 CLI 注入页验证、发布 dry-run、ACR 发布、生产备份/部署/健康检查。
+- 状态：`passed`（TASK-183 本地代码、测试与真实浏览器验收通过，待生产发布与 CloudCC 注入页复验）
+- 范围：TASK-183 客户互动工作台界面规范化、标准图标与 AI 客户助理 SSE 流式回复。
+- 命令：身份/assignment 门禁、聚焦 Maven 测试与编译、Vitest、Vite build、`git diff --check`、本地真实登录桌面浏览器交互与控制台检查。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-183 客户互动工作台界面规范化与流式助理本地验收 (2026-07-11T11:40:00+08:00):
+  - `frontend-full-tests`: Vitest 12 个文件、56 项 -> **success**；TypeScript/Vite production build -> **success**，仅保留既有大 chunk 警告。
+  - `backend-focused-tests`: `CustomerWorkbenchServiceTest,CustomerCrmProjectionServiceTest,CloudccOpenApiServiceTest` -> **success**；`mvn -DskipTests compile` -> **success**。
+  - `browser-layout`: 真实本地登录、1920x960；document `scrollWidth=clientWidth=1920`、`scrollHeight=clientHeight=960`；设置展开态客户列表高度 `564px`，不再被错误网格行推到底部；控制台 error `0`。
+  - `browser-controls`: 未连接状态显示“CRM 未连接 · 使用演示数据”和只读/不可写回说明；“打开 CRM 客户主页”不存在；通知弹层、固定/取消固定、关闭/重新打开助理均通过真实点击。
+  - `browser-streaming`: 发送后 60ms 新增助理消息并显示“正在准备回答”，500ms 显示“相关资料已就绪”；输入值立即为空；最终回答使用 `.bubble-markdown` 渲染，无原始 `#`/表格分隔符；消息区 `scrollHeight=1823`、`clientHeight=616`、`scrollTop=1207`，距底部 `0`。
+  - `static`: `git diff --check` -> **success**；工作台源码不含手写 SVG 路径或 CSS 伪元素铃铛/问号。
 
 - TASK-182 生产发布与 AI 客户助理对话修复 (2026-07-11T08:45:00+08:00):
   - `identity-gate` / `assignment-check`: TASK-182 前端、测试、规格和状态文件范围均为 **allowed**。

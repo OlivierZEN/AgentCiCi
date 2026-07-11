@@ -112,6 +112,39 @@ export type CustomerAssistantResult = {
 
 export type CustomerAssistantHistoryMessage = { role: "user" | "assistant" | string; content: string; createdAt: string };
 
+export type CustomerAssistantStreamEvent =
+  | { type: "workbench"; result: CustomerAssistantResult }
+  | { type: "phase"; phase: string; modelName?: string }
+  | { type: "tool_call"; toolName: string }
+  | { type: "delta"; text: string }
+  | { type: "done"; runId?: string }
+  | { type: "error"; message: string; runId?: string };
+
+export function parseCustomerAssistantStreamEvent(eventName: string, data: string): CustomerAssistantStreamEvent | null {
+  let payload: Record<string, unknown> = {};
+  try {
+    payload = data ? JSON.parse(data) as Record<string, unknown> : {};
+  } catch {
+    if (eventName === "error") return { type: "error", message: data || "流式回复失败" };
+    return null;
+  }
+  if (eventName === "workbench") return { type: "workbench", result: payload as CustomerAssistantResult };
+  if (eventName === "phase" && typeof payload.phase === "string") {
+    return { type: "phase", phase: payload.phase, modelName: typeof payload.modelName === "string" ? payload.modelName : undefined };
+  }
+  if (eventName === "tool_call" && typeof payload.toolName === "string") return { type: "tool_call", toolName: payload.toolName };
+  if (eventName === "delta" && typeof payload.text === "string") return { type: "delta", text: payload.text };
+  if (eventName === "done") return { type: "done", runId: typeof payload.runId === "string" ? payload.runId : undefined };
+  if (eventName === "error") {
+    return {
+      type: "error",
+      message: typeof payload.message === "string" ? payload.message : "流式回复失败",
+      runId: typeof payload.runId === "string" ? payload.runId : undefined,
+    };
+  }
+  return null;
+}
+
 async function requestJson<T>(token: string, input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, {
     ...init,
@@ -207,6 +240,52 @@ export function askCustomerWorkbenchAssistant(token: string, payload: { accountI
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function streamCustomerWorkbenchAssistant(
+  token: string,
+  payload: { accountId?: string; message: string },
+  onEvent: (event: CustomerAssistantStreamEvent) => void | Promise<void>,
+  signal?: AbortSignal,
+) {
+  const response = await fetch("/customer-workbench/assistant/stream", {
+    method: "POST",
+    headers: {
+      Accept: "text/event-stream",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+  if (!response.ok) {
+    const raw = await response.text();
+    throw new Error(raw || `请求失败：${response.status}`);
+  }
+  if (!response.body) throw new Error("流式响应为空");
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+    let boundary = buffer.indexOf("\n\n");
+    while (boundary >= 0) {
+      const block = buffer.slice(0, boundary);
+      buffer = buffer.slice(boundary + 2);
+      let eventName = "message";
+      const dataLines: string[] = [];
+      block.split("\n").forEach((line) => {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+      });
+      const event = parseCustomerAssistantStreamEvent(eventName, dataLines.join("\n"));
+      if (event) await onEvent(event);
+      boundary = buffer.indexOf("\n\n");
+    }
+  }
 }
 
 export function setCustomerFollowed(token: string, accountId: string, followed: boolean) {

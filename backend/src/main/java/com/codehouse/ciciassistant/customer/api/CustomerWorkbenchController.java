@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.customer.service.CustomerCrmProjectionService
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.util.List;
 import java.util.Map;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/customer-workbench")
@@ -112,6 +114,11 @@ public class CustomerWorkbenchController {
     @PostMapping("/assistant")
     public ApiResponse<Map<String, Object>> assistant(@RequestBody(required = false) AssistantCommand command) {
         return ApiResponse.ok(service.assistant(orgId(), userId(), command));
+    }
+
+    @PostMapping(value = "/assistant/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter assistantStream(@RequestBody(required = false) AssistantCommand command) {
+        return service.assistantStream(orgId(), userId(), command);
     }
 
     @GetMapping("/integration-status")

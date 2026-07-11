@@ -1,9 +1,41 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRightLeft,
+  Bell,
+  Bot,
+  CalendarDays,
+  Check,
+  ClipboardCheck,
+  ClipboardList,
+  ExternalLink,
+  FileText,
+  Inbox,
+  Info,
+  Keyboard,
+  Link2,
+  List as ListIcon,
+  LoaderCircle,
+  MessageSquare,
+  MessageCircle,
+  Mic,
+  Pencil,
+  Phone,
+  Pin,
+  PinOff,
+  RefreshCw,
+  Search,
+  Send,
+  Settings2,
+  Users,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import { useAsrVoiceInput } from "../../shared/useAsrVoiceInput";
+import ChatMarkdown from "../../components/ChatMarkdown";
 import {
   acceptCustomerRecommendation,
   applyCustomerRecommendation,
-  askCustomerWorkbenchAssistant,
   confirmCustomerRecommendation,
   dismissCustomerRecommendation,
   getCustomerWorkbenchIntegrationStatus,
@@ -15,6 +47,7 @@ import {
   setCustomerFollowed,
   saveCustomerInteraction,
   submitCustomerRecommendationFeedback,
+  streamCustomerWorkbenchAssistant,
   updateCustomerRecommendation,
   type CustomerAssistantResult,
   type CustomerRecommendation,
@@ -23,9 +56,12 @@ import {
 } from "./customerWorkbenchApi";
 
 type ChatMessage = {
+  id: string;
   role: "user" | "assistant";
   text: string;
   time: string;
+  busy?: boolean;
+  phase?: string;
 };
 
 type WorkbenchMode = "new" | "existing";
@@ -49,8 +85,22 @@ export function scrollConversationToLatest(element: Pick<HTMLElement, "scrollTop
   if (element) element.scrollTop = element.scrollHeight;
 }
 
+export function assistantPhaseLabel(phase: string): string {
+  return ({
+    connecting: "正在连接智能助手...",
+    context_ready: "客户上下文已就绪...",
+    run: "正在准备回答...",
+    model: "正在分析客户信息...",
+    retrieving: "正在检索相关资料...",
+    rag_done: "相关资料已就绪...",
+    generating: "正在生成回复...",
+    tool_call: "正在查询业务数据...",
+  } as Record<string, string>)[phase] ?? "正在处理...";
+}
+
 type IconName =
   | "alert"
+  | "bell"
   | "bot"
   | "calendar"
   | "check"
@@ -62,18 +112,52 @@ type IconName =
   | "inbox"
   | "info"
   | "keyboard"
+  | "link"
   | "list"
   | "message"
   | "mic"
   | "people"
   | "phone"
   | "pin"
+  | "pinOff"
+  | "refresh"
   | "search"
   | "send"
   | "sliders"
   | "swap"
   | "task"
   | "wechat";
+
+const workbenchIcons: Record<IconName, LucideIcon> = {
+  alert: AlertTriangle,
+  bell: Bell,
+  bot: Bot,
+  calendar: CalendarDays,
+  check: Check,
+  clipboard: ClipboardCheck,
+  close: X,
+  document: FileText,
+  edit: Pencil,
+  external: ExternalLink,
+  inbox: Inbox,
+  info: Info,
+  keyboard: Keyboard,
+  link: Link2,
+  list: ListIcon,
+  message: MessageSquare,
+  mic: Mic,
+  people: Users,
+  phone: Phone,
+  pin: Pin,
+  pinOff: PinOff,
+  refresh: RefreshCw,
+  search: Search,
+  send: Send,
+  sliders: Settings2,
+  swap: ArrowRightLeft,
+  task: ClipboardList,
+  wechat: MessageCircle,
+};
 
 const segmentLabels: Record<string, string> = {
   NEW: "新客户",
@@ -219,61 +303,8 @@ function evidenceLabel(value: unknown) {
 }
 
 function Icon({ name, className = "" }: { name: IconName; className?: string }) {
-  const baseClass = `customer-workbench-icon${className ? ` ${className}` : ""}`;
-
-  // Icon path data is sourced from Bootstrap Icons v1.13.1 (MIT).
-  switch (name) {
-    case "alert":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2" /></svg>;
-    case "bot":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M6 12.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1h-3a.5.5 0 0 1-.5-.5M3 8.062C3 6.76 4.235 5.765 5.53 5.886a26.6 26.6 0 0 0 4.94 0C11.765 5.765 13 6.76 13 8.062v1.157a.93.93 0 0 1-.765.935c-.845.147-2.34.346-4.235.346s-3.39-.2-4.235-.346A.93.93 0 0 1 3 9.219zm4.542-.827a.25.25 0 0 0-.217.068l-.92.9a25 25 0 0 1-1.871-.183.25.25 0 0 0-.068.495c.55.076 1.232.149 2.02.193a.25.25 0 0 0 .189-.071l.754-.736.847 1.71a.25.25 0 0 0 .404.062l.932-.97a25 25 0 0 0 1.922-.188.25.25 0 0 0-.068-.495c-.538.074-1.207.145-1.98.189a.25.25 0 0 0-.166.076l-.754.785-.842-1.7a.25.25 0 0 0-.182-.135" /><path fill="currentColor" d="M8.5 1.866a1 1 0 1 0-1 0V3h-2A4.5 4.5 0 0 0 1 7.5V8a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1v1a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-1a1 1 0 0 0 1-1V9a1 1 0 0 0-1-1v-.5A4.5 4.5 0 0 0 10.5 3h-2zM14 7.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.5A3.5 3.5 0 0 1 5.5 4h5A3.5 3.5 0 0 1 14 7.5" /></svg>;
-    case "calendar":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M4 .5a.5.5 0 0 0-1 0V1H2a2 2 0 0 0-2 2v1h16V3a2 2 0 0 0-2-2h-1V.5a.5.5 0 0 0-1 0V1H4zM16 14V5H0v9a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2m-5.146-5.146-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708" /></svg>;
-    case "check":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z" /></svg>;
-    case "clipboard":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5z" /><path fill="currentColor" d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708" /></svg>;
-    case "close":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8z" /></svg>;
-    case "document":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M9.293 0H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V4.707A1 1 0 0 0 13.707 4L10 .293A1 1 0 0 0 9.293 0M9.5 3.5v-2l3 3h-2a1 1 0 0 1-1-1M4.5 9a.5.5 0 0 1 0-1h7a.5.5 0 0 1 0 1zM4 10.5a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5m.5 2.5a.5.5 0 0 1 0-1h4a.5.5 0 0 1 0 1z" /></svg>;
-    case "edit":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325" /></svg>;
-    case "external":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" fillRule="evenodd" d="M8.636 3.5a.5.5 0 0 0-.5-.5H1.5A1.5 1.5 0 0 0 0 4.5v10A1.5 1.5 0 0 0 1.5 16h10a1.5 1.5 0 0 0 1.5-1.5V7.864a.5.5 0 0 0-1 0V14.5a.5.5 0 0 1-.5.5h-10a.5.5 0 0 1-.5-.5v-10a.5.5 0 0 1 .5-.5h6.636a.5.5 0 0 0 .5-.5" /><path fill="currentColor" fillRule="evenodd" d="M16 .5a.5.5 0 0 0-.5-.5h-5a.5.5 0 0 0 0 1h3.793L6.146 9.146a.5.5 0 1 0 .708.708L15 1.707V5.5a.5.5 0 0 0 1 0z" /></svg>;
-    case "inbox":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M4.98 4a.5.5 0 0 0-.39.188L1.54 8H6a.5.5 0 0 1 .5.5 1.5 1.5 0 1 0 3 0A.5.5 0 0 1 10 8h4.46l-3.05-3.812A.5.5 0 0 0 11.02 4zm9.954 5H10.45a2.5 2.5 0 0 1-4.9 0H1.066l.32 2.562a.5.5 0 0 0 .497.438h12.234a.5.5 0 0 0 .496-.438zM3.809 3.563A1.5 1.5 0 0 1 4.981 3h6.038a1.5 1.5 0 0 1 1.172.563l3.7 4.625a.5.5 0 0 1 .105.374l-.39 3.124A1.5 1.5 0 0 1 14.117 13H1.883a1.5 1.5 0 0 1-1.489-1.314l-.39-3.124a.5.5 0 0 1 .106-.374z" /></svg>;
-    case "info":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16" /><path fill="currentColor" d="m8.93 6.588-2.29.287-.082.38.45.083c.294.07.352.176.288.469l-.738 3.468c-.194.897.105 1.319.808 1.319.545 0 1.178-.252 1.465-.598l.088-.416c-.2.176-.492.246-.686.246-.275 0-.375-.193-.304-.533zM9 4.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0" /></svg>;
-    case "keyboard":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M14 5a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM2 4a2 2 0 0 0-2 2v5a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2z" /><path fill="currentColor" d="M13 10.25a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm0-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5 0A.25.25 0 0 1 8.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 8 8.75zm2 0a.25.25 0 0 1 .25-.25h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5a.25.25 0 0 1-.25-.25zm1 2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-5-2A.25.25 0 0 1 6.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 6 8.75zm-2 0A.25.25 0 0 1 4.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 4 8.75zm-2 0A.25.25 0 0 1 2.25 8h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 2 8.75zm11-2a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm-2 0A.25.25 0 0 1 9.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 9 6.75zm-2 0A.25.25 0 0 1 7.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 7 6.75zm-2 0A.25.25 0 0 1 5.25 6h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5A.25.25 0 0 1 5 6.75zm-3 0A.25.25 0 0 1 2.25 6h1.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-1.5A.25.25 0 0 1 2 6.75zm0 4a.25.25 0 0 1 .25-.25h.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-.5a.25.25 0 0 1-.25-.25zm2 0a.25.25 0 0 1 .25-.25h5.5a.25.25 0 0 1 .25.25v.5a.25.25 0 0 1-.25.25h-5.5a.25.25 0 0 1-.25-.25z" /></svg>;
-    case "list":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" fillRule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" /></svg>;
-    case "message":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M16 8c0 3.866-3.582 7-8 7a9 9 0 0 1-2.347-.306c-.584.296-1.925.864-4.181 1.234-.2.032-.352-.176-.273-.362.354-.836.674-1.95.77-2.966C.744 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7M5 8a1 1 0 1 0-2 0 1 1 0 0 0 2 0m4 0a1 1 0 1 0-2 0 1 1 0 0 0 2 0m3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2" /></svg>;
-    case "mic":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0z" /><path fill="currentColor" d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5" /></svg>;
-    case "people":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M7 14s-1 0-1-1 1-4 5-4 5 3 5 4-1 1-1 1zm4-6a3 3 0 1 0 0-6 3 3 0 0 0 0 6m-5.784 6A2.24 2.24 0 0 1 5 13c0-1.355.68-2.75 1.936-3.72A6.3 6.3 0 0 0 5 9c-4 0-5 3-5 4s1 1 1 1zM4.5 8a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5" /></svg>;
-    case "phone":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" fillRule="evenodd" d="M1.885.511a1.745 1.745 0 0 1 2.61.163L6.29 2.98c.329.423.445.974.315 1.494l-.547 2.19a.68.68 0 0 0 .178.643l2.457 2.457a.68.68 0 0 0 .644.178l2.189-.547a1.75 1.75 0 0 1 1.494.315l2.306 1.794c.829.645.905 1.87.163 2.611l-1.034 1.034c-.74.74-1.846 1.065-2.877.702a18.6 18.6 0 0 1-7.01-4.42 18.6 18.6 0 0 1-4.42-7.009c-.362-1.03-.037-2.137.703-2.877z" /></svg>;
-    case "pin":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M9.828.722a.5.5 0 0 1 .354.146l4.95 4.95a.5.5 0 0 1 0 .707c-.48.48-1.072.588-1.503.588-.177 0-.335-.018-.46-.039l-3.134 3.134a6 6 0 0 1 .16 1.013c.046.702-.032 1.687-.72 2.375a.5.5 0 0 1-.707 0l-2.829-2.828-3.182 3.182c-.195.195-1.219.902-1.414.707s.512-1.22.707-1.414l3.182-3.182-2.828-2.829a.5.5 0 0 1 0-.707c.688-.688 1.673-.767 2.375-.72a6 6 0 0 1 1.013.16l3.134-3.133a3 3 0 0 1-.04-.461c0-.43.108-1.022.589-1.503a.5.5 0 0 1 .353-.146m.122 2.112v-.002zm0-.002v.002a.5.5 0 0 1-.122.51L6.293 6.878a.5.5 0 0 1-.511.12H5.78l-.014-.004a5 5 0 0 0-.288-.076 5 5 0 0 0-.765-.116c-.422-.028-.836.008-1.175.15l5.51 5.509c.141-.34.177-.753.149-1.175a5 5 0 0 0-.192-1.054l-.004-.013v-.001a.5.5 0 0 1 .12-.512l3.536-3.535a.5.5 0 0 1 .532-.115l.096.022c.087.017.208.034.344.034q.172.002.343-.04L9.927 2.028q-.042.172-.04.343a1.8 1.8 0 0 0 .062.46z" /></svg>;
-    case "search":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0" /></svg>;
-    case "send":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z" /></svg>;
-    case "sliders":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" fillRule="evenodd" d="M11.5 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M9.05 3a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0V3zM4.5 7a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3M2.05 8a2.5 2.5 0 0 1 4.9 0H16v1H6.95a2.5 2.5 0 0 1-4.9 0H0V8zm9.45 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3m-2.45 1a2.5 2.5 0 0 1 4.9 0H16v1h-2.05a2.5 2.5 0 0 1-4.9 0H0v-1z" /></svg>;
-    case "swap":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" fillRule="evenodd" d="M1 11.5a.5.5 0 0 0 .5.5h11.793l-3.147 3.146a.5.5 0 0 0 .708.708l4-4a.5.5 0 0 0 0-.708l-4-4a.5.5 0 0 0-.708.708L13.293 11H1.5a.5.5 0 0 0-.5.5m14-7a.5.5 0 0 1-.5.5H2.707l3.147 3.146a.5.5 0 1 1-.708.708l-4-4a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 4H14.5a.5.5 0 0 1 .5.5" /></svg>;
-    case "task":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M6.5 0A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0zm3 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5z" /><path fill="currentColor" d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1A2.5 2.5 0 0 1 9.5 5h-3A2.5 2.5 0 0 1 4 2.5zm6.854 7.354-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 0 1 .708-.708L7.5 10.793l2.646-2.647a.5.5 0 0 1 .708.708" /></svg>;
-    case "wechat":
-      return <svg className={baseClass} viewBox="0 0 16 16" aria-hidden><path fill="currentColor" d="M11.176 14.429c-2.665 0-4.826-1.8-4.826-4.018 0-2.22 2.159-4.02 4.824-4.02S16 8.191 16 10.411c0 1.21-.65 2.301-1.666 3.036a.32.32 0 0 0-.12.366l.218.81a.6.6 0 0 1 .029.117.166.166 0 0 1-.162.162.2.2 0 0 1-.092-.03l-1.057-.61a.5.5 0 0 0-.256-.074.5.5 0 0 0-.142.021 5.7 5.7 0 0 1-1.576.22M9.064 9.542a.647.647 0 1 0 .557-1 .645.645 0 0 0-.646.647.6.6 0 0 0 .09.353Zm3.232.001a.646.646 0 1 0 .546-1 .645.645 0 0 0-.644.644.63.63 0 0 0 .098.356" /><path fill="currentColor" d="M0 6.826c0 1.455.781 2.765 2.001 3.656a.385.385 0 0 1 .143.439l-.161.6-.1.373a.5.5 0 0 0-.032.14.19.19 0 0 0 .193.193q.06 0 .111-.029l1.268-.733a.6.6 0 0 1 .308-.088q.088 0 .171.025a6.8 6.8 0 0 0 1.625.26 4.5 4.5 0 0 1-.177-1.251c0-2.936 2.785-5.02 5.824-5.02l.15.002C10.587 3.429 8.392 2 5.796 2 2.596 2 0 4.16 0 6.826m4.632-1.555a.77.77 0 1 1-1.54 0 .77.77 0 0 1 1.54 0m3.875 0a.77.77 0 1 1-1.54 0 .77.77 0 0 1 1.54 0" /></svg>;
-    default:
-      return null;
-  }
+  const Component = workbenchIcons[name];
+  return <Component className={`customer-workbench-icon${className ? ` ${className}` : ""}`} strokeWidth={1.8} aria-hidden />;
 }
 
 type CustomerWorkbenchAppProps = {
@@ -311,8 +342,9 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [assistantInput, setAssistantInput] = useState("");
+  const [assistantReplying, setAssistantReplying] = useState(false);
   const [assistantMessages, setAssistantMessages] = useState<ChatMessage[]>([
-    { role: "assistant", text: "我可以根据当前工作台数据总结互动、查看风险、切换客户，或形成待确认的 CRM 落地建议。", time: nowTime() },
+    { id: "welcome", role: "assistant", text: "我可以根据当前工作台数据总结互动、查看风险、切换客户，或形成待确认的 CRM 落地建议。", time: nowTime() },
   ]);
   const recommendationRef = useRef<HTMLDivElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -321,6 +353,8 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const deepLinkedAccountIdRef = useRef(initialAccountId);
   const previousAssistantAccountRef = useRef("");
   const voiceSessionIdRef = useRef(0);
+  const chatMessageSequenceRef = useRef(0);
+  const assistantStreamAbortRef = useRef<AbortController | null>(null);
   const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
 
   useEffect(() => {
@@ -389,12 +423,16 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   useEffect(() => {
     if (!token || !activeAccountId) return;
     let ignore = false;
+    assistantStreamAbortRef.current?.abort();
+    assistantStreamAbortRef.current = null;
+    setAssistantReplying(false);
     const accountName = activeAccount?.name || "当前客户";
-    setAssistantMessages([{ role: "assistant", text: `已进入${accountName}。可以查询互动、风险和 CRM 建议。`, time: nowTime() }]);
+    setAssistantMessages([{ id: `account-${activeAccountId}`, role: "assistant", text: `已进入${accountName}。可以查询互动、风险和 CRM 建议。`, time: nowTime() }]);
     getCustomerAssistantHistory(token, activeAccountId)
       .then((items) => {
         if (ignore || !items.length) return;
-        setAssistantMessages(items.map((item) => ({
+        setAssistantMessages(items.map((item, index) => ({
+          id: `history-${activeAccountId}-${index}`,
           role: item.role === "user" ? "user" : "assistant",
           text: item.content,
           time: chatTime(item.createdAt),
@@ -493,17 +531,63 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
 
   const submitAssistant = async (preset?: string) => {
     const message = (preset ?? assistantInput).trim();
-    if (!message || !token) return;
+    if (!message || !token || assistantReplying) return;
     voiceSessionIdRef.current += 1;
     abortAsrSession();
+    assistantStreamAbortRef.current?.abort();
+    const streamController = new AbortController();
+    assistantStreamAbortRef.current = streamController;
+    const sequence = ++chatMessageSequenceRef.current;
+    const userMessageId = `user-${Date.now()}-${sequence}`;
+    const assistantMessageId = `assistant-${Date.now()}-${sequence}`;
+    let workbenchResult: CustomerAssistantResult | null = null;
     setAssistantInput("");
-    setAssistantMessages((prev) => [...prev, { role: "user", text: message, time: nowTime() }]);
+    setAssistantReplying(true);
+    setAssistantMessages((prev) => [
+      ...prev,
+      { id: userMessageId, role: "user", text: message, time: nowTime() },
+      { id: assistantMessageId, role: "assistant", text: "", time: nowTime(), busy: true, phase: assistantPhaseLabel("connecting") },
+    ]);
     try {
-      const result = await askCustomerWorkbenchAssistant(token, { accountId: activeAccountId, message });
-      setAssistantMessages((prev) => [...prev, { role: "assistant", text: result.reply, time: nowTime() }]);
-      handleAssistantResult(result);
+      await streamCustomerWorkbenchAssistant(token, { accountId: activeAccountId, message }, async (event) => {
+        if (event.type === "workbench") {
+          workbenchResult = event.result;
+          return;
+        }
+        if (event.type === "phase") {
+          setAssistantMessages((prev) => prev.map((item) => item.id === assistantMessageId
+            ? { ...item, phase: assistantPhaseLabel(event.phase) }
+            : item));
+          return;
+        }
+        if (event.type === "tool_call") {
+          setAssistantMessages((prev) => prev.map((item) => item.id === assistantMessageId
+            ? { ...item, phase: assistantPhaseLabel("tool_call") }
+            : item));
+          return;
+        }
+        if (event.type === "delta") {
+          setAssistantMessages((prev) => prev.map((item) => item.id === assistantMessageId
+            ? { ...item, text: `${item.text}${event.text}`, phase: assistantPhaseLabel("generating") }
+            : item));
+          await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+          return;
+        }
+        if (event.type === "error") throw new Error(event.message);
+      }, streamController.signal);
+      setAssistantMessages((prev) => prev.map((item) => item.id === assistantMessageId
+        ? { ...item, busy: false, phase: "", text: item.text || "智能助手暂未生成有效回复，请重试。" }
+        : item));
+      if (workbenchResult) handleAssistantResult(workbenchResult);
     } catch (error) {
-      setAssistantMessages((prev) => [...prev, { role: "assistant", text: error instanceof Error ? error.message : String(error), time: nowTime() }]);
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      const messageText = error instanceof Error ? error.message : String(error);
+      setAssistantMessages((prev) => prev.map((item) => item.id === assistantMessageId
+        ? { ...item, busy: false, phase: "", text: item.text ? `${item.text}\n\n回复中断：${messageText}` : `暂时无法完成回复：${messageText}` }
+        : item));
+    } finally {
+      if (assistantStreamAbortRef.current === streamController) assistantStreamAbortRef.current = null;
+      setAssistantReplying(false);
     }
   };
 
@@ -563,10 +647,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             <button type="button" className={workbenchMode === "existing" ? "is-active" : ""} onClick={() => switchMode("existing")}>老客户经营</button>
           </div>
           <button type="button" className="customer-workbench__crm-state" onClick={() => void reloadDetail()} title={integration.message || "刷新 CRM 数据"}>
-            <span aria-hidden className={integration.ready ? "is-ready" : "is-error"} />{integration.label}
+            <span aria-hidden className={integration.ready ? "is-ready" : "is-error"} />{integration.label}<Icon name="refresh" />
           </button>
           <div className="customer-workbench__notification-wrap">
-            <button type="button" className="customer-workbench__icon-button customer-workbench__icon-button--bell" aria-label="通知" onClick={() => setShowNotifications((value) => !value)} />
+            <button type="button" className="customer-workbench__icon-button" aria-label="客户提醒" title="客户提醒" onClick={() => setShowNotifications((value) => !value)}><Icon name="bell" /></button>
             {notifications.length ? <b className="customer-workbench__notification-count">{notifications.length}</b> : null}
             {showNotifications ? (
               <div className="customer-workbench__notification-popover">
@@ -591,7 +675,6 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               </div>
             ) : null}
           </div>
-          <button type="button" className="customer-workbench__icon-button customer-workbench__icon-button--help" aria-label="帮助" onClick={() => setNotice("数据来自当前用户有权访问的 CloudCC CRM；任何写回都需先确认。")}/>
           <div className="customer-workbench__profile">
             <i aria-hidden>{userName.trim().slice(0, 1) || "我"}</i>
             <span>{userName}</span>
@@ -601,23 +684,22 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       </header>
 
       <div className={`customer-workbench__body${assistantOpen ? "" : " is-assistant-closed"}`}>
-        <aside className="customer-workbench__queue" aria-label={workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}>
+        <aside className={`customer-workbench__queue${showQueueSettings ? " has-settings" : ""}`} aria-label={workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}>
           <header>
             <div className="customer-workbench__queue-title">
               <small>CRM · {workbenchMode === "new" ? "新客户" : "存量客户"}</small>
               <strong>{workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}</strong>
             </div>
             <div className="customer-workbench__queue-tools" aria-label="队列工具">
-              <button type="button" aria-label="筛选" onClick={() => searchInputRef.current?.focus()}><Icon name="sliders" /></button>
-              <button type="button" aria-label="列表设置" className={showQueueSettings ? "is-active" : ""} onClick={() => setShowQueueSettings((value) => !value)}><Icon name="list" /></button>
+              <button type="button" aria-label="列表设置" title="列表设置" aria-expanded={showQueueSettings} className={showQueueSettings ? "is-active" : ""} onClick={() => setShowQueueSettings((value) => !value)}><Icon name="sliders" /></button>
             </div>
           </header>
           {showQueueSettings ? (
-            <div className="customer-workbench__queue-settings">
-              <label><input type="checkbox" checked={compactQueue} onChange={(event) => setCompactQueue(event.target.checked)} />紧凑列表</label>
-              <label>每页<select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value="8">8</option><option value="12">12</option><option value="20">20</option></select></label>
-              <button type="button" onClick={() => void reloadDetail()}>刷新 CRM 数据</button>
-            </div>
+            <section className="customer-workbench__queue-settings" aria-label="列表显示设置">
+              <label className="customer-workbench__queue-density"><input type="checkbox" checked={compactQueue} onChange={(event) => setCompactQueue(event.target.checked)} /><span>紧凑列表</span></label>
+              <label><span>每页数量</span><select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value="8">8</option><option value="12">12</option><option value="20">20</option></select></label>
+              <button type="button" onClick={() => void reloadDetail()}><Icon name="refresh" />刷新数据</button>
+            </section>
           ) : null}
           <label className="customer-workbench__search">
             <span aria-hidden><Icon name="search" /></span>
@@ -644,7 +726,6 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               {workbenchMode === "existing" ? <option value="renewal">续约日期</option> : null}
             </select>
             <span>共 {queueMeta.totalElements} 位客户</span>
-            <button type="button" aria-label="列表密度"><Icon name="list" /></button>
           </div>
           <div className={`customer-workbench__accounts${compactQueue ? " is-compact" : ""}`}>
             {accounts.map((item) => (
@@ -685,14 +766,14 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         <main className="customer-workbench__main">
           <header className="customer-workbench__head">
             <div>
-              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu" aria-label="客户更多操作" onClick={async () => {
+              <h2>{detail?.name || activeAccount?.name || "客户互动工作台"} <button type="button" className="customer-workbench__more-menu" aria-label="复制客户工作台链接" title="复制客户工作台链接" onClick={async () => {
                 const link = new URL(window.location.href);
                 if (!embedded) link.searchParams.set("aiApp", "customer-workbench");
                 link.searchParams.set("accountId", activeAccountId);
                 link.searchParams.set("mode", workbenchMode);
                 await navigator.clipboard.writeText(link.toString());
                 setNotice("客户工作台链接已复制。");
-              }}>···</button></h2>
+              }}><Icon name="link" /></button></h2>
               <p className="customer-workbench__entity-line">
                 <em>Account</em>
                 <button type="button" onClick={() => setActiveTab(workbenchMode === "new" ? "signals" : "renewal")}>Opportunity <b>{detail?.opportunityCount ?? activeAccount?.opportunityCount ?? 0}</b></button>
@@ -705,13 +786,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
                 <span>最近互动：{shortDate(detail?.updatedAt || activeAccount?.updatedAt || "")}（{lifecycleSourceLabel(detail?.lastInteractionType || "CRM")}）</span>
               </p>
             </div>
-            <button type="button" className="customer-workbench__open-crm" disabled={!integration.baseUrl || !activeAccountId} onClick={() => {
-              if (!integration.baseUrl || !activeAccountId) return;
-              window.open(`${integration.baseUrl.replace(/\/$/, "")}/#/commonObjects/detail/${encodeURIComponent(activeAccountId)}/DETAIL`, "_blank", "noopener,noreferrer");
-            }}>打开 CRM 客户主页 <Icon name="external" /></button>
-            {!assistantOpen ? <button type="button" onClick={() => setAssistantOpen(true)}>打开 AI 助理</button> : null}
+            {!assistantOpen ? <button type="button" className="customer-workbench__open-assistant" onClick={() => setAssistantOpen(true)}><Icon name="bot" />打开 AI 助理</button> : null}
           </header>
 
+        {!integration.ready ? <div className="customer-workbench__notice is-demo">{integration.message || "当前显示只读演示数据，不能写回 CRM。"}</div> : null}
         {notice ? <div className="customer-workbench__notice">{notice}</div> : null}
 
         <section className="customer-workbench__metrics" aria-label="客户指标">
@@ -761,11 +839,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         <header>
           <div>
             <strong>AI 客户助理</strong>
-            <Icon name="info" />
           </div>
           <div className="customer-workbench__assistant-tools">
-            <button type="button" aria-label={assistantPinned ? "取消固定" : "固定"} className={assistantPinned ? "is-active" : ""} onClick={() => setAssistantPinned((value) => !value)}><Icon name="pin" /></button>
-            <button type="button" aria-label="关闭" onClick={() => setAssistantOpen(false)}><Icon name="close" /></button>
+            <button type="button" aria-label={assistantPinned ? "取消固定 AI 助理" : "固定 AI 助理"} title={assistantPinned ? "取消固定" : "固定"} className={assistantPinned ? "is-active" : ""} onClick={() => setAssistantPinned((value) => !value)}><Icon name={assistantPinned ? "pinOff" : "pin"} /></button>
+            <button type="button" aria-label="关闭 AI 助理" title="关闭" onClick={() => setAssistantOpen(false)}><Icon name="close" /></button>
           </div>
         </header>
         <div className="customer-workbench__chat" ref={assistantChatRef}>
@@ -773,8 +850,14 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           {assistantMessages.map((message, index) => (
             <div key={`${message.time}-${index}`} className={`customer-workbench-message is-${message.role}`}>
               {message.role === "assistant" ? <span className="customer-workbench-message__avatar" aria-hidden><Icon name="bot" /></span> : null}
-              <div className="customer-workbench-message__body">
-                <p>{message.text}</p>
+              <div className={`customer-workbench-message__body${message.busy ? " is-streaming" : ""}`}>
+                <div className="customer-workbench-message__content">
+                  {message.role === "assistant" ? (
+                    message.busy && !message.text ? (
+                      <span className="customer-workbench-message__status" role="status"><LoaderCircle aria-hidden />{message.phase || "正在处理..."}</span>
+                    ) : <ChatMarkdown content={message.text} busy={message.busy} />
+                  ) : <p>{message.text}</p>}
+                </div>
                 <span>{message.time}</span>
               </div>
               {message.role === "user" ? <span className="customer-workbench-message__avatar is-user" aria-hidden>{userName.trim().slice(0, 1) || "我"}</span> : null}
@@ -782,10 +865,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           ))}
         </div>
         <div className="customer-workbench__quick-actions">
-          <button type="button" onClick={() => void submitAssistant("为当前客户生成跟进任务建议")}>生成跟进任务</button>
-          <button type="button" onClick={() => void submitAssistant("查看当前客户的风险信号")}>查看风险</button>
-          <button type="button" onClick={() => setInteractionEditorOpen(true)}>整理互动记录</button>
-          <button type="button" onClick={() => void submitAssistant("切换到下一个客户")}>切换下个客户</button>
+          <button type="button" disabled={assistantReplying} onClick={() => void submitAssistant("为当前客户生成跟进任务建议")}>生成跟进任务</button>
+          <button type="button" disabled={assistantReplying} onClick={() => void submitAssistant("查看当前客户的风险信号")}>查看风险</button>
+          <button type="button" disabled={assistantReplying} onClick={() => setInteractionEditorOpen(true)}>整理互动记录</button>
+          <button type="button" disabled={assistantReplying} onClick={() => void submitAssistant("切换到下一个客户")}>切换下个客户</button>
         </div>
         <div className="customer-workbench__composer">
           <textarea ref={composerInputRef} value={assistantInput} onChange={(event) => setAssistantInput(event.target.value)} placeholder="输入问题或指令..." />
@@ -795,11 +878,11 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               className={`customer-workbench__composer-icon${listening ? " is-recording" : ""}`}
               onClick={() => void startVoice()}
               aria-label={listening ? "停止语音输入" : "语音输入"}
-              disabled={!speechSupported}
+              disabled={!speechSupported || assistantReplying}
             >
               <Icon name="mic" />
             </button>
-            <button type="button" className="customer-workbench__send" onClick={() => void submitAssistant()} aria-label="发送"><Icon name="send" /></button>
+            <button type="button" className="customer-workbench__send" disabled={assistantReplying || !assistantInput.trim()} onClick={() => void submitAssistant()} aria-label={assistantReplying ? "正在回复" : "发送"} title={assistantReplying ? "正在回复" : "发送"}><Icon name="send" /></button>
           </div>
         </div>
         <p className="customer-workbench__ai-note">AI 生成内容仅供参考，请结合实际情况判断</p>

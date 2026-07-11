@@ -37,6 +37,7 @@ import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 class CustomerWorkbenchServiceTest {
 
@@ -160,8 +161,25 @@ class CustomerWorkbenchServiceTest {
                 .contains("客户互动工作台上下文")
                 .contains("北京智造科技有限公司")
                 .contains("客户关注实施周期和 MES 集成能力")
-                .contains("查看风险");
+                .contains("查看风险")
+                .contains("不输出 Markdown 表格");
         assertThat(expectedSessionId).hasSizeLessThanOrEqualTo(64);
+
+        SseEmitter emitter = service.assistantStream(
+                orgId,
+                userId,
+                new CustomerWorkbenchService.AssistantCommand(accountId, "查看风险"));
+        assertThat(emitter).isNotNull();
+        verify(chatOrchestratorService).chatStream(
+                eq(orgId),
+                eq(userId),
+                eq(expectedSessionId),
+                anyString(),
+                eq(List.of()),
+                eq(CustomerWorkbenchService.ASSISTANT_AGENT_ID),
+                eq(CustomerWorkbenchService.SKILL_CODE),
+                eq(Map.of("source", "customer-workbench", "crmAccountId", accountId)),
+                eq(emitter));
     }
 
     @Test

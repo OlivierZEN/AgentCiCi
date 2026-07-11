@@ -21,6 +21,7 @@ import com.codehouse.ciciassistant.skill.service.SkillDefinitionService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -36,6 +37,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Service
 public class CustomerWorkbenchService {
@@ -422,6 +424,66 @@ public class CustomerWorkbenchService {
     }
 
     public Map<String, Object> assistant(String orgId, String userId, AssistantCommand command) {
+        AssistantInvocation invocation = prepareAssistantInvocation(orgId, userId, command);
+        Map<String, Object> agentResult = chatOrchestratorService.chat(
+                orgId,
+                userId,
+                invocation.sessionId(),
+                invocation.prompt(),
+                List.of(),
+                ASSISTANT_AGENT_ID,
+                SKILL_CODE,
+                Map.of("source", "customer-workbench", "crmAccountId", invocation.accountId())
+        );
+        Object answer = agentResult.get("answer");
+        return mapOf(
+                "reply", answer == null || String.valueOf(answer).isBlank() ? "智能体暂未生成有效回复，请重试。" : String.valueOf(answer),
+                "action", invocation.uiAction().get("type"),
+                "actionPayload", invocation.uiAction().get("payload"),
+                "uiActions", List.of(invocation.uiAction()),
+                "account", invocation.customer(),
+                "crmConnection", invocation.crmConnection(),
+                "agentId", agentResult.getOrDefault("agentId", ASSISTANT_AGENT_ID),
+                "sessionId", agentResult.getOrDefault("sessionId", invocation.sessionId()),
+                "runId", agentResult.getOrDefault("runId", ""),
+                "model", agentResult.getOrDefault("model", Map.of()),
+                "resolvedSkills", agentResult.getOrDefault("resolvedSkills", List.of()),
+                "activeSkillCode", agentResult.getOrDefault("activeSkillCode", SKILL_CODE)
+        );
+    }
+
+    public SseEmitter assistantStream(String orgId, String userId, AssistantCommand command) {
+        AssistantInvocation invocation = prepareAssistantInvocation(orgId, userId, command);
+        SseEmitter emitter = new SseEmitter(600_000L);
+        try {
+            emitter.send(SseEmitter.event().name("workbench").data(mapOf(
+                    "action", invocation.uiAction().get("type"),
+                    "actionPayload", invocation.uiAction().get("payload"),
+                    "uiActions", List.of(invocation.uiAction()),
+                    "accountId", invocation.accountId(),
+                    "sessionId", invocation.sessionId(),
+                    "crmConnection", invocation.crmConnection()
+            )));
+            emitter.send(SseEmitter.event().name("phase").data(mapOf("phase", "context_ready")));
+        } catch (IOException ex) {
+            emitter.completeWithError(ex);
+            return emitter;
+        }
+        chatOrchestratorService.chatStream(
+                orgId,
+                userId,
+                invocation.sessionId(),
+                invocation.prompt(),
+                List.of(),
+                ASSISTANT_AGENT_ID,
+                SKILL_CODE,
+                Map.of("source", "customer-workbench", "crmAccountId", invocation.accountId()),
+                emitter
+        );
+        return emitter;
+    }
+
+    private AssistantInvocation prepareAssistantInvocation(String orgId, String userId, AssistantCommand command) {
         agentDefinitionService.warmupBuiltinAgents(orgId);
         skillDefinitionService.ensurePhaseOneDefaults(orgId);
         String text = command == null || command.message() == null ? "" : command.message().trim();
@@ -435,33 +497,16 @@ public class CustomerWorkbenchService {
         Map<String, Object> crmConnection = crmConnectionView(orgId, userId);
         String sessionId = assistantSessionId(userId, accountId);
         String prompt = buildAssistantPrompt(userId, text, customer, crmConnection);
-        Map<String, Object> agentResult = chatOrchestratorService.chat(
-                orgId,
-                userId,
-                sessionId,
-                prompt,
-                List.of(),
-                ASSISTANT_AGENT_ID,
-                SKILL_CODE,
-                Map.of("source", "customer-workbench", "crmAccountId", accountId)
-        );
-        Object answer = agentResult.get("answer");
         Map<String, Object> uiAction = resolveUiAction(text, customer);
-        return mapOf(
-                "reply", answer == null || String.valueOf(answer).isBlank() ? "智能体暂未生成有效回复，请重试。" : String.valueOf(answer),
-                "action", uiAction.get("type"),
-                "actionPayload", uiAction.get("payload"),
-                "uiActions", List.of(uiAction),
-                "account", customer,
-                "crmConnection", crmConnection,
-                "agentId", agentResult.getOrDefault("agentId", ASSISTANT_AGENT_ID),
-                "sessionId", agentResult.getOrDefault("sessionId", sessionId),
-                "runId", agentResult.getOrDefault("runId", ""),
-                "model", agentResult.getOrDefault("model", Map.of()),
-                "resolvedSkills", agentResult.getOrDefault("resolvedSkills", List.of()),
-                "activeSkillCode", agentResult.getOrDefault("activeSkillCode", SKILL_CODE)
-        );
+        return new AssistantInvocation(accountId, customer, crmConnection, sessionId, prompt, uiAction);
     }
+
+    private record AssistantInvocation(String accountId,
+                                       Map<String, Object> customer,
+                                       Map<String, Object> crmConnection,
+                                       String sessionId,
+                                       String prompt,
+                                       Map<String, Object> uiAction) {}
 
     private String assistantSessionId(String userId, String accountId) {
         String seed = blankToEmpty(userId) + ":" + blankToEmpty(accountId);
@@ -519,9 +564,10 @@ public class CustomerWorkbenchService {
                 [回答要求]
                 1. 你必须以客户互动工作台 AI 客户助理身份回答。
                 2. 只能基于上方工作台上下文、已授权 CRM 查询工具或用户输入回答；缺少事实时写“待确认”，不要编造。
-                3. 输出中文，结构紧凑，优先覆盖事实、推断、风险/机会、下一步行动、待确认项。
+                3. 输出中文，使用简短段落和项目列表，优先覆盖事实、推断、风险/机会、下一步行动、待确认项。
                 4. 涉及 CRM 写回、价格承诺、合同解释、服务责任归因、关键人判断或客户敏感信息外发时，只能形成建议并要求用户确认。
                 5. 如果用户要求生成跟进任务、整理微信记录、查看风险或分析新/老客户经营，请直接给出可落地建议，不要说自己只是规则助手。
+                6. 不使用装饰性 emoji，不使用一级标题，不输出 Markdown 表格；需要对比时改用带标签的项目列表。
 
                 [用户问题]
                 %s
@@ -944,7 +990,10 @@ public class CustomerWorkbenchService {
         return mapOf(
                 "ready", ready,
                 "mode", ready ? "BOUND" : "DEMO",
-                "label", ready ? "CloudCC CRM 已连接" : "演示模式"
+                "label", ready ? "CloudCC CRM 已连接" : "CRM 未连接 · 使用演示数据",
+                "message", ready
+                        ? "当前用户已连接 CloudCC CRM，数据受 CRM 记录权限约束。"
+                        : "当前 AgentCiCi 用户没有可用的 CloudCC 会话，正在显示只读演示数据，不能写回 CRM。"
         );
     }
 

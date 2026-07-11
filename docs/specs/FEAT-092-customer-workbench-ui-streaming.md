@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-092
 title: 客户互动工作台界面规范化与流式助理
-status: in_implementation
+status: implemented_pending_production
 owner_role: fullstack-agent
 task_ids: TASK-183
 related_decisions: FEAT-081
 related_issues: none
-updated_at: 2026-07-11T03:12:54Z
+updated_at: 2026-07-11T03:40:00Z
 updated_by: MANAGER-001
 ---
 
@@ -92,5 +92,8 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 已完成现状审计和事件契约设计。
-- 待完成任务授权、代码、测试、真实双入口验收和生产发布。
+- 已完成任务授权、SSE 适配、标准图标替换、连接状态澄清、无效入口清理、即时处理状态、Markdown 渲染和自动滚底。
+- 浏览器复测发现并修复设置区展开后队列从 6 行变为 7 行但网格未同步的缺陷；展开后客户列表继续占据剩余高度，不再被推到底部。
+- 本地 1920x960 真实登录验收：发送后 60ms 出现“正在准备回答”，500ms 显示“相关资料已就绪”；输入框立即清空，长回复结束时消息区距底部为 0；Markdown 已渲染且无原始标题/表格标记，页面无外层滚动，控制台错误为 0。
+- 前端 12 个测试文件、56 项测试和 Vite build 通过；后端聚焦测试与编译通过。
+- 待完成生产发布、AgentCiCi 线上入口和 CloudCC 真实注入页复验。
