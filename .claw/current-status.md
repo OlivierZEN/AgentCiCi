@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T04:16:00Z
+updated_at: 2026-07-11T04:19:04Z
 updated_by: MANAGER-001
-phase: customer-workbench-queue-clipping-production
-active_task: "none"
-next_action: "Monitor production 2.4.3 queue sizing at non-default browser zoom and continue customer-workbench functional completion."
+phase: customer-assistant-expand-mode
+active_task: "TASK-185"
+next_action: "Replace the assistant pin with IDE-style expand/restore while preserving center width, then verify and publish."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-185 is active to remove the weak AI-assistant pin behavior and add a standard expand/restore control. Expanded mode hides the left customer queue, transfers its width to the right assistant, and preserves the center customer-detail width.
 - TASK-184 is done in production `2.4.3`. Border-box sizing and a four-column adaptive filter grid keep the queue at `277/277` on 712px, `307/307` on 1920px and `335/335` in the real CloudCC iframe; all filter labels and customer rows fit without clipping.
 - TASK-184 evidence: 56 frontend tests and build passed; six services healthy; public routes 200; CloudCC injection `issues=[]`; post-warmup error scan empty. Release commit/tag/image/version is `3b18b8591e2c` / `2.4.3`.
 - TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.

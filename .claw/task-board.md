@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T04:16:00Z
+updated_at: 2026-07-11T04:19:04Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-185 - 客户互动工作台 AI 助理展开模式
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-093-customer-assistant-expand-mode.md`
+- task_status_path: `.claw/tasks/TASK-185.md`
+- assignment_path: `.claw/assignments/TASK-185.yaml`
+- blocked_by: `none`
+- next_action: Remove pin behavior, implement panel expansion, verify stable center width, and publish.
 
 ### TASK-184 - 客户互动工作台左侧队列横向裁切热修
 
