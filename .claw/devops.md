@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T05:53:07Z
+updated_at: 2026-07-11T06:09:47Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.7 TASK-188 客户互动工作台标题与静态链接控件修复 on 2026-07-11:
+  - Git commit/tag `14f8bbd4fdaa` / `2.4.7`. Added the application-level workbench title and removed all pointer-hover visual/geometric changes from the copy-link control.
+  - Images: backend index `sha256:f2dc193e5d1af7c24ab339cec14b541f49aa6d15fcbfe528062bb0d2eb554aaf`; frontend index `sha256:b37c562b6962db8c5e10a26c3046be0b6eb33d2d6bbb005aabab069bec5bce4b`.
+  - Backup: `/opt/cici/backups/20260711-140704-before-2.4.7-task188-title-static-link`; env `1646`, PostgreSQL `2594115`, KB `196338`, Qdrant `1574403` bytes.
+  - Backend/frontend recreated on `2.4.7`; database, Redis, RabbitMQ and Qdrant remained healthy on `2.3.4`. Six services healthy; health `UP`; version `2.4.7 / 14f8bbd4fdaa`; Nginx valid; public routes `200`; stable logs clean.
+  - Production browser: platform/embed title passed, copy-link default and hover styles were identical, copy success notice appeared, no outer overflow or console errors. Screenshot: `output/playwright/task188-prod-title-static-link.png`.
 
 - 2.4.6 TASK-187 AI 应用壳层导航稳定性治理 on 2026-07-11:
   - Git commit/tag `f7f0e829b9cd` / `2.4.6`. Removed AI canvas shell padding, stabilized all primary rail states, decoupled app-menu opening from workspace switching, and standardized close/filter icons.

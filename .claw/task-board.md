@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T05:58:07Z
+updated_at: 2026-07-11T06:09:47Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-188 - 客户互动工作台标题与静态链接控件修复
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-096-customer-workbench-title-static-link.md`
 - task_status_path: `.claw/tasks/TASK-188.md`
 - assignment_path: `.claw/assignments/TASK-188.yaml`
 - blocked_by: `none`
-- next_action: Add the application title and make the copy-link control fully static on pointer hover.
+- next_action: Done in production `2.4.7`; retain the application title and static pointer states.
 
 ### TASK-187 - AI 应用壳层导航稳定性治理
 

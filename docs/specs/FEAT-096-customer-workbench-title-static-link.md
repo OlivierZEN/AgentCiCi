@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-096
 title: 客户互动工作台标题与静态链接控件修复
-status: ready
+status: production_ready
 owner_role: frontend-agent
 task_ids: TASK-188
 related_decisions: FEAT-095
 related_issues: none
-updated_at: 2026-07-11T05:58:07Z
+updated_at: 2026-07-11T06:09:47Z
 updated_by: MANAGER-001
 ---
 
@@ -31,3 +31,8 @@ updated_by: MANAGER-001
 - 点击复制链接仍写入包含 accountId/mode 的工作台 URL，并显示成功提示。
 - 1920x960 页面无 document/body 外层溢出，工作台三栏尺寸不被标题改变。
 
+## 生产验收
+
+- `2.4.7` 已上线；平台入口和 CRM 嵌入入口均显示应用标题，嵌入入口无 AgentCiCi 一级侧栏。
+- 复制链接按钮 hover 前后均为 `32x28 @ 597.7734375,52.4140625`，透明背景、`rgb(124,109,89)`、无 transform/shadow/transition；中间区域持续为 `1238.0078125x922 @ 365.1953125,38`。
+- 点击复制链接成功提示可见；document/body 无外层溢出，浏览器控制台 error/warn 为 `0`。

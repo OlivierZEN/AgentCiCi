@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T05:53:07Z
+updated_at: 2026-07-11T06:09:47Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T05:53:07Z
+last_run_at: 2026-07-11T06:09:47Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,20 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-187 已在生产 `2.4.6` 完成 AI 应用壳层导航稳定性治理）
-- 范围：TASK-187 壳层零间距、侧栏 hover 固定几何、菜单/画布解耦、关闭与筛选图标规范化。
-- 命令：身份/assignment 门禁、Vitest、Vite build、JSON/diff 检查、发布 dry-run、ACR 清单校验、备份、部署、健康检查和生产 1920x960 浏览器交互/computed-style/截图。
+- 状态：`passed`（TASK-188 已在生产 `2.4.7` 完成应用标题与复制链接静态化）
+- 范围：TASK-188 工作台应用级标题、复制链接控件静态 pointer 状态与双入口验收。
+- 命令：身份/assignment 门禁、Vitest、Vite build、diff 检查、发布 dry-run、ACR 清单、备份、部署、健康检查和生产 1920x960 浏览器 computed-style/交互/截图。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-188 客户互动工作台标题与静态链接控件生产验收 (2026-07-11T14:09:47+08:00):
+  - `frontend`: Vitest 12 个文件、57 项 -> **success**；Vite production build 和 `git diff --check` -> **success**。本地 Vite 页面启动正常，因本机未运行 8080 后端而无法本地登录；改由真实生产组织完成完整交互验收。
+  - `release`: `2.4.7 / 14f8bbd4fdaa`，backend index `sha256:f2dc193e5d1af7c24ab339cec14b541f49aa6d15fcbfe528062bb0d2eb554aaf`，frontend index `sha256:b37c562b6962db8c5e10a26c3046be0b6eb33d2d6bbb005aabab069bec5bce4b`；前端推送期间一次 ACR blob HEAD EOF 自动重试后成功，镜像 inspect 与 Git tag 通过。
+  - `backup/deploy`: `/opt/cici/backups/20260711-140704-before-2.4.7-task188-title-static-link` 四类文件非空；backend/frontend `2.4.7` healthy，四个状态服务保持 `2.3.4` healthy；健康 `UP`、版本 `2.4.7 / 14f8bbd4fdaa`、Nginx 和公开三入口通过。
+  - `browser-title`: 平台和 CRM embed 均存在 level-1 “客户互动工作台”；embed 的 AgentCiCi rail 数量 `0`；document/body 无外层溢出。
+  - `browser-hover`: 复制链接按钮 hover 前后均为 `32x28 @ 597.7734375,52.4140625`、透明背景、同一文字色、无 transform/shadow/transition；中间区域持续为 `1238.0078125x922 @ 365.1953125,38`。
+  - `browser-action`: 点击后显示“客户工作台链接已复制。”；控制台 error/warn `0`。截图：`output/playwright/task188-prod-title-static-link.png`；稳定期前后端错误扫描为空。
 
 - TASK-187 AI 应用壳层导航稳定性生产验收 (2026-07-11T13:53:07+08:00):
   - `frontend`: Vitest 12 个文件、57 项 -> **success**；Vite production build、DESIGN.json 解析和 `git diff --check` -> **success**。
