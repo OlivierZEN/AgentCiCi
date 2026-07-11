@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-097
 title: 客户互动多模态采集与确认归集
-status: implemented
+status: production
 owner_role: fullstack-agent
 task_ids: TASK-189
 related_decisions: FEAT-081
 related_issues: none
-updated_at: 2026-07-11T08:07:07Z
+updated_at: 2026-07-11T08:33:33Z
 updated_by: MANAGER-001
 ---
 
@@ -106,3 +106,11 @@ updated_by: MANAGER-001
 - 重启恢复真实接管了事务时序修复前遗留的 `QUEUED` 批次并完成为 `READY`；修复后的新批次在事务提交后立即进入 `PROCESSING`。
 - 真实 PNG 截图保存为不可变 `IMAGE` 原件，OCR 提取互动来源、发生时间、主题和互动内容，并合并到带来源边界的统一草稿。
 - 1920x1000 桌面截图：`output/playwright/task189-local-multimodal-modal-final.png`；控制台错误和警告均为 0。
+
+## 生产验收证据
+
+- 生产版本 `2.4.8`，发布提交/tag 为 `530ba01263b9 / 2.4.8`；Flyway V75 成功，六个服务健康，公开平台、工作台与 CRM embed 入口均返回 200。
+- 真实截图创建批次 `cib_0a109c387d2e48f1afab2f864fdbc6e6`，原件状态与批次状态均为 `READY`，OCR 提取 87 个字符，鉴权原件读取返回 200。
+- 用户确认后生成事件 `cwi_e3e4cfaa8671f3cd14799c097512977c283137b9`，CRM 支撑的时间线回读命中 1 条；再次确认返回同一事件且 `deduplicated=true`。
+- AgentCiCi 生产页与真实 CloudCC CRM iframe 均成功打开多模态工作区，document/body 无横向或纵向外层溢出，控制台 error/warn 均为 0。
+- 截图：`output/playwright/task189-prod-platform-multimodal-2.4.8.png`、`output/playwright/task189-prod-cloudcc-multimodal-2.4.8.png`。

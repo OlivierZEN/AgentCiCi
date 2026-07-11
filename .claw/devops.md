@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T06:09:47Z
+updated_at: 2026-07-11T08:33:33Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.8 TASK-189 客户互动多模态采集与确认归集 on 2026-07-11:
+  - Git commit/tag `530ba01263b9` / `2.4.8`; added immutable multimodal batches, secured original assets, ASR/OCR/document extraction, structured AI analysis, recovery scheduling, human confirmation and the two-column capture/review UI.
+  - Images: backend index `sha256:19f76c827aa8270839b7892e65ca8b4634237205e68a9957a85f6f21ae28b003`, amd64 `sha256:5614e2bedb9eb9a17bfb6922249125b5e865df6abd3b55a9c60031e685996b31`; frontend index `sha256:afb2db2b5962d574e808e33ce40ca8dd2fdaa36d3ddea66eef59cdc370fb7e37`, amd64 `sha256:2512dc750f0d35984d902470115f5531509aee85e7c48e404dc22b3460407f96`.
+  - Backup: `/opt/cici/backups/20260711-161034-before-2.4.8-task189-multimodal-interaction`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend recreated on `2.4.8`; state services remained healthy on `2.3.4`. Six services healthy; health `UP`; version `2.4.8 / 530ba01263b9`; V75 successful; Nginx valid; public routes `200`; stable error scan empty.
+  - Production API: a real screenshot batch reached `READY`, authenticated original read returned `200`, confirmation appeared in the CRM-backed timeline, and repeated confirmation reused the same event.
+  - Production browser: AgentCiCi and real CloudCC iframe opened the multimodal work area with no outer overflow or console errors. Screenshots: `output/playwright/task189-prod-platform-multimodal-2.4.8.png`, `output/playwright/task189-prod-cloudcc-multimodal-2.4.8.png`.
 
 - 2.4.7 TASK-188 客户互动工作台标题与静态链接控件修复 on 2026-07-11:
   - Git commit/tag `14f8bbd4fdaa` / `2.4.7`. Added the application-level workbench title and removed all pointer-hover visual/geometric changes from the copy-link control.

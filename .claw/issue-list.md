@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-09T14:24:00+08:00
+updated_at: 2026-07-11T08:33:33Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -15,7 +15,8 @@ status: active
   - Verified facts: `cloudcc package pagecomponent customer-workbench . --dry-run` passed; `cloudcc publish pagecomponent customer-workbench .` published V7 id `6a4f2c24e4b0a577cbba1f4c`; `cloudcc bind pagecomponent . customer_interaction_workbench ...` failed with `Bind PageComponent Failed: 系统发生异常`; `cloudcc update customPage . customer_interaction_workbench @output/task171-custompage-bind-2.2.4.json` failed with `Save CustomPage Failed: 系统发生异常`.
   - Verified facts: `cloudcc verify injectionPage . customer_interaction_workbench --expected-component component-customer-workbench` returned `status=passed`, but its own output still reported `actualComponentIds=["6a4db950e4b0a577cbba1eca"]`, which is stale relative to the latest V7 id.
   - Verified facts: real CRM browser verification still loaded `component-customer-workbench-V7.0.js` by `compUniName` and completed SSO successfully, so the production runtime path is healthy; the defect is in repeatable customPage bind/update automation and stale-id validation.
-  - Recommended skill fixes: surface the underlying devconsole response body for bind/update failures; validate customPage `compList` / `pageContent` envelope against the documented lightning-devconsole contract before submit; make `verify injectionPage` optionally compare expected component id/version as well as component name; report `stale_component_reference` as warning or failure when latest published pagecomponent id differs from customPage `comId`.
+  - Verified facts (2026-07-11): `cc-customization-expert-msapi 2.1.276-msapi` read back pagecomponent V10 and customPage V4 with the exact same component id `6a503defe4b0a577cbba1f8a`; `verify injectionPage --expected-component-id 6a503... --stale-policy warning` nevertheless emitted `stale_component_reference` because `actualVersions=[]`. Real CloudCC iframe loaded the workbench and passed the production multimodal flow, proving this instance is a missing-version-evidence false positive rather than a stale binding.
+  - Recommended skill fixes: surface the underlying devconsole response body for bind/update failures; validate customPage `compList` / `pageContent` envelope against the documented lightning-devconsole contract before submit; compare id first; only report a version mismatch when runtime/version evidence is available; when `actualVersions` is empty, emit a distinct `runtime_version_unavailable` diagnostic instead of `stale_component_reference`.
   - Status: open (skill improvement follow-up; production embedded SSO is verified).
 
 - ISSUE-2026-06-22-onechat-dns-nxdomain:

@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T06:09:47Z
+updated_at: 2026-07-11T08:33:33Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T06:09:47Z
+last_run_at: 2026-07-11T08:33:33Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-189 客户互动多模态采集生产验收（2026-07-11）
+
+- `release`: dry-run、ACR 推送与 tag `2.4.8` 成功；运行版本为 `2.4.8 / 530ba01263b9`，V75 成功，六服务健康，Nginx 与公开三入口通过，稳定期错误扫描为空。
+- `backup`: `/opt/cici/backups/20260711-161034-before-2.4.8-task189-multimodal-interaction` 的环境、PostgreSQL、KB 与 Qdrant 备份均非空。
+- `production-api`: 真实截图批次 `cib_0a109c387d2e48f1afab2f864fdbc6e6` 达到 `READY`，图片资产达到 `READY`，OCR 提取 87 字符，鉴权原件请求返回 200。
+- `production-confirm`: 首次确认创建事件 `cwi_e3e4cfaa8671f3cd14799c097512977c283137b9`，时间线回读命中 1 条；再次确认返回同一事件且 `deduplicated=true`。该事件作为一条有意保留的生产验收互动记录。
+- `agent-browser`: 生产 AgentCiCi 组织“智能体平台演示环境”显示版本 `2.4.8`、CloudCC 已连接，多模态工作区打开正常；document/body X/Y overflow 均为 false，console error/warn 均为 0。截图：`output/playwright/task189-prod-platform-multimodal-2.4.8.png`。
+- `cloudcc-browser`: 使用 `cc-customization-expert-msapi` 核验 pagecomponent V10/customPage V4 后，在真实 CloudCC Web 菜单打开客户互动工作台及多模态工作区；iframe document/body X/Y overflow 均为 false，console error/warn 均为 0。截图：`output/playwright/task189-prod-cloudcc-multimodal-2.4.8.png`。
+- `cloudcc-skill`: 实际与期望 component id 都是 `6a503defe4b0a577cbba1f8a`，但 `actualVersions=[]` 时技能仍报告 `stale_component_reference` warning；真实嵌入正常，已记录为技能误报警缺口。
 
 ## TASK-189 客户互动多模态采集本地验收（2026-07-11）
 

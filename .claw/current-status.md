@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T08:07:07Z
+updated_at: 2026-07-11T08:33:33Z
 updated_by: MANAGER-001
-phase: multimodal-interaction-release
-active_task: "TASK-189"
-next_action: "Commit and release 2.4.8, then validate multimodal ingestion and confirmed CRM timeline projection in both entry points."
+phase: security-rules-resume
+active_task: "TASK-170"
+next_action: "Resume TASK-170 security rules platform after validating its assignment and current branch state."
 read_next:
   goals: false
   decisions: false
@@ -22,8 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-189 is in review: immutable multimodal batches, secured originals, post-commit async extraction, stalled-batch recovery, structured AI analysis, human confirmation and the two-column ingestion UI are implemented.
-- TASK-189 local evidence: focused backend tests, 57 frontend tests/build, Compose validation, real pasted-text processing, restart recovery and real screenshot OCR passed; 1920x1000 modal has no outer overflow and clean browser console.
+- TASK-189 is done in production `2.4.8`: immutable multimodal batches, secured originals, post-commit async extraction, stalled-batch recovery, structured AI analysis, human confirmation and the two-column ingestion UI are live.
+- TASK-189 evidence: focused backend tests, 57 frontend tests/build, Compose validation, real text/image processing, authenticated original read, confirmation idempotency and CRM timeline readback passed. AgentCiCi and real CloudCC iframe have no outer overflow or console errors.
 - TASK-188 is done in production `2.4.7`: topbar now carries the application-level “客户互动工作台” title; the copy-link icon has no pointer hover visual or geometric change while keyboard focus remains visible.
 - TASK-188 evidence: 57 frontend tests/build, release backup/health/public routes, platform/embed title checks, static hover computed styles, copy success notice, no outer overflow and console errors `0`. Release commit/tag is `14f8bbd4fdaa / 2.4.7`.
 - TASK-187 is done in production `2.4.6`: AI 应用画布与一级侧栏零间距，侧栏 hover 固定几何，一级“AI应用”只开关菜单，具体应用项才切换画布；关闭按钮和筛选箭头统一为无套框标准图标。
@@ -37,13 +37,13 @@ read_next:
 - TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.
 - TASK-183 local gates passed 56 frontend tests, Vite build, focused backend tests/compile, 1920x960 browser interaction checks and zero console errors. The browser exposed and verified a seven-row queue-grid fix when settings are expanded; send showed a processing state within 60ms and the completed long conversation remained exactly at the bottom.
 - TASK-183 production evidence: release commit/tag/image/version `49402ae8f3a0` / `2.4.2`; six services healthy; V72-V74 successful; public routes 200; SSE emitted 40 deltas without error; AgentCiCi and real CloudCC iframe both showed immediate status/input clearing and stayed at the latest message; injection verification returned `issues=[]`.
-- Current branch: `main`; production is running release `2.4.7` from Git commit `14f8bbd4fdaa`; TASK-182 through TASK-188 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096 are production ready.
+- Current branch: `main`; production is running release `2.4.8` from Git commit `530ba01263b9`; TASK-182 through TASK-189 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097 are production ready.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.
 - Releases `2.3.10` through `2.3.12` completed the production data path, all-existing-customer default queue and optimistic-lock/idempotent CRM write recovery. Two accepted CRM Task recommendations remain as intentional production acceptance records and both read back with the expected account, subject, status and due date.
 - Release `2.4.1` fixes the AI customer assistant voice/send race and latest-message positioning. Real CRM embedded acceptance confirmed the composer clears immediately after send and remains empty after reply; a long reply produced `scrollHeight=2020`, `scrollTop=1460`, `clientHeight=560`, exactly at the latest message.
-- The skill gap report records a same-component-ID `stale_component_reference` false positive, nested create-ID parsing, unreliable expression lookup and unrelated script-scan 500 scoping.
+- The skill gap report records a verified same-component-ID `stale_component_reference` false positive when runtime version evidence is absent, nested create-ID parsing, unreliable expression lookup and unrelated script-scan 500 scoping.
 - TASK-181 is done in production `2.3.9`: customer workbench left customer list alignment hotfix passed local and production desktop Chrome validation. Rows are stable at `104px`, with no row overflow, no adjacent overlap, no outer document/body scrollbar, and console errors `0`.
 - TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.
 - TASK-180 evidence: assignment/login gates, local frontend build, compose config, release dry-run, ACR image push, Git tag, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png` / `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.

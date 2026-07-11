@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T08:07:07Z
+updated_at: 2026-07-11T08:33:33Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-189 - 客户互动多模态采集与确认归集
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-097-multimodal-interaction-ingestion.md`
 - task_status_path: `.claw/tasks/TASK-189.md`
 - assignment_path: `.claw/assignments/TASK-189.yaml`
 - blocked_by: `none`
-- next_action: Release `2.4.8`, validate real production text/image/document inputs and confirm into the CRM-backed timeline.
+- next_action: Done in production `2.4.8`; monitor extraction quality, processing latency and confirmed CRM timeline records.
 
 ### TASK-188 - 客户互动工作台标题与静态链接控件修复
 

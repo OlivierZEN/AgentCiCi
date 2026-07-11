@@ -1,7 +1,7 @@
 task_id: TASK-189
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-11T06:36:11Z
 expires_at: none
 spec_path: docs/specs/FEAT-097-multimodal-interaction-ingestion.md
@@ -17,6 +17,7 @@ allowed_write_roots:
   - frontend/src/assistant/cici-ui.css
   - docs/specs/**
   - .claw/tasks/**
+  - .claw/issue-list.md
   - output/playwright/**
 protected_paths:
   - .claw/assignments/**
@@ -25,6 +26,7 @@ protected_paths:
   - .claw/task-board.md
   - .claw/test-report.md
   - .claw/devops.md
+  - .claw/issue-list.md
   - scripts/**
 scope_files:
   - docs/specs/FEAT-097-multimodal-interaction-ingestion.md
@@ -34,6 +36,7 @@ scope_files:
   - .claw/current-status.md
   - .claw/test-report.md
   - .claw/devops.md
+  - .claw/issue-list.md
 shared_contracts:
   - PRODUCT.md
   - DESIGN.md
@@ -49,4 +52,3 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "Public identity material only; do not record credentials, bearer tokens, cookies, original customer content, or reusable secrets."
-
