@@ -26,6 +26,7 @@ scope_files:
   - .claw/test-report.md
   - .claw/devops.md
   - backend/src/main/java/com/codehouse/ciciassistant/customer/service/CustomerCrmProjectionService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/domain/CustomerSignalRepository.java
   - backend/src/test/java/com/codehouse/ciciassistant/customer/service/CustomerCrmProjectionServiceTest.java
   - frontend/build/customer-workbench.umd.min.js
   - frontend/pagecomponents/customer-workbench/customer-workbench.vue
@@ -51,4 +52,3 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "CloudCC component operations must use cc-customization-expert-msapi; do not record credentials or tokens."
-
