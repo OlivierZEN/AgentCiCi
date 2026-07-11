@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assistantPhaseLabel,
+  customerWorkbenchBodyClassName,
   defaultCustomerQueueFilter,
   isCurrentVoiceSession,
   scrollConversationToLatest,
@@ -18,6 +19,12 @@ describe("defaultCustomerQueueFilter", () => {
 });
 
 describe("customer assistant conversation behavior", () => {
+  it("keeps expanded and closed assistant layouts mutually exclusive", () => {
+    expect(customerWorkbenchBodyClassName(true, false)).toBe("customer-workbench__body");
+    expect(customerWorkbenchBodyClassName(true, true)).toBe("customer-workbench__body is-assistant-expanded");
+    expect(customerWorkbenchBodyClassName(false, true)).toBe("customer-workbench__body is-assistant-closed");
+  });
+
   it("ignores speech callbacks from an invalidated session after send", () => {
     expect(isCurrentVoiceSession(4, 5)).toBe(false);
     expect(isCurrentVoiceSession(5, 5)).toBe(true);

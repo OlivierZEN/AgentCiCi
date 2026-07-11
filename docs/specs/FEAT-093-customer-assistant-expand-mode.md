@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-093
 title: 客户互动工作台 AI 助理展开模式
-status: in_implementation
+status: implemented_pending_production
 owner_role: frontend-agent
 task_ids: TASK-185
 related_decisions: FEAT-092
 related_issues: none
-updated_at: 2026-07-11T04:19:04Z
+updated_at: 2026-07-11T04:27:00Z
 updated_by: MANAGER-001
 ---
 
@@ -41,3 +41,10 @@ AI 客户助理标题栏的固定按钮只有切换客户时自动关闭这一�
 - 关闭并重新打开 AI 助理后为默认三栏。
 - 712x725 与 1920x960 桌面视口无 document/body 外层溢出；对话区继续内部滚动。
 - AgentCiCi 入口和 CloudCC CRM iframe 均通过真实浏览器点击、尺寸测量和截图验收。
+
+## 实现进展
+
+- 已移除 Pin 图标、pinned 状态和切换客户自动关闭行为。
+- 已实现标准面板展开/恢复按钮、三轨等量宽度转移、队列 inert/aria-hidden 和 reduced-motion 处理。
+- 本地 1920x960：展开前后中间区均为 `1214px`；队列 `307px -> 0`，助理 `317px -> 624px`；恢复尺寸完全一致，关闭再打开回到默认三栏。
+- 前端 12 个测试文件、57 项测试和生产构建通过；待生产发布与 CloudCC iframe 复验。

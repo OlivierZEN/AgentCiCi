@@ -19,10 +19,10 @@ import {
   MessageSquare,
   MessageCircle,
   Mic,
+  PanelRightClose,
+  PanelRightOpen,
   Pencil,
   Phone,
-  Pin,
-  PinOff,
   RefreshCw,
   Search,
   Send,
@@ -98,6 +98,10 @@ export function assistantPhaseLabel(phase: string): string {
   } as Record<string, string>)[phase] ?? "正在处理...";
 }
 
+export function customerWorkbenchBodyClassName(assistantOpen: boolean, assistantExpanded: boolean): string {
+  return `customer-workbench__body${assistantOpen ? "" : " is-assistant-closed"}${assistantOpen && assistantExpanded ? " is-assistant-expanded" : ""}`;
+}
+
 type IconName =
   | "alert"
   | "bell"
@@ -118,8 +122,8 @@ type IconName =
   | "mic"
   | "people"
   | "phone"
-  | "pin"
-  | "pinOff"
+  | "panelExpand"
+  | "panelRestore"
   | "refresh"
   | "search"
   | "send"
@@ -148,8 +152,8 @@ const workbenchIcons: Record<IconName, LucideIcon> = {
   mic: Mic,
   people: Users,
   phone: Phone,
-  pin: Pin,
-  pinOff: PinOff,
+  panelExpand: PanelRightOpen,
+  panelRestore: PanelRightClose,
   refresh: RefreshCw,
   search: Search,
   send: Send,
@@ -336,7 +340,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [compactQueue, setCompactQueue] = useState(false);
   const [pageSize, setPageSize] = useState(12);
   const [assistantOpen, setAssistantOpen] = useState(true);
-  const [assistantPinned, setAssistantPinned] = useState(true);
+  const [assistantExpanded, setAssistantExpanded] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<CustomerRecommendation | null>(null);
   const [interactionEditorOpen, setInteractionEditorOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -351,7 +355,6 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const assistantChatRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const deepLinkedAccountIdRef = useRef(initialAccountId);
-  const previousAssistantAccountRef = useRef("");
   const voiceSessionIdRef = useRef(0);
   const chatMessageSequenceRef = useRef(0);
   const assistantStreamAbortRef = useRef<AbortController | null>(null);
@@ -413,12 +416,6 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   }, [token, activeAccountId]);
 
   const activeAccount = useMemo(() => accounts.find((item) => item.accountId === activeAccountId) ?? accounts[0], [accounts, activeAccountId]);
-
-  useEffect(() => {
-    const previous = previousAssistantAccountRef.current;
-    previousAssistantAccountRef.current = activeAccountId;
-    if (previous && previous !== activeAccountId && !assistantPinned) setAssistantOpen(false);
-  }, [activeAccountId, assistantPinned]);
 
   useEffect(() => {
     if (!token || !activeAccountId) return;
@@ -683,8 +680,13 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         </div>
       </header>
 
-      <div className={`customer-workbench__body${assistantOpen ? "" : " is-assistant-closed"}`}>
-        <aside className={`customer-workbench__queue${showQueueSettings ? " has-settings" : ""}`} aria-label={workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}>
+      <div className={customerWorkbenchBodyClassName(assistantOpen, assistantExpanded)}>
+        <aside
+          className={`customer-workbench__queue${showQueueSettings ? " has-settings" : ""}`}
+          aria-label={workbenchMode === "new" ? "新客户推进队列" : "老客户经营队列"}
+          aria-hidden={assistantExpanded}
+          inert={assistantExpanded ? true : undefined}
+        >
           <header>
             <div className="customer-workbench__queue-title">
               <small>CRM · {workbenchMode === "new" ? "新客户" : "存量客户"}</small>
@@ -786,7 +788,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
                 <span>最近互动：{shortDate(detail?.updatedAt || activeAccount?.updatedAt || "")}（{lifecycleSourceLabel(detail?.lastInteractionType || "CRM")}）</span>
               </p>
             </div>
-            {!assistantOpen ? <button type="button" className="customer-workbench__open-assistant" onClick={() => setAssistantOpen(true)}><Icon name="bot" />打开 AI 助理</button> : null}
+            {!assistantOpen ? <button type="button" className="customer-workbench__open-assistant" onClick={() => { setAssistantExpanded(false); setAssistantOpen(true); }}><Icon name="bot" />打开 AI 助理</button> : null}
           </header>
 
         {!integration.ready ? <div className="customer-workbench__notice is-demo">{integration.message || "当前显示只读演示数据，不能写回 CRM。"}</div> : null}
@@ -841,8 +843,15 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             <strong>AI 客户助理</strong>
           </div>
           <div className="customer-workbench__assistant-tools">
-            <button type="button" aria-label={assistantPinned ? "取消固定 AI 助理" : "固定 AI 助理"} title={assistantPinned ? "取消固定" : "固定"} className={assistantPinned ? "is-active" : ""} onClick={() => setAssistantPinned((value) => !value)}><Icon name={assistantPinned ? "pinOff" : "pin"} /></button>
-            <button type="button" aria-label="关闭 AI 助理" title="关闭" onClick={() => setAssistantOpen(false)}><Icon name="close" /></button>
+            <button
+              type="button"
+              aria-label={assistantExpanded ? "恢复 AI 助理默认宽度" : "展开 AI 助理"}
+              title={assistantExpanded ? "恢复默认宽度" : "展开 AI 助理"}
+              aria-pressed={assistantExpanded}
+              className={assistantExpanded ? "is-active" : ""}
+              onClick={() => setAssistantExpanded((value) => !value)}
+            ><Icon name={assistantExpanded ? "panelRestore" : "panelExpand"} /></button>
+            <button type="button" aria-label="关闭 AI 助理" title="关闭" onClick={() => { setAssistantExpanded(false); setAssistantOpen(false); }}><Icon name="close" /></button>
           </div>
         </header>
         <div className="customer-workbench__chat" ref={assistantChatRef}>

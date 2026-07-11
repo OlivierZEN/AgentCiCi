@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T04:16:00Z
+updated_at: 2026-07-11T04:27:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T04:16:00Z
+last_run_at: 2026-07-11T04:27:00Z
 last_run_status: passed
 ---
 
@@ -18,6 +18,13 @@ last_run_status: passed
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-185 AI 助理展开模式本地验收 (2026-07-11T12:27:00+08:00):
+  - `browser-default`: 1920x960 队列 `307px`、中间 `1214px`、助理 `317px`，document/body 无外层溢出。
+  - `browser-expanded`: 队列隐藏且 inert，轨道为 0；中间仍为 `1214px`；助理为 `624px`；页面无外层溢出。
+  - `browser-restore`: 恢复后三栏宽度与展开前完全一致；展开态关闭再打开后为默认三栏，展开按钮 aria-label 正确。
+  - `frontend`: Vitest 12 个文件、57 项 -> **success**；TypeScript/Vite build -> **success**；源码无 Pin/固定状态残留；`git diff --check` -> **success**。
+  - 截图：`output/playwright/task185-assistant-default.png`、`output/playwright/task185-assistant-expanded.png`。
 
 - TASK-184 生产热修与 CloudCC 验收 (2026-07-11T12:16:00+08:00):
   - `release`: `2.4.3` dry-run/正式发布 -> **success**；提交 `3b18b8591e2c`，backend index digest `sha256:a1e4a470d4e39df5dac3f5c7504849c679ebb28340045ac69401fb6c7fffb4d8`，frontend index digest `sha256:f569239f16997c19d090f8cd189d5dd097b83cd274c9235ab1004c266c31e34e`。

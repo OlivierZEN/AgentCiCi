@@ -13640,15 +13640,19 @@
 }
 
 .customer-workbench__body {
+  --customer-queue-track: clamp(300px, 17.5vw, 336px);
+  --customer-assistant-track: clamp(300px, 17.5vw, 336px);
   display: grid;
-  grid-template-columns: minmax(300px, 336px) minmax(0, 1fr) minmax(300px, 336px);
+  grid-template-columns: var(--customer-queue-track) minmax(0, 1fr) var(--customer-assistant-track);
   min-height: 0;
   flex: 1;
   overflow: hidden;
+  transition: grid-template-columns 240ms ease;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__body {
-  grid-template-columns: 326px minmax(0, 1fr) 320px;
+  --customer-queue-track: 326px;
+  --customer-assistant-track: 320px;
 }
 
 .customer-workbench__queue,
@@ -13664,6 +13668,7 @@
   border-right: 1px solid #ded2bb;
   padding: 20px 10px 12px;
   overflow: hidden;
+  transition: opacity 160ms ease, transform 240ms ease, padding 240ms ease, border-color 160ms ease;
 }
 
 .customer-workbench__queue > * {
@@ -15024,7 +15029,9 @@
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__body {
-  grid-template-columns: minmax(278px, 308px) minmax(620px, 1fr) minmax(300px, 318px);
+  --customer-queue-track: clamp(278px, 16vw, 308px);
+  --customer-assistant-track: clamp(300px, 16.5vw, 318px);
+  grid-template-columns: var(--customer-queue-track) minmax(620px, 1fr) var(--customer-assistant-track);
 }
 
 .cici-ai-apps__main--workbench .customer-workbench__queue {
@@ -15325,6 +15332,38 @@
 
 .cici-ai-apps__main--workbench .customer-workbench__body.is-assistant-closed {
   grid-template-columns: minmax(278px, 308px) minmax(620px, 1fr);
+}
+
+.customer-workbench__body.is-assistant-expanded {
+  --customer-queue-track: 0px;
+  --customer-assistant-track: clamp(600px, 35vw, 672px);
+}
+
+.cici-ai-apps__main--workbench .customer-workbench__body.is-assistant-expanded {
+  --customer-queue-track: 0px;
+  --customer-assistant-track: clamp(578px, 32.5vw, 626px);
+}
+
+.customer-workbench__body.is-assistant-expanded .customer-workbench__queue {
+  visibility: hidden;
+  opacity: 0;
+  transform: translateX(-16px);
+  padding-right: 0;
+  padding-left: 0;
+  border-right-color: transparent;
+  pointer-events: none;
+}
+
+.customer-workbench__assistant-tools button.is-active {
+  color: #876223;
+  background: #faf4e8;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .customer-workbench__body,
+  .customer-workbench__queue {
+    transition: none;
+  }
 }
 
 .customer-workbench__queue-settings {
