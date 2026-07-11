@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-184
 title: 客户互动工作台左侧队列横向裁切热修
-status: in_progress
+status: done
 owner_role: frontend-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-092-customer-workbench-ui-streaming.md
 assignment_path: .claw/assignments/TASK-184.yaml
-updated_at: 2026-07-11T04:11:00Z
+updated_at: 2026-07-11T04:16:00Z
 updated_by: MANAGER-001
 ---
 
@@ -30,3 +30,5 @@ updated_by: MANAGER-001
 - 已完成盒模型、直接子项最大宽度、筛选网格和按钮内边距修复。
 - 本地 712x725：队列 `277/277`，四筛选按钮均无内部溢出；1920x960：队列与筛选区均 `307/307`，页面无外层溢出。
 - 前端 12 个测试文件、56 项测试和生产构建通过；待发布生产热修。
+- 已发布生产 `2.4.3`，提交/标签/镜像/版本接口统一为 `3b18b8591e2c` / `2.4.3`。
+- CloudCC 真实 iframe：队列 `335/335`、筛选区 `315/315`、客户列表 `315/315`，四个筛选按钮均无内部溢出；技能校验、公开入口、健康和静置日志通过。

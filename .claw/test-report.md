@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T04:11:00Z
+updated_at: 2026-07-11T04:16:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T04:11:00Z
+last_run_at: 2026-07-11T04:16:00Z
 last_run_status: passed
 ---
 
@@ -18,6 +18,12 @@ last_run_status: passed
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-184 生产热修与 CloudCC 验收 (2026-07-11T12:16:00+08:00):
+  - `release`: `2.4.3` dry-run/正式发布 -> **success**；提交 `3b18b8591e2c`，backend index digest `sha256:a1e4a470d4e39df5dac3f5c7504849c679ebb28340045ac69401fb6c7fffb4d8`，frontend index digest `sha256:f569239f16997c19d090f8cd189d5dd097b83cd274c9235ab1004c266c31e34e`。
+  - `backup/deploy`: `/opt/cici/backups/20260711-121242-before-2.4.3-task184-queue` 四类文件非空；六服务 healthy；健康 `UP`；版本 `2.4.3 / 3b18b8591e2c`；Nginx 通过。
+  - `crm-browser`: CloudCC 真实 iframe 队列 `clientWidth=scrollWidth=335`、筛选区和客户列表均 `315/315`；四个筛选按钮均 `scrollWidth <= clientWidth`，客户行右侧不再被主内容区裁切。
+  - `public/skill/logs`: x.agentcici.com 根、工作台和 embed 路由 `200`，HTTP `301`；`cc-customization-expert-msapi verify injectionPage` -> `issues=[]`；最近 60 秒前后端 error/exception/failed 扫描为空。
 
 - TASK-184 客户队列横向裁切本地热修验收 (2026-07-11T12:11:00+08:00):
   - `browser-narrow`: 712x725 真实本地登录，队列 `clientWidth=277`、`scrollWidth=277`；四个筛选按钮内部 `scrollWidth == clientWidth`；document `scrollWidth=clientWidth=712`、`scrollHeight=clientHeight=725`。

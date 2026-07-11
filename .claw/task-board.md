@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T04:03:47Z
+updated_at: 2026-07-11T04:16:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-184 - 客户互动工作台左侧队列横向裁切热修
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-092-customer-workbench-ui-streaming.md`
 - task_status_path: `.claw/tasks/TASK-184.md`
 - assignment_path: `.claw/assignments/TASK-184.yaml`
 - blocked_by: `none`
-- next_action: Constrain all queue children to the queue width, verify narrow/wide desktop layouts, and publish the hotfix.
+- next_action: Done in production `2.4.3`; monitor queue clipping at non-default browser zoom levels.
 
 ### TASK-183 - 客户互动工作台界面规范化与流式助理
 

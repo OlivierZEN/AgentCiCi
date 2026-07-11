@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T03:53:00Z
+updated_at: 2026-07-11T04:16:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.3 TASK-184 客户互动工作台左侧队列横向裁切热修 on 2026-07-11:
+  - Git commit/tag: `3b18b8591e2c` / `2.4.3`. Search/settings use border-box, queue children are width-contained, and four filters use an adaptive grid with compact padding.
+  - Images: backend index `sha256:a1e4a470d4e39df5dac3f5c7504849c679ebb28340045ac69401fb6c7fffb4d8`; frontend index `sha256:f569239f16997c19d090f8cd189d5dd097b83cd274c9235ab1004c266c31e34e`.
+  - Backup: `/opt/cici/backups/20260711-121242-before-2.4.3-task184-queue`; env `1646`, PostgreSQL `2593100`, KB `196338`, Qdrant `1574403` bytes.
+  - Six services healthy; health `UP`; version `2.4.3 / 3b18b8591e2c`; Nginx valid; public workbench/embed routes `200`; post-warmup errors empty.
+  - Real CloudCC iframe measured queue `335/335`, filters `315/315`, accounts `315/315`; no filter label overflow. Skill CLI injection verification returned `issues=[]`.
 
 - 2.4.2 TASK-183 客户互动工作台界面规范化与流式助理 on 2026-07-11:
   - Git commit: `49402ae8f3a0` on `main`; annotated tag `2.4.2` pushed. Scope: standard Lucide icons, single inline queue settings, explicit read-only demo status, removal of nonfunctional entries, SSE phases/deltas, safe Markdown and automatic latest-message following.

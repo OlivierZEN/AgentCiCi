@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T04:11:00Z
+updated_at: 2026-07-11T04:16:00Z
 updated_by: MANAGER-001
-phase: customer-workbench-queue-clipping-hotfix
-active_task: "TASK-184"
-next_action: "Commit the verified queue-width fix, publish production 2.4.3, and verify the real CloudCC embedded page."
+phase: customer-workbench-queue-clipping-production
+active_task: "none"
+next_action: "Monitor production 2.4.3 queue sizing at non-default browser zoom and continue customer-workbench functional completion."
 read_next:
   goals: false
   decisions: false
@@ -22,11 +22,12 @@ read_next:
 
 ## Snapshot
 
-- TASK-184 local fix is complete after production screenshot evidence showed the left customer queue wider than its visible column. Border-box sizing and a four-column adaptive filter grid now keep the queue at `277/277` on 712px and `307/307` on 1920px; all filter labels fit and the page has no outer overflow. Production release remains.
+- TASK-184 is done in production `2.4.3`. Border-box sizing and a four-column adaptive filter grid keep the queue at `277/277` on 712px, `307/307` on 1920px and `335/335` in the real CloudCC iframe; all filter labels and customer rows fit without clipping.
+- TASK-184 evidence: 56 frontend tests and build passed; six services healthy; public routes 200; CloudCC injection `issues=[]`; post-warmup error scan empty. Release commit/tag/image/version is `3b18b8591e2c` / `2.4.3`.
 - TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.
 - TASK-183 local gates passed 56 frontend tests, Vite build, focused backend tests/compile, 1920x960 browser interaction checks and zero console errors. The browser exposed and verified a seven-row queue-grid fix when settings are expanded; send showed a processing state within 60ms and the completed long conversation remained exactly at the bottom.
 - TASK-183 production evidence: release commit/tag/image/version `49402ae8f3a0` / `2.4.2`; six services healthy; V72-V74 successful; public routes 200; SSE emitted 40 deltas without error; AgentCiCi and real CloudCC iframe both showed immediate status/input clearing and stayed at the latest message; injection verification returned `issues=[]`.
-- Current branch: `main`; production is running release `2.4.2` from Git commit `49402ae8f3a0`; TASK-182/TASK-183 are complete and FEAT-081/FEAT-092 are production ready.
+- Current branch: `main`; production is running release `2.4.3` from Git commit `3b18b8591e2c`; TASK-182/TASK-183/TASK-184 are complete and FEAT-081/FEAT-092 are production ready.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.
