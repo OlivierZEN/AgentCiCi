@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T05:38:44Z
+updated_at: 2026-07-11T05:53:07Z
 updated_by: MANAGER-001
-phase: ai-app-shell-navigation-stability
-active_task: "TASK-187"
-next_action: "Remove AI app canvas gaps, stabilize rail hover geometry, decouple menu opening from workspace switching, and verify production."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Resume the security rules platform after completing the AI application shell production hotfix."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-187 is in progress: repair AI app shell spacing, rail hover stability, menu-only AI Apps entry behavior, flyout close chrome, and workbench filter alignment.
+- TASK-187 is done in production `2.4.6`: AI 应用画布与一级侧栏零间距，侧栏 hover 固定几何，一级“AI应用”只开关菜单，具体应用项才切换画布；关闭按钮和筛选箭头统一为无套框标准图标。
+- TASK-187 evidence: 57 frontend tests/build, release backup/health/public routes, 1920x960 production interaction and computed-style checks passed; document/body no overflow, console errors `0`. Release commit/tag/image/version is `f7f0e829b9cd` / `2.4.6`.
 - TASK-186 is done in production `2.4.5`: shared frameless icon/mode controls are documented and implemented; AgentCiCi and CloudCC iframe computed-style audits found zero raised-button offenders and no outer overflow.
 - TASK-186 evidence: 57 frontend tests/build, release backup/health/public routes, dual-entry screenshots, CloudCC skill verification and clean 60-second post-warmup logs passed. Release commit/tag/image/version is `b615cf417601` / `2.4.5`.
 - TASK-185 is done in production `2.4.4`: Pin behavior is removed; standard panel expand/restore transfers the queue width to the assistant while the center remains fixed. AgentCiCi measured `1214px` before/after; CloudCC iframe measured `1213px`, assistant `327px -> 653px`, and exact restoration.
@@ -32,7 +33,7 @@ read_next:
 - TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.
 - TASK-183 local gates passed 56 frontend tests, Vite build, focused backend tests/compile, 1920x960 browser interaction checks and zero console errors. The browser exposed and verified a seven-row queue-grid fix when settings are expanded; send showed a processing state within 60ms and the completed long conversation remained exactly at the bottom.
 - TASK-183 production evidence: release commit/tag/image/version `49402ae8f3a0` / `2.4.2`; six services healthy; V72-V74 successful; public routes 200; SSE emitted 40 deltas without error; AgentCiCi and real CloudCC iframe both showed immediate status/input clearing and stayed at the latest message; injection verification returned `issues=[]`.
-- Current branch: `main`; production is running release `2.4.5` from Git commit `b615cf417601`; TASK-182 through TASK-186 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094 are production ready.
+- Current branch: `main`; production is running release `2.4.6` from Git commit `f7f0e829b9cd`; TASK-182 through TASK-187 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095 are production ready.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

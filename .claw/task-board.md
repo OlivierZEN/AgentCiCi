@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T05:38:44Z
+updated_at: 2026-07-11T05:53:07Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-187 - AI 应用壳层导航稳定性治理
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-095-ai-app-shell-navigation-stability.md`
 - task_status_path: `.claw/tasks/TASK-187.md`
 - assignment_path: `.claw/assignments/TASK-187.yaml`
 - blocked_by: `none`
-- next_action: Repair shell spacing, stable rail states, menu-only AI Apps click, and icon alignment.
+- next_action: Done in production `2.4.6`; reuse shell navigation geometry and menu semantics on future pages.
 
 ### TASK-186 - 产品控件去框化与客户互动工作台全页治理
 

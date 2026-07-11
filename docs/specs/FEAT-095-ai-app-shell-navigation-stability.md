@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-095
 title: AI 应用壳层导航稳定性治理
-status: in_implementation
+status: production_ready
 owner_role: frontend-agent
 task_ids: TASK-187
 related_decisions: FEAT-090, FEAT-094
 related_issues: none
-updated_at: 2026-07-11T05:42:34Z
+updated_at: 2026-07-11T05:53:07Z
 updated_by: MANAGER-001
 ---
 
@@ -48,4 +48,7 @@ AI 应用主区域与一级侧栏之间存在额外画布间距；侧栏图标�
 - AI 应用一级入口已改为纯菜单开关；具体应用项负责设置活动应用并切换 `workspaceTab`。
 - AI 应用画布外层 padding 已归零；一级侧栏按钮全状态清除 transform/box-shadow，头像 hover scale 已移除。
 - 菜单关闭使用 Lucide `X` 与公共裸图标原语；工作台概览筛选使用 `ChevronDown` 和中心对齐布局。
-- 57 项前端测试、Vite 生产构建、DESIGN.json 解析与 diff 检查通过；待生产发布和真实浏览器验收。
+- 57 项前端测试、Vite 生产构建、DESIGN.json 解析与 diff 检查通过。
+- 生产版本 `2.4.6` 已完成备份、部署、六服务健康、版本、公网入口和稳定期日志验收。
+- 生产 1920x960 实测画布与侧栏间距为 `0`，外层 padding 为 `0`；侧栏按钮 hover 前后矩形不变且无 transform/shadow；一级“AI应用”开关菜单时工作台主区域矩形保持 `1238.0078125px`，具体应用点击后才切换画布并关闭菜单。
+- 菜单关闭按钮默认和 hover 均为 `border:none`、`box-shadow:none`、`transform:none`；两个筛选按钮均包含 Lucide SVG 且 `align-items:center`；document/body 无外层溢出，控制台错误为 `0`。

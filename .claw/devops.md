@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T05:29:43Z
+updated_at: 2026-07-11T05:53:07Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.6 TASK-187 AI 应用壳层导航稳定性治理 on 2026-07-11:
+  - Git commit/tag `f7f0e829b9cd` / `2.4.6`. Removed AI canvas shell padding, stabilized all primary rail states, decoupled app-menu opening from workspace switching, and standardized close/filter icons.
+  - Images: backend index `sha256:b89ba70ab17a6c2c3ed278b6a7e128c07e5caf8607f7eceefa63571f88f205b4`; frontend index `sha256:f6e3ec216d54f32acb561cf98fa6bf918fad1311459edaa54a80b00bce238c92`.
+  - Backup: `/opt/cici/backups/20260711-134559-before-2.4.6-task187-ai-app-shell`; env `1646`, PostgreSQL `2593822`, KB `196338`, Qdrant `1574403` bytes.
+  - Backend/frontend recreated on `2.4.6`; database, Redis, RabbitMQ and Qdrant remained healthy on `2.3.4`. Six services healthy; health `UP`; version `2.4.6 / f7f0e829b9cd`; Nginx valid; public routes `200`.
+  - Production browser: rail/app gap `0`, no rail hover geometry change, menu-only primary AI Apps behavior, concrete-app switching, frameless close and centered Lucide filters passed with no outer overflow or console errors. Screenshots: `output/playwright/task187-prod-shell-stable.png`, `output/playwright/task187-prod-ai-app-menu.png`.
 
 - 2.4.5 TASK-186 产品控件去框化与客户互动工作台全页治理 on 2026-07-11:
   - Git commit/tag `b615cf417601` / `2.4.5`. Added shared frameless icon and mode-switch primitives, removed duplicate mode-switch frame, and blocked legacy raised-button chrome across the workbench.

@@ -1,7 +1,7 @@
 task_id: TASK-187
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-11T05:38:44Z
 expires_at: none
 spec_path: docs/specs/FEAT-095-ai-app-shell-navigation-stability.md

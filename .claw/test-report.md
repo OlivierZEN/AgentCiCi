@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T05:29:43Z
+updated_at: 2026-07-11T05:53:07Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T05:29:43Z
+last_run_at: 2026-07-11T05:53:07Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,20 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-186 已在生产 `2.4.5` 完成公共控件规则、工作台全页审计和双入口验收）
-- 范围：TASK-186 产品裸图标/模式切换公共原语、客户互动工作台去框化与生产发布。
-- 命令：身份/assignment 门禁、Vitest、Vite build、JSON/diff 检查、发布 dry-run、ACR 清单校验、备份、部署、健康检查、生产双入口 computed-style/截图和技能 CLI。
+- 状态：`passed`（TASK-187 已在生产 `2.4.6` 完成 AI 应用壳层导航稳定性治理）
+- 范围：TASK-187 壳层零间距、侧栏 hover 固定几何、菜单/画布解耦、关闭与筛选图标规范化。
+- 命令：身份/assignment 门禁、Vitest、Vite build、JSON/diff 检查、发布 dry-run、ACR 清单校验、备份、部署、健康检查和生产 1920x960 浏览器交互/computed-style/截图。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-187 AI 应用壳层导航稳定性生产验收 (2026-07-11T13:53:07+08:00):
+  - `frontend`: Vitest 12 个文件、57 项 -> **success**；Vite production build、DESIGN.json 解析和 `git diff --check` -> **success**。
+  - `release`: `2.4.6 / f7f0e829b9cd`，backend index `sha256:b89ba70ab17a6c2c3ed278b6a7e128c07e5caf8607f7eceefa63571f88f205b4`，frontend index `sha256:f6e3ec216d54f32acb561cf98fa6bf918fad1311459edaa54a80b00bce238c92`；Git tag `2.4.6` 已推送。
+  - `backup/deploy`: `/opt/cici/backups/20260711-134559-before-2.4.6-task187-ai-app-shell` 四类文件非空；backend/frontend `2.4.6` healthy，四个状态服务保持 `2.3.4` healthy；健康 `UP`、版本 `2.4.6 / f7f0e829b9cd`、Nginx 通过、公开三入口 `200`。
+  - `browser-layout`: `.cici-ai-apps padding=0px`，侧栏 right 与应用画布 left 均为 `58px`，间距 `0`；document/body 无外层溢出。侧栏各按钮 `transform:none`、`box-shadow:none`，AI 应用按钮 hover 前后保持 `40x40 @ 8.5,166`，工作台保持 `1862x960 @ 58,0`。
+  - `browser-navigation`: 点击一级“AI应用”后菜单出现且工作台/中间区域保持 `1862px / 1238.0078125px`；关闭后主区域不变；点击“客户洞察”后才切换应用并关闭菜单，再点击具体“客户互动工作台”恢复。关闭按钮默认/hover 均无 border/shadow/transform。
+  - `browser-icons`: “全部类型”和“全部建议”均包含 Lucide SVG、`align-items:center`；版本 `2.4.6` 可见，控制台 error/warn `0`。截图：`output/playwright/task187-prod-shell-stable.png`、`output/playwright/task187-prod-ai-app-menu.png`。
 
 - TASK-186 产品控件去框化生产验收 (2026-07-11T13:29:43+08:00):
   - `frontend`: Vitest 12 个文件、57 项 -> **success**；Vite production build、DESIGN.json 解析和 `git diff --check` -> **success**。
