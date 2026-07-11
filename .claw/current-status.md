@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T05:53:07Z
+updated_at: 2026-07-11T05:58:07Z
 updated_by: MANAGER-001
-phase: security-rules-platform
-active_task: "TASK-170"
-next_action: "Resume the security rules platform after completing the AI application shell production hotfix."
+phase: customer-workbench-title-static-link
+active_task: "TASK-188"
+next_action: "Add the customer workbench application title, remove copy-link pointer hover visuals, and verify production."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-188 is ready: add a concise application title to the workbench topbar and make the copy-link icon completely static on pointer hover while retaining keyboard focus visibility.
 - TASK-187 is done in production `2.4.6`: AI 应用画布与一级侧栏零间距，侧栏 hover 固定几何，一级“AI应用”只开关菜单，具体应用项才切换画布；关闭按钮和筛选箭头统一为无套框标准图标。
 - TASK-187 evidence: 57 frontend tests/build, release backup/health/public routes, 1920x960 production interaction and computed-style checks passed; document/body no overflow, console errors `0`. Release commit/tag/image/version is `f7f0e829b9cd` / `2.4.6`.
 - TASK-186 is done in production `2.4.5`: shared frameless icon/mode controls are documented and implemented; AgentCiCi and CloudCC iframe computed-style audits found zero raised-button offenders and no outer overflow.

@@ -1,0 +1,53 @@
+task_id: TASK-188
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-11T05:58:07Z
+expires_at: none
+spec_path: docs/specs/FEAT-096-customer-workbench-title-static-link.md
+task_status_path: .claw/tasks/TASK-188.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-096-customer-workbench-title-static-link.md
+  - .claw/tasks/TASK-188.md
+  - .claw/assignments/TASK-188.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.test.tsx
+  - frontend/src/assistant/cici-ui.css
+  - output/playwright/task188-prod-title-static-link.png
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-095-ai-app-shell-navigation-stability.md
+  - docs/specs/FEAT-096-customer-workbench-title-static-link.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "补充客户互动工作台应用标题，并取消复制链接控件所有鼠标 hover 动态视觉。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-11T05:58:07Z; user explicitly requested title and static link control repair."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; do not record credentials, bearer tokens, cookies, or reusable secrets."
+
