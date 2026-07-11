@@ -50,7 +50,6 @@ public class CustomerCrmProjectionService {
     private final ObjectMapper objectMapper;
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
     private final Map<String, Object> loadLocks = new ConcurrentHashMap<>();
-    private final Map<String, Object> signalPersistLocks = new ConcurrentHashMap<>();
 
     public CustomerCrmProjectionService(CloudccOpenApiService cloudcc,
                                         CustomerInteractionEventRepository eventRepository,
@@ -339,23 +338,14 @@ public class CustomerCrmProjectionService {
 
     @Transactional
     protected void persistSignals(String orgId, String accountId, List<Map<String, Object>> signals) {
-        String lockKey = orgId + "::" + accountId;
-        synchronized (signalPersistLocks.computeIfAbsent(lockKey, ignored -> new Object())) {
-            persistSignalsLocked(orgId, accountId, signals);
-        }
-    }
-
-    private void persistSignalsLocked(String orgId, String accountId, List<Map<String, Object>> signals) {
         Set<String> activeIds = new LinkedHashSet<>();
         for (Map<String, Object> signal : signals) {
             String publicId = stableId("sig", orgId, accountId, text(signal, "type"));
             activeIds.add(publicId);
-            CustomerSignalEntity entity = signalRepository.findByOrgIdAndPublicId(orgId, publicId)
-                    .orElseGet(() -> new CustomerSignalEntity(publicId, orgId, accountId, text(signal, "mode"), text(signal, "type"),
-                            text(signal, "title"), text(signal, "detail"), text(signal, "severity"), toJson(signal.get("evidence")), null, Instant.now()));
-            entity.refresh(text(signal, "mode"), text(signal, "title"), text(signal, "detail"), text(signal, "severity"),
-                    toJson(signal.get("evidence")), Instant.now());
-            signalRepository.save(entity);
+            Instant now = Instant.now();
+            signalRepository.upsertSignal(publicId, orgId, accountId, text(signal, "mode"), text(signal, "type"),
+                    text(signal, "title"), text(signal, "detail"), text(signal, "severity"),
+                    toJson(signal.get("evidence")), now, now);
         }
         for (CustomerSignalEntity existing : signalRepository.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId)) {
             if (!activeIds.contains(existing.getPublicId())) {

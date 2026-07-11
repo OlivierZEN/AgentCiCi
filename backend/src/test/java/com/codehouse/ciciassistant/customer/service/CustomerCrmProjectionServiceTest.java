@@ -10,18 +10,17 @@ import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.customer.domain.CustomerFollowSubscriptionRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerSignalRepository;
-import com.codehouse.ciciassistant.customer.domain.CustomerSignalEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.ArrayList;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
 class CustomerCrmProjectionServiceTest {
@@ -76,21 +75,13 @@ class CustomerCrmProjectionServiceTest {
     }
 
     @Test
-    void serializesSignalPersistenceForTheSameAccount() throws Exception {
+    void usesAtomicSignalUpsertUnderConcurrentProjection() throws Exception {
         CustomerSignalRepository signals = mock(CustomerSignalRepository.class);
-        ConcurrentHashMap<String, CustomerSignalEntity> stored = new ConcurrentHashMap<>();
-        when(signals.findByOrgIdAndPublicId(anyString(), anyString())).thenAnswer(invocation ->
-                Optional.ofNullable(stored.get(invocation.getArgument(1, String.class))));
-        when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenAnswer(invocation ->
-                new ArrayList<>(stored.values()));
-        when(signals.save(any())).thenAnswer(invocation -> {
-            CustomerSignalEntity entity = invocation.getArgument(0);
-            CustomerSignalEntity existing = stored.putIfAbsent(entity.getPublicId(), entity);
-            if (existing != null && existing != entity) {
-                throw new IllegalStateException("duplicate signal insert");
-            }
-            return entity;
-        });
+        AtomicInteger upserts = new AtomicInteger();
+        when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
+        when(signals.upsertSignal(anyString(), anyString(), anyString(), anyString(), anyString(),
+                anyString(), anyString(), anyString(), anyString(), any(), any()))
+                .thenAnswer(invocation -> upserts.incrementAndGet());
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 mock(CloudccOpenApiService.class), mock(CustomerInteractionEventRepository.class),
                 mock(CustomerWorkbenchRecommendationRepository.class), signals,
@@ -112,7 +103,7 @@ class CustomerCrmProjectionServiceTest {
             }
             start.countDown();
             for (Future<?> future : futures) future.get();
-            assertThat(stored).hasSize(1);
+            assertThat(upserts).hasValue(8);
         } finally {
             executor.shutdownNow();
         }
