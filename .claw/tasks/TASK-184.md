@@ -7,7 +7,7 @@ owner_role: frontend-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-092-customer-workbench-ui-streaming.md
 assignment_path: .claw/assignments/TASK-184.yaml
-updated_at: 2026-07-11T04:03:47Z
+updated_at: 2026-07-11T04:11:00Z
 updated_by: MANAGER-001
 ---
 
@@ -26,4 +26,7 @@ updated_by: MANAGER-001
 ## 当前进展
 
 - 已根据用户截图确认问题并创建热修任务。
-- 待完成 CSS 定位、浏览器复测和生产发布。
+- 已确认根因是搜索框和设置区 `width: 100%` 未使用 border-box，额外内边距/边框把左栏撑宽；四筛选按钮的 nowrap 与工作台专用 7px 内边距进一步造成文字裁切。
+- 已完成盒模型、直接子项最大宽度、筛选网格和按钮内边距修复。
+- 本地 712x725：队列 `277/277`，四筛选按钮均无内部溢出；1920x960：队列与筛选区均 `307/307`，页面无外层溢出。
+- 前端 12 个测试文件、56 项测试和生产构建通过；待发布生产热修。

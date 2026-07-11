@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T03:53:00Z
+updated_at: 2026-07-11T04:11:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T03:53:00Z
+last_run_at: 2026-07-11T04:11:00Z
 last_run_status: passed
 ---
 
@@ -18,6 +18,12 @@ last_run_status: passed
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-184 客户队列横向裁切本地热修验收 (2026-07-11T12:11:00+08:00):
+  - `browser-narrow`: 712x725 真实本地登录，队列 `clientWidth=277`、`scrollWidth=277`；四个筛选按钮内部 `scrollWidth == clientWidth`；document `scrollWidth=clientWidth=712`、`scrollHeight=clientHeight=725`。
+  - `browser-wide`: 1920x960，队列和筛选区均 `clientWidth=scrollWidth=307/291`，document/body 无外层溢出。
+  - `frontend`: Vitest 12 个文件、56 项 -> **success**；TypeScript/Vite production build -> **success**，仅保留既有大 chunk 警告。
+  - `static`: `git diff --check` -> **success**。截图：`output/playwright/task184-customer-queue-narrow.png`、`output/playwright/task184-customer-queue-wide.png`。
 
 - TASK-183 生产发布与双入口流式验收 (2026-07-11T11:53:00+08:00):
   - `release`: dry-run 和正式发布 `2.4.2` -> **success**；提交 `49402ae8f3a0`，backend index digest `sha256:7bf22552e8aaac27b65c627f87bf1acb863b6f5b87d2f726e76f870d47346f62`，frontend index digest `sha256:3af8fc2b046c91bca9055de48ccb6163a7f735f590bdffaceb3c6408dca0b0ea`。
