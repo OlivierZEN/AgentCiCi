@@ -1,0 +1,56 @@
+task_id: TASK-187
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-11T05:38:44Z
+expires_at: none
+spec_path: docs/specs/FEAT-095-ai-app-shell-navigation-stability.md
+task_status_path: .claw/tasks/TASK-187.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-095-ai-app-shell-navigation-stability.md
+  - .claw/tasks/TASK-187.md
+  - .claw/assignments/TASK-187.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - DESIGN.md
+  - DESIGN.json
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/cici-ui.css
+  - output/playwright/task187-prod-shell-stable.png
+  - output/playwright/task187-prod-ai-app-menu.png
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-090-ai-apps-workbench-ui-refactor.md
+  - docs/specs/FEAT-094-customer-workbench-control-chrome-cleanup.md
+  - docs/specs/FEAT-095-ai-app-shell-navigation-stability.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "消除 AI 应用壳层间距和侧栏 hover 几何变化，解耦应用菜单与画布切换并统一图标控件。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-11T05:38:44Z; user explicitly requested shell-level navigation repair."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Public identity material only; do not record credentials, bearer tokens, cookies, or reusable secrets."

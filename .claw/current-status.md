@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T05:29:43Z
+updated_at: 2026-07-11T05:38:44Z
 updated_by: MANAGER-001
-phase: customer-workbench-control-chrome-production
-active_task: "none"
-next_action: "Monitor production 2.4.5 and require shared frameless control primitives on future product pages."
+phase: ai-app-shell-navigation-stability
+active_task: "TASK-187"
+next_action: "Remove AI app canvas gaps, stabilize rail hover geometry, decouple menu opening from workspace switching, and verify production."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-187 is in progress: repair AI app shell spacing, rail hover stability, menu-only AI Apps entry behavior, flyout close chrome, and workbench filter alignment.
 - TASK-186 is done in production `2.4.5`: shared frameless icon/mode controls are documented and implemented; AgentCiCi and CloudCC iframe computed-style audits found zero raised-button offenders and no outer overflow.
 - TASK-186 evidence: 57 frontend tests/build, release backup/health/public routes, dual-entry screenshots, CloudCC skill verification and clean 60-second post-warmup logs passed. Release commit/tag/image/version is `b615cf417601` / `2.4.5`.
 - TASK-185 is done in production `2.4.4`: Pin behavior is removed; standard panel expand/restore transfers the queue width to the assistant while the center remains fixed. AgentCiCi measured `1214px` before/after; CloudCC iframe measured `1213px`, assistant `327px -> 653px`, and exact restoration.
