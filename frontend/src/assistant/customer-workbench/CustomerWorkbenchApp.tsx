@@ -40,6 +40,15 @@ type DetailTab =
   | "renewal"
   | "relationship";
 type RecommendationAction = "accept" | "edit" | "dismiss" | "confirm" | "apply";
+
+export function isCurrentVoiceSession(sessionId: number, currentSessionId: number): boolean {
+  return sessionId === currentSessionId;
+}
+
+export function scrollConversationToLatest(element: Pick<HTMLElement, "scrollTop" | "scrollHeight"> | null): void {
+  if (element) element.scrollTop = element.scrollHeight;
+}
+
 type IconName =
   | "alert"
   | "bot"
@@ -307,10 +316,12 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   ]);
   const recommendationRef = useRef<HTMLDivElement | null>(null);
   const composerInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const assistantChatRef = useRef<HTMLDivElement | null>(null);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const deepLinkedAccountIdRef = useRef(initialAccountId);
   const previousAssistantAccountRef = useRef("");
-  const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession } = useAsrVoiceInput();
+  const voiceSessionIdRef = useRef(0);
+  const { listening, speechSupported, start: startAsrSession, stop: stopAsrSession, abort: abortAsrSession } = useAsrVoiceInput();
 
   useEffect(() => {
     if (!token) return;
@@ -392,6 +403,11 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       .catch(() => undefined);
     return () => { ignore = true; };
   }, [activeAccount?.name, activeAccountId, token]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => scrollConversationToLatest(assistantChatRef.current));
+    return () => window.cancelAnimationFrame(frame);
+  }, [assistantMessages]);
 
   const switchMode = (mode: WorkbenchMode) => {
     setWorkbenchMode(mode);
@@ -478,8 +494,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const submitAssistant = async (preset?: string) => {
     const message = (preset ?? assistantInput).trim();
     if (!message || !token) return;
-    setAssistantMessages((prev) => [...prev, { role: "user", text: message, time: nowTime() }]);
+    voiceSessionIdRef.current += 1;
+    abortAsrSession();
     setAssistantInput("");
+    setAssistantMessages((prev) => [...prev, { role: "user", text: message, time: nowTime() }]);
     try {
       const result = await askCustomerWorkbenchAssistant(token, { accountId: activeAccountId, message });
       setAssistantMessages((prev) => [...prev, { role: "assistant", text: result.reply, time: nowTime() }]);
@@ -500,14 +518,19 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       return;
     }
     const prefixBeforeSpeech = assistantInput;
+    const voiceSessionId = voiceSessionIdRef.current + 1;
+    voiceSessionIdRef.current = voiceSessionId;
     await startAsrSession({
       token,
       provider: "aliyun",
       speakerDiarization: false,
       getPrefix: () => prefixBeforeSpeech,
-      onLiveText: setAssistantInput,
+      onLiveText: (text) => {
+        if (isCurrentVoiceSession(voiceSessionId, voiceSessionIdRef.current)) setAssistantInput(text);
+      },
       onNotice: setNotice,
       onFinished: async ({ asrText, fullText }) => {
+        if (!isCurrentVoiceSession(voiceSessionId, voiceSessionIdRef.current)) return;
         if (asrText) {
           setAssistantInput(fullText);
           setNotice("语音录入完成，内容已生成到输入框。");
@@ -745,7 +768,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             <button type="button" aria-label="关闭" onClick={() => setAssistantOpen(false)}><Icon name="close" /></button>
           </div>
         </header>
-        <div className="customer-workbench__chat">
+        <div className="customer-workbench__chat" ref={assistantChatRef}>
           <div className="customer-workbench__dayline">今天</div>
           {assistantMessages.map((message, index) => (
             <div key={`${message.time}-${index}`} className={`customer-workbench-message is-${message.role}`}>
