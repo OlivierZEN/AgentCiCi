@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T14:59:42Z
+updated_at: 2026-07-11T15:26:48Z
 updated_by: MANAGER-001
-phase: security-rules-resume
-active_task: "TASK-170"
-next_action: "Resume TASK-170 security rules platform after validating its assignment and current branch state."
+phase: cloudcc-refresh-stability
+active_task: "TASK-191"
+next_action: "Fix CloudCC component remount and customer-signal insert concurrency, publish through the customization skill, and validate repeated refresh."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-191 is in progress: the repeated-refresh white screen occurs before the AgentCiCi iframe request, while the remaining `Unexpected server error` is a verified duplicate `customer_signal.public_id` insert race during concurrent customer detail projection.
 
 - TASK-190 is done in production `2.4.9`: per-user single-flight Token acquisition, conditional stale-token invalidation, HTTP-200 business authentication failure refresh/retry and explicit CloudCC API errors are live.
 - TASK-190 production evidence: mapped `CCAdmin` concurrent integration/queue/notifications/supervisor requests all returned 200; integration is connected with 110 visible accounts, existing queue has 48 accounts, and stable backend logs are clean.

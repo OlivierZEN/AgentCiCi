@@ -1,0 +1,54 @@
+task_id: TASK-191
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-11T15:26:48Z
+expires_at: none
+spec_path: docs/specs/FEAT-099-cloudcc-embed-remount-signal-idempotency.md
+task_status_path: .claw/tasks/TASK-191.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - frontend/build/**
+  - frontend/pagecomponents/customer-workbench/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-099-cloudcc-embed-remount-signal-idempotency.md
+  - .claw/tasks/TASK-191.md
+  - .claw/assignments/TASK-191.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/service/CustomerCrmProjectionService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/service/CustomerCrmProjectionServiceTest.java
+  - frontend/build/customer-workbench.umd.min.js
+  - frontend/pagecomponents/customer-workbench/customer-workbench.vue
+  - output/playwright/task191-prod-cloudcc-refresh-stable.png
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-099-cloudcc-embed-remount-signal-idempotency.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "修复 CloudCC pagecomponent 重挂载与客户信号并发幂等，不改变工作台业务权限和视觉结构。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-11T15:26:48Z; user reproduced white screen and persistent unexpected error after repeated CRM refresh."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "CloudCC component operations must use cc-customization-expert-msapi; do not record credentials or tokens."
+
