@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface CustomerSignalRepository extends JpaRepository<CustomerSignalEntity, Long> {
     List<CustomerSignalEntity> findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(String orgId, String crmAccountId);
@@ -14,6 +15,7 @@ public interface CustomerSignalRepository extends JpaRepository<CustomerSignalEn
     long countByOrgIdAndCrmAccountIdAndStatus(String orgId, String crmAccountId, String status);
 
     @Modifying
+    @Transactional
     @Query(value = """
             INSERT INTO customer_signal
                 (public_id, org_id, crm_account_id, mode, signal_type, title, detail, severity, status,

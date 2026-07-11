@@ -22,7 +22,7 @@ updated_by: MANAGER-001
 
 - pagecomponent UMD 通过 DOM 变更观察器持续发现延迟创建或被 CloudCC 复用的组件节点。
 - 已标记挂载但内部 iframe 被宿主清空时，销毁旧 Vue 实例并重新挂载；fallback 的 SSO、resize 状态也同步重置。
-- 客户信号持久化按组织和客户串行化，避免同一进程中的查询后插入竞态；稳定 ID 语义保持不变。
+- 客户信号通过 PostgreSQL `INSERT ... ON CONFLICT DO UPDATE` 原子写入，消除跨请求和跨实例的查询后插入竞态；单条 UPSERT 在仓储层建立短事务，避免把 CRM 网络读取纳入长事务；稳定 ID 语义保持不变。
 - 所有 CloudCC 发布、customPage 绑定和注入验证继续通过 `cc-customization-expert-msapi` 完成。
 
 ## 验收标准
@@ -31,4 +31,3 @@ updated_by: MANAGER-001
 - 宿主清空并复用同一组件节点后能够重新挂载。
 - 同一客户多路并发信号持久化不触发唯一键异常。
 - 真实 CRM 页面连续刷新至少三次均显示工作台，且页面不再出现 `Unexpected server error`。
-
