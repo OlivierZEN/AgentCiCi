@@ -23,7 +23,7 @@ scope_files:
   - .claw/test-report.md
   - .claw/devops.md
   - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
-  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.test.tsx
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.test.ts
   - frontend/src/assistant/cici-ui.css
   - output/playwright/task188-prod-title-static-link.png
 protected_paths:
@@ -50,4 +50,3 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "Public identity material only; do not record credentials, bearer tokens, cookies, or reusable secrets."
-
