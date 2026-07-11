@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T04:16:00Z
+updated_at: 2026-07-11T04:35:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.4.4 TASK-185 客户互动工作台 AI 助理展开模式 on 2026-07-11:
+  - Git commit/tag `f69d2191ed3b` / `2.4.4`. Removed Pin behavior; added standard panel expand/restore, equal-width track transfer, hidden/inert queue, stable center and reduced-motion handling.
+  - Images: backend index `sha256:d0bc2a926d718b6de5ae267439c7f7877b03121e92c6b6b1ce97f6826cf6c136`; frontend index `sha256:43a1bcb9610029399690362861a90830662f71fda20b825f0b615a98e82d6d3c`.
+  - Backup: `/opt/cici/backups/20260711-122835-before-2.4.4-task185-assistant-expand`; env `1646`, PostgreSQL `2593348`, KB `196338`, Qdrant `1574403` bytes.
+  - Six services healthy; health `UP`; version `2.4.4 / f69d2191ed3b`; Nginx valid; public routes `200`; post-warmup logs empty; injection verification `issues=[]`.
+  - Real CloudCC iframe: default queue/main/assistant `327/1213/327`, expanded `hidden/1213/653`, restored exactly. Screenshot `output/playwright/task185-prod-cloudcc-expanded.png`.
 
 - 2.4.3 TASK-184 客户互动工作台左侧队列横向裁切热修 on 2026-07-11:
   - Git commit/tag: `3b18b8591e2c` / `2.4.3`. Search/settings use border-box, queue children are width-contained, and four filters use an adaptive grid with compact padding.

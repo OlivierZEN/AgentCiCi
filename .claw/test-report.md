@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T04:27:00Z
+updated_at: 2026-07-11T04:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T04:27:00Z
+last_run_at: 2026-07-11T04:35:00Z
 last_run_status: passed
 ---
 
@@ -18,6 +18,13 @@ last_run_status: passed
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-185 生产发布与双入口展开验收 (2026-07-11T12:35:00+08:00):
+  - `release`: `2.4.4` dry-run/正式发布 -> **success**；提交 `f69d2191ed3b`，backend index digest `sha256:d0bc2a926d718b6de5ae267439c7f7877b03121e92c6b6b1ce97f6826cf6c136`，frontend index digest `sha256:43a1bcb9610029399690362861a90830662f71fda20b825f0b615a98e82d6d3c`。
+  - `backup/deploy`: `/opt/cici/backups/20260711-122835-before-2.4.4-task185-assistant-expand` 四类文件非空；首次 SSH 连接重置发生在修改线上环境前，重连后分步拉取/重建成功；六服务 healthy，版本 `2.4.4 / f69d2191ed3b`，Nginx 通过。
+  - `agent-browser`: Pin/固定入口不存在；默认 `queue/main/assistant=307/1214/317`，展开 `hidden/1214/624`，中间差值 `0`，队列 aria-hidden/inert；页面无外层溢出。
+  - `crm-browser`: 真实 iframe 默认 `327/1213/327`，展开 `hidden/1213/653`，中间差值 `0`；恢复后完全回到默认尺寸。截图：`output/playwright/task185-prod-cloudcc-expanded.png`。
+  - `public/skill/logs`: x.agentcici.com 根、工作台和 embed 路由 `200`，HTTP `301`；技能 CLI `issues=[]`；最近 60 秒前后端错误扫描为空。
 
 - TASK-185 AI 助理展开模式本地验收 (2026-07-11T12:27:00+08:00):
   - `browser-default`: 1920x960 队列 `307px`、中间 `1214px`、助理 `317px`，document/body 无外层溢出。

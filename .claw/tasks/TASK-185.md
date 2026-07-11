@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-185
 title: 客户互动工作台 AI 助理展开模式
-status: in_progress
+status: done
 owner_role: frontend-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-093-customer-assistant-expand-mode.md
 assignment_path: .claw/assignments/TASK-185.yaml
-updated_at: 2026-07-11T04:27:00Z
+updated_at: 2026-07-11T04:35:00Z
 updated_by: MANAGER-001
 ---
 
@@ -30,3 +30,5 @@ updated_by: MANAGER-001
 - 队列展开态为 hidden/inert，恢复后客户和列表状态保留；关闭再打开回到默认三栏。
 - 前端 57 项测试、Vite production build、`git diff --check` 通过。
 - 待提交、发布生产并复验真实 CloudCC iframe。
+- 已发布生产 `2.4.4`，提交/标签/镜像/版本接口统一为 `f69d2191ed3b` / `2.4.4`。
+- AgentCiCi 与 CloudCC iframe 的展开、恢复、中间宽度稳定、Pin 移除、无外层溢出均通过真实点击和尺寸测量。

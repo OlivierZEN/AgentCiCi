@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-093
 title: 客户互动工作台 AI 助理展开模式
-status: implemented_pending_production
+status: production
 owner_role: frontend-agent
 task_ids: TASK-185
 related_decisions: FEAT-092
 related_issues: none
-updated_at: 2026-07-11T04:27:00Z
+updated_at: 2026-07-11T04:35:00Z
 updated_by: MANAGER-001
 ---
 
@@ -48,3 +48,5 @@ AI 客户助理标题栏的固定按钮只有切换客户时自动关闭这一�
 - 已实现标准面板展开/恢复按钮、三轨等量宽度转移、队列 inert/aria-hidden 和 reduced-motion 处理。
 - 本地 1920x960：展开前后中间区均为 `1214px`；队列 `307px -> 0`，助理 `317px -> 624px`；恢复尺寸完全一致，关闭再打开回到默认三栏。
 - 前端 12 个测试文件、57 项测试和生产构建通过；待生产发布与 CloudCC iframe 复验。
+- 已发布生产 `2.4.4`（提交 `f69d2191ed3b`）。AgentCiCi 中间区展开前后均 `1214px`；CloudCC iframe 中间区均 `1213px`，助理 `327px -> 653px`，恢复后尺寸完全一致。
+- 真实 CRM iframe、公开入口、技能 CLI 注入页验证和静置日志均通过。
