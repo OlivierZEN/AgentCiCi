@@ -1,0 +1,56 @@
+task_id: TASK-190
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-11T14:40:42Z
+expires_at: none
+spec_path: docs/specs/FEAT-098-cloudcc-session-refresh.md
+task_status_path: .claw/tasks/TASK-190.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/main/java/com/codehouse/ciciassistant/cloudcc/**
+  - backend/src/main/java/com/codehouse/ciciassistant/common/**
+  - backend/src/test/java/com/codehouse/ciciassistant/integration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/cloudcc/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - output/playwright/**
+scope_files:
+  - docs/specs/FEAT-098-cloudcc-session-refresh.md
+  - .claw/tasks/TASK-190.md
+  - .claw/assignments/TASK-190.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - backend/src/main/java/com/codehouse/ciciassistant/integration/service/CloudccAccessTokenService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/cloudcc/CloudccOpenApiService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/common/web/GlobalExceptionHandler.java
+  - backend/src/test/java/com/codehouse/ciciassistant/integration/service/CloudccAccessTokenServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/cloudcc/CloudccOpenApiServiceTest.java
+  - output/playwright/task190-prod-cloudcc-session-recovered.png
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-098-cloudcc-session-refresh.md
+  - docs/production-release-runbook.md
+task_boundary:
+  - "修复 CloudCC Token 并发刷新、HTTP 200 登录失效识别和面向用户的会话错误。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-11T14:40:42Z; user reported the real CRM embedded connection failure."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Do not record CloudCC tokens, safety marks, passwords, cookies, or reusable secrets."
+

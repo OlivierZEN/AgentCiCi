@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T08:33:33Z
+updated_at: 2026-07-11T14:40:42Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-190 - CloudCC 嵌入端会话失效自动恢复
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-098-cloudcc-session-refresh.md`
+- task_status_path: `.claw/tasks/TASK-190.md`
+- assignment_path: `.claw/assignments/TASK-190.yaml`
+- blocked_by: `none`
+- next_action: Implement single-flight token refresh, HTTP-200 auth-expiry retry and real CRM embedded verification.
 
 ### TASK-189 - 客户互动多模态采集与确认归集
 

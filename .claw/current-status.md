@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T08:33:33Z
+updated_at: 2026-07-11T14:40:42Z
 updated_by: MANAGER-001
-phase: security-rules-resume
-active_task: "TASK-170"
-next_action: "Resume TASK-170 security rules platform after validating its assignment and current branch state."
+phase: cloudcc-session-recovery
+active_task: "TASK-190"
+next_action: "Fix CloudCC single-flight token refresh and business-response auth expiry, then release and verify the real CRM iframe."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-190 is in progress after a real CRM embedded failure: CloudCC returned HTTP 200 with `result=false` and “登录失败，请再次尝试重新登录” for mapped user `CCAdmin`; current code refreshes only on HTTP 401 and has no per-user single-flight token acquisition.
 
 - TASK-189 is done in production `2.4.8`: immutable multimodal batches, secured originals, post-commit async extraction, stalled-batch recovery, structured AI analysis, human confirmation and the two-column ingestion UI are live.
 - TASK-189 evidence: focused backend tests, 57 frontend tests/build, Compose validation, real text/image processing, authenticated original read, confirmation idempotency and CRM timeline readback passed. AgentCiCi and real CloudCC iframe have no outer overflow or console errors.
