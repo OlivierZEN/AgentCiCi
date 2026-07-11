@@ -10,11 +10,18 @@ import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.customer.domain.CustomerFollowSubscriptionRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerSignalRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerSignalEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerWorkbenchRecommendationRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.ArrayList;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 class CustomerCrmProjectionServiceTest {
@@ -66,6 +73,49 @@ class CustomerCrmProjectionServiceTest {
         assertThat((List<?>) detail.get("serviceIssues")).hasSize(1);
         assertThat((List<?>) detail.get("valueItems")).hasSize(2);
         assertThat((List<?>) detail.get("signals")).isNotEmpty();
+    }
+
+    @Test
+    void serializesSignalPersistenceForTheSameAccount() throws Exception {
+        CustomerSignalRepository signals = mock(CustomerSignalRepository.class);
+        ConcurrentHashMap<String, CustomerSignalEntity> stored = new ConcurrentHashMap<>();
+        when(signals.findByOrgIdAndPublicId(anyString(), anyString())).thenAnswer(invocation ->
+                Optional.ofNullable(stored.get(invocation.getArgument(1, String.class))));
+        when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenAnswer(invocation ->
+                new ArrayList<>(stored.values()));
+        when(signals.save(any())).thenAnswer(invocation -> {
+            CustomerSignalEntity entity = invocation.getArgument(0);
+            CustomerSignalEntity existing = stored.putIfAbsent(entity.getPublicId(), entity);
+            if (existing != null && existing != entity) {
+                throw new IllegalStateException("duplicate signal insert");
+            }
+            return entity;
+        });
+        CustomerCrmProjectionService service = new CustomerCrmProjectionService(
+                mock(CloudccOpenApiService.class), mock(CustomerInteractionEventRepository.class),
+                mock(CustomerWorkbenchRecommendationRepository.class), signals,
+                mock(CustomerFollowSubscriptionRepository.class), new ObjectMapper());
+        List<Map<String, Object>> projected = List.of(Map.of(
+                "mode", "EXISTING", "type", "SERVICE_RISK", "title", "服务风险",
+                "detail", "存在未关闭服务问题", "severity", "HIGH", "evidence", List.of("case-1")));
+
+        ExecutorService executor = Executors.newFixedThreadPool(8);
+        try {
+            CountDownLatch start = new CountDownLatch(1);
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < 8; i++) {
+                futures.add(executor.submit(() -> {
+                    start.await();
+                    service.persistSignals("org", "account", projected);
+                    return null;
+                }));
+            }
+            start.countDown();
+            for (Future<?> future : futures) future.get();
+            assertThat(stored).hasSize(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @SuppressWarnings("unchecked")

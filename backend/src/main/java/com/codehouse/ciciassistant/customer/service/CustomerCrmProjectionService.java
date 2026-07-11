@@ -50,6 +50,7 @@ public class CustomerCrmProjectionService {
     private final ObjectMapper objectMapper;
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
     private final Map<String, Object> loadLocks = new ConcurrentHashMap<>();
+    private final Map<String, Object> signalPersistLocks = new ConcurrentHashMap<>();
 
     public CustomerCrmProjectionService(CloudccOpenApiService cloudcc,
                                         CustomerInteractionEventRepository eventRepository,
@@ -338,6 +339,13 @@ public class CustomerCrmProjectionService {
 
     @Transactional
     protected void persistSignals(String orgId, String accountId, List<Map<String, Object>> signals) {
+        String lockKey = orgId + "::" + accountId;
+        synchronized (signalPersistLocks.computeIfAbsent(lockKey, ignored -> new Object())) {
+            persistSignalsLocked(orgId, accountId, signals);
+        }
+    }
+
+    private void persistSignalsLocked(String orgId, String accountId, List<Map<String, Object>> signals) {
         Set<String> activeIds = new LinkedHashSet<>();
         for (Map<String, Object> signal : signals) {
             String publicId = stableId("sig", orgId, accountId, text(signal, "type"));
