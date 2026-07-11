@@ -48,6 +48,52 @@ export type CustomerInteractionEvent = {
   lifecycleArea: string;
 };
 
+export type CustomerInteractionAsset = {
+  assetId: string;
+  inputType: "AUDIO" | "IMAGE" | "DOCUMENT" | string;
+  name: string;
+  contentType: string;
+  size: number;
+  sha256: string;
+  sortOrder: number;
+  status: "STORED" | "PROCESSING" | "READY" | "FAILED" | string;
+  extractedText: string;
+  errorMessage: string;
+};
+
+export type CustomerInteractionAnalysis = {
+  summary?: string;
+  facts?: string[];
+  customerNeeds?: string[];
+  risks?: string[];
+  opportunities?: string[];
+  commitments?: string[];
+  nextActions?: string[];
+  pendingQuestions?: string[];
+  sentiment?: string;
+  degraded?: boolean;
+};
+
+export type CustomerInteractionBatch = {
+  batchId: string;
+  accountId: string;
+  sourceType: "WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK" | string;
+  occurredAt: string;
+  subject: string;
+  narrationText: string;
+  pastedText: string;
+  status: "QUEUED" | "PROCESSING" | "READY" | "PARTIAL" | "FAILED" | "CONFIRMED" | string;
+  combinedText: string;
+  analysis: CustomerInteractionAnalysis;
+  errorMessage: string;
+  confirmedEventId: string;
+  createdAt: string;
+  updatedAt: string;
+  assets: CustomerInteractionAsset[];
+  deduplicated?: boolean;
+  event?: CustomerInteractionEvent;
+};
+
 export type CustomerRecommendation = {
   recommendationId: string;
   accountId: string;
@@ -192,6 +238,74 @@ export function saveCustomerInteraction(token: string, accountId: string, payloa
     `/customer-workbench/accounts/${encodeURIComponent(accountId)}/interactions`,
     { method: "POST", body: JSON.stringify(payload) },
   );
+}
+
+async function requestMultipart<T>(token: string, input: string, form: FormData): Promise<T> {
+  const response = await fetch(input, { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+  const { body, rawText } = await safeFetchJson<T>(response);
+  if (!response.ok || body?.success === false) throw new Error(body?.message || rawText || `请求失败：${response.status}`);
+  return (body?.data ?? null) as T;
+}
+
+export function createCustomerInteractionBatch(token: string, accountId: string, payload: {
+  sourceType: string;
+  occurredAt: string;
+  subject: string;
+  narrationText: string;
+  pastedText: string;
+  files: File[];
+}) {
+  const form = new FormData();
+  form.set("sourceType", payload.sourceType);
+  form.set("occurredAt", payload.occurredAt);
+  form.set("subject", payload.subject);
+  form.set("narrationText", payload.narrationText);
+  form.set("pastedText", payload.pastedText);
+  payload.files.forEach((file) => form.append("files", file, file.name));
+  return requestMultipart<CustomerInteractionBatch>(
+    token,
+    `/customer-workbench/accounts/${encodeURIComponent(accountId)}/interaction-batches`,
+    form,
+  );
+}
+
+export function listCustomerInteractionBatches(token: string, accountId: string) {
+  return requestJson<CustomerInteractionBatch[]>(token, `/customer-workbench/accounts/${encodeURIComponent(accountId)}/interaction-batches`);
+}
+
+export function getCustomerInteractionBatch(token: string, batchId: string) {
+  return requestJson<CustomerInteractionBatch>(token, `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}`);
+}
+
+export async function viewCustomerInteractionAsset(token: string, batchId: string, assetId: string) {
+  const response = await fetch(
+    `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}/assets/${encodeURIComponent(assetId)}`,
+    { headers: { Authorization: `Bearer ${token}` } },
+  );
+  if (!response.ok) {
+    const { body, rawText } = await safeFetchJson<unknown>(response);
+    throw new Error(body?.message || rawText || `原件读取失败：${response.status}`);
+  }
+  const objectUrl = URL.createObjectURL(await response.blob());
+  const preview = window.open(objectUrl, "_blank", "noopener,noreferrer");
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  if (!preview) throw new Error("浏览器阻止了原件预览窗口，请允许当前站点打开新窗口。");
+}
+
+export function retryCustomerInteractionBatch(token: string, batchId: string) {
+  return requestJson<CustomerInteractionBatch>(token, `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}/retry`, { method: "POST" });
+}
+
+export function confirmCustomerInteractionBatch(token: string, batchId: string, payload: {
+  sourceType: string;
+  subject: string;
+  content: string;
+  occurredAt: string;
+}) {
+  return requestJson<CustomerInteractionBatch>(token, `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}/confirm`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function acceptCustomerRecommendation(token: string, recommendationId: string) {

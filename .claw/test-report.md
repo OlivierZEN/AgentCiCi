@@ -10,6 +10,19 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-189 客户互动多模态采集本地验收（2026-07-11）
+
+- `identity-gate`: MANAGER-001 / TASK-189 assignment and representative source/spec/test files -> **allowed**.
+- `frontend-tests`: `npm test` -> **57 passed**.
+- `frontend-build`: `npm run build` -> **success**; only the existing Vite large-chunk advisory remains.
+- `backend-focused-tests`: `CustomerInteractionIngestionServiceTest,CustomerWorkbenchServiceTest` -> **success**; covers empty/unsupported rejection, SHA-256 duplicate suppression, text extraction, AI fallback, confirmation idempotency and existing customer workbench behavior.
+- `backend-migration-runtime`: local PostgreSQL migrated from V74 to V75 and application started healthy.
+- `post-commit-dispatch`: a new pasted-text batch entered `PROCESSING` immediately after commit and completed `READY`; an older intentionally stranded `QUEUED` batch was recovered after restart and completed `READY`.
+- `real-image-ocr`: uploaded `codex-clipboard-64e0b170-fc8b-452c-8ffa-492bc9dc1bd9.png`; immutable `IMAGE` asset reached `READY`, OCR extracted visible form text, and combined text retained the file source boundary.
+- `compose-config`: ACR Compose rendering with `deploy/acr.env.example` -> **success**.
+- `desktop-browser`: local 1920x1000 modal showed stable two-column capture/review layout, no page-level overflow or overlap; clean browser session console had errors `0`, warnings `0`. Screenshot: `output/playwright/task189-local-multimodal-modal-final.png`.
+- No reusable token, password, model credential or uploaded file content was written to project logs.
+
 ## Latest Run Summary
 
 - 状态：`passed`（TASK-188 已在生产 `2.4.7` 完成应用标题与复制链接静态化）

@@ -11,6 +11,9 @@ import {
   ClipboardList,
   ExternalLink,
   FileText,
+  FileAudio,
+  History,
+  Image as ImageIcon,
   Inbox,
   Info,
   Keyboard,
@@ -25,9 +28,12 @@ import {
   Pencil,
   Phone,
   RefreshCw,
+  RotateCcw,
   Search,
   Send,
   Settings2,
+  Trash2,
+  Upload,
   Users,
   X,
   type LucideIcon,
@@ -45,8 +51,13 @@ import {
   getCustomerWorkbenchSupervisorSummary,
   getCustomerWorkbenchQueue,
   getCustomerWorkbenchDetail,
+  createCustomerInteractionBatch,
+  confirmCustomerInteractionBatch,
+  getCustomerInteractionBatch,
+  listCustomerInteractionBatches,
+  retryCustomerInteractionBatch,
+  viewCustomerInteractionAsset,
   setCustomerFollowed,
-  saveCustomerInteraction,
   submitCustomerRecommendationFeedback,
   streamCustomerWorkbenchAssistant,
   updateCustomerRecommendation,
@@ -54,6 +65,7 @@ import {
   type CustomerRecommendation,
   type CustomerWorkbenchAccount,
   type CustomerWorkbenchDetail,
+  type CustomerInteractionBatch,
 } from "./customerWorkbenchApi";
 
 type ChatMessage = {
@@ -901,18 +913,18 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           onClose={() => setEditingRecommendation(null)} onSave={saveRecommendationEdit} />
       ) : null}
       {interactionEditorOpen ? (
-        <InteractionEditor onClose={() => setInteractionEditorOpen(false)} onSave={async (draft) => {
-          if (!activeAccountId) return;
-          try {
-            const saved = await saveCustomerInteraction(token, activeAccountId, draft);
+        <InteractionEditor
+          token={token}
+          accountId={activeAccountId}
+          accountName={detail?.name || activeAccount?.name || "当前客户"}
+          onClose={() => setInteractionEditorOpen(false)}
+          onConfirmed={async (batch) => {
             setInteractionEditorOpen(false);
-            setNotice(saved.deduplicated ? "该互动记录已存在，未重复保存。" : "互动记录已确认并进入时间线。");
+            setNotice(batch.deduplicated ? "该互动记录已存在，未重复保存。" : "互动记录已确认并进入时间线。");
             await reloadDetail();
             setActiveTab("timeline");
-          } catch (error) {
-            setNotice(error instanceof Error ? error.message : String(error));
-          }
-        }} />
+          }}
+        />
       ) : null}
     </section>
   );
@@ -1232,35 +1244,326 @@ function RecommendationEditor({ item, onClose, onSave }: {
   );
 }
 
-function InteractionEditor({ onClose, onSave }: {
+function InteractionEditor({ token, accountId, accountName, onClose, onConfirmed }: {
+  token: string;
+  accountId: string;
+  accountName: string;
   onClose: () => void;
-  onSave: (draft: { sourceType: "WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK"; subject: string; content: string; occurredAt: string }) => Promise<void>;
+  onConfirmed: (batch: CustomerInteractionBatch) => Promise<void>;
 }) {
   const [sourceType, setSourceType] = useState<"WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK">("WECHAT");
   const [subject, setSubject] = useState("");
-  const [content, setContent] = useState("");
+  const [narrationText, setNarrationText] = useState("");
+  const [pastedText, setPastedText] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [batch, setBatch] = useState<CustomerInteractionBatch | null>(null);
+  const [recentBatches, setRecentBatches] = useState<CustomerInteractionBatch[]>([]);
+  const [confirmationText, setConfirmationText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  const imageInputRef = useRef<HTMLInputElement | null>(null);
+  const audioInputRef = useRef<HTMLInputElement | null>(null);
+  const documentInputRef = useRef<HTMLInputElement | null>(null);
+  const voicePrefixRef = useRef("");
+  const { listening, speechSupported, start: startVoiceCapture, stop: stopVoiceCapture, abort: abortVoiceCapture } = useAsrVoiceInput();
   const [occurredAt, setOccurredAt] = useState(() => {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
   });
+
+  const processing = batch?.status === "QUEUED" || batch?.status === "PROCESSING";
+  const confirmable = batch?.status === "READY" || batch?.status === "PARTIAL";
+
+  useEffect(() => {
+    void listCustomerInteractionBatches(token, accountId).then(setRecentBatches).catch(() => undefined);
+    return () => abortVoiceCapture();
+  }, [token, accountId, abortVoiceCapture]);
+
+  useEffect(() => {
+    if (!batch || !processing) return;
+    const timer = window.setInterval(() => {
+      void getCustomerInteractionBatch(token, batch.batchId).then((next) => {
+        setBatch(next);
+        setRecentBatches((current) => [next, ...current.filter((item) => item.batchId !== next.batchId)].slice(0, 20));
+        if ((next.status === "READY" || next.status === "PARTIAL") && next.combinedText) {
+          setConfirmationText((current) => current.trim() ? current : next.combinedText);
+          setMessage(next.status === "PARTIAL" ? "部分材料未能提取，请核对提示和确认稿。" : "整理草稿已生成，请核对后归集。");
+        }
+      }).catch((error) => setMessage(error instanceof Error ? error.message : String(error)));
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [token, batch?.batchId, processing]);
+
+  useEffect(() => {
+    if (batch?.combinedText && !confirmationText.trim()) setConfirmationText(batch.combinedText);
+  }, [batch?.batchId, batch?.combinedText]);
+
+  const addFiles = (incoming: FileList | null) => {
+    if (!incoming) return;
+    setFiles((current) => {
+      const merged = [...current];
+      for (const file of Array.from(incoming)) {
+        if (!merged.some((item) => item.name === file.name && item.size === file.size && item.lastModified === file.lastModified)) merged.push(file);
+      }
+      if (merged.length > 12) setMessage("一次最多选择 12 个文件。");
+      return merged.slice(0, 12);
+    });
+  };
+
+  const startNarration = async () => {
+    if (listening) {
+      stopVoiceCapture();
+      return;
+    }
+    voicePrefixRef.current = narrationText;
+    await startVoiceCapture({
+      token,
+      provider: "auto",
+      speakerDiarization: false,
+      getPrefix: () => voicePrefixRef.current,
+      onLiveText: setNarrationText,
+      onNotice: setMessage,
+      onFinished: ({ fullText }) => {
+        setNarrationText(fullText);
+        setMessage("语音描述已转写，可继续补充或提交整理。");
+      },
+      autoStopAfterNoSpeechMs: 5000,
+    });
+  };
+
+  const submitBatch = async () => {
+    setBusy(true);
+    setMessage("");
+    try {
+      const created = await createCustomerInteractionBatch(token, accountId, {
+        sourceType,
+        occurredAt: new Date(occurredAt).toISOString(),
+        subject,
+        narrationText,
+        pastedText,
+        files,
+      });
+      setBatch(created);
+      setRecentBatches((current) => [created, ...current.filter((item) => item.batchId !== created.batchId)].slice(0, 20));
+      setMessage("原始材料已安全保存，正在转写、识别和分析。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const chooseBatch = async (batchId: string) => {
+    if (!batchId) return;
+    setBusy(true);
+    try {
+      const selected = await getCustomerInteractionBatch(token, batchId);
+      setBatch(selected);
+      setSourceType(selected.sourceType as typeof sourceType);
+      setSubject(selected.subject);
+      const date = new Date(selected.occurredAt);
+      date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
+      setOccurredAt(date.toISOString().slice(0, 16));
+      setNarrationText(selected.narrationText);
+      setPastedText(selected.pastedText);
+      setFiles([]);
+      setConfirmationText(selected.combinedText);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const retry = async () => {
+    if (!batch) return;
+    setBusy(true);
+    try {
+      const next = await retryCustomerInteractionBatch(token, batch.batchId);
+      setBatch(next);
+      setMessage("已重新提交失败材料和分析任务。");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetCapture = () => {
+    abortVoiceCapture();
+    setBatch(null);
+    setSubject("");
+    setNarrationText("");
+    setPastedText("");
+    setFiles([]);
+    setConfirmationText("");
+    setMessage("");
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    setOccurredAt(now.toISOString().slice(0, 16));
+  };
+
+  const viewAsset = async (assetId: string) => {
+    if (!batch) return;
+    try {
+      await viewCustomerInteractionAsset(token, batch.batchId, assetId);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    }
+  };
+
+  const confirm = async () => {
+    if (!batch) return;
+    setBusy(true);
+    try {
+      const confirmed = await confirmCustomerInteractionBatch(token, batch.batchId, {
+        sourceType,
+        subject,
+        content: confirmationText,
+        occurredAt: new Date(occurredAt).toISOString(),
+      });
+      await onConfirmed(confirmed);
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const pendingFilesSize = files.reduce((total, file) => total + file.size, 0);
+  const hasMaterial = narrationText.trim().length > 0 || pastedText.trim().length >= 10 || files.length > 0;
+  const analysis = batch?.analysis ?? {};
   return (
     <div className="customer-workbench-dialog" role="dialog" aria-modal="true" aria-labelledby="interaction-editor-title">
-      <form onSubmit={(event) => {
-        event.preventDefault();
-        void onSave({ sourceType, subject, content, occurredAt: new Date(occurredAt).toISOString() });
-      }}>
-        <header><h3 id="interaction-editor-title">整理互动记录</h3><button type="button" className="cici-product-icon-button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button></header>
-        <label>互动来源<select value={sourceType} onChange={(event) => setSourceType(event.target.value as typeof sourceType)}>
-          <option value="WECHAT">微信</option><option value="PHONE">电话</option><option value="MEETING">会议</option><option value="CUSTOMER_FEEDBACK">客户反馈</option>
-        </select></label>
-        <label>发生时间<input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} required /></label>
-        <label>主题<input value={subject} onChange={(event) => setSubject(event.target.value)} placeholder="可留空，由系统按来源生成" /></label>
-        <label>互动内容<textarea value={content} onChange={(event) => setContent(event.target.value)} minLength={10} maxLength={10000} required placeholder="粘贴微信聊天、电话纪要、会议摘要或客户反馈" /></label>
-        <footer><button type="button" onClick={onClose}>取消</button><button type="submit">确认保存</button></footer>
-      </form>
+      <section className="customer-workbench-ingestion">
+        <header>
+          <div><h3 id="interaction-editor-title">整理互动记录</h3><p>{accountName} · 原始材料保留，确认后才进入客户时间线</p></div>
+          <button type="button" className="cici-product-icon-button" onClick={onClose} aria-label="关闭"><Icon name="close" /></button>
+        </header>
+
+        <div className="customer-workbench-ingestion__body">
+          <section className="customer-workbench-ingestion__capture" aria-label="采集原始材料">
+            <div className="customer-workbench-ingestion__meta">
+              <label>互动来源<select value={sourceType} onChange={(event) => setSourceType(event.target.value as typeof sourceType)} disabled={processing}>
+                <option value="WECHAT">微信</option><option value="PHONE">电话</option><option value="MEETING">会议</option><option value="CUSTOMER_FEEDBACK">客户反馈</option>
+              </select></label>
+              <label>发生时间<input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} disabled={processing} required /></label>
+            </div>
+            <label>主题<input value={subject} onChange={(event) => setSubject(event.target.value)} disabled={processing} placeholder="可留空，由系统按来源生成" /></label>
+
+            <div className="customer-workbench-ingestion__voice">
+              <span><Mic aria-hidden />语音描述</span>
+              <button type="button" onClick={() => void startNarration()} disabled={!speechSupported || processing} className={listening ? "is-recording" : ""}>
+                {listening ? <><CircleStopIcon />停止录音</> : <><Mic aria-hidden />开始口述</>}
+              </button>
+              <textarea value={narrationText} onChange={(event) => setNarrationText(event.target.value)} disabled={processing} placeholder="用语音描述与客户的沟通过程，系统实时转写；此内容会标记为销售人员口述。" />
+            </div>
+
+            <div className="customer-workbench-ingestion__upload-actions" aria-label="上传原始材料">
+              <button type="button" onClick={() => imageInputRef.current?.click()} disabled={processing}><ImageIcon aria-hidden />沟通截图</button>
+              <button type="button" onClick={() => audioInputRef.current?.click()} disabled={processing}><FileAudio aria-hidden />录音文件</button>
+              <button type="button" onClick={() => documentInputRef.current?.click()} disabled={processing}><FileText aria-hidden />文本文档</button>
+              <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
+              <input ref={audioInputRef} type="file" accept="audio/*,.m4a,.aac,.ogg,.webm,.mp4" multiple hidden onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
+              <input ref={documentInputRef} type="file" accept=".txt,.md,.markdown,.docx,.pdf,text/plain,application/pdf" multiple hidden onChange={(event) => { addFiles(event.target.files); event.target.value = ""; }} />
+            </div>
+
+            {files.length ? <div className="customer-workbench-ingestion__pending-files">
+              <div><strong>待上传材料</strong><span>{files.length} 个 · {formatFileSize(pendingFilesSize)}</span></div>
+              {files.map((file, index) => <div key={`${file.name}-${file.size}-${file.lastModified}`}>
+                <FileKindIcon file={file} /><span><b>{file.name}</b><small>{formatFileSize(file.size)}</small></span>
+                <button type="button" aria-label={`移除 ${file.name}`} title="移除" onClick={() => setFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))}><Trash2 aria-hidden /></button>
+              </div>)}
+            </div> : null}
+
+            <label>粘贴文本<textarea value={pastedText} onChange={(event) => setPastedText(event.target.value)} disabled={processing} maxLength={50000} placeholder="粘贴微信聊天、电话纪要、会议摘要或客户反馈。可与语音和文件一起提交。" /></label>
+            <p className="customer-workbench-ingestion__consent"><Info aria-hidden />上传录音或截图前，请确认已获得必要授权；原件将用于事实追溯。</p>
+
+            <div className="customer-workbench-ingestion__history">
+              <History aria-hidden /><select aria-label="最近整理草稿" value={batch?.batchId ?? ""} onChange={(event) => void chooseBatch(event.target.value)} disabled={busy || processing}>
+                <option value="">最近整理草稿</option>
+                {recentBatches.map((item) => <option key={item.batchId} value={item.batchId}>{batchStatusLabel(item.status)} · {new Date(item.createdAt).toLocaleString("zh-CN")}</option>)}
+              </select>
+              {batch ? <button type="button" onClick={resetCapture} disabled={busy || processing}>新建采集</button> : null}
+            </div>
+          </section>
+
+          <section className="customer-workbench-ingestion__review" aria-label="整理与确认">
+            <header><div><strong>统一沟通草稿</strong><span className={`is-${(batch?.status || "draft").toLowerCase()}`}>{batchStatusLabel(batch?.status || "DRAFT")}</span></div>
+              {batch && ["FAILED", "PARTIAL"].includes(batch.status) ? <button type="button" onClick={() => void retry()} disabled={busy || processing}><RotateCcw aria-hidden />重试</button> : null}
+            </header>
+
+            {batch?.assets?.length ? <div className="customer-workbench-ingestion__assets">
+              {batch.assets.map((asset) => <div key={asset.assetId} className={`is-${asset.status.toLowerCase()}`}>
+                <FileAssetIcon inputType={asset.inputType} /><span><b>{asset.name}</b><small>{assetStatusLabel(asset.status)} · {formatFileSize(asset.size)}</small>{asset.errorMessage ? <em>{asset.errorMessage}</em> : null}</span>
+                <button type="button" onClick={() => void viewAsset(asset.assetId)}>查看原件</button>
+              </div>)}
+            </div> : <div className="customer-workbench-ingestion__empty"><Upload aria-hidden /><span>提交材料后，这里会显示转写、识别和分析进度。</span></div>}
+
+            {processing ? <div className="customer-workbench-ingestion__processing" role="status"><LoaderCircle aria-hidden />正在处理原始材料并生成整理草稿...</div> : null}
+            {batch?.errorMessage ? <p className="customer-workbench-ingestion__error"><AlertTriangle aria-hidden />{batch.errorMessage}</p> : null}
+
+            <label>确认稿<textarea value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} disabled={!confirmable || busy} minLength={10} maxLength={10000} placeholder="系统处理完成后，可在这里校对统一沟通记录。" /></label>
+
+            {confirmable ? <div className="customer-workbench-ingestion__analysis">
+              <h4>AI 提取结果{analysis.degraded ? <small>分析降级，请重点核对</small> : null}</h4>
+              {analysis.summary ? <p>{analysis.summary}</p> : null}
+              <AnalysisGroup title="关键事实" items={analysis.facts} />
+              <AnalysisGroup title="客户诉求" items={analysis.customerNeeds} />
+              <AnalysisGroup title="风险" items={analysis.risks} tone="risk" />
+              <AnalysisGroup title="机会" items={analysis.opportunities} tone="opportunity" />
+              <AnalysisGroup title="客户承诺" items={analysis.commitments} />
+              <AnalysisGroup title="下一步行动" items={analysis.nextActions} />
+              <AnalysisGroup title="待确认" items={analysis.pendingQuestions} tone="pending" />
+            </div> : null}
+          </section>
+        </div>
+
+        {message ? <p className="customer-workbench-ingestion__message" role="status">{message}</p> : null}
+        <footer>
+          <button type="button" onClick={onClose}>取消</button>
+          {!batch || batch.status === "FAILED" ? <button type="button" onClick={() => void submitBatch()} disabled={busy || processing || !hasMaterial}>{busy ? "正在提交..." : "生成整理草稿"}</button> : null}
+          {confirmable ? <button type="button" onClick={() => void confirm()} disabled={busy || confirmationText.trim().length < 10}>{busy ? "正在归集..." : "确认并归集"}</button> : null}
+        </footer>
+      </section>
     </div>
   );
+}
+
+function CircleStopIcon() {
+  return <span className="customer-workbench-ingestion__stop-icon" aria-hidden />;
+}
+
+function formatFileSize(size: number) {
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function batchStatusLabel(status: string) {
+  return ({ DRAFT: "待提交", QUEUED: "排队中", PROCESSING: "处理中", READY: "待确认", PARTIAL: "部分完成", FAILED: "处理失败", CONFIRMED: "已归集" } as Record<string, string>)[status] ?? status;
+}
+
+function assetStatusLabel(status: string) {
+  return ({ STORED: "已保存", PROCESSING: "处理中", READY: "已提取", FAILED: "提取失败" } as Record<string, string>)[status] ?? status;
+}
+
+function FileKindIcon({ file }: { file: File }) {
+  if (file.type.startsWith("image/")) return <ImageIcon aria-hidden />;
+  if (file.type.startsWith("audio/") || /\.(m4a|aac|ogg|webm|mp4)$/i.test(file.name)) return <FileAudio aria-hidden />;
+  return <FileText aria-hidden />;
+}
+
+function FileAssetIcon({ inputType }: { inputType: string }) {
+  if (inputType === "IMAGE") return <ImageIcon aria-hidden />;
+  if (inputType === "AUDIO") return <FileAudio aria-hidden />;
+  return <FileText aria-hidden />;
+}
+
+function AnalysisGroup({ title, items, tone = "" }: { title: string; items?: string[]; tone?: string }) {
+  if (!items?.length) return null;
+  return <section className={tone ? `is-${tone}` : ""}><strong>{title}</strong><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></section>;
 }
 
 function List({ items, empty }: { items: string[]; empty: string }) {

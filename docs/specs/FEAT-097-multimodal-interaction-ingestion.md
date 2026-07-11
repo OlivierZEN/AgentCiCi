@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-097
 title: 客户互动多模态采集与确认归集
-status: ready
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-189
 related_decisions: FEAT-081
 related_issues: none
-updated_at: 2026-07-11T06:36:11Z
+updated_at: 2026-07-11T08:07:07Z
 updated_by: MANAGER-001
 ---
 
@@ -58,6 +58,8 @@ updated_by: MANAGER-001
 
 1. 创建批次，验证当前用户对客户的可见权限。
 2. 先安全落盘原始文件，再提交到受控执行器异步处理。
+   - 创建与重试只在数据库事务成功提交后投递，避免异步线程读取不到未提交批次。
+   - 后台恢复扫描会重新投递滞留的排队批次和超时处理中批次；已成功提取的原件会跳过。
 3. 音频复用 Aliyun 文件 ASR；图片使用组织可用的阿里云视觉模型执行 OCR；文档使用结构化解析器读取。
 4. 按实时口述、粘贴文本和文件顺序合并，保留材料标题与来源边界。
 5. 使用组织的 `customer-insight` 模型路由生成严格 JSON 分析；模型失败时仍保留统一草稿并标记降级。
@@ -97,3 +99,10 @@ updated_by: MANAGER-001
 - 关闭并重新打开后可读取最近草稿；失败批次可重试。
 - 平台与 CRM 嵌入入口均可完成流程，1920x960 无页面外层滚动和内容遮挡。
 
+## 本地验收证据
+
+- 前端 57 项测试和生产构建通过；后端多模态服务测试与既有客户工作台服务测试通过。
+- 真实粘贴文本批次完成 `QUEUED -> PROCESSING -> READY`，结构化提取事实、诉求、风险、承诺、下一步行动与待确认项。
+- 重启恢复真实接管了事务时序修复前遗留的 `QUEUED` 批次并完成为 `READY`；修复后的新批次在事务提交后立即进入 `PROCESSING`。
+- 真实 PNG 截图保存为不可变 `IMAGE` 原件，OCR 提取互动来源、发生时间、主题和互动内容，并合并到带来源边界的统一草稿。
+- 1920x1000 桌面截图：`output/playwright/task189-local-multimodal-modal-final.png`；控制台错误和警告均为 0。

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T06:36:11Z
+updated_at: 2026-07-11T08:07:07Z
 updated_by: MANAGER-001
-phase: multimodal-interaction-ingestion
+phase: multimodal-interaction-release
 active_task: "TASK-189"
-next_action: "Implement immutable multimodal source batches, extraction and AI analysis, then confirm into the customer timeline."
+next_action: "Commit and release 2.4.8, then validate multimodal ingestion and confirmed CRM timeline projection in both entry points."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-189 is ready: upgrade interaction organization from a text-only modal to immutable voice/audio/image/document/text batches, asynchronous extraction, structured AI analysis and human-confirmed timeline ingestion.
+- TASK-189 is in review: immutable multimodal batches, secured originals, post-commit async extraction, stalled-batch recovery, structured AI analysis, human confirmation and the two-column ingestion UI are implemented.
+- TASK-189 local evidence: focused backend tests, 57 frontend tests/build, Compose validation, real pasted-text processing, restart recovery and real screenshot OCR passed; 1920x1000 modal has no outer overflow and clean browser console.
 - TASK-188 is done in production `2.4.7`: topbar now carries the application-level “客户互动工作台” title; the copy-link icon has no pointer hover visual or geometric change while keyboard focus remains visible.
 - TASK-188 evidence: 57 frontend tests/build, release backup/health/public routes, platform/embed title checks, static hover computed styles, copy success notice, no outer overflow and console errors `0`. Release commit/tag is `14f8bbd4fdaa / 2.4.7`.
 - TASK-187 is done in production `2.4.6`: AI 应用画布与一级侧栏零间距，侧栏 hover 固定几何，一级“AI应用”只开关菜单，具体应用项才切换画布；关闭按钮和筛选箭头统一为无套框标准图标。
