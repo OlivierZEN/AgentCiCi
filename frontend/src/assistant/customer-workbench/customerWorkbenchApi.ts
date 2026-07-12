@@ -347,18 +347,26 @@ export function getCustomerMemory(token: string, accountId: string) {
 }
 
 export async function viewCustomerInteractionAsset(token: string, batchId: string, assetId: string) {
-  const response = await fetch(
-    `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}/assets/${encodeURIComponent(assetId)}`,
-    { headers: { Authorization: `Bearer ${token}` } },
-  );
-  if (!response.ok) {
-    const { body, rawText } = await safeFetchJson<unknown>(response);
-    throw new Error(body?.message || rawText || `原件读取失败：${response.status}`);
-  }
-  const objectUrl = URL.createObjectURL(await response.blob());
-  const preview = window.open(objectUrl, "_blank", "noopener,noreferrer");
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  const preview = window.open("", "_blank");
   if (!preview) throw new Error("浏览器阻止了原件预览窗口，请允许当前站点打开新窗口。");
+  preview.opener = null;
+  preview.document.title = "正在打开原始材料";
+  try {
+    const response = await fetch(
+      `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}/assets/${encodeURIComponent(assetId)}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!response.ok) {
+      const { body, rawText } = await safeFetchJson<unknown>(response);
+      throw new Error(body?.message || rawText || `原件读取失败：${response.status}`);
+    }
+    const objectUrl = URL.createObjectURL(await response.blob());
+    preview.location.replace(objectUrl);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+  } catch (error) {
+    preview.close();
+    throw error;
+  }
 }
 
 export function retryCustomerInteractionBatch(token: string, batchId: string) {
