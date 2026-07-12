@@ -1,0 +1,51 @@
+task_id: TASK-199
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-12T12:20:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-105-interaction-driven-customer-actions.md
+task_status_path: .claw/tasks/TASK-199.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/main/resources/db/migration/**
+  - frontend/src/assistant/customer-workbench/**
+  - frontend/src/assistant/*.css
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-105-interaction-driven-customer-actions.md
+  - .claw/tasks/TASK-199.md
+  - .claw/assignments/TASK-199.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-097-multimodal-interaction-ingestion.md
+  - docs/specs/FEAT-103-customer-interaction-archive-memory-retrieval.md
+  - docs/specs/FEAT-104-ai-dynamic-customer-scoring.md
+  - docs/specs/FEAT-105-interaction-driven-customer-actions.md
+task_boundary:
+  - "实现互动驱动的动态经营动作，不改变 CloudCC 身份权限、人工确认写回和现有工作台视觉语言。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-12T12:20:00Z; user approved continuous interaction-driven customer actions."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"

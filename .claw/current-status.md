@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T12:03:00Z
+updated_at: 2026-07-12T12:20:00Z
 updated_by: MANAGER-001
 phase: platform-security-rules
-active_task: "TASK-170"
-next_action: "Resume TASK-170 after monitoring the 2.6.1 dynamic scoring history backfill release."
+active_task: "TASK-199"
+next_action: "Implement and release interaction-driven dynamic customer actions, then resume TASK-170."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-199 is in progress: replace first-open fixed recommendations with AI action candidates generated from each confirmed interaction, governed by evidence, confidence, business-key deduplication, cooldown and the existing human-confirmed CRM write path.
 
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-198 follow-up closed the real-data history gap: recent confirmed archives missing the new `scoringSignals` contract are lazily backfilled as 60%-confidence `PENDING` evidence, never altering the score; archives already carrying new signals preserve their original values. Production generated 2 pending signals for the demo organization and 8 for the large organization while both scores stayed 50; repeated reads were idempotent.
