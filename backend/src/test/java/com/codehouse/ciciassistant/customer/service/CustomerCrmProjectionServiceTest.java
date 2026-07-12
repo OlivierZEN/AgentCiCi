@@ -41,7 +41,7 @@ class CustomerCrmProjectionServiceTest {
         CustomerSignalRepository signals = mock(CustomerSignalRepository.class);
         CustomerFollowSubscriptionRepository follows = mock(CustomerFollowSubscriptionRepository.class);
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
-                cloudcc, events, recommendations, signals, follows, new ObjectMapper());
+                cloudcc, events, recommendations, signals, follows, mock(CustomerDynamicScoringService.class), new ObjectMapper());
 
         when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocation -> switch (invocation.getArgument(2, String.class)) {
@@ -109,7 +109,7 @@ class CustomerCrmProjectionServiceTest {
         when(recommendations.findByOrgIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 cloudcc, mock(CustomerInteractionEventRepository.class), recommendations,
-                mock(CustomerSignalRepository.class), follows, new ObjectMapper());
+                mock(CustomerSignalRepository.class), follows, mock(CustomerDynamicScoringService.class), new ObjectMapper());
 
         Map<String, Object> newQueue = awaitQueue(service,
                 new CustomerCrmProjectionService.QueueQuery("new", "all", "interaction", "desc", "", 1, 20, false));
@@ -150,7 +150,7 @@ class CustomerCrmProjectionServiceTest {
         when(events.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(anyString(), anyString())).thenReturn(List.of());
         when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
-                cloudcc, events, recommendations, signals, follows, new ObjectMapper());
+                cloudcc, events, recommendations, signals, follows, mock(CustomerDynamicScoringService.class), new ObjectMapper());
 
         awaitQueue(service, new CustomerCrmProjectionService.QueueQuery(
                 "new", "focus", "interaction", "desc", "", 1, 20, false));
@@ -191,7 +191,7 @@ class CustomerCrmProjectionServiceTest {
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 cloudcc, mock(CustomerInteractionEventRepository.class),
                 mock(CustomerWorkbenchRecommendationRepository.class), mock(CustomerSignalRepository.class),
-                mock(CustomerFollowSubscriptionRepository.class), new ObjectMapper());
+                mock(CustomerFollowSubscriptionRepository.class), mock(CustomerDynamicScoringService.class), new ObjectMapper());
         CustomerCrmProjectionService.QueueQuery query =
                 new CustomerCrmProjectionService.QueueQuery("new", "all", "priority", "desc", "", 1, 20, false);
 
@@ -223,7 +223,8 @@ class CustomerCrmProjectionServiceTest {
                 .thenAnswer(invocation -> "Account".equals(invocation.getArgument(2, String.class)) ? accounts : List.of());
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 cloudcc, mock(CustomerInteractionEventRepository.class), recommendations,
-                mock(CustomerSignalRepository.class), mock(CustomerFollowSubscriptionRepository.class), new ObjectMapper());
+                mock(CustomerSignalRepository.class), mock(CustomerFollowSubscriptionRepository.class),
+                mock(CustomerDynamicScoringService.class), new ObjectMapper());
 
         Map<String, Object> result = awaitQueue(service,
                 new CustomerCrmProjectionService.QueueQuery("all", "all", "priority", "desc", "", 1, 12, false));
@@ -246,7 +247,7 @@ class CustomerCrmProjectionServiceTest {
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 mock(CloudccOpenApiService.class), mock(CustomerInteractionEventRepository.class),
                 mock(CustomerWorkbenchRecommendationRepository.class), signals,
-                mock(CustomerFollowSubscriptionRepository.class), new ObjectMapper());
+                mock(CustomerFollowSubscriptionRepository.class), mock(CustomerDynamicScoringService.class), new ObjectMapper());
         List<Map<String, Object>> projected = List.of(Map.of(
                 "mode", "EXISTING", "type", "SERVICE_RISK", "title", "服务风险",
                 "detail", "存在未关闭服务问题", "severity", "HIGH", "evidence", List.of("case-1")));

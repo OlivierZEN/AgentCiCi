@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-104
 title: AI 动态客户信号与可解释评分
-status: approved
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-198
 related_decisions: FEAT-097,FEAT-103
 related_issues: none
-updated_at: 2026-07-12T10:57:20Z
+updated_at: 2026-07-12T11:22:43Z
 updated_by: MANAGER-001
 ---
 
@@ -88,3 +88,4 @@ updated_by: MANAGER-001
 ## 实现进展
 
 - 2026-07-12：用户确认方案，进入实现。
+- 2026-07-12：完成 V77 动态信号与评分快照、互动分析信号契约、邮件来源、同源幂等、低置信度隔离、90 天半衰期、过期/重复/相反主题替代、五维聚合、列表统一筛选排序、解释 API、评分抽屉和互动档案跳转；进入生产发布验收。

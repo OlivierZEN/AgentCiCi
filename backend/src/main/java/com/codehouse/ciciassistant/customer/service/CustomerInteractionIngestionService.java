@@ -58,7 +58,7 @@ public class CustomerInteractionIngestionService {
     private static final long MAX_TOTAL_BYTES = 200L * 1024L * 1024L;
     private static final long MAX_IMAGE_BYTES = 10L * 1024L * 1024L;
     private static final int MAX_COMBINED_TEXT = 100_000;
-    private static final Set<String> SOURCES = Set.of("WECHAT", "PHONE", "MEETING", "CUSTOMER_FEEDBACK");
+    private static final Set<String> SOURCES = Set.of("WECHAT", "PHONE", "MEETING", "EMAIL", "CUSTOMER_FEEDBACK");
     private static final Set<String> IMAGE_EXTENSIONS = Set.of("png", "jpg", "jpeg", "webp");
     private static final Set<String> AUDIO_EXTENSIONS = Set.of("mp3", "wav", "m4a", "aac", "ogg", "webm", "mp4");
     private static final Set<String> DOCUMENT_EXTENSIONS = Set.of("txt", "md", "markdown", "docx", "pdf");
@@ -69,6 +69,7 @@ public class CustomerInteractionIngestionService {
     private final CustomerInteractionEventRepository eventRepository;
     private final CustomerWorkbenchService workbenchService;
     private final CustomerMemoryService customerMemoryService;
+    private final CustomerDynamicScoringService dynamicScoringService;
     private final AliyunAsrService asrService;
     private final AliyunBailianClient modelClient;
     private final ModelRouterService modelRouterService;
@@ -82,6 +83,7 @@ public class CustomerInteractionIngestionService {
                                                CustomerInteractionEventRepository eventRepository,
                                                CustomerWorkbenchService workbenchService,
                                                CustomerMemoryService customerMemoryService,
+                                               CustomerDynamicScoringService dynamicScoringService,
                                                AliyunAsrService asrService,
                                                AliyunBailianClient modelClient,
                                                ModelRouterService modelRouterService,
@@ -94,6 +96,7 @@ public class CustomerInteractionIngestionService {
         this.eventRepository = eventRepository;
         this.workbenchService = workbenchService;
         this.customerMemoryService = customerMemoryService;
+        this.dynamicScoringService = dynamicScoringService;
         this.asrService = asrService;
         this.modelClient = modelClient;
         this.modelRouterService = modelRouterService;
@@ -215,6 +218,8 @@ public class CustomerInteractionIngestionService {
                 batch.getAnalysisJson(), assets.size());
         customerMemoryService.replaceForEvent(orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
                 batch.getOccurredAt(), batch.getAnalysisJson(), assets.stream().map(CustomerInteractionAssetEntity::getPublicId).toList());
+        dynamicScoringService.recordAnalysis(orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
+                source, batch.getOccurredAt(), batch.getAnalysisJson());
         batch.markConfirmed(eventId);
         batchRepository.save(batch);
         Map<String, Object> result = new LinkedHashMap<>(batchView(batch, assets));
@@ -427,6 +432,21 @@ public class CustomerInteractionIngestionService {
                 nextActions: string[]
                 pendingQuestions: string[]
                 sentiment: POSITIVE | NEUTRAL | NEGATIVE
+                scoringSignals: object[]，每一项字段固定为：
+                  dimension: HEALTH | EXPANSION | RENEWAL | RELATIONSHIP | RISK
+                  direction: POSITIVE | NEGATIVE
+                  impact: 1 到 10 的整数
+                  confidence: 0 到 1 的小数
+                  title: string
+                  evidence: string，必须是原始材料中可核验的原句或紧邻事实
+                  reason: string，说明为什么影响该维度
+                  validDays: 7 到 365 的整数
+
+                评分信号规则：
+                1. 只依据本次材料识别，不得因联系人、合同或工单数量机械加减分。
+                2. HEALTH 表示总体使用与合作健康，EXPANSION 表示增购可能，RENEWAL 表示续约质量，RELATIONSHIP 表示关键关系，RISK 表示风险程度。
+                3. 对 HEALTH/EXPANSION/RENEWAL/RELATIONSHIP，POSITIVE 表示改善；对 RISK，NEGATIVE 表示风险上升，POSITIVE 表示风险缓解。
+                4. 没有明确证据时不要生成信号；不确定事项仍放入 pendingQuestions。
 
                 原始材料：
                 %s
@@ -466,10 +486,47 @@ public class CustomerInteractionIngestionService {
         for (String key : List.of("facts", "customerNeeds", "risks", "opportunities", "commitments", "nextActions", "pendingQuestions")) {
             result.put(key, stringList(value.get(key), 30));
         }
+        result.put("scoringSignals", scoringSignals(value.get("scoringSignals")));
         String sentiment = blank(value.get("sentiment")).toUpperCase(Locale.ROOT);
         result.put("sentiment", List.of("POSITIVE", "NEUTRAL", "NEGATIVE").contains(sentiment) ? sentiment : "NEUTRAL");
         result.put("degraded", degraded);
         return result;
+    }
+
+    private List<Map<String, Object>> scoringSignals(Object value) {
+        if (!(value instanceof List<?> list)) return List.of();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) continue;
+            String dimension = blank(raw.get("dimension")).toUpperCase(Locale.ROOT);
+            String direction = blank(raw.get("direction")).toUpperCase(Locale.ROOT);
+            String title = clip(blank(raw.get("title")), 256);
+            String evidence = clip(blank(raw.get("evidence")), 2000);
+            if (!Set.of("HEALTH", "EXPANSION", "RENEWAL", "RELATIONSHIP", "RISK").contains(dimension)
+                    || !Set.of("POSITIVE", "NEGATIVE").contains(direction) || title.isBlank() || evidence.isBlank()) continue;
+            Map<String, Object> signal = new LinkedHashMap<>();
+            signal.put("dimension", dimension);
+            signal.put("direction", direction);
+            signal.put("impact", boundedInteger(raw.get("impact"), 1, 10, 5));
+            signal.put("confidence", boundedDecimal(raw.get("confidence"), 0, 1, 0.5));
+            signal.put("title", title);
+            signal.put("evidence", evidence);
+            signal.put("reason", clip(blank(raw.get("reason")), 2000));
+            signal.put("validDays", boundedInteger(raw.get("validDays"), 7, 365, 90));
+            result.add(signal);
+            if (result.size() >= 30) break;
+        }
+        return result;
+    }
+
+    private static int boundedInteger(Object value, int min, int max, int fallback) {
+        try { return Math.max(min, Math.min(max, Integer.parseInt(blank(value)))); }
+        catch (Exception ex) { return fallback; }
+    }
+
+    private static double boundedDecimal(Object value, double min, double max, double fallback) {
+        try { return Math.max(min, Math.min(max, Double.parseDouble(blank(value)))); }
+        catch (Exception ex) { return fallback; }
     }
 
     private List<String> stringList(Object value, int limit) {

@@ -52,6 +52,7 @@ import {
   getCustomerWorkbenchSupervisorSummary,
   getCustomerWorkbenchQueue,
   getCustomerWorkbenchDetail,
+  getCustomerScoreExplanation,
   createCustomerInteractionBatch,
   confirmCustomerInteractionBatch,
   getCustomerInteractionBatch,
@@ -70,6 +71,8 @@ import {
   type CustomerInteractionBatch,
   type CustomerInteractionArchive,
   type CustomerAssistantEvidence,
+  type CustomerScoreExplanation,
+  type CustomerScoreSignal,
 } from "./customerWorkbenchApi";
 
 type ChatMessage = {
@@ -327,6 +330,7 @@ function lifecycleSourceLabel(value: string) {
   if (value.includes("微信") || normalized.includes("WECHAT")) return "微信";
   if (value.includes("电话") || normalized.includes("PHONE")) return "通话录音";
   if (value.includes("会议") || normalized.includes("MEETING") || normalized.includes("EVENT")) return "会议纪要";
+  if (value.includes("邮件") || normalized.includes("EMAIL")) return "邮件";
   return value;
 }
 
@@ -335,6 +339,7 @@ function sourceIconName(value: string): IconName {
   if (label === "微信") return "wechat";
   if (label === "通话录音") return "phone";
   if (label === "会议纪要") return "calendar";
+  if (label === "邮件") return "message";
   return "message";
 }
 
@@ -400,6 +405,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [editingRecommendation, setEditingRecommendation] = useState<CustomerRecommendation | null>(null);
   const [interactionEditorContext, setInteractionEditorContext] = useState<{ accountId: string; accountName: string } | null>(null);
   const [archiveEventId, setArchiveEventId] = useState("");
+  const [scoreExplanationOpen, setScoreExplanationOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [assistantInput, setAssistantInput] = useState("");
@@ -941,7 +947,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             </>
           ) : (
             <>
-              <Metric label="客户健康度" value={metricValue(detail, "health", detail?.healthScore ?? 0)} suffix="" onClick={() => setActiveTab("overview")} />
+              <Metric label="客户健康度" value={metricValue(detail, "health", detail?.healthScore ?? 0)} suffix="" onClick={() => setScoreExplanationOpen(true)} />
               <Metric label="续约倒计时" value={metricValue(detail, "renewalDays", detail?.renewalDays ?? -1) < 0 ? "待确认" : metricValue(detail, "renewalDays", detail?.renewalDays ?? -1)} suffix={metricValue(detail, "renewalDays", detail?.renewalDays ?? -1) < 0 ? "" : "天"} onClick={() => setActiveTab("renewal")} />
               <Metric label="未闭环问题" value={metricValue(detail, "openIssues", 0)} suffix="" onClick={() => setActiveTab("service")} />
               <Metric label="增购信号" value={metricValue(detail, "expansionSignals", 0)} suffix="" onClick={() => setActiveTab("renewal")} />
@@ -961,10 +967,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           {activeTab === "overview" ? <Overview detail={detail} mode={workbenchMode} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} onOpenTab={setActiveTab} onOpenArchive={setArchiveEventId} /> : null}
           {activeTab === "timeline" ? <Timeline detail={detail} onOpenArchive={setArchiveEventId} /> : null}
           {activeTab === "signals" ? <NewCustomerPanel detail={detail} /> : null}
-          {activeTab === "service" ? <ExistingCustomerPanel detail={detail} focus="service" /> : null}
-          {activeTab === "value" ? <ExistingCustomerPanel detail={detail} focus="value" /> : null}
-          {activeTab === "renewal" ? <ExistingCustomerPanel detail={detail} focus="renewal" /> : null}
-          {activeTab === "relationship" ? <ExistingCustomerPanel detail={detail} focus="relationship" /> : null}
+          {activeTab === "service" ? <ExistingCustomerPanel detail={detail} focus="service" onOpenScore={() => setScoreExplanationOpen(true)} /> : null}
+          {activeTab === "value" ? <ExistingCustomerPanel detail={detail} focus="value" onOpenScore={() => setScoreExplanationOpen(true)} /> : null}
+          {activeTab === "renewal" ? <ExistingCustomerPanel detail={detail} focus="renewal" onOpenScore={() => setScoreExplanationOpen(true)} /> : null}
+          {activeTab === "relationship" ? <ExistingCustomerPanel detail={detail} focus="relationship" onOpenScore={() => setScoreExplanationOpen(true)} /> : null}
           {activeTab === "recommendations" ? (
             <div ref={recommendationRef}>
               <Recommendations detail={detail} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} />
@@ -1072,6 +1078,13 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           setArchiveEventId("");
           void submitAssistant(`基于互动档案 ${archive.eventId} 分析本次沟通产生的风险、机会和下一步行动`);
         }}
+      /> : null}
+      {scoreExplanationOpen && activeAccountId ? <CustomerScoreDrawer
+        token={token}
+        accountId={activeAccountId}
+        initialValue={detail?.scoreSnapshot}
+        onClose={() => setScoreExplanationOpen(false)}
+        onOpenEvidence={(eventId) => { setScoreExplanationOpen(false); setArchiveEventId(eventId); }}
       /> : null}
     </section>
   );
@@ -1216,9 +1229,11 @@ function NewCustomerPanel({ detail }: { detail: CustomerWorkbenchDetail | null }
 function ExistingCustomerPanel({
   detail,
   focus = "service",
+  onOpenScore,
 }: {
   detail: CustomerWorkbenchDetail | null;
   focus?: "service" | "value" | "renewal" | "relationship";
+  onOpenScore: () => void;
 }) {
   const score = detail?.healthScore ?? 0;
   const focusCopy = {
@@ -1245,10 +1260,10 @@ function ExistingCustomerPanel({
         <strong>{score}<small>分</small></strong>
       </header>
       <div className="customer-workbench-health-grid">
-        <strong>健康度<small>{metricValue(detail, "health", score)} 分</small></strong>
-        <strong>未闭环服务<small>{metricValue(detail, "openIssues", 0)} 个</small></strong>
-        <strong>增购机会<small>{metricValue(detail, "expansionSignals", 0)} 个</small></strong>
-        <strong>关系覆盖<small>{detail?.relationshipMap?.length ?? 0} 人</small></strong>
+        <button type="button" onClick={onOpenScore}><strong>综合健康度</strong><small>{score} 分</small><span>{scoreDeltaLabel(detail?.scoreSnapshot?.netChange30d ?? 0)}</span></button>
+        <button type="button" onClick={onOpenScore}><strong>增购动能</strong><small>{detail?.scoreSnapshot?.expansionScore ?? 50} 分</small><span>查看证据</span></button>
+        <button type="button" onClick={onOpenScore}><strong>关系质量</strong><small>{detail?.scoreSnapshot?.relationshipScore ?? 50} 分</small><span>查看证据</span></button>
+        <button type="button" onClick={onOpenScore}><strong>风险指数</strong><small>{detail?.scoreSnapshot?.riskScore ?? 50} 分</small><span>越高风险越大</span></button>
       </div>
       <div className="customer-workbench-record-grid">
         {focusItems.map((item, index) => <article key={`${item.title}-${index}`}><strong>{item.title}</strong><p>{item.detail}</p><span>{item.meta}</span></article>)}
@@ -1398,6 +1413,91 @@ function RecommendationEditor({ item, onClose, onSave }: {
   );
 }
 
+function CustomerScoreDrawer({ token, accountId, initialValue, onClose, onOpenEvidence }: {
+  token: string;
+  accountId: string;
+  initialValue?: CustomerScoreExplanation;
+  onClose: () => void;
+  onOpenEvidence: (eventId: string) => void;
+}) {
+  const [value, setValue] = useState<CustomerScoreExplanation | null>(initialValue ?? null);
+  const [tab, setTab] = useState<"all" | "positive" | "negative" | "pending">("all");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    setError("");
+    void getCustomerScoreExplanation(token, accountId)
+      .then((result) => { if (active) setValue(result); })
+      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : String(reason)); });
+    return () => { active = false; };
+  }, [token, accountId]);
+  const signals = (value?.signals ?? []).filter((signal) => {
+    if (tab === "pending") return signal.status === "PENDING";
+    if (signal.status !== "ACTIVE") return tab === "all";
+    if (tab === "positive") return signal.contribution > 0;
+    if (tab === "negative") return signal.contribution < 0;
+    return true;
+  });
+  return <div className="customer-workbench-archive-overlay" role="presentation" onMouseDown={(event) => {
+    if (event.target === event.currentTarget) onClose();
+  }}>
+    <aside className="customer-workbench-archive customer-score-drawer" role="dialog" aria-modal="true" aria-labelledby="customer-score-title">
+      <header>
+        <div><span>AI 动态评分</span><h3 id="customer-score-title">客户评分依据</h3>
+          <p>{value ? `最近 30 天净变化 ${scoreDeltaLabel(value.netChange30d)} · ${value.activeSignalCount} 条有效证据` : "正在计算评分"}</p></div>
+        <button type="button" className="cici-product-icon-button" aria-label="关闭评分依据" onClick={onClose}><X aria-hidden /></button>
+      </header>
+      {error ? <div className="customer-workbench-archive__error"><AlertTriangle aria-hidden />{error}</div> : null}
+      {!value && !error ? <div className="customer-workbench-archive__loading"><LoaderCircle aria-hidden />正在读取评分信号...</div> : null}
+      {value ? <>
+        <div className="customer-score-drawer__summary">
+          <strong><span>综合健康</span>{value.healthScore}<small>分</small></strong>
+          <dl>
+            <div><dt>使用健康</dt><dd>{value.healthDimensionScore}</dd></div>
+            <div><dt>增购动能</dt><dd>{value.expansionScore}</dd></div>
+            <div><dt>续约质量</dt><dd>{value.renewalScore}</dd></div>
+            <div><dt>关系质量</dt><dd>{value.relationshipScore}</dd></div>
+            <div><dt>风险指数</dt><dd>{value.riskScore}</dd></div>
+          </dl>
+        </div>
+        <nav className="customer-workbench-archive__tabs" aria-label="评分信号筛选">
+          <button type="button" className={tab === "all" ? "is-active" : ""} onClick={() => setTab("all")}>全部</button>
+          <button type="button" className={tab === "positive" ? "is-active" : ""} onClick={() => setTab("positive")}>加分</button>
+          <button type="button" className={tab === "negative" ? "is-active" : ""} onClick={() => setTab("negative")}>减分</button>
+          <button type="button" className={tab === "pending" ? "is-active" : ""} onClick={() => setTab("pending")}>待确认 {value.pendingSignalCount}</button>
+        </nav>
+        <div className="customer-workbench-archive__body customer-score-drawer__signals">
+          {signals.map((signal) => <ScoreSignalRow key={signal.signalId} signal={signal} onOpenEvidence={onOpenEvidence} />)}
+          {!signals.length ? <p className="customer-workbench-archive__empty">当前筛选下没有评分证据。</p> : null}
+        </div>
+        <footer><span>计算版本 {value.calculationVersion} · {new Date(value.calculatedAt).toLocaleString("zh-CN")}</span>
+          <span>低于 65% 置信度的信号不计入评分</span></footer>
+      </> : null}
+    </aside>
+  </div>;
+}
+
+function ScoreSignalRow({ signal, onOpenEvidence }: { signal: CustomerScoreSignal; onOpenEvidence: (eventId: string) => void }) {
+  const active = signal.status === "ACTIVE";
+  const delta = signal.contribution > 0 ? `+${signal.contribution.toFixed(1)}` : signal.contribution.toFixed(1);
+  return <article className={`customer-score-signal is-${signal.status.toLowerCase()}`}>
+    <div><span>{scoreDimensionLabel(signal.dimension)}</span><time>{formatTimelineDateTime(signal.occurredAt).replace("\n", " ")}</time></div>
+    <header><strong>{signal.title}</strong><b className={signal.contribution >= 0 ? "is-positive" : "is-negative"}>{active ? delta : "待确认"}</b></header>
+    <p>{signal.reason}</p><blockquote>{signal.evidence}</blockquote>
+    <footer><span>影响 {signal.impact}/10 · 置信度 {Math.round(signal.confidence * 100)}% · 有效至 {shortDate(signal.validUntil)}</span>
+      {signal.sourceEventId ? <button type="button" onClick={() => onOpenEvidence(signal.sourceEventId)}>查看互动档案</button> : null}</footer>
+  </article>;
+}
+
+function scoreDimensionLabel(value: string) {
+  return ({ HEALTH: "使用健康", EXPANSION: "增购动能", RENEWAL: "续约质量", RELATIONSHIP: "关系质量", RISK: "风险" } as Record<string, string>)[value] || value;
+}
+
+function scoreDeltaLabel(value: number) {
+  if (Math.abs(value) < 0.05) return "持平";
+  return `${value > 0 ? "+" : ""}${value.toFixed(1)} 分`;
+}
+
 function InteractionArchiveDrawer({ token, eventId, onClose, onContinueAnalysis }: {
   token: string;
   eventId: string;
@@ -1494,7 +1594,7 @@ function InteractionEditor({ token, accountId, accountName, onClose, onConfirmed
   onClose: () => void;
   onConfirmed: (batch: CustomerInteractionBatch) => Promise<void>;
 }) {
-  const [sourceType, setSourceType] = useState<"WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK">("WECHAT");
+  const [sourceType, setSourceType] = useState<"WECHAT" | "PHONE" | "MEETING" | "EMAIL" | "CUSTOMER_FEEDBACK">("WECHAT");
   const [subject, setSubject] = useState("");
   const [narrationText, setNarrationText] = useState("");
   const [pastedText, setPastedText] = useState("");
@@ -1689,7 +1789,7 @@ function InteractionEditor({ token, accountId, accountName, onClose, onConfirmed
           <section className="customer-workbench-ingestion__capture" aria-label="采集原始材料">
             <div className="customer-workbench-ingestion__meta">
               <label>互动来源<select value={sourceType} onChange={(event) => setSourceType(event.target.value as typeof sourceType)} disabled={processing}>
-                <option value="WECHAT">微信</option><option value="PHONE">电话</option><option value="MEETING">会议</option><option value="CUSTOMER_FEEDBACK">客户反馈</option>
+                <option value="WECHAT">微信</option><option value="PHONE">电话</option><option value="MEETING">会议</option><option value="EMAIL">邮件</option><option value="CUSTOMER_FEEDBACK">客户反馈</option>
               </select></label>
               <label>发生时间<input type="datetime-local" value={occurredAt} onChange={(event) => setOccurredAt(event.target.value)} disabled={processing} required /></label>
             </div>

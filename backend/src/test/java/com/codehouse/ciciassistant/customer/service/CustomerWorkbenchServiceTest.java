@@ -82,6 +82,7 @@ class CustomerWorkbenchServiceTest {
                 agentDefinitionService,
                 chatOrchestratorService,
                 customerMemoryService,
+                mock(CustomerDynamicScoringService.class),
                 new ObjectMapper());
 
         String orgId = "org-demo";
@@ -244,7 +245,8 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
                 crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, skillDefinitionService,
-                agentDefinitionService, chatOrchestratorService, mock(CustomerMemoryService.class), new ObjectMapper());
+                agentDefinitionService, chatOrchestratorService, mock(CustomerMemoryService.class),
+                mock(CustomerDynamicScoringService.class), new ObjectMapper());
         CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
                 "rec-write", "org-demo", "001-demo", "CREATE_TASK", "创建跟进任务", "客户要求三日内反馈",
                 BigDecimal.valueOf(.92), """
@@ -292,7 +294,8 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
                 crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, mock(SkillDefinitionService.class),
-                mock(AgentDefinitionService.class), mock(ChatOrchestratorService.class), mock(CustomerMemoryService.class), new ObjectMapper());
+                mock(AgentDefinitionService.class), mock(ChatOrchestratorService.class), mock(CustomerMemoryService.class),
+                mock(CustomerDynamicScoringService.class), new ObjectMapper());
         CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
                 "rec-recover", "org-demo", "001-demo", "CREATE_TASK", "创建跟进任务", "客户要求反馈",
                 BigDecimal.valueOf(.92), "{\"subject\":\"反馈方案\"}");
@@ -343,7 +346,8 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
                 crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, skillDefinitionService,
-                agentDefinitionService, chatOrchestratorService, mock(CustomerMemoryService.class), new ObjectMapper());
+                agentDefinitionService, chatOrchestratorService, mock(CustomerMemoryService.class),
+                mock(CustomerDynamicScoringService.class), new ObjectMapper());
         CustomerWorkbenchSnapshotEntity snapshot = new CustomerWorkbenchSnapshotEntity(
                 "cw-history", "org-demo", "001-demo", "客户甲", "王销售", "NEW",
                 80, 70, 1, 1, "{\"stage\":\"需求确认\",\"risks\":[\"预算待确认\"]}");

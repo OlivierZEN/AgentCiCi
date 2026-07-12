@@ -78,6 +78,11 @@ public class CustomerWorkbenchController {
         return ApiResponse.ok(service.timeline(orgId(), userId(), accountId));
     }
 
+    @GetMapping("/accounts/{accountId}/score-explanation")
+    public ApiResponse<Map<String, Object>> scoreExplanation(@PathVariable String accountId) {
+        return ApiResponse.ok(service.scoreExplanation(orgId(), userId(), accountId));
+    }
+
     @GetMapping("/accounts/{accountId}/assistant-history")
     public ApiResponse<List<Map<String, String>>> assistantHistory(@PathVariable String accountId) {
         return ApiResponse.ok(service.assistantHistory(orgId(), userId(), accountId));

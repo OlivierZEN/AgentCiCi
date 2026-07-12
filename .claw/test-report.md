@@ -6226,3 +6226,29 @@ last_run_status: passed
 - Static diff check:
   - Command: `git diff --check`
   - Result: success
+## 2026-07-12 TASK-198 AI 动态客户信号与可解释评分
+
+- Authorization:
+  - Result: success.
+  - Notes: `MANAGER-001` passed task login and assignment checks for backend customer code, V77, workbench UI, specs and task state.
+- Focused backend tests:
+  - Command: `mvn -f backend/pom.xml -Dtest=CustomerCrmProjectionServiceTest,CustomerDynamicScoringServiceTest,CustomerInteractionIngestionServiceTest,CustomerWorkbenchServiceTest test`.
+  - Result: success, 17 tests.
+  - Notes: covers AI signal normalization, low-confidence pending state, idempotence, batch snapshot use, interaction confirmation and existing workbench behavior.
+- Full backend baseline:
+  - Command: `mvn -q -f backend/pom.xml test`.
+  - Result: baseline not green, 251 tests with 16 failures and 3 errors.
+  - Notes: TASK-198 focused suites are green; remaining failures/errors are unrelated existing billing/auth/skill fixture drift and connection-sensitive suites, consistent with the repository's known 19-test baseline gap.
+- Frontend tests and build:
+  - Command: `npm test -- --run && npm run build` in `frontend/`.
+  - Result: success, 64 tests and Vite production build; existing large-chunk warning remains.
+- Migration and local runtime:
+  - Command: local Spring Boot startup against PostgreSQL.
+  - Result: success; Flyway applied V76 and V77 and reached schema version 77, backend health became ready.
+- Desktop browser validation:
+  - Target: local AgentCiCi customer workbench, old-customer mode.
+  - Result: success; score drawer rendered at 720px width and full viewport height, used an internal auto-scroll region, and document overflow was `x=0/y=0`.
+  - Notes: verified five dimensions, 50-point insufficient-evidence baseline, 65% confidence note, filters and close action. Demo/detail score-source mismatch found during QA was fixed before release.
+- Release dry run:
+  - Command: `./scripts/release-acr.sh --dry-run`.
+  - Result: success; generated production version `2.5.12` with canonical backend/frontend image and Git tag plan.

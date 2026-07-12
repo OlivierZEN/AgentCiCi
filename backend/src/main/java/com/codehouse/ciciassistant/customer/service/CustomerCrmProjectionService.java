@@ -56,6 +56,7 @@ public class CustomerCrmProjectionService {
     private final CustomerWorkbenchRecommendationRepository recommendationRepository;
     private final CustomerSignalRepository signalRepository;
     private final CustomerFollowSubscriptionRepository followRepository;
+    private final CustomerDynamicScoringService dynamicScoringService;
     private final ObjectMapper objectMapper;
     private final Map<String, CacheEntry> cache = new ConcurrentHashMap<>();
     private final Map<String, CompletableFuture<Dataset>> activeLoads = new ConcurrentHashMap<>();
@@ -69,12 +70,14 @@ public class CustomerCrmProjectionService {
                                         CustomerWorkbenchRecommendationRepository recommendationRepository,
                                         CustomerSignalRepository signalRepository,
                                         CustomerFollowSubscriptionRepository followRepository,
+                                        CustomerDynamicScoringService dynamicScoringService,
                                         ObjectMapper objectMapper) {
         this.cloudcc = cloudcc;
         this.eventRepository = eventRepository;
         this.recommendationRepository = recommendationRepository;
         this.signalRepository = signalRepository;
         this.followRepository = followRepository;
+        this.dynamicScoringService = dynamicScoringService;
         this.objectMapper = objectMapper;
     }
 
@@ -109,13 +112,15 @@ public class CustomerCrmProjectionService {
                 .collect(java.util.stream.Collectors.groupingBy(
                         CustomerWorkbenchRecommendationEntity::getCrmAccountId,
                         java.util.stream.Collectors.counting()));
-        List<Map<String, Object>> items = result.records().stream().map(account -> {
+        List<Map<String, Object>> items = new ArrayList<>(result.records().stream().map(account -> {
             String accountId = text(account, "id");
             Map<String, Object> cached = cachedAccounts.get(accountId);
             return cached != null && dataset != null
                     ? accountView(cached, dataset, followed.contains(accountId), pendingCounts.getOrDefault(accountId, 0L))
                     : searchAccountView(account);
-        }).sorted(queueComparator("interaction", "desc")).toList();
+        }).toList());
+        dynamicScoringService.overlayScores(orgId, items);
+        items.sort(queueComparator("interaction", "desc"));
         return mapOf(
                 "items", items,
                 "page", result.pageNum(),
@@ -168,10 +173,12 @@ public class CustomerCrmProjectionService {
                 .collect(java.util.stream.Collectors.groupingBy(
                         CustomerWorkbenchRecommendationEntity::getCrmAccountId,
                         java.util.stream.Collectors.counting()));
-        return dataset.accounts().stream()
+        List<Map<String, Object>> views = new ArrayList<>(dataset.accounts().stream()
                 .map(account -> accountView(account, dataset, followed.contains(text(account, "id")),
                         pendingCounts.getOrDefault(text(account, "id"), 0L)))
-                .toList();
+                .toList());
+        dynamicScoringService.overlayScores(orgId, views);
+        return views;
     }
 
     private Map<String, Object> queueFromViews(List<Map<String, Object>> allViews, QueueQuery query, Instant loadedAt) {

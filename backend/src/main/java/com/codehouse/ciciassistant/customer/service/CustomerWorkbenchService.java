@@ -59,6 +59,7 @@ public class CustomerWorkbenchService {
     private final AgentDefinitionService agentDefinitionService;
     private final ChatOrchestratorService chatOrchestratorService;
     private final CustomerMemoryService customerMemoryService;
+    private final CustomerDynamicScoringService dynamicScoringService;
     private final ObjectMapper objectMapper;
 
     public CustomerWorkbenchService(CustomerWorkbenchSnapshotRepository snapshotRepository,
@@ -73,6 +74,7 @@ public class CustomerWorkbenchService {
                                     AgentDefinitionService agentDefinitionService,
                                     ChatOrchestratorService chatOrchestratorService,
                                     CustomerMemoryService customerMemoryService,
+                                    CustomerDynamicScoringService dynamicScoringService,
                                     ObjectMapper objectMapper) {
         this.snapshotRepository = snapshotRepository;
         this.eventRepository = eventRepository;
@@ -86,16 +88,25 @@ public class CustomerWorkbenchService {
         this.agentDefinitionService = agentDefinitionService;
         this.chatOrchestratorService = chatOrchestratorService;
         this.customerMemoryService = customerMemoryService;
+        this.dynamicScoringService = dynamicScoringService;
         this.objectMapper = objectMapper;
     }
 
     public Map<String, Object> queue(String orgId, String userId, CustomerCrmProjectionService.QueueQuery query) {
         if (isCrmReady(orgId, userId)) {
-            return crmProjectionService.queue(orgId, userId, query);
+            Map<String, Object> result = new LinkedHashMap<>(crmProjectionService.queue(orgId, userId, query));
+            Object itemsValue = result.get("items");
+            if (itemsValue instanceof List<?> rawItems) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> items = (List<Map<String, Object>>) rawItems;
+                dynamicScoringService.overlayScores(orgId, items);
+            }
+            return result;
         }
         ensureDemoData(orgId, userId);
         List<Map<String, Object>> modeItems = snapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
                 .map(item -> accountListView(orgId, item)).toList();
+        dynamicScoringService.overlayScores(orgId, modeItems);
         if ("new".equalsIgnoreCase(query.mode())) {
             modeItems = modeItems.stream().filter(item -> List.of("NEW", "RISK").contains(String.valueOf(item.get("segment")))).toList();
         } else if ("existing".equalsIgnoreCase(query.mode())) {
@@ -139,6 +150,7 @@ public class CustomerWorkbenchService {
     public Map<String, Object> accountDetail(String orgId, String userId, String accountId) {
         if (isCrmReady(orgId, userId)) {
             Map<String, Object> view = new LinkedHashMap<>(crmProjectionService.detail(orgId, userId, accountId, false));
+            dynamicScoringService.overlay(view, dynamicScoringService.explanation(orgId, accountId));
             ensureLiveRecommendations(orgId, accountId, view);
             view.put("recommendations", recommendations(orgId, userId, accountId));
             return view;
@@ -146,6 +158,7 @@ public class CustomerWorkbenchService {
         ensureDemoData(orgId, userId);
         CustomerWorkbenchSnapshotEntity snapshot = requireSnapshot(orgId, accountId);
         Map<String, Object> view = new LinkedHashMap<>(snapshotView(snapshot));
+        dynamicScoringService.overlay(view, dynamicScoringService.explanation(orgId, accountId));
         view.put("timeline", timeline(orgId, userId, accountId));
         view.put("recommendations", recommendations(orgId, userId, accountId));
         view.put("crmConnection", crmConnectionView(orgId, userId));
@@ -159,6 +172,11 @@ public class CustomerWorkbenchService {
         }
         return eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
                 .map(this::eventView).toList();
+    }
+
+    public Map<String, Object> scoreExplanation(String orgId, String userId, String accountId) {
+        assertAccountAccess(orgId, userId, accountId);
+        return dynamicScoringService.explanation(orgId, accountId);
     }
 
     public List<Map<String, String>> assistantHistory(String orgId, String userId, String accountId) {
@@ -190,6 +208,7 @@ public class CustomerWorkbenchService {
             case "WECHAT" -> "微信沟通记录";
             case "PHONE" -> "电话沟通记录";
             case "MEETING" -> "客户会议记录";
+            case "EMAIL" -> "客户邮件记录";
             default -> "客户反馈记录";
         };
         if (subject.length() > 256) subject = subject.substring(0, 256);
@@ -531,8 +550,8 @@ public class CustomerWorkbenchService {
 
     private String normalizeInteractionSource(String sourceType) {
         return switch (blankToEmpty(sourceType).toUpperCase(Locale.ROOT)) {
-            case "WECHAT", "PHONE", "MEETING", "CUSTOMER_FEEDBACK" -> blankToEmpty(sourceType).toUpperCase(Locale.ROOT);
-            default -> throw new IllegalArgumentException("互动来源仅支持微信、电话、会议或客户反馈");
+            case "WECHAT", "PHONE", "MEETING", "EMAIL", "CUSTOMER_FEEDBACK" -> blankToEmpty(sourceType).toUpperCase(Locale.ROOT);
+            default -> throw new IllegalArgumentException("互动来源仅支持微信、电话、会议、邮件或客户反馈");
         };
     }
 

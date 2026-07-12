@@ -66,6 +66,7 @@ class CustomerInteractionIngestionServiceTest {
                 mock(CustomerInteractionEventRepository.class),
                 workbenchService,
                 mock(CustomerMemoryService.class),
+                mock(CustomerDynamicScoringService.class),
                 mock(AliyunAsrService.class),
                 mock(AliyunBailianClient.class),
                 modelRouterService,

@@ -83,6 +83,50 @@ export type CustomerInteractionAnalysis = {
   pendingQuestions?: string[];
   sentiment?: string;
   degraded?: boolean;
+  scoringSignals?: Array<{
+    dimension: "HEALTH" | "EXPANSION" | "RENEWAL" | "RELATIONSHIP" | "RISK" | string;
+    direction: "POSITIVE" | "NEGATIVE" | string;
+    impact: number;
+    confidence: number;
+    title: string;
+    evidence: string;
+    reason: string;
+    validDays: number;
+  }>;
+};
+
+export type CustomerScoreSignal = {
+  signalId: string;
+  dimension: "HEALTH" | "EXPANSION" | "RENEWAL" | "RELATIONSHIP" | "RISK" | string;
+  direction: "POSITIVE" | "NEGATIVE" | string;
+  impact: number;
+  confidence: number;
+  contribution: number;
+  title: string;
+  reason: string;
+  evidence: string;
+  status: "ACTIVE" | "PENDING" | "EXPIRED" | "SUPERSEDED" | string;
+  sourceType: string;
+  sourceEventId: string;
+  sourceBatchId: string;
+  occurredAt: string;
+  validUntil: string;
+};
+
+export type CustomerScoreExplanation = {
+  healthScore: number;
+  healthDimensionScore: number;
+  expansionScore: number;
+  renewalScore: number;
+  relationshipScore: number;
+  riskScore: number;
+  netChange30d: number;
+  activeSignalCount: number;
+  pendingSignalCount: number;
+  calculationVersion: string;
+  calculatedAt: string;
+  status: "READY" | "INSUFFICIENT_EVIDENCE" | string;
+  signals: CustomerScoreSignal[];
 };
 
 export type CustomerInteractionBatch = {
@@ -184,6 +228,7 @@ export type CustomerWorkbenchDetail = CustomerWorkbenchAccount & {
   timeline: CustomerInteractionEvent[];
   recommendations: CustomerRecommendation[];
   crmConnection?: { ready: boolean; mode: string; label: string };
+  scoreSnapshot?: CustomerScoreExplanation;
 };
 
 export type CustomerAssistantResult = {
@@ -284,12 +329,16 @@ export function getCustomerWorkbenchDetail(token: string, accountId: string) {
   return requestJson<CustomerWorkbenchDetail>(token, `/customer-workbench/accounts/${encodeURIComponent(accountId)}`);
 }
 
+export function getCustomerScoreExplanation(token: string, accountId: string) {
+  return requestJson<CustomerScoreExplanation>(token, `/customer-workbench/accounts/${encodeURIComponent(accountId)}/score-explanation`);
+}
+
 export function getCustomerAssistantHistory(token: string, accountId: string) {
   return requestJson<CustomerAssistantHistoryMessage[]>(token, `/customer-workbench/accounts/${encodeURIComponent(accountId)}/assistant-history`);
 }
 
 export function saveCustomerInteraction(token: string, accountId: string, payload: {
-  sourceType: "WECHAT" | "PHONE" | "MEETING" | "CUSTOMER_FEEDBACK";
+  sourceType: "WECHAT" | "PHONE" | "MEETING" | "EMAIL" | "CUSTOMER_FEEDBACK";
   subject: string;
   content: string;
   occurredAt?: string;
