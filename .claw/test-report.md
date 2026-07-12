@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-12T04:58:00Z
+updated_at: 2026-07-12T06:36:16Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-12T04:58:00Z
+last_run_at: 2026-07-12T06:36:16Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-197 客户互动档案、动态记忆与按需检索生产验收（2026-07-12）
+
+- `backend-focused`: `CustomerMemoryServiceTest,CustomerInteractionIngestionServiceTest,CustomerWorkbenchServiceTest,CustomerCrmProjectionServiceTest` 通过，覆盖 90 天窗口、历史扩展、指定档案优先、结构化记忆生成、确认幂等和 CRM 投影兼容。
+- `frontend`: 12 个测试文件、64 项测试通过；生产构建通过，仅保留既有 Vite chunk-size 提示。
+- `full-backend-baseline`: V76 类型契约修正后 Spring/Flyway/JPA 启动通过；共享测试库全量套件仍有 16 个失败、2 个错误，来自既有账号/夹具污染、平台模型 `onekeytoken` 配置漂移、停用模型厂商和历史技能名称差异，与 TASK-197 定向套件无关。
+- `production-api`: 演示组织真实客户“北京智造科技有限公司”返回 10 条时间线、1 条可追溯档案和 `crmConnection.ready=true`；档案包含 59 字确认稿、1 个原件、完整结构化分析和 10 条 ACTIVE 客户记忆。
+- `assistant-context`: 普通风险问题返回 7 条证据、10 条近期互动、8 条 ACTIVE 记忆，`historyRequested=false`，其中 1 条证据可直接打开互动档案；回复正文使用 `[E1]` 等编号引用事实。
+- `production-browser`: 版本 `2.5.11`，全量客户搜索命中北京智造；时间线“查看档案”打开确认记录、AI 分析、原始材料三个页签，原件在独立 Blob 标签页显示，最终控制台 `0 errors / 0 warnings`。截图：`output/playwright/task197-prod-archive-final-2.5.11.png`。
+- `release`: `2.5.11 / d0ed7e4129cf`；backend index `sha256:d4ba55523711a534ce7ef37c676d8eb8505c27a6497b1a4363f675f59d0aeec9`、amd64 `sha256:a8793ab297a0a74cbde806ad29f739673a802ec069027d34355b8702d0b6fecb`；frontend index `sha256:9e154f5c605ccfbb999297f9e9f3a1935af86893781bfe15947069a4c78e2a89`、amd64 `sha256:a03f195ed0397a0484567b8fe7f403632c1d0e5a1e6b38224f87bb6ab373ca32`。
+- `operations`: 最终备份 `/opt/cici/backups/20260712-143215-before-release` 四类文件非空；backend/frontend `2.5.11` healthy，健康检查 `UP`，V76 已在前一发布成功执行且重启无迁移错误。
 
 ## TASK-196 客户互动整理上下文稳定性生产验收（2026-07-12）
 

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T05:20:00Z
+updated_at: 2026-07-12T06:36:16Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-197 - 客户互动档案、动态记忆与按需检索落地
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-103-customer-interaction-archive-memory-retrieval.md`
 - task_status_path: `.claw/tasks/TASK-197.md`
 - assignment_path: `.claw/assignments/TASK-197.yaml`
 - blocked_by: `none`
-- next_action: Implement archive linkage, incremental customer memory, bounded assistant retrieval and evidence navigation.
+- next_action: Done in production `2.5.11`; monitor archive growth, ACTIVE memory resolution and assistant evidence quality.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 

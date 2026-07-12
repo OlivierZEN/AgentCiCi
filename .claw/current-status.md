@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T05:20:00Z
+updated_at: 2026-07-12T06:36:16Z
 updated_by: MANAGER-001
-phase: customer-interaction-memory
-active_task: "TASK-197"
-next_action: "Implement the approved interaction archive, customer memory and bounded evidence retrieval design."
+phase: customer-interaction-memory-production
+active_task: "none"
+next_action: "Monitor production archive growth, ACTIVE memory resolution and evidence quality after release 2.5.11."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,9 @@ read_next:
 
 ## Snapshot
 
-- TASK-197 is in progress: the user approved a five-layer interaction archive and customer-memory design. Current code retains raw assets and AI analysis but only surfaces the latest creator-owned batches, while the assistant duplicates a full customer snapshot and full multi-year timeline in every prompt.
+- TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
+- TASK-197 retrieval defaults to a compact customer snapshot, 90 days / 20 recent interactions and 8 relevant ACTIVE memories/evidence. Explicit history questions expand the window, and an explicit archive ID is ranked first.
+- TASK-197 evidence: focused backend tests, 64 frontend tests and production build passed; real Beijing Smart Manufacturing data produced 10 memory items, assistant context returned 7 evidence items without history expansion, original material opened in a new browser tab, and final browser console had zero errors or warnings.
 
 - TASK-196 is done in production `2.5.9`: interaction confirmation no longer starts a full CRM refresh, queue reloads preserve the selected customer, the interaction editor freezes its Account context, and ordinary old-customer analysis no longer triggers mode navigation.
 - TASK-196 evidence: frontend 64 tests/build and 12 backend focused tests passed; real “奔驰” search retained 4 results and the selected Mercedes-Benz customer after confirmation and a 35-second poll, with no `refresh=true`, browser error, backend target error or Nginx 5xx.
@@ -42,7 +44,7 @@ read_next:
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
-- Current branch: `main`; production is running release `2.5.9` from Git commit `6c7e27181fbb`; TASK-182 through TASK-196 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100/FEAT-101/FEAT-102 are production ready within their documented limits.
+- Current branch: `main`; production is running release `2.5.11` from Git commit `d0ed7e4129cf`; TASK-182 through TASK-197 are complete and FEAT-081/FEAT-092 through FEAT-103 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

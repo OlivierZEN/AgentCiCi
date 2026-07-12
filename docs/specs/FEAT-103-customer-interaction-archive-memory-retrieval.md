@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-103
 title: 客户互动档案、动态记忆与按需检索
-status: approved
+status: production_ready
 owner_role: fullstack-agent
 task_ids: TASK-197
 related_decisions: FEAT-081,FEAT-097,FEAT-102
 related_issues: none
-updated_at: 2026-07-12T05:20:00Z
+updated_at: 2026-07-12T06:36:16Z
 updated_by: MANAGER-001
 ---
 

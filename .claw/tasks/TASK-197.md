@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-197
 title: 客户互动档案、动态记忆与按需检索落地
-status: in_progress
+status: done
 owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-103-customer-interaction-archive-memory-retrieval.md
 assignment_path: .claw/assignments/TASK-197.yaml
-updated_at: 2026-07-12T05:20:00Z
+updated_at: 2026-07-12T06:36:16Z
 updated_by: MANAGER-001
 ---
 
@@ -24,3 +24,11 @@ updated_by: MANAGER-001
 3. 将助手改为近期窗口、未闭环记忆和相关历史混合检索。
 4. 增加档案详情、证据定位和继续分析交互。
 5. 完成自动化、桌面浏览器和生产发布验收。
+
+## 完成结果
+
+- V76 将确认批次与正式互动事件关联，并新增可审计的客户记忆项；旧确认批次首次读取时按来源事件幂等回填。
+- 互动确认只更新当前事件及当前客户记忆，不再触发全客户历史重算；档案保留确认稿、AI 分析、提取文本和原件引用。
+- 助手默认使用精简客户快照、近 90 天最多 20 条互动、最多 8 条 ACTIVE 记忆/证据；明确历史问题或档案 ID 才扩大范围并优先引用指定来源。
+- 时间线和助手证据均可打开互动档案，三个页签和“基于本次互动继续分析”已落地；原件按 Account 权限在新标签页预览。
+- 生产 `2.5.11 / d0ed7e4129cf` 已验收：北京智造客户 10 条时间线中 1 条可追溯档案，生成 10 条客户记忆；助手本轮使用 7 条证据、10 条近期互动和 8 条 ACTIVE 记忆，未扩大到历史模式。

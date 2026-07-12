@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T04:58:00Z
+updated_at: 2026-07-12T06:36:16Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.5.11 TASK-197 客户互动档案、动态记忆与按需检索 on 2026-07-12:
+  - Git commit/tag `d0ed7e4129cf` / `2.5.11`; V76 archives confirmed interaction batches, adds typed ACTIVE customer memory and bounds assistant context to recent/relevant evidence.
+  - Images: backend index `sha256:d4ba55523711a534ce7ef37c676d8eb8505c27a6497b1a4363f675f59d0aeec9`, amd64 `sha256:a8793ab297a0a74cbde806ad29f739673a802ec069027d34355b8702d0b6fecb`; frontend index `sha256:9e154f5c605ccfbb999297f9e9f3a1935af86893781bfe15947069a4c78e2a89`, amd64 `sha256:a03f195ed0397a0484567b8fe7f403632c1d0e5a1e6b38224f87bb6ab373ca32`.
+  - Final backup: `/opt/cici/backups/20260712-143215-before-release`; env, PostgreSQL, KB files and Qdrant archives are non-empty. Initial archive release backup is `/opt/cici/backups/20260712-141943-before-release`.
+  - Backend/frontend run `2.5.11`; four state services remain healthy on `2.3.4`. Health `UP`; V76 applied successfully; backend startup has no migration error.
+  - Production API verified archive detail, 10 ACTIVE memories and bounded assistant context (`recent=10`, `memory=8`, `evidence=7`, `history=false`). Production browser verified all three archive tabs and original-file preview with zero console errors/warnings. Screenshot: `output/playwright/task197-prod-archive-final-2.5.11.png`.
 
 - 2.5.9 TASK-196 客户互动整理上下文稳定性 on 2026-07-12:
   - Git commit/tag `6c7e27181fbb` / `2.5.9`; interaction confirmation uses ordinary detail/queue reads, preserves selected customers outside the current result page, freezes modal Account context and constrains assistant mode navigation to explicit commands.
