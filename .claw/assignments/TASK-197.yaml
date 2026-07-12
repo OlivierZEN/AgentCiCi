@@ -14,6 +14,7 @@ allowed_write_roots:
   - backend/src/test/java/com/codehouse/ciciassistant/customer/**
   - backend/src/main/resources/db/migration/**
   - frontend/src/assistant/customer-workbench/**
+  - frontend/src/assistant/*.css
   - docs/specs/**
   - .claw/tasks/**
 scope_files:
