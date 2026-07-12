@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-11T16:27:00Z
+updated_at: 2026-07-12T01:18:00Z
 updated_by: MANAGER-001
-phase: security-rules-platform
-active_task: "TASK-170"
-next_action: "Resume the security rules platform after completing the CloudCC refresh stability production hotfix."
+phase: large-crm-async-sync
+active_task: "TASK-192"
+next_action: "Implement asynchronous CRM dataset initialization and verify the 10,000-account organization without gateway timeouts."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-192 is ready: production Nginx recorded four simultaneous customer-workbench 504 responses at 08:58:38 for the large CRM organization; controlled backend read succeeded after 94.99 seconds with exactly 10,000 visible accounts, proving the synchronous full-dataset initialization exceeds the 60-second gateway timeout and reaches the current page ceiling.
 
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.

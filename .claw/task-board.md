@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-11T16:27:00Z
+updated_at: 2026-07-12T01:18:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-192 - 大数据量 CRM 组织异步初始化与 504 修复
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-100-large-crm-organization-async-sync.md`
+- task_status_path: `.claw/tasks/TASK-192.md`
+- assignment_path: `.claw/assignments/TASK-192.yaml`
+- blocked_by: `none`
+- next_action: Implement asynchronous single-flight CRM dataset loading, stale reads, sync-state polling and normalized errors.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
