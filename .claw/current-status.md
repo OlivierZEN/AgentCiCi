@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T04:58:00Z
+updated_at: 2026-07-12T05:20:00Z
 updated_by: MANAGER-001
-phase: security-rules-platform
-active_task: "TASK-170"
-next_action: "Continue the security rules platform and input/output security gateway from its task status."
+phase: customer-interaction-memory
+active_task: "TASK-197"
+next_action: "Implement the approved interaction archive, customer memory and bounded evidence retrieval design."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-197 is in progress: the user approved a five-layer interaction archive and customer-memory design. Current code retains raw assets and AI analysis but only surfaces the latest creator-owned batches, while the assistant duplicates a full customer snapshot and full multi-year timeline in every prompt.
 
 - TASK-196 is done in production `2.5.9`: interaction confirmation no longer starts a full CRM refresh, queue reloads preserve the selected customer, the interaction editor freezes its Account context, and ordinary old-customer analysis no longer triggers mode navigation.
 - TASK-196 evidence: frontend 64 tests/build and 12 backend focused tests passed; real “奔驰” search retained 4 results and the selected Mercedes-Benz customer after confirmation and a 35-second poll, with no `refresh=true`, browser error, backend target error or Nginx 5xx.

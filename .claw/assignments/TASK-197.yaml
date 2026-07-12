@@ -1,0 +1,49 @@
+task_id: TASK-197
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-12T05:20:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-103-customer-interaction-archive-memory-retrieval.md
+task_status_path: .claw/tasks/TASK-197.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/main/resources/db/migration/**
+  - frontend/src/assistant/customer-workbench/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-103-customer-interaction-archive-memory-retrieval.md
+  - .claw/tasks/TASK-197.md
+  - .claw/assignments/TASK-197.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-097-multimodal-interaction-ingestion.md
+  - docs/specs/FEAT-103-customer-interaction-archive-memory-retrieval.md
+task_boundary:
+  - "实现客户互动档案、动态记忆、助手按需检索和证据定位，不改变 CRM 登录、身份映射或工作台整体视觉语言。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-12T05:18:00Z; user approved the interaction archive and layered retrieval design."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
