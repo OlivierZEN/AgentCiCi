@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-12T01:52:52Z
+updated_at: 2026-07-12T02:45:57Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-12T01:52:52Z
+last_run_at: 2026-07-12T02:45:57Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-193 客户队列最近互动倒序生产验收（2026-07-12）
+
+- `backend`: `CustomerCrmProjectionServiceTest,CustomerWorkbenchServiceTest` 共 10 项通过；覆盖新客户和老客户按最近互动倒序、暂无互动置后、10,000 客户规模和既有工作台行为。
+- `frontend`: 12 个测试文件、59 项测试通过；生产构建通过，仅保留既有 Vite chunk-size 提示；页面默认排序选项为“最近互动”。
+- `release`: `2.5.3 / c7af96a48092` 已发布；后端 index `sha256:2be33ef3be924aed10865cd273d44db4dbb3d2e71a0948fb46ec908a6971eb11`，前端 index `sha256:c128d28bcd58917714d8bf8e8911bd2d566bb91cc48258b140a1c321eb9e8758`。
+- `production-data`: 真实组织 `org5nszpgj99jaysxv6y` 使用现有 Owen 身份调用未传 `sort` 的默认接口；新客户、老客户首屏各 12 条均 `descending=true`、`emptyLast=true`。
+- `operations`: 发布前备份四类产物非空；六服务健康，版本和 Git commit 一致，工作台 HTTP 200，后端目标错误和 Nginx 5xx 扫描为空。
 
 ## TASK-192 大数据量 CRM 异步初始化生产验收（2026-07-12）
 

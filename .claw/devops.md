@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T01:52:52Z
+updated_at: 2026-07-12T02:45:57Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.5.3 TASK-193 客户队列最近互动倒序 on 2026-07-12:
+  - Git commit/tag `c7af96a48092` / `2.5.3`; 新客户推进和老客户经营默认统一为 `interaction desc`，暂无互动时间的客户置后，相同时间按 account ID 稳定排序。
+  - Images: backend index `sha256:2be33ef3be924aed10865cd273d44db4dbb3d2e71a0948fb46ec908a6971eb11`, amd64 `sha256:c4204bacb832bb39708cf6552d97bea9388d9ce820722c90e8486ed8ece13c47`; frontend index `sha256:c128d28bcd58917714d8bf8e8911bd2d566bb91cc48258b140a1c321eb9e8758`, amd64 `sha256:884a0c69b710878d1e6efab3fc96edeb7e770ddc0552a8dac02fa9f6750d4e21`.
+  - Backup: `/opt/cici/backups/20260712-104207-before-2.5.3-task193-recent-order`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend run `2.5.3`; four state services remain healthy on `2.3.4`. Health `UP`, version `2.5.3 / c7af96a48092`, Nginx valid, workbench HTTP 200.
+  - Real large organization default queries returned both new/existing first pages in descending timestamps with empty values last; post-release backend error and Nginx 5xx scans are empty.
 
 - 2.5.2 TASK-192 大数据量 CRM 组织异步初始化 on 2026-07-12:
   - Git commit/tag `1c2084b5746c` / `2.5.2`; CRM 投影改为按组织成员隔离的后台单飞、10 分钟缓存和 stale-while-revalidate，首页不再同步等待大数据读取。

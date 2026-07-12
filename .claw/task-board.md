@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T02:05:00Z
+updated_at: 2026-07-12T02:45:57Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-193 - 客户队列默认按最近互动倒序
-
-- status: `in_progress`
-- priority: `high`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-100-large-crm-organization-async-sync.md`
-- task_status_path: `.claw/tasks/TASK-193.md`
-- assignment_path: `.claw/assignments/TASK-193.yaml`
-- blocked_by: `none`
-- next_action: Publish the tested interaction-desc default and verify both modes with real CRM data.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
@@ -744,6 +733,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-193 - 客户队列默认按最近互动倒序
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-100-large-crm-organization-async-sync.md`
+- task_status_path: `.claw/tasks/TASK-193.md`
+- assignment_path: `.claw/assignments/TASK-193.yaml`
+- blocked_by: `none`
+- next_action: `none`; production `2.5.3` defaults both queues to recent-interaction descending order.
 
 ### TASK-192 - 大数据量 CRM 组织异步初始化与 504 修复
 

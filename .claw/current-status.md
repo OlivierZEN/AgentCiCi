@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T02:05:00Z
+updated_at: 2026-07-12T02:45:57Z
 updated_by: MANAGER-001
-phase: customer-queue-recent-order
-active_task: "TASK-193"
-next_action: "Make both customer queues default to most-recent interaction order and publish the verified hotfix."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Resume TASK-170 security rules platform after the completed customer queue ordering hotfix."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-193 is ready: both new-customer advancement and existing-customer operations will default to `interaction desc`, with customers lacking interaction timestamps placed last and deterministic tie ordering.
+- TASK-193 is done in production `2.5.3`: new-customer advancement and existing-customer operations both default to recent-interaction descending order; missing interaction timestamps stay last and ties use deterministic account ordering.
+- TASK-193 evidence: backend 10 tests, frontend 59 tests/build, release backup/health/public smoke and real large-organization default-query checks passed; both modes returned 12 rows in descending timestamp order with no post-release errors.
 
 - TASK-192 is done in production `2.5.2`: the large CRM organization now initializes through per-user asynchronous single-flight projection with stale-while-revalidate, bounded parallel reads, indexed aggregation and bulk recommendation lookup. Cold-cache startup requests return `200/SYNCING` in about one second instead of four 60-second 504 responses.
 - TASK-192 evidence: the real organization background sync completed in 46.21 seconds with 10,000 visible accounts; READY queue read returned in 0.68 seconds, no post-release 504/upstream timeout remained, and raw gateway HTML is normalized. The current 10,000-record OpenAPI ceiling is explicitly surfaced and remains a separate incremental-projection follow-up.
