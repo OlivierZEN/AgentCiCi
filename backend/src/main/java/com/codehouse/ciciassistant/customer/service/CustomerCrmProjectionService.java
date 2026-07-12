@@ -385,7 +385,7 @@ public class CustomerCrmProjectionService {
 
     private Map<String, Object> syncMetadata(String key, Dataset dataset) {
         SyncState state = syncStates.get(key);
-        boolean syncing = state != null && "SYNCING".equals(state.status());
+        boolean syncing = activeLoads.containsKey(key) || state != null && "SYNCING".equals(state.status());
         boolean failed = state != null && "FAILED".equals(state.status());
         boolean limited = dataset != null && dataset.recordLimitReached();
         return mapOf(
