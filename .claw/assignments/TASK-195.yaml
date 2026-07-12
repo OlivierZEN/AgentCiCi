@@ -1,0 +1,43 @@
+task_id: TASK-195
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-12T03:50:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-081-customer-interaction-workbench.md
+task_status_path: .claw/tasks/TASK-195.md
+branch: main
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots: []
+scope_files:
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.tsx
+  - frontend/src/assistant/customer-workbench/CustomerWorkbenchApp.test.ts
+  - frontend/src/assistant/cici-ui.css
+  - .claw/tasks/TASK-195.md
+  - .claw/assignments/TASK-195.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+task_boundary:
+  - "只调整客户互动时间线的日期展示、布局和测试，不改变后端数据、时区语义或其他摘要日期格式。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-12T03:49:00Z; user requested four-digit year in all customer interaction timelines."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T03:33:00Z
+updated_at: 2026-07-12T03:50:00Z
 updated_by: MANAGER-001
-phase: security-rules-platform
-active_task: "TASK-170"
-next_action: "Continue TASK-170 security rules platform work; monitor production 2.5.6 global customer search latency and permission behavior."
+phase: customer-timeline-year-label
+active_task: "TASK-195"
+next_action: "Show four-digit years in every customer interaction timeline and verify date-column alignment."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-195 is in progress: customer interaction timelines must display `YYYY-MM-DD` plus `HH:mm` so repeated month/day values remain distinguishable across years; scope is frontend formatting, alignment and regression tests only.
 
 - TASK-194 is done in production `2.5.6`: customer-name search now queries all Accounts visible to the current CloudCC identity, bypasses new/existing mode, queue filter and projection-cache limits, loads cache-external detail on demand, and aligns the workspace to the matched customer's actual mode.
 - TASK-194 evidence: backend 11 focused tests and frontend 60 tests/build passed; the real large organization found “青岛海信商用显示股份有限公司” in about 0.76 seconds and loaded detail in about 0.22 seconds. Browser verification showed one 1px wrapper focus border, no inner input border/shadow, no business error, and correct old-customer operations UI.
