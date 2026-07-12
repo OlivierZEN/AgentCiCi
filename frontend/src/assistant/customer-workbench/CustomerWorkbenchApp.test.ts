@@ -5,6 +5,7 @@ import {
   customerModeToWorkbenchMode,
   defaultCustomerQueueFilter,
   defaultCustomerQueueSort,
+  formatTimelineDateTime,
   isCurrentVoiceSession,
   scrollConversationToLatest,
 } from "./CustomerWorkbenchApp";
@@ -31,6 +32,17 @@ describe("customerModeToWorkbenchMode", () => {
     expect(customerModeToWorkbenchMode("EXISTING")).toBe("existing");
     expect(customerModeToWorkbenchMode("NEW")).toBe("new");
     expect(customerModeToWorkbenchMode("SEARCH")).toBeNull();
+  });
+});
+
+describe("formatTimelineDateTime", () => {
+  it("keeps the four-digit year visible for cross-year interaction timelines", () => {
+    expect(formatTimelineDateTime("2024-09-20T09:36:00")).toBe("2024-09-20\n09:36");
+    expect(formatTimelineDateTime("2026-09-20T09:36:00")).toBe("2026-09-20\n09:36");
+  });
+
+  it("preserves an unparseable source value instead of inventing a date", () => {
+    expect(formatTimelineDateTime("时间待确认")).toBe("时间待确认");
   });
 });
 

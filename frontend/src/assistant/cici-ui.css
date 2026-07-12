@@ -14367,7 +14367,7 @@
 .customer-workbench-timeline article {
   position: relative;
   display: grid;
-  grid-template-columns: 64px 38px minmax(0, 1fr);
+  grid-template-columns: 76px 38px minmax(0, 1fr);
   gap: 8px;
   padding: 0 0 13px;
 }
@@ -14377,7 +14377,7 @@
   position: absolute;
   top: 30px;
   bottom: -13px;
-  left: 87px;
+  left: 99px;
   width: 1px;
   background: #ded2bb;
   pointer-events: none;
@@ -14386,6 +14386,9 @@
 .customer-workbench-timeline time {
   color: #7c6d59;
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  white-space: pre-line;
 }
 
 .customer-workbench-timeline__icon {
@@ -15236,12 +15239,12 @@
 }
 
 .cici-ai-apps__main--workbench .customer-workbench-timeline article {
-  grid-template-columns: 56px 32px minmax(0, 1fr);
+  grid-template-columns: 72px 32px minmax(0, 1fr);
   padding-bottom: 8px;
 }
 
 .cici-ai-apps__main--workbench .customer-workbench-timeline article:not(:last-child)::before {
-  left: 75px;
+  left: 93px;
   bottom: -8px;
 }
 

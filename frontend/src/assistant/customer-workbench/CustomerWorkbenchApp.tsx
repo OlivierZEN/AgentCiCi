@@ -265,6 +265,18 @@ function shortDate(value: string) {
   return `${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} ${time}`;
 }
 
+export function formatTimelineDateTime(value: string) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const year = String(date.getFullYear()).padStart(4, "0");
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}\n${hours}:${minutes}`;
+}
+
 function formatConfidence(value: number) {
   const normalized = Number(value);
   if (!Number.isFinite(normalized)) return "—";
@@ -1096,7 +1108,7 @@ function TimelineCards({ detail, compact = false }: { detail: CustomerWorkbenchD
     <div className={`customer-workbench-timeline${compact ? " is-compact" : ""}`}>
       {(detail?.timeline ?? []).slice(0, compact ? 5 : undefined).map((item) => (
         <article key={item.eventId}>
-          <time>{shortDate(item.occurredAt)}</time>
+          <time dateTime={item.occurredAt}>{formatTimelineDateTime(item.occurredAt)}</time>
           <span className={`customer-workbench-timeline__icon is-${lifecycleSourceLabel(item.sourceType)}`} aria-hidden>
             <Icon name={sourceIconName(item.sourceType)} />
           </span>
