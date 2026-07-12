@@ -93,6 +93,17 @@ export type CustomerInteractionAnalysis = {
     reason: string;
     validDays: number;
   }>;
+  actionCandidates?: Array<{
+    actionType: "CREATE_TASK" | "CREATE_OPPORTUNITY" | "UPDATE_OPPORTUNITY" | string;
+    businessKey: string;
+    title: string;
+    reason: string;
+    evidence: string;
+    confidence: number;
+    dueInDays: number;
+    validDays: number;
+    targetRecordId?: string;
+  }>;
 };
 
 export type CustomerScoreSignal = {
@@ -147,6 +158,7 @@ export type CustomerInteractionBatch = {
   assets: CustomerInteractionAsset[];
   deduplicated?: boolean;
   event?: CustomerInteractionEvent;
+  actionResult?: { generated: number; refreshed: number; skipped: number; recommendationIds?: string[] };
 };
 
 export type CustomerMemoryItem = {
@@ -193,6 +205,11 @@ export type CustomerRecommendation = {
   appliedCrmId?: string;
   targetObject?: string;
   targetRecordId?: string;
+  sourceEventId?: string;
+  sourceBatchId?: string;
+  actionKey?: string;
+  triggerType?: string;
+  validUntil?: string;
   evidence?: unknown[];
   dismissalReason?: string;
   lastErrorMessage?: string;

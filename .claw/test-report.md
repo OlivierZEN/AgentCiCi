@@ -6276,3 +6276,22 @@ last_run_status: passed
   - Real data: organization `org2sva14i4udjmi2t4s` produced 2 pending signals and organization `org5nszpgj99jaysxv6y` produced 8; both snapshots remained `healthScore=50`, `activeSignalCount=0`.
   - Idempotence: two consecutive production explanation reads returned `50/0/2/2`; persisted signal count remained 2.
   - Stable-window logs: backend scoring errors `0`, Nginx 5xx `0`. Restart-window stream 502 responses ended when the backend became healthy and did not recur.
+
+## 2026-07-12 TASK-199 互动驱动的客户经营动作
+
+- Authorization:
+  - Result: success.
+  - Notes: `MANAGER-001` passed TASK-199 assignment checks for backend customer code, V78, workbench UI, specs and task state.
+- Focused backend tests:
+  - Command: `mvn -q -Dmaven.repo.local=.m2/repository -Dtest=CustomerInteractionActionServiceTest,CustomerInteractionIngestionServiceTest,CustomerWorkbenchServiceTest,CustomerDynamicScoringServiceTest,CustomerCrmProjectionServiceTest test` in `backend/`.
+  - Result: success, 24 tests with zero failures/errors.
+  - Notes: covers evidence-backed action creation, pending refresh without stacking, low-confidence rejection, missing target rejection, seven-day cooldown, historical-expiry rejection, hallucinated-evidence rejection, confirmation idempotence and existing workbench/scoring/projection behavior.
+- Frontend tests and build:
+  - Command: `npm test -- --run && npm run build` in `frontend/`.
+  - Result: success, 66 tests and Vite production build; existing large-chunk warning remains.
+- Desktop browser validation:
+  - Target: local AgentCiCi customer workbench.
+  - Result: success; historical recommendations are labeled `历史建议`, customer/timeline/action structure renders normally, and browser console has zero errors and zero warnings.
+  - Evidence: `output/playwright/task199-local-dynamic-actions.png`.
+- Static checks:
+  - Result: success; `git diff --check` passed and fixed first-open recommendation/seed symbols are absent from production customer service code.

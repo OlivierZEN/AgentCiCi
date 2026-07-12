@@ -7,6 +7,7 @@ import {
   defaultCustomerQueueSort,
   formatTimelineDateTime,
   isCurrentVoiceSession,
+  interactionConfirmationOutcome,
   preserveSelectedCustomer,
   scrollConversationToLatest,
   shouldSwitchWorkbenchMode,
@@ -106,5 +107,19 @@ describe("customer workbench request errors", () => {
     expect(customerWorkbenchErrorMessage(504, undefined, html))
       .toBe("CRM 数据同步耗时较长，系统仍在后台处理，请稍后重试。");
     expect(customerWorkbenchErrorMessage(503, undefined, html)).not.toContain("<html>");
+  });
+});
+
+describe("interaction-driven customer actions", () => {
+  it("opens generated actions immediately after interaction confirmation", () => {
+    expect(interactionConfirmationOutcome({ actionResult: { generated: 1, refreshed: 1, skipped: 0 } })).toEqual({
+      actionCount: 2,
+      tab: "recommendations",
+      notice: "互动已归集，识别出 2 项经营动作，请确认后写入 CRM。",
+    });
+  });
+
+  it("keeps informational interactions on the timeline", () => {
+    expect(interactionConfirmationOutcome({ actionResult: { generated: 0, refreshed: 0, skipped: 1 } }).tab).toBe("timeline");
   });
 });

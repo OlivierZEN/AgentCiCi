@@ -70,6 +70,7 @@ public class CustomerInteractionIngestionService {
     private final CustomerWorkbenchService workbenchService;
     private final CustomerMemoryService customerMemoryService;
     private final CustomerDynamicScoringService dynamicScoringService;
+    private final CustomerInteractionActionService interactionActionService;
     private final AliyunAsrService asrService;
     private final AliyunBailianClient modelClient;
     private final ModelRouterService modelRouterService;
@@ -84,6 +85,7 @@ public class CustomerInteractionIngestionService {
                                                CustomerWorkbenchService workbenchService,
                                                CustomerMemoryService customerMemoryService,
                                                CustomerDynamicScoringService dynamicScoringService,
+                                               CustomerInteractionActionService interactionActionService,
                                                AliyunAsrService asrService,
                                                AliyunBailianClient modelClient,
                                                ModelRouterService modelRouterService,
@@ -97,6 +99,7 @@ public class CustomerInteractionIngestionService {
         this.workbenchService = workbenchService;
         this.customerMemoryService = customerMemoryService;
         this.dynamicScoringService = dynamicScoringService;
+        this.interactionActionService = interactionActionService;
         this.asrService = asrService;
         this.modelClient = modelClient;
         this.modelRouterService = modelRouterService;
@@ -220,10 +223,13 @@ public class CustomerInteractionIngestionService {
                 batch.getOccurredAt(), batch.getAnalysisJson(), assets.stream().map(CustomerInteractionAssetEntity::getPublicId).toList());
         dynamicScoringService.recordAnalysis(orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
                 source, batch.getOccurredAt(), batch.getAnalysisJson());
+        Map<String, Object> actionResult = interactionActionService.recordActions(
+                orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(), batch.getOccurredAt(), batch.getAnalysisJson());
         batch.markConfirmed(eventId);
         batchRepository.save(batch);
         Map<String, Object> result = new LinkedHashMap<>(batchView(batch, assets));
         result.put("event", saved);
+        result.put("actionResult", actionResult);
         result.put("deduplicated", Boolean.TRUE.equals(saved.get("deduplicated")));
         return result;
     }
@@ -281,7 +287,7 @@ public class CustomerInteractionIngestionService {
                 batchRepository.save(batch);
                 return;
             }
-            AnalysisResult analysis = analyze(batch.getOrgId(), combined);
+            AnalysisResult analysis = analyze(batch.getOrgId(), combined, customerContext(batch));
             boolean partial = !errors.isEmpty() || analysis.degraded();
             String errorMessage = String.join("；", errors);
             if (analysis.degraded()) errorMessage = joinError(errorMessage, analysis.message());
@@ -417,7 +423,8 @@ public class CustomerInteractionIngestionService {
         }
     }
 
-    private AnalysisResult analyze(String orgId, String combined) {
+    private AnalysisResult analyze(String orgId, String combined, Map<String, Object> customerContext) {
+        String crmContext = json(customerContext);
         String prompt = """
                 请分析下面的客户原始沟通材料，并且只输出一个 JSON 对象，不要输出 Markdown 或代码围栏。
                 禁止补造材料中没有的人名、日期、金额、承诺和结论。不确定内容必须放入 pendingQuestions。
@@ -441,6 +448,16 @@ public class CustomerInteractionIngestionService {
                   evidence: string，必须是原始材料中可核验的原句或紧邻事实
                   reason: string，说明为什么影响该维度
                   validDays: 7 到 365 的整数
+                actionCandidates: object[]，每一项字段固定为：
+                  actionType: CREATE_TASK | CREATE_OPPORTUNITY | UPDATE_OPPORTUNITY
+                  businessKey: string，稳定业务键，例如 expansion:mobile-inspection 或 followup:budget-approver
+                  title: string，可直接作为 CRM 任务主题或商机名称
+                  reason: string，说明为什么现在需要执行
+                  evidence: string，必须是本次原始材料中的可核验原句
+                  confidence: 0 到 1 的小数
+                  dueInDays: 1 到 90 的整数
+                  validDays: 7 到 180 的整数
+                  targetRecordId: string，仅 UPDATE_OPPORTUNITY 必填，必须来自下面 CRM 上下文中的商机 id
 
                 评分信号规则：
                 1. 只依据本次材料识别，不得因联系人、合同或工单数量机械加减分。
@@ -448,9 +465,19 @@ public class CustomerInteractionIngestionService {
                 3. 对 HEALTH/EXPANSION/RENEWAL/RELATIONSHIP，POSITIVE 表示改善；对 RISK，NEGATIVE 表示风险上升，POSITIVE 表示风险缓解。
                 4. 没有明确证据时不要生成信号；不确定事项仍放入 pendingQuestions。
 
+                经营动作规则：
+                1. 只生成销售人员可以执行且值得写入 CRM 的动作，纯信息摘要不要生成动作。
+                2. 明确的新采购、增购或独立项目需求可生成 CREATE_OPPORTUNITY；已有商机的阶段、预算、方案或下一步发生变化时生成 UPDATE_OPPORTUNITY。
+                3. 回访、材料补充、关系维护、服务闭环、续约准备和待确认事项生成 CREATE_TASK。
+                4. 不确定是否为新商机时不要创建商机，应放入 pendingQuestions 或生成核实任务。
+                5. actionCandidates 的证据只能来自本次原始材料；CRM 上下文只用于识别已有商机及 targetRecordId。
+
+                当前 CRM 客户上下文：
+                %s
+
                 原始材料：
                 %s
-                """.formatted(clip(combined, 60_000));
+                """.formatted(clip(crmContext, 12_000), clip(combined, 60_000));
         Map<String, String> route = modelRouterService.route(orgId, "customer-insight");
         Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, route.get("provider"));
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
@@ -487,6 +514,7 @@ public class CustomerInteractionIngestionService {
             result.put(key, stringList(value.get(key), 30));
         }
         result.put("scoringSignals", scoringSignals(value.get("scoringSignals")));
+        result.put("actionCandidates", actionCandidates(value.get("actionCandidates"), combined));
         String sentiment = blank(value.get("sentiment")).toUpperCase(Locale.ROOT);
         result.put("sentiment", List.of("POSITIVE", "NEUTRAL", "NEGATIVE").contains(sentiment) ? sentiment : "NEUTRAL");
         result.put("degraded", degraded);
@@ -517,6 +545,63 @@ public class CustomerInteractionIngestionService {
             if (result.size() >= 30) break;
         }
         return result;
+    }
+
+    private List<Map<String, Object>> actionCandidates(Object value, String combined) {
+        if (!(value instanceof List<?> list)) return List.of();
+        String sourceText = normalizedEvidence(combined);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Object item : list) {
+            if (!(item instanceof Map<?, ?> raw)) continue;
+            String actionType = blank(raw.get("actionType")).toUpperCase(Locale.ROOT);
+            String businessKey = clip(blank(raw.get("businessKey")), 128);
+            String title = clip(blank(raw.get("title")), 256);
+            String reason = clip(blank(raw.get("reason")), 2000);
+            String evidence = clip(blank(raw.get("evidence")), 2000);
+            String targetRecordId = clip(blank(raw.get("targetRecordId")), 128);
+            if (!Set.of("CREATE_TASK", "CREATE_OPPORTUNITY", "UPDATE_OPPORTUNITY").contains(actionType)
+                    || businessKey.isBlank() || title.isBlank() || reason.isBlank() || evidence.isBlank()
+                    || !sourceText.contains(normalizedEvidence(evidence))) continue;
+            Map<String, Object> action = new LinkedHashMap<>();
+            action.put("actionType", actionType);
+            action.put("businessKey", businessKey);
+            action.put("title", title);
+            action.put("reason", reason);
+            action.put("evidence", evidence);
+            action.put("confidence", boundedDecimal(raw.get("confidence"), 0, 1, 0.5));
+            action.put("dueInDays", boundedInteger(raw.get("dueInDays"), 1, 90, 7));
+            action.put("validDays", boundedInteger(raw.get("validDays"), 7, 180, 30));
+            action.put("targetRecordId", targetRecordId);
+            result.add(action);
+            if (result.size() >= 20) break;
+        }
+        return result;
+    }
+
+    private static String normalizedEvidence(String value) {
+        return blank(value).replaceAll("\\s+", " ");
+    }
+
+    private Map<String, Object> customerContext(CustomerInteractionBatchEntity batch) {
+        try {
+            Map<String, Object> detail = workbenchService.accountDetail(
+                    batch.getOrgId(), batch.getCreatedBy(), batch.getCrmAccountId());
+            Map<String, Object> context = new LinkedHashMap<>();
+            context.put("accountId", batch.getCrmAccountId());
+            context.put("name", detail.getOrDefault("name", ""));
+            context.put("customerMode", detail.getOrDefault("customerMode", ""));
+            context.put("opportunityCount", detail.getOrDefault("opportunityCount", 0));
+            Object opportunities = detail.get("opportunities");
+            context.put("opportunities", opportunities instanceof List<?> list ? list.stream().limit(10).toList() : List.of());
+            return context;
+        } catch (RuntimeException ex) {
+            return Map.of("accountId", batch.getCrmAccountId(), "crmContextAvailable", false);
+        }
+    }
+
+    private String json(Object value) {
+        try { return objectMapper.writeValueAsString(value); }
+        catch (Exception ex) { return "{}"; }
     }
 
     private static int boundedInteger(Object value, int min, int max, int fallback) {

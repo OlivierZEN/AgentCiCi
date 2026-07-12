@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-199
 title: 互动驱动的客户经营动作
-status: in_progress
+status: review
 owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-105-interaction-driven-customer-actions.md
 assignment_path: .claw/assignments/TASK-199.yaml
-updated_at: 2026-07-12T12:20:00Z
+updated_at: 2026-07-12T15:23:54Z
 updated_by: MANAGER-001
 ---
 
@@ -27,4 +27,7 @@ updated_by: MANAGER-001
 
 ## 当前结果
 
-- 规格和授权已建立，进入实现。
+- 已移除首次打开客户时的固定建议和演示种子动作。
+- 已实现互动动作候选、原文证据校验、置信度门槛、业务键去重/刷新、七天冷却、历史时效拦截、来源档案追溯和现有人工确认写回链路。
+- V78 已增加来源事件、来源批次、动作键、触发类型和有效期字段。
+- 后端 24 项聚焦测试、前端 66 项测试与生产构建、本地桌面浏览器验收通过；等待生产发布和真实环境验收。

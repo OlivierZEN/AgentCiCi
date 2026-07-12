@@ -70,6 +70,7 @@ import {
   type CustomerWorkbenchDetail,
   type CustomerInteractionBatch,
   type CustomerInteractionArchive,
+  type CustomerInteractionAnalysis,
   type CustomerAssistantEvidence,
   type CustomerScoreExplanation,
   type CustomerScoreSignal,
@@ -121,6 +122,17 @@ export function assistantPhaseLabel(phase: string): string {
 
 export function customerWorkbenchBodyClassName(assistantOpen: boolean, assistantExpanded: boolean): string {
   return `customer-workbench__body${assistantOpen ? "" : " is-assistant-closed"}${assistantOpen && assistantExpanded ? " is-assistant-expanded" : ""}`;
+}
+
+export function interactionConfirmationOutcome(batch: Pick<CustomerInteractionBatch, "deduplicated" | "actionResult">) {
+  const actionCount = (batch.actionResult?.generated ?? 0) + (batch.actionResult?.refreshed ?? 0);
+  if (batch.deduplicated) return { actionCount: 0, tab: "timeline" as const, notice: "该互动记录已存在，未重复保存。" };
+  if (actionCount > 0) return {
+    actionCount,
+    tab: "recommendations" as const,
+    notice: `互动已归集，识别出 ${actionCount} 项经营动作，请确认后写入 CRM。`,
+  };
+  return { actionCount: 0, tab: "timeline" as const, notice: "互动记录已确认并进入时间线，本次没有足够证据生成经营动作。" };
 }
 
 type IconName =
@@ -362,7 +374,9 @@ function evidenceLabel(value: unknown) {
   if (typeof value === "string") return value;
   if (!value || typeof value !== "object") return "CRM 事实";
   const item = value as Record<string, unknown>;
-  return String(item.title || item.detail || item.subject || item.source || "CRM 事实");
+  const title = String(item.title || item.subject || item.source || "CRM 事实");
+  const detail = String(item.detail || "");
+  return detail && detail !== title ? `${title}：${detail}` : title;
 }
 
 function Icon({ name, className = "" }: { name: IconName; className?: string }) {
@@ -973,7 +987,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           {activeTab === "relationship" ? <ExistingCustomerPanel detail={detail} focus="relationship" onOpenScore={() => setScoreExplanationOpen(true)} /> : null}
           {activeTab === "recommendations" ? (
             <div ref={recommendationRef}>
-              <Recommendations detail={detail} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} />
+              <Recommendations detail={detail} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} onOpenArchive={setArchiveEventId} />
             </div>
           ) : null}
           {activeTab === "actions" ? <NextActionPanel detail={detail} onAction={handleRecommendation} /> : null}
@@ -1064,9 +1078,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           onConfirmed={async (batch) => {
             setInteractionEditorContext(null);
             setActiveAccountId(batch.accountId);
-            setNotice(batch.deduplicated ? "该互动记录已存在，未重复保存。" : "互动记录已确认并进入时间线。");
+            const outcome = interactionConfirmationOutcome(batch);
+            setNotice(outcome.notice);
             await reloadDetail(batch.accountId);
-            setActiveTab("timeline");
+            setActiveTab(outcome.tab);
           }}
         />
       ) : null}
@@ -1134,7 +1149,7 @@ function Overview({
             <h3>{mode === "new" ? "CRM 落地建议" : "老客户经营动作"}（{detail?.recommendations?.length ?? 0}）</h3>
             <button type="button" className="customer-workbench__panel-filter" onClick={() => onOpenTab("recommendations")}><span>{mode === "new" ? "全部建议" : "按影响排序"}</span><Icon name="chevronDown" /></button>
           </header>
-          <Recommendations detail={detail} onAction={onAction} onFeedback={onFeedback} onNotice={onNotice} compact />
+          <Recommendations detail={detail} onAction={onAction} onFeedback={onFeedback} onNotice={onNotice} onOpenArchive={onOpenArchive} compact />
           <button type="button" className="customer-workbench__more" onClick={() => onOpenTab("recommendations")}>{mode === "new" ? "查看全部建议" : "查看全部经营动作"} ›</button>
         </section>
       </div>
@@ -1317,12 +1332,14 @@ function Recommendations({
   onAction,
   onFeedback,
   onNotice,
+  onOpenArchive,
   compact = false,
 }: {
   detail: CustomerWorkbenchDetail | null;
   onAction: (item: CustomerRecommendation, action: RecommendationAction) => void;
   onFeedback: (item: CustomerRecommendation, rating: "HELPFUL" | "NOT_HELPFUL") => void;
   onNotice: (message: string) => void;
+  onOpenArchive?: (eventId: string) => void;
   compact?: boolean;
 }) {
   const items = detail?.recommendations ?? [];
@@ -1340,12 +1357,13 @@ function Recommendations({
               <span>{item.rationale}</span>
             </div>
           </header>
-          <p><b>置信度</b>{formatConfidence(item.confidence)} <span>依据：{item.evidence?.length ? String(item.evidence.length) + " 条 CRM 事实" : "当前客户 CRM 数据"}</span></p>
+          <p><b>置信度</b>{formatConfidence(item.confidence)} <span>{item.triggerType === "INTERACTION_AI" ? "互动识别" : "历史建议"} · 依据：{item.evidence?.length ? String(item.evidence.length) + " 条事实" : "当前客户 CRM 数据"}{item.validUntil ? ` · 有效至 ${new Date(item.validUntil).toLocaleDateString("zh-CN")}` : ""}</span></p>
           {!compact && item.evidence?.length ? <div className="customer-workbench-recommendation__evidence">
             <button type="button" onClick={() => setExpandedEvidenceId((current) => current === item.recommendationId ? "" : item.recommendationId)}>
               {expandedEvidenceId === item.recommendationId ? "收起依据" : `查看依据 (${item.evidence.length})`}
             </button>
-            {expandedEvidenceId === item.recommendationId ? <ul>{item.evidence.map((evidence, evidenceIndex) => <li key={`${item.recommendationId}-${evidenceIndex}`}>{evidenceLabel(evidence)}</li>)}</ul> : null}
+            {expandedEvidenceId === item.recommendationId ? <><ul>{item.evidence.map((evidence, evidenceIndex) => <li key={`${item.recommendationId}-${evidenceIndex}`}>{evidenceLabel(evidence)}</li>)}</ul>
+              {item.sourceEventId && onOpenArchive ? <button type="button" onClick={() => onOpenArchive(item.sourceEventId!)}>查看互动档案</button> : null}</> : null}
           </div> : null}
           {item.lastErrorMessage ? <p className="customer-workbench-recommendation__error">上次执行失败：{item.lastErrorMessage}</p> : null}
           <footer>
@@ -1354,9 +1372,10 @@ function Recommendations({
             {item.status === "CONFIRMED" || item.status === "FAILED" ? <button type="button" onClick={() => onAction(item, "apply")}><Icon name="check" />{item.status === "FAILED" ? "重试" : "写入 CRM"}</button> : null}
             {item.status === "APPLYING" ? <button type="button" disabled><Icon name="check" />执行中</button> : null}
             {item.status === "APPLIED" ? <button type="button" disabled><Icon name="check" />已写入</button> : null}
-            {item.status !== "APPLIED" && item.status !== "APPLYING" && item.status !== "DISMISSED" ? <button type="button" onClick={() => onAction(item, "edit")}><Icon name="edit" />修改</button> : null}
-            {item.status !== "APPLIED" && item.status !== "APPLYING" && item.status !== "DISMISSED" ? <button type="button" onClick={() => onAction(item, "dismiss")}><Icon name="close" />忽略</button> : null}
+            {!["APPLIED", "APPLYING", "DISMISSED", "EXPIRED"].includes(item.status) ? <button type="button" onClick={() => onAction(item, "edit")}><Icon name="edit" />修改</button> : null}
+            {!["APPLIED", "APPLYING", "DISMISSED", "EXPIRED"].includes(item.status) ? <button type="button" onClick={() => onAction(item, "dismiss")}><Icon name="close" />忽略</button> : null}
             {item.status === "DISMISSED" ? <span>已忽略</span> : null}
+            {item.status === "EXPIRED" ? <span>已过期</span> : null}
           </footer>
           {!compact ? <div className="customer-workbench-recommendation__feedback">
             <span>这条建议是否有帮助？</span>
@@ -1556,6 +1575,7 @@ function InteractionArchiveDrawer({ token, eventId, onClose, onContinueAnalysis 
             <AnalysisGroup title="机会" items={analysis.opportunities} tone="opportunity" />
             <AnalysisGroup title="客户承诺" items={analysis.commitments} />
             <AnalysisGroup title="下一步行动" items={analysis.nextActions} />
+            <AnalysisActionCandidates items={analysis.actionCandidates} />
             <AnalysisGroup title="待确认" items={analysis.pendingQuestions} tone="pending" />
           </section> : null}
           {tab === "sources" ? <section><h4>原始材料与提取内容</h4>{archive.assets.length ? <div className="customer-workbench-archive__sources">
@@ -1858,6 +1878,7 @@ function InteractionEditor({ token, accountId, accountName, onClose, onConfirmed
               <AnalysisGroup title="机会" items={analysis.opportunities} tone="opportunity" />
               <AnalysisGroup title="客户承诺" items={analysis.commitments} />
               <AnalysisGroup title="下一步行动" items={analysis.nextActions} />
+              <AnalysisActionCandidates items={analysis.actionCandidates} />
               <AnalysisGroup title="待确认" items={analysis.pendingQuestions} tone="pending" />
             </div> : null}
           </section>
@@ -1907,6 +1928,17 @@ function FileAssetIcon({ inputType }: { inputType: string }) {
 function AnalysisGroup({ title, items, tone = "" }: { title: string; items?: string[]; tone?: string }) {
   if (!items?.length) return null;
   return <section className={tone ? `is-${tone}` : ""}><strong>{title}</strong><ul>{items.map((item) => <li key={item}>{item}</li>)}</ul></section>;
+}
+
+function AnalysisActionCandidates({ items }: { items?: CustomerInteractionAnalysis["actionCandidates"] }) {
+  if (!items?.length) return null;
+  const actionLabel = (type: string) => ({
+    CREATE_TASK: "创建跟进任务",
+    CREATE_OPPORTUNITY: "创建新商机",
+    UPDATE_OPPORTUNITY: "更新现有商机",
+  } as Record<string, string>)[type] ?? type;
+  return <AnalysisGroup title="建议经营动作（确认归集后生成）" tone="opportunity" items={items.map((item) =>
+    `${actionLabel(item.actionType)}：${item.title} · 置信度 ${Math.round(item.confidence * 100)}% · ${item.reason}`)} />;
 }
 
 function List({ items, empty }: { items: string[]; empty: string }) {

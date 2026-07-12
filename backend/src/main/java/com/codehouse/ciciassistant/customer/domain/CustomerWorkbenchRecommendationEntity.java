@@ -21,6 +21,7 @@ public class CustomerWorkbenchRecommendationEntity {
     public static final String STATUS_DISMISSED = "DISMISSED";
     public static final String STATUS_APPLIED = "APPLIED";
     public static final String STATUS_FAILED = "FAILED";
+    public static final String STATUS_EXPIRED = "EXPIRED";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -87,6 +88,21 @@ public class CustomerWorkbenchRecommendationEntity {
     @Column(name = "last_error_message", columnDefinition = "TEXT")
     private String lastErrorMessage;
 
+    @Column(name = "source_event_id", length = 64)
+    private String sourceEventId;
+
+    @Column(name = "source_batch_id", length = 64)
+    private String sourceBatchId;
+
+    @Column(name = "action_key", length = 128)
+    private String actionKey;
+
+    @Column(name = "trigger_type", length = 32)
+    private String triggerType;
+
+    @Column(name = "valid_until")
+    private Instant validUntil;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -143,11 +159,46 @@ public class CustomerWorkbenchRecommendationEntity {
     public Instant getAppliedAt() { return appliedAt; }
     public String getLastErrorCode() { return lastErrorCode; }
     public String getLastErrorMessage() { return lastErrorMessage; }
+    public String getSourceEventId() { return sourceEventId; }
+    public String getSourceBatchId() { return sourceBatchId; }
+    public String getActionKey() { return actionKey; }
+    public String getTriggerType() { return triggerType; }
+    public Instant getValidUntil() { return validUntil; }
 
     public void configureTarget(String targetObject, String targetRecordId, String evidenceJson) {
         this.targetObject = targetObject;
         this.targetRecordId = targetRecordId;
         this.evidenceJson = evidenceJson == null || evidenceJson.isBlank() ? "[]" : evidenceJson;
+        this.updatedAt = Instant.now();
+    }
+
+    public void configureTrigger(String sourceEventId, String sourceBatchId, String actionKey,
+                                 String triggerType, Instant validUntil) {
+        this.sourceEventId = sourceEventId;
+        this.sourceBatchId = sourceBatchId;
+        this.actionKey = actionKey;
+        this.triggerType = triggerType;
+        this.validUntil = validUntil;
+        this.updatedAt = Instant.now();
+    }
+
+    public void refreshPending(String title, String rationale, BigDecimal confidence, String crmPayload,
+                               String targetObject, String targetRecordId, String evidenceJson,
+                               String sourceEventId, String sourceBatchId, Instant validUntil) {
+        if (!STATUS_PENDING.equals(status) && !STATUS_FAILED.equals(status)) return;
+        this.title = title;
+        this.rationale = rationale;
+        this.confidence = confidence;
+        this.crmPayload = crmPayload;
+        this.targetObject = targetObject;
+        this.targetRecordId = targetRecordId;
+        this.evidenceJson = evidenceJson;
+        this.sourceEventId = sourceEventId;
+        this.sourceBatchId = sourceBatchId;
+        this.validUntil = validUntil;
+        this.status = STATUS_PENDING;
+        this.lastErrorCode = null;
+        this.lastErrorMessage = null;
         this.updatedAt = Instant.now();
     }
 
@@ -218,5 +269,12 @@ public class CustomerWorkbenchRecommendationEntity {
         this.lastErrorCode = errorCode;
         this.lastErrorMessage = errorMessage;
         this.updatedAt = Instant.now();
+    }
+
+    public void expire() {
+        if (STATUS_PENDING.equals(status) || STATUS_FAILED.equals(status)) {
+            this.status = STATUS_EXPIRED;
+            this.updatedAt = Instant.now();
+        }
     }
 }

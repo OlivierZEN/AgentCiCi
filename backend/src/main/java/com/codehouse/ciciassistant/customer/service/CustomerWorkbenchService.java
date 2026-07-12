@@ -148,10 +148,10 @@ public class CustomerWorkbenchService {
 
     @Transactional
     public Map<String, Object> accountDetail(String orgId, String userId, String accountId) {
+        expireActions(orgId, accountId);
         if (isCrmReady(orgId, userId)) {
             Map<String, Object> view = new LinkedHashMap<>(crmProjectionService.detail(orgId, userId, accountId, false));
             dynamicScoringService.overlay(view, dynamicScoringService.explanation(orgId, accountId));
-            ensureLiveRecommendations(orgId, accountId, view);
             view.put("recommendations", recommendations(orgId, userId, accountId));
             return view;
         }
@@ -647,38 +647,16 @@ public class CustomerWorkbenchService {
         requireSnapshot(orgId, accountId);
     }
 
-    @Transactional
-    protected void ensureLiveRecommendations(String orgId, String accountId, Map<String, Object> detail) {
-        if (!recommendationRepository.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId).isEmpty()) return;
-        String name = String.valueOf(detail.getOrDefault("name", "客户"));
-        List<?> signals = detail.get("signals") instanceof List<?> list ? list : List.of();
-        Object firstSignalDetail = signals.isEmpty() || !(signals.get(0) instanceof Map<?, ?> firstSignal)
-                ? null : firstSignal.get("detail");
-        String rationale = firstSignalDetail == null ? "当前客户没有明确的下一步 CRM 任务，建议由负责人确认跟进安排。"
-                : String.valueOf(firstSignalDetail);
-        CustomerWorkbenchRecommendationEntity task = new CustomerWorkbenchRecommendationEntity(
-                stableRecommendationId(orgId, accountId, "CREATE_TASK"), orgId, accountId, "CREATE_TASK",
-                "创建下一次跟进任务", rationale, BigDecimal.valueOf(0.88),
-                toJson(mapOf("subject", "跟进 " + name, "relateid", accountId, "relateobj", "Account",
-                        "status", "未开始", "priority", "普通", "expiredate", LocalDate.now().plusDays(3).toString(),
-                        "remark", rationale)));
-        task.configureTarget("Task", "", toJson(signals.stream().limit(3).toList()));
-        recommendationRepository.save(task);
-        Object opportunityCount = detail.getOrDefault("opportunityCount", 0);
-        if (Integer.parseInt(String.valueOf(opportunityCount)) == 0) {
-            CustomerWorkbenchRecommendationEntity opportunity = new CustomerWorkbenchRecommendationEntity(
-                    stableRecommendationId(orgId, accountId, "CREATE_OPPORTUNITY"), orgId, accountId, "CREATE_OPPORTUNITY",
-                    "创建业务机会并补齐推进信息", "当前客户没有可见业务机会，建议确认名称、阶段和下一步后写入 CRM。",
-                    BigDecimal.valueOf(0.76), toJson(mapOf("name", name + " 新业务机会", "khmc", accountId,
-                            "jieduan", "1-发现机会", "xyb", "确认需求、预算和关键决策人")));
-            opportunity.configureTarget("Opportunity", "", "[]");
-            recommendationRepository.save(opportunity);
-        }
-    }
-
-    private String stableRecommendationId(String orgId, String accountId, String type) {
-        String seed = orgId + ":" + accountId + ":" + type;
-        return "cwr_" + UUID.nameUUIDFromBytes(seed.getBytes(StandardCharsets.UTF_8)).toString().replace("-", "");
+    private void expireActions(String orgId, String accountId) {
+        List<CustomerWorkbenchRecommendationEntity> items = recommendationRepository
+                .findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId);
+        List<CustomerWorkbenchRecommendationEntity> expired = items.stream()
+                .filter(item -> item.getValidUntil() != null && item.getValidUntil().isBefore(Instant.now()))
+                .filter(item -> CustomerWorkbenchRecommendationEntity.STATUS_PENDING.equals(item.getStatus())
+                        || CustomerWorkbenchRecommendationEntity.STATUS_FAILED.equals(item.getStatus()))
+                .peek(CustomerWorkbenchRecommendationEntity::expire)
+                .toList();
+        if (!expired.isEmpty()) recommendationRepository.saveAll(expired);
     }
 
     private String targetObject(String type) {
@@ -832,34 +810,7 @@ public class CustomerWorkbenchService {
                         account.segment().equals("NEW") ? "NEW_CUSTOMER" : (account.segment().equals("EXISTING") ? "EXISTING_CUSTOMER" : "MIXED")
                 ));
             }
-            seedRecommendation(publicIdPrefix, orgId, account.id(), "CREATE_TASK", "创建下一次跟进任务",
-                    "最近互动中出现明确待办，建议写入 CRM 任务并设置截止时间。",
-                    0.91, mapOf("objectApiName", "Task", "subject", "跟进 " + account.name(), "accountId", account.id()));
-            seedRecommendation(publicIdPrefix, orgId, account.id(), account.segment().equals("NEW") ? "CREATE_OPPORTUNITY" : "UPDATE_RISK",
-                    account.segment().equals("NEW") ? "创建商机推进记录" : "更新客户经营风险",
-                    account.segment().equals("NEW") ? "客户已出现预算、需求或决策链信号。" : "客户服务或续约信号需要主管关注。",
-                    0.82, mapOf("accountId", account.id(), "source", "customer-interaction-workbench"));
         }
-    }
-
-    private void seedRecommendation(String publicIdPrefix,
-                                    String orgId,
-                                    String accountId,
-                                    String type,
-                                    String title,
-                                    String rationale,
-                                    double confidence,
-                                    Map<String, Object> payload) {
-        recommendationRepository.save(new CustomerWorkbenchRecommendationEntity(
-                publicIdPrefix + "_cwr_" + accountId + "_" + type.toLowerCase(Locale.ROOT),
-                orgId,
-                accountId,
-                type,
-                title,
-                rationale,
-                BigDecimal.valueOf(confidence),
-                toJson(payload)
-        ));
     }
 
     private String publicIdPrefix(String orgId) {
@@ -1019,6 +970,11 @@ public class CustomerWorkbenchService {
                 "appliedAt", item.getAppliedAt() == null ? "" : item.getAppliedAt().toString(),
                 "lastErrorCode", item.getLastErrorCode(),
                 "lastErrorMessage", item.getLastErrorMessage(),
+                "sourceEventId", blankToEmpty(item.getSourceEventId()),
+                "sourceBatchId", blankToEmpty(item.getSourceBatchId()),
+                "actionKey", blankToEmpty(item.getActionKey()),
+                "triggerType", blankToEmpty(item.getTriggerType()),
+                "validUntil", item.getValidUntil() == null ? "" : item.getValidUntil().toString(),
                 "version", item.getVersion(),
                 "updatedAt", item.getUpdatedAt().toString()
         );
