@@ -62,6 +62,7 @@ public class CustomerCrmProjectionService {
     private final Map<String, SyncState> syncStates = new ConcurrentHashMap<>();
     private final ExecutorService syncExecutor = Executors.newFixedThreadPool(2, runnable -> daemonThread(runnable, "crm-dataset-sync"));
     private final ExecutorService queryExecutor = Executors.newFixedThreadPool(3, runnable -> daemonThread(runnable, "crm-object-query"));
+    private final ExecutorService detailQueryExecutor = Executors.newFixedThreadPool(7, runnable -> daemonThread(runnable, "crm-detail-query"));
 
     public CustomerCrmProjectionService(CloudccOpenApiService cloudcc,
                                         CustomerInteractionEventRepository eventRepository,
@@ -387,19 +388,19 @@ public class CustomerCrmProjectionService {
         String accountExpression = "id = '" + accountId + "'";
         String relationExpression = "khmc = '" + accountId + "'";
         String activityExpression = "relateid = '" + accountId + "'";
-        CompletableFuture<List<Map<String, Object>>> accounts = queryAsync(() -> queryRequiredFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> accounts = detailQueryAsync(() -> queryRequiredFiltered(orgId, userId,
                 "Account", "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays", accountExpression));
-        CompletableFuture<List<Map<String, Object>>> contacts = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> contacts = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
                 "Contact", "id,name,khmc,ownerid,zhiwu,contactrole,scbclxbcrq", relationExpression));
-        CompletableFuture<List<Map<String, Object>>> opportunities = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> opportunities = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
                 "Opportunity", "id,name,khmc,ownerid,jieduan,jine,jsrq,xyb,latestcontact,lastmodifydate", relationExpression));
-        CompletableFuture<List<Map<String, Object>>> tasks = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> tasks = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
                 "Task", "id,name,subject,relateid,relateobj,status,priority,expiredate,ownerid,remark,lastmodifydate", activityExpression));
-        CompletableFuture<List<Map<String, Object>>> events = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> events = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
                 "Event", "id,name,subject,relateid,relateobj,status,type,begintime,endtime,ownerid,remark,lastmodifydate", activityExpression));
-        CompletableFuture<List<Map<String, Object>>> cases = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> cases = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
                 "cloudcccase", "id,name,khmc,ownerid,zhuangtai,yxj,duedate,zhuti,problemdescription,lastmodifydate", relationExpression));
-        CompletableFuture<List<Map<String, Object>>> contracts = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> contracts = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
                 "contract", "id,name,khmc,ownerid,zhuangtai,htksrq,htjsrq,htje,lastmodifydate", relationExpression));
         CompletableFuture.allOf(accounts, contacts, opportunities, tasks, events, cases, contracts).join();
         if (accounts.join().isEmpty()) throw new IllegalArgumentException("当前用户无权访问该客户或客户不存在");
@@ -408,6 +409,10 @@ public class CustomerCrmProjectionService {
 
     private CompletableFuture<List<Map<String, Object>>> queryAsync(Supplier<List<Map<String, Object>>> query) {
         return CompletableFuture.supplyAsync(query, queryExecutor);
+    }
+
+    private CompletableFuture<List<Map<String, Object>>> detailQueryAsync(Supplier<List<Map<String, Object>>> query) {
+        return CompletableFuture.supplyAsync(query, detailQueryExecutor);
     }
 
     private List<Map<String, Object>> queryRequired(String orgId, String userId, String objectApiName, String fields) {
@@ -871,6 +876,7 @@ public class CustomerCrmProjectionService {
     void shutdownExecutors() {
         syncExecutor.shutdownNow();
         queryExecutor.shutdownNow();
+        detailQueryExecutor.shutdownNow();
     }
 
     private String stableId(String prefix, String... values) {
