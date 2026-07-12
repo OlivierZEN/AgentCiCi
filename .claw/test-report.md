@@ -1,14 +1,27 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-11T16:27:00Z
+updated_at: 2026-07-12T01:52:52Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-11T16:27:00Z
+last_run_at: 2026-07-12T01:52:52Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-192 大数据量 CRM 异步初始化生产验收（2026-07-12）
+
+- `root-cause`: 组织 `org5nszpgj99jaysxv6y` 首屏四个接口同步等待 Account、Contact、Opportunity、Task、Event、Case、Contract 全量分页读取；受控后端直读耗时 94.99 秒，超过 Nginx 60 秒读取超时。真实账号会话有效，问题不是凭据或身份映射失败。
+- `before`: 2026-07-12 08:58:38，`integration-status`、`notifications`、`supervisor-summary`、`queue` 四路请求同时返回 504，页面直接展示 Nginx HTML；可见 Account 达到现有 10,000 条读取上限。
+- `backend-focused`: `CustomerCrmProjectionServiceTest`、`CustomerWorkbenchServiceTest`、`CustomerSignalRepositoryIntegrationTest` 共 10 项通过；覆盖异步立即返回、并发单飞、10,000 客户五秒规模门、批量建议读取和零逐客户计数。
+- `frontend`: 12 个测试文件、58 项测试通过；生产构建通过，仅保留既有 Vite chunk-size 提示。非 JSON 504 被规范化为中文业务消息，同步状态自动轮询。
+- `release`: `2.5.2 / 1c2084b5746c` 已发布；后端 index `sha256:287f46e2e748bee6b49db68d1001a6136770ec8adc8ae6508a002c73a9426aea`，前端 index `sha256:ae284daf247695759e7e1961dd74db2aa3ecd8d1274cedcb28175aa8aae46b25`。
+- `cold-cache`: 生产 HTTPS 四路并发请求分别在 0.996-1.013 秒返回 HTTP 200；queue 为 `CLOUDCC_SYNCING` 且 `syncStatus=SYNCING`，integration 显示“正在同步 CRM 数据”。
+- `ready`: 后台同步 46.21 秒完成，Account=10,000、`recordLimitReached=true`；integration 转为 `READY`，队列 0.68 秒返回 12 条首屏记录，重点推进筛选总数 37。
+- `logs`: 发布后无 504、`upstream timed out`、异常堆栈或通用服务器错误。临时浏览器诊断会话在验收收尾时过期，未重复注入凭据；API、Nginx 与后台日志证据完整。
+- `state-validation`: TASK-192 自身状态、spec、assignment 和完成区归档均有效；全库校验仍被 TASK-191 及更早任务留在 Active Tasks、旧 spec 状态/时间格式和旧 task 热文件预算等既有治理债务阻塞，本任务未扩散修改这些无关历史文件。
+- `boundary`: 本任务解决超时、并发阻塞和错误展示；每对象 10,000 条 OpenAPI 上限仍存在并已显式提示，完整增量投影需另立架构任务。
 
 ## TASK-191 CloudCC 重复刷新稳定性生产验收（2026-07-12）
 

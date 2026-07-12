@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-100
 title: 大数据量 CRM 组织异步初始化与稳定读取
-status: in_implementation
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-192
 related_decisions: FEAT-081,FEAT-098,FEAT-099
 related_issues: none
-updated_at: 2026-07-12T01:30:00Z
+updated_at: 2026-07-12T01:52:52Z
 updated_by: MANAGER-001
 ---
 
@@ -63,3 +63,11 @@ updated_by: MANAGER-001
 - 同步完成后自动出现真实客户数据；缓存过期时旧数据仍可读取。
 - 前端不显示任何 Nginx HTML；同步中、失败、截断均有明确中文状态。
 - 小数据演示组织现有新客户推进、老客户经营、详情和 CRM 权限行为不回归。
+
+## 生产验收结论
+
+- 版本：`2.5.2 / 1c2084b5746c`，后端与前端健康，Nginx 配置校验通过。
+- 冷缓存下并发请求 `integration-status`、`queue`、`notifications`、`supervisor-summary` 均在 0.99-1.02 秒返回 HTTP 200；状态一致为 `SYNCING`，未再等待网关超时。
+- 后台完整读取在 46.21 秒完成，Account 数量 10,000，`recordLimitReached=true`；完成后状态为 `READY`，队列查询 0.68 秒返回 12 条首屏数据。
+- 发布后的目标日志未出现 504、`upstream timed out`、异常堆栈或原始 HTML 错误泄漏。
+- 本次事故和交互稳定性达到生产验收标准；超过 10,000 条的完整数据覆盖仍受“约束与后续”章节限制。

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-11T16:27:00Z
+updated_at: 2026-07-12T01:52:52Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.5.2 TASK-192 大数据量 CRM 组织异步初始化 on 2026-07-12:
+  - Git commit/tag `1c2084b5746c` / `2.5.2`; CRM 投影改为按组织成员隔离的后台单飞、10 分钟缓存和 stale-while-revalidate，首页不再同步等待大数据读取。
+  - Images: backend index `sha256:287f46e2e748bee6b49db68d1001a6136770ec8adc8ae6508a002c73a9426aea`, amd64 `sha256:17e95d7e40469339195537786117f5903834a50941c08bad51841fa35aa7121a`; frontend index `sha256:ae284daf247695759e7e1961dd74db2aa3ecd8d1274cedcb28175aa8aae46b25`, amd64 `sha256:1784be25fd2e510f445b24fc47f07b46ea03e11fb54be9d7df5cbe35d67bcc16`.
+  - Backup: `/opt/cici/backups/20260712-093803-before-2.5.2-task192-sync-state`; backend/frontend running `2.5.2`, four stateful services remain healthy on `2.3.4`; health `UP`, version `2.5.2 / 1c2084b5746c`, Nginx valid.
+  - Real large organization cold-cache startup: four HTTPS requests returned HTTP 200 in 0.996-1.013 seconds with consistent `SYNCING`; background projection completed in 46.21 seconds with 10,000 accounts; READY queue returned in 0.68 seconds.
+  - Post-release Nginx/backend scans contain no 504, upstream timeout or target exception. Release `2.5.1` was superseded by the sync-state consistency fix and is not a rollback target.
 
 - 2.4.12 TASK-191 CloudCC 嵌入重复刷新与信号原子写入 on 2026-07-12:
   - Git commit/tag `4d00d417dcf3` / `2.4.12`; pagecomponent V11 handles delayed/reused host nodes, and customer signal UPSERT has a repository-level transaction.

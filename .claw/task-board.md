@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T01:18:00Z
+updated_at: 2026-07-12T01:52:52Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-192 - 大数据量 CRM 组织异步初始化与 504 修复
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-100-large-crm-organization-async-sync.md`
-- task_status_path: `.claw/tasks/TASK-192.md`
-- assignment_path: `.claw/assignments/TASK-192.yaml`
-- blocked_by: `none`
-- next_action: Publish the verified implementation and validate SYNCING-to-READY behavior with the 10,000-account organization.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
@@ -744,6 +733,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-192 - 大数据量 CRM 组织异步初始化与 504 修复
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-100-large-crm-organization-async-sync.md`
+- task_status_path: `.claw/tasks/TASK-192.md`
+- assignment_path: `.claw/assignments/TASK-192.yaml`
+- blocked_by: `none`
+- next_action: Monitor sync duration and create a separate incremental-projection task before removing the 10,000-record ceiling.
 
 ### TASK-134 - AI minutes local audio upload and speaker diarization
 

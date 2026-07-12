@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T01:18:00Z
+updated_at: 2026-07-12T01:52:52Z
 updated_by: MANAGER-001
-phase: large-crm-async-sync
-active_task: "TASK-192"
-next_action: "Implement asynchronous CRM dataset initialization and verify the 10,000-account organization without gateway timeouts."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Resume TASK-170 security rules platform after the completed TASK-192 production hotfix."
 read_next:
   goals: false
   decisions: false
@@ -22,46 +22,20 @@ read_next:
 
 ## Snapshot
 
-- TASK-192 is ready: production Nginx recorded four simultaneous customer-workbench 504 responses at 08:58:38 for the large CRM organization; controlled backend read succeeded after 94.99 seconds with exactly 10,000 visible accounts, proving the synchronous full-dataset initialization exceeds the 60-second gateway timeout and reaches the current page ceiling.
+- TASK-192 is done in production `2.5.2`: the large CRM organization now initializes through per-user asynchronous single-flight projection with stale-while-revalidate, bounded parallel reads, indexed aggregation and bulk recommendation lookup. Cold-cache startup requests return `200/SYNCING` in about one second instead of four 60-second 504 responses.
+- TASK-192 evidence: the real organization background sync completed in 46.21 seconds with 10,000 visible accounts; READY queue read returned in 0.68 seconds, no post-release 504/upstream timeout remained, and raw gateway HTML is normalized. The current 10,000-record OpenAPI ceiling is explicitly surfaced and remains a separate incremental-projection follow-up.
 
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
-- TASK-190 is done in production `2.4.9`: per-user single-flight Token acquisition, conditional stale-token invalidation, HTTP-200 business authentication failure refresh/retry and explicit CloudCC API errors are live.
-- TASK-190 production evidence: mapped `CCAdmin` concurrent integration/queue/notifications/supervisor requests all returned 200; integration is connected with 110 visible accounts, existing queue has 48 accounts, and stable backend logs are clean.
-
-- TASK-189 is done in production `2.4.8`: immutable multimodal batches, secured originals, post-commit async extraction, stalled-batch recovery, structured AI analysis, human confirmation and the two-column ingestion UI are live.
-- TASK-189 evidence: focused backend tests, 57 frontend tests/build, Compose validation, real text/image processing, authenticated original read, confirmation idempotency and CRM timeline readback passed. AgentCiCi and real CloudCC iframe have no outer overflow or console errors.
-- TASK-188 is done in production `2.4.7`: topbar now carries the application-level “客户互动工作台” title; the copy-link icon has no pointer hover visual or geometric change while keyboard focus remains visible.
-- TASK-188 evidence: 57 frontend tests/build, release backup/health/public routes, platform/embed title checks, static hover computed styles, copy success notice, no outer overflow and console errors `0`. Release commit/tag is `14f8bbd4fdaa / 2.4.7`.
-- TASK-187 is done in production `2.4.6`: AI 应用画布与一级侧栏零间距，侧栏 hover 固定几何，一级“AI应用”只开关菜单，具体应用项才切换画布；关闭按钮和筛选箭头统一为无套框标准图标。
-- TASK-187 evidence: 57 frontend tests/build, release backup/health/public routes, 1920x960 production interaction and computed-style checks passed; document/body no overflow, console errors `0`. Release commit/tag/image/version is `f7f0e829b9cd` / `2.4.6`.
-- TASK-186 is done in production `2.4.5`: shared frameless icon/mode controls are documented and implemented; AgentCiCi and CloudCC iframe computed-style audits found zero raised-button offenders and no outer overflow.
-- TASK-186 evidence: 57 frontend tests/build, release backup/health/public routes, dual-entry screenshots, CloudCC skill verification and clean 60-second post-warmup logs passed. Release commit/tag/image/version is `b615cf417601` / `2.4.5`.
-- TASK-185 is done in production `2.4.4`: Pin behavior is removed; standard panel expand/restore transfers the queue width to the assistant while the center remains fixed. AgentCiCi measured `1214px` before/after; CloudCC iframe measured `1213px`, assistant `327px -> 653px`, and exact restoration.
-- TASK-185 evidence: 57 frontend tests/build, six-service health, public routes, AgentCiCi/CloudCC browser clicks, injection verification `issues=[]` and post-warmup logs passed. Release commit/tag/image/version is `f69d2191ed3b` / `2.4.4`.
-- TASK-184 is done in production `2.4.3`. Border-box sizing and a four-column adaptive filter grid keep the queue at `277/277` on 712px, `307/307` on 1920px and `335/335` in the real CloudCC iframe; all filter labels and customer rows fit without clipping.
-- TASK-184 evidence: 56 frontend tests and build passed; six services healthy; public routes 200; CloudCC injection `issues=[]`; post-warmup error scan empty. Release commit/tag/image/version is `3b18b8591e2c` / `2.4.3`.
-- TASK-183 is done in production `2.4.2` for screenshot-driven UI cleanup and customer-assistant streaming. A single inline queue-settings control, explicit read-only CRM demo status, Lucide icons, SSE phases/deltas, safe Markdown rendering, immediate input clearing and automatic latest-message following are live.
-- TASK-183 local gates passed 56 frontend tests, Vite build, focused backend tests/compile, 1920x960 browser interaction checks and zero console errors. The browser exposed and verified a seven-row queue-grid fix when settings are expanded; send showed a processing state within 60ms and the completed long conversation remained exactly at the bottom.
-- TASK-183 production evidence: release commit/tag/image/version `49402ae8f3a0` / `2.4.2`; six services healthy; V72-V74 successful; public routes 200; SSE emitted 40 deltas without error; AgentCiCi and real CloudCC iframe both showed immediate status/input clearing and stayed at the latest message; injection verification returned `issues=[]`.
-- Current branch: `main`; production is running release `2.4.12` from Git commit `4d00d417dcf3`; TASK-182 through TASK-191 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099 are production ready.
+- Current branch: `main`; production is running release `2.5.2` from Git commit `1c2084b5746c`; TASK-182 through TASK-192 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.
 - Releases `2.3.10` through `2.3.12` completed the production data path, all-existing-customer default queue and optimistic-lock/idempotent CRM write recovery. Two accepted CRM Task recommendations remain as intentional production acceptance records and both read back with the expected account, subject, status and due date.
 - Release `2.4.1` fixes the AI customer assistant voice/send race and latest-message positioning. Real CRM embedded acceptance confirmed the composer clears immediately after send and remains empty after reply; a long reply produced `scrollHeight=2020`, `scrollTop=1460`, `clientHeight=560`, exactly at the latest message.
 - The skill gap report records a verified same-component-ID `stale_component_reference` false positive when runtime version evidence is absent, nested create-ID parsing, unreliable expression lookup and unrelated script-scan 500 scoping.
-- TASK-181 is done in production `2.3.9`: customer workbench left customer list alignment hotfix passed local and production desktop Chrome validation. Rows are stable at `104px`, with no row overflow, no adjacent overlap, no outer document/body scrollbar, and console errors `0`.
-- TASK-180 is done in production `2.3.8`: AI 应用常驻大列表 has been replaced by a click-triggered floating vertical app list; customer workbench density and border treatment have been tightened; outer document/body scrollbars are absent in production desktop validation.
-- TASK-180 evidence: assignment/login gates, local frontend build, compose config, release dry-run, ACR image push, Git tag, production backup/deploy/health/public smoke, authenticated production browser workbench/flyout checks for `org2sva14i4udjmi2t4s`, customer workbench API smoke, and zero browser console errors passed. Screenshots: `output/playwright/task180-prod-workbench-demo-org2-2.3.8.png` / `output/playwright/task180-prod-flyout-demo-org2-2.3.8.png`.
-- TASK-179 is done in production `2.3.7`: AI 听记 realtime uses `auto`; configured organizations select Iflytek with `role_type=2`, while unconfigured organizations keep Aliyun transcription with an explicit diarization-degraded notice.
-- TASK-179 evidence: backend 7 focused tests, frontend 7 tests, production build, compose validation, local fallback flow, production configured-Iflytek flow, health/version/public smoke, and zero browser console errors passed. Full backend baseline has unrelated fixture/connection failures recorded in `.claw/test-report.md`.
-- TASK-178 is done in production `2.3.5`: CRM embedded customer-workbench microphone permission and ASR startup-error reporting were fixed.
-- TASK-175/TASK-176 are done in production `2.3.4`: customer-workbench scroll cleanup and customer/data insight separation.
-- TASK-174 data insight is done in production `2.3.2`; demo organization `org2sva14i4udjmi2t4s` uses real CRM-backed aggregate rows.
-- TASK-173 real customer-workbench assistant is done in production `2.3.1`.
-- TASK-170 security rules platform remains in progress and resumes after the newer production hotfix.
+- TASK-170 security rules platform remains in progress and is the active task after the completed production hotfix.
 - Known DNS risk remains: this workstation cannot resolve `onechat.agentcici.com`; production-IP resolved smoke previously returned HTTP 200.
 
 ## Read Next
