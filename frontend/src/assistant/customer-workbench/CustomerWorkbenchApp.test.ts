@@ -6,7 +6,7 @@ import {
   isCurrentVoiceSession,
   scrollConversationToLatest,
 } from "./CustomerWorkbenchApp";
-import { parseCustomerAssistantStreamEvent } from "./customerWorkbenchApi";
+import { customerWorkbenchErrorMessage, parseCustomerAssistantStreamEvent } from "./customerWorkbenchApi";
 
 describe("defaultCustomerQueueFilter", () => {
   it("keeps the new-customer priority queue focused", () => {
@@ -48,5 +48,14 @@ describe("customer assistant conversation behavior", () => {
       type: "workbench",
       result: { action: "OPEN_TAB", actionPayload: { tab: "timeline" } },
     });
+  });
+});
+
+describe("customer workbench request errors", () => {
+  it("never exposes an nginx HTML timeout page", () => {
+    const html = "<html><head><title>504 Gateway Time-out</title></head><body>nginx</body></html>";
+    expect(customerWorkbenchErrorMessage(504, undefined, html))
+      .toBe("CRM 数据同步耗时较长，系统仍在后台处理，请稍后重试。");
+    expect(customerWorkbenchErrorMessage(503, undefined, html)).not.toContain("<html>");
   });
 });

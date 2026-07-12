@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-100
 title: 大数据量 CRM 组织异步初始化与稳定读取
-status: approved
+status: in_implementation
 owner_role: fullstack-agent
 task_ids: TASK-192
 related_decisions: FEAT-081,FEAT-098,FEAT-099
 related_issues: none
-updated_at: 2026-07-12T01:18:00Z
+updated_at: 2026-07-12T01:30:00Z
 updated_by: MANAGER-001
 ---
 

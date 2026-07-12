@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
@@ -22,11 +25,12 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 class CustomerCrmProjectionServiceTest {
 
     @Test
-    void projectsPermissionScopedCrmObjectsIntoSeparateNewAndExistingQueues() {
+    void projectsPermissionScopedCrmObjectsIntoSeparateNewAndExistingQueues() throws Exception {
         CloudccOpenApiService cloudcc = mock(CloudccOpenApiService.class);
         CustomerInteractionEventRepository events = mock(CustomerInteractionEventRepository.class);
         CustomerWorkbenchRecommendationRepository recommendations = mock(CustomerWorkbenchRecommendationRepository.class);
@@ -60,9 +64,9 @@ class CustomerCrmProjectionServiceTest {
         when(signals.findByOrgIdAndPublicId(anyString(), anyString())).thenReturn(Optional.empty());
         when(signals.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Map<String, Object> newQueue = service.queue("org", "user",
+        Map<String, Object> newQueue = awaitQueue(service,
                 new CustomerCrmProjectionService.QueueQuery("new", "all", "priority", "desc", "", 1, 20, false));
-        Map<String, Object> existingQueue = service.queue("org", "user",
+        Map<String, Object> existingQueue = awaitQueue(service,
                 new CustomerCrmProjectionService.QueueQuery("existing", "all", "priority", "desc", "", 1, 20, false));
 
         assertThat(items(newQueue)).extracting(item -> item.get("name")).containsExactly("新客户甲");
@@ -72,6 +76,67 @@ class CustomerCrmProjectionServiceTest {
         assertThat((List<?>) detail.get("serviceIssues")).hasSize(1);
         assertThat((List<?>) detail.get("valueItems")).hasSize(2);
         assertThat((List<?>) detail.get("signals")).isNotEmpty();
+    }
+
+    @Test
+    void returnsSyncingImmediatelyAndStartsOnlyOneDatasetLoad() throws Exception {
+        CloudccOpenApiService cloudcc = mock(CloudccOpenApiService.class);
+        CountDownLatch accountStarted = new CountDownLatch(1);
+        CountDownLatch releaseAccount = new CountDownLatch(1);
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    if ("Account".equals(invocation.getArgument(2, String.class))) {
+                        accountStarted.countDown();
+                        releaseAccount.await();
+                        return List.of(Map.of("id", "001-a", "name", "客户甲"));
+                    }
+                    return List.of();
+                });
+        CustomerCrmProjectionService service = new CustomerCrmProjectionService(
+                cloudcc, mock(CustomerInteractionEventRepository.class),
+                mock(CustomerWorkbenchRecommendationRepository.class), mock(CustomerSignalRepository.class),
+                mock(CustomerFollowSubscriptionRepository.class), new ObjectMapper());
+        CustomerCrmProjectionService.QueueQuery query =
+                new CustomerCrmProjectionService.QueueQuery("new", "all", "priority", "desc", "", 1, 20, false);
+
+        Map<String, Object> first = service.queue("org", "user", query);
+        assertThat(first).containsEntry("syncing", true).containsEntry("source", "CLOUDCC_SYNCING");
+        assertThat(accountStarted.await(1, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+        for (int i = 0; i < 4; i++) {
+            assertThat(service.integrationStatus("org", "user")).containsEntry("syncStatus", "SYNCING");
+            assertThat(service.queue("org", "user", query)).containsEntry("syncing", true);
+        }
+
+        releaseAccount.countDown();
+        Map<String, Object> ready = awaitQueue(service, query);
+        assertThat(ready).containsEntry("syncStatus", "READY");
+        assertThat(items(ready)).extracting(item -> item.get("name")).containsExactly("客户甲");
+        verify(cloudcc, times(7)).queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString());
+        service.shutdownExecutors();
+    }
+
+    @Test
+    @Timeout(5)
+    void buildsATenThousandAccountQueueWithIndexesAndBulkRecommendationRead() throws Exception {
+        CloudccOpenApiService cloudcc = mock(CloudccOpenApiService.class);
+        CustomerWorkbenchRecommendationRepository recommendations = mock(CustomerWorkbenchRecommendationRepository.class);
+        List<Map<String, Object>> accounts = java.util.stream.IntStream.range(0, 10_000)
+                .mapToObj(index -> Map.<String, Object>of("id", "001-" + index, "name", "客户" + index))
+                .toList();
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> "Account".equals(invocation.getArgument(2, String.class)) ? accounts : List.of());
+        CustomerCrmProjectionService service = new CustomerCrmProjectionService(
+                cloudcc, mock(CustomerInteractionEventRepository.class), recommendations,
+                mock(CustomerSignalRepository.class), mock(CustomerFollowSubscriptionRepository.class), new ObjectMapper());
+
+        Map<String, Object> result = awaitQueue(service,
+                new CustomerCrmProjectionService.QueueQuery("all", "all", "priority", "desc", "", 1, 12, false));
+
+        assertThat(result).containsEntry("totalElements", 10_000).containsEntry("recordLimitReached", true);
+        assertThat(items(result)).hasSize(12);
+        verify(recommendations, times(1)).findByOrgIdOrderByUpdatedAtDesc("org");
+        verify(recommendations, never()).countByOrgIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString());
+        service.shutdownExecutors();
     }
 
     @Test
@@ -112,5 +177,17 @@ class CustomerCrmProjectionServiceTest {
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> items(Map<String, Object> queue) {
         return (List<Map<String, Object>>) queue.get("items");
+    }
+
+    private Map<String, Object> awaitQueue(CustomerCrmProjectionService service,
+                                            CustomerCrmProjectionService.QueueQuery query) throws Exception {
+        long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(2);
+        Map<String, Object> result;
+        do {
+            result = service.queue("org", "user", query);
+            if (!Boolean.TRUE.equals(result.get("syncing"))) return result;
+            Thread.sleep(10);
+        } while (System.nanoTime() < deadline);
+        throw new AssertionError("CRM dataset did not become ready");
     }
 }

@@ -241,18 +241,9 @@ public class CustomerWorkbenchService {
     }
 
     public Map<String, Object> supervisorSummary(String orgId, String userId) {
-        List<Map<String, Object>> accounts = new ArrayList<>();
-        int page = 1;
-        int totalPages;
-        do {
-            Map<String, Object> result = queue(orgId, userId,
-                    new CustomerCrmProjectionService.QueueQuery("all", "all", "risk", "desc", "", page, 100, false));
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> items = (List<Map<String, Object>>) result.getOrDefault("items", List.of());
-            accounts.addAll(items);
-            totalPages = intValue(result.get("totalPages"));
-            page++;
-        } while (page <= totalPages);
+        List<Map<String, Object>> accounts = isCrmReady(orgId, userId)
+                ? crmProjectionService.visibleAccountViews(orgId, userId)
+                : List.of();
         Set<String> visibleAccountIds = accounts.stream().map(item -> String.valueOf(item.get("accountId")))
                 .collect(java.util.stream.Collectors.toSet());
         List<CustomerWorkbenchRecommendationEntity> recommendations = recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()

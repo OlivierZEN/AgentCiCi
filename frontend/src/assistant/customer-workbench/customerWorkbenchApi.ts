@@ -34,6 +34,12 @@ export type CustomerQueueResult = {
   dataAsOf?: string;
   source: string;
   mode: string;
+  syncStatus?: "EMPTY" | "SYNCING" | "READY" | "FAILED" | string;
+  syncing?: boolean;
+  syncMessage?: string;
+  lastSuccessfulSyncAt?: string;
+  recordLimitReached?: boolean;
+  recordLimit?: number;
 };
 
 export type CustomerInteractionEvent = {
@@ -202,9 +208,19 @@ async function requestJson<T>(token: string, input: string, init?: RequestInit):
   });
   const { body, rawText } = await safeFetchJson<T>(response);
   if (!response.ok || body?.success === false) {
-    throw new Error(body?.message || rawText || `请求失败：${response.status}`);
+    throw new Error(customerWorkbenchErrorMessage(response.status, body?.message, rawText));
   }
   return (body?.data ?? null) as T;
+}
+
+export function customerWorkbenchErrorMessage(status: number, apiMessage?: string, rawText = "") {
+  if (apiMessage?.trim()) return apiMessage.trim();
+  const looksLikeHtml = /<\s*(?:html|head|body|title|h1|center)\b/i.test(rawText);
+  if (status === 504) return "CRM 数据同步耗时较长，系统仍在后台处理，请稍后重试。";
+  if (status === 502 || status === 503) return "CRM 服务暂时不可用，请稍后重试。";
+  if (looksLikeHtml) return `服务暂时不可用（${status}），请稍后重试。`;
+  const compact = rawText.replace(/\s+/g, " ").trim();
+  return compact && compact.length <= 180 ? compact : `请求失败：${status}`;
 }
 
 export function listCustomerWorkbenchAccounts(token: string) {
@@ -415,7 +431,9 @@ export function getCustomerWorkbenchNotifications(token: string) {
 }
 
 export function getCustomerWorkbenchIntegrationStatus(token: string) {
-  return requestJson<{ ready: boolean; status?: string; label: string; baseUrl?: string; dataAsOf?: string; visibleAccounts?: number; message?: string }>(
+  return requestJson<{ ready: boolean; status?: string; label: string; baseUrl?: string; dataAsOf?: string; visibleAccounts?: number;
+    message?: string; syncing?: boolean; syncStatus?: string; syncMessage?: string; lastSuccessfulSyncAt?: string;
+    recordLimitReached?: boolean; recordLimit?: number }>(
     token, "/customer-workbench/integration-status",
   );
 }

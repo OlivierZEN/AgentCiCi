@@ -14145,6 +14145,12 @@
   color: #6f5427;
 }
 
+.customer-workbench__notice.is-syncing {
+  border-color: #d9bd79;
+  background: #fff8e8;
+  color: #6f5427;
+}
+
 .customer-workbench__metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -15309,6 +15315,10 @@
 
 .customer-workbench__crm-state span.is-error {
   background: #c8463f;
+}
+
+.customer-workbench__crm-state span.is-syncing {
+  background: #d39522;
 }
 
 .customer-workbench__notification-wrap {

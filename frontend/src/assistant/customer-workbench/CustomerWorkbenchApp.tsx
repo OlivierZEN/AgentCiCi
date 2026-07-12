@@ -347,13 +347,15 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [sort, setSort] = useState("priority");
   const [page, setPage] = useState(1);
   const [queueMeta, setQueueMeta] = useState({ totalElements: 0, totalPages: 0, filterCounts: {} as Record<string, number>, dataAsOf: "" });
-  const [integration, setIntegration] = useState<{ ready: boolean; label: string; baseUrl?: string; message?: string }>({ ready: false, label: "正在连接 CRM" });
+  const [integration, setIntegration] = useState<{ ready: boolean; label: string; baseUrl?: string; message?: string;
+    syncing?: boolean; syncStatus?: string; recordLimitReached?: boolean }>({ ready: false, syncing: true, label: "正在连接 CRM" });
   const [notifications, setNotifications] = useState<Array<{ accountId: string; accountName: string; title: string; customerMode?: string }>>([]);
   const [supervisorSummary, setSupervisorSummary] = useState<{ visibleAccounts: number; riskAccounts: number; pendingRecommendations: number; writeSuccessRate: number } | null>(null);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showQueueSettings, setShowQueueSettings] = useState(false);
   const [compactQueue, setCompactQueue] = useState(false);
   const [pageSize, setPageSize] = useState(12);
+  const [queueReloadVersion, setQueueReloadVersion] = useState(0);
   const [assistantOpen, setAssistantOpen] = useState(true);
   const [assistantExpanded, setAssistantExpanded] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<CustomerRecommendation | null>(null);
@@ -385,6 +387,14 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           if (ignore) return;
           setAccounts(result.items);
           setQueueMeta({ totalElements: result.totalElements, totalPages: result.totalPages, filterCounts: result.filterCounts, dataAsOf: result.dataAsOf || "" });
+          if (result.syncing) {
+            const hasStaleData = Boolean(result.lastSuccessfulSyncAt);
+            setIntegration((current) => ({ ...current, ready: hasStaleData, syncing: true, syncStatus: "SYNCING",
+              label: hasStaleData ? "正在刷新 CRM 数据" : "正在同步 CRM 数据",
+              message: result.syncMessage || "首次同步的数据量较大，完成后会自动显示客户。" }));
+          } else if (result.recordLimitReached) {
+            setNotice(`当前可见客户已达到 ${result.recordLimit || 10_000} 条读取上限，正在使用本次已同步的数据。`);
+          }
           setActiveAccountId((current) => {
             if (deepLinkedAccountIdRef.current && current === deepLinkedAccountIdRef.current) return current;
             return result.items.some((item) => item.accountId === current) ? current : result.items[0]?.accountId || "";
@@ -397,18 +407,54 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       ignore = true;
       window.clearTimeout(timer);
     };
-  }, [filter, page, pageSize, query, sort, token, workbenchMode]);
+  }, [filter, page, pageSize, query, queueReloadVersion, sort, token, workbenchMode]);
 
   useEffect(() => {
     if (!token) return;
-    Promise.all([getCustomerWorkbenchIntegrationStatus(token), getCustomerWorkbenchNotifications(token)])
-      .then(([status, items]) => { setIntegration(status); setNotifications(items); })
-      .catch((error) => setIntegration({ ready: false, label: "CRM 连接异常", message: error instanceof Error ? error.message : String(error) }));
-    getCustomerWorkbenchSupervisorSummary(token).then(setSupervisorSummary).catch(() => setSupervisorSummary(null));
+    let stopped = false;
+    let timer = 0;
+    let wasSyncing = false;
+    const poll = async () => {
+      try {
+        const status = await getCustomerWorkbenchIntegrationStatus(token);
+        if (stopped) return;
+        setIntegration(status);
+        if (status.syncing) {
+          wasSyncing = true;
+          timer = window.setTimeout(poll, 2500);
+          return;
+        }
+        if (!status.ready) {
+          timer = window.setTimeout(poll, 30_000);
+          return;
+        }
+        if (wasSyncing) setQueueReloadVersion((value) => value + 1);
+        const [itemsResult, summaryResult] = await Promise.allSettled([
+          getCustomerWorkbenchNotifications(token),
+          getCustomerWorkbenchSupervisorSummary(token),
+        ]);
+        if (!stopped) {
+          if (itemsResult.status === "fulfilled") setNotifications(itemsResult.value);
+          if (summaryResult.status === "fulfilled") setSupervisorSummary(summaryResult.value);
+          wasSyncing = false;
+          timer = window.setTimeout(poll, 30_000);
+        }
+      } catch (error) {
+        if (!stopped) {
+          setIntegration({ ready: false, syncing: false, label: "CRM 连接异常", message: error instanceof Error ? error.message : String(error) });
+          timer = window.setTimeout(poll, 30_000);
+        }
+      }
+    };
+    void poll();
+    return () => {
+      stopped = true;
+      window.clearTimeout(timer);
+    };
   }, [token]);
 
   useEffect(() => {
-    if (!token || !activeAccountId) {
+    if (!token || !activeAccountId || (integration.syncing && !integration.ready)) {
       setDetail(null);
       return;
     }
@@ -428,12 +474,12 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
     return () => {
       ignore = true;
     };
-  }, [token, activeAccountId]);
+  }, [token, activeAccountId, integration.ready, integration.syncing]);
 
   const activeAccount = useMemo(() => accounts.find((item) => item.accountId === activeAccountId) ?? accounts[0], [accounts, activeAccountId]);
 
   useEffect(() => {
-    if (!token || !activeAccountId) return;
+    if (!token || !activeAccountId || (integration.syncing && !integration.ready)) return;
     let ignore = false;
     assistantStreamAbortRef.current?.abort();
     assistantStreamAbortRef.current = null;
@@ -452,7 +498,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       })
       .catch(() => undefined);
     return () => { ignore = true; };
-  }, [activeAccount?.name, activeAccountId, token]);
+  }, [activeAccount?.name, activeAccountId, integration.ready, integration.syncing, token]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => scrollConversationToLatest(assistantChatRef.current));
@@ -474,6 +520,30 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
     const result = await getCustomerWorkbenchQueue(token, { mode: workbenchMode, filter, sort, direction: "desc", query, page, size: pageSize, refresh: true });
     setAccounts(result.items);
     setQueueMeta({ totalElements: result.totalElements, totalPages: result.totalPages, filterCounts: result.filterCounts, dataAsOf: result.dataAsOf || "" });
+  };
+
+  const refreshCrmData = async () => {
+    if (!token) return;
+    setLoading(true);
+    try {
+      const result = await getCustomerWorkbenchQueue(token, {
+        mode: workbenchMode, filter, sort, direction: "desc", query, page, size: pageSize, refresh: true,
+      });
+      setAccounts(result.items);
+      setQueueMeta({ totalElements: result.totalElements, totalPages: result.totalPages, filterCounts: result.filterCounts, dataAsOf: result.dataAsOf || "" });
+      if (result.syncing) {
+        const hasStaleData = Boolean(result.lastSuccessfulSyncAt);
+        setIntegration((current) => ({ ...current, ready: hasStaleData, syncing: true, syncStatus: "SYNCING",
+          label: hasStaleData ? "正在刷新 CRM 数据" : "正在同步 CRM 数据",
+          message: result.syncMessage || "CRM 数据已进入后台刷新。" }));
+      } else {
+        setNotice("CRM 数据已进入后台刷新，当前继续显示最近一次同步结果。");
+      }
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : String(error));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRecommendation = async (item: CustomerRecommendation, action: RecommendationAction) => {
@@ -654,8 +724,8 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             <button type="button" className={workbenchMode === "new" ? "is-active" : ""} onClick={() => switchMode("new")}>新客户推进</button>
             <button type="button" className={workbenchMode === "existing" ? "is-active" : ""} onClick={() => switchMode("existing")}>老客户经营</button>
           </div>
-          <button type="button" className="customer-workbench__crm-state" onClick={() => void reloadDetail()} title={integration.message || "刷新 CRM 数据"}>
-            <span aria-hidden className={integration.ready ? "is-ready" : "is-error"} />{integration.label}<Icon name="refresh" />
+          <button type="button" className="customer-workbench__crm-state" onClick={() => void refreshCrmData()} title={integration.message || "刷新 CRM 数据"}>
+            <span aria-hidden className={integration.syncing ? "is-syncing" : integration.ready ? "is-ready" : "is-error"} />{integration.label}<Icon name="refresh" />
           </button>
           <div className="customer-workbench__notification-wrap">
             <button type="button" className="customer-workbench__icon-button cici-product-icon-button" aria-label="客户提醒" title="客户提醒" onClick={() => setShowNotifications((value) => !value)}><Icon name="bell" /></button>
@@ -802,7 +872,9 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             {!assistantOpen ? <button type="button" className="customer-workbench__open-assistant" onClick={() => { setAssistantExpanded(false); setAssistantOpen(true); }}><Icon name="bot" />打开 AI 助理</button> : null}
           </header>
 
-        {!integration.ready ? <div className="customer-workbench__notice is-demo">{integration.message || "当前显示只读演示数据，不能写回 CRM。"}</div> : null}
+        {!integration.ready ? <div className={`customer-workbench__notice${integration.syncing ? " is-syncing" : " is-demo"}`}>
+          {integration.message || (integration.syncing ? "正在同步 CRM 数据，完成后会自动显示客户。" : "当前显示只读演示数据，不能写回 CRM。")}
+        </div> : null}
         {notice ? <div className="customer-workbench__notice">{notice}</div> : null}
 
         <section className="customer-workbench__metrics" aria-label="客户指标">
