@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T04:11:00Z
+updated_at: 2026-07-12T04:58:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.5.9 TASK-196 客户互动整理上下文稳定性 on 2026-07-12:
+  - Git commit/tag `6c7e27181fbb` / `2.5.9`; interaction confirmation uses ordinary detail/queue reads, preserves selected customers outside the current result page, freezes modal Account context and constrains assistant mode navigation to explicit commands.
+  - Images: backend index `sha256:e72350e9b5a92c811649f260791c63bd2120a11a25455b672c60648303716b7f`, amd64 `sha256:d83a6892a1d46cc8aafa130ccb8831f9eead29ad8d5abd7251cad171a051addd`; frontend index `sha256:5bb6554e4202e88fadec1eb7f0870bcf1766933da076eb1851706c0632bac45a`, amd64 `sha256:ee3e34ba4eec966e3080e6dfe225d313b0bd59f42e5f0d9b8bac6491a147521d`.
+  - Backup: `/opt/cici/backups/20260712-124820-before-2.5.9-task196-context-stability`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend run `2.5.9`; four state services remain healthy on `2.3.4`. Health `UP`, version `2.5.9 / 6c7e27181fbb`, Nginx valid and public workbench HTTP 200.
+  - Real large-organization interaction confirmation retained the “奔驰” query, 4 search results and selected Mercedes-Benz customer across a 35-second poll; no `refresh=true`, browser error, backend target error or Nginx 5xx. Screenshot: `output/playwright/task196-prod-customer-context-stable-2.5.9.png`.
 
 - 2.5.8 TASK-195 客户互动时间线完整年份显示 on 2026-07-12:
   - Git commit/tag `a016c165fd95` / `2.5.8`; compact and full customer timelines render `YYYY-MM-DD` and `HH:mm` on two lines, preserve invalid-source fallback, and keep the expanded date column, event icon and vertical axis aligned.

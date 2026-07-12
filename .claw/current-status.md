@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T04:45:00Z
+updated_at: 2026-07-12T04:58:00Z
 updated_by: MANAGER-001
-phase: customer-workbench-context-stability
-active_task: "TASK-196"
-next_action: "Prevent interaction confirmation and assistant analysis from resetting the selected customer or customer queue."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Continue the security rules platform and input/output security gateway from its task status."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-196 is in progress: production logs confirm interaction confirmation starts an unnecessary full CRM refresh; refreshed queue reconciliation replaces a selected customer that is not on the current page, while broad assistant keyword matching can also clear state after a long reply.
+- TASK-196 is done in production `2.5.9`: interaction confirmation no longer starts a full CRM refresh, queue reloads preserve the selected customer, the interaction editor freezes its Account context, and ordinary old-customer analysis no longer triggers mode navigation.
+- TASK-196 evidence: frontend 64 tests/build and 12 backend focused tests passed; real “奔驰” search retained 4 results and the selected Mercedes-Benz customer after confirmation and a 35-second poll, with no `refresh=true`, browser error, backend target error or Nginx 5xx.
 
 - TASK-195 is done in production `2.5.8`: compact and full customer interaction timelines display `YYYY-MM-DD` plus `HH:mm` on two stable lines, with no date-internal wrapping.
 - TASK-195 evidence: frontend 62 tests/build passed; a real 22-event timeline included visible 2026 and 2023 records, all sampled labels had four-digit years, the icon/vertical-axis delta was 0px, and the page had no outer overflow or business error.
@@ -39,7 +40,7 @@ read_next:
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
-- Current branch: `main`; production is running release `2.5.8` from Git commit `a016c165fd95`; TASK-182 through TASK-195 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100/FEAT-101 are production ready within their documented limits.
+- Current branch: `main`; production is running release `2.5.9` from Git commit `6c7e27181fbb`; TASK-182 through TASK-196 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100/FEAT-101/FEAT-102 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

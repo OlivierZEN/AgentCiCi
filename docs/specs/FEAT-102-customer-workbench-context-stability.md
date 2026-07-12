@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-102
 title: 客户互动整理期间上下文与队列稳定性
-status: approved
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-196
 related_decisions: FEAT-081,FEAT-100,FEAT-101
 related_issues: none
-updated_at: 2026-07-12T04:45:00Z
+updated_at: 2026-07-12T04:58:00Z
 updated_by: MANAGER-001
 ---
 
@@ -36,3 +36,12 @@ updated_by: MANAGER-001
 - 整理过程中即使队列重载，弹窗 Account 上下文与批次 Account 一致。
 - “分析这个老客户经营情况”返回 `NONE`；“切换到老客户经营”才返回 `SWITCH_MODE`。
 - 自动化覆盖状态协调、模式命令识别和真实生产浏览器回归。
+
+## 生产验收
+
+- 发布版本：`2.5.9 / 6c7e27181fbb`。
+- 真实组织 `org5nszpgj99jaysxv6y` 搜索“奔驰”得到 4 条全量客户结果，选中“梅赛德斯-奔驰汽车金融有限公司”完成受控文本互动归集。
+- 确认后立即及 35 秒轮询后，搜索词、结果数、工作台模式和当前客户均保持；新记录进入该客户时间线。
+- 浏览器网络轨迹只有普通 `queue?mode=existing&query=奔驰` 请求，`refresh=true` 为 0；确认后未启动新的 10,000 Account CRM 投影同步。
+- 前端 64 项测试和生产构建通过；后端客户工作台/CRM 投影 12 项定向测试通过；浏览器控制台 0 错误，发布后 Nginx 5xx 和后端目标错误为空。
+- 截图：`output/playwright/task196-prod-customer-context-stable-2.5.9.png`。

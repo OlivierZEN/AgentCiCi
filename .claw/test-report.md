@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-12T04:11:00Z
+updated_at: 2026-07-12T04:58:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-12T04:11:00Z
+last_run_at: 2026-07-12T04:58:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-196 客户互动整理上下文稳定性生产验收（2026-07-12）
+
+- `root-cause`: 互动确认调用 `queue?refresh=true` 触发 10,000 Account 全量投影；队列回读把不在当前页的已选客户替换为首条；弹窗使用动态 Account；助手又把普通“老客户经营”分析误判为模式切换。
+- `automated`: 前端 12 个测试文件、64 项测试和生产构建通过；`CustomerWorkbenchServiceTest,CustomerCrmProjectionServiceTest` 共 12 项通过，覆盖选择保持、同模式幂等和明确导航命令。
+- `release`: 生产 `2.5.9 / 6c7e27181fbb`；backend index `sha256:e72350e9b5a92c811649f260791c63bd2120a11a25455b672c60648303716b7f`、amd64 `sha256:d83a6892a1d46cc8aafa130ccb8831f9eead29ad8d5abd7251cad171a051addd`；frontend index `sha256:5bb6554e4202e88fadec1eb7f0870bcf1766933da076eb1851706c0632bac45a`、amd64 `sha256:ee3e34ba4eec966e3080e6dfe225d313b0bd59f42e5f0d9b8bac6491a147521d`。
+- `production-browser`: 大数据组织搜索“奔驰”返回 4 条，目标客户完成 `TASK-196 稳定性验收` 受控互动归集；确认后及 35 秒轮询后，搜索词、结果数、当前客户和 CRM 连接均保持。截图：`output/playwright/task196-prod-customer-context-stable-2.5.9.png`。
+- `network-logs`: 归集轨迹只有普通 `queue?mode=existing&query=奔驰`，无 `refresh=true`；确认后没有新 CRM 全量同步，浏览器控制台 0 错误，Nginx 5xx 和后端目标错误为空。
+- `operations`: 备份 `/opt/cici/backups/20260712-124820-before-2.5.9-task196-context-stability` 四类文件非空；backend/frontend `2.5.9` healthy，状态服务保持 `2.3.4`；健康 `UP`、Nginx 有效、公网页面 200。
 
 ## TASK-195 客户互动时间线完整年份生产验收（2026-07-12）
 
