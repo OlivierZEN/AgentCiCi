@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T15:23:54Z
+updated_at: 2026-07-12T15:38:41Z
 updated_by: MANAGER-001
 phase: platform-security-rules
-active_task: "TASK-199"
-next_action: "Release and verify TASK-199 interaction-driven dynamic customer actions, then resume TASK-170."
+active_task: "TASK-170"
+next_action: "Resume TASK-170 security rules platform work; monitor TASK-199 dynamic action precision and CRM conversion."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-199 is in review: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions now produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path. V78 and local automated/browser acceptance are green; production release is next.
+- TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
+- TASK-199 production evidence: a real old-customer interaction generated one 100%-confidence `CREATE_OPPORTUNITY` action for the independent mobile-inspection expansion, linked to its interaction event/batch and original sentence; repeated confirmation stayed idempotent at one action. The action was intentionally not written to CRM.
 
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-198 follow-up closed the real-data history gap: recent confirmed archives missing the new `scoringSignals` contract are lazily backfilled as 60%-confidence `PENDING` evidence, never altering the score; archives already carrying new signals preserve their original values. Production generated 2 pending signals for the demo organization and 8 for the large organization while both scores stayed 50; repeated reads were idempotent.
@@ -42,7 +43,7 @@ read_next:
 
 - Earlier TASK-191 through TASK-193 production evidence remains in `.claw/test-report.md` and `.claw/devops.md`; no regression was observed during this release.
 
-- Current branch: `main`; production is running release `2.6.1` from Git commit `ae6643c109a8`; TASK-182 through TASK-198 are complete and FEAT-081/FEAT-092 through FEAT-104 are production ready within their documented limits.
+- Current branch: `main`; production is running release `2.6.2` from Git commit `b87bbe43dd0d`; TASK-182 through TASK-199 are complete and FEAT-081/FEAT-092 through FEAT-105 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

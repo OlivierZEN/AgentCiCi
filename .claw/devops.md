@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T06:36:16Z
+updated_at: 2026-07-12T15:38:41Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.6.2 TASK-199 互动驱动的客户经营动作 on 2026-07-12:
+  - Git commit/tag `b87bbe43dd0d` / `2.6.2`; V78 adds source event/batch, action key, trigger type and validity to customer recommendations. Fixed first-open generation is removed in favor of evidence-backed candidates from confirmed interactions.
+  - Images: backend index `sha256:e0f275c02d910b392c708cf8940da9ca30fe1eabc2b19e2469fb42259638ae60`, amd64 `sha256:b3d7e8a91be39e1e81402de72b333b652a210f1f21dc1260a64d454758b9cac7`; frontend index `sha256:73f5b0b427d1707ee8d4de5a6819169b0df755408a0747d7387ed8917731dc12`, amd64 `sha256:928eb9ce5665ac8a4740d0b010e6be11601d12f89f706eda20f24cc1616dcdca`.
+  - Backup: `/opt/cici/backups/20260712-232657-before-2.6.2-task199-interaction-actions`; env, PostgreSQL, KB files and Qdrant archives are non-empty.
+  - Runtime: backend/frontend healthy on `2.6.2`; four state services remain healthy on `2.3.4`. Health `UP`, version `2.6.2 / b87bbe43dd0d`, V78 successful, Nginx valid and public root/workbench HTTP 200.
+  - Real acceptance: batch `cib_554a1a6cc47e44d0afde91e1bbbd638e` generated event `cwi_f39777961d5df638a255caf7edd9308ffed0ed5c` and one pending action keyed `expansion:mobile-inspection`; evidence and validity rendered correctly, repeat confirmation was idempotent, and no CRM write was executed. Screenshot: `output/playwright/task199-prod-interaction-driven-action-2.6.2.png`.
 
 - 2.6.1 TASK-198 historical scoring evidence backfill on 2026-07-12:
   - Git commit/tag `ae6643c109a8` / `2.6.1`; confirmed archives missing the new scoring contract are lazily and idempotently converted to 60%-confidence pending evidence, while new-contract signals keep their original values.

@@ -6295,3 +6295,16 @@ last_run_status: passed
   - Evidence: `output/playwright/task199-local-dynamic-actions.png`.
 - Static checks:
   - Result: success; `git diff --check` passed and fixed first-open recommendation/seed symbols are absent from production customer service code.
+- Release dry run and images:
+  - Result: success; release version `2.6.2`, Git `b87bbe43dd0d`, backend index `sha256:e0f275c02d910b392c708cf8940da9ca30fe1eabc2b19e2469fb42259638ae60`, frontend index `sha256:73f5b0b427d1707ee8d4de5a6819169b0df755408a0747d7387ed8917731dc12`.
+- Production backup and deployment:
+  - Result: success; backup `/opt/cici/backups/20260712-232657-before-2.6.2-task199-interaction-actions` contains non-empty env, PostgreSQL, KB and Qdrant artifacts. Backend/frontend are healthy on `2.6.2`; state services remain healthy on `2.3.4`.
+  - Notes: health `UP`, version `2.6.2 / b87bbe43dd0d`, V78 `success=true`, Nginx valid, public root/workbench HTTP 200.
+- Real interaction/action acceptance:
+  - Result: success in organization `org2sva14i4udjmi2t4s`, existing customer `0012022D9CDF1CBPQGwJ`.
+  - Evidence: confirmed batch `cib_554a1a6cc47e44d0afde91e1bbbd638e` produced event `cwi_f39777961d5df638a255caf7edd9308ffed0ed5c` and recommendation `cwr_0d4d4e3ddf5064c191e84b562a5f3dffc6aec10e` with key `expansion:mobile-inspection`, 100% confidence, exact source sentence, source event/batch and `2027-01-08` validity.
+  - Idempotence: repeating confirmation returned `deduplicated=true`; matching action count remained `1`. The pending action was not accepted or written to CRM.
+- Production browser and stable window:
+  - Result: success; old-customer operations showed the new timeline event and `互动识别` action beside retained `历史建议`, with one evidence item and validity. Browser console had zero errors/warnings; task-related backend errors, migration errors and workbench Nginx 5xx were zero after warmup.
+  - Evidence: `output/playwright/task199-prod-interaction-driven-action-2.6.2.png`.
+  - Note: three login-shell `Session not found` responses for stale `workbench:cici-system` were observed before the stable window; they are unrelated to customer interaction/action endpoints.

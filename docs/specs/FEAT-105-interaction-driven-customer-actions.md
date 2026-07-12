@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-105
 title: 互动驱动的客户经营动作
-status: implemented
+status: production_ready
 owner_role: fullstack-agent
 task_ids: TASK-199
 related_decisions: FEAT-097,FEAT-103,FEAT-104
 related_issues: none
-updated_at: 2026-07-12T15:23:54Z
+updated_at: 2026-07-12T15:38:41Z
 updated_by: MANAGER-001
 ---
 
@@ -61,3 +61,4 @@ updated_by: MANAGER-001
 - 2026-07-12：用户确认从固定补全建议升级为持续互动驱动的动态经营动作，进入实现。
 - 2026-07-12：互动分析已增加 CRM 上下文和动作候选；平台完成原文证据校验、置信度门槛、业务键去重、七天冷却、历史时效校验、来源审计和人工确认写回。首次打开客户的固定建议逻辑及演示种子动作已移除。
 - 2026-07-12：后端 24 项聚焦测试、前端 66 项测试与生产构建、本地桌面浏览器验收通过，进入生产发布。
+- 2026-07-12：生产 `2.6.2` 发布完成。真实老客户沟通识别出移动巡检独立增购信号，生成 1 条带原文证据、来源档案和有效期的动态创建商机动作；重复确认保持 1 条，未执行 CRM 写入。

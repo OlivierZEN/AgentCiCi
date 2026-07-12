@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T15:23:54Z
+updated_at: 2026-07-12T15:38:41Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-199 - 互动驱动的客户经营动作
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-105-interaction-driven-customer-actions.md`
 - task_status_path: `.claw/tasks/TASK-199.md`
 - assignment_path: `.claw/assignments/TASK-199.yaml`
 - blocked_by: `TASK-198`
-- next_action: Release V78 and interaction-driven actions, then verify real analysis, evidence traceability and production stability.
+- next_action: Done in production `2.6.2`; monitor candidate precision, dismissal feedback, deduplication and conversion to confirmed CRM writes.
 
 ### TASK-198 - AI 动态客户信号与可解释评分升级
 
