@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T06:36:16Z
+updated_at: 2026-07-12T10:57:20Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-198 - AI 动态客户信号与可解释评分升级
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-104-ai-dynamic-customer-scoring.md`
+- task_status_path: `.claw/tasks/TASK-198.md`
+- assignment_path: `.claw/assignments/TASK-198.yaml`
+- blocked_by: `none`
+- next_action: Implement evidence-backed dynamic signals, score snapshots and explanation UI.
 
 ### TASK-197 - 客户互动档案、动态记忆与按需检索落地
 

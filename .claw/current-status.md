@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T06:36:16Z
+updated_at: 2026-07-12T10:57:20Z
 updated_by: MANAGER-001
-phase: customer-interaction-memory-production
-active_task: "none"
-next_action: "Monitor production archive growth, ACTIVE memory resolution and evidence quality after release 2.5.11."
+phase: ai-dynamic-customer-scoring
+active_task: "TASK-198"
+next_action: "Implement evidence-backed AI signals, deterministic score aggregation and score explanation UI."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-198 is in progress: replace fixed contract/case/task-count health scoring with AI-identified, evidence-backed, time-decayed dynamic signals and separate health, expansion, renewal, relationship and risk dimensions.
 
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
 - TASK-197 retrieval defaults to a compact customer snapshot, 90 days / 20 recent interactions and 8 relevant ACTIVE memories/evidence. Explicit history questions expand the window, and an explicit archive ID is ranked first.
