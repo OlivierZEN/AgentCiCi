@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-12T02:45:57Z
+updated_at: 2026-07-12T03:33:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-12T02:45:57Z
+last_run_at: 2026-07-12T03:33:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-194 全量客户名称搜索与输入焦点治理生产验收（2026-07-12）
+
+- `root-cause`: 原搜索只过滤当前内存投影，并在名称匹配前应用新/老客户模式和队列筛选；投影又有 10,000 Account 上限，因此 CRM 中可见的客户可能无法命中。全局 `input:focus` 阴影叠加组件边框，形成双层焦点框。
+- `backend`: `CustomerCrmProjectionServiceTest,CustomerWorkbenchServiceTest` 共 11 项通过；覆盖权限范围 Account 名称查询、单引号转义、模式/筛选旁路、缓存外客户详情加载和既有队列行为。
+- `frontend`: 12 个测试文件、60 项通过；生产构建通过，仅保留既有 Vite chunk-size 提示。覆盖搜索态文案、客户真实模式自动对齐和现有工作台交互。
+- `release`: 生产 `2.5.6 / 12c766bed77d`；backend index `sha256:bfa4ad2932c037000716213cc6df224483d863cce4a0332252fea5de77cfd59b`、amd64 `sha256:8c6918de52589c95bdac2cc7c83d9138484276454278a98a3693407bc2cd645d`；frontend index `sha256:661037ba5a6d1a7543122871f713b360e4e3ad9f3fa1311878d2598b498e56b6`、amd64 `sha256:e063dbc5fdd2adbe8d37ea271c2c2a0f855bdc3c353449ac0ee630ef7339f7ad`。
+- `production-api`: 真实组织 `org5nszpgj99jaysxv6y` 在 `mode=new/filter=focus` 下查询“青岛海信商用显示”，HTTP 200，`source=CLOUDCC_SEARCH`、`searchScope=ALL_VISIBLE_ACCOUNTS`、`totalElements=1`，命中“青岛海信商用显示股份有限公司”；复测搜索 0.76 秒、详情 0.22 秒，客户分类 `EXISTING`。
+- `production-browser`: 版本 `2.5.6`、CloudCC 已连接；搜索结果显示“全部客户搜索结果 1 条”，页面自动切换“老客户经营队列”并展示服务与关系预警。无过期令牌或通用服务器错误；input 为零边框/零阴影/透明背景，wrapper 为单一 1px 金色边框且无阴影。截图：`output/playwright/task194-prod-global-search-existing-mode-2.5.6.png`。
+- `operations`: 备份 `/opt/cici/backups/20260712-112702-before-2.5.6-task194-global-search` 四类文件非空；backend/frontend `2.5.6` healthy，状态服务保持 `2.3.4` healthy；健康 `UP`、版本/commit 一致、Nginx 有效，公开根路由与工作台均 HTTP 200，发布后后端目标错误和 Nginx 5xx 扫描为空。
 
 ## TASK-193 客户队列最近互动倒序生产验收（2026-07-12）
 

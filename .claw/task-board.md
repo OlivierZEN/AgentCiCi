@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T03:05:00Z
+updated_at: 2026-07-12T03:33:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-194 - 全量客户名称搜索与产品输入焦点治理
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-101-global-customer-search-and-field-focus.md`
-- task_status_path: `.claw/tasks/TASK-194.md`
-- assignment_path: `.claw/assignments/TASK-194.yaml`
-- blocked_by: `none`
-- next_action: Verify global Account search and single-layer focus in a real browser and CRM organization, then publish.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
@@ -744,6 +733,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-194 - 全量客户名称搜索与产品输入焦点治理
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-101-global-customer-search-and-field-focus.md`
+- task_status_path: `.claw/tasks/TASK-194.md`
+- assignment_path: `.claw/assignments/TASK-194.yaml`
+- blocked_by: `none`
+- next_action: `none`; production `2.5.6` searches all CloudCC Accounts visible to the current identity and applies the shared single-layer focus rule.
 
 ### TASK-193 - 客户队列默认按最近互动倒序
 

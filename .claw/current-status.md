@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T03:05:00Z
+updated_at: 2026-07-12T03:33:00Z
 updated_by: MANAGER-001
-phase: global-customer-search-focus
-active_task: "TASK-194"
-next_action: "Implement all-visible CRM customer name search and remove nested product input focus frames."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Continue TASK-170 security rules platform work; monitor production 2.5.6 global customer search latency and permission behavior."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-194 is ready: customer-name search will bypass queue mode/filter/cache limits through permission-scoped CloudCC Account search; product-shell input focus will use one border layer without shadow or extra outline.
+- TASK-194 is done in production `2.5.6`: customer-name search now queries all Accounts visible to the current CloudCC identity, bypasses new/existing mode, queue filter and projection-cache limits, loads cache-external detail on demand, and aligns the workspace to the matched customer's actual mode.
+- TASK-194 evidence: backend 11 focused tests and frontend 60 tests/build passed; the real large organization found “青岛海信商用显示股份有限公司” in about 0.76 seconds and loaded detail in about 0.22 seconds. Browser verification showed one 1px wrapper focus border, no inner input border/shadow, no business error, and correct old-customer operations UI.
 
 - TASK-193 is done in production `2.5.3`: new-customer advancement and existing-customer operations both default to recent-interaction descending order; missing interaction timestamps stay last and ties use deterministic account ordering.
 - TASK-193 evidence: backend 10 tests, frontend 59 tests/build, release backup/health/public smoke and real large-organization default-query checks passed; both modes returned 12 rows in descending timestamp order with no post-release errors.
@@ -33,7 +34,7 @@ read_next:
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
-- Current branch: `main`; production is running release `2.5.2` from Git commit `1c2084b5746c`; TASK-182 through TASK-192 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100 are production ready within their documented limits.
+- Current branch: `main`; production is running release `2.5.6` from Git commit `12c766bed77d`; TASK-182 through TASK-194 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100/FEAT-101 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

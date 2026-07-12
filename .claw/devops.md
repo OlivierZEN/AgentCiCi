@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T02:45:57Z
+updated_at: 2026-07-12T03:33:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.5.6 TASK-194 全量客户名称搜索与输入焦点治理 on 2026-07-12:
+  - Git commit/tag `12c766bed77d` / `2.5.6`; CloudCC Account 名称搜索覆盖当前用户全部可见客户，不再受工作台模式、筛选和 10,000 条投影缓存限制；缓存外客户按需加载关联详情，页面按客户真实分类自动对齐新客户推进或老客户经营。
+  - Images: backend index `sha256:bfa4ad2932c037000716213cc6df224483d863cce4a0332252fea5de77cfd59b`, amd64 `sha256:8c6918de52589c95bdac2cc7c83d9138484276454278a98a3693407bc2cd645d`; frontend index `sha256:661037ba5a6d1a7543122871f713b360e4e3ad9f3fa1311878d2598b498e56b6`, amd64 `sha256:e063dbc5fdd2adbe8d37ea271c2c2a0f855bdc3c353449ac0ee630ef7339f7ad`.
+  - Backup: `/opt/cici/backups/20260712-112702-before-2.5.6-task194-global-search`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend run `2.5.6`; four state services remain healthy on `2.3.4`. Health `UP`, version `2.5.6 / 12c766bed77d`, Nginx valid, public root/workbench HTTP 200, post-release backend target-error and Nginx 5xx scans are empty.
+  - Real large-organization search returned the exact cache-external Account in 0.76 seconds and detail in 0.22 seconds; browser switched from new-customer entry to existing-customer operations and verified the shared single-layer field focus rule. Screenshot: `output/playwright/task194-prod-global-search-existing-mode-2.5.6.png`.
+  - Releases `2.5.4` and `2.5.5` were intermediate TASK-194 validation builds superseded by mode-alignment release `2.5.6` and are not rollback targets.
 
 - 2.5.3 TASK-193 客户队列最近互动倒序 on 2026-07-12:
   - Git commit/tag `c7af96a48092` / `2.5.3`; 新客户推进和老客户经营默认统一为 `interaction desc`，暂无互动时间的客户置后，相同时间按 account ID 稳定排序。

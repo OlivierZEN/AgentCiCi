@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-101
 title: 全量客户名称搜索与产品输入焦点治理
-status: ready
+status: verified
 owner_role: fullstack-agent
 task_ids: TASK-194
 related_decisions: FEAT-081,FEAT-100
 related_issues: none
-updated_at: 2026-07-12T03:05:00Z
+updated_at: 2026-07-12T03:33:00Z
 updated_by: MANAGER-001
 ---
 
@@ -40,3 +40,10 @@ updated_by: MANAGER-001
 - 客户搜索框聚焦前后几何尺寸一致，只存在一层边框；认证后产品页面的文本输入控件不再出现第二层 focus 阴影框。
 - 后端注入/转义、全局搜索、缓存外详情加载和现有队列行为有自动化测试；桌面端浏览器完成 focus 与搜索交互检查。
 
+## 生产验收
+
+- 生产版本：`2.5.6 / 12c766bed77d`。
+- 真实组织 `org5nszpgj99jaysxv6y` 在新客户推进页面输入“青岛海信商用显示”，服务端通过 `CLOUDCC_SEARCH / ALL_VISIBLE_ACCOUNTS` 返回唯一匹配“青岛海信商用显示股份有限公司”，不受当前模式、筛选或 10,000 条投影上限约束。
+- 命中客户分类为 `EXISTING` 后，页面自动切换到“老客户经营队列”，展示客户健康度、未闭环问题、老客户经营动作和服务与关系预警。
+- 生产复测搜索约 0.76 秒、详情约 0.22 秒；页面不存在过期令牌或通用服务器错误提示。
+- 聚焦状态下 input 为 `border: 0`、`box-shadow: none`、透明背景，搜索容器仅保留 `1px` 边框且无阴影。
