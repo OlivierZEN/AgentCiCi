@@ -362,7 +362,7 @@ public class CustomerCrmProjectionService {
                 "stage", stage(opportunities, contracts),
                 "tags", tags(account, riskCount, existing),
                 "followed", followed,
-                "updatedAt", (last == null ? dataset.loadedAt() : last).toString(),
+                "updatedAt", last == null ? "" : last.toString(),
                 "dataAsOf", dataset.loadedAt().toString(),
                 "source", "CLOUDCC_LIVE"
         );
@@ -589,14 +589,16 @@ public class CustomerCrmProjectionService {
     }
 
     private Comparator<Map<String, Object>> queueComparator(String sort, String direction) {
-        Comparator<Map<String, Object>> comparator = switch (sort == null ? "priority" : sort) {
+        Comparator<Map<String, Object>> comparator = switch (sort == null ? "interaction" : sort) {
             case "risk" -> Comparator.comparingInt(item -> number(item, "riskCount"));
             case "health" -> Comparator.comparingInt(item -> number(item, "healthScore"));
             case "interaction" -> Comparator.comparing(item -> instant(item, "updatedAt"), Comparator.nullsFirst(Comparator.naturalOrder()));
             case "renewal" -> Comparator.comparingInt(item -> number(item, "renewalDays"));
-            default -> Comparator.comparingInt(item -> number(item, "progressScore") + number(item, "riskCount") * 10);
+            case "priority" -> Comparator.comparingInt(item -> number(item, "progressScore") + number(item, "riskCount") * 10);
+            default -> Comparator.comparing(item -> instant(item, "updatedAt"), Comparator.nullsFirst(Comparator.naturalOrder()));
         };
-        return "asc".equalsIgnoreCase(direction) ? comparator : comparator.reversed();
+        Comparator<Map<String, Object>> ordered = "asc".equalsIgnoreCase(direction) ? comparator : comparator.reversed();
+        return ordered.thenComparing(item -> text(item, "accountId"));
     }
 
     private int progressScore(List<Map<String, Object>> opportunities, List<Map<String, Object>> contacts, List<Map<String, Object>> tasks) {

@@ -3,6 +3,7 @@ import {
   assistantPhaseLabel,
   customerWorkbenchBodyClassName,
   defaultCustomerQueueFilter,
+  defaultCustomerQueueSort,
   isCurrentVoiceSession,
   scrollConversationToLatest,
 } from "./CustomerWorkbenchApp";
@@ -15,6 +16,12 @@ describe("defaultCustomerQueueFilter", () => {
 
   it("shows all existing customers until the user chooses a filter", () => {
     expect(defaultCustomerQueueFilter("existing")).toBe("");
+  });
+});
+
+describe("defaultCustomerQueueSort", () => {
+  it("shows the most recently interacted customers first in both modes", () => {
+    expect(defaultCustomerQueueSort()).toBe("interaction");
   });
 });
 

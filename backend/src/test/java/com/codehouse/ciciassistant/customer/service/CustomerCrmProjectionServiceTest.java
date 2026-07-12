@@ -79,6 +79,47 @@ class CustomerCrmProjectionServiceTest {
     }
 
     @Test
+    void ordersBothCustomerModesByMostRecentInteractionByDefault() throws Exception {
+        CloudccOpenApiService cloudcc = mock(CloudccOpenApiService.class);
+        CustomerWorkbenchRecommendationRepository recommendations = mock(CustomerWorkbenchRecommendationRepository.class);
+        CustomerFollowSubscriptionRepository follows = mock(CustomerFollowSubscriptionRepository.class);
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.getArgument(2, String.class)) {
+                    case "Account" -> List.of(
+                            Map.of("id", "001-new-old", "name", "新客户较早"),
+                            Map.of("id", "001-old-recent", "name", "老客户最近"),
+                            Map.of("id", "001-new-recent", "name", "新客户最近"),
+                            Map.of("id", "001-new-none", "name", "新客户暂无互动"),
+                            Map.of("id", "001-old-old", "name", "老客户较早"));
+                    case "Task" -> List.of(
+                            Map.of("id", "task-1", "relateid", "001-new-old", "lastmodifydate", "2026-07-09 09:00:00"),
+                            Map.of("id", "task-2", "relateid", "001-new-recent", "lastmodifydate", "2026-07-12 09:00:00"),
+                            Map.of("id", "task-3", "relateid", "001-old-old", "lastmodifydate", "2026-07-08 09:00:00"),
+                            Map.of("id", "task-4", "relateid", "001-old-recent", "lastmodifydate", "2026-07-11 09:00:00"));
+                    case "contract" -> List.of(
+                            Map.of("id", "contract-1", "khmc", "001-old-old"),
+                            Map.of("id", "contract-2", "khmc", "001-old-recent"));
+                    default -> List.of();
+                });
+        when(follows.findByOrgIdAndUserId("org", "user")).thenReturn(List.of());
+        when(recommendations.findByOrgIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
+        CustomerCrmProjectionService service = new CustomerCrmProjectionService(
+                cloudcc, mock(CustomerInteractionEventRepository.class), recommendations,
+                mock(CustomerSignalRepository.class), follows, new ObjectMapper());
+
+        Map<String, Object> newQueue = awaitQueue(service,
+                new CustomerCrmProjectionService.QueueQuery("new", "all", "interaction", "desc", "", 1, 20, false));
+        Map<String, Object> existingQueue = awaitQueue(service,
+                new CustomerCrmProjectionService.QueueQuery("existing", "all", "interaction", "desc", "", 1, 20, false));
+
+        assertThat(items(newQueue)).extracting(item -> item.get("name"))
+                .containsExactly("新客户最近", "新客户较早", "新客户暂无互动");
+        assertThat(items(existingQueue)).extracting(item -> item.get("name"))
+                .containsExactly("老客户最近", "老客户较早");
+        service.shutdownExecutors();
+    }
+
+    @Test
     void returnsSyncingImmediatelyAndStartsOnlyOneDatasetLoad() throws Exception {
         CloudccOpenApiService cloudcc = mock(CloudccOpenApiService.class);
         CountDownLatch accountStarted = new CountDownLatch(1);

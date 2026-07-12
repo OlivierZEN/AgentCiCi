@@ -222,6 +222,10 @@ export function defaultCustomerQueueFilter(mode: WorkbenchMode) {
   return mode === "new" ? "focus" : "";
 }
 
+export function defaultCustomerQueueSort() {
+  return "interaction";
+}
+
 function nowTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -344,7 +348,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [activeTab, setActiveTab] = useState<DetailTab>("overview");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState(defaultCustomerQueueFilter(initialMode));
-  const [sort, setSort] = useState("priority");
+  const [sort, setSort] = useState(defaultCustomerQueueSort);
   const [page, setPage] = useState(1);
   const [queueMeta, setQueueMeta] = useState({ totalElements: 0, totalPages: 0, filterCounts: {} as Record<string, number>, dataAsOf: "" });
   const [integration, setIntegration] = useState<{ ready: boolean; label: string; baseUrl?: string; message?: string;
@@ -803,8 +807,8 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           </nav>
           <div className="customer-workbench__sortline">
             <select value={sort} onChange={(event) => { setSort(event.target.value); setPage(1); }} aria-label="客户排序">
-              {workbenchMode === "new" ? <option value="priority">推进优先</option> : <option value="risk">风险优先</option>}
               <option value="interaction">最近互动</option>
+              {workbenchMode === "new" ? <option value="priority">推进优先</option> : <option value="risk">风险优先</option>}
               <option value="health">健康度</option>
               {workbenchMode === "existing" ? <option value="renewal">续约日期</option> : null}
             </select>

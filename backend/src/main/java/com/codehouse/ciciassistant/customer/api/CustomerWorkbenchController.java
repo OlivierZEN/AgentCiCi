@@ -54,7 +54,7 @@ public class CustomerWorkbenchController {
     public ApiResponse<Map<String, Object>> queue(
             @RequestParam(defaultValue = "new") String mode,
             @RequestParam(defaultValue = "all") String filter,
-            @RequestParam(defaultValue = "priority") String sort,
+            @RequestParam(defaultValue = "interaction") String sort,
             @RequestParam(defaultValue = "desc") String direction,
             @RequestParam(defaultValue = "") String query,
             @RequestParam(defaultValue = "1") int page,
