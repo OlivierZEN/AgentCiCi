@@ -13786,7 +13786,23 @@
   background: transparent;
   color: #2b2217;
   font-size: 13px;
+  padding: 0;
+  border-radius: 0;
   outline: 0;
+  box-shadow: none;
+  appearance: none;
+}
+
+.customer-workbench__search:focus-within {
+  border-color: #b99652;
+}
+
+.customer-workbench__search input:focus,
+.customer-workbench__search input:focus-visible {
+  border: 0;
+  background: transparent !important;
+  outline: 0;
+  box-shadow: none !important;
 }
 
 .customer-workbench__queue nav {

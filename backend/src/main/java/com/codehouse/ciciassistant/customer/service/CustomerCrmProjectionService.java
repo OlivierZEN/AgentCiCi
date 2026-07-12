@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.customer.service;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService.PageRecords;
 import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.customer.domain.CustomerFollowSubscriptionEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerFollowSubscriptionRepository;
@@ -79,11 +80,83 @@ public class CustomerCrmProjectionService {
     public Map<String, Object> queue(String orgId, String userId, QueueQuery query) {
         String key = cacheKey(orgId, userId);
         Dataset dataset = availableDataset(orgId, userId, query.refresh());
+        if (query.query() != null && !query.query().isBlank()) {
+            Map<String, Object> result = searchQueue(orgId, userId, query, dataset);
+            result.putAll(syncMetadata(key, dataset));
+            return result;
+        }
         if (dataset == null) return emptyQueue(query, key);
         List<Map<String, Object>> all = accountViews(orgId, userId, dataset);
         Map<String, Object> result = queueFromViews(all, query, dataset.loadedAt());
         result.putAll(syncMetadata(key, dataset));
         return result;
+    }
+
+    private Map<String, Object> searchQueue(String orgId, String userId, QueueQuery query, Dataset dataset) {
+        int size = Math.max(1, Math.min(100, query.size()));
+        int page = Math.max(1, query.page());
+        String term = normalizedSearchTerm(query.query());
+        PageRecords result = cloudcc.pageQueryRecords(orgId, userId, "Account",
+                "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays",
+                "name like '%" + escapeExpressionLiteral(term) + "%'", page, size);
+        Map<String, Map<String, Object>> cachedAccounts = dataset == null ? Map.of() : dataset.accounts().stream()
+                .collect(java.util.stream.Collectors.toMap(item -> text(item, "id"), item -> item, (left, right) -> left));
+        Set<String> followed = followRepository.findByOrgIdAndUserId(orgId, userId).stream()
+                .map(CustomerFollowSubscriptionEntity::getCrmAccountId).collect(java.util.stream.Collectors.toSet());
+        Map<String, Long> pendingCounts = recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+                .filter(item -> CustomerWorkbenchRecommendationEntity.STATUS_PENDING.equals(item.getStatus()))
+                .collect(java.util.stream.Collectors.groupingBy(
+                        CustomerWorkbenchRecommendationEntity::getCrmAccountId,
+                        java.util.stream.Collectors.counting()));
+        List<Map<String, Object>> items = result.records().stream().map(account -> {
+            String accountId = text(account, "id");
+            Map<String, Object> cached = cachedAccounts.get(accountId);
+            return cached != null && dataset != null
+                    ? accountView(cached, dataset, followed.contains(accountId), pendingCounts.getOrDefault(accountId, 0L))
+                    : searchAccountView(account);
+        }).sorted(queueComparator("interaction", "desc")).toList();
+        return mapOf(
+                "items", items,
+                "page", result.pageNum(),
+                "size", size,
+                "totalElements", result.totalCount(),
+                "totalPages", result.pageCount(),
+                "filterCounts", mapOf("all", (long) result.totalCount()),
+                "dataAsOf", dataset == null ? "" : dataset.loadedAt().toString(),
+                "source", "CLOUDCC_SEARCH",
+                "mode", "search",
+                "searchScope", "ALL_VISIBLE_ACCOUNTS"
+        );
+    }
+
+    private Map<String, Object> searchAccountView(Map<String, Object> account) {
+        Instant last = firstInstant(account, "lastcontactdate", "lastmodifydate");
+        LinkedHashSet<String> tags = new LinkedHashSet<>();
+        if (!text(account, "hangye").isBlank()) tags.add(text(account, "hangye"));
+        if (!text(account, "fenji").isBlank()) tags.add(text(account, "fenji"));
+        return mapOf(
+                "accountId", text(account, "id"),
+                "name", text(account, "name"),
+                "owner", firstNonBlank(text(account, "owneridccname"), text(account, "ownerid"), "未分配"),
+                "customerMode", "SEARCH",
+                "segment", "SEARCH",
+                "healthScore", 0,
+                "progressScore", 0,
+                "riskCount", 0,
+                "nextActionCount", 0,
+                "pendingRecommendationCount", 0,
+                "opportunityCount", 0,
+                "renewalDays", -1,
+                "interactionCount", 0,
+                "lastInteraction", last == null ? "暂无可见互动" : "CRM 客户档案最近更新",
+                "lastInteractionType", "CRM",
+                "stage", "客户档案",
+                "tags", List.copyOf(tags),
+                "followed", false,
+                "updatedAt", last == null ? "" : last.toString(),
+                "dataAsOf", Instant.now().toString(),
+                "source", "CLOUDCC_SEARCH"
+        );
     }
 
     private List<Map<String, Object>> accountViews(String orgId, String userId, Dataset dataset) {
@@ -127,7 +200,7 @@ public class CustomerCrmProjectionService {
     }
 
     public Map<String, Object> detail(String orgId, String userId, String accountId, boolean refresh) {
-        Dataset dataset = requireDataset(orgId, userId, refresh);
+        Dataset dataset = requireAccountDataset(orgId, userId, accountId, refresh);
         Map<String, Object> account = dataset.accounts().stream()
                 .filter(item -> accountId.equals(text(item, "id"))).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("当前用户无权访问该客户或客户不存在"));
@@ -171,7 +244,7 @@ public class CustomerCrmProjectionService {
     }
 
     public List<Map<String, Object>> timeline(String orgId, String userId, String accountId, boolean refresh) {
-        Dataset dataset = requireDataset(orgId, userId, refresh);
+        Dataset dataset = requireAccountDataset(orgId, userId, accountId, refresh);
         if (dataset.accounts().stream().noneMatch(item -> accountId.equals(text(item, "id")))) {
             throw new IllegalArgumentException("当前用户无权访问该客户或客户不存在");
         }
@@ -203,7 +276,7 @@ public class CustomerCrmProjectionService {
 
     @Transactional
     public Map<String, Object> follow(String orgId, String userId, String accountId, boolean followed) {
-        Dataset dataset = requireDataset(orgId, userId, false);
+        Dataset dataset = requireAccountDataset(orgId, userId, accountId, false);
         if (dataset.accounts().stream().noneMatch(item -> accountId.equals(text(item, "id")))) {
             throw new IllegalArgumentException("当前用户无权关注该客户");
         }
@@ -253,6 +326,15 @@ public class CustomerCrmProjectionService {
         return dataset;
     }
 
+    private Dataset requireAccountDataset(String orgId, String userId, String accountId, boolean refresh) {
+        Dataset dataset = availableDataset(orgId, userId, refresh);
+        if (dataset != null && dataset.accounts().stream().anyMatch(item -> accountId.equals(text(item, "id")))) return dataset;
+        Dataset focused = loadFocusedDataset(orgId, userId, accountId);
+        Dataset merged = dataset == null ? focused : dataset.merge(focused);
+        cache.put(cacheKey(orgId, userId), new CacheEntry(merged, Instant.now().plus(CACHE_TTL)));
+        return merged;
+    }
+
     private void scheduleDatasetLoad(String key, String orgId, String userId) {
         if (activeLoads.containsKey(key)) return;
         SyncState previous = syncStates.get(key);
@@ -298,6 +380,32 @@ public class CustomerCrmProjectionService {
         return Dataset.create(accounts.join(), contacts.join(), opportunities.join(), tasks.join(), events.join(), cases.join(), contracts.join());
     }
 
+    private Dataset loadFocusedDataset(String orgId, String userId, String accountId) {
+        if (accountId == null || !accountId.matches("[A-Za-z0-9_-]{3,128}")) {
+            throw new IllegalArgumentException("客户标识无效");
+        }
+        String accountExpression = "id = '" + accountId + "'";
+        String relationExpression = "khmc = '" + accountId + "'";
+        String activityExpression = "relateid = '" + accountId + "'";
+        CompletableFuture<List<Map<String, Object>>> accounts = queryAsync(() -> queryRequiredFiltered(orgId, userId,
+                "Account", "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays", accountExpression));
+        CompletableFuture<List<Map<String, Object>>> contacts = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+                "Contact", "id,name,khmc,ownerid,zhiwu,contactrole,scbclxbcrq", relationExpression));
+        CompletableFuture<List<Map<String, Object>>> opportunities = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+                "Opportunity", "id,name,khmc,ownerid,jieduan,jine,jsrq,xyb,latestcontact,lastmodifydate", relationExpression));
+        CompletableFuture<List<Map<String, Object>>> tasks = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+                "Task", "id,name,subject,relateid,relateobj,status,priority,expiredate,ownerid,remark,lastmodifydate", activityExpression));
+        CompletableFuture<List<Map<String, Object>>> events = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+                "Event", "id,name,subject,relateid,relateobj,status,type,begintime,endtime,ownerid,remark,lastmodifydate", activityExpression));
+        CompletableFuture<List<Map<String, Object>>> cases = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+                "cloudcccase", "id,name,khmc,ownerid,zhuangtai,yxj,duedate,zhuti,problemdescription,lastmodifydate", relationExpression));
+        CompletableFuture<List<Map<String, Object>>> contracts = queryAsync(() -> queryOptionalFiltered(orgId, userId,
+                "contract", "id,name,khmc,ownerid,zhuangtai,htksrq,htjsrq,htje,lastmodifydate", relationExpression));
+        CompletableFuture.allOf(accounts, contacts, opportunities, tasks, events, cases, contracts).join();
+        if (accounts.join().isEmpty()) throw new IllegalArgumentException("当前用户无权访问该客户或客户不存在");
+        return Dataset.create(accounts.join(), contacts.join(), opportunities.join(), tasks.join(), events.join(), cases.join(), contracts.join());
+    }
+
     private CompletableFuture<List<Map<String, Object>>> queryAsync(Supplier<List<Map<String, Object>>> query) {
         return CompletableFuture.supplyAsync(query, queryExecutor);
     }
@@ -317,6 +425,28 @@ public class CustomerCrmProjectionService {
             return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, "");
         } catch (RuntimeException ex) {
             log.info("CloudCC optional object unavailable for current user: org={}, user={}, object={}, message={}",
+                    orgId, userId, objectApiName, ex.getMessage());
+            return List.of();
+        }
+    }
+
+    private List<Map<String, Object>> queryRequiredFiltered(String orgId, String userId, String objectApiName,
+                                                            String fields, String expressions) {
+        try {
+            return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, expressions);
+        } catch (RuntimeException ex) {
+            log.warn("CloudCC filtered required query failed: org={}, user={}, object={}, message={}",
+                    orgId, userId, objectApiName, ex.getMessage());
+            return cloudcc.queryAllRecords(orgId, userId, objectApiName, "id,name", expressions);
+        }
+    }
+
+    private List<Map<String, Object>> queryOptionalFiltered(String orgId, String userId, String objectApiName,
+                                                            String fields, String expressions) {
+        try {
+            return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, expressions);
+        } catch (RuntimeException ex) {
+            log.info("CloudCC filtered optional object unavailable: org={}, user={}, object={}, message={}",
                     orgId, userId, objectApiName, ex.getMessage());
             return List.of();
         }
@@ -588,6 +718,15 @@ public class CustomerCrmProjectionService {
                 .toLowerCase(Locale.ROOT).contains(needle);
     }
 
+    private String normalizedSearchTerm(String value) {
+        String normalized = value == null ? "" : value.strip().replaceAll("[\\p{Cntrl}]", "");
+        return normalized.length() <= 100 ? normalized : normalized.substring(0, 100);
+    }
+
+    private String escapeExpressionLiteral(String value) {
+        return value.replace("\\", "\\\\").replace("'", "''");
+    }
+
     private Comparator<Map<String, Object>> queueComparator(String sort, String direction) {
         Comparator<Map<String, Object>> comparator = switch (sort == null ? "interaction" : sort) {
             case "risk" -> Comparator.comparingInt(item -> number(item, "riskCount"));
@@ -837,6 +976,20 @@ public class CustomerCrmProjectionService {
         List<Map<String, Object>> casesFor(String accountId) { return values(casesByAccount, accountId); }
         List<Map<String, Object>> contractsFor(String accountId) { return values(contractsByAccount, accountId); }
 
+        Dataset merge(Dataset other) {
+            LinkedHashMap<String, Map<String, Object>> mergedAccounts = new LinkedHashMap<>();
+            accounts.forEach(item -> mergedAccounts.put(text(item, "id"), item));
+            other.accounts.forEach(item -> mergedAccounts.put(text(item, "id"), item));
+            return new Dataset(List.copyOf(mergedAccounts.values()),
+                    mergeIndex(contactsByAccount, other.contactsByAccount),
+                    mergeIndex(opportunitiesByAccount, other.opportunitiesByAccount),
+                    mergeIndex(tasksByAccount, other.tasksByAccount),
+                    mergeIndex(eventsByAccount, other.eventsByAccount),
+                    mergeIndex(casesByAccount, other.casesByAccount),
+                    mergeIndex(contractsByAccount, other.contractsByAccount),
+                    loadedAt, recordLimitReached || other.recordLimitReached);
+        }
+
         private static List<Map<String, Object>> values(Map<String, List<Map<String, Object>>> index, String accountId) {
             return index.getOrDefault(accountId, List.of());
         }
@@ -844,6 +997,19 @@ public class CustomerCrmProjectionService {
         private static Map<String, List<Map<String, Object>>> groupBy(List<Map<String, Object>> items, String field) {
             return items.stream().filter(item -> !text(item, field).isBlank())
                     .collect(java.util.stream.Collectors.groupingBy(item -> text(item, field)));
+        }
+
+        private static Map<String, List<Map<String, Object>>> mergeIndex(
+                Map<String, List<Map<String, Object>>> left,
+                Map<String, List<Map<String, Object>>> right) {
+            Map<String, List<Map<String, Object>>> merged = new HashMap<>(left);
+            right.forEach((key, values) -> merged.merge(key, values, (existing, added) -> {
+                LinkedHashMap<String, Map<String, Object>> byId = new LinkedHashMap<>();
+                existing.forEach(item -> byId.put(text(item, "id"), item));
+                added.forEach(item -> byId.put(text(item, "id"), item));
+                return List.copyOf(byId.values());
+            }));
+            return Map.copyOf(merged);
         }
     }
 }

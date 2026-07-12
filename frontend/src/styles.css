@@ -1570,8 +1570,15 @@ input {
 
 input:focus {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: none;
   background: var(--surface);
+}
+
+/* Fields use one focus layer everywhere: their existing border or wrapper focus-within rule. */
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus,
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
 }
 
 button {

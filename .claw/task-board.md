@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-194 - 全量客户名称搜索与产品输入焦点治理
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-101-global-customer-search-and-field-focus.md`
 - task_status_path: `.claw/tasks/TASK-194.md`
 - assignment_path: `.claw/assignments/TASK-194.yaml`
 - blocked_by: `none`
-- next_action: Implement permission-scoped global Account search, external-result detail loading and shared single-layer field focus.
+- next_action: Verify global Account search and single-layer focus in a real browser and CRM organization, then publish.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 

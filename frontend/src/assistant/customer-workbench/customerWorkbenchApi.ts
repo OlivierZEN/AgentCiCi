@@ -40,6 +40,7 @@ export type CustomerQueueResult = {
   lastSuccessfulSyncAt?: string;
   recordLimitReached?: boolean;
   recordLimit?: number;
+  searchScope?: "ALL_VISIBLE_ACCOUNTS" | string;
 };
 
 export type CustomerInteractionEvent = {

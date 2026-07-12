@@ -272,6 +272,7 @@ function metricValue(detail: CustomerWorkbenchDetail | null, key: string, fallba
 }
 
 function queueStatus(account: CustomerWorkbenchAccount) {
+  if (account.customerMode === "SEARCH") return "客户";
   if (account.segment === "RISK") return "风险";
   if (account.pendingRecommendationCount > 0) return "关注";
   if (account.segment === "EXISTING" || account.segment === "STRATEGIC") return "健康";
@@ -794,7 +795,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               ref={searchInputRef}
               value={query}
               onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-              placeholder="搜索客户名称 / 负责人 / 关键字"
+              placeholder="搜索全部客户名称"
               aria-label="搜索客户"
             />
           </label>
@@ -812,7 +813,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
               <option value="health">健康度</option>
               {workbenchMode === "existing" ? <option value="renewal">续约日期</option> : null}
             </select>
-            <span>共 {queueMeta.totalElements} 位客户</span>
+            <span>{query.trim() ? `全部客户搜索结果 ${queueMeta.totalElements} 条` : `共 ${queueMeta.totalElements} 位客户`}</span>
           </div>
           <div className={`customer-workbench__accounts${compactQueue ? " is-compact" : ""}`}>
             {accounts.map((item) => (
@@ -830,10 +831,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
                   </span>
                   <span className="customer-workbench-account__meta">
                     <small>{item.owner} · {item.stage}</small>
-                    <time>{shortDate(item.updatedAt || "") || "今天 09:30"}</time>
+                    <time>{shortDate(item.updatedAt || "") || "暂无互动"}</time>
                   </span>
                   <span className="customer-workbench-account__badges">
-                    {workbenchMode === "new" ? <em>商机 {item.opportunityCount ?? 0}</em> : <em>健康 {item.healthScore}</em>}
+                    {item.customerMode === "SEARCH" ? <em>全局搜索</em> : workbenchMode === "new" ? <em>商机 {item.opportunityCount ?? 0}</em> : <em>健康 {item.healthScore}</em>}
                     {item.riskCount ? <em className="is-risk">{workbenchMode === "new" ? "风险信号" : "关系风险"} {item.riskCount}</em> : null}
                     {item.pendingRecommendationCount ? <em className="is-warn">{workbenchMode === "new" ? "未确认建议" : "经营动作"} {item.pendingRecommendationCount}</em> : null}
                   </span>

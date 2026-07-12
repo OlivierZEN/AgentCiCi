@@ -2,7 +2,9 @@ package com.codehouse.ciciassistant.customer.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -10,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService.PageRecords;
 import com.codehouse.ciciassistant.customer.domain.CustomerFollowSubscriptionRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerSignalRepository;
@@ -26,6 +29,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.mockito.ArgumentCaptor;
 
 class CustomerCrmProjectionServiceTest {
 
@@ -116,6 +120,57 @@ class CustomerCrmProjectionServiceTest {
                 .containsExactly("新客户最近", "新客户较早", "新客户暂无互动");
         assertThat(items(existingQueue)).extracting(item -> item.get("name"))
                 .containsExactly("老客户最近", "老客户较早");
+        service.shutdownExecutors();
+    }
+
+    @Test
+    void searchesAllVisibleAccountsAndLoadsDetailsOutsideTheProjectionCache() throws Exception {
+        CloudccOpenApiService cloudcc = mock(CloudccOpenApiService.class);
+        CustomerInteractionEventRepository events = mock(CustomerInteractionEventRepository.class);
+        CustomerWorkbenchRecommendationRepository recommendations = mock(CustomerWorkbenchRecommendationRepository.class);
+        CustomerSignalRepository signals = mock(CustomerSignalRepository.class);
+        CustomerFollowSubscriptionRepository follows = mock(CustomerFollowSubscriptionRepository.class);
+        Map<String, Object> cachedAccount = Map.of("id", "001-cached", "name", "缓存客户");
+        Map<String, Object> externalAccount = Map.of(
+                "id", "001-external", "name", "华'北制造集团", "lastmodifydate", "2026-07-12 10:00:00");
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    String object = invocation.getArgument(2, String.class);
+                    String expressions = invocation.getArgument(4, String.class);
+                    if ("Account".equals(object)) return expressions.isBlank() ? List.of(cachedAccount) : List.of(externalAccount);
+                    return List.of();
+                });
+        when(cloudcc.pageQueryRecords(eq("org"), eq("user"), eq("Account"), anyString(),
+                anyString(), anyInt(), anyInt()))
+                .thenReturn(new PageRecords(List.of(externalAccount), 1, 1, 1));
+        when(follows.findByOrgIdAndUserId("org", "user")).thenReturn(List.of());
+        when(follows.findByOrgIdAndUserIdAndCrmAccountId(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
+        when(recommendations.findByOrgIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
+        when(recommendations.countByOrgIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString())).thenReturn(0L);
+        when(events.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(anyString(), anyString())).thenReturn(List.of());
+        when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
+        CustomerCrmProjectionService service = new CustomerCrmProjectionService(
+                cloudcc, events, recommendations, signals, follows, new ObjectMapper());
+
+        awaitQueue(service, new CustomerCrmProjectionService.QueueQuery(
+                "new", "focus", "interaction", "desc", "", 1, 20, false));
+        Map<String, Object> search = service.queue("org", "user", new CustomerCrmProjectionService.QueueQuery(
+                "existing", "renewal", "interaction", "desc", "华'北", 1, 20, false));
+
+        assertThat(search).containsEntry("mode", "search")
+                .containsEntry("searchScope", "ALL_VISIBLE_ACCOUNTS")
+                .containsEntry("totalElements", 1);
+        assertThat(items(search)).extracting(item -> item.get("name")).containsExactly("华'北制造集团");
+        assertThat(items(search).get(0)).containsEntry("customerMode", "SEARCH");
+        ArgumentCaptor<String> expression = ArgumentCaptor.forClass(String.class);
+        verify(cloudcc).pageQueryRecords(eq("org"), eq("user"), eq("Account"), anyString(),
+                expression.capture(), eq(1), eq(20));
+        assertThat(expression.getValue()).isEqualTo("name like '%华''北%'");
+
+        Map<String, Object> detail = service.detail("org", "user", "001-external", false);
+        assertThat(detail).containsEntry("accountId", "001-external")
+                .containsEntry("name", "华'北制造集团")
+                .containsEntry("source", "CLOUDCC_LIVE");
         service.shutdownExecutors();
     }
 
