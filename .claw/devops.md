@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T03:33:00Z
+updated_at: 2026-07-12T04:11:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.5.8 TASK-195 客户互动时间线完整年份显示 on 2026-07-12:
+  - Git commit/tag `a016c165fd95` / `2.5.8`; compact and full customer timelines render `YYYY-MM-DD` and `HH:mm` on two lines, preserve invalid-source fallback, and keep the expanded date column, event icon and vertical axis aligned.
+  - Images: backend index `sha256:fa59e23ec070d06708c07324895333fd33be60b2b94035152c25a728cacdd21b`, amd64 `sha256:93a6bd67479c9d51f96f7b7f2c53732bd11c89fce7ba1627b454c2f66c8ab6d5`; frontend index `sha256:580f5167a4c3cfe71488eb51f81478a5efa10dae7a1d370d1861849755440bc6`, amd64 `sha256:07246081a4c74f7daed5d4f2e0867474523de39dc11148f15e0de2fddab2ebe5`.
+  - Backup: `/opt/cici/backups/20260712-120506-before-2.5.8-task195-no-wrap`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Backend/frontend run `2.5.8`; four state services remain healthy on `2.3.4`. Health `UP`, version `2.5.8 / a016c165fd95`, public workbench HTTP 200, post-release target-error and Nginx 5xx scans are empty.
+  - Real 22-event timeline showed both 2026 and 2023 labels, no internal date wrapping, zero-pixel icon/axis delta and no document overflow. Screenshot: `output/playwright/task195-prod-timeline-full-year-2.5.8.png`.
+  - Release `2.5.7` was an intermediate validation build whose date labels could wrap at hyphens; it is superseded by `2.5.8` and is not a rollback target.
 
 - 2.5.6 TASK-194 全量客户名称搜索与输入焦点治理 on 2026-07-12:
   - Git commit/tag `12c766bed77d` / `2.5.6`; CloudCC Account 名称搜索覆盖当前用户全部可见客户，不再受工作台模式、筛选和 10,000 条投影缓存限制；缓存外客户按需加载关联详情，页面按客户真实分类自动对齐新客户推进或老客户经营。

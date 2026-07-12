@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T03:50:00Z
+updated_at: 2026-07-12T04:11:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-195 - 客户互动时间线完整年份显示
-
-- status: `in_progress`
-- priority: `high`
-- owner_role: `frontend-agent`
-- spec_path: `docs/specs/FEAT-081-customer-interaction-workbench.md`
-- task_status_path: `.claw/tasks/TASK-195.md`
-- assignment_path: `.claw/assignments/TASK-195.yaml`
-- blocked_by: `none`
-- next_action: Add four-digit year to compact and full interaction timelines, then verify alignment in production.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
@@ -744,6 +733,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-195 - 客户互动时间线完整年份显示
+
+- status: `done`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-081-customer-interaction-workbench.md`
+- task_status_path: `.claw/tasks/TASK-195.md`
+- assignment_path: `.claw/assignments/TASK-195.yaml`
+- blocked_by: `none`
+- next_action: `none`; production `2.5.8` shows four-digit years in compact and full customer interaction timelines.
 
 ### TASK-194 - 全量客户名称搜索与产品输入焦点治理
 

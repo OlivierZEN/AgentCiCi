@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T03:50:00Z
+updated_at: 2026-07-12T04:11:00Z
 updated_by: MANAGER-001
-phase: customer-timeline-year-label
-active_task: "TASK-195"
-next_action: "Show four-digit years in every customer interaction timeline and verify date-column alignment."
+phase: security-rules-platform
+active_task: "TASK-170"
+next_action: "Continue TASK-170 security rules platform work; monitor production 2.5.8 customer timeline rendering."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-195 is in progress: customer interaction timelines must display `YYYY-MM-DD` plus `HH:mm` so repeated month/day values remain distinguishable across years; scope is frontend formatting, alignment and regression tests only.
+- TASK-195 is done in production `2.5.8`: compact and full customer interaction timelines display `YYYY-MM-DD` plus `HH:mm` on two stable lines, with no date-internal wrapping.
+- TASK-195 evidence: frontend 62 tests/build passed; a real 22-event timeline included visible 2026 and 2023 records, all sampled labels had four-digit years, the icon/vertical-axis delta was 0px, and the page had no outer overflow or business error.
 
 - TASK-194 is done in production `2.5.6`: customer-name search now queries all Accounts visible to the current CloudCC identity, bypasses new/existing mode, queue filter and projection-cache limits, loads cache-external detail on demand, and aligns the workspace to the matched customer's actual mode.
 - TASK-194 evidence: backend 11 focused tests and frontend 60 tests/build passed; the real large organization found “青岛海信商用显示股份有限公司” in about 0.76 seconds and loaded detail in about 0.22 seconds. Browser verification showed one 1px wrapper focus border, no inner input border/shadow, no business error, and correct old-customer operations UI.
@@ -36,7 +37,7 @@ read_next:
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
-- Current branch: `main`; production is running release `2.5.6` from Git commit `12c766bed77d`; TASK-182 through TASK-194 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100/FEAT-101 are production ready within their documented limits.
+- Current branch: `main`; production is running release `2.5.8` from Git commit `a016c165fd95`; TASK-182 through TASK-195 are complete and FEAT-081/FEAT-092/FEAT-093/FEAT-094/FEAT-095/FEAT-096/FEAT-097/FEAT-098/FEAT-099/FEAT-100/FEAT-101 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-12T03:33:00Z
+updated_at: 2026-07-12T04:11:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-12T03:33:00Z
+last_run_at: 2026-07-12T04:11:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-195 客户互动时间线完整年份生产验收（2026-07-12）
+
+- `root-cause`: 时间线复用通用 `shortDate()`，非今天/昨天只输出 `MM-DD HH:mm`，跨年记录无法区分；首次年份实现使用 `pre-line` 时浏览器仍会在连字符处折行。
+- `frontend`: 12 个测试文件、62 项测试通过；生产构建通过，仅保留既有 Vite chunk-size 提示。单元测试覆盖 2024/2026 同月同日仍保留四位年份及非法来源值回退。
+- `release`: 最终生产 `2.5.8 / a016c165fd95`；backend index `sha256:fa59e23ec070d06708c07324895333fd33be60b2b94035152c25a728cacdd21b`、amd64 `sha256:93a6bd67479c9d51f96f7b7f2c53732bd11c89fce7ba1627b454c2f66c8ab6d5`；frontend index `sha256:580f5167a4c3cfe71488eb51f81478a5efa10dae7a1d370d1861849755440bc6`、amd64 `sha256:07246081a4c74f7daed5d4f2e0867474523de39dc11148f15e0de2fddab2ebe5`。
+- `production-browser`: 真实客户“梅赛德斯-奔驰汽车金融有限公司”的完整时间线共 22 条，概览显示前 5 条；2026 与 2023 记录均为 `YYYY-MM-DD` + `HH:mm` 两行，日期内部 `white-space=pre` 不折行。图标中心与垂直轴偏差 `0px`，页面无外层溢出、无业务错误。截图：`output/playwright/task195-prod-timeline-full-year-2.5.8.png`。
+- `operations`: 最终备份 `/opt/cici/backups/20260712-120506-before-2.5.8-task195-no-wrap` 四类文件非空；backend/frontend `2.5.8` healthy，状态服务保持 `2.3.4`；健康 `UP`、版本/commit 一致，发布后后端目标错误和 Nginx 5xx 扫描为空。
 
 ## TASK-194 全量客户名称搜索与输入焦点治理生产验收（2026-07-12）
 
