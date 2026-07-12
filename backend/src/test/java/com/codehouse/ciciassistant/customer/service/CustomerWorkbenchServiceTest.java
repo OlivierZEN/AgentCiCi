@@ -42,6 +42,20 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 class CustomerWorkbenchServiceTest {
 
     @Test
+    void assistantNavigationRequiresAnExplicitModeCommand() {
+        Map<String, Object> customer = Map.of("accountId", "001-demo");
+
+        assertThat(CustomerWorkbenchService.resolveUiAction("分析这个老客户经营情况", customer))
+                .containsEntry("type", "NONE");
+        assertThat(CustomerWorkbenchService.resolveUiAction("整理老客户的沟通记录并分析经营风险", customer))
+                .containsEntry("type", "OPEN_TAB");
+        assertThat(CustomerWorkbenchService.resolveUiAction("请帮我切换到老客户经营页面", customer))
+                .containsEntry("type", "SWITCH_MODE");
+        assertThat(CustomerWorkbenchService.resolveUiAction("打开新客户推进", customer))
+                .containsEntry("type", "SWITCH_MODE");
+    }
+
+    @Test
     void assistantUsesRealAgentOrchestratorWithCustomerContext() {
         CustomerWorkbenchSnapshotRepository snapshotRepository = mock(CustomerWorkbenchSnapshotRepository.class);
         CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);

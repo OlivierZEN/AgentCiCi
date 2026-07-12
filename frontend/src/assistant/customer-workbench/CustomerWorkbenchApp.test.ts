@@ -7,7 +7,9 @@ import {
   defaultCustomerQueueSort,
   formatTimelineDateTime,
   isCurrentVoiceSession,
+  preserveSelectedCustomer,
   scrollConversationToLatest,
+  shouldSwitchWorkbenchMode,
 } from "./CustomerWorkbenchApp";
 import { customerWorkbenchErrorMessage, parseCustomerAssistantStreamEvent } from "./customerWorkbenchApi";
 
@@ -32,6 +34,25 @@ describe("customerModeToWorkbenchMode", () => {
     expect(customerModeToWorkbenchMode("EXISTING")).toBe("existing");
     expect(customerModeToWorkbenchMode("NEW")).toBe("new");
     expect(customerModeToWorkbenchMode("SEARCH")).toBeNull();
+  });
+});
+
+describe("customer context stability", () => {
+  const queue = [
+    { accountId: "account-a" },
+    { accountId: "account-b" },
+  ] as Parameters<typeof preserveSelectedCustomer>[1];
+
+  it("keeps a selected customer even when it is outside the current queue page", () => {
+    expect(preserveSelectedCustomer("searched-account", queue)).toBe("searched-account");
+    expect(preserveSelectedCustomer("", queue)).toBe("account-a");
+    expect(preserveSelectedCustomer("", [])).toBe("");
+  });
+
+  it("ignores an idempotent assistant mode action", () => {
+    expect(shouldSwitchWorkbenchMode("existing", "existing")).toBe(false);
+    expect(shouldSwitchWorkbenchMode("existing", "new")).toBe(true);
+    expect(shouldSwitchWorkbenchMode("existing", "unknown")).toBe(false);
   });
 });
 

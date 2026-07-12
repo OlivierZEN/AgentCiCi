@@ -232,6 +232,17 @@ export function customerModeToWorkbenchMode(customerMode?: string): WorkbenchMod
   return null;
 }
 
+export function preserveSelectedCustomer(
+  currentAccountId: string,
+  items: CustomerWorkbenchAccount[],
+) {
+  return currentAccountId || items[0]?.accountId || "";
+}
+
+export function shouldSwitchWorkbenchMode(current: WorkbenchMode, target?: string): target is WorkbenchMode {
+  return (target === "new" || target === "existing") && target !== current;
+}
+
 function nowTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -382,7 +393,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [assistantOpen, setAssistantOpen] = useState(true);
   const [assistantExpanded, setAssistantExpanded] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<CustomerRecommendation | null>(null);
-  const [interactionEditorOpen, setInteractionEditorOpen] = useState(false);
+  const [interactionEditorContext, setInteractionEditorContext] = useState<{ accountId: string; accountName: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [assistantInput, setAssistantInput] = useState("");
@@ -420,7 +431,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           }
           setActiveAccountId((current) => {
             if (deepLinkedAccountIdRef.current && current === deepLinkedAccountIdRef.current) return current;
-            return result.items.some((item) => item.accountId === current) ? current : result.items[0]?.accountId || "";
+            return preserveSelectedCustomer(current, result.items);
           });
         })
         .catch((error) => setNotice(error instanceof Error ? error.message : String(error)))
@@ -506,7 +517,8 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
     };
   }, [token, activeAccountId, integration.ready, integration.syncing, workbenchMode]);
 
-  const activeAccount = useMemo(() => accounts.find((item) => item.accountId === activeAccountId) ?? accounts[0], [accounts, activeAccountId]);
+  const activeAccount = useMemo(() => accounts.find((item) => item.accountId === activeAccountId)
+    ?? (activeAccountId ? undefined : accounts[0]), [accounts, activeAccountId]);
 
   useEffect(() => {
     if (!token || !activeAccountId || (integration.syncing && !integration.ready)) return;
@@ -536,6 +548,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   }, [assistantMessages]);
 
   const switchMode = (mode: WorkbenchMode) => {
+    if (mode === workbenchMode) return;
     setWorkbenchMode(mode);
     setFilter(defaultCustomerQueueFilter(mode));
     setPage(1);
@@ -544,10 +557,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
     setActiveAccountId("");
   };
 
-  const reloadDetail = async () => {
-    if (!token || !activeAccountId) return;
-    setDetail(await getCustomerWorkbenchDetail(token, activeAccountId));
-    const result = await getCustomerWorkbenchQueue(token, { mode: workbenchMode, filter, sort, direction: "desc", query, page, size: pageSize, refresh: true });
+  const reloadDetail = async (accountId = activeAccountId) => {
+    if (!token || !accountId) return;
+    setDetail(await getCustomerWorkbenchDetail(token, accountId));
+    const result = await getCustomerWorkbenchQueue(token, { mode: workbenchMode, filter, sort, direction: "desc", query, page, size: pageSize });
     setAccounts(result.items);
     setQueueMeta({ totalElements: result.totalElements, totalPages: result.totalPages, filterCounts: result.filterCounts, dataAsOf: result.dataAsOf || "" });
   };
@@ -632,7 +645,9 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       setActiveTab("recommendations");
       window.setTimeout(() => recommendationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 120);
     }
-    if (result.action === "SWITCH_MODE" && result.actionPayload?.mode) switchMode(result.actionPayload.mode);
+    if (result.action === "SWITCH_MODE" && shouldSwitchWorkbenchMode(workbenchMode, result.actionPayload?.mode)) {
+      switchMode(result.actionPayload.mode);
+    }
     if (result.action === "OPEN_TAB" && result.actionPayload?.tab) setActiveTab(result.actionPayload.tab as DetailTab);
     if (result.action === "SELECT_NEXT_ACCOUNT" && accounts.length) {
       const index = accounts.findIndex((item) => item.accountId === activeAccountId);
@@ -811,7 +826,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
             <section className="customer-workbench__queue-settings" aria-label="列表显示设置">
               <label className="customer-workbench__queue-density"><input type="checkbox" checked={compactQueue} onChange={(event) => setCompactQueue(event.target.checked)} /><span>紧凑列表</span></label>
               <label><span>每页数量</span><select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }}><option value="8">8</option><option value="12">12</option><option value="20">20</option></select></label>
-              <button type="button" onClick={() => void reloadDetail()}><Icon name="refresh" />刷新数据</button>
+              <button type="button" onClick={() => void refreshCrmData()}><Icon name="refresh" />刷新 CRM 数据</button>
             </section>
           ) : null}
           <label className="customer-workbench__search">
@@ -989,7 +1004,10 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         <div className="customer-workbench__quick-actions">
           <button type="button" disabled={assistantReplying} onClick={() => void submitAssistant("为当前客户生成跟进任务建议")}>生成跟进任务</button>
           <button type="button" disabled={assistantReplying} onClick={() => void submitAssistant("查看当前客户的风险信号")}>查看风险</button>
-          <button type="button" disabled={assistantReplying} onClick={() => setInteractionEditorOpen(true)}>整理互动记录</button>
+          <button type="button" disabled={assistantReplying || !activeAccountId} onClick={() => setInteractionEditorContext({
+            accountId: activeAccountId,
+            accountName: detail?.name || activeAccount?.name || "当前客户",
+          })}>整理互动记录</button>
           <button type="button" disabled={assistantReplying} onClick={() => void submitAssistant("切换到下一个客户")}>切换下个客户</button>
         </div>
         <div className="customer-workbench__composer">
@@ -1014,16 +1032,17 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         <RecommendationEditor key={editingRecommendation.recommendationId} item={editingRecommendation}
           onClose={() => setEditingRecommendation(null)} onSave={saveRecommendationEdit} />
       ) : null}
-      {interactionEditorOpen ? (
+      {interactionEditorContext ? (
         <InteractionEditor
           token={token}
-          accountId={activeAccountId}
-          accountName={detail?.name || activeAccount?.name || "当前客户"}
-          onClose={() => setInteractionEditorOpen(false)}
+          accountId={interactionEditorContext.accountId}
+          accountName={interactionEditorContext.accountName}
+          onClose={() => setInteractionEditorContext(null)}
           onConfirmed={async (batch) => {
-            setInteractionEditorOpen(false);
+            setInteractionEditorContext(null);
+            setActiveAccountId(batch.accountId);
             setNotice(batch.deduplicated ? "该互动记录已存在，未重复保存。" : "互动记录已确认并进入时间线。");
-            await reloadDetail();
+            await reloadDetail(batch.accountId);
             setActiveTab("timeline");
           }}
         />

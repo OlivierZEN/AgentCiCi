@@ -691,11 +691,11 @@ public class CustomerWorkbenchService {
         }
     }
 
-    private Map<String, Object> resolveUiAction(String text, Map<String, Object> customer) {
+    static Map<String, Object> resolveUiAction(String text, Map<String, Object> customer) {
         String input = blankToEmpty(text);
-        if (input.contains("老客户") || input.contains("客户经营"))
+        if (explicitModeSwitch(input, "老客户经营", "存量客户"))
             return mapOf("type", "SWITCH_MODE", "payload", Map.of("mode", "existing"), "requiresConfirmation", false);
-        if (input.contains("新客户") || input.contains("客户推进"))
+        if (explicitModeSwitch(input, "新客户推进"))
             return mapOf("type", "SWITCH_MODE", "payload", Map.of("mode", "new"), "requiresConfirmation", false);
         if (input.contains("下一个客户"))
             return mapOf("type", "SELECT_NEXT_ACCOUNT", "payload", Map.of(), "requiresConfirmation", false);
@@ -707,6 +707,16 @@ public class CustomerWorkbenchService {
             return mapOf("type", "PROPOSE_RECOMMENDATION", "payload", Map.of("accountId", customer.get("accountId"),
                     "recommendationType", "CREATE_TASK"), "requiresConfirmation", true);
         return mapOf("type", "NONE", "payload", Map.of(), "requiresConfirmation", false);
+    }
+
+    private static boolean explicitModeSwitch(String input, String... targets) {
+        String compact = blankToEmpty(input).replaceAll("\\s+", "");
+        for (String target : targets) {
+            String quoted = java.util.regex.Pattern.quote(target);
+            if (compact.matches("^(?:请)?(?:帮我)?(?:切换|打开|进入)(?:到|至)?" + quoted
+                    + "(?:页面|列表|模式)?[。！？.!?]*$")) return true;
+        }
+        return false;
     }
 
     @Transactional
