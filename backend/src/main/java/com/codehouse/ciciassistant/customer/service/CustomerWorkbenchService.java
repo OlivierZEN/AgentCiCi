@@ -58,6 +58,7 @@ public class CustomerWorkbenchService {
     private final SkillDefinitionService skillDefinitionService;
     private final AgentDefinitionService agentDefinitionService;
     private final ChatOrchestratorService chatOrchestratorService;
+    private final CustomerMemoryService customerMemoryService;
     private final ObjectMapper objectMapper;
 
     public CustomerWorkbenchService(CustomerWorkbenchSnapshotRepository snapshotRepository,
@@ -71,6 +72,7 @@ public class CustomerWorkbenchService {
                                     SkillDefinitionService skillDefinitionService,
                                     AgentDefinitionService agentDefinitionService,
                                     ChatOrchestratorService chatOrchestratorService,
+                                    CustomerMemoryService customerMemoryService,
                                     ObjectMapper objectMapper) {
         this.snapshotRepository = snapshotRepository;
         this.eventRepository = eventRepository;
@@ -83,6 +85,7 @@ public class CustomerWorkbenchService {
         this.skillDefinitionService = skillDefinitionService;
         this.agentDefinitionService = agentDefinitionService;
         this.chatOrchestratorService = chatOrchestratorService;
+        this.customerMemoryService = customerMemoryService;
         this.objectMapper = objectMapper;
     }
 
@@ -210,6 +213,16 @@ public class CustomerWorkbenchService {
         Map<String, Object> view = new LinkedHashMap<>(eventView(saved));
         view.put("deduplicated", false);
         return view;
+    }
+
+    @Transactional
+    public void attachInteractionArchive(String orgId, String userId, String eventId,
+                                         String batchId, String analysisJson, int evidenceCount) {
+        CustomerInteractionEventEntity event = eventRepository.findByOrgIdAndPublicId(orgId, eventId)
+                .orElseThrow(() -> new IllegalArgumentException("正式互动记录不存在"));
+        assertAccountAccess(orgId, userId, event.getCrmAccountId());
+        event.attachArchive(batchId, analysisJson, evidenceCount, 1);
+        eventRepository.save(event);
     }
 
     @Transactional
@@ -439,7 +452,9 @@ public class CustomerWorkbenchService {
                 "runId", agentResult.getOrDefault("runId", ""),
                 "model", agentResult.getOrDefault("model", Map.of()),
                 "resolvedSkills", agentResult.getOrDefault("resolvedSkills", List.of()),
-                "activeSkillCode", agentResult.getOrDefault("activeSkillCode", SKILL_CODE)
+                "activeSkillCode", agentResult.getOrDefault("activeSkillCode", SKILL_CODE),
+                "evidence", invocation.context().evidence(),
+                "contextMeta", invocation.context().metadata()
         );
     }
 
@@ -453,7 +468,9 @@ public class CustomerWorkbenchService {
                     "uiActions", List.of(invocation.uiAction()),
                     "accountId", invocation.accountId(),
                     "sessionId", invocation.sessionId(),
-                    "crmConnection", invocation.crmConnection()
+                    "crmConnection", invocation.crmConnection(),
+                    "evidence", invocation.context().evidence(),
+                    "contextMeta", invocation.context().metadata()
             )));
             emitter.send(SseEmitter.event().name("phase").data(mapOf("phase", "context_ready")));
         } catch (IOException ex) {
@@ -487,9 +504,11 @@ public class CustomerWorkbenchService {
         Map<String, Object> customer = accountDetail(orgId, userId, accountId);
         Map<String, Object> crmConnection = crmConnectionView(orgId, userId);
         String sessionId = assistantSessionId(userId, accountId);
-        String prompt = buildAssistantPrompt(userId, text, customer, crmConnection);
+        CustomerMemoryService.AssistantContext context = customerMemoryService.buildAssistantContext(
+                orgId, accountId, text, customer);
+        String prompt = buildAssistantPrompt(userId, text, context, crmConnection);
         Map<String, Object> uiAction = resolveUiAction(text, customer);
-        return new AssistantInvocation(accountId, customer, crmConnection, sessionId, prompt, uiAction);
+        return new AssistantInvocation(accountId, customer, crmConnection, sessionId, prompt, uiAction, context);
     }
 
     private record AssistantInvocation(String accountId,
@@ -497,7 +516,8 @@ public class CustomerWorkbenchService {
                                        Map<String, Object> crmConnection,
                                        String sessionId,
                                        String prompt,
-                                       Map<String, Object> uiAction) {}
+                                       Map<String, Object> uiAction,
+                                       CustomerMemoryService.AssistantContext context) {}
 
     private String assistantSessionId(String userId, String accountId) {
         String seed = blankToEmpty(userId) + ":" + blankToEmpty(accountId);
@@ -539,17 +559,17 @@ public class CustomerWorkbenchService {
 
     private String buildAssistantPrompt(String userId,
                                         String userMessage,
-                                        Map<String, Object> customer,
+                                        CustomerMemoryService.AssistantContext context,
                                         Map<String, Object> crmConnection) {
-        Object recentTimeline = customer.getOrDefault("timeline", List.of());
-        Object pendingRecommendations = customer.getOrDefault("recommendations", List.of());
         return """
                 [客户互动工作台上下文]
                 当前用户：%s
                 当前客户 CRM Account Id：%s
-                当前客户快照 JSON：%s
+                精简客户快照 JSON：%s
                 最近互动 JSON：%s
-                CRM 落地建议 JSON：%s
+                当前未闭环客户记忆 JSON：%s
+                本轮证据 JSON：%s
+                上下文范围 JSON：%s
                 CRM 连接状态 JSON：%s
 
                 [回答要求]
@@ -559,15 +579,18 @@ public class CustomerWorkbenchService {
                 4. 涉及 CRM 写回、价格承诺、合同解释、服务责任归因、关键人判断或客户敏感信息外发时，只能形成建议并要求用户确认。
                 5. 如果用户要求生成跟进任务、整理微信记录、查看风险或分析新/老客户经营，请直接给出可落地建议，不要说自己只是规则助手。
                 6. 不使用装饰性 emoji，不使用一级标题，不输出 Markdown 表格；需要对比时改用带标签的项目列表。
+                7. 引用事实时使用证据编号，例如 [E1]；多年已关闭事项不能作为当前待办，除非用户明确询问历史或该事项仍标记为 ACTIVE。
 
                 [用户问题]
                 %s
                 """.formatted(
                 userId,
-                customer.get("accountId"),
-                toJson(customer),
-                toJson(recentTimeline),
-                toJson(pendingRecommendations),
+                context.customer().get("accountId"),
+                toJson(context.customer()),
+                toJson(context.recentInteractions()),
+                toJson(context.activeMemories()),
+                toJson(context.evidence()),
+                toJson(context.metadata()),
                 toJson(crmConnection),
                 userMessage == null || userMessage.isBlank() ? "请根据当前客户互动上下文给出推进建议。" : userMessage);
     }
@@ -945,7 +968,11 @@ public class CustomerWorkbenchService {
                 "summary", item.getAiSummary(),
                 "sentiment", item.getSentiment(),
                 "intentTags", readList(item.getIntentTags()),
-                "lifecycleArea", item.getLifecycleArea()
+                "lifecycleArea", item.getLifecycleArea(),
+                "sourceBatchId", blankToEmpty(item.getSourceBatchId()),
+                "archiveAvailable", item.getSourceBatchId() != null && !item.getSourceBatchId().isBlank(),
+                "evidenceCount", item.getEvidenceCount(),
+                "analysisVersion", item.getAnalysisVersion()
         );
     }
 

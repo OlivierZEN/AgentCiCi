@@ -9,6 +9,7 @@ import {
   ChevronDown,
   ClipboardCheck,
   ClipboardList,
+  Database,
   ExternalLink,
   FileText,
   FileAudio,
@@ -54,6 +55,7 @@ import {
   createCustomerInteractionBatch,
   confirmCustomerInteractionBatch,
   getCustomerInteractionBatch,
+  getCustomerInteractionArchive,
   listCustomerInteractionBatches,
   retryCustomerInteractionBatch,
   viewCustomerInteractionAsset,
@@ -66,6 +68,8 @@ import {
   type CustomerWorkbenchAccount,
   type CustomerWorkbenchDetail,
   type CustomerInteractionBatch,
+  type CustomerInteractionArchive,
+  type CustomerAssistantEvidence,
 } from "./customerWorkbenchApi";
 
 type ChatMessage = {
@@ -75,6 +79,7 @@ type ChatMessage = {
   time: string;
   busy?: boolean;
   phase?: string;
+  evidence?: CustomerAssistantEvidence[];
 };
 
 type WorkbenchMode = "new" | "existing";
@@ -394,6 +399,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
   const [assistantExpanded, setAssistantExpanded] = useState(false);
   const [editingRecommendation, setEditingRecommendation] = useState<CustomerRecommendation | null>(null);
   const [interactionEditorContext, setInteractionEditorContext] = useState<{ accountId: string; accountName: string } | null>(null);
+  const [archiveEventId, setArchiveEventId] = useState("");
   const [loading, setLoading] = useState(false);
   const [notice, setNotice] = useState("");
   const [assistantInput, setAssistantInput] = useState("");
@@ -679,6 +685,9 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       await streamCustomerWorkbenchAssistant(token, { accountId: activeAccountId, message }, async (event) => {
         if (event.type === "workbench") {
           workbenchResult = event.result;
+          setAssistantMessages((prev) => prev.map((item) => item.id === assistantMessageId
+            ? { ...item, evidence: event.result.evidence ?? [] }
+            : item));
           return;
         }
         if (event.type === "phase") {
@@ -949,8 +958,8 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
         </nav>
 
         <section className="customer-workbench__content">
-          {activeTab === "overview" ? <Overview detail={detail} mode={workbenchMode} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} onOpenTab={setActiveTab} /> : null}
-          {activeTab === "timeline" ? <Timeline detail={detail} /> : null}
+          {activeTab === "overview" ? <Overview detail={detail} mode={workbenchMode} onAction={handleRecommendation} onFeedback={handleRecommendationFeedback} onNotice={setNotice} onOpenTab={setActiveTab} onOpenArchive={setArchiveEventId} /> : null}
+          {activeTab === "timeline" ? <Timeline detail={detail} onOpenArchive={setArchiveEventId} /> : null}
           {activeTab === "signals" ? <NewCustomerPanel detail={detail} /> : null}
           {activeTab === "service" ? <ExistingCustomerPanel detail={detail} focus="service" /> : null}
           {activeTab === "value" ? <ExistingCustomerPanel detail={detail} focus="value" /> : null}
@@ -995,6 +1004,14 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
                     ) : <ChatMarkdown content={message.text} busy={message.busy} />
                   ) : <p>{message.text}</p>}
                 </div>
+                {message.role === "assistant" && message.evidence?.length ? <div className="customer-workbench-message__evidence" aria-label="本轮回答依据">
+                  <strong>本轮依据</strong>
+                  {message.evidence.map((item) => item.archiveAvailable ? (
+                    <button key={item.evidenceId} type="button" onClick={() => setArchiveEventId(item.eventId)}>
+                      <span>{item.evidenceId}</span>{item.label}<time>{shortDate(item.occurredAt)}</time>
+                    </button>
+                  ) : <span key={item.evidenceId}><b>{item.evidenceId}</b>{item.label}<time>{shortDate(item.occurredAt)}</time></span>)}
+                </div> : null}
                 <span>{message.time}</span>
               </div>
               {message.role === "user" ? <span className="customer-workbench-message__avatar is-user" aria-hidden>{userName.trim().slice(0, 1) || "我"}</span> : null}
@@ -1047,6 +1064,15 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
           }}
         />
       ) : null}
+      {archiveEventId ? <InteractionArchiveDrawer
+        token={token}
+        eventId={archiveEventId}
+        onClose={() => setArchiveEventId("")}
+        onContinueAnalysis={(archive) => {
+          setArchiveEventId("");
+          void submitAssistant(`基于互动档案 ${archive.eventId} 分析本次沟通产生的风险、机会和下一步行动`);
+        }}
+      /> : null}
     </section>
   );
 }
@@ -1069,6 +1095,7 @@ function Overview({
   onFeedback,
   onNotice,
   onOpenTab,
+  onOpenArchive,
 }: {
   detail: CustomerWorkbenchDetail | null;
   mode: WorkbenchMode;
@@ -1076,6 +1103,7 @@ function Overview({
   onFeedback: (item: CustomerRecommendation, rating: "HELPFUL" | "NOT_HELPFUL") => void;
   onNotice: (message: string) => void;
   onOpenTab: (tab: DetailTab) => void;
+  onOpenArchive: (eventId: string) => void;
 }) {
   return (
     <div className="customer-workbench-overview-wrap">
@@ -1085,7 +1113,7 @@ function Overview({
             <h3>{mode === "new" ? "新客户互动时间线" : "老客户互动时间线"}</h3>
             <button type="button" className="customer-workbench__panel-filter" onClick={() => onOpenTab("timeline")}><span>全部类型</span><Icon name="chevronDown" /></button>
           </header>
-          <TimelineCards detail={detail} compact />
+          <TimelineCards detail={detail} compact onOpenArchive={onOpenArchive} />
           <button type="button" className="customer-workbench__more" onClick={() => onOpenTab("timeline")}>查看全部互动记录 ›</button>
         </section>
         <section className="customer-workbench-panel customer-workbench-panel--recommendations">
@@ -1102,7 +1130,7 @@ function Overview({
   );
 }
 
-function Timeline({ detail }: { detail: CustomerWorkbenchDetail | null }) {
+function Timeline({ detail, onOpenArchive }: { detail: CustomerWorkbenchDetail | null; onOpenArchive: (eventId: string) => void }) {
   const [source, setSource] = useState("all");
   const events = detail?.timeline ?? [];
   return (
@@ -1111,7 +1139,7 @@ function Timeline({ detail }: { detail: CustomerWorkbenchDetail | null }) {
         <option value="all">全部类型</option>
         <option value="wechat">微信</option><option value="phone">电话</option><option value="meeting">会议</option><option value="task">CRM 任务</option>
       </select></header>
-      <TimelineCards detail={{ ...detail, timeline: source === "all" ? events : events.filter((item) => {
+      <TimelineCards onOpenArchive={onOpenArchive} detail={{ ...detail, timeline: source === "all" ? events : events.filter((item) => {
         const normalized = item.sourceType.toUpperCase();
         if (source === "wechat") return normalized.includes("WECHAT");
         if (source === "phone") return normalized.includes("PHONE");
@@ -1122,7 +1150,11 @@ function Timeline({ detail }: { detail: CustomerWorkbenchDetail | null }) {
   );
 }
 
-function TimelineCards({ detail, compact = false }: { detail: CustomerWorkbenchDetail | null; compact?: boolean }) {
+function TimelineCards({ detail, compact = false, onOpenArchive }: {
+  detail: CustomerWorkbenchDetail | null;
+  compact?: boolean;
+  onOpenArchive?: (eventId: string) => void;
+}) {
   return (
     <div className={`customer-workbench-timeline${compact ? " is-compact" : ""}`}>
       {(detail?.timeline ?? []).slice(0, compact ? 5 : undefined).map((item) => (
@@ -1136,6 +1168,7 @@ function TimelineCards({ detail, compact = false }: { detail: CustomerWorkbenchD
             <p>{item.summary}</p>
             <span>来源：{lifecycleSourceLabel(item.sourceType)} · {item.lifecycleArea}</span>
             {item.intentTags?.[0] ? <em>{item.intentTags[0]}</em> : null}
+            {item.archiveAvailable && onOpenArchive ? <button type="button" className="customer-workbench-timeline__archive" onClick={() => onOpenArchive(item.eventId)}><Database aria-hidden />查看档案</button> : null}
           </div>
         </article>
       ))}
@@ -1363,6 +1396,95 @@ function RecommendationEditor({ item, onClose, onSave }: {
       </form>
     </div>
   );
+}
+
+function InteractionArchiveDrawer({ token, eventId, onClose, onContinueAnalysis }: {
+  token: string;
+  eventId: string;
+  onClose: () => void;
+  onContinueAnalysis: (archive: CustomerInteractionArchive) => void;
+}) {
+  const [archive, setArchive] = useState<CustomerInteractionArchive | null>(null);
+  const [tab, setTab] = useState<"confirmed" | "analysis" | "sources">("confirmed");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setArchive(null);
+    setError("");
+    void getCustomerInteractionArchive(token, eventId)
+      .then((value) => { if (active) setArchive(value); })
+      .catch((reason) => { if (active) setError(reason instanceof Error ? reason.message : String(reason)); });
+    return () => { active = false; };
+  }, [token, eventId]);
+
+  const analysis = archive?.analysis ?? {};
+  return <div className="customer-workbench-archive-overlay" role="presentation" onMouseDown={(event) => {
+    if (event.target === event.currentTarget) onClose();
+  }}>
+    <aside className="customer-workbench-archive" role="dialog" aria-modal="true" aria-labelledby="interaction-archive-title">
+      <header>
+        <div>
+          <span>客户互动档案</span>
+          <h3 id="interaction-archive-title">{archive?.subject || "正在读取互动档案"}</h3>
+          {archive ? <p>{formatTimelineDateTime(archive.occurredAt).replace("\n", " ")} · {lifecycleSourceLabel(archive.sourceType)} · 分析版本 {archive.analysisVersion ?? 1}</p> : null}
+        </div>
+        <button type="button" className="cici-product-icon-button" aria-label="关闭互动档案" onClick={onClose}><X aria-hidden /></button>
+      </header>
+
+      {error ? <div className="customer-workbench-archive__error"><AlertTriangle aria-hidden />{error}</div> : null}
+      {!archive && !error ? <div className="customer-workbench-archive__loading"><LoaderCircle aria-hidden />正在读取确认稿、分析和原始材料...</div> : null}
+      {archive ? <>
+        <nav className="customer-workbench-archive__tabs" aria-label="互动档案内容">
+          <button type="button" className={tab === "confirmed" ? "is-active" : ""} onClick={() => setTab("confirmed")}>确认记录</button>
+          <button type="button" className={tab === "analysis" ? "is-active" : ""} onClick={() => setTab("analysis")}>AI 分析</button>
+          <button type="button" className={tab === "sources" ? "is-active" : ""} onClick={() => setTab("sources")}>原始材料 {archive.assets.length}</button>
+        </nav>
+        <div className="customer-workbench-archive__body">
+          {tab === "confirmed" ? <>
+            <section><h4>用户确认稿</h4><p className="customer-workbench-archive__prose">{archive.confirmedText}</p></section>
+            <section><h4>当前记忆项</h4>{archive.memory.length ? <div className="customer-workbench-archive__memory">
+              {archive.memory.map((item) => <div key={item.memoryId}><span>{memoryTypeLabel(item.type)}</span><p>{item.content}</p><small>置信度 {Math.round(item.confidence * 100)}% · {item.status}</small></div>)}
+            </div> : <p className="customer-workbench-archive__empty">本条互动没有可沉淀的结构化记忆。</p>}</section>
+          </> : null}
+          {tab === "analysis" ? <section className="customer-workbench-archive__analysis">
+            <h4>AI 结构化分析</h4>
+            {analysis.summary ? <p>{analysis.summary}</p> : null}
+            <AnalysisGroup title="关键事实" items={analysis.facts} />
+            <AnalysisGroup title="客户诉求" items={analysis.customerNeeds} />
+            <AnalysisGroup title="风险" items={analysis.risks} tone="risk" />
+            <AnalysisGroup title="机会" items={analysis.opportunities} tone="opportunity" />
+            <AnalysisGroup title="客户承诺" items={analysis.commitments} />
+            <AnalysisGroup title="下一步行动" items={analysis.nextActions} />
+            <AnalysisGroup title="待确认" items={analysis.pendingQuestions} tone="pending" />
+          </section> : null}
+          {tab === "sources" ? <section><h4>原始材料与提取内容</h4>{archive.assets.length ? <div className="customer-workbench-archive__sources">
+            {archive.assets.map((asset) => <article key={asset.assetId}>
+              <FileAssetIcon inputType={asset.inputType} />
+              <div><strong>{asset.name}</strong><span>{assetStatusLabel(asset.status)} · {formatFileSize(asset.size)}</span>{asset.extractedText ? <p>{asset.extractedText}</p> : null}</div>
+              <button type="button" onClick={() => void viewCustomerInteractionAsset(token, archive.batchId, asset.assetId)}>查看原件</button>
+            </article>)}
+          </div> : <p className="customer-workbench-archive__empty">本次互动由口述或粘贴文本形成，没有文件原件。</p>}</section> : null}
+        </div>
+        <footer>
+          <span>档案 ID：{archive.eventId}</span>
+          <button type="button" onClick={() => onContinueAnalysis(archive)}>基于本次互动继续分析</button>
+        </footer>
+      </> : null}
+    </aside>
+  </div>;
+}
+
+function memoryTypeLabel(type: string) {
+  return ({
+    FACT: "事实",
+    NEED: "诉求",
+    RISK: "风险",
+    OPPORTUNITY: "机会",
+    COMMITMENT: "承诺",
+    NEXT_ACTION: "下一步行动",
+    PENDING_QUESTION: "待确认",
+  } as Record<string, string>)[type] || type;
 }
 
 function InteractionEditor({ token, accountId, accountName, onClose, onConfirmed }: {

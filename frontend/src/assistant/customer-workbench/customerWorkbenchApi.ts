@@ -53,6 +53,10 @@ export type CustomerInteractionEvent = {
   sentiment: string;
   intentTags: string[];
   lifecycleArea: string;
+  sourceBatchId?: string;
+  archiveAvailable?: boolean;
+  evidenceCount?: number;
+  analysisVersion?: number;
 };
 
 export type CustomerInteractionAsset = {
@@ -99,6 +103,38 @@ export type CustomerInteractionBatch = {
   assets: CustomerInteractionAsset[];
   deduplicated?: boolean;
   event?: CustomerInteractionEvent;
+};
+
+export type CustomerMemoryItem = {
+  memoryId: string;
+  accountId: string;
+  sourceEventId: string;
+  sourceBatchId: string;
+  type: string;
+  content: string;
+  status: string;
+  confidence: number;
+  occurredAt: string;
+  evidence: string[];
+};
+
+export type CustomerInteractionArchive = CustomerInteractionEvent & {
+  batchId: string;
+  confirmedText: string;
+  combinedText: string;
+  analysis: CustomerInteractionAnalysis;
+  assets: CustomerInteractionAsset[];
+  memory: CustomerMemoryItem[];
+};
+
+export type CustomerAssistantEvidence = {
+  evidenceId: string;
+  eventId: string;
+  batchId: string;
+  occurredAt: string;
+  label: string;
+  content: string;
+  archiveAvailable: boolean;
 };
 
 export type CustomerRecommendation = {
@@ -161,6 +197,14 @@ export type CustomerAssistantResult = {
   model?: Record<string, unknown>;
   resolvedSkills?: string[];
   activeSkillCode?: string;
+  evidence?: CustomerAssistantEvidence[];
+  contextMeta?: {
+    recentWindowDays?: number;
+    recentInteractionCount?: number;
+    activeMemoryCount?: number;
+    evidenceCount?: number;
+    historyRequested?: boolean;
+  };
 };
 
 export type CustomerAssistantHistoryMessage = { role: "user" | "assistant" | string; content: string; createdAt: string };
@@ -292,6 +336,14 @@ export function listCustomerInteractionBatches(token: string, accountId: string)
 
 export function getCustomerInteractionBatch(token: string, batchId: string) {
   return requestJson<CustomerInteractionBatch>(token, `/customer-workbench/interaction-batches/${encodeURIComponent(batchId)}`);
+}
+
+export function getCustomerInteractionArchive(token: string, eventId: string) {
+  return requestJson<CustomerInteractionArchive>(token, `/customer-workbench/interaction-archive/${encodeURIComponent(eventId)}`);
+}
+
+export function getCustomerMemory(token: string, accountId: string) {
+  return requestJson<CustomerMemoryItem[]>(token, `/customer-workbench/accounts/${encodeURIComponent(accountId)}/memory`);
 }
 
 export async function viewCustomerInteractionAsset(token: string, batchId: string, assetId: string) {

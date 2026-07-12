@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.customer.service.CustomerWorkbenchService;
 import com.codehouse.ciciassistant.customer.service.CustomerInteractionIngestionService;
 import com.codehouse.ciciassistant.customer.service.CustomerInteractionIngestionService.ConfirmationCommand;
+import com.codehouse.ciciassistant.customer.service.CustomerMemoryService;
 import com.codehouse.ciciassistant.customer.service.CustomerWorkbenchService.AssistantCommand;
 import com.codehouse.ciciassistant.customer.service.CustomerWorkbenchService.FollowCommand;
 import com.codehouse.ciciassistant.customer.service.CustomerWorkbenchService.InteractionCommand;
@@ -38,11 +39,14 @@ public class CustomerWorkbenchController {
 
     private final CustomerWorkbenchService service;
     private final CustomerInteractionIngestionService ingestionService;
+    private final CustomerMemoryService memoryService;
 
     public CustomerWorkbenchController(CustomerWorkbenchService service,
-                                       CustomerInteractionIngestionService ingestionService) {
+                                       CustomerInteractionIngestionService ingestionService,
+                                       CustomerMemoryService memoryService) {
         this.service = service;
         this.ingestionService = ingestionService;
+        this.memoryService = memoryService;
     }
 
     @GetMapping("/accounts")
@@ -131,6 +135,22 @@ public class CustomerWorkbenchController {
     public ApiResponse<Map<String, Object>> confirmInteractionBatch(@PathVariable String batchId,
                                                                     @RequestBody ConfirmationCommand command) {
         return ApiResponse.ok(ingestionService.confirm(orgId(), userId(), batchId, command), "互动记录已确认并归集");
+    }
+
+    @GetMapping("/accounts/{accountId}/interaction-archive")
+    public ApiResponse<List<Map<String, Object>>> interactionArchive(@PathVariable String accountId) {
+        return ApiResponse.ok(ingestionService.interactionArchive(orgId(), userId(), accountId));
+    }
+
+    @GetMapping("/interaction-archive/{eventId}")
+    public ApiResponse<Map<String, Object>> interactionArchiveDetail(@PathVariable String eventId) {
+        return ApiResponse.ok(ingestionService.interactionArchiveDetail(orgId(), userId(), eventId));
+    }
+
+    @GetMapping("/accounts/{accountId}/memory")
+    public ApiResponse<List<Map<String, Object>>> customerMemory(@PathVariable String accountId) {
+        service.accountDetail(orgId(), userId(), accountId);
+        return ApiResponse.ok(memoryService.activeMemory(orgId(), accountId));
     }
 
     @GetMapping("/accounts/{accountId}/recommendations")

@@ -543,7 +543,10 @@ public class CustomerCrmProjectionService {
             out.add(mapOf("eventId", item.getPublicId(), "accountId", accountId, "sourceType", item.getSourceType(),
                     "occurredAt", item.getOccurredAt().toString(), "subject", item.getSubject(), "summary", item.getAiSummary(),
                     "sentiment", item.getSentiment(), "intentTags", readList(item.getIntentTags()),
-                    "lifecycleArea", item.getLifecycleArea(), "sourceRecordId", item.getPublicId()));
+                    "lifecycleArea", item.getLifecycleArea(), "sourceRecordId", item.getPublicId(),
+                    "sourceBatchId", item.getSourceBatchId() == null ? "" : item.getSourceBatchId(),
+                    "archiveAvailable", item.getSourceBatchId() != null && !item.getSourceBatchId().isBlank(),
+                    "evidenceCount", item.getEvidenceCount(), "analysisVersion", item.getAnalysisVersion()));
         }
         return out.stream().sorted(Comparator.comparing(item -> instant(item, "occurredAt"),
                 Comparator.nullsLast(Comparator.reverseOrder()))).toList();

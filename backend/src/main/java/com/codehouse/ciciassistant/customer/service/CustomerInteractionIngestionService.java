@@ -7,6 +7,8 @@ import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetEntit
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionBatchEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionBatchRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -64,7 +66,9 @@ public class CustomerInteractionIngestionService {
 
     private final CustomerInteractionBatchRepository batchRepository;
     private final CustomerInteractionAssetRepository assetRepository;
+    private final CustomerInteractionEventRepository eventRepository;
     private final CustomerWorkbenchService workbenchService;
+    private final CustomerMemoryService customerMemoryService;
     private final AliyunAsrService asrService;
     private final AliyunBailianClient modelClient;
     private final ModelRouterService modelRouterService;
@@ -75,7 +79,9 @@ public class CustomerInteractionIngestionService {
 
     public CustomerInteractionIngestionService(CustomerInteractionBatchRepository batchRepository,
                                                CustomerInteractionAssetRepository assetRepository,
+                                               CustomerInteractionEventRepository eventRepository,
                                                CustomerWorkbenchService workbenchService,
+                                               CustomerMemoryService customerMemoryService,
                                                AliyunAsrService asrService,
                                                AliyunBailianClient modelClient,
                                                ModelRouterService modelRouterService,
@@ -85,7 +91,9 @@ public class CustomerInteractionIngestionService {
                                                @Value("${app.customer-interaction.storage-dir:./data/kb-files/customer-interactions}") String storageDir) {
         this.batchRepository = batchRepository;
         this.assetRepository = assetRepository;
+        this.eventRepository = eventRepository;
         this.workbenchService = workbenchService;
+        this.customerMemoryService = customerMemoryService;
         this.asrService = asrService;
         this.modelClient = modelClient;
         this.modelRouterService = modelRouterService;
@@ -156,7 +164,7 @@ public class CustomerInteractionIngestionService {
     }
 
     public AssetDownload asset(String orgId, String userId, String batchPublicId, String assetPublicId) {
-        CustomerInteractionBatchEntity batch = requireOwnedBatch(orgId, userId, batchPublicId);
+        CustomerInteractionBatchEntity batch = requireVisibleBatch(orgId, userId, batchPublicId);
         CustomerInteractionAssetEntity asset = assetRepository.findByOrgIdAndPublicId(orgId, assetPublicId)
                 .filter(item -> item.getBatchId().equals(batch.getId()))
                 .orElseThrow(() -> new IllegalArgumentException("原始材料不存在"));
@@ -202,12 +210,41 @@ public class CustomerInteractionIngestionService {
         Map<String, Object> saved = workbenchService.saveInteraction(orgId, userId, batch.getCrmAccountId(),
                 new CustomerWorkbenchService.InteractionCommand(source, subject, content, occurredAt));
         String eventId = String.valueOf(saved.getOrDefault("eventId", ""));
+        List<CustomerInteractionAssetEntity> assets = assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId());
+        workbenchService.attachInteractionArchive(orgId, userId, eventId, batch.getPublicId(),
+                batch.getAnalysisJson(), assets.size());
+        customerMemoryService.replaceForEvent(orgId, batch.getCrmAccountId(), eventId, batch.getPublicId(),
+                batch.getOccurredAt(), batch.getAnalysisJson(), assets.stream().map(CustomerInteractionAssetEntity::getPublicId).toList());
         batch.markConfirmed(eventId);
         batchRepository.save(batch);
-        Map<String, Object> result = new LinkedHashMap<>(batchView(batch, assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId())));
+        Map<String, Object> result = new LinkedHashMap<>(batchView(batch, assets));
         result.put("event", saved);
         result.put("deduplicated", Boolean.TRUE.equals(saved.get("deduplicated")));
         return result;
+    }
+
+    public List<Map<String, Object>> interactionArchive(String orgId, String userId, String accountId) {
+        workbenchService.accountDetail(orgId, userId, accountId);
+        return eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
+                .filter(item -> item.getSourceBatchId() != null && !item.getSourceBatchId().isBlank())
+                .map(this::archiveSummary).toList();
+    }
+
+    public Map<String, Object> interactionArchiveDetail(String orgId, String userId, String eventId) {
+        CustomerInteractionEventEntity event = eventRepository.findByOrgIdAndPublicId(orgId, eventId)
+                .orElseThrow(() -> new IllegalArgumentException("互动档案不存在"));
+        workbenchService.accountDetail(orgId, userId, event.getCrmAccountId());
+        CustomerInteractionBatchEntity batch = batchRepository.findByOrgIdAndPublicId(orgId, event.getSourceBatchId())
+                .orElseThrow(() -> new IllegalArgumentException("互动档案缺少来源批次"));
+        List<CustomerInteractionAssetEntity> assets = assetRepository.findByBatchIdOrderBySortOrderAsc(batch.getId());
+        Map<String, Object> view = new LinkedHashMap<>(archiveSummary(event));
+        view.put("confirmedText", event.getRawSummary());
+        view.put("combinedText", batch.getCombinedText());
+        view.put("analysis", parseAnalysis(event.getAnalysisJson()));
+        view.put("assets", assets.stream().map(this::assetView).toList());
+        view.put("memory", customerMemoryService.activeMemory(orgId, event.getCrmAccountId()).stream()
+                .filter(item -> eventId.equals(String.valueOf(item.get("sourceEventId")))).toList());
+        return view;
     }
 
     void processBatch(String publicId) {
@@ -493,6 +530,22 @@ public class CustomerInteractionIngestionService {
                 Map.entry("errorMessage", asset.getErrorMessage()));
     }
 
+    private Map<String, Object> archiveSummary(CustomerInteractionEventEntity event) {
+        return Map.ofEntries(
+                Map.entry("eventId", event.getPublicId()),
+                Map.entry("accountId", event.getCrmAccountId()),
+                Map.entry("batchId", event.getSourceBatchId() == null ? "" : event.getSourceBatchId()),
+                Map.entry("sourceType", event.getSourceType()),
+                Map.entry("occurredAt", event.getOccurredAt().toString()),
+                Map.entry("subject", event.getSubject()),
+                Map.entry("summary", event.getAiSummary()),
+                Map.entry("sentiment", event.getSentiment()),
+                Map.entry("intentTags", parseList(event.getIntentTags())),
+                Map.entry("analysisVersion", event.getAnalysisVersion()),
+                Map.entry("evidenceCount", event.getEvidenceCount()),
+                Map.entry("archiveAvailable", true));
+    }
+
     private Object parseAnalysis(String json) {
         try { return objectMapper.readValue(blank(json).isBlank() ? "{}" : json, MAP_TYPE); }
         catch (Exception ex) { return Map.of(); }
@@ -502,6 +555,18 @@ public class CustomerInteractionIngestionService {
         return batchRepository.findByOrgIdAndPublicId(orgId, publicId)
                 .filter(batch -> batch.getCreatedBy().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("互动采集批次不存在或无权访问"));
+    }
+
+    private CustomerInteractionBatchEntity requireVisibleBatch(String orgId, String userId, String publicId) {
+        CustomerInteractionBatchEntity batch = batchRepository.findByOrgIdAndPublicId(orgId, publicId)
+                .orElseThrow(() -> new IllegalArgumentException("互动采集批次不存在或无权访问"));
+        workbenchService.accountDetail(orgId, userId, batch.getCrmAccountId());
+        return batch;
+    }
+
+    private List<Object> parseList(String json) {
+        try { return objectMapper.readValue(blank(json).isBlank() ? "[]" : json, new TypeReference<>() {}); }
+        catch (Exception ex) { return List.of(); }
     }
 
     private void validateUploads(List<MultipartFile> files, String narration, String pasted) {

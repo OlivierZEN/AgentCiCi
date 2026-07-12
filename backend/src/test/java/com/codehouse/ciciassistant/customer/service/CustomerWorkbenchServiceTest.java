@@ -68,6 +68,7 @@ class CustomerWorkbenchServiceTest {
         SkillDefinitionService skillDefinitionService = mock(SkillDefinitionService.class);
         AgentDefinitionService agentDefinitionService = mock(AgentDefinitionService.class);
         ChatOrchestratorService chatOrchestratorService = mock(ChatOrchestratorService.class);
+        CustomerMemoryService customerMemoryService = mock(CustomerMemoryService.class);
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository,
                 eventRepository,
@@ -80,6 +81,7 @@ class CustomerWorkbenchServiceTest {
                 skillDefinitionService,
                 agentDefinitionService,
                 chatOrchestratorService,
+                customerMemoryService,
                 new ObjectMapper());
 
         String orgId = "org-demo";
@@ -131,6 +133,13 @@ class CustomerWorkbenchServiceTest {
         when(recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(orgId, accountId, CustomerWorkbenchRecommendationEntity.STATUS_PENDING))
                 .thenReturn(1L);
         when(cloudccAccessTokenService.getSessionContext(orgId, userId)).thenReturn(Optional.empty());
+        when(customerMemoryService.buildAssistantContext(eq(orgId), eq(accountId), anyString(), anyMap()))
+                .thenReturn(new CustomerMemoryService.AssistantContext(
+                        Map.of("accountId", accountId, "name", "北京智造科技有限公司"),
+                        List.of(Map.of("eventId", "evt-1", "summary", "客户关注实施周期和 MES 集成能力")),
+                        List.of(),
+                        List.of(Map.of("evidenceId", "E1", "eventId", "evt-1", "label", "微信沟通")),
+                        Map.of("recentWindowDays", 90)));
         when(chatOrchestratorService.chat(
                 eq(orgId),
                 eq(userId),
@@ -235,7 +244,7 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
                 crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, skillDefinitionService,
-                agentDefinitionService, chatOrchestratorService, new ObjectMapper());
+                agentDefinitionService, chatOrchestratorService, mock(CustomerMemoryService.class), new ObjectMapper());
         CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
                 "rec-write", "org-demo", "001-demo", "CREATE_TASK", "创建跟进任务", "客户要求三日内反馈",
                 BigDecimal.valueOf(.92), """
@@ -283,7 +292,7 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
                 crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, mock(SkillDefinitionService.class),
-                mock(AgentDefinitionService.class), mock(ChatOrchestratorService.class), new ObjectMapper());
+                mock(AgentDefinitionService.class), mock(ChatOrchestratorService.class), mock(CustomerMemoryService.class), new ObjectMapper());
         CustomerWorkbenchRecommendationEntity recommendation = new CustomerWorkbenchRecommendationEntity(
                 "rec-recover", "org-demo", "001-demo", "CREATE_TASK", "创建跟进任务", "客户要求反馈",
                 BigDecimal.valueOf(.92), "{\"subject\":\"反馈方案\"}");
@@ -334,7 +343,7 @@ class CustomerWorkbenchServiceTest {
         CustomerWorkbenchService service = new CustomerWorkbenchService(
                 snapshotRepository, eventRepository, recommendationRepository, recommendationFeedbackRepository, writeAuditRepository,
                 crmProjectionService, cloudccOpenApiService, cloudccAccessTokenService, skillDefinitionService,
-                agentDefinitionService, chatOrchestratorService, new ObjectMapper());
+                agentDefinitionService, chatOrchestratorService, mock(CustomerMemoryService.class), new ObjectMapper());
         CustomerWorkbenchSnapshotEntity snapshot = new CustomerWorkbenchSnapshotEntity(
                 "cw-history", "org-demo", "001-demo", "客户甲", "王销售", "NEW",
                 80, 70, 1, 1, "{\"stage\":\"需求确认\",\"risks\":[\"预算待确认\"]}");

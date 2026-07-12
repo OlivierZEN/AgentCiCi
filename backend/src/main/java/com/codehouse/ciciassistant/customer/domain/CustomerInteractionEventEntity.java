@@ -52,6 +52,18 @@ public class CustomerInteractionEventEntity {
     @Column(name = "lifecycle_area", nullable = false, length = 32)
     private String lifecycleArea;
 
+    @Column(name = "source_batch_id", length = 64)
+    private String sourceBatchId;
+
+    @Column(name = "analysis_json", nullable = false, columnDefinition = "TEXT")
+    private String analysisJson;
+
+    @Column(name = "evidence_count", nullable = false)
+    private int evidenceCount;
+
+    @Column(name = "analysis_version", nullable = false)
+    private int analysisVersion;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -85,6 +97,9 @@ public class CustomerInteractionEventEntity {
         this.sentiment = sentiment;
         this.intentTags = intentTags;
         this.lifecycleArea = lifecycleArea;
+        this.analysisJson = "{}";
+        this.evidenceCount = 0;
+        this.analysisVersion = 1;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
     }
@@ -102,6 +117,18 @@ public class CustomerInteractionEventEntity {
     public String getSentiment() { return sentiment; }
     public String getIntentTags() { return intentTags; }
     public String getLifecycleArea() { return lifecycleArea; }
+    public String getSourceBatchId() { return sourceBatchId; }
+    public String getAnalysisJson() { return analysisJson; }
+    public int getEvidenceCount() { return evidenceCount; }
+    public int getAnalysisVersion() { return analysisVersion; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public void attachArchive(String sourceBatchId, String analysisJson, int evidenceCount, int analysisVersion) {
+        this.sourceBatchId = sourceBatchId;
+        this.analysisJson = analysisJson == null || analysisJson.isBlank() ? "{}" : analysisJson;
+        this.evidenceCount = Math.max(0, evidenceCount);
+        this.analysisVersion = Math.max(1, analysisVersion);
+        this.updatedAt = Instant.now();
+    }
 }

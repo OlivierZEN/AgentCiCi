@@ -16,6 +16,7 @@ import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetEntit
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionAssetRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionBatchEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerInteractionBatchRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
@@ -62,7 +63,9 @@ class CustomerInteractionIngestionServiceTest {
         service = new CustomerInteractionIngestionService(
                 batchRepository,
                 assetRepository,
+                mock(CustomerInteractionEventRepository.class),
                 workbenchService,
+                mock(CustomerMemoryService.class),
                 mock(AliyunAsrService.class),
                 mock(AliyunBailianClient.class),
                 modelRouterService,
