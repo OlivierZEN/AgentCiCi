@@ -1,0 +1,48 @@
+task_id: TASK-196
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-12T04:45:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-102-customer-workbench-context-stability.md
+task_status_path: .claw/tasks/TASK-196.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/customer-workbench/**
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-102-customer-workbench-context-stability.md
+  - .claw/tasks/TASK-196.md
+  - .claw/assignments/TASK-196.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-100-large-crm-organization-async-sync.md
+  - docs/specs/FEAT-102-customer-workbench-context-stability.md
+task_boundary:
+  - "修复互动整理和助手分析引发的客户上下文、队列与同步状态重置，不改变 CRM 权限、互动数据模型或页面视觉语言。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-12T04:43:00Z; production logs correlate interaction confirmation with refresh=true full sync and active-account replacement."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"

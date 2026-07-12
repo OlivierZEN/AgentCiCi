@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T04:11:00Z
+updated_at: 2026-07-12T04:45:00Z
 updated_by: MANAGER-001
-phase: security-rules-platform
-active_task: "TASK-170"
-next_action: "Continue TASK-170 security rules platform work; monitor production 2.5.8 customer timeline rendering."
+phase: customer-workbench-context-stability
+active_task: "TASK-196"
+next_action: "Prevent interaction confirmation and assistant analysis from resetting the selected customer or customer queue."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-196 is in progress: production logs confirm interaction confirmation starts an unnecessary full CRM refresh; refreshed queue reconciliation replaces a selected customer that is not on the current page, while broad assistant keyword matching can also clear state after a long reply.
 
 - TASK-195 is done in production `2.5.8`: compact and full customer interaction timelines display `YYYY-MM-DD` plus `HH:mm` on two stable lines, with no date-internal wrapping.
 - TASK-195 evidence: frontend 62 tests/build passed; a real 22-event timeline included visible 2026 and 2023 records, all sampled labels had four-digit years, the icon/vertical-axis delta was 0px, and the page had no outer overflow or business error.
