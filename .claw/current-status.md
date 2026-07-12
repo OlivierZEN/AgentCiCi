@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T02:45:57Z
+updated_at: 2026-07-12T03:05:00Z
 updated_by: MANAGER-001
-phase: security-rules-platform
-active_task: "TASK-170"
-next_action: "Resume TASK-170 security rules platform after the completed customer queue ordering hotfix."
+phase: global-customer-search-focus
+active_task: "TASK-194"
+next_action: "Implement all-visible CRM customer name search and remove nested product input focus frames."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-194 is ready: customer-name search will bypass queue mode/filter/cache limits through permission-scoped CloudCC Account search; product-shell input focus will use one border layer without shadow or extra outline.
 
 - TASK-193 is done in production `2.5.3`: new-customer advancement and existing-customer operations both default to recent-interaction descending order; missing interaction timestamps stay last and ties use deterministic account ordering.
 - TASK-193 evidence: backend 10 tests, frontend 59 tests/build, release backup/health/public smoke and real large-organization default-query checks passed; both modes returned 12 rows in descending timestamp order with no post-release errors.

@@ -1,0 +1,51 @@
+task_id: TASK-194
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-12T03:05:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-101-global-customer-search-and-field-focus.md
+task_status_path: .claw/tasks/TASK-194.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - frontend/src/assistant/customer-workbench/**
+  - frontend/src/assistant/cici-ui.css
+  - frontend/src/styles.css
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-101-global-customer-search-and-field-focus.md
+  - .claw/tasks/TASK-194.md
+  - .claw/assignments/TASK-194.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-100-large-crm-organization-async-sync.md
+  - docs/specs/FEAT-101-global-customer-search-and-field-focus.md
+task_boundary:
+  - "实现客户名称全局搜索、缓存外详情加载和认证后输入焦点基础样式，不改变 CRM 权限、对象元数据或客户分类规则。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-12T03:05:00Z; current search was confirmed to be mode/filter/cache bounded, and CloudCC OpenAPI name-like expression was verified through cc-customization-expert-msapi."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+

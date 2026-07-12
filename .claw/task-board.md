@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T02:45:57Z
+updated_at: 2026-07-12T03:05:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-194 - 全量客户名称搜索与产品输入焦点治理
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-101-global-customer-search-and-field-focus.md`
+- task_status_path: `.claw/tasks/TASK-194.md`
+- assignment_path: `.claw/assignments/TASK-194.yaml`
+- blocked_by: `none`
+- next_action: Implement permission-scoped global Account search, external-result detail loading and shared single-layer field focus.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
