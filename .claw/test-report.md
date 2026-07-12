@@ -6269,3 +6269,10 @@ last_run_status: passed
   - Command: `mvn -q -Dmaven.repo.local=.m2/repository -Dtest=CustomerDynamicScoringServiceTest,CustomerCrmProjectionServiceTest,CustomerInteractionIngestionServiceTest,CustomerWorkbenchServiceTest test` in `backend/`.
   - Result: success, 18 tests, zero failures/errors.
   - Notes: verifies old analysis becomes pending-only evidence at a neutral 50 baseline, repeated reads are idempotent, and current scoring/projection/ingestion behavior remains green.
+- Historical signal backfill production release:
+  - Result: success; Git commit/tag `ae6643c109a8` / `2.6.1`, backend index `sha256:36efd141a73d5650810e9f3d25c742385f26012b112a5845a811aa758399ec84`, frontend index `sha256:f88f747357c8126d9bd403dd208437f940145d39205112358d57a42ab3492ab1`.
+  - Backup: `/opt/cici/backups/20260712-195131-before-2.6.1-task198-history-backfill`; all four artifacts are non-empty.
+  - Runtime: backend/frontend healthy on `2.6.1`, state services healthy on `2.3.4`, health `UP`, version `2.6.1 / ae6643c109a8`, Nginx valid and public workbench HTTP 200.
+  - Real data: organization `org2sva14i4udjmi2t4s` produced 2 pending signals and organization `org5nszpgj99jaysxv6y` produced 8; both snapshots remained `healthScore=50`, `activeSignalCount=0`.
+  - Idempotence: two consecutive production explanation reads returned `50/0/2/2`; persisted signal count remained 2.
+  - Stable-window logs: backend scoring errors `0`, Nginx 5xx `0`. Restart-window stream 502 responses ended when the backend became healthy and did not recur.

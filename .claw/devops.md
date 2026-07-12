@@ -17,6 +17,13 @@ status: active
 
 ## Latest Release
 
+- 2.6.1 TASK-198 historical scoring evidence backfill on 2026-07-12:
+  - Git commit/tag `ae6643c109a8` / `2.6.1`; confirmed archives missing the new scoring contract are lazily and idempotently converted to 60%-confidence pending evidence, while new-contract signals keep their original values.
+  - Images: backend index `sha256:36efd141a73d5650810e9f3d25c742385f26012b112a5845a811aa758399ec84`, amd64 `sha256:ec3e493629e10e8a92f998c722a0abea084029d0d3dd24d60921a8c53bcb1398`; frontend index `sha256:f88f747357c8126d9bd403dd208437f940145d39205112358d57a42ab3492ab1`, amd64 `sha256:20099ee54c2a3a940ffb02e0b9c08018fe8934cb3eb2a9d331e50a7523ff0292`.
+  - Backup: `/opt/cici/backups/20260712-195131-before-2.6.1-task198-history-backfill`; env, PostgreSQL, KB files and Qdrant archives are non-empty.
+  - Backend/frontend run `2.6.1`; four state services remain healthy on `2.3.4`. Health `UP`, version `2.6.1 / ae6643c109a8`, Nginx valid and public workbench HTTP 200.
+  - Real demo and large-organization archives generated 2 and 8 pending signals respectively; both snapshots stayed at 50 with zero active signals. Repeated reads were idempotent, and the post-warmup backend scoring-error/Nginx-5xx scans were empty.
+
 - 2.5.12 TASK-198 AI 动态客户信号与可解释评分 on 2026-07-12:
   - Git commit/tag `4adbd3bf2d3a` / `2.5.12`; V77 adds auditable AI evidence signals and versioned score snapshots, with confidence gating, lifecycle replacement, 90-day decay and five-dimensional scoring.
   - Images: backend index `sha256:58efb89a6c48505d8e94d797724a2207bab7f6acdeb5df21e8e9b1b74d705086`, amd64 `sha256:68ae75f21b77bd63e7e4ea6edc4b1d83ffd792f147018b568546c36175c1bafc`; frontend index `sha256:9fd8215c87319cf0b1b2259b7f0b99351cf993673fa174b603604b48ef70b53b`, amd64 `sha256:77d138450accd03c99314b5cb8459aabc003e6798167ca68b72d8db989228585`.

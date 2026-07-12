@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T11:50:00Z
+updated_at: 2026-07-12T12:03:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-198 - AI 动态客户信号与可解释评分升级
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-104-ai-dynamic-customer-scoring.md`
 - task_status_path: `.claw/tasks/TASK-198.md`
 - assignment_path: `.claw/assignments/TASK-198.yaml`
 - blocked_by: `none`
-- next_action: Release the safe historical archive backfill hotfix and verify real pending evidence without score drift.
+- next_action: Done in production `2.6.1`; monitor pending-confidence rate, signal quality and score drift.
 
 ### TASK-197 - 客户互动档案、动态记忆与按需检索落地
 

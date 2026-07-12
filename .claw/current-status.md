@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T11:50:00Z
+updated_at: 2026-07-12T12:03:00Z
 updated_by: MANAGER-001
 phase: platform-security-rules
-active_task: "TASK-198"
-next_action: "Release and verify the safe historical interaction signal backfill hotfix, then resume TASK-170."
+active_task: "TASK-170"
+next_action: "Resume TASK-170 after monitoring the 2.6.1 dynamic scoring history backfill release."
 read_next:
   goals: false
   decisions: false
@@ -22,8 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-198 is in production hotfix validation after `2.5.12`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
-- TASK-198 follow-up closes a real-data gap: recent confirmed archives missing the new `scoringSignals` contract are lazily backfilled as 60%-confidence `PENDING` evidence, never altering the score; archives already carrying new signals preserve their original values. Focused backend validation now passes 18 tests and repeated explanation reads are idempotent.
+- TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
+- TASK-198 follow-up closed the real-data history gap: recent confirmed archives missing the new `scoringSignals` contract are lazily backfilled as 60%-confidence `PENDING` evidence, never altering the score; archives already carrying new signals preserve their original values. Production generated 2 pending signals for the demo organization and 8 for the large organization while both scores stayed 50; repeated reads were idempotent.
 
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
 - TASK-197 retrieval defaults to a compact customer snapshot, 90 days / 20 recent interactions and 8 relevant ACTIVE memories/evidence. Explicit history questions expand the window, and an explicit archive ID is ranked first.
@@ -38,16 +38,9 @@ read_next:
 - TASK-194 is done in production `2.5.6`: customer-name search now queries all Accounts visible to the current CloudCC identity, bypasses new/existing mode, queue filter and projection-cache limits, loads cache-external detail on demand, and aligns the workspace to the matched customer's actual mode.
 - TASK-194 evidence: backend 11 focused tests and frontend 60 tests/build passed; the real large organization found “青岛海信商用显示股份有限公司” in about 0.76 seconds and loaded detail in about 0.22 seconds. Browser verification showed one 1px wrapper focus border, no inner input border/shadow, no business error, and correct old-customer operations UI.
 
-- TASK-193 is done in production `2.5.3`: new-customer advancement and existing-customer operations both default to recent-interaction descending order; missing interaction timestamps stay last and ties use deterministic account ordering.
-- TASK-193 evidence: backend 10 tests, frontend 59 tests/build, release backup/health/public smoke and real large-organization default-query checks passed; both modes returned 12 rows in descending timestamp order with no post-release errors.
+- Earlier TASK-191 through TASK-193 production evidence remains in `.claw/test-report.md` and `.claw/devops.md`; no regression was observed during this release.
 
-- TASK-192 is done in production `2.5.2`: the large CRM organization now initializes through per-user asynchronous single-flight projection with stale-while-revalidate, bounded parallel reads, indexed aggregation and bulk recommendation lookup. Cold-cache startup requests return `200/SYNCING` in about one second instead of four 60-second 504 responses.
-- TASK-192 evidence: the real organization background sync completed in 46.21 seconds with 10,000 visible accounts; READY queue read returned in 0.68 seconds, no post-release 504/upstream timeout remained, and raw gateway HTML is normalized. The current 10,000-record OpenAPI ceiling is explicitly surfaced and remains a separate incremental-projection follow-up.
-
-- TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
-- TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
-
-- Current branch: `main`; production is running release `2.5.12` from Git commit `4adbd3bf2d3a`; TASK-198 historical signal backfill is under hotfix validation, while TASK-182 through TASK-197 remain complete.
+- Current branch: `main`; production is running release `2.6.1` from Git commit `ae6643c109a8`; TASK-182 through TASK-198 are complete and FEAT-081/FEAT-092 through FEAT-104 are production ready within their documented limits.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

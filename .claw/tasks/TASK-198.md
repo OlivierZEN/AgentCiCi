@@ -2,12 +2,12 @@
 kind: task-status
 task_id: TASK-198
 title: AI 动态客户信号与可解释评分升级
-status: review
+status: done
 owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-104-ai-dynamic-customer-scoring.md
 assignment_path: .claw/assignments/TASK-198.yaml
-updated_at: 2026-07-12T11:50:00Z
+updated_at: 2026-07-12T12:03:00Z
 updated_by: MANAGER-001
 ---
 
@@ -32,4 +32,5 @@ updated_by: MANAGER-001
 - 列表、筛选、排序、详情和解释接口统一使用批量评分快照；证据不足时显示 50 分中性基线，不伪造判断。
 - 评分抽屉支持全部、加分、减分、待确认和互动档案跳转；本地桌面浏览器无外层滚动或布局溢出。
 - 生产 `2.5.12` 已完成主体能力验收，但真实数据检查发现历史已确认档案尚未回填信号。
-- 修正版对最近 50 条有分析内容的已确认档案进行幂等懒回填：新契约信号保留原值，旧版风险/机会/承诺只进入 60% 置信度待确认区，不改变当前评分；等待修正版生产验收后关闭。
+- `2.6.1` 对最近 50 条有分析内容的已确认档案进行幂等懒回填：新契约信号保留原值，旧版风险/机会/承诺只进入 60% 置信度待确认区，不改变当前评分。
+- 生产真实数据生成 2 条和 8 条待确认信号，两个客户均保持 50 分；重复读取数量稳定，发布后评分错误和 Nginx 5xx 为 0，任务关闭。
