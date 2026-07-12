@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   assistantPhaseLabel,
   customerWorkbenchBodyClassName,
+  customerModeToWorkbenchMode,
   defaultCustomerQueueFilter,
   defaultCustomerQueueSort,
   isCurrentVoiceSession,
@@ -22,6 +23,14 @@ describe("defaultCustomerQueueFilter", () => {
 describe("defaultCustomerQueueSort", () => {
   it("shows the most recently interacted customers first in both modes", () => {
     expect(defaultCustomerQueueSort()).toBe("interaction");
+  });
+});
+
+describe("customerModeToWorkbenchMode", () => {
+  it("aligns a global search result with its real customer workspace", () => {
+    expect(customerModeToWorkbenchMode("EXISTING")).toBe("existing");
+    expect(customerModeToWorkbenchMode("NEW")).toBe("new");
+    expect(customerModeToWorkbenchMode("SEARCH")).toBeNull();
   });
 });
 

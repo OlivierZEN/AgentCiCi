@@ -226,6 +226,12 @@ export function defaultCustomerQueueSort() {
   return "interaction";
 }
 
+export function customerModeToWorkbenchMode(customerMode?: string): WorkbenchMode | null {
+  if (customerMode === "EXISTING") return "existing";
+  if (customerMode === "NEW") return "new";
+  return null;
+}
+
 function nowTime() {
   const now = new Date();
   return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
@@ -469,6 +475,13 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
       .then((item) => {
         if (!ignore) {
           setDetail(item);
+          const targetMode = customerModeToWorkbenchMode(item.customerMode);
+          if (targetMode && targetMode !== workbenchMode) {
+            setWorkbenchMode(targetMode);
+            setFilter(defaultCustomerQueueFilter(targetMode));
+            setPage(1);
+            setActiveTab("overview");
+          }
           if (deepLinkedAccountIdRef.current === item.accountId) deepLinkedAccountIdRef.current = "";
         }
       })
@@ -479,7 +492,7 @@ export function CustomerWorkbenchApp({ token, embedded = false, userName = "我"
     return () => {
       ignore = true;
     };
-  }, [token, activeAccountId, integration.ready, integration.syncing]);
+  }, [token, activeAccountId, integration.ready, integration.syncing, workbenchMode]);
 
   const activeAccount = useMemo(() => accounts.find((item) => item.accountId === activeAccountId) ?? accounts[0], [accounts, activeAccountId]);
 
