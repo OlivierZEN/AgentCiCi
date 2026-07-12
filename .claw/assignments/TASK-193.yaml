@@ -1,0 +1,43 @@
+task_id: TASK-193
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-12T02:05:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-100-large-crm-organization-async-sync.md
+task_status_path: .claw/tasks/TASK-193.md
+branch: main
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/customer/**
+  - backend/src/test/java/com/codehouse/ciciassistant/customer/**
+  - frontend/src/assistant/customer-workbench/**
+  - .claw/tasks/**
+scope_files:
+  - .claw/tasks/TASK-193.md
+  - .claw/assignments/TASK-193.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-100-large-crm-organization-async-sync.md
+task_boundary:
+  - "仅调整客户队列默认排序及其测试，不改变客户分类、权限、筛选和 CRM 数据读取范围。"
+change_manifest_required: true
+signature: "MANAGER-001 local SSH challenge allowed 2026-07-12T02:05:00Z; user requested both new and existing customer queues to show the most recently interacted customers first."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+

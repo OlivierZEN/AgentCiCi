@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T01:52:52Z
+updated_at: 2026-07-12T02:05:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-193 - 客户队列默认按最近互动倒序
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-100-large-crm-organization-async-sync.md`
+- task_status_path: `.claw/tasks/TASK-193.md`
+- assignment_path: `.claw/assignments/TASK-193.yaml`
+- blocked_by: `none`
+- next_action: Implement interaction-desc defaults and verify both customer modes.
 
 ### TASK-191 - CloudCC 嵌入页重复刷新与客户信号并发修复
 
