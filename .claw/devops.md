@@ -17,6 +17,13 @@ status: active
 
 ## Latest Release
 
+- 2.5.12 TASK-198 AI 动态客户信号与可解释评分 on 2026-07-12:
+  - Git commit/tag `4adbd3bf2d3a` / `2.5.12`; V77 adds auditable AI evidence signals and versioned score snapshots, with confidence gating, lifecycle replacement, 90-day decay and five-dimensional scoring.
+  - Images: backend index `sha256:58efb89a6c48505d8e94d797724a2207bab7f6acdeb5df21e8e9b1b74d705086`, amd64 `sha256:68ae75f21b77bd63e7e4ea6edc4b1d83ffd792f147018b568546c36175c1bafc`; frontend index `sha256:9fd8215c87319cf0b1b2259b7f0b99351cf993673fa174b603604b48ef70b53b`, amd64 `sha256:77d138450accd03c99314b5cb8459aabc003e6798167ca68b72d8db989228585`.
+  - Backup: `/opt/cici/backups/20260712-192621-before-2.5.12-task198-dynamic-scoring`; four artifacts are non-empty.
+  - Backend/frontend run `2.5.12`; four state services remain healthy on `2.3.4`. Health `UP`; V77 applied successfully; Nginx valid; public workbench HTTP 200.
+  - AgentCiCi and real CloudCC embed both verified connected CRM data, the same dynamic neutral baseline and the score explanation drawer with zero outer overflow and zero browser errors/warnings. Screenshot: `output/playwright/task198-prod-cloudcc-score-drawer-2.5.12.png`.
+
 - 2.5.11 TASK-197 客户互动档案、动态记忆与按需检索 on 2026-07-12:
   - Git commit/tag `d0ed7e4129cf` / `2.5.11`; V76 archives confirmed interaction batches, adds typed ACTIVE customer memory and bounds assistant context to recent/relevant evidence.
   - Images: backend index `sha256:d4ba55523711a534ce7ef37c676d8eb8505c27a6497b1a4363f675f59d0aeec9`, amd64 `sha256:a8793ab297a0a74cbde806ad29f739673a802ec069027d34355b8702d0b6fecb`; frontend index `sha256:9e154f5c605ccfbb999297f9e9f3a1935af86893781bfe15947069a4c78e2a89`, amd64 `sha256:a03f195ed0397a0484567b8fe7f403632c1d0e5a1e6b38224f87bb6ab373ca32`.

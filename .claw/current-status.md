@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-12T11:22:43Z
+updated_at: 2026-07-12T11:50:00Z
 updated_by: MANAGER-001
-phase: ai-dynamic-customer-scoring-release
+phase: platform-security-rules
 active_task: "TASK-198"
-next_action: "Commit and release 2.5.12, then verify dynamic score evidence in AgentCiCi and CloudCC CRM embed."
+next_action: "Release and verify the safe historical interaction signal backfill hotfix, then resume TASK-170."
 read_next:
   goals: false
   decisions: false
@@ -22,8 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-198 implementation is ready for release `2.5.12`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer now share the same snapshot source.
-- TASK-198 local evidence: 17 focused backend tests, 64 frontend tests and production build passed; V77 applied on the local PostgreSQL schema; desktop browser verified the five-dimension drawer, neutral insufficient-evidence state, no outer overflow and an internal scroll region. The full backend baseline still has 19 unrelated failures/errors already present in billing/auth/skill fixture and connection-sensitive suites.
+- TASK-198 is in production hotfix validation after `2.5.12`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
+- TASK-198 follow-up closes a real-data gap: recent confirmed archives missing the new `scoringSignals` contract are lazily backfilled as 60%-confidence `PENDING` evidence, never altering the score; archives already carrying new signals preserve their original values. Focused backend validation now passes 18 tests and repeated explanation reads are idempotent.
 
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
 - TASK-197 retrieval defaults to a compact customer snapshot, 90 days / 20 recent interactions and 8 relevant ACTIVE memories/evidence. Explicit history questions expand the window, and an explicit archive ID is ranked first.
@@ -47,7 +47,7 @@ read_next:
 - TASK-191 is done in production `2.4.12`: pagecomponent V11 observes delayed/reused CloudCC host nodes and remounts a missing iframe; customer signals use atomic PostgreSQL UPSERT with a repository-level short transaction.
 - TASK-191 evidence: 8 focused/integration tests passed; real CloudCC loaded CRM data and assistant history after three consecutive refreshes; no post-release duplicate-key, transaction-required or unexpected-server errors were logged. Screenshot: `output/playwright/task191-prod-cloudcc-refresh-stable.png`.
 
-- Current branch: `main`; production is running release `2.5.11` from Git commit `d0ed7e4129cf`; TASK-182 through TASK-197 are complete and FEAT-081/FEAT-092 through FEAT-103 are production ready within their documented limits.
+- Current branch: `main`; production is running release `2.5.12` from Git commit `4adbd3bf2d3a`; TASK-198 historical signal backfill is under hotfix validation, while TASK-182 through TASK-197 remain complete.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

@@ -2,6 +2,8 @@ package com.codehouse.ciciassistant.customer.service;
 
 import com.codehouse.ciciassistant.customer.domain.CustomerDynamicSignalEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerDynamicSignalRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerScoreSnapshotEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerScoreSnapshotRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -33,21 +35,31 @@ public class CustomerDynamicScoringService {
 
     private final CustomerDynamicSignalRepository signalRepository;
     private final CustomerScoreSnapshotRepository snapshotRepository;
+    private final CustomerInteractionEventRepository eventRepository;
     private final ObjectMapper objectMapper;
 
     public CustomerDynamicScoringService(CustomerDynamicSignalRepository signalRepository,
                                          CustomerScoreSnapshotRepository snapshotRepository,
+                                         CustomerInteractionEventRepository eventRepository,
                                          ObjectMapper objectMapper) {
         this.signalRepository = signalRepository;
         this.snapshotRepository = snapshotRepository;
+        this.eventRepository = eventRepository;
         this.objectMapper = objectMapper;
     }
 
     @Transactional
     public Map<String, Object> recordAnalysis(String orgId, String accountId, String eventId, String batchId,
                                               String sourceType, Instant occurredAt, String analysisJson) {
+        persistAnalysis(orgId, accountId, eventId, batchId, sourceType, occurredAt, analysisJson, false);
+        return explanation(orgId, accountId);
+    }
+
+    private void persistAnalysis(String orgId, String accountId, String eventId, String batchId,
+                                 String sourceType, Instant occurredAt, String analysisJson, boolean legacyFallback) {
         Map<String, Object> analysis = parse(analysisJson);
         List<Map<String, Object>> candidates = mapList(analysis.get("scoringSignals"));
+        if (candidates.isEmpty() && legacyFallback) candidates = legacyPendingSignals(analysis);
         List<CustomerDynamicSignalEntity> previous = signalRepository.findByOrgIdAndSourceEventId(orgId, eventId);
         Map<String, CustomerDynamicSignalEntity> previousById = previous.stream()
                 .collect(Collectors.toMap(CustomerDynamicSignalEntity::getPublicId, Function.identity(), (left, right) -> left));
@@ -82,13 +94,28 @@ public class CustomerDynamicScoringService {
         previous.stream().filter(item -> !currentIds.contains(item.getPublicId())).forEach(CustomerDynamicSignalEntity::supersede);
         signalRepository.saveAll(previous);
         signalRepository.saveAll(changed);
-        return explanation(orgId, accountId);
     }
 
     @Transactional
     public Map<String, Object> explanation(String orgId, String accountId) {
-        return explanationFrom(orgId, accountId,
-                signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId));
+        List<CustomerDynamicSignalEntity> signals = signalRepository
+                .findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId);
+        Set<String> representedEvents = signals.stream()
+                .map(CustomerDynamicSignalEntity::getSourceEventId)
+                .collect(Collectors.toSet());
+        List<CustomerInteractionEventEntity> backfillEvents = eventRepository
+                .findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId).stream()
+                .filter(event -> event.getSourceBatchId() != null && !event.getSourceBatchId().isBlank())
+                .filter(event -> !representedEvents.contains(event.getPublicId()))
+                .filter(event -> hasSignalCandidates(event.getAnalysisJson()))
+                .limit(50)
+                .toList();
+        backfillEvents.forEach(event -> persistAnalysis(orgId, accountId, event.getPublicId(), event.getSourceBatchId(),
+                event.getSourceType(), event.getOccurredAt(), event.getAnalysisJson(), true));
+        if (!backfillEvents.isEmpty()) {
+            signals = signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId);
+        }
+        return explanationFrom(orgId, accountId, signals);
     }
 
     @Transactional
@@ -250,6 +277,18 @@ public class CustomerDynamicScoringService {
         try { return objectMapper.readValue(text(value).isBlank() ? "{}" : value, MAP_TYPE); }
         catch (Exception ex) { return Map.of(); }
     }
+
+    private boolean hasSignalCandidates(String analysisJson) {
+        Map<String, Object> analysis = parse(analysisJson);
+        return !mapList(analysis.get("scoringSignals")).isEmpty()
+                || hasItems(analysis.get("risks"))
+                || hasItems(analysis.get("opportunities"))
+                || hasItems(analysis.get("commitments"));
+    }
+
+    private static boolean hasItems(Object value) {
+        return value instanceof Collection<?> collection && !collection.isEmpty();
+    }
     private static List<Map<String, Object>> mapList(Object value) {
         if (!(value instanceof Collection<?> collection)) return List.of();
         List<Map<String, Object>> result = new ArrayList<>();
@@ -261,6 +300,34 @@ public class CustomerDynamicScoringService {
             }
         }
         return result;
+    }
+
+    private static List<Map<String, Object>> legacyPendingSignals(Map<String, Object> analysis) {
+        List<Map<String, Object>> signals = new ArrayList<>();
+        appendLegacy(signals, analysis.get("risks"), "RISK", "NEGATIVE", "历史风险证据");
+        appendLegacy(signals, analysis.get("opportunities"), "EXPANSION", "POSITIVE", "历史机会证据");
+        appendLegacy(signals, analysis.get("commitments"), "RELATIONSHIP", "POSITIVE", "历史承诺证据");
+        return signals;
+    }
+
+    private static void appendLegacy(List<Map<String, Object>> target, Object value, String dimension,
+                                     String direction, String titlePrefix) {
+        if (!(value instanceof Collection<?> items)) return;
+        for (Object item : items) {
+            String evidence = clip(text(item), 2000);
+            if (evidence.isBlank()) continue;
+            Map<String, Object> signal = new LinkedHashMap<>();
+            signal.put("dimension", dimension);
+            signal.put("direction", direction);
+            signal.put("impact", 5);
+            signal.put("confidence", 0.60);
+            signal.put("title", clip(titlePrefix + "：" + evidence, 256));
+            signal.put("evidence", evidence);
+            signal.put("reason", "历史 AI 分析未提供影响强度和置信度，保留为待确认信号，不计入当前评分");
+            signal.put("validDays", 365);
+            target.add(signal);
+            if (target.size() >= 30) return;
+        }
     }
     private static int integer(Object value, int min, int max, int fallback) {
         try { return Math.max(min, Math.min(max, Integer.parseInt(text(value)))); }

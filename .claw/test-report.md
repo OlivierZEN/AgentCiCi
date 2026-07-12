@@ -6252,3 +6252,20 @@ last_run_status: passed
 - Release dry run:
   - Command: `./scripts/release-acr.sh --dry-run`.
   - Result: success; generated production version `2.5.12` with canonical backend/frontend image and Git tag plan.
+- Production release:
+  - Result: success; Git commit/tag `4adbd3bf2d3a` / `2.5.12` and backend/frontend ACR images were pushed.
+  - Images: backend index `sha256:58efb89a6c48505d8e94d797724a2207bab7f6acdeb5df21e8e9b1b74d705086`, amd64 `sha256:68ae75f21b77bd63e7e4ea6edc4b1d83ffd792f147018b568546c36175c1bafc`; frontend index `sha256:9fd8215c87319cf0b1b2259b7f0b99351cf993673fa174b603604b48ef70b53b`, amd64 `sha256:77d138450accd03c99314b5cb8459aabc003e6798167ca68b72d8db989228585`.
+  - Backup: `/opt/cici/backups/20260712-192621-before-2.5.12-task198-dynamic-scoring`; env, PostgreSQL, KB files and Qdrant archives were non-empty.
+  - Runtime: backend/frontend healthy on `2.5.12`; state services stayed healthy on `2.3.4`; health `UP`, version `2.5.12 / 4adbd3bf2d3a`, V77 `success=true`, Nginx valid, public root/workbench HTTP 200.
+- Production dual-entry browser:
+  - Result: success in AgentCiCi and real CloudCC CRM injection page using the same organization and user context.
+  - Notes: CRM reached READY, existing-customer queue showed the dynamic neutral baseline, score drawer rendered all five dimensions and no-evidence state, host outer overflow was zero, and browser error/warning logs were empty.
+  - Evidence: `output/playwright/task198-prod-cloudcc-score-drawer-2.5.12.png`.
+- CloudCC implementation expert verification:
+  - Skill: `cc-customization-expert-msapi 2.1.276-msapi`.
+  - Result: component/customPage readback matched component id `6a526349e4b0a577cbba1fba`, name `component-customer-workbench`, version `11` and the production embed URL.
+  - Notes: `verify injectionPage` returned the known warning `stale_component_reference` only because no runtime version snapshot was supplied; component ID/name/reference were exact, and the real CRM browser runtime rendered successfully.
+- Historical signal backfill hotfix:
+  - Command: `mvn -q -Dmaven.repo.local=.m2/repository -Dtest=CustomerDynamicScoringServiceTest,CustomerCrmProjectionServiceTest,CustomerInteractionIngestionServiceTest,CustomerWorkbenchServiceTest test` in `backend/`.
+  - Result: success, 18 tests, zero failures/errors.
+  - Notes: verifies old analysis becomes pending-only evidence at a neutral 50 baseline, repeated reads are idempotent, and current scoring/projection/ingestion behavior remains green.

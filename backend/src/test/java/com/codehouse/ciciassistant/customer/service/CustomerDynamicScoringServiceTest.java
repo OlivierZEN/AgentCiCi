@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.customer.domain.CustomerDynamicSignalEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerDynamicSignalRepository;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventEntity;
+import com.codehouse.ciciassistant.customer.domain.CustomerInteractionEventRepository;
 import com.codehouse.ciciassistant.customer.domain.CustomerScoreSnapshotEntity;
 import com.codehouse.ciciassistant.customer.domain.CustomerScoreSnapshotRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,6 +25,7 @@ class CustomerDynamicScoringServiceTest {
     void aggregatesAuditableSignalsAndKeepsLowConfidenceEvidencePending() {
         CustomerDynamicSignalRepository signalRepository = mock(CustomerDynamicSignalRepository.class);
         CustomerScoreSnapshotRepository snapshotRepository = mock(CustomerScoreSnapshotRepository.class);
+        CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
         List<CustomerDynamicSignalEntity> stored = new ArrayList<>();
         when(signalRepository.findByOrgIdAndSourceEventId("org-1", "event-1")).thenAnswer(invocation -> new ArrayList<>(stored));
         when(signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
@@ -39,7 +42,7 @@ class CustomerDynamicScoringServiceTest {
         when(snapshotRepository.save(any(CustomerScoreSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CustomerDynamicScoringService service = new CustomerDynamicScoringService(
-                signalRepository, snapshotRepository, new ObjectMapper());
+                signalRepository, snapshotRepository, eventRepository, new ObjectMapper());
         String analysis = """
                 {"scoringSignals":[
                   {"dimension":"RELATIONSHIP","direction":"POSITIVE","impact":8,"confidence":0.9,
@@ -61,6 +64,56 @@ class CustomerDynamicScoringServiceTest {
                 .singleElement().extracting(CustomerDynamicSignalEntity::getTitle).isEqualTo("可能扩容");
 
         service.recordAnalysis("org-1", "account-1", "event-1", "batch-1", "MEETING", Instant.now(), analysis);
+        assertThat(stored).hasSize(3);
+    }
+
+    @Test
+    void backfillsLegacyAnalysisAsPendingEvidenceWithoutChangingTheScore() {
+        CustomerDynamicSignalRepository signalRepository = mock(CustomerDynamicSignalRepository.class);
+        CustomerScoreSnapshotRepository snapshotRepository = mock(CustomerScoreSnapshotRepository.class);
+        CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
+        List<CustomerDynamicSignalEntity> stored = new ArrayList<>();
+        when(signalRepository.findByOrgIdAndSourceEventId("org-1", "event-legacy"))
+                .thenAnswer(invocation -> stored.stream()
+                        .filter(item -> "event-legacy".equals(item.getSourceEventId())).toList());
+        when(signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
+                .thenAnswer(invocation -> new ArrayList<>(stored));
+        when(signalRepository.saveAll(anyList())).thenAnswer(invocation -> {
+            List<CustomerDynamicSignalEntity> values = invocation.getArgument(0);
+            for (CustomerDynamicSignalEntity value : values) {
+                stored.removeIf(item -> item.getPublicId().equals(value.getPublicId()));
+                stored.add(value);
+            }
+            return values;
+        });
+        when(snapshotRepository.findByOrgIdAndCrmAccountId("org-1", "account-1")).thenReturn(Optional.empty());
+        when(snapshotRepository.save(any(CustomerScoreSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        CustomerInteractionEventEntity legacy = new CustomerInteractionEventEntity(
+                "event-legacy", "org-1", "account-1", null, "EMAIL", Instant.now(),
+                "历史沟通", "原始内容", "旧版分析", "NEUTRAL", "[]", "MIXED");
+        legacy.attachArchive("batch-legacy", """
+                {"risks":["客户要求本周解决问题"],
+                 "opportunities":["客户愿意讨论扩容"],
+                 "commitments":["双方约定下周复盘"]}
+                """, 1, 1);
+        when(eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
+                .thenReturn(List.of(legacy));
+
+        CustomerDynamicScoringService service = new CustomerDynamicScoringService(
+                signalRepository, snapshotRepository, eventRepository, new ObjectMapper());
+
+        var result = service.explanation("org-1", "account-1");
+
+        assertThat(result).containsEntry("healthScore", 50)
+                .containsEntry("activeSignalCount", 0)
+                .containsEntry("pendingSignalCount", 3)
+                .containsEntry("status", "INSUFFICIENT_EVIDENCE");
+        assertThat(stored).hasSize(3).allSatisfy(signal -> {
+            assertThat(signal.getStatus()).isEqualTo(CustomerDynamicSignalEntity.STATUS_PENDING);
+            assertThat(signal.getConfidence()).isEqualTo(0.60);
+        });
+
+        service.explanation("org-1", "account-1");
         assertThat(stored).hasSize(3);
     }
 }

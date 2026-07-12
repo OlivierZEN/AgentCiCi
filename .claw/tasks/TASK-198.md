@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 assignee: MANAGER-001
 spec_path: docs/specs/FEAT-104-ai-dynamic-customer-scoring.md
 assignment_path: .claw/assignments/TASK-198.yaml
-updated_at: 2026-07-12T11:22:43Z
+updated_at: 2026-07-12T11:50:00Z
 updated_by: MANAGER-001
 ---
 
@@ -31,4 +31,5 @@ updated_by: MANAGER-001
 - 新确认互动通过 AI JSON 契约输出证据、影响、置信度和有效期，仅增量重算当前客户。
 - 列表、筛选、排序、详情和解释接口统一使用批量评分快照；证据不足时显示 50 分中性基线，不伪造判断。
 - 评分抽屉支持全部、加分、减分、待确认和互动档案跳转；本地桌面浏览器无外层滚动或布局溢出。
-- 等待 `2.5.12` 生产发布及真实 CRM 验收后关闭任务。
+- 生产 `2.5.12` 已完成主体能力验收，但真实数据检查发现历史已确认档案尚未回填信号。
+- 修正版对最近 50 条有分析内容的已确认档案进行幂等懒回填：新契约信号保留原值，旧版风险/机会/承诺只进入 60% 置信度待确认区，不改变当前评分；等待修正版生产验收后关闭。

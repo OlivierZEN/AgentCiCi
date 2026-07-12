@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T11:22:43Z
+updated_at: 2026-07-12T11:50:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-198.md`
 - assignment_path: `.claw/assignments/TASK-198.yaml`
 - blocked_by: `none`
-- next_action: Release `2.5.12`, verify V77, real CRM score consistency and explanation drawer, then close.
+- next_action: Release the safe historical archive backfill hotfix and verify real pending evidence without score drift.
 
 ### TASK-197 - 客户互动档案、动态记忆与按需检索落地
 
