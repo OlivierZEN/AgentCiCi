@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.AgentEvaluationService;
+import com.codehouse.ciciassistant.agent.service.AgentEvaluationControlPlaneService;
 import com.codehouse.ciciassistant.agent.service.AgentProductionReadinessService;
 import com.codehouse.ciciassistant.agent.service.AgentSkillBindingService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
@@ -40,6 +41,7 @@ public class AgentDefinitionController {
     private final AgentAccessControlService accessControlService;
     private final AgentProductionReadinessService productionReadinessService;
     private final AgentEvaluationService agentEvaluationService;
+    private final AgentEvaluationControlPlaneService evaluationControlPlaneService;
     private final ObjectMapper objectMapper;
 
     public AgentDefinitionController(AgentDefinitionService agentDefinitionService,
@@ -47,12 +49,14 @@ public class AgentDefinitionController {
                                      AgentAccessControlService accessControlService,
                                      AgentProductionReadinessService productionReadinessService,
                                      AgentEvaluationService agentEvaluationService,
+                                     AgentEvaluationControlPlaneService evaluationControlPlaneService,
                                      ObjectMapper objectMapper) {
         this.agentDefinitionService = agentDefinitionService;
         this.agentSkillBindingService = agentSkillBindingService;
         this.accessControlService = accessControlService;
         this.productionReadinessService = productionReadinessService;
         this.agentEvaluationService = agentEvaluationService;
+        this.evaluationControlPlaneService = evaluationControlPlaneService;
         this.objectMapper = objectMapper;
     }
 
@@ -329,6 +333,12 @@ public class AgentDefinitionController {
         String orgId = TenantContext.requireOrgId();
         accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
         AgentWorkflowVersionEntity version = agentDefinitionService.publishVersion(orgId, agentId, request.versionNo());
+        try {
+            evaluationControlPlaneService.recordPublishReference(
+                    orgId, agentId, version.getVersionNo(), requireUserId());
+        } catch (RuntimeException ignored) {
+            // Publishing has already completed; evaluation audit persistence must not turn success into an API failure.
+        }
         Map<String, Object> payload = new LinkedHashMap<>(toVersionPayload(version));
         payload.put("published", true);
         payload.put("readiness", productionReadinessService.check(orgId, agentId, version.getVersionNo()));

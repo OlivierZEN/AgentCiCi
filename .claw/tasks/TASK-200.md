@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-200
-status: in_progress
-updated_at: 2026-07-14T00:00:00+08:00
+status: done
+updated_at: 2026-07-14T01:22:40+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -40,7 +40,14 @@ spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
 - TASK-200 任务范围 SSH challenge 登录：allowed。
 - `check-assignment.py` 对规格、状态、V79、后端 Agent/Platform、前端 App/Admin/Platform/Builder 代表文件：allowed。
 - `git diff --check`：success。
-- 代码测试、构建和浏览器证据将在真实执行后补充。
+- V79 在干净 PostgreSQL 测试库及本地运行库迁移成功，schema version 为 79。
+- `AgentProductionReadinessIntegrationTest`、`AgentEvaluationControlPlaneIntegrationTest`、`AgentEvaluationAssertionEngineTest`：7 项通过。
+- `RbacProductionReadinessIntegrationTest`、`PlatformAuthIntegrationTest`、`PlatformGovernanceIntegrationTest`、`AgentRunTraceIntegrationTest`：相关回归通过。
+- 前端 Vitest：12 个文件、67 项通过；`npm run build` 成功，保留已有大 chunk 警告。
+- `mvn -q -DskipTests compile`、Compose config 和 `git diff --check` 成功。
+- 本地桌面浏览器验证 `/admin/evaluation`、Builder“评测/发布渠道”隔离和 `/platform/evaluation`；无页面错误、无横向溢出、控制台 error/warning 为 0。
+- `./scripts/release-acr.sh --dry-run` 成功，生成统一候选版本 `2.6.3`，未构建、推送或创建 tag。
+- 完整后端基线仍存在仓库既有的无关 fixture/auth/model 测试漂移；TASK-200 聚焦及相关安全回归均为绿色，明细见 `.claw/test-report.md`。
 
 ## Changed Files
 
@@ -56,3 +63,4 @@ spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
 
 - 目标分支：`codex/TASK-200-agent-evaluation-control-plane`。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
+- 功能已达到生产发布就绪；合并后按 `docs/production-release-runbook.md` 使用统一版本 `2.6.3` 或重新 dry-run 得到的下一版本发布。

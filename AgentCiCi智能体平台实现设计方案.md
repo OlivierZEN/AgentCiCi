@@ -30,7 +30,8 @@
 ### 3.1 接入层（Client / Channel）
 
 - **助手端（`/`）**：面向员工 / 普通用户；会话聊天、只读知识库列表（勾选参与 RAG）；与管理功能隔离。
-- **管理后台（`/admin/login` → `/admin/*`）**：面向 **组织管理员（`ORG_ADMIN`）**；知识库维护、模型/工具/运维、用户与角色管理；独立登录与 Token 存储，不与助手端混用同一界面。
+- **管理后台（`/admin/login` → `/admin/*`）**：面向 **组织管理员（`ORG_ADMIN`）**；知识库维护、模型/工具/运维、用户与角色管理，以及 `/admin/evaluation` 组织 AI 质量中心；独立登录与 Token 存储，不与助手端混用同一界面。
+- **平台运营端（`/platform/login` → `/platform/*`）**：面向平台管理员、运营与审计角色；`/platform/evaluation` 维护平台核心、标准应用和行业评测资产，组织原始输入与隐藏挑战集按角色最小化可见。
 - 后续可扩展：内嵌助手组件（抽屉/悬浮）仍应对接同一套助手 API 与权限模型。
 - 所有调用统一通过后端 API（Spring Boot）进入。
 
@@ -225,14 +226,15 @@
 | 入口 | 路由 | 受众 | 能力概要 |
 |------|------|------|----------|
 | 助手端 | `/` | `ORG_USER` / `ORG_ADMIN` 均可登录使用助手 | 手机号验证码登录；对话；**只读**知识库列表 + 多选参与 RAG |
-| 管理后台 | `/admin/login`，业务页 `/admin/kb`、`/admin/models`、`/admin/tools`、`/admin/ops`、`/admin/users` | 仅 **`ORG_ADMIN`** | 知识库与文档全生命周期管理；模型/工具配置；观测运维（智能体运行、成本、审计）；**用户列表与角色变更** |
+| 管理后台 | `/admin/login`，业务页 `/admin/kb`、`/admin/models`、`/admin/tools`、`/admin/ops`、`/admin/users`、`/admin/evaluation` | 仅 **`ORG_ADMIN`** | 知识库与文档全生命周期管理；模型/工具配置；观测运维；用户与角色；组织私有评测、运行、问题和 Trace 回归闭环 |
+| 平台运营端 | `/platform/login`，质量页 `/platform/evaluation` | 平台角色；资产写入仅 `PLATFORM_ADMIN` / `PLATFORM_OPERATOR` | 平台核心、标准应用、行业评测资产的版本、隐藏用例、授权、全局脱敏运行摘要与审计 |
 
 **鉴权与体验约定**
 
 - 管理后台登录成功后，前端根据登录响应中的 `roles` 判断是否包含 `ORG_ADMIN`；不包含则拒绝写入管理 Token 并提示错误。
 - 访问 `/admin` 下受保护路由时，用已存管理 Token 调用 `GET /auth/me` 再次校验 `ORG_ADMIN`，不通过则清除管理 Token 并跳转 `/admin/login`。
 - 助手端与管理端 **不使用同一 Tab 混排控制台**；两侧通过页脚/文案链结互相跳转（`/admin/login` ↔ `/`）。
-- 开发环境下 Vite 将 `/auth`、`/kb`、`/ai`、`/models`、`/tools`、`/ops`、**`/admin`** 等代理至后端（见 `frontend/vite.config.ts`）；前端本地存储键名见 `frontend/src/constants.ts`（`cici_assistant_token` / `cici_admin_token`）。
+- 开发环境下 Vite 将 `/auth`、`/kb`、`/ai`、`/models`、`/tools`、`/ops`、`/evaluation`、**`/admin`** 与 `/api/platform` 等代理至后端（见 `frontend/vite.config.ts`）；各入口使用独立 Token 存储。
 
 **后续扩展**
 
@@ -275,6 +277,14 @@
 
 - `GET /admin/users`：本组织用户列表（**需 `ORG_ADMIN`**）
 - `PUT /admin/users/{userId}/role`：变更用户角色，body 示例 `{ "roleCode": "ORG_ADMIN" }` 或 `"ORG_USER"`（**需 `ORG_ADMIN`**；后端禁止唯一管理员将自己降为普通用户）
+
+### 5.7 智能体评测与发布门禁
+
+- `/evaluation/*`：组织管理员维护租户私有评测集、运行指定候选版本、查看断言结果与质量问题，并把当前组织 Trace 脱敏后转为待审核回归用例。
+- `/platform/evaluation/*`：平台侧维护平台核心、标准应用和行业评测资产；已发布版本不可原地修改，隐藏用例不会向租户返回输入、期望或完整断言证据。
+- 评测运行复用候选编译版本、Skill 解析、模型路由、RAG 与工具 Schema，但只记录工具调用计划，不执行 CRM、工单、消息、审批等真实写动作。
+- P0、安全、强制套件、阈值失败、缺少当前版本运行或快照过期均可阻断发布；发布成功记录评测运行引用与快照指纹。
+- Agent Builder 使用“Agent 定义 / 评测 / 发布渠道”三个独立一级 Tab；“发布渠道”只维护企微、钉钉、飞书、Web、Open API 和调度入口，不承载评测维护。
 
 ## 6. 非功能与安全要求
 

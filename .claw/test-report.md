@@ -6308,3 +6308,38 @@ last_run_status: passed
   - Result: success; old-customer operations showed the new timeline event and `互动识别` action beside retained `历史建议`, with one evidence item and validity. Browser console had zero errors/warnings; task-related backend errors, migration errors and workbench Nginx 5xx were zero after warmup.
   - Evidence: `output/playwright/task199-prod-interaction-driven-action-2.6.2.png`.
   - Note: three login-shell `Session not found` responses for stale `workbench:cici-system` were observed before the stable window; they are unrelated to customer interaction/action endpoints.
+
+## 2026-07-14 TASK-200 多租户智能体评测控制面生产落地
+
+- Authorization and assignment:
+  - Result: success.
+  - Notes: `MANAGER-001` passed the generic and TASK-200 SSH challenge gates; assignment checks passed for V79, Agent/AI/Skill/Common backend code, platform/admin/Builder frontend code, Vite proxy and project-state files.
+- Flyway and backend compilation:
+  - Commands: clean PostgreSQL test startup, local Spring Boot startup, and `mvn -q -DskipTests compile` in `backend/`.
+  - Result: success; 75 migrations validated and schema reached V79 in test and local runtime databases; backend compilation passed.
+- Focused evaluation tests:
+  - Command: `mvn -q -Dtest=AgentProductionReadinessIntegrationTest,AgentEvaluationControlPlaneIntegrationTest,AgentEvaluationAssertionEngineTest test` in `backend/`.
+  - Result: success, 7 tests with zero failures/errors after the final redaction-order correction.
+  - Coverage: platform suite draft/publish/immutability, sealed hidden-case redaction, tenant asset isolation and review lifecycle, platform auditor/read boundary, billing-role rejection, cross-Agent issue-reference rejection, Trace-to-DRAFT regression capture, mobile/email/ID-card/credential redaction, compound assertions, invalid assertion fail-closed, real evaluation model failure handling, stale/publish gates and publish readiness.
+- Related security and observability regression:
+  - Command: `mvn -q -Dtest=RbacProductionReadinessIntegrationTest,PlatformAuthIntegrationTest,PlatformGovernanceIntegrationTest,AgentRunTraceIntegrationTest test` in `backend/`.
+  - Result: success with zero failures/errors.
+- Full backend baseline:
+  - Command: `mvn -q test` in `backend/` against a clean test schema during TASK-200 validation.
+  - Result: baseline not green outside TASK-200.
+  - Notes: unrelated existing failures include stale `skill_definition.source_type` fixtures, disabled meeting-minutes model provider assumptions, AutoService platform-auth expectation drift, billing/context/audit assumptions, OneKeyToken model-list expectation drift, customer-insight success mismatch and legacy skill-governance authorization assumptions. TASK-200 focused and adjacent RBAC/platform/Trace suites are green.
+- Frontend tests and production build:
+  - Commands: `npm test` and `npm run build` in `frontend/`.
+  - Result: success; 12 files / 67 tests passed and Vite production build completed. Existing large-chunk warning remains.
+- Local browser desktop validation:
+  - Targets: `/admin/evaluation`, `/admin/agent-builder`, and `/platform/evaluation` on local runtime.
+  - Result: success; tenant AI quality overview and evaluation-set maintenance rendered real API data, platform governance and standard-asset maintenance rendered correctly, and all checked pages had zero horizontal overflow and zero browser console errors/warnings.
+  - Product-boundary evidence: Builder “评测” showed version quality, production gate and evaluation actions with no channel content; Builder “发布渠道” showed only 企微、钉钉、飞书、Web 浮窗、开放 API channel controls and no evaluation/quality headings.
+  - Defect found and fixed: stale generated `vite.config.js` lacked `/evaluation` proxy although `vite.config.ts` contained it; both configs are now aligned and the page was reloaded successfully with no JSON parse alert.
+- Compose and static checks:
+  - Commands: `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config`, assignment check and `git diff --check`.
+  - Result: success; rendered Compose output contained 232 lines and no validation error.
+- Release dry run:
+  - Command: `./scripts/release-acr.sh --dry-run`.
+  - Result: success; generated canonical production candidate `2.6.3` for backend/frontend images, `CICI_APP_VERSION`, `VITE_CICI_APP_VERSION`, `CICI_IMAGE_TAG` and Git tag.
+  - Notes: dry-run only; no image, Git tag, production data or deployment state was changed.

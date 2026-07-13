@@ -151,6 +151,12 @@ public class AgentCompileService {
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("entry", "runAgent");
         manifest.put("runtimeLang", "typescript-sandbox");
+        manifest.put("identity", Map.of(
+                "name", safeText(command.name()),
+                "summary", safeText(command.summary()),
+                "model", safeText(command.model()),
+                "systemPrompt", safeText(command.systemPrompt())
+        ));
         manifest.put("dependencies", Map.of(
                 "model", safeText(command.model()),
                 "tools", effectiveToolIds,

@@ -52,6 +52,30 @@ public class AgentEvalCaseResultEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "failure_category", length = 64)
+    private String failureCategory;
+
+    @Column(name = "failure_summary", length = 1000)
+    private String failureSummary;
+
+    @Column(name = "assertion_results_json", columnDefinition = "TEXT")
+    private String assertionResultsJson;
+
+    @Column(name = "trace_id", length = 128)
+    private String traceId;
+
+    @Column(name = "score", nullable = false)
+    private Double score;
+
+    @Column(name = "elapsed_ms", nullable = false)
+    private Long elapsedMs;
+
+    @Column(name = "tool_call_count", nullable = false)
+    private Integer toolCallCount;
+
+    @Column(name = "rag_hit_count", nullable = false)
+    private Integer ragHitCount;
+
     protected AgentEvalCaseResultEntity() {
     }
 
@@ -76,6 +100,28 @@ public class AgentEvalCaseResultEntity {
         this.outputPreview = outputPreview;
         this.resultSummaryJson = resultSummaryJson;
         this.createdAt = Instant.now();
+        this.score = STATUS_PASSED.equals(status) ? 1.0d : 0.0d;
+        this.elapsedMs = 0L;
+        this.toolCallCount = 0;
+        this.ragHitCount = 0;
+    }
+
+    public void attachEvidence(String failureCategory,
+                               String failureSummary,
+                               String assertionResultsJson,
+                               String traceId,
+                               double score,
+                               long elapsedMs,
+                               int toolCallCount,
+                               int ragHitCount) {
+        this.failureCategory = failureCategory;
+        this.failureSummary = failureSummary;
+        this.assertionResultsJson = assertionResultsJson;
+        this.traceId = traceId;
+        this.score = score;
+        this.elapsedMs = elapsedMs;
+        this.toolCallCount = toolCallCount;
+        this.ragHitCount = ragHitCount;
     }
 
     public Long getId() { return id; }
@@ -101,4 +147,20 @@ public class AgentEvalCaseResultEntity {
     public String getResultSummaryJson() { return resultSummaryJson; }
 
     public Instant getCreatedAt() { return createdAt; }
+
+    public String getFailureCategory() { return failureCategory; }
+
+    public String getFailureSummary() { return failureSummary; }
+
+    public String getAssertionResultsJson() { return assertionResultsJson; }
+
+    public String getTraceId() { return traceId; }
+
+    public Double getScore() { return score; }
+
+    public Long getElapsedMs() { return elapsedMs; }
+
+    public Integer getToolCallCount() { return toolCallCount; }
+
+    public Integer getRagHitCount() { return ragHitCount; }
 }

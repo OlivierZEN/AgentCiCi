@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
         "/admin/wecom": { target: backendTarget, changeOrigin: true },
         "/api/autoservice": { target: backendTarget, changeOrigin: true },
         "/agents": { target: backendTarget, changeOrigin: true },
+        "/evaluation": { target: backendTarget, changeOrigin: true },
         "/skills": { target: backendTarget, changeOrigin: true },
         "/feishu": { target: backendTarget, changeOrigin: true },
         "/wecom": { target: backendTarget, changeOrigin: true },

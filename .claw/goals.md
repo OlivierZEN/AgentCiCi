@@ -1,9 +1,9 @@
 ---
 kind: goals
 version: 3
-updated_at: 2026-07-14T00:00:00+08:00
+updated_at: 2026-07-14T01:22:40+08:00
 updated_by: MANAGER-001
-status: active
+status: complete
 ---
 
 # Goals
@@ -14,7 +14,7 @@ status: active
 - 完成确定性断言、运行快照、版本对比、结果失效、发布门禁、Trace 回流和质量问题闭环。
 - 建设 `/platform/evaluation`、`/admin/evaluation` 与 Agent Builder 独立“评测”Tab；原“发布渠道”只保留 IM/API/调度运行入口。
 - 完成自动化测试、桌面浏览器、生产构建和发布就绪验证。
-- 当前执行任务：`TASK-200`。
+- 交付状态：`TASK-200` 已达到生产发布就绪，等待评审、合并并按运行手册发布。
 
 ## Product Goal
 

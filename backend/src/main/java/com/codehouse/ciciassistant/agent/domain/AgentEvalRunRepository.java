@@ -11,4 +11,8 @@ public interface AgentEvalRunRepository extends JpaRepository<AgentEvalRunEntity
             String orgId,
             String agentId,
             Integer versionNo);
+
+    List<AgentEvalRunEntity> findByOrgIdOrderByCreatedAtDesc(String orgId);
+
+    List<AgentEvalRunEntity> findTop200ByOrderByCreatedAtDesc();
 }

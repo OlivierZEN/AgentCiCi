@@ -85,13 +85,39 @@ public class SkillResolverService {
      */
     public ResolvedSkillContext resolve(String orgId, String requestedAgentId, String sessionId,
                                         Optional<String> activeSkillOverride) {
-        String agentId = resolveAgentId(requestedAgentId, sessionId);
+        return resolveInternal(orgId, requestedAgentId, sessionId, activeSkillOverride, null, false);
+    }
+
+    public ResolvedSkillContext resolveForEvaluation(String orgId,
+                                                     String agentId,
+                                                     Long workflowVersionId) {
+        AgentWorkflowVersionEntity version = agentWorkflowVersionRepository.findById(workflowVersionId)
+                .filter(item -> orgId.equals(item.getOrgId()) && agentId.equals(item.getAgentId()))
+                .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
+        return resolveInternal(
+                orgId,
+                agentId,
+                "evaluation-" + workflowVersionId,
+                Optional.empty(),
+                resolveRuntimeBinding(orgId, version),
+                true);
+    }
+
+    private ResolvedSkillContext resolveInternal(String orgId,
+                                                 String requestedAgentId,
+                                                 String sessionId,
+                                                 Optional<String> activeSkillOverride,
+                                                 PublishedRuntimeBinding runtimeBindingOverride,
+                                                 boolean evaluationMode) {
+        String agentId = evaluationMode ? requestedAgentId : resolveAgentId(requestedAgentId, sessionId);
         AgentCapabilityResolverService.AgentCapabilityResolution capability = agentCapabilityResolverService.resolve(
                 orgId,
                 agentId,
                 List.of()
         );
-        PublishedRuntimeBinding publishedRuntimeBinding = resolvePublishedRuntimeBinding(orgId, agentId);
+        PublishedRuntimeBinding publishedRuntimeBinding = runtimeBindingOverride == null
+                ? resolvePublishedRuntimeBinding(orgId, agentId)
+                : runtimeBindingOverride;
         PlatformGovernanceService.RuntimePolicyBundle runtimePolicyBundle =
                 platformGovernanceService.resolvePublishedPolicyBundle(orgId);
         List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs = publishedRuntimeBinding.skillRefs();
@@ -103,7 +129,7 @@ public class SkillResolverService {
         List<SkillDefinitionEntity> entities = pinnedSkillRefs.isEmpty()
                 ? resolveSkillEntities(orgId, agentId, effectiveSkillCodes)
                 : List.of();
-        if (pinnedSkillRefs.isEmpty() && entities.isEmpty() && !"cici-system".equals(agentId)) {
+        if (!evaluationMode && pinnedSkillRefs.isEmpty() && entities.isEmpty() && !"cici-system".equals(agentId)) {
             agentId = "cici-system";
             capability = agentCapabilityResolverService.resolve(orgId, agentId, List.of());
             publishedRuntimeBinding = resolvePublishedRuntimeBinding(orgId, agentId);
@@ -167,8 +193,10 @@ public class SkillResolverService {
         skillScopedToolNames.removeAll(new LinkedHashSet<>(agentDirectToolNames));
 
         List<String> boundSkillCodes = skills.stream().map(s -> s.skillCode().toLowerCase(Locale.ROOT)).toList();
-        Optional<String> activeSkillEffective = chatSessionStateService.mergeAndGetActiveSkillCode(
-                orgId, sessionId, agentId, activeSkillOverride, boundSkillCodes);
+        Optional<String> activeSkillEffective = evaluationMode
+                ? Optional.empty()
+                : chatSessionStateService.mergeAndGetActiveSkillCode(
+                        orgId, sessionId, agentId, activeSkillOverride, boundSkillCodes);
 
         LinkedHashSet<String> baselineUniversal = new LinkedHashSet<>(agentDirectToolNames);
         baselineUniversal.addAll(ToolNameNormalizer.canonicalizeAll(publishedRuntimeBinding.toolNames()));
@@ -340,20 +368,27 @@ public class SkillResolverService {
         if (version.isEmpty() || version.get().getWorkflowManifest() == null || version.get().getWorkflowManifest().isBlank()) {
             return PublishedRuntimeBinding.EMPTY;
         }
+        return resolveRuntimeBinding(orgId, version.get());
+    }
+
+    private PublishedRuntimeBinding resolveRuntimeBinding(String orgId, AgentWorkflowVersionEntity version) {
+        if (version.getWorkflowManifest() == null || version.getWorkflowManifest().isBlank()) {
+            return PublishedRuntimeBinding.EMPTY;
+        }
         try {
             Map<String, Object> manifest = objectMapper.readValue(
-                    version.get().getWorkflowManifest(), new TypeReference<Map<String, Object>>() {});
+                    version.getWorkflowManifest(), new TypeReference<Map<String, Object>>() {});
             Map<String, Object> dependencies = getMap(manifest.get("dependencies"));
             Map<String, Object> policies = getMap(manifest.get("policies"));
             List<AgentWorkflowSkillRefService.RuntimeSkillRef> skillRefs =
-                    agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, version.get().getId());
+                    agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, version.getId());
             return new PublishedRuntimeBinding(
                     toStringList(dependencies.get("skills")),
                     toStringList(dependencies.get("tools")),
                     toStringList(dependencies.get("knowledgeBases")),
                     asString(policies.get("handoffRule")),
                     toInteger(policies.get("maxToolCalls")),
-                    version.get().getId(),
+                    version.getId(),
                     skillRefs
             );
         } catch (Exception ex) {

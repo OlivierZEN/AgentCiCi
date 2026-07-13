@@ -183,14 +183,22 @@ public class AgentWorkflowRuntimeService {
                 runtimeResolution.effectiveToolNames(),
                 policyBundle
         );
+        List<RuntimeSkillGovernanceView> resolvedSkillVersions =
+                buildRuntimeSkillGovernanceViews(orgId, agentId, capability, targetVersion);
         executionResult.contextSnapshot().put("runMode", "EVALUATION");
         executionResult.contextSnapshot().put("evaluationVersionNo", targetVersion.getVersionNo());
+        executionResult.contextSnapshot().put("resolvedSkillVersions", resolvedSkillVersions);
+        executionResult.contextSnapshot().put("effectiveKnowledgeBaseIds", runtimeResolution.effectiveKnowledgeBaseIds());
+        executionResult.contextSnapshot().put("toolCalls", List.of());
+        executionResult.contextSnapshot().put("ragSources", List.of());
+        executionResult.contextSnapshot().put("sideEffectPolicy", "BLOCK_WRITES");
+        executionResult.contextSnapshot().put("writeSideEffectsExecuted", false);
         executionResult.trace().add(0, "run-mode:evaluation");
         return new RuntimeExecutionResult(
                 executionResult.status(),
                 executionResult.output(),
                 targetVersion.getId(),
-                buildRuntimeSkillGovernanceViews(orgId, agentId, capability, targetVersion),
+                resolvedSkillVersions,
                 new RuntimePolicyBundleView(
                         policyBundle.bundleCode(),
                         policyBundle.versionNo(),

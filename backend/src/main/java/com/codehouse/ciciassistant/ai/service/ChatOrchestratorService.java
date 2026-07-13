@@ -5,6 +5,8 @@ import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
+import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatSessionEntity;
@@ -97,6 +99,7 @@ public class ChatOrchestratorService {
     private final ChatSessionStateRepository chatSessionStateRepository;
     private final RuntimeContextPromptService runtimeContextPromptService;
     private final AgentWorkflowRuntimeService agentWorkflowRuntimeService;
+    private final AgentWorkflowVersionRepository agentWorkflowVersionRepository;
     private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService;
     private final AgentRunTraceService agentRunTraceService;
     private final AgentAccessControlService agentAccessControlService;
@@ -125,6 +128,7 @@ public class ChatOrchestratorService {
                                    ChatSessionStateRepository chatSessionStateRepository,
                                    RuntimeContextPromptService runtimeContextPromptService,
                                    AgentWorkflowRuntimeService agentWorkflowRuntimeService,
+                                   AgentWorkflowVersionRepository agentWorkflowVersionRepository,
                                    AgentWorkflowExecutionLogService agentWorkflowExecutionLogService,
                                    AgentRunTraceService agentRunTraceService,
                                    AgentAccessControlService agentAccessControlService,
@@ -152,6 +156,7 @@ public class ChatOrchestratorService {
         this.chatSessionStateRepository = chatSessionStateRepository;
         this.runtimeContextPromptService = runtimeContextPromptService;
         this.agentWorkflowRuntimeService = agentWorkflowRuntimeService;
+        this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.agentWorkflowExecutionLogService = agentWorkflowExecutionLogService;
         this.agentRunTraceService = agentRunTraceService;
         this.agentAccessControlService = agentAccessControlService;
@@ -174,6 +179,176 @@ public class ChatOrchestratorService {
         return agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId,
                 () -> chatLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
                         activeSkillCode, metadataFilters, runId));
+    }
+
+    /**
+     * Executes one candidate-version model turn for evaluation without persisting chat state and without
+     * executing tool calls. Tool schemas remain visible so the evaluator can verify tool selection and
+     * arguments, but every requested call is captured as evidence only.
+     */
+    public EvaluationDryRunResult evaluateNoSideEffects(String orgId,
+                                                        String actorId,
+                                                        String agentId,
+                                                        Integer versionNo,
+                                                        String question,
+                                                        String conversationHistoryJson,
+                                                        String fixtureJson) {
+        AgentWorkflowVersionEntity version = agentWorkflowVersionRepository
+                .findByOrgIdAndAgentIdAndVersionNo(orgId, agentId, versionNo)
+                .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
+        Map<String, Object> manifest = parseObject(version.getWorkflowManifest());
+        Map<String, Object> identity = objectMap(manifest.get("identity"));
+        ResolvedSkillContext resolved = skillResolverService.resolveForEvaluation(orgId, agentId, version.getId());
+        ResolvedSkillContext skillContext = withEvaluationIdentity(
+                resolved,
+                textOrDefault(identity.get("systemPrompt"), resolved.agentSystemPrompt()),
+                textOrDefault(identity.get("model"), resolved.agentModel()));
+        BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
+                builtinSkillDocumentService.resolveDocs(skillContext, question);
+        Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
+        String modelName = resolveModelName(
+                skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
+        ModelCallCredentials credentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
+
+        List<String> knowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, List.of());
+        KnowledgeRetrievalRouter.Decision decision = KnowledgeRetrievalRouter.decide(
+                question, knowledgeBaseIds, List.of(), "evaluation-" + version.getId());
+        RagService.RetrievalResult ragResult = decision.shouldRetrieve()
+                ? ragService.retrieveDetailed(
+                        orgId,
+                        knowledgeBaseIds,
+                        question,
+                        Map.of(),
+                        KbAccessControlService.AccessPrincipal.system())
+                : emptyRagRetrievalResult();
+
+        BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig runtimeConfig =
+                builtinSkillRuntimeConfigService.resolve(skillContext, builtinDocs, orgId, actorId);
+        String system = skillPromptAssembler.assemble(
+                AliyunBailianClient.SYSTEM_PROMPT,
+                skillContext,
+                builtinDocs,
+                runtimeConfig)
+                + "\n---\n\nEvaluation policy: this is a side-effect-free candidate-version evaluation. "
+                + "You may request a tool call for planning evidence, but no tool will be executed and you must not claim that a write succeeded.";
+        List<Map<String, Object>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", system));
+        messages.addAll(parseEvaluationHistory(conversationHistoryJson));
+        StringBuilder userContent = new StringBuilder(question == null ? "" : question);
+        if (!ragResult.context().isEmpty()) {
+            userContent.append("\n\n[参考知识库信息]\n");
+            for (int index = 0; index < ragResult.context().size(); index++) {
+                userContent.append(index + 1).append(". ").append(ragResult.context().get(index)).append('\n');
+            }
+        }
+        if (fixtureJson != null && !fixtureJson.isBlank()) {
+            userContent.append("\n\n[评测夹具，仅作只读上下文]\n").append(fixtureJson.trim());
+        }
+        messages.add(Map.of("role", "user", "content", userContent.toString()));
+
+        List<Map<String, Object>> toolSchemas = toolOrchestratorService.getToolDefinitions(
+                orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
+        ChatCompletionResult completion = chatCompletionWithResolvedCredentials(
+                modelName,
+                messages,
+                toolSchemas.isEmpty() ? null : toolSchemas,
+                true,
+                credentials);
+        String rawOutput = completion.content() == null ? "" : completion.content().trim();
+        if (rawOutput.isBlank()
+                || rawOutput.startsWith("Aliyun API key is not configured")
+                || rawOutput.startsWith("Model call failed:")
+                || rawOutput.startsWith("Empty response.")) {
+            throw new IllegalStateException("Evaluation model call failed: " + rawOutput);
+        }
+        List<Map<String, Object>> plannedToolCalls = safeToolCalls(completion).stream()
+                .map(call -> Map.<String, Object>of(
+                        "id", call.id() == null ? "" : call.id(),
+                        "name", call.name() == null ? "" : call.name(),
+                        "arguments", parseToolArguments(call.arguments())))
+                .toList();
+        String output = AssistantContentSanitizer.stripThinkingSections(rawOutput).trim();
+        List<String> ragSources = ragResult.sources().stream()
+                .map(source -> source.knowledgeBaseName() + "/" + source.documentName())
+                .distinct()
+                .toList();
+        Map<String, Object> context = new LinkedHashMap<>();
+        context.put("runMode", "EVALUATION");
+        context.put("evaluationVersionNo", versionNo);
+        context.put("modelName", modelName);
+        context.put("toolCalls", plannedToolCalls);
+        context.put("ragSources", ragSources);
+        context.put("knowledgeUsed", !ragResult.context().isEmpty());
+        context.put("sideEffectPolicy", "BLOCK_WRITES");
+        context.put("writeSideEffectsExecuted", false);
+        context.put("resolvedSkillVersions", skillContext.resolvedSkillRefs());
+        context.put("effectiveKnowledgeBaseIds", knowledgeBaseIds);
+        context.put("promptTokens", completion.promptTokens());
+        context.put("completionTokens", completion.completionTokens());
+        return new EvaluationDryRunResult(
+                output,
+                plannedToolCalls,
+                ragSources,
+                List.of("model:evaluation", "tools:planned-only", "side-effects:blocked"),
+                context);
+    }
+
+    private ResolvedSkillContext withEvaluationIdentity(ResolvedSkillContext current,
+                                                        String systemPrompt,
+                                                        String model) {
+        return new ResolvedSkillContext(
+                current.agentId(), current.skills(), current.skillCodes(), current.allowedToolNames(),
+                current.agentDirectToolNames(), current.skillDeclaredToolNames(), current.skillScopedToolNames(),
+                current.defaultKnowledgeBaseIds(), current.handoffRules(), current.outputContract(),
+                systemPrompt, model, current.activeSkillCode(), current.maxToolCalls(), current.publishedVersionId(),
+                current.resolvedSkillRefs(), current.skillApiTools(), current.policyBundle());
+    }
+
+    private List<Map<String, Object>> parseEvaluationHistory(String json) {
+        if (json == null || json.isBlank()) return List.of();
+        try {
+            JsonNode root = TOOL_RESULT_OBJECT_MAPPER.readTree(json);
+            if (!root.isArray()) return List.of();
+            List<Map<String, Object>> rows = new ArrayList<>();
+            for (JsonNode item : root) {
+                String role = item.path("role").asText("").trim().toLowerCase(Locale.ROOT);
+                String content = item.path("content").asText("").trim();
+                if (("user".equals(role) || "assistant".equals(role)) && !content.isBlank()) {
+                    rows.add(Map.of("role", role, "content", content));
+                }
+            }
+            return rows;
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Invalid evaluation conversation history");
+        }
+    }
+
+    private Map<String, Object> parseObject(String json) {
+        if (json == null || json.isBlank()) return Map.of();
+        try {
+            return TOOL_RESULT_OBJECT_MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        } catch (Exception ex) {
+            throw new IllegalArgumentException("Invalid candidate workflow manifest");
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> objectMap(Object value) {
+        return value instanceof Map<?, ?> map ? (Map<String, Object>) map : Map.of();
+    }
+
+    private String textOrDefault(Object value, String fallback) {
+        String text = value == null ? "" : String.valueOf(value).trim();
+        return text.isBlank() ? fallback : text;
+    }
+
+    private Map<String, Object> parseToolArguments(String json) {
+        if (json == null || json.isBlank()) return Map.of();
+        try {
+            return TOOL_RESULT_OBJECT_MAPPER.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<>() {});
+        } catch (Exception ex) {
+            return Map.of("raw", json);
+        }
     }
 
     private Map<String, Object> chatLocked(String orgId, String userId, String sessionId,
@@ -2399,6 +2574,15 @@ public class ChatOrchestratorService {
         } catch (Exception ignored) {
             return 0;
         }
+    }
+
+    public record EvaluationDryRunResult(
+            String output,
+            List<Map<String, Object>> toolCalls,
+            List<String> ragSources,
+            List<String> trace,
+            Map<String, Object> context
+    ) {
     }
 
     private record ToolCallSummary(String name, String arguments) {

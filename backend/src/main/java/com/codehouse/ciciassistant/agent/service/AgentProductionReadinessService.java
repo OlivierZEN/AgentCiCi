@@ -27,7 +27,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AgentProductionReadinessService {
@@ -65,7 +64,6 @@ public class AgentProductionReadinessService {
         this.agentEvaluationService = agentEvaluationService;
     }
 
-    @Transactional(readOnly = true)
     public ReadinessResult check(String orgId, String agentId, Integer versionNo) {
         Optional<AgentDefinitionEntity> definitionOpt = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
         ArrayList<ReadinessCheck> checks = new ArrayList<>();
@@ -125,7 +123,6 @@ public class AgentProductionReadinessService {
         return result(agentId, targetVersion == null ? null : targetVersion.getVersionNo(), checks, summary);
     }
 
-    @Transactional(readOnly = true)
     public ReadinessResult requirePublishReady(String orgId, String agentId, Integer versionNo) {
         ReadinessResult readiness = check(orgId, agentId, versionNo);
         if (readiness.blocked()) {

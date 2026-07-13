@@ -8,4 +8,10 @@ public interface AgentEvalCaseRepository extends JpaRepository<AgentEvalCaseEnti
     List<AgentEvalCaseEntity> findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(String orgId, Long suiteId, String status);
 
     long countByOrgIdAndSuiteIdAndStatus(String orgId, Long suiteId, String status);
+
+    long countBySuiteIdAndStatus(Long suiteId, String status);
+
+    List<AgentEvalCaseEntity> findBySuiteIdAndStatusOrderByIdAsc(Long suiteId, String status);
+
+    List<AgentEvalCaseEntity> findBySuiteIdOrderByIdAsc(Long suiteId);
 }

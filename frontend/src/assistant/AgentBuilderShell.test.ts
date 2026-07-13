@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   applyAgentDetailToList,
+  AGENT_BUILDER_EDITOR_TABS,
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
   resolveAgentAfterDelete,
@@ -8,6 +9,17 @@ import {
   resolveAgentDetailTarget,
   type BaseModelOption,
 } from "./AgentBuilderShell";
+
+describe("Agent Builder information architecture", () => {
+  it("keeps evaluation governance separate from delivery channels", () => {
+    expect(AGENT_BUILDER_EDITOR_TABS).toEqual([
+      { id: "definition", label: "Agent 定义", purpose: "definition" },
+      { id: "evaluation", label: "评测", purpose: "quality-governance" },
+      { id: "publish", label: "发布渠道", purpose: "delivery-channels" },
+    ]);
+    expect(AGENT_BUILDER_EDITOR_TABS.find((tab) => tab.id === "publish")?.purpose).not.toContain("quality");
+  });
+});
 
 const modelOptions: BaseModelOption[] = [
   { value: "qwen3.6-plus", label: "qwen3.6-plus · Bailian", note: "Bailian" },

@@ -2,7 +2,7 @@
 kind: feature-spec
 feature_id: FEAT-106
 title: 多租户智能体评测控制面与生产发布门禁
-status: in_progress
+status: production_ready
 owner_role: product-agent-quality
 task_ids:
   - TASK-200
@@ -15,7 +15,7 @@ related_features:
   - FEAT-019
   - FEAT-022
   - FEAT-080
-updated_at: 2026-07-14T00:00:00+08:00
+updated_at: 2026-07-14T01:22:40+08:00
 updated_by: MANAGER-001
 ---
 
@@ -358,4 +358,9 @@ GET    /platform/evaluation/runs
 
 - 2026-07-14：用户确认整体信息架构和入口分层，明确评测不得与 IM 发布渠道混淆。
 - 2026-07-14：完成现有 V67、`AgentEvaluationService`、生产就绪门禁、Builder 基础卡片、平台/租户壳层与 Trace 入口的代码审计。
-
+- 2026-07-14：V79 完成评测套件、用例、运行、结果兼容扩展，并新增套件绑定、质量问题和发布引用；历史评测数据保持兼容。
+- 2026-07-14：完成平台/标准应用/行业/租户私有四层资产、平台版本冻结、隐藏挑战集、租户授权、真实候选版本执行、多断言、运行快照、候选/基线对比、结果失效和发布门禁。
+- 2026-07-14：评测执行复用候选编译版本、Skill 解析、模型路由、只读 RAG 与工具 Schema；工具调用只记录计划、不执行真实写动作。
+- 2026-07-14：完成平台“智能体质量”、租户“AI 质量”、Builder 独立“评测”Tab、Ops Trace“加入回归集”和质量问题闭环；“发布渠道”仅保留企微、钉钉、飞书、Web、Open API 等运行入口。
+- 2026-07-14：完成平台角色最小权限、跨租户/跨智能体引用校验、隐藏结果脱敏、Trace 手机/邮箱/身份证/凭据脱敏和平台审计。
+- 2026-07-14：聚焦后端测试、相关 RBAC/平台/Trace 回归、前端 67 项测试、生产构建、桌面浏览器、Compose 与 `2.6.3` release dry-run 均通过，进入生产发布就绪状态。

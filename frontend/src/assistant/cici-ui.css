@@ -3577,6 +3577,50 @@
   gap: 16px;
 }
 
+.cici-builder-evaluation-workspace {
+  min-height: 430px;
+  padding: 4px 2px 12px;
+}
+
+.cici-builder-evaluation-workspace__intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border: 1px solid #ded2bb;
+  background: #fffdf8;
+}
+
+.cici-builder-evaluation-workspace__intro h2 {
+  margin: 0 0 6px;
+  color: #2b2217;
+  font-size: 17px;
+}
+
+.cici-builder-evaluation-workspace__intro p {
+  max-width: 720px;
+  margin: 0;
+  color: #756955;
+  font-size: 12px;
+  line-height: 1.65;
+}
+
+.cici-builder-evaluation-workspace__link {
+  flex: 0 0 auto;
+  padding: 7px 10px;
+  border: 1px solid #b99b65;
+  color: #72531d;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cici-builder-evaluation-workspace__link:hover {
+  border-color: #876223;
+  background: #f9f1df;
+}
+
 .cici-builder-production-gate,
 .cici-builder-evaluation-gate {
   padding: 16px 0;

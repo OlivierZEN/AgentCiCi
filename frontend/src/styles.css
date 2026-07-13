@@ -12742,6 +12742,76 @@ td.skills-data-table__actions > * {
   white-space: nowrap;
 }
 
+.cici-monitor-trace-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-main .admin-page .cici-monitor-trace-head-actions button {
+  min-height: 26px;
+  padding: 0 8px;
+  border: 1px solid #b99652;
+  border-radius: 2px;
+  background: #fffdf8;
+  color: #76561f;
+  font-size: 11px;
+}
+
+.cici-monitor-regression-form {
+  display: grid;
+  gap: 9px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #ded2bb;
+  background: #faf5e9;
+}
+
+.cici-monitor-regression-form label {
+  display: grid;
+  gap: 4px;
+  color: #756955;
+  font-size: 11px;
+}
+
+.cici-monitor-regression-form input,
+.cici-monitor-regression-form select {
+  width: 100%;
+  min-height: 31px;
+  border: 1px solid #d8ccb6;
+  border-radius: 2px;
+  background: #fffdf8;
+  color: #2b2217;
+}
+
+.cici-monitor-regression-form > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.admin-main .admin-page .cici-monitor-regression-form button {
+  min-height: 29px;
+  padding: 0 9px;
+  border: 1px solid #b99652;
+  border-radius: 2px;
+  background: #2b2217;
+  color: #fffdf8;
+  font-size: 11px;
+}
+
+.admin-main .admin-page .cici-monitor-regression-form button:first-child {
+  border-color: #d8ccb6;
+  background: transparent;
+  color: #665b4d;
+}
+
+.cici-monitor-regression-form p {
+  margin: 0;
+  color: #76561f;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .cici-monitor-agent-list {
   padding: 0 10px;
   display: grid;

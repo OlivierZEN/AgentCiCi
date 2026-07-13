@@ -73,6 +73,39 @@ public class AgentEvalCaseEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
+    @Column(name = "case_key", length = 128)
+    private String caseKey;
+
+    @Column(name = "category", nullable = false, length = 64)
+    private String category;
+
+    @Column(name = "conversation_history_json", columnDefinition = "TEXT")
+    private String conversationHistoryJson;
+
+    @Column(name = "fixture_json", columnDefinition = "TEXT")
+    private String fixtureJson;
+
+    @Column(name = "assertion_config_json", columnDefinition = "TEXT")
+    private String assertionConfigJson;
+
+    @Column(name = "judge_config_json", columnDefinition = "TEXT")
+    private String judgeConfigJson;
+
+    @Column(name = "tags_json", columnDefinition = "TEXT")
+    private String tagsJson;
+
+    @Column(name = "created_from_trace_id", length = 128)
+    private String createdFromTraceId;
+
+    @Column(name = "hidden_case", nullable = false)
+    private boolean hiddenCase;
+
+    @Column(name = "review_status", nullable = false, length = 32)
+    private String reviewStatus;
+
+    @Column(name = "redaction_status", nullable = false, length = 32)
+    private String redactionStatus;
+
     protected AgentEvalCaseEntity() {
     }
 
@@ -102,8 +135,53 @@ public class AgentEvalCaseEntity {
         this.forbiddenToolName = forbiddenToolName;
         this.priority = priority == null || priority.isBlank() ? "P1" : priority;
         this.status = STATUS_ACTIVE;
+        this.category = "ANSWER_QUALITY";
+        this.hiddenCase = false;
+        this.reviewStatus = "APPROVED";
+        this.redactionStatus = "NOT_REQUIRED";
         this.createdAt = now;
         this.updatedAt = now;
+    }
+
+    public AgentEvalCaseEntity(String orgId,
+                               String agentId,
+                               Long suiteId,
+                               String name,
+                               String inputText,
+                               String assertionType,
+                               String expectedText,
+                               String forbiddenText,
+                               String expectedStatus,
+                               String requiredToolName,
+                               String forbiddenToolName,
+                               String priority,
+                               String caseKey,
+                               String category,
+                               String conversationHistoryJson,
+                               String fixtureJson,
+                               String assertionConfigJson,
+                               String judgeConfigJson,
+                               String tagsJson,
+                               String createdFromTraceId,
+                               boolean hiddenCase,
+                               String reviewStatus,
+                               String redactionStatus) {
+        this(orgId, agentId, suiteId, name, inputText, assertionType, expectedText, forbiddenText,
+                expectedStatus, requiredToolName, forbiddenToolName, priority);
+        this.caseKey = caseKey;
+        this.category = category == null || category.isBlank() ? "ANSWER_QUALITY" : category;
+        this.conversationHistoryJson = conversationHistoryJson;
+        this.fixtureJson = fixtureJson;
+        this.assertionConfigJson = assertionConfigJson;
+        this.judgeConfigJson = judgeConfigJson;
+        this.tagsJson = tagsJson;
+        this.createdFromTraceId = createdFromTraceId;
+        this.hiddenCase = hiddenCase;
+        this.reviewStatus = reviewStatus == null || reviewStatus.isBlank() ? "APPROVED" : reviewStatus;
+        this.redactionStatus = redactionStatus == null || redactionStatus.isBlank() ? "NOT_REQUIRED" : redactionStatus;
+        if (!"APPROVED".equals(this.reviewStatus)) {
+            this.status = "DRAFT";
+        }
     }
 
     public Long getId() { return id; }
@@ -137,4 +215,85 @@ public class AgentEvalCaseEntity {
     public Instant getCreatedAt() { return createdAt; }
 
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public String getCaseKey() { return caseKey; }
+
+    public String getCategory() { return category; }
+
+    public String getConversationHistoryJson() { return conversationHistoryJson; }
+
+    public String getFixtureJson() { return fixtureJson; }
+
+    public String getAssertionConfigJson() { return assertionConfigJson; }
+
+    public String getJudgeConfigJson() { return judgeConfigJson; }
+
+    public String getTagsJson() { return tagsJson; }
+
+    public String getCreatedFromTraceId() { return createdFromTraceId; }
+
+    public boolean isHiddenCase() { return hiddenCase; }
+
+    public String getReviewStatus() { return reviewStatus; }
+
+    public String getRedactionStatus() { return redactionStatus; }
+
+    public void activate() {
+        this.status = STATUS_ACTIVE;
+        this.reviewStatus = "APPROVED";
+        this.updatedAt = Instant.now();
+    }
+
+    public void disable() {
+        this.status = "DISABLED";
+        this.updatedAt = Instant.now();
+    }
+
+    public void update(String name,
+                       String inputText,
+                       String assertionType,
+                       String expectedText,
+                       String forbiddenText,
+                       String expectedStatus,
+                       String requiredToolName,
+                       String forbiddenToolName,
+                       String priority,
+                       String caseKey,
+                       String category,
+                       String conversationHistoryJson,
+                       String fixtureJson,
+                       String assertionConfigJson,
+                       String judgeConfigJson,
+                       String tagsJson,
+                       boolean hiddenCase,
+                       String reviewStatus,
+                       String redactionStatus) {
+        this.name = name;
+        this.inputText = inputText;
+        this.assertionType = assertionType;
+        this.expectedText = expectedText;
+        this.forbiddenText = forbiddenText;
+        this.expectedStatus = expectedStatus;
+        this.requiredToolName = requiredToolName;
+        this.forbiddenToolName = forbiddenToolName;
+        this.priority = priority;
+        this.caseKey = caseKey;
+        this.category = category;
+        this.conversationHistoryJson = conversationHistoryJson;
+        this.fixtureJson = fixtureJson;
+        this.assertionConfigJson = assertionConfigJson;
+        this.judgeConfigJson = judgeConfigJson;
+        this.tagsJson = tagsJson;
+        this.hiddenCase = hiddenCase;
+        this.reviewStatus = reviewStatus;
+        this.redactionStatus = redactionStatus;
+        if ("APPROVED".equals(reviewStatus)) {
+            this.status = STATUS_ACTIVE;
+        } else if ("REJECTED".equals(reviewStatus)) {
+            this.status = "DISABLED";
+        } else {
+            this.status = "DRAFT";
+        }
+        this.updatedAt = Instant.now();
+    }
 }

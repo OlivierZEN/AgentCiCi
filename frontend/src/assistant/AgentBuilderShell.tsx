@@ -330,7 +330,12 @@ type DebugRuntimePayload = {
 };
 
 type CompileTab = "preview" | "triggers" | "executions" | "history" | "summary" | "code" | "manifest" | "debug";
-type EditorTab = "definition" | "publish";
+type EditorTab = "definition" | "evaluation" | "publish";
+export const AGENT_BUILDER_EDITOR_TABS: ReadonlyArray<{ id: EditorTab; label: string; purpose: string }> = [
+  { id: "definition", label: "Agent 定义", purpose: "definition" },
+  { id: "evaluation", label: "评测", purpose: "quality-governance" },
+  { id: "publish", label: "发布渠道", purpose: "delivery-channels" },
+];
 
 type AgentExecutionSource = "try_run" | "manual" | "schedule" | "channel" | "unknown";
 
@@ -2036,7 +2041,7 @@ export default function AgentBuilderShell({
   }, [activeCompileTab, loadRuntimeExecutions, loadRuntimeTriggers, loadVersionHistory, selectedAgentId, token]);
 
   useEffect(() => {
-    if (!token || !selectedAgentId || activeEditorTab !== "publish") return;
+    if (!token || !selectedAgentId || activeEditorTab !== "evaluation") return;
     void loadProductionReadiness();
     void loadEvaluationSuites();
   }, [activeEditorTab, loadEvaluationSuites, loadProductionReadiness, selectedAgentId, token]);
@@ -3646,22 +3651,18 @@ export default function AgentBuilderShell({
           <section className="cici-builder-card cici-builder-card--wide cici-builder-editor-card">
             <div className="cici-builder-card__head cici-builder-card__head--editor">
               <div className="cici-builder-tabs cici-builder-tabs--editor">
-                <button
-                  type="button"
-                  className={`cici-builder-tabs__item${activeEditorTab === "definition" ? " is-active" : ""}`}
-                  onClick={() => setActiveEditorTab("definition")}
-                >
-                  Agent 定义
-                </button>
-                <button
-                  type="button"
-                  className={`cici-builder-tabs__item${activeEditorTab === "publish" ? " is-active" : ""}`}
-                  onClick={() => setActiveEditorTab("publish")}
-                >
-                  发布渠道
-                </button>
+                {AGENT_BUILDER_EDITOR_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`cici-builder-tabs__item${activeEditorTab === tab.id ? " is-active" : ""}`}
+                    onClick={() => setActiveEditorTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
-              <span>{activeEditorTab === "definition" ? "Identity" : "Channels"}</span>
+              <span>{activeEditorTab === "definition" ? "Identity" : activeEditorTab === "evaluation" ? "Quality" : "Channels"}</span>
             </div>
 
             {activeEditorTab === "definition" ? (
@@ -3766,10 +3767,20 @@ export default function AgentBuilderShell({
                   </label>
                 </section>
               </div>
-            ) : (
-              <div className="cici-builder-publish-stack">
+            ) : activeEditorTab === "evaluation" ? (
+              <div className="cici-builder-publish-stack cici-builder-evaluation-workspace">
+                <div className="cici-builder-evaluation-workspace__intro">
+                  <div>
+                    <h2>版本质量与发布门禁</h2>
+                    <p>运行当前候选版本的适用评测集，检查平台基线、标准应用、行业包和组织私有回归用例。</p>
+                  </div>
+                  <a className="cici-builder-evaluation-workspace__link" href="/admin/evaluation">打开 AI 质量中心</a>
+                </div>
                 {renderProductionGatePanel()}
                 {renderEvaluationGatePanel()}
+              </div>
+            ) : (
+              <div className="cici-builder-publish-stack">
                 <div className="cici-builder-publish-hub">
                   <aside className="cici-builder-publish-menu" aria-label="发布渠道菜单">
                     {CHANNEL_OPTIONS.map((channel) => {

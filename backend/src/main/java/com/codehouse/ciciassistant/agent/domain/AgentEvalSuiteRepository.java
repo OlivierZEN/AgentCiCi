@@ -8,5 +8,14 @@ public interface AgentEvalSuiteRepository extends JpaRepository<AgentEvalSuiteEn
 
     List<AgentEvalSuiteEntity> findByOrgIdAndAgentIdAndStatusOrderByIdAsc(String orgId, String agentId, String status);
 
+    List<AgentEvalSuiteEntity> findByOrgIdAndStatusOrderByUpdatedAtDesc(String orgId, String status);
+
+    List<AgentEvalSuiteEntity> findByScopeTypeNotAndReleaseStatusAndStatusOrderByIdAsc(
+            String scopeType, String releaseStatus, String status);
+
+    List<AgentEvalSuiteEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+
+    List<AgentEvalSuiteEntity> findByTemplateCodeOrderByVersionNoDesc(String templateCode);
+
     Optional<AgentEvalSuiteEntity> findByIdAndOrgId(Long id, String orgId);
 }

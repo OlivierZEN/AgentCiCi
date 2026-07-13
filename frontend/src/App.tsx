@@ -18,6 +18,7 @@ import AdminAgentBuilderPage from "./admin/pages/AdminAgentBuilderPage";
 import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
+import AdminEvaluationPage from "./admin/pages/AdminEvaluationPage";
 import EmbedMeetingMinutesPage from "./embed/EmbedMeetingMinutesPage";
 import PlatformGuard from "./platform/PlatformGuard";
 import PlatformLogin from "./platform/PlatformLogin";
@@ -32,6 +33,7 @@ import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
 import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
+import PlatformEvaluationPage from "./platform/pages/PlatformEvaluationPage";
 
 export default function App() {
   return (
@@ -69,6 +71,7 @@ export default function App() {
             <Route path="agent-builder" element={<AdminAgentBuilderPage />} />
             <Route path="agent-builder/:agentId/openapi-docs" element={<AdminAgentOpenApiDocsPage />} />
             <Route path="agent-builder/:agentId" element={<AdminAgentBuilderPage />} />
+            <Route path="evaluation" element={<AdminEvaluationPage />} />
             <Route path="integrations" element={<AdminIntegrationsPage />} />
             <Route path="embed-apps" element={<AdminEmbedAppsPage />} />
             <Route path="embed-apps/:appCode" element={<AdminEmbedAppsPage />} />
@@ -88,6 +91,7 @@ export default function App() {
             <Route path="billing" element={<PlatformBillingPage />} />
             <Route path="skills" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
+            <Route path="evaluation" element={<PlatformEvaluationPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
             <Route path="tenants/:orgId" element={<PlatformTenantDetailPage />} />
             <Route path="website-leads" element={<PlatformAutoServiceDemoRequestsPage />} />

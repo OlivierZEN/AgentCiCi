@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.agent;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -32,6 +33,7 @@ class AgentProductionReadinessIntegrationTest {
 
     @Test
     void shouldBlockPublishWhenAgentHasNoProductionEntry() throws Exception {
+        ensurePlatformModelRoute();
         String token = loginToken("13800138111");
         String agentId = "ready-no-entry-" + suffix();
         createAgent(token, agentId, "无入口 Agent", "[]");
@@ -57,6 +59,7 @@ class AgentProductionReadinessIntegrationTest {
 
     @Test
     void shouldExposeReadinessAndIncludeItInPublishResponse() throws Exception {
+        ensurePlatformModelRoute();
         String token = loginToken("13800138111");
         String agentId = "ready-web-" + suffix();
         createAgent(token, agentId, "Web Agent", "[\"web\"]");
@@ -90,6 +93,7 @@ class AgentProductionReadinessIntegrationTest {
 
     @Test
     void shouldBlockPublishWhenBlockingEvaluationFails() throws Exception {
+        ensurePlatformModelRoute();
         String token = loginToken("13800138111");
         String agentId = "ready-eval-" + suffix();
         createAgent(token, agentId, "Eval Agent", "[\"web\"]");
@@ -219,6 +223,46 @@ class AgentProductionReadinessIntegrationTest {
             throw new IllegalStateException("login failed: " + loginResult.getResponse().getContentAsString());
         }
         return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
+    }
+
+    private void ensurePlatformModelRoute() throws Exception {
+        String platformToken = platformToken();
+        mockMvc.perform(put("/platform/models/providers/{providerCode}", "deepseek")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "enabled": true,
+                                  "apiBaseUrl": "http://127.0.0.1:1/v1",
+                                  "apiKey": "evaluation-test-key"
+                                }
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/platform/models/providers/{providerCode}/selected-models", "deepseek")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"selectedModels":["deepseek-chat"]}
+                                """))
+                .andExpect(status().isOk());
+        mockMvc.perform(put("/platform/models/routes/{sceneCode}", "chat")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"providerCode":"deepseek","modelName":"deepseek-chat"}
+                                """))
+                .andExpect(status().isOk());
+    }
+
+    private String platformToken() throws Exception {
+        MvcResult result = mockMvc.perform(post("/auth/platform/password/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"identifier":"admin@cloudcc.com","password":"szyd1234"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data").path("token").asText();
     }
 
     private String suffix() {

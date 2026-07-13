@@ -79,6 +79,12 @@ type Props = {
   token: string;
 };
 
+type RegressionSuitePayload = {
+  id: number;
+  name: string;
+  platformOwned?: boolean;
+};
+
 type MonitorStatusFilter = "all" | "RUNNING" | "FAILED" | "WAITING_CONFIRMATION" | "tool" | "knowledge";
 
 function formatMonitorDateTime(value?: string) {
@@ -226,6 +232,12 @@ export default function AdminAgentRunMonitor({ token }: Props) {
   const [activeLogId, setActiveLogId] = useState("");
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<MonitorStatusFilter>("all");
+  const [traceFeedbackOpen, setTraceFeedbackOpen] = useState(false);
+  const [regressionSuites, setRegressionSuites] = useState<RegressionSuitePayload[]>([]);
+  const [regressionSuiteId, setRegressionSuiteId] = useState("");
+  const [regressionCaseName, setRegressionCaseName] = useState("");
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [feedbackNotice, setFeedbackNotice] = useState("");
 
   const loadRuntimeSnapshots = async () => {
     try {
@@ -396,6 +408,52 @@ export default function AdminAgentRunMonitor({ token }: Props) {
     void loadTraceDetail(selectedLog.traceId);
   }, [selectedLog?.traceId, token]);
 
+  const openTraceFeedback = async () => {
+    if (!selectedLog?.agentId) return;
+    setFeedbackNotice("");
+    setRegressionCaseName(`生产问题回归 · ${selectedLog.title}`);
+    setTraceFeedbackOpen(true);
+    try {
+      const response = await fetch(`/evaluation/suites?agentId=${encodeURIComponent(selectedLog.agentId)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<RegressionSuitePayload[]>(response);
+      if (!response.ok || !body?.success || !Array.isArray(body.data)) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      const editable = body.data.filter((suite) => !suite.platformOwned);
+      setRegressionSuites(editable);
+      setRegressionSuiteId(editable[0]?.id ? String(editable[0].id) : "");
+    } catch (cause) {
+      setRegressionSuites([]);
+      setFeedbackNotice(cause instanceof Error ? cause.message : "评测集加载失败");
+    }
+  };
+
+  const createRegressionCase = async () => {
+    if (!selectedLog?.traceId || !selectedLog.agentId || !regressionSuiteId) return;
+    setFeedbackBusy(true); setFeedbackNotice("");
+    try {
+      const response = await fetch("/evaluation/cases/from-trace", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          traceId: selectedLog.traceId,
+          agentId: selectedLog.agentId,
+          suiteId: Number(regressionSuiteId),
+          name: regressionCaseName.trim() || "来自生产 Trace 的回归用例",
+          priority: selectedLog.rawStatus === "FAILED" ? "P0" : "P1",
+          category: selectedLog.rawStatus === "FAILED" ? "RUNTIME_RELIABILITY" : "ANSWER_QUALITY",
+        }),
+      });
+      const { body } = await safeFetchJson<Record<string, unknown>>(response);
+      if (!response.ok || !body?.success) throw new Error(body?.message ?? `HTTP ${response.status}`);
+      setFeedbackNotice("已脱敏加入回归集，当前状态为待审核。请在 AI 质量中心补充期望断言。 ");
+    } catch (cause) {
+      setFeedbackNotice(cause instanceof Error ? cause.message : "回归用例创建失败");
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
+
   const statusClass = (severity: string) =>
     severity === "busy" ? "is-running" : severity === "warn" ? "is-waiting" : severity === "ok" ? "is-ok" : "is-idle";
 
@@ -564,8 +622,19 @@ export default function AdminAgentRunMonitor({ token }: Props) {
         <aside className="cici-monitor-panel cici-monitor-panel--trace">
           <header className="cici-monitor-panel__head">
             <h2>链路追踪</h2>
-            <span>{selectedLog ? `执行记录 ${selectedLog.recordId}` : "未选择"}</span>
+            <div className="cici-monitor-trace-head-actions">
+              <span>{selectedLog ? `执行记录 ${selectedLog.recordId}` : "未选择"}</span>
+              <button type="button" onClick={() => void openTraceFeedback()} disabled={!selectedLog?.agentId}>加入回归集</button>
+            </div>
           </header>
+          {traceFeedbackOpen ? (
+            <section className="cici-monitor-regression-form" aria-label="将生产链路加入回归集">
+              <label><span>目标评测集</span><select value={regressionSuiteId} onChange={(event) => setRegressionSuiteId(event.target.value)}><option value="">选择组织私有评测集</option>{regressionSuites.map((suite) => <option key={suite.id} value={suite.id}>{suite.name}</option>)}</select></label>
+              <label><span>用例名称</span><input value={regressionCaseName} onChange={(event) => setRegressionCaseName(event.target.value)} /></label>
+              <div><button type="button" onClick={() => setTraceFeedbackOpen(false)}>取消</button><button type="button" onClick={() => void createRegressionCase()} disabled={!regressionSuiteId || feedbackBusy}>{feedbackBusy ? "处理中…" : "脱敏并加入"}</button></div>
+              {feedbackNotice ? <p role="status">{feedbackNotice}</p> : null}
+            </section>
+          ) : null}
           {selectedLog ? (
             <>
               <section className="cici-monitor-trace-summary">

@@ -65,6 +65,36 @@ public class AgentEvalRunEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "target_type", nullable = false, length = 32)
+    private String targetType;
+
+    @Column(name = "baseline_version_no")
+    private Integer baselineVersionNo;
+
+    @Column(name = "trigger_type", nullable = false, length = 32)
+    private String triggerType;
+
+    @Column(name = "runtime_snapshot_json", columnDefinition = "TEXT")
+    private String runtimeSnapshotJson;
+
+    @Column(name = "snapshot_fingerprint", length = 128)
+    private String snapshotFingerprint;
+
+    @Column(name = "avg_latency_ms", nullable = false)
+    private Long avgLatencyMs;
+
+    @Column(name = "total_elapsed_ms", nullable = false)
+    private Long totalElapsedMs;
+
+    @Column(name = "tool_call_accuracy", nullable = false)
+    private Double toolCallAccuracy;
+
+    @Column(name = "rag_hit_rate", nullable = false)
+    private Double ragHitRate;
+
+    @Column(name = "created_by", length = 128)
+    private String createdBy;
+
     protected AgentEvalRunEntity() {
     }
 
@@ -97,6 +127,34 @@ public class AgentEvalRunEntity {
         this.startedAt = startedAt;
         this.finishedAt = finishedAt;
         this.createdAt = startedAt;
+        this.targetType = "CANDIDATE";
+        this.triggerType = "MANUAL";
+        this.avgLatencyMs = 0L;
+        this.totalElapsedMs = 0L;
+        this.toolCallAccuracy = 0.0d;
+        this.ragHitRate = 0.0d;
+    }
+
+    public void attachExecutionMetadata(String targetType,
+                                        Integer baselineVersionNo,
+                                        String triggerType,
+                                        String runtimeSnapshotJson,
+                                        String snapshotFingerprint,
+                                        long avgLatencyMs,
+                                        long totalElapsedMs,
+                                        double toolCallAccuracy,
+                                        double ragHitRate,
+                                        String createdBy) {
+        this.targetType = targetType == null || targetType.isBlank() ? "CANDIDATE" : targetType;
+        this.baselineVersionNo = baselineVersionNo;
+        this.triggerType = triggerType == null || triggerType.isBlank() ? "MANUAL" : triggerType;
+        this.runtimeSnapshotJson = runtimeSnapshotJson;
+        this.snapshotFingerprint = snapshotFingerprint;
+        this.avgLatencyMs = avgLatencyMs;
+        this.totalElapsedMs = totalElapsedMs;
+        this.toolCallAccuracy = toolCallAccuracy;
+        this.ragHitRate = ragHitRate;
+        this.createdBy = createdBy;
     }
 
     public Long getId() { return id; }
@@ -130,4 +188,24 @@ public class AgentEvalRunEntity {
     public Instant getFinishedAt() { return finishedAt; }
 
     public Instant getCreatedAt() { return createdAt; }
+
+    public String getTargetType() { return targetType; }
+
+    public Integer getBaselineVersionNo() { return baselineVersionNo; }
+
+    public String getTriggerType() { return triggerType; }
+
+    public String getRuntimeSnapshotJson() { return runtimeSnapshotJson; }
+
+    public String getSnapshotFingerprint() { return snapshotFingerprint; }
+
+    public Long getAvgLatencyMs() { return avgLatencyMs; }
+
+    public Long getTotalElapsedMs() { return totalElapsedMs; }
+
+    public Double getToolCallAccuracy() { return toolCallAccuracy; }
+
+    public Double getRagHitRate() { return ragHitRate; }
+
+    public String getCreatedBy() { return createdBy; }
 }
