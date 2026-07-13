@@ -1,7 +1,7 @@
 task_id: TASK-200
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: completed
+status: active
 assigned_at: 2026-07-14T00:00:00+08:00
 expires_at: none
 spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
@@ -84,5 +84,5 @@ signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user approved continuo
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "PM-created full-stack evaluation control-plane task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+notes: "PM-created full-stack evaluation control-plane task. Reopened on 2026-07-14 for the user-authorized production release of the verified implementation. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
 hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py on branch codex/TASK-200-agent-evaluation-control-plane before implementation edits."

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T01:22:40+08:00
+updated_at: 2026-07-14T07:43:07+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-200 - 多租户智能体评测控制面生产落地
 
-- status: `done`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`
 - task_status_path: `.claw/tasks/TASK-200.md`
 - assignment_path: `.claw/assignments/TASK-200.yaml`
 - blocked_by: `none`
-- next_action: Production-ready on `codex/TASK-200-agent-evaluation-control-plane`; review/merge, then release under the production runbook.
+- next_action: User-authorized production release in progress: promote the verified commit, back up production, deploy the unified release, and complete API/browser acceptance.
 
 ### TASK-199 - 互动驱动的客户经营动作
 

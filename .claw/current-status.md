@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T01:22:40+08:00
+updated_at: 2026-07-14T07:43:07+08:00
 updated_by: MANAGER-001
-phase: agent-evaluation-release-ready
-active_task: "none"
-next_action: "Review and merge codex/TASK-200-agent-evaluation-control-plane, then run the production release playbook from the merged commit."
+phase: agent-evaluation-production-release
+active_task: "TASK-200"
+next_action: "Run production release gates, create the pre-release backup, deploy the unified TASK-200 version, and complete production acceptance."
 read_next:
   goals: false
   decisions: false
@@ -41,7 +41,7 @@ read_next:
 
 - Earlier TASK-191 through TASK-193 production evidence remains in `.claw/test-report.md` and `.claw/devops.md`; no regression was observed during this release.
 
-- Current work branch: `codex/TASK-200-agent-evaluation-control-plane`; production remains on release `2.6.2` from Git commit `b87bbe43dd0d` until TASK-200 is reviewed, merged and released.
+- Current work branch: `codex/TASK-200-agent-evaluation-control-plane`; the user authorized production release of commit `af9d902e4d44f53acc2c2c40b9bef20dfa7d7a9a`. Production remains on `2.6.2` / `b87bbe43dd0d` until the release gates, backup and deployment complete.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-200
-status: done
-updated_at: 2026-07-14T01:22:40+08:00
+status: in_progress
+updated_at: 2026-07-14T07:43:07+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -64,3 +64,8 @@ spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
 - 目标分支：`codex/TASK-200-agent-evaluation-control-plane`。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
 - 功能已达到生产发布就绪；合并后按 `docs/production-release-runbook.md` 使用统一版本 `2.6.3` 或重新 dry-run 得到的下一版本发布。
+
+## Release Status
+
+- 用户已于 2026-07-14 明确授权发布到线上环境。
+- 当前阶段：生产发布门禁、备份、镜像发布、部署与验收执行中。
