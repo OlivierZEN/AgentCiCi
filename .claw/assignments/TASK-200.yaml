@@ -29,6 +29,7 @@ allowed_write_roots:
   - frontend/src/styles.css
   - frontend/vite.config.js
   - frontend/vite.config.ts
+  - deploy/*.conf
   - README.md
   - AgentCiCi智能体平台实现设计方案.md
   - docs/specs/**
@@ -45,6 +46,8 @@ scope_files:
   - .claw/devops.md
   - backend/src/main/resources/db/migration/V79__agent_evaluation_control_plane.sql
   - frontend/src/App.tsx
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - README.md
   - AgentCiCi智能体平台实现设计方案.md
 protected_paths:
@@ -84,5 +87,5 @@ signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user approved continuo
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "PM-created full-stack evaluation control-plane task. Reopened on 2026-07-14 for the user-authorized production release of the verified implementation. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+notes: "PM-created full-stack evaluation control-plane task. Reopened on 2026-07-14 for the user-authorized production release of the verified implementation; production smoke expanded the exact scope to the two Nginx route files after evaluation APIs were found falling through to SPA HTML. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
 hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py on branch codex/TASK-200-agent-evaluation-control-plane before implementation edits."
