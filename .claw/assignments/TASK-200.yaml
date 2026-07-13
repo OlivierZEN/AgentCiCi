@@ -1,0 +1,80 @@
+task_id: TASK-200
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T00:00:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
+task_status_path: .claw/tasks/TASK-200.md
+branch: codex/TASK-200-agent-evaluation-control-plane
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/db/migration/**
+  - frontend/src/admin/**
+  - frontend/src/platform/**
+  - frontend/src/assistant/**
+  - frontend/src/shared/**
+  - frontend/src/App.tsx
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
+  - .claw/tasks/TASK-200.md
+  - .claw/assignments/TASK-200.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/goals.md
+  - .claw/decisions.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - backend/src/main/resources/db/migration/V79__agent_evaluation_control_plane.sql
+  - frontend/src/App.tsx
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/goals.md
+  - .claw/decisions.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-031-agent-evaluation-regression-system.md
+  - docs/specs/FEAT-080-security-rules-platform.md
+  - docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
+task_boundary:
+  - "实现平台核心、标准应用、行业与租户私有四层评测资产和版本治理。"
+  - "实现确定性断言、运行快照、结果失效、版本对比、发布门禁、Trace 回流和质量问题闭环。"
+  - "新增 /platform/evaluation、/admin/evaluation 和 Agent Builder 独立评测 Tab。"
+  - "发布渠道只保留飞书、钉钉、企业微信、Web、Open API 和调度等运行入口，不承载评测维护。"
+  - "评测环境不得真实写入 CRM、工单、消息、审批或其他外部业务系统。"
+  - "不得弱化平台 P0、安全、权限、租户隔离、Agent RBAC 和发布门禁。"
+  - "不新增移动端适配、模型训练平台或跨租户公开排行榜。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user approved continuous goal delivery for the complete agent evaluation system."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created full-stack evaluation control-plane task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+hard_gate_notes: "MANAGER-001 must run task-scoped dev-login.py and check-assignment.py on branch codex/TASK-200-agent-evaluation-control-plane before implementation edits."
+

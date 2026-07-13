@@ -352,3 +352,18 @@ status: active
 - Alternatives considered:
   - Keep desktop and mobile as a universal quality gate: rejected because it adds recurring scope the user no longer wants.
   - Remove all existing mobile code immediately: rejected because the request is about not adding new mobile compatibility work, not rolling back historical implementation.
+
+## DEC-027 Agent Evaluation Uses Two-Level Control Planes and an Independent Builder Tab
+
+- Status: accepted
+- Date: 2026-07-14T00:00:00+08:00
+- Decision: implement intelligent-agent evaluation as a shared quality control plane with platform-maintained core, standard-application and industry suites, tenant-maintained private suites, an independent Agent Builder evaluation tab, and production Trace feedback. Keep IM, API and schedule configuration exclusively in the existing publishing-channel surface.
+- Why this won:
+  - Platform-owned sealed suites preserve safety, product and industry baselines without exposing or allowing tenant mutation of core evaluation assets.
+  - Tenant-private suites let organizations express their own CRM fields, processes and terminology without polluting platform standards.
+  - Agent Builder needs contextual run, comparison and gate feedback, while full asset maintenance belongs in platform and tenant quality centers.
+  - Separating evaluation from publishing channels prevents users from mistaking Feishu, DingTalk, WeCom, Web or Open API runtime bindings for quality-release governance.
+- Alternatives considered:
+  - Put all evaluation maintenance in the Agent Builder publishing-channel page: rejected because channels and quality gates have different ownership, lifecycle and user intent.
+  - Put all evaluation maintenance only in the platform console: rejected because tenants must own private workflows, fixtures and regression cases.
+  - Let tenants copy and modify platform suites: rejected because it destroys a stable benchmark, complicates upgrades and exposes protected evaluation assets.

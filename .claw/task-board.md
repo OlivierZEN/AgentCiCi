@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-12T15:38:41Z
+updated_at: 2026-07-14T00:00:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-200 - 多租户智能体评测控制面生产落地
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`
+- task_status_path: `.claw/tasks/TASK-200.md`
+- assignment_path: `.claw/assignments/TASK-200.yaml`
+- blocked_by: `none`
+- next_action: Validate assignment, create the task branch, then implement V79 and the backend evaluation control plane before UI delivery.
 
 ### TASK-199 - 互动驱动的客户经营动作
 
