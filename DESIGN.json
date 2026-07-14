@@ -63,6 +63,34 @@
       "fast": "150ms ease-out",
       "standard": "180ms ease-out"
     },
+    "platformLoginSurface": {
+      "purpose": "User-approved route-level visual exception for the unauthenticated platform operations login entry.",
+      "spec": "docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md",
+      "route": "/platform/login",
+      "status": "approved",
+      "layout": {
+        "desktopSplit": "45% visual field / 55% login field",
+        "visualField": "orbital Agent intelligence scene with SVG hairlines, sparse signal nodes and a central core",
+        "loginField": "high-whitespace semantic form without a legacy ivory outer card",
+        "divider": "single low-contrast 1px vertical rule"
+      },
+      "palette": {
+        "cosmicBlack": "#050607",
+        "deepSpace": "#0e0f14",
+        "duskBlue": "#0f1b2a",
+        "nebulaTeal": "#0e1f22",
+        "nightPurple": "#1a1c2a",
+        "softWhite": "#f5f6f8",
+        "stardustGold": "#f5d28a",
+        "signalTeal": "#8bcfc0"
+      },
+      "rules": [
+        "This exception applies only to the unauthenticated /platform/login entry and does not change authenticated platform workbench themes.",
+        "Keep login copy, form semantics, auth request behavior, token storage, role validation and redirect behavior unchanged.",
+        "Use semantic HTML with CSS and inline SVG for the orbital scene; do not rasterize core UI text or ship a screenshot as the page background.",
+        "Use subtle borders, low-radius controls, restrained signal glow and reduced-motion support; avoid glassmorphism, card grids, neon bloom and decorative metrics."
+      ]
+    },
     "themePreferences": {
       "purpose": "Account-level selectable palettes for authenticated AgentCiCi, admin, platform, and CloudCC embedded product surfaces.",
       "defaultTheme": "gilded",

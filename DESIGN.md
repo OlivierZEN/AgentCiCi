@@ -29,6 +29,8 @@
 
 新品牌页、营销页或路由级视觉偏离必须先 shape、得到用户确认，并记录到 `docs/specs/`。
 
+`/platform/login` 是已确认的路由级视觉例外（FEAT-115）：它使用宇宙黑、深空蓝、夜紫、星云青、软白与少量星尘金，采用左侧轨道智能场 + 右侧高留白登录表单的桌面构图。该例外只适用于未认证的平台账号入口，不改变认证后 `/platform/*` 的主题 token、组件尺寸或治理工作台规则。
+
 ## 页面质量流程
 
 新建或明显改动产品页面时，按 `DESIGN.json.extensions.pageImplementationWorkflow` 执行：
