@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-205
-status: ready
-updated_at: 2026-07-14T09:43:14Z
+status: in_progress
+updated_at: 2026-07-14T10:30:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -23,11 +23,11 @@ spec_path: docs/specs/FEAT-111-crm-business-analysis-skill.md
 - 用户已批准“通用助手 + CRM 经营分析 Skill + 高阶确定性工具”的架构。
 - CloudCC `standard-catalog` 已确认目标租户存在产品、订单、订单产品、合同、业务机会产品及关键字段，无需元数据变更。
 - FEAT-111 已定义指标语义、对象关系、工具合同、演示数据规模、权限和验收标准。
+- 实施计划已固化到 `docs/superpowers/plans/2026-07-14-crm-business-analysis.md`，当前按 TDD 执行。
 
 ## Next Action
 
-- 完成 assignment 代表性文件授权验证并将任务分配提交推送到 `origin/main`。
-- 从 `origin/main` 创建 `codex/TASK-205-crm-business-analysis`，按 TDD 实现工具、Skill、种子脚本和评测。
+- 先扩展文件型标准 Skill 的运行时策略契约，再实现产品销售排行服务与高阶工具。
 
 ## Constraints
 
