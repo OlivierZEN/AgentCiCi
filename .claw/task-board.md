@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T16:51:00Z
+updated_at: 2026-07-14T17:28:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,18 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-210.md`
 - assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
-- next_action: Production runs `2.7.4`; complete AgentCiCi plus CloudCC embed visual acceptance and close TASK-210 independently.
-
-### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
-- task_status_path: `.claw/tasks/TASK-208.md`
-- assignment_path: `.claw/assignments/TASK-208.yaml`
-- blocked_by: `none`
-- next_action: Merge the verified `2.7.2 + 2.7.3 + 2.7.4` integration, publish `2.7.5`, migrate CRM data, then complete five-session production acceptance.
+- next_action: Production runs integrated `2.7.5` with TASK-210 preserved; complete its independent AgentCiCi plus CloudCC embed visual evidence and close TASK-210.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 
@@ -876,6 +865,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
+- task_status_path: `.claw/tasks/TASK-208.md`
+- assignment_path: `.claw/assignments/TASK-208.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.5 / be80eea665c0`; monitor CRM source-field coverage and keep the governed SalesA demo batch idempotent.
 
 ### TASK-209 - 运营平台登录页原图像素锁定复刻
 
