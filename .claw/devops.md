@@ -1,12 +1,17 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T10:46:00Z
+updated_at: 2026-07-14T10:51:08Z
 updated_by: MANAGER-001
 status: active
 ---
 
 # DevOps
+
+## CloudCC Embedded Asset
+
+- 2026-07-14 TASK-206: `component-customer-workbench` pagecomponent V13 is active at ID `6a561531e4b0a577cbba2080`; `customer_interaction_workbench` customPage V7 references that ID with `embedded=true` and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`.
+- Publish, dry-run binding, update and readback were executed only through `cc-customization-expert-msapi 2.1.279-msapi`. The real CRM injection page passed initial load and two consecutive refreshes with connected identity and customer data.
 
 ## Production Capacity Snapshot
 

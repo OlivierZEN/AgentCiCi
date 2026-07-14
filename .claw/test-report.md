@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T10:46:00Z
+updated_at: 2026-07-14T10:51:08Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T10:46:00Z
+last_run_at: 2026-07-14T10:51:08Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-206 CloudCC 嵌入身份同步自动恢复（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通过 TASK-206 assignment 检查；pagecomponent 源码、预构建 bundle、配置、测试与任务状态均在授权范围内。
+- `frontend-focused`: `npm test -- src/assistant/customer-workbench/CloudccEmbedSso.test.ts` 通过，1 个文件、5 项；覆盖双路径策略一致、每次重取 token/用户、临时/身份错误分类、敏感信息不外泄和首次 503 后自动恢复。
+- `frontend-full`: `npm test` 通过，14 个文件、78 项；`npm run build` 成功，仅保留既有 Vite 大 chunk 提示；UMD `node --check` 与 `git diff --check` 通过。
+- `cloudcc-package`: `cloudcc package pagecomponent customer-workbench . --dry-run` 通过，确认使用 `frontend/build/customer-workbench.umd.min.js` 且不打包本地凭据与状态文件。
+- `cloudcc-publish`: 通过 `cc-customization-expert-msapi 2.1.279-msapi` 发布 pagecomponent V13，ID `6a561531e4b0a577cbba2080`；customPage dry-run 后更新为 V7，精确引用该组件、`embedded=true` 和生产工作台 URL。
+- `cloudcc-readback`: 在线 pagecomponent 查询确认 ID/V13；injectionPage 回读确认 customPage V7 组件 ID 和 URL。验证接口因 runtime snapshot 不返回版本字段报告已知 `stale_component_reference`，不影响 ID/在线版本和真实运行时验收。
+- `browser-production`: 真实 CloudCC CRM 注入页显示“CloudCC CRM 已连接”、`CCAdmin / 组织管理员`、客户队列和详情数据；连续两次刷新结果均为 `connected=true / failed=false / blank=false / hasCustomers=true`。
 
 ## TASK-205 CRM 经营分析与高仿真销售数据生产验收（2026-07-14）
 

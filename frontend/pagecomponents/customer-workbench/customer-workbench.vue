@@ -23,6 +23,10 @@
 </template>
 
 <script>
+const SSO_RETRY_DELAYS = [0, 800, 2000, 4000];
+const SSO_RECOVERY_DELAY = 5000;
+const SSO_MAX_RECOVERY_CYCLES = 1;
+
 export default {
   props: {
     elePropObj: {
@@ -57,6 +61,9 @@ export default {
       resolvedWorkspaceUrl: "",
       ssoStarted: false,
       ssoMessage: "",
+      ssoRetryTimer: null,
+      ssoRecoveryCycles: 0,
+      ssoDestroyed: false,
       embedHeight: "100vh",
       previousDocumentOverflow: null,
       previousBodyOverflow: null
@@ -94,6 +101,8 @@ export default {
     window.addEventListener("resize", this.syncEmbedHeight, { passive: true });
   },
   beforeDestroy() {
+    this.ssoDestroyed = true;
+    this.clearSsoRetryTimer();
     window.removeEventListener("resize", this.syncEmbedHeight);
     if (this.previousDocumentOverflow !== null && document.documentElement) {
       document.documentElement.style.overflow = this.previousDocumentOverflow;
@@ -114,18 +123,34 @@ export default {
         });
       }
     },
-    async bootstrapSso() {
+    bootstrapSso() {
       if (!this.enableSso || this.ssoStarted) {
         return;
       }
+      if (typeof fetch !== "function") {
+        this.ssoMessage = "当前浏览器暂不支持 CloudCC 身份同步，请重新打开工作台。";
+        return;
+      }
+      this.ssoDestroyed = false;
       this.ssoStarted = true;
+      this.runSsoAttempt(0);
+    },
+    async runSsoAttempt(attemptIndex) {
       try {
-        this.ssoMessage = "正在同步 CloudCC 当前用户身份...";
+        const delay = SSO_RETRY_DELAYS[attemptIndex] || 0;
+        this.ssoMessage = attemptIndex === 0
+          ? "正在同步 CloudCC 当前用户身份..."
+          : `CloudCC 身份服务暂时不可用，正在重新同步（${attemptIndex + 1}/${SSO_RETRY_DELAYS.length}）...`;
+        if (delay > 0) {
+          await this.waitForSsoDelay(delay);
+        }
+        if (this.ssoDestroyed) {
+          return;
+        }
         const token = await this.readCloudccRuntimeToken();
         const user = await this.readCloudccUserInfo(token);
         if (!token || !user) {
-          this.ssoMessage = "未获取到 CloudCC 登录态，已切换为普通工作台入口。";
-          return;
+          return this.retryOrFinishSso(attemptIndex, true, 0);
         }
         const response = await fetch(this.ssoEndpoint, {
           method: "POST",
@@ -140,13 +165,62 @@ export default {
         });
         const body = await response.json().catch(() => null);
         if (!response.ok || !body || !body.success || !body.data || !body.data.ticket) {
-          this.ssoMessage = "CloudCC 身份同步失败，已切换为普通工作台入口。";
-          return;
+          return this.retryOrFinishSso(
+            attemptIndex,
+            response.ok ? true : this.isRetryableSsoStatus(response.status),
+            response.status
+          );
         }
+        this.clearSsoRetryTimer();
+        this.ssoStarted = false;
+        this.ssoRecoveryCycles = 0;
         this.resolvedWorkspaceUrl = this.appendQuery(this.workspaceUrl, "ssoTicket", body.data.ticket);
         this.ssoMessage = "";
       } catch (error) {
-        this.ssoMessage = "CloudCC 身份同步异常，已切换为普通工作台入口。";
+        return this.retryOrFinishSso(attemptIndex, true, 0);
+      }
+    },
+    retryOrFinishSso(attemptIndex, retryable, status) {
+      if (retryable && attemptIndex + 1 < SSO_RETRY_DELAYS.length) {
+        return this.runSsoAttempt(attemptIndex + 1);
+      }
+      this.finishSsoFailure(retryable, status);
+      return undefined;
+    },
+    finishSsoFailure(retryable, status) {
+      this.clearSsoRetryTimer();
+      this.ssoStarted = false;
+      if (status === 401 || status === 403) {
+        this.ssoMessage = "CloudCC 当前用户与 AgentCiCi 账号未正确映射，请联系管理员检查账号绑定。";
+      } else if (status === 400) {
+        this.ssoMessage = "CloudCC 身份信息不完整，请从 CRM 重新打开客户互动工作台。";
+      } else {
+        this.ssoMessage = "CloudCC 身份服务暂时不可用，将在几秒后自动重试。";
+      }
+      if (retryable && !this.ssoDestroyed && this.ssoRecoveryCycles < SSO_MAX_RECOVERY_CYCLES) {
+        this.ssoRecoveryCycles += 1;
+        this.ssoRetryTimer = window.setTimeout(() => {
+          this.ssoRetryTimer = null;
+          this.bootstrapSso();
+        }, SSO_RECOVERY_DELAY);
+      }
+    },
+    isRetryableSsoStatus(status) {
+      return !status || status === 408 || status === 425 || status === 429 || status >= 500;
+    },
+    waitForSsoDelay(delay) {
+      this.clearSsoRetryTimer();
+      return new Promise((resolve) => {
+        this.ssoRetryTimer = window.setTimeout(() => {
+          this.ssoRetryTimer = null;
+          resolve();
+        }, delay);
+      });
+    },
+    clearSsoRetryTimer() {
+      if (this.ssoRetryTimer !== null) {
+        window.clearTimeout(this.ssoRetryTimer);
+        this.ssoRetryTimer = null;
       }
     },
     syncEmbedHeight() {
