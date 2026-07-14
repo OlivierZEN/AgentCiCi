@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T10:51:08Z
+updated_at: 2026-07-14T11:30:00Z
 updated_by: MANAGER-001
 phase: customer-workbench-comprehensive-demo-scenarios
-active_task: "TASK-203"
-next_action: "Continue TASK-203 comprehensive customer-workbench demo scenarios after TASK-206 CloudCC embed recovery completion."
+active_task: "TASK-206"
+next_action: "Repair ordinary-user CloudCC OpenAPI token validation and truthful embedded SSO error mapping, then release and reverify in CRM."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-206 is done. CloudCC pagecomponent V13 and customPage V7 now use bounded retry, token/user reacquisition, terminal lock release and one recovery cycle while preserving strict identity mapping. Fault injection recovered from 503 on the second attempt; the real CRM page loaded connected customer data and passed repeated refreshes without failure or blank screen.
+- TASK-206 is reopened. Retry recovery works, but an ordinary CRM user exposed a second root cause: the pagecomponent supplies an OpenAPI token while the backend validates it against the privileged setup metadata endpoint, and the frontend mislabels every 401/403 as account mapping failure. The fix must move validation to role-aware CloudCC OpenAPI without relaxing three-way identity matching.
 - TASK-205 is complete in production `2.6.8 / 095094300a25`: the platform-standard CRM business analysis Skill, deterministic intent gate and `crm_product_sales_rank` tool are live; `cici-system` published version 3 pins the Skill. Five new sessions returned the same quantity Top 5 and server logs show exactly five skill-scoped high-level tool calls with no atomic CRM exploration.
 - CloudCC batch `TASK-205-CRM-ANALYTICS-DEMO-V1` is idempotently present with 12 products, 16 reused accounts, 24 opportunities, 72 opportunity products, 16 contracts, 48 orders and 144 order items. Final readback preserves quantity Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`, while amount ranking differs as designed.
 

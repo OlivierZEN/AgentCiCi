@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T10:51:08Z
+updated_at: 2026-07-14T11:30:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-206 - CloudCC 嵌入身份同步自动恢复
 
-- status: `done`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md`
 - task_status_path: `.claw/tasks/TASK-206.md`
 - assignment_path: `.claw/assignments/TASK-206.yaml`
 - blocked_by: `none`
-- next_action: Done in CloudCC pagecomponent V13/customPage V7; monitor transient ticket failures and automatic recovery.
+- next_action: Replace setup-metadata token validation with role-aware CloudCC OpenAPI validation, correct safe error mapping, then release and reverify an ordinary CRM user.
 
 ### TASK-205 - CRM 经营分析 Skill 与产品销售演示数据
 

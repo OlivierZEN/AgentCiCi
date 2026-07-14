@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-206
-status: done
-updated_at: 2026-07-14T10:51:08Z
+status: in_progress
+updated_at: 2026-07-14T11:30:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -23,6 +23,8 @@ spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
 - 线上 pagecomponent/customPage 绑定正确，相同测试用户重新登录后的 SSO 全链路为 HTTP 200。
 - 当前 `bootstrapSso` / `bootstrapFallbackSso` 在任何失败后都保留 started 标志，且没有重试。
 - 截图发生时的一次失败因此被放大为当前页面永久失败，需要重开 CRM 页面才能恢复。
+- 后续普通销售用户复测仍被拒绝；Nginx 响应长度与后端安全文案精确对应为 `CloudCC runtime token 校验失败`，并非页面所显示的“账号未映射”。
+- pagecomponent 优先读取 `$CCDK.CCToken.getOpenApiToken()`，但后端把该 OpenAPI token 发送到 `setup/api/customObject/standardObjList` 元数据接口校验。该接口属于实施/管理能力，普通销售用户会因权限不足被误判为无效令牌；管理员测试账号因此掩盖了问题。
 
 ## Delivery Result
 
@@ -30,6 +32,13 @@ spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
 - HTTP 400/401/403 保持失败关闭，不降低用户映射和数据权限校验；状态提示不包含 token、原始响应或内部堆栈。
 - CloudCC pagecomponent V13（`6a561531e4b0a577cbba2080`）和 customPage V7 已通过 `cc-customization-expert-msapi` 发布、绑定和回读。
 - 真实 CloudCC CRM 页面首次加载及连续两次刷新均显示“CloudCC CRM 已连接”，客户列表与详情正常，无白屏或身份失败提示。
+
+## Reopened Work
+
+- 使用 `/openApi/common` 的角色权限查询入口验证 OpenAPI token；仅把认证失败视为无效，业务对象无权限不得误判令牌无效。
+- 继续从已远端验证的 JWT 载荷提取 actor/org，并保持 token 用户、页面用户、AgentCiCi 成员三方一致。
+- 前端读取服务端安全消息，按真实原因展示可行动提示；不得显示 token、原始响应或内部异常。
+- 增加普通用户、失效 token、权限拒绝和身份不一致的聚焦测试，完成应用发布、pagecomponent 发布和真实 CRM 复验。
 
 ## Constraints
 

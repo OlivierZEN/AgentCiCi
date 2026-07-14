@@ -37,6 +37,14 @@ CloudCC 运行时可能走 Vue 挂载，也可能走 UMD DOM fallback。源码�
 
 本次不修改 `CloudccSsoService` 的身份一致性、成员绑定、当前成员 CloudCC accessToken 生成和一次性 ticket 校验。CRM token 与 AgentCiCi token 继续不互换；AgentCiCi 仅使用当前映射成员生成的 CloudCC token 调用 CRM/MCP。
 
+### 普通用户令牌校验修正（2026-07-14 复测补充）
+
+- pagecomponent 优先取得的是 `getOpenApiToken()`，令牌必须在 CloudCC `/openApi/common` 数据权限入口远端校验，不能调用 `setup/api/customObject/standardObjList` 实施元数据接口。
+- 校验请求使用 `pageQueryWithRoleRight`、`Account`、仅 `id` 字段、第一页一条；响应只用于确认令牌是否通过 CloudCC 认证，不保存或返回业务记录。
+- HTTP 401、明确的 invalid token/session/重新登录语义判定为令牌无效；对象/字段权限拒绝说明请求已通过认证，不得把普通用户误判为无效令牌。
+- 远端认证通过后，actor/org 仍从 CloudCC 响应或 JWT 载荷提取；actor 缺失、token actor 与页面用户不一致、成员未绑定、成员侧 CloudCC 凭据不可用仍分别拒绝。
+- 前端只展示后端白名单安全消息：令牌失效提示重新打开 CRM，身份不一致提示重新登录，成员未绑定提示管理员配置绑定；未知 401/403 使用通用安全提示。
+
 ## 验收标准
 
 1. 首次 ticket 请求模拟 503、第二次成功时，页面自动进入带 `ssoTicket` 的工作台。
@@ -46,6 +54,8 @@ CloudCC 运行时可能走 Vue 挂载，也可能走 UMD DOM fallback。源码�
 5. Vue 源码与 UMD fallback 的重试常量和状态行为一致。
 6. `cloudcc package pagecomponent --dry-run`、发布、customPage 绑定验证与真实 CRM 浏览器复验通过。
 7. 生产发布后健康检查、Nginx、错误日志和 SSO ticket/consume 请求均通过。
+8. 普通销售用户的有效 OpenAPI token 不依赖 setup 元数据权限即可签发 ticket；无效 token 仍被拒绝。
+9. 页面不再把 runtime token 失败、身份不一致和成员凭据不可用统一显示成“账号未映射”。
 
 ## 引用的实施技能文档
 
