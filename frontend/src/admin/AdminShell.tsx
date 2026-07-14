@@ -5,9 +5,10 @@ import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
 import type { AdminOutletContext } from "./useAdminToken";
+import { applyProductTheme } from "../theme/theme";
 
 type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
-type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string };
+type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string; themeCode?: string };
 type CurrentUserUpdatedDetail = { userId: string; mobile?: string; nickname?: string; avatarBase64?: string };
 type OrganizationProfileUpdatedDetail = { orgId: string; name: string; shortName?: string };
 
@@ -73,7 +74,9 @@ export default function AdminShell() {
         });
         const json = await res.json();
         if (res.ok && json.success) {
-          setMe((json.data ?? {}) as MePayload);
+          const profile = (json.data ?? {}) as MePayload;
+          setMe(profile);
+          if (profile.themeCode) applyProductTheme(profile.themeCode);
         }
       } catch {
         // ignore header profile fetch errors

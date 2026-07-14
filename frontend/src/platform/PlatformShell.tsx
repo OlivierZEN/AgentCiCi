@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
-import { clearAuthPayload, readAuthPayload } from "../auth/authStorage";
+import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_PLATFORM_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
+import ThemePreferencePanel from "../theme/ThemePreferencePanel";
+import { applyProductTheme } from "../theme/theme";
 
 type AuthPayload = {
   token: string;
@@ -11,6 +13,7 @@ type AuthPayload = {
   email?: string;
   mobile?: string;
   displayName?: string;
+  themeCode?: string;
 };
 
 function readAuth(): AuthPayload | null {
@@ -32,6 +35,29 @@ export default function PlatformShell() {
     }
   });
 
+  useEffect(() => {
+    if (!auth?.token) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await authFetch(LS_PLATFORM_TOKEN, "/auth/platform/me");
+        const body = await response.json();
+        if (!cancelled && response.ok && body.success) {
+          const profile = body.data as AuthPayload;
+          applyProductTheme(profile.themeCode);
+          const next = { ...auth, ...profile, token: auth.token };
+          writeAuthPayload(LS_PLATFORM_TOKEN, next);
+          setAuth(next);
+        }
+      } catch {
+        // Keep the locally applied theme when the profile endpoint is temporarily unavailable.
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [auth?.token]);
+
   if (!auth) {
     return <Navigate to="/platform/login" replace />;
   }
@@ -46,6 +72,20 @@ export default function PlatformShell() {
             <span className="platform-nav__meta-label">平台账号</span>
             <strong className="platform-nav__org">{accountLabel(auth)}</strong>
           </div>
+          <details className="platform-theme-settings">
+            <summary>界面主题</summary>
+            <ThemePreferencePanel
+              token={auth.token}
+              endpoint="/auth/platform/me/theme"
+              initialTheme={auth.themeCode}
+              compact
+              onSaved={(themeCode) => {
+                const next = { ...auth, themeCode };
+                writeAuthPayload(LS_PLATFORM_TOKEN, next);
+                setAuth(next);
+              }}
+            />
+          </details>
         </div>
         <nav className="admin-nav-links platform-nav__links">
           <NavLink to="/platform" end className={({ isActive }) => (isActive ? "active" : "")}>

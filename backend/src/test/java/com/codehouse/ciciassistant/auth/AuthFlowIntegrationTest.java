@@ -465,6 +465,51 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
+    void shouldPersistThemePreferenceAcrossOrganizationSwitchesAndRejectUnknownTheme() throws Exception {
+        String mobile = "13902400141";
+        MvcResult registerResult = mockMvc.perform(post("/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "mobile": "%s",
+                                  "password": "szyd1234",
+                                  "organizationName": "主题偏好组织"
+                                }
+                                """.formatted(mobile)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String token = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data").path("token").asText();
+
+        mockMvc.perform(get("/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.themeCode").value("gilded"));
+
+        mockMvc.perform(put("/auth/me/theme")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "themeCode": "CRM-BLUE" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.themeCode").value("crm-blue"));
+
+        mockMvc.perform(get("/auth/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.themeCode").value("crm-blue"));
+
+        mockMvc.perform(put("/auth/me/theme")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "themeCode": "custom-css" }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("不支持的界面主题"));
+    }
+
+    @Test
     void shouldRejectDuplicateProfileEmailIdentifier() throws Exception {
         MvcResult firstRegister = mockMvc.perform(post("/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

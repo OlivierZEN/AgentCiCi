@@ -63,6 +63,99 @@
       "fast": "150ms ease-out",
       "standard": "180ms ease-out"
     },
+    "themePreferences": {
+      "purpose": "Account-level selectable palettes for authenticated AgentCiCi, admin, platform, and CloudCC embedded product surfaces.",
+      "defaultTheme": "gilded",
+      "storageContract": {
+        "serverField": "themeCode",
+        "localFallbackKey": "cici-product-theme",
+        "serverWinsAfterAuthentication": true,
+        "crossOrganizationForSameAccount": true
+      },
+      "themes": [
+        {
+          "code": "gilded",
+          "displayName": "鎏金账房",
+          "mode": "light",
+          "canvas": "#f7f3eb",
+          "surface": "#fffdf8",
+          "text": "#2b2217",
+          "accent": "#a67c2f"
+        },
+        {
+          "code": "crm-blue",
+          "displayName": "CRM 标准蓝",
+          "mode": "light",
+          "canvas": "#f3f7fc",
+          "surface": "#ffffff",
+          "text": "#17233d",
+          "accent": "#1677d2"
+        },
+        {
+          "code": "ocean",
+          "displayName": "蓝色海洋",
+          "mode": "light",
+          "canvas": "#eff8fc",
+          "surface": "#fbfeff",
+          "text": "#163247",
+          "accent": "#0788b5"
+        },
+        {
+          "code": "sakura",
+          "displayName": "樱花粉语",
+          "mode": "light",
+          "canvas": "#fbf3f6",
+          "surface": "#fffafb",
+          "text": "#3c2830",
+          "accent": "#b64e72"
+        },
+        {
+          "code": "lavender",
+          "displayName": "熏衣紫语",
+          "mode": "light",
+          "canvas": "#f5f2fa",
+          "surface": "#fdfbff",
+          "text": "#2e2939",
+          "accent": "#7255a6"
+        },
+        {
+          "code": "avocado",
+          "displayName": "牛油果小调",
+          "mode": "light",
+          "canvas": "#f1f6ee",
+          "surface": "#fbfdf9",
+          "text": "#253126",
+          "accent": "#5f7f42"
+        },
+        {
+          "code": "wine",
+          "displayName": "红酒醇香",
+          "mode": "light",
+          "canvas": "#f8f1f2",
+          "surface": "#fffafa",
+          "text": "#352629",
+          "accent": "#8e3c4b"
+        },
+        {
+          "code": "galaxy",
+          "displayName": "星河幻境",
+          "mode": "dark",
+          "canvas": "#11151d",
+          "surface": "#191e29",
+          "text": "#f4f6fb",
+          "accent": "#7f91ef"
+        }
+      ],
+      "rules": [
+        "All themes share one layout, component tree, typography scale, density, icon vocabulary, interaction geometry, and overflow model; themes only remap semantic design tokens.",
+        "Gilded remains the default and fallback for historical accounts, unknown values, and unavailable server preferences.",
+        "Do not add user-supplied CSS, arbitrary colors, bitmap backgrounds, decorative gradients, glassmorphism, bokeh, glow, or theme-specific page structures.",
+        "Theme selection is an account preference. Apply a local cached value before render, then let the authenticated server preference win without a full-page reload.",
+        "CRM embedded customer workbench uses the current AgentCiCi identity preference and must not derive a theme from CloudCC tokens.",
+        "Galaxy is the only dark palette. It remains a restrained enterprise workspace and must preserve WCAG-readable text, controls, forms, dividers, statuses, and focus states.",
+        "Theme option UI uses compact radio rows, three-color swatches, one structural boundary, and no nested cards, hover movement, shadows, or decorative illustrations."
+      ]
+    },
     "breakpoints": {
       "compact": "980px",
       "stacked": "720px"
@@ -73,7 +166,7 @@
       "rules": [
         "All frontend pages, components, modals, visualizations, and meaningful UI changes must use frontend-design before implementation.",
         "Before coding UI, define the surface purpose, target user, tone, constraints, and one concrete visual direction.",
-        "The visual direction must remain within The Gilded Ledger product style: warm ivory canvas, ledger ink text, compact density, champagne-gold structural lines, and restrained enterprise-workbench tone.",
+        "The default visual direction remains The Gilded Ledger product style. A user-selected palette listed in extensions.themePreferences may remap semantic colors while preserving the same compact density, structure, components, and restrained enterprise-workbench tone.",
         "Do not use frontend-design as permission to introduce route-level visual drift, marketing-page composition, purple gradients, default glassmorphism, large dark command centers, generic card grids, or decorative spectacle that conflicts with PRODUCT.md, DESIGN.md, or this DESIGN.json.",
         "Distinctiveness should come from clearer hierarchy, stronger spacing rhythm, purposeful interaction states, refined typography, and task-specific composition inside the product register."
       ]

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T00:44:28Z
+updated_at: 2026-07-14T01:30:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-202 - 用户级产品主题偏好
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-108-user-selectable-product-themes.md`
 - task_status_path: `.claw/tasks/TASK-202.md`
 - assignment_path: `.claw/assignments/TASK-202.yaml`
 - blocked_by: `none`
-- next_action: Implement account-level persistence, eight theme tokens, the personal settings selector, cross-shell synchronization and desktop visual verification.
+- next_action: Implementation and local desktop verification are complete; production release was not requested.
 
 ### TASK-201 - 智能体构建页布局与模型治理收敛
 

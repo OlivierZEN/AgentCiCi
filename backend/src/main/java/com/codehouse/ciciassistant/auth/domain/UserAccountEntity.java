@@ -32,6 +32,9 @@ public class UserAccountEntity {
     @Column(name = "email", length = 128)
     private String email;
 
+    @Column(name = "theme_code", nullable = false, length = 32)
+    private String themeCode = "gilded";
+
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
@@ -99,6 +102,15 @@ public class UserAccountEntity {
 
     public void setEmail(String email) {
         this.email = email;
+        touch();
+    }
+
+    public String getThemeCode() {
+        return themeCode;
+    }
+
+    public void setThemeCode(String themeCode) {
+        this.themeCode = themeCode;
         touch();
     }
 

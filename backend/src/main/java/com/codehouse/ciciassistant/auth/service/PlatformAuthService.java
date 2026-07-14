@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.auth.service;
 
+import com.codehouse.ciciassistant.auth.ProductThemeCodes;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.domain.PlatformAccountCredentialEntity;
 import com.codehouse.ciciassistant.auth.domain.PlatformAccountCredentialRepository;
@@ -59,6 +60,16 @@ public class PlatformAuthService {
         return platformAccountPayload(account, resolveRoles(account));
     }
 
+    @Transactional
+    public Map<String, Object> updateCurrentPlatformTheme(String platformAccountId, String themeCode) {
+        PlatformAccountEntity account = platformAccountRepository.findById(platformAccountId)
+                .filter(this::isActive)
+                .orElseThrow(() -> new UnauthorizedException("Platform account not found"));
+        account.setThemeCode(ProductThemeCodes.requireAllowed(themeCode));
+        platformAccountRepository.save(account);
+        return platformAccountPayload(account, resolveRoles(account));
+    }
+
     private PlatformAccountEntity findPlatformAccount(LoginIdentifier loginIdentifier) {
         return (loginIdentifier.isEmail()
                 ? platformAccountRepository.findByEmailIgnoreCase(loginIdentifier.value())
@@ -103,6 +114,7 @@ public class PlatformAuthService {
         payload.put("email", account.getEmail());
         payload.put("mobile", account.getMobile());
         payload.put("displayName", account.getDisplayName());
+        payload.put("themeCode", ProductThemeCodes.normalizeStored(account.getThemeCode()));
         payload.put("roles", roles);
         return payload;
     }

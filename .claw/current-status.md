@@ -1,17 +1,17 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T00:44:28Z
+updated_at: 2026-07-14T01:30:00Z
 updated_by: MANAGER-001
-phase: user-theme-preferences-implementation
-active_task: "TASK-202"
-next_action: "Implement FEAT-108 account-level theme persistence, shared design tokens, personal settings selection, cross-shell synchronization and desktop verification."
+phase: user-theme-preferences-complete
+active_task: "none"
+next_action: "TASK-202 is locally complete and verified; await an explicit production release request."
 read_next:
   goals: false
   decisions: false
   issue_list: false
   task_board: true
-  active_task_status: true
+  active_task_status: false
   test_report: true
   devops: true
 ---
@@ -22,7 +22,8 @@ read_next:
 
 ## Snapshot
 
-- TASK-202 is active for per-user selectable product themes. The approved catalog is Gilded Ledger, CRM Standard Blue, Blue Ocean, Sakura, Lavender, Avocado, Red Wine and Galaxy; all themes preserve one layout/component system and persist at account level across application and CRM embed entry points.
+- TASK-202 is complete locally: every organization user and platform account can select one of eight shared product themes, with immediate preview, local first-paint caching, account-level persistence and reload synchronization across the main app, management console, operations platform and CRM embedded customer workbench. The catalog is 鎏金账房、CRM 标准蓝、蓝色海洋、樱花粉语、熏衣紫语、牛油果小调、红酒醇香和星河幻境。
+- TASK-202 evidence: V80 migrated a clean PostgreSQL schema; 22 authentication integration tests and 71 frontend tests passed; production build and diff check passed. Real desktop verification covered all theme choices plus app/admin/platform/customer-workbench surfaces, including a public-token fix for dark platform cards. No production release was performed.
 - TASK-201 is complete and merged to `origin/main` at `f6be64e`; it was not released to production.
 - TASK-201 is locally implemented and in review: the concrete model selector is removed while internal model compatibility remains; the definition form is balanced into equal columns; avatar actions and four strategy buttons share one row; evaluation and publish channels now live in the lower version-control lifecycle workspace. All 68 frontend tests, production build, diff check and real 1280x720 desktop browser verification passed; no production release was performed.
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.

@@ -29,6 +29,9 @@ public class PlatformAccountEntity {
     @Column(name = "roles_json", nullable = false, columnDefinition = "TEXT")
     private String rolesJson;
 
+    @Column(name = "theme_code", nullable = false, length = 32)
+    private String themeCode = "gilded";
+
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
@@ -73,8 +76,17 @@ public class PlatformAccountEntity {
         return rolesJson;
     }
 
+    public String getThemeCode() {
+        return themeCode;
+    }
+
     public String getStatus() {
         return status;
+    }
+
+    public void setThemeCode(String themeCode) {
+        this.themeCode = themeCode;
+        this.updatedAt = Instant.now();
     }
 
     public void updateBootstrapFields(String email, String mobile, String displayName, String rolesJson) {

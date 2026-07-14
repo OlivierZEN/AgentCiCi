@@ -11,6 +11,7 @@ import java.util.Map;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -39,6 +40,16 @@ public class PlatformAuthController {
         return ApiResponse.ok(platformAuthService.currentPlatformAccount(platformAccountId));
     }
 
+    @PutMapping("/me/theme")
+    @RequirePlatformRole
+    public ApiResponse<Map<String, Object>> updateCurrentPlatformTheme(@Valid @RequestBody PlatformThemeRequest request) {
+        String platformAccountId = TenantContext.getUserId()
+                .orElseThrow(() -> new UnauthorizedException("Missing platform account context"));
+        return ApiResponse.ok(
+                platformAuthService.updateCurrentPlatformTheme(platformAccountId, request.themeCode()),
+                "Theme updated");
+    }
+
     public record PlatformPasswordLoginRequest(
             String identifier,
             String email,
@@ -54,5 +65,8 @@ public class PlatformAuthController {
             }
             return mobile;
         }
+    }
+
+    public record PlatformThemeRequest(@NotBlank String themeCode) {
     }
 }

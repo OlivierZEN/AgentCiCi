@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T00:31:25Z
+updated_at: 2026-07-14T01:30:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T00:31:25Z
+last_run_at: 2026-07-14T01:30:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-202 用户级产品主题偏好本地验收（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通用与 TASK-202 SSH challenge 均为 allowed；后端认证、V80、前端主题模块、设计事实源、规格和状态代表文件通过 assignment 检查。
+- `backend`: 在独立 PostgreSQL schema 上从空库执行 76 个 Flyway 迁移并到达 V80；`AuthFlowIntegrationTest,PlatformAuthIntegrationTest` 共 22 项，0 failure / 0 error，覆盖普通账号与平台账号的默认主题、保存、刷新/切换组织持久化和非法代码拒绝。共享测试库存在历史固定手机号夹具污染，未作为最终证据源。
+- `frontend`: Vitest 13 个文件、71 项通过；TypeScript/Vite production build 通过，仅保留既有大 chunk 提示；`git diff --check` 通过。
+- `browser-settings`: 真实桌面浏览器的“界面主题”展示八个标准选项，逐项即时预览并显示同步状态；浅色主题保持可读性，星河是唯一深色主题，布局、控件尺寸和交互结构不随主题变化。
+- `browser-cross-shell`: 主应用、管理端、运营平台和客户互动工作台均读取共享语义令牌；星河运营平台最初发现硬编码浅色卡片导致低对比，改为公共 `platform-*` 令牌后复验通过。平台账号刷新后仍恢复星河，普通账号跨管理端读取红酒主题成功；验收结束后本地演示账号恢复鎏金默认。
+- `release`: 未执行生产发布；当前证据覆盖本地实现、API、迁移和桌面端验收。
 
 ## TASK-201 智能体构建页布局与模型治理本地验收（2026-07-14）
 

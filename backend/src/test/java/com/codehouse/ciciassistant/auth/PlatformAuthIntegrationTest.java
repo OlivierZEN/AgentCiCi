@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.auth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -106,6 +107,34 @@ class PlatformAuthIntegrationTest {
         mockMvc.perform(get("/admin/users")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldPersistPlatformThemeAndRejectUnknownTheme() throws Exception {
+        String platformToken = platformToken("admin@cloudcc.com");
+
+        mockMvc.perform(put("/auth/platform/me/theme")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "themeCode": "galaxy" }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.themeCode").value("galaxy"));
+
+        mockMvc.perform(get("/auth/platform/me")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.themeCode").value("galaxy"));
+
+        mockMvc.perform(put("/auth/platform/me/theme")
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                { "themeCode": "neon" }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("不支持的界面主题"));
     }
 
     @Test

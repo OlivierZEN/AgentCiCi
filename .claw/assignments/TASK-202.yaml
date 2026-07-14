@@ -1,7 +1,7 @@
 task_id: TASK-202
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-14T00:44:28Z
 expires_at: none
 spec_path: docs/specs/FEAT-108-user-selectable-product-themes.md
@@ -55,4 +55,3 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "PM-created full-stack task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
-

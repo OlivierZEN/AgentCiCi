@@ -1,5 +1,6 @@
 import { FormEvent, KeyboardEvent, PointerEvent as ReactPointerEvent, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { X } from "lucide-react";
+import { applyProductTheme } from "../theme/theme";
 import {
   streamAiChat,
   streamSessionUpdates,
@@ -58,6 +59,7 @@ type MeProfile = {
   displayName?: string;
   email?: string;
   avatarBase64?: string;
+  themeCode?: string;
 };
 type CurrentUserUpdatedDetail = {
   userId?: string;
@@ -1426,7 +1428,9 @@ export default function AssistantApp() {
       });
       const { body } = await safeFetchJson<MeProfile>(response);
       if (response.ok && body?.success) {
-        setMe(body.data as MeProfile | null);
+        const profile = body.data as MeProfile | null;
+        setMe(profile);
+        if (profile?.themeCode) applyProductTheme(profile.themeCode);
         return true;
       }
     } catch {}

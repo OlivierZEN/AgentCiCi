@@ -4,6 +4,10 @@ import App from "./App";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import "./styles.css";
 import "./assistant/cici-ui.css";
+import "./theme/theme.css";
+import { initializeProductTheme } from "./theme/theme";
+
+initializeProductTheme();
 
 const rootNode = document.getElementById("root");
 if (!rootNode) {

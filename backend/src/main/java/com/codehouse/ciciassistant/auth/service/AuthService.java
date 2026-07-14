@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.auth.service;
 
+import com.codehouse.ciciassistant.auth.ProductThemeCodes;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.domain.AccountAuthCredentialEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountAuthCredentialRepository;
@@ -332,6 +333,7 @@ public class AuthService {
         row.put("lastName", account.getLastName() == null ? "" : account.getLastName());
         row.put("displayName", displayName);
         row.put("email", account.getEmail() == null ? "" : account.getEmail());
+        row.put("themeCode", ProductThemeCodes.normalizeStored(account.getThemeCode()));
         row.put("avatarBase64", user.getAvatarBase64() == null ? "" : user.getAvatarBase64());
         row.put("roles", resolveRoles(user));
         return row;
@@ -344,6 +346,16 @@ public class AuthService {
         String normalizedAvatar = AvatarDataUrlValidator.normalizeNullableDataUrl(avatarBase64, "avatarBase64");
         user.setAvatarBase64(normalizedAvatar);
         userRepository.save(user);
+        return currentUser(orgId, userId);
+    }
+
+    @Transactional
+    public Map<String, Object> updateCurrentUserTheme(String orgId, String userId, String themeCode) {
+        UserEntity user = userRepository.findByIdAndOrg_Id(userId, orgId)
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
+        UserAccountEntity account = user.getAccount();
+        account.setThemeCode(ProductThemeCodes.requireAllowed(themeCode));
+        userAccountRepository.save(account);
         return currentUser(orgId, userId);
     }
 

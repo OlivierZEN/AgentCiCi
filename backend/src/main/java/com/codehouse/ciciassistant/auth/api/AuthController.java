@@ -116,6 +116,13 @@ public class AuthController {
                 request.email()), "Profile updated");
     }
 
+    @PutMapping("/me/theme")
+    public ApiResponse<Map<String, Object>> updateMyTheme(@Valid @RequestBody UpdateMyThemeRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
+        return ApiResponse.ok(authService.updateCurrentUserTheme(orgId, userId, request.themeCode()), "Theme updated");
+    }
+
     @PutMapping("/me/password")
     public ApiResponse<Map<String, Object>> changeMyPassword(@Valid @RequestBody ChangeMyPasswordRequest request) {
         String orgId = TenantContext.requireOrgId();
@@ -200,5 +207,8 @@ public class AuthController {
             @NotBlank String currentPassword,
             @NotBlank String newPassword
     ) {
+    }
+
+    public record UpdateMyThemeRequest(@NotBlank String themeCode) {
     }
 }

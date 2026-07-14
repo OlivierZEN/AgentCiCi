@@ -5,6 +5,8 @@ import { getDisplayInitial, readAvatarFileAsDataUrl } from "../shared/avatar";
 import CommunicationChannelBinding from "./CommunicationChannelBinding";
 import MyWorkflowStudio from "./MyWorkflowStudio";
 import UserMemoryPanel from "./UserMemoryPanel";
+import ThemePreferencePanel from "../theme/ThemePreferencePanel";
+import { applyProductTheme } from "../theme/theme";
 
 type Props = {
   open: boolean;
@@ -24,9 +26,10 @@ type MeProfile = {
   displayName?: string;
   email?: string;
   avatarBase64?: string;
+  themeCode?: string;
 };
 
-type SettingsTab = "workflow" | "channels" | "email" | "memory";
+type SettingsTab = "workflow" | "channels" | "email" | "memory" | "appearance";
 type ProfileTab = "info" | "password";
 
 type ProfileForm = {
@@ -175,6 +178,7 @@ export default function MyEmailAccountsModal({ open, token, onClose, variant = "
       const meRes = await fetchJson<MeProfile>("/auth/me", { headers: { Authorization: `Bearer ${token}` } });
       if (meRes.success && meRes.data) {
         setMeProfile(meRes.data);
+        applyProductTheme(meRes.data.themeCode);
         setAvatarPreview(meRes.data.avatarBase64 ?? "");
         setProfileForm({
           firstName: meRes.data.firstName ?? "",
@@ -650,6 +654,13 @@ export default function MyEmailAccountsModal({ open, token, onClose, variant = "
           >
             专属记忆
           </button>
+          <button
+            type="button"
+            className={`cici-settings-tabs__item${tab === "appearance" ? " is-active" : ""}`}
+            onClick={() => setTab("appearance")}
+          >
+            界面主题
+          </button>
           </div>
         )}
 
@@ -662,6 +673,12 @@ export default function MyEmailAccountsModal({ open, token, onClose, variant = "
             <CommunicationChannelBinding token={token} active={tab === "channels"} />
           ) : tab === "memory" ? (
             <UserMemoryPanel token={token} agentId="cici-system" />
+          ) : tab === "appearance" ? (
+            <ThemePreferencePanel
+              token={token}
+              initialTheme={meProfile.themeCode}
+              onSaved={(themeCode) => setMeProfile((current) => ({ ...current, themeCode }))}
+            />
           ) : (
             <>
             <p className="cici-modal__intro">

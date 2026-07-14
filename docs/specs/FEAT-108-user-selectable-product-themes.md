@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-108
 title: 用户级产品主题偏好
-status: approved
+status: implemented
 owner_role: project-manager
 task_ids: TASK-202
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-14T00:44:28Z
+updated_at: 2026-07-14T01:30:00Z
 updated_by: MANAGER-001
 ---
 
@@ -117,4 +117,3 @@ updated_by: MANAGER-001
 ## 任务拆分
 
 - `TASK-202`：完成主题设计事实源、账号偏好存储、主题 API、前端主题基础设施、个人设置入口、主要产品表面适配、测试与桌面视觉验收。
-
