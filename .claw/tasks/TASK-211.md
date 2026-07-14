@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-211
-status: ready
-updated_at: 2026-07-14T23:22:06Z
+status: in_progress
+updated_at: 2026-07-14T23:51:30Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -24,11 +24,11 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 - 根因已验证：生产 5 次 CRM SSE 都只有一个 2,383 字符正文 `delta`；OpenAPI streaming 也只有一个正文 `message`。
 - 前端逐片渲染和 Nginx buffering 配置正常；缺陷由后端 CRM 确定性分支的一次性 `safeSendDelta` 引入。
 - 用户已批准方案 A：复用现有 `safeSendDeltaInChunks`，不恢复最终 LLM，不新增前端模拟打字。
-- 详细事件契约、TDD 门禁、生产验收和回滚条件已写入 FEAT-114，等待用户确认书面规格后实施。
+- 用户已确认书面规格；实施计划已写入 `docs/superpowers/plans/2026-07-15-crm-streaming-output.md`，定向基线测试通过。
 
 ## Next Action
 
-- 用户确认书面 FEAT-114 后，编写实施计划；先让多分片回归测试在当前实现上正确失败，再做最小后端修复。
+- 按实施计划先让多分片回归在当前单 `delta` 实现上正确失败，再做最小后端修复和 OpenAPI 协议回归。
 
 ## Constraints
 
@@ -56,4 +56,4 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 
 - 分支：`codex/TASK-211-crm-streaming-output`。
 - 先读 FEAT-114 的“TASK-211 真实流式输出纠偏设计”，再读当前单包路径与已有分块 helper。
-- 当前阶段只有治理文档变更，尚未编辑生产代码或测试。
+- 当前阶段已完成书面规格确认、实施计划和干净基线；尚未编辑生产代码或测试。

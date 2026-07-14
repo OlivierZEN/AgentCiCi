@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-14T23:22:06Z
+updated_at: 2026-07-14T23:51:30Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -15,7 +15,7 @@ status: active
   - Verified root cause: 生产 5 份 CRM SSE 均为 `phase ×3 → delta ×1 → done ×1`，唯一 `delta` 为 2,383 字符；OpenAPI streaming 也只有一个 2,383 字符 `message`。`ChatOrchestratorService` 的 CRM 确定性分支对完整格式化正文只调用一次 `safeSendDelta`，而前端逐 delta 更新和 Nginx buffering 配置均正常。
   - Approved resolution: TASK-211 复用服务端现有 `safeSendDeltaInChunks`，保持确定性正文、防泄漏、blocking、持久化和业务结果不变，同时让内部 SSE 与 OpenAPI 产生有序多分片正文事件。
   - Verification required: TDD 证明当前实现因单片失败；修复后验证分片数量、上限、顺序、拼接正文、结束事件、防泄漏和最终 LLM 零调用，并完成 SalesA 五次生产页面流式验收。
-  - Status: open (TASK-211 design approved; implementation awaits written FEAT-114 review).
+  - Status: open (TASK-211 design and written plan approved; TDD implementation in progress).
 
 - ISSUE-2026-07-09-cloudcc-custompage-bind-skill-gap:
   - Symptom: TASK-171 SSO closure requires updating a CloudCC customPage to the latest pagecomponent id through `cc-customization-expert-msapi`, but the skill write path fails even though publish and runtime loading work.

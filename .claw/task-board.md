@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T23:22:06Z
+updated_at: 2026-07-14T23:51:30Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-211 - CRM 确定性回答真实流式输出纠偏
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
 - task_status_path: `.claw/tasks/TASK-211.md`
 - assignment_path: `.claw/assignments/TASK-211.yaml`
 - blocked_by: `none`
-- next_action: Await written FEAT-114 review, then implement server-side multi-delta CRM streaming with TDD and production acceptance.
+- next_action: Execute the approved plan with a RED multi-delta regression, the minimal backend fix, independent review, and production acceptance.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 
