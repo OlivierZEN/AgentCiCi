@@ -721,12 +721,13 @@ public class AgentOpenApiConversationService {
                 return;
             }
             if (!eventName.isBlank()) {
+                String safeThought = safeAgentThoughtObservation(eventName, data);
                 clientEmitter.send(SseEmitter.event().name("agent_thought").data(Map.of(
                         "event", "agent_thought",
                         "task_id", task.getTaskId(),
                         "message_id", messageId,
-                        "thought", eventName,
-                        "observation", safeAgentThoughtObservation(eventName, data))));
+                        "thought", safeThought,
+                        "observation", safeThought)));
             }
         }
 
@@ -835,7 +836,7 @@ public class AgentOpenApiConversationService {
         return null;
     }
 
-    static Object safeAgentThoughtObservation(String eventName, Object ignoredData) {
+    static String safeAgentThoughtObservation(String eventName, Object ignoredData) {
         String normalizedEvent = eventName == null ? "" : eventName.trim().toLowerCase(Locale.ROOT);
         return switch (normalizedEvent) {
             case "tool_call" -> "工具处理中";

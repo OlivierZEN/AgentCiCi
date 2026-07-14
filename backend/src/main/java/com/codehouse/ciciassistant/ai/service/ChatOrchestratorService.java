@@ -2315,7 +2315,7 @@ public class ChatOrchestratorService {
             return current;
         }
         return current
-                + "\n\n---\n本轮不会在完成状态后自动追加回复。以下是已经返回的工具结果摘要：\n\n"
+                + "\n\n---\n已返回结果摘要：\n\n"
                 + fallback;
     }
 
@@ -2360,11 +2360,7 @@ public class ChatOrchestratorService {
         for (int i = 0; i < limit; i++) {
             ToolResultSummary item = summaries.get(i);
             text.append("\n").append(i + 1).append(". ")
-                    .append(item.toolName()).append("：")
                     .append(item.summary());
-            if (!item.arguments().isBlank()) {
-                text.append("\n   查询参数：").append(clipStatic(item.arguments(), 220));
-            }
         }
         if (summaries.size() > limit) {
             text.append("\n其余 ").append(summaries.size() - limit).append(" 次工具结果已省略。");
@@ -2634,7 +2630,7 @@ public class ChatOrchestratorService {
         int limit = Math.min(5, count);
         for (int i = 0; i < limit; i++) {
             JsonNode item = data.get(i);
-            String title = firstNonBlank(nodeText(item, "name"), nodeText(item, "id"), "记录 " + (i + 1));
+            String title = firstNonBlank(nodeText(item, "name"), "记录 " + (i + 1));
             summary.append("\n").append(i + 1).append(". ").append(clipStatic(title, 160));
             String person = firstNonBlank(nodeText(item, "bkhrccname"), nodeText(item, "khperson"));
             String period = firstNonBlank(nodeText(item, "khy"), nodeText(item, "kaoheyuefen"), nodeText(item, "khyquarter"));

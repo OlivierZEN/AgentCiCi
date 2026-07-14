@@ -477,7 +477,26 @@ class ChatOrchestratorServiceModelIdentityTest {
 
         assertThat(fallback)
                 .contains("原始字段已隐藏")
-                .doesNotContain("{\"mystery\"", "payload-secret", "ownerId", "005-secret");
+                .doesNotContain("{\"mystery\"", "payload-secret", "ownerId", "005-secret",
+                        "unknown_lookup", "unknown-call", "查询参数");
+    }
+
+    @Test
+    void shouldNeverUseInternalIdAsBusinessDataFallbackTitle() {
+        String toolJson = """
+                {"success":true,"data":[
+                  {"id":"a49-secret-object-id","ownerId":"005-secret","internal":"payload-secret"}
+                ]}
+                """;
+
+        String fallback = ChatOrchestratorService.buildToolResultFallbackMessage(List.of(Map.of(
+                "role", "tool",
+                "content", toolJson
+        )));
+
+        assertThat(fallback)
+                .contains("记录 1")
+                .doesNotContain("a49-secret-object-id", "ownerId", "005-secret", "payload-secret");
     }
 
     @Test
@@ -510,7 +529,7 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
-    void shouldAppendToolSummaryWhenFinalAnswerOnlyPromisesFollowup() {
+    void shouldAppendSafeResultSummaryWhenFinalAnswerOnlyPromisesFollowup() {
         String toolJson = """
                 {"success":true,"results":[
                   {"title":"白糖现货价格日报","url":"https://example.com/sugar","snippet":"广西、云南主产区报价小幅上行。"}
@@ -522,9 +541,10 @@ class ChatOrchestratorServiceModelIdentityTest {
                 List.of(Map.of("role", "tool", "content", toolJson)));
 
         assertThat(guarded)
-                .contains("本轮不会在完成状态后自动追加回复")
+                .contains("已返回结果摘要")
                 .contains("白糖现货价格日报")
-                .contains("广西、云南主产区报价小幅上行");
+                .contains("广西、云南主产区报价小幅上行")
+                .doesNotContain("本轮不会在完成状态后自动追加回复", "模型本轮未能生成最终自然语言总结");
     }
 
     @Test
@@ -579,10 +599,11 @@ class ChatOrchestratorServiceModelIdentityTest {
 
         assertThat(fallback)
                 .contains("本轮已经完成 2 次工具查询")
-                .contains("get_object_data：查询完成，但没有返回匹配记录")
-                .contains("monthkpi")
-                .contains("get_object_fields：读取到对象字段结构：标准字段 10 条、自定义字段 41 条")
+                .contains("1. 查询完成，但没有返回匹配记录")
+                .contains("2. 读取到对象字段结构：标准字段 10 条、自定义字段 41 条")
                 .contains("下一步可以确认对象名称、人员姓名、月份/季度字段或筛选条件")
+                .doesNotContain("get_object_data", "get_object_fields", "monthkpi", "a49",
+                        "objapi", "objprefix", "expressions", "查询参数")
                 .doesNotContain("系统保护上限")
                 .doesNotContain("暂时无法继续处理");
     }
