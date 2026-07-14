@@ -26,17 +26,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: Validate and push the allocation-only commit, then implement source mapping and standard icons with tests.
 
-### TASK-209 - 运营平台登录页原图像素锁定复刻
-
-- status: `done`
-- priority: `critical`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md`
-- task_status_path: `.claw/tasks/TASK-209.md`
-- assignment_path: `.claw/assignments/TASK-209.yaml`
-- blocked_by: `none`
-- next_action: Done in production `2.7.2 / ddcda0ef6111`; preserve the released background asset and transparent interaction layer in later releases.
-
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
 - status: `in_progress`
@@ -887,6 +876,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-209 - 运营平台登录页原图像素锁定复刻
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md`
+- task_status_path: `.claw/tasks/TASK-209.md`
+- assignment_path: `.claw/assignments/TASK-209.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.2 / ddcda0ef6111`; preserve the released background asset and transparent interaction layer in later releases.
 
 ### TASK-196 - 客户互动整理上下文与队列丢失修复
 

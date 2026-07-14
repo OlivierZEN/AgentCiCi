@@ -13,7 +13,7 @@ last_run_status: passed
 ## TASK-208 生产发布线整合门禁（2026-07-15）
 
 - `ancestry`: 整合提交同时包含生产 `2.7.2 / ddcda0ef6111` 与 TASK-208 `2.7.3 / 85b92c2d1f63` 两条不可变发布线；两次 `git merge-base --is-ancestor` 均通过。
-- `content-preservation`: CRM 后端、内置 `crm-business-analysis` Skill、CRM 测试和受控迁移脚本与 TASK-208 `2.7.3` 树一致；完整 `frontend/` 与 `DESIGN.md`、`DESIGN.json`、`design-qa.md` 与生产 `2.7.2` 树一致。
+- `content-preservation`: CRM 后端、内置 `crm-business-analysis` Skill、CRM 测试和受控迁移脚本与 TASK-208 `2.7.3` 树一致；完整 `frontend/` 与 `DESIGN.md`、`DESIGN.json` 与生产 `2.7.2` 树一致，`design-qa.md` 仅追加同一版本的生产验收证据。
 - `backend-focused`: 8 个 Surefire 报告共 143 项通过，0 failure / 0 error；覆盖路由、五层经营分析、格式化、高阶工具、阻塞/SSE/OpenAPI 防泄漏和 CRM 数据契约。
 - `frontend-full`: Vitest 16 个文件、86 项通过；TypeScript/Vite 生产构建成功，共转换 1,935 个模块，仅保留既有大 chunk 提示。
 - `identity/assignment`: MANAGER-001 SSH 持钥、GitHub 身份、TASK-208 当前集成分支与状态文件代表路径均为 `allowed`；TASK-209 前端与设计事实源由其已完成 assignment 覆盖。
