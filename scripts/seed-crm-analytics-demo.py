@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Build and optionally seed the TASK-205 CloudCC CRM analytics demo dataset.
+"""Plan and optionally apply the TASK-205 CRM analytics ownership repair.
 
-The default mode is a read-only dry run. Only ``--execute`` writes records.
-Records are matched by stable batch markers and are created or updated without
-deleting any tenant data. Output never includes credentials.
+The default mode is a read-only dry run. The script discovers the existing
+TASK-205 batch and the existing TASK-203 V2 accounts, validates the complete
+boundary, and produces a minimal update/rollback plan. Only explicit
+``--execute`` mode writes, and the only write operation is OpenAPI ``update``.
 """
 
 from __future__ import annotations
@@ -17,12 +18,25 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
-from typing import Any, Callable, Iterable
+from typing import Any, Iterable
 
 
 ROOT = Path(__file__).resolve().parents[1]
 CLOUDCC = Path("/Users/owenmacbook/.agents/skills/cc-customization-expert-msapi/tools/bin/cloudcc")
 BATCH = "TASK-205-CRM-ANALYTICS-DEMO-V1"
+V2_ACCOUNT_BATCH = "TASK-203-DEMO-V2"
+TARGET_OWNER_ID = "00520264AE58B11bw6gE"
+TARGET_OWNER_NAME = "SalesA"
+SOURCE_OWNER_ID = "0052017BE8702F1PIi4j"
+
+EXPECTED_MIGRATION_COUNTS = {
+    "products": 12,
+    "opportunities": 24,
+    "opportunityProducts": 72,
+    "contracts": 16,
+    "orders": 48,
+    "orderItems": 144,
+}
 
 
 @dataclass(frozen=True)
@@ -80,6 +94,64 @@ OPPORTUNITY_STAGES = [
 ]
 
 
+@dataclass(frozen=True)
+class MigrationSpec:
+    dataset_key: str
+    object_api: str
+    fields: str
+    marker_field: str | None
+    marker_kind: str | None
+    account_field: str | None = None
+    required_references: tuple[str, ...] = ()
+
+
+MIGRATION_SPECS = (
+    MigrationSpec("products", "product", "id,cpdm,ownerid", None, None),
+    MigrationSpec(
+        "opportunities",
+        "Opportunity",
+        "id,ownerid,khmc,description",
+        "description",
+        "OPPORTUNITY",
+        "khmc",
+    ),
+    MigrationSpec(
+        "opportunityProducts",
+        "opportunitypdt",
+        "id,ownerid,opportunity,product2,description",
+        "description",
+        "OPPORTUNITY_PRODUCT",
+        required_references=("opportunity", "product2"),
+    ),
+    MigrationSpec(
+        "contracts",
+        "contract",
+        "id,ownerid,khmc,opportunityid,beizhu",
+        "beizhu",
+        "CONTRACT",
+        "khmc",
+        ("opportunityid",),
+    ),
+    MigrationSpec(
+        "orders",
+        "cloudccorder",
+        "id,ownerid,accountid,opportunityid,contractid,description",
+        "description",
+        "ORDER",
+        "accountid",
+        ("opportunityid", "contractid"),
+    ),
+    MigrationSpec(
+        "orderItems",
+        "cloudccorderitem",
+        "id,ownerid,orderid,product2id,description",
+        "description",
+        "ORDER_ITEM",
+        required_references=("orderid", "product2id"),
+    ),
+)
+
+
 def marker(kind: str, key: str) -> str:
     return f"{BATCH}|{kind}:{key}|"
 
@@ -93,6 +165,7 @@ def build_dataset(as_of: date) -> dict[str, list[dict[str, Any]]]:
             "unit": "个",
             "productprice": str(product.price),
             "yqy": "true",
+            "ownerid": TARGET_OWNER_ID,
         }
         for product in PRODUCTS
     ]
@@ -117,6 +190,7 @@ def build_dataset(as_of: date) -> dict[str, list[dict[str, Any]]]:
                 "jieduan": OPPORTUNITY_STAGES[index % len(OPPORTUNITY_STAGES)],
                 "jine": str(product.price * (8 + index % 7)),
                 "jsrq": (as_of + timedelta(days=15 + index * 3)).isoformat(),
+                "ownerid": TARGET_OWNER_ID,
                 "description": marker("OPPORTUNITY", key)
                 + f" 高仿真销售漏斗；主推产品 {product.code}；包含赢单、培育和丢单分布。",
             }
@@ -140,6 +214,7 @@ def build_dataset(as_of: date) -> dict[str, list[dict[str, Any]]]:
                     "totalprice": str(quantity * product.price),
                     "subtotal": str(quantity * product.price),
                     "unit": "个",
+                    "ownerid": TARGET_OWNER_ID,
                     "description": marker("OPPORTUNITY_PRODUCT", key)
                     + " 演示商机产品组合和管道金额。",
                 }
@@ -164,6 +239,7 @@ def build_dataset(as_of: date) -> dict[str, list[dict[str, Any]]]:
                 "htksrq": sign_date.isoformat(),
                 "htjsrq": (sign_date + timedelta(days=365)).isoformat(),
                 "zhuangtai": contract_statuses[index % len(contract_statuses)],
+                "ownerid": TARGET_OWNER_ID,
                 "beizhu": marker("CONTRACT", key)
                 + " 演示合同状态、金额、签约周期及客户关联。",
             }
@@ -213,6 +289,7 @@ def build_dataset(as_of: date) -> dict[str, list[dict[str, Any]]]:
                     "totalprice": str(quantity * product.price),
                     "productcode": product.code,
                     "unit": "个",
+                    "ownerid": TARGET_OWNER_ID,
                     "description": marker("ORDER_ITEM", line_key)
                     + f" {period}；{'有效成交' if status == '已生效' else '无效高数量反例'}。",
                 }
@@ -229,6 +306,7 @@ def build_dataset(as_of: date) -> dict[str, list[dict[str, Any]]]:
                 "podate": order_date.isoformat(),
                 "status": status,
                 "totalamount": str(total_amount),
+                "ownerid": TARGET_OWNER_ID,
                 "description": marker("ORDER", order_key)
                 + f" {period}；{status}；多客户、多周期产品销售演示。",
             }
@@ -305,13 +383,50 @@ def summarize(dataset: dict[str, list[dict[str, Any]]], as_of: date) -> dict[str
             "allOrderItemsResolveOrder": all(item["_order"] in order_keys for item in dataset["orderItems"]),
             "quantityAndAmountRankingDiffer": quantity_rank[:3] != amount_rank[:3],
         },
+        "migrationPlan": {
+            "sourceBatch": BATCH,
+            "targetOwner": {"id": TARGET_OWNER_ID, "name": TARGET_OWNER_NAME},
+            "targetAccounts": {
+                "marker": V2_ACCOUNT_BATCH,
+                "requiredCount": 16,
+                "stableSort": "customerName",
+            },
+            "expectedCounts": EXPECTED_MIGRATION_COUNTS,
+            "expectedOwnerUpdates": sum(EXPECTED_MIGRATION_COUNTS.values()),
+            "expectedAccountRelinks": (
+                EXPECTED_MIGRATION_COUNTS["opportunities"]
+                + EXPECTED_MIGRATION_COUNTS["contracts"]
+                + EXPECTED_MIGRATION_COUNTS["orders"]
+            ),
+            "writePolicy": {
+                "allowedActions": ["update"],
+                "creates": 0,
+                "accountWrites": 0,
+            },
+            "rollbackManifest": {
+                "requiredFields": [
+                    "objectApiName",
+                    "id",
+                    "oldOwnerId",
+                    "oldAccountId",
+                    "targetOwnerId",
+                    "targetAccountId",
+                ],
+                "records": [],
+            },
+        },
     }
 
 
-def run_cloudcc(action: str, object_api: str, payload: dict[str, Any]) -> dict[str, Any]:
+def run_cloudcc(
+    action: str,
+    object_api: str,
+    payload: dict[str, Any],
+    project: Path,
+) -> dict[str, Any]:
     body = json.dumps({"objectApiName": object_api, **payload}, ensure_ascii=False, separators=(",", ":"))
     process = subprocess.run(
-        [str(CLOUDCC), action, "openapi", ".", body],
+        [str(CLOUDCC), action, "openapi", str(project), body],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
@@ -320,18 +435,17 @@ def run_cloudcc(action: str, object_api: str, payload: dict[str, Any]) -> dict[s
         check=False,
     )
     if process.returncode != 0:
-        message = process.stderr.strip() or process.stdout.strip()[-500:]
-        raise RuntimeError(f"CloudCC {action} {object_api} failed: {message}")
+        raise RuntimeError(f"CloudCC {action} {object_api} failed (exit {process.returncode})")
     start = process.stdout.find("{")
     if start < 0:
         raise RuntimeError(f"CloudCC {action} {object_api} did not return JSON")
     result = json.loads(process.stdout[start:])
     if result.get("result") is not True:
-        raise RuntimeError(f"CloudCC {action} {object_api} returned failure: {result.get('returnInfo')}")
+        raise RuntimeError(f"CloudCC {action} {object_api} returned failure")
     return result
 
 
-def page_query_all(object_api: str, fields: str) -> list[dict[str, Any]]:
+def page_query_all(object_api: str, fields: str, project: Path) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     page = 1
     while page <= 50:
@@ -339,15 +453,18 @@ def page_query_all(object_api: str, fields: str) -> list[dict[str, Any]]:
             "pageQuery",
             object_api,
             {"fields": fields, "pageNUM": page, "pageSize": 200},
+            project,
         )
         batch = result.get("data")
         if not isinstance(batch, list):
-            break
+            raise RuntimeError(f"CloudCC pageQuery {object_api} returned invalid data")
         records.extend(item for item in batch if isinstance(item, dict))
         page_count = int(result.get("pageCount") or (1 if batch else 0))
         if not batch or page >= page_count:
             break
         page += 1
+    if page > 50:
+        raise RuntimeError(f"CloudCC pageQuery {object_api} exceeded pagination safety limit")
     return records
 
 
@@ -356,220 +473,509 @@ def chunks(items: list[dict[str, Any]], size: int = 40) -> Iterable[list[dict[st
         yield items[index : index + size]
 
 
-def clean_record(record: dict[str, Any]) -> dict[str, Any]:
-    return {key: value for key, value in record.items() if not key.startswith("_")}
+def reference_id(value: Any) -> str:
+    if isinstance(value, dict):
+        value = value.get("id")
+    return str(value or "").strip()
 
 
-def extract_created_ids(result: dict[str, Any]) -> list[str]:
-    data = result.get("data")
-    raw_ids = data.get("ids", []) if isinstance(data, dict) else []
-    ids: list[str] = []
-    for item in raw_ids:
-        if isinstance(item, dict):
-            if item.get("success") is not True:
-                raise RuntimeError(f"CloudCC record create failed: {item.get('errors')}")
-            ids.append(str(item.get("id") or ""))
-        elif item:
-            ids.append(str(item))
-    return ids
+def marker_key(value: Any, kind: str) -> str | None:
+    text = str(value or "")
+    prefix = f"{BATCH}|{kind}:"
+    start = text.find(prefix)
+    if start < 0:
+        return None
+    remainder = text[start + len(prefix) :]
+    key, separator, _ = remainder.partition("|")
+    return key if separator and key else None
 
 
-def sync_records(
-    object_api: str,
-    fields: str,
-    desired: list[dict[str, Any]],
-    existing_key: Callable[[dict[str, Any]], str | None],
-    *,
-    update_existing: bool = True,
-) -> tuple[dict[str, str], dict[str, int]]:
-    existing_rows = page_query_all(object_api, fields)
-    ids: dict[str, str] = {}
-    for row in existing_rows:
-        key = existing_key(row)
-        if key and row.get("id"):
-            ids[key] = str(row["id"])
+def require_rows(snapshot: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    value = snapshot.get(key)
+    if not isinstance(value, list) or any(not isinstance(item, dict) for item in value):
+        raise RuntimeError(f"snapshot {key} must be an array of records")
+    return value
 
-    missing = [record for record in desired if record["_key"] not in ids]
-    for batch in chunks(missing):
-        result = run_cloudcc("create", object_api, {"data": [clean_record(record) for record in batch]})
-        created_ids = extract_created_ids(result)
-        if len(created_ids) != len(batch):
-            raise RuntimeError(f"CloudCC create {object_api} returned unexpected id count")
-        for record, record_id in zip(batch, created_ids):
-            ids[record["_key"]] = record_id
 
-    existing_desired = [record for record in desired if record["_key"] in ids and record not in missing]
-    if update_existing:
-        for batch in chunks(existing_desired):
-            payload = [
-                {"id": ids[record["_key"]], **clean_record(record)}
-                for record in batch
-            ]
-            run_cloudcc("update", object_api, {"data": payload})
-    return ids, {
-        "created": len(missing),
-        "updated": len(existing_desired) if update_existing else 0,
-        "reused": len(existing_desired) if not update_existing else 0,
+def load_snapshot(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise RuntimeError("snapshot root must be an object")
+    return value
+
+
+def read_remote_snapshot(project: Path) -> dict[str, Any]:
+    if not CLOUDCC.exists():
+        raise RuntimeError(f"CloudCC CLI not found: {CLOUDCC}")
+    snapshot: dict[str, Any] = {
+        "users": page_query_all("ccuser", "id,name,loginname,isusing", project),
+        "accounts": page_query_all("Account", "id,name,ownerid,beizhu", project),
+    }
+    for spec in MIGRATION_SPECS:
+        snapshot[spec.dataset_key] = page_query_all(spec.object_api, spec.fields, project)
+    return snapshot
+
+
+def validate_dataset_contract(dataset: dict[str, list[dict[str, Any]]]) -> None:
+    for key, expected_count in EXPECTED_MIGRATION_COUNTS.items():
+        records = dataset.get(key, [])
+        if len(records) != expected_count:
+            raise RuntimeError(f"dataset {key} count mismatch: expected {expected_count}, found {len(records)}")
+        keys = [str(record.get("_key") or "") for record in records]
+        if any(not key_value for key_value in keys) or len(set(keys)) != expected_count:
+            raise RuntimeError(f"dataset {key} has missing or duplicate stable keys")
+
+
+def discover_target_owner(snapshot: dict[str, Any]) -> None:
+    matches = [row for row in require_rows(snapshot, "users") if reference_id(row.get("id")) == TARGET_OWNER_ID]
+    if len(matches) != 1:
+        raise RuntimeError(f"target owner lookup mismatch: expected 1 SalesA user, found {len(matches)}")
+    owner = matches[0]
+    if str(owner.get("name") or "").strip() != TARGET_OWNER_NAME:
+        raise RuntimeError("target owner name mismatch")
+    if str(owner.get("isusing") or "").strip().lower() not in {"1", "true"}:
+        raise RuntimeError("target owner is not active")
+
+
+def discover_target_accounts(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    accounts = [
+        row
+        for row in require_rows(snapshot, "accounts")
+        if V2_ACCOUNT_BATCH in str(row.get("beizhu") or "")
+    ]
+    if len(accounts) != 16:
+        raise RuntimeError(f"V2 Account count mismatch: expected 16, found {len(accounts)}")
+    ids = [reference_id(row.get("id")) for row in accounts]
+    names = [str(row.get("name") or "").strip() for row in accounts]
+    if any(not account_id for account_id in ids) or len(set(ids)) != 16:
+        raise RuntimeError("V2 Account has missing or duplicate id")
+    if any(not name for name in names) or len(set(names)) != 16:
+        raise RuntimeError("V2 Account has missing or duplicate name")
+    if any(reference_id(row.get("ownerid")) != TARGET_OWNER_ID for row in accounts):
+        raise RuntimeError("V2 Account owner mismatch")
+    return sorted(accounts, key=lambda row: str(row.get("name") or ""))
+
+
+def select_batch_records(
+    dataset: dict[str, list[dict[str, Any]]],
+    snapshot: dict[str, Any],
+) -> dict[str, list[tuple[str, dict[str, Any]]]]:
+    selected: dict[str, list[tuple[str, dict[str, Any]]]] = {}
+    for spec in MIGRATION_SPECS:
+        desired_keys = {str(record["_key"]) for record in dataset[spec.dataset_key]}
+        rows = require_rows(snapshot, spec.dataset_key)
+        if spec.marker_field is None:
+            candidates = [row for row in rows if str(row.get("cpdm") or "") in desired_keys]
+        else:
+            candidates = [row for row in rows if BATCH in str(row.get(spec.marker_field) or "")]
+        expected_count = EXPECTED_MIGRATION_COUNTS[spec.dataset_key]
+        if len(candidates) != expected_count:
+            raise RuntimeError(
+                f"{spec.object_api} batch count mismatch: expected {expected_count}, found {len(candidates)}"
+            )
+        by_key: dict[str, dict[str, Any]] = {}
+        for row in candidates:
+            key = (
+                str(row.get("cpdm") or "")
+                if spec.marker_field is None
+                else marker_key(row.get(spec.marker_field), str(spec.marker_kind))
+            )
+            if not key or key not in desired_keys:
+                raise RuntimeError(f"{spec.object_api} marker mismatch")
+            if key in by_key:
+                raise RuntimeError(f"{spec.object_api} duplicate stable key: {key}")
+            if not reference_id(row.get("id")):
+                raise RuntimeError(f"{spec.object_api} record {key} missing id")
+            owner_id = reference_id(row.get("ownerid"))
+            if not owner_id:
+                raise RuntimeError(f"{spec.object_api} record {key} missing owner")
+            if owner_id not in {SOURCE_OWNER_ID, TARGET_OWNER_ID}:
+                raise RuntimeError(f"{spec.object_api} record {key} owner mismatch")
+            by_key[key] = row
+        if set(by_key) != desired_keys:
+            raise RuntimeError(f"{spec.object_api} stable key boundary mismatch")
+        selected[spec.dataset_key] = [(key, by_key[key]) for key in sorted(by_key)]
+    validate_batch_references(selected)
+    return selected
+
+
+def validate_batch_references(selected: dict[str, list[tuple[str, dict[str, Any]]]]) -> None:
+    id_sets = {
+        key: {reference_id(row.get("id")) for _, row in records}
+        for key, records in selected.items()
+    }
+    reference_targets = {
+        ("opportunityProducts", "opportunity"): "opportunities",
+        ("opportunityProducts", "product2"): "products",
+        ("contracts", "opportunityid"): "opportunities",
+        ("orders", "opportunityid"): "opportunities",
+        ("orders", "contractid"): "contracts",
+        ("orderItems", "orderid"): "orders",
+        ("orderItems", "product2id"): "products",
+    }
+    for spec in MIGRATION_SPECS:
+        for key, row in selected[spec.dataset_key]:
+            if spec.account_field and not reference_id(row.get(spec.account_field)):
+                raise RuntimeError(f"{spec.object_api} record {key} missing {spec.account_field}")
+            for field in spec.required_references:
+                target_key = reference_targets[(spec.dataset_key, field)]
+                value = reference_id(row.get(field))
+                if not value:
+                    raise RuntimeError(f"{spec.object_api} record {key} missing {field}")
+                if value not in id_sets[target_key]:
+                    raise RuntimeError(f"{spec.object_api} record {key} has invalid {field}")
+
+
+def build_migration_plan(
+    dataset: dict[str, list[dict[str, Any]]],
+    snapshot: dict[str, Any],
+) -> dict[str, Any]:
+    validate_dataset_contract(dataset)
+    discover_target_owner(snapshot)
+    target_accounts = discover_target_accounts(snapshot)
+    selected = select_batch_records(dataset, snapshot)
+
+    logical_accounts = sorted(str(record["_key"]) for record in dataset["accounts"])
+    account_by_logical = dict(zip(logical_accounts, target_accounts))
+    account_mapping = [
+        {
+            "logicalCustomerName": logical_name,
+            "targetAccountId": reference_id(account_by_logical[logical_name].get("id")),
+            "targetAccountName": str(account_by_logical[logical_name].get("name") or ""),
+        }
+        for logical_name in logical_accounts
+    ]
+
+    plan_records: list[dict[str, Any]] = []
+    rollback_records: list[dict[str, Any]] = []
+    object_stats: dict[str, dict[str, int]] = {}
+    owner_changes = 0
+    account_changes = 0
+
+    for spec in MIGRATION_SPECS:
+        desired_by_key = {str(record["_key"]): record for record in dataset[spec.dataset_key]}
+        spec_owner_changes = 0
+        spec_account_changes = 0
+        spec_updates = 0
+        for key, row in selected[spec.dataset_key]:
+            record_id = reference_id(row.get("id"))
+            old_owner_id = reference_id(row.get("ownerid"))
+            target_account_id: str | None = None
+            old_account_id: str | None = None
+            if spec.account_field:
+                logical_name = str(desired_by_key[key].get("_account") or "")
+                if logical_name not in account_by_logical:
+                    raise RuntimeError(f"{spec.object_api} record {key} has unknown logical customer")
+                target_account_id = reference_id(account_by_logical[logical_name].get("id"))
+                old_account_id = reference_id(row.get(spec.account_field))
+
+            changes: dict[str, dict[str, str]] = {}
+            if old_owner_id != TARGET_OWNER_ID:
+                changes["ownerid"] = {"old": old_owner_id, "new": TARGET_OWNER_ID}
+                spec_owner_changes += 1
+            if spec.account_field and old_account_id != target_account_id:
+                changes[spec.account_field] = {
+                    "old": str(old_account_id),
+                    "new": str(target_account_id),
+                }
+                spec_account_changes += 1
+            rollback_records.append(
+                {
+                    "objectApiName": spec.object_api,
+                    "key": key,
+                    "id": record_id,
+                    "oldOwnerId": old_owner_id,
+                    "oldAccountId": old_account_id,
+                    "targetOwnerId": TARGET_OWNER_ID,
+                    "targetAccountId": target_account_id,
+                }
+            )
+            if changes:
+                spec_updates += 1
+                plan_records.append(
+                    {
+                        "objectApiName": spec.object_api,
+                        "key": key,
+                        "id": record_id,
+                        "changes": changes,
+                    }
+                )
+        owner_changes += spec_owner_changes
+        account_changes += spec_account_changes
+        object_stats[spec.dataset_key] = {
+            "expected": EXPECTED_MIGRATION_COUNTS[spec.dataset_key],
+            "found": len(selected[spec.dataset_key]),
+            "plannedUpdates": spec_updates,
+            "ownerChanges": spec_owner_changes,
+            "accountChanges": spec_account_changes,
+        }
+
+    return {
+        "status": "READY",
+        "sourceBatch": BATCH,
+        "targetOwner": {"id": TARGET_OWNER_ID, "name": TARGET_OWNER_NAME, "active": True},
+        "targetAccounts": {
+            "marker": V2_ACCOUNT_BATCH,
+            "requiredCount": 16,
+            "foundCount": len(target_accounts),
+            "stableSort": "customerName",
+        },
+        "accountMapping": account_mapping,
+        "expectedCounts": EXPECTED_MIGRATION_COUNTS,
+        "expectedOwnerUpdates": sum(EXPECTED_MIGRATION_COUNTS.values()),
+        "expectedAccountRelinks": 88,
+        "writePolicy": {"allowedActions": ["update"], "creates": 0, "accountWrites": 0},
+        "updatePlan": {
+            "summary": {
+                "plannedRecordUpdates": len(plan_records),
+                "ownerChanges": owner_changes,
+                "accountChanges": account_changes,
+                "fieldChanges": owner_changes + account_changes,
+                "creates": 0,
+                "duplicates": 0,
+            },
+            "objectStats": object_stats,
+            "records": plan_records,
+        },
+        "rollbackManifest": {
+            "version": 1,
+            "sourceBatch": BATCH,
+            "requiredFields": [
+                "objectApiName",
+                "id",
+                "oldOwnerId",
+                "oldAccountId",
+                "targetOwnerId",
+                "targetAccountId",
+            ],
+            "recordCount": len(rollback_records),
+            "records": rollback_records,
+        },
     }
 
 
-def key_from_marker(field: str, kind: str) -> Callable[[dict[str, Any]], str | None]:
-    prefix = f"{BATCH}|{kind}:"
-
-    def reader(row: dict[str, Any]) -> str | None:
-        value = str(row.get(field) or "")
-        start = value.find(prefix)
-        if start < 0:
-            return None
-        remainder = value[start + len(prefix) :]
-        return remainder.split("|", 1)[0] or None
-
-    return reader
-
-
-def resolve_records(
-    records: list[dict[str, Any]],
-    mappings: dict[str, tuple[str, dict[str, str]]],
-) -> list[dict[str, Any]]:
-    resolved: list[dict[str, Any]] = []
-    for record in records:
-        item = dict(record)
-        for internal_field, (api_field, ids) in mappings.items():
-            key = str(item.pop(internal_field))
-            if key not in ids:
-                raise RuntimeError(f"Cannot resolve {internal_field} reference: {key}")
-            item[api_field] = ids[key]
-        resolved.append(item)
-    return resolved
+def validate_update_result(result: dict[str, Any], expected: list[dict[str, Any]], object_api: str) -> None:
+    data = result.get("data")
+    raw_ids = data.get("ids") if isinstance(data, dict) else None
+    if not isinstance(raw_ids, list) or len(raw_ids) != len(expected):
+        raise RuntimeError(f"CloudCC update {object_api} returned unexpected result count")
+    for expected_row, returned in zip(expected, raw_ids):
+        if isinstance(returned, dict):
+            if returned.get("success") is not True:
+                raise RuntimeError(f"CloudCC update {object_api} failed for one record")
+            returned_id = reference_id(returned.get("id"))
+        else:
+            returned_id = reference_id(returned)
+        if returned_id and returned_id != reference_id(expected_row.get("id")):
+            raise RuntimeError(f"CloudCC update {object_api} returned mismatched id")
 
 
-def execute(dataset: dict[str, list[dict[str, Any]]]) -> dict[str, dict[str, int]]:
-    if not CLOUDCC.exists():
-        raise RuntimeError(f"CloudCC CLI not found: {CLOUDCC}")
-    stats: dict[str, dict[str, int]] = {}
-
-    account_ids, stats["accounts"] = sync_records(
-        "Account",
-        "id,name,beizhu",
-        dataset["accounts"],
-        lambda row: str(row.get("name")) if row.get("name") in ACCOUNT_NAMES else None,
-        update_existing=False,
-    )
-    product_ids, stats["products"] = sync_records(
-        "product",
-        "id,name,cpdm,unit,productprice,yqy",
-        dataset["products"],
-        lambda row: str(row.get("cpdm")) if str(row.get("cpdm") or "").startswith("DEMO-") else None,
-    )
-
-    opportunity_records = resolve_records(
-        dataset["opportunities"], {"_account": ("khmc", account_ids)}
-    )
-    opportunity_ids, stats["opportunities"] = sync_records(
-        "Opportunity",
-        "id,name,khmc,jieduan,jine,jsrq,description",
-        opportunity_records,
-        key_from_marker("description", "OPPORTUNITY"),
-    )
-
-    contract_records = resolve_records(
-        dataset["contracts"],
-        {
-            "_account": ("khmc", account_ids),
-            "_opportunity": ("opportunityid", opportunity_ids),
-        },
-    )
-    contract_ids, stats["contracts"] = sync_records(
-        "contract",
-        "id,name,contractnumber,khmc,opportunityid,htje,qdrq,qyrq,htksrq,htjsrq,zhuangtai,beizhu",
-        contract_records,
-        key_from_marker("beizhu", "CONTRACT"),
-    )
-
-    order_records = resolve_records(
-        dataset["orders"],
-        {
-            "_account": ("accountid", account_ids),
-            "_opportunity": ("opportunityid", opportunity_ids),
-            "_contract": ("contractid", contract_ids),
-        },
-    )
-    order_ids, stats["orders"] = sync_records(
-        "cloudccorder",
-        "id,name,accountid,contractid,opportunityid,podate,status,totalamount,description",
-        order_records,
-        key_from_marker("description", "ORDER"),
-    )
-
-    order_item_records = resolve_records(
-        dataset["orderItems"],
-        {
-            "_order": ("orderid", order_ids),
-            "_product": ("product2id", product_ids),
-        },
-    )
-    _, stats["orderItems"] = sync_records(
-        "cloudccorderitem",
-        "id,name,orderid,product2id,quantity,unitprice,totalprice,productcode,unit,description",
-        order_item_records,
-        key_from_marker("description", "ORDER_ITEM"),
-    )
-
-    opportunity_product_records = resolve_records(
-        dataset["opportunityProducts"],
-        {
-            "_opportunity": ("opportunity", opportunity_ids),
-            "_product": ("product2", product_ids),
-        },
-    )
-    _, stats["opportunityProducts"] = sync_records(
-        "opportunitypdt",
-        "id,name,opportunity,product2,quantity,unitprice,totalprice,subtotal,unit,description",
-        opportunity_product_records,
-        key_from_marker("description", "OPPORTUNITY_PRODUCT"),
-    )
+def apply_update_plan(update_plan: dict[str, Any], project: Path) -> dict[str, int]:
+    records = update_plan.get("records")
+    if not isinstance(records, list):
+        raise RuntimeError("update plan records are invalid")
+    stats: dict[str, int] = {}
+    for spec in MIGRATION_SPECS:
+        object_records = [row for row in records if row.get("objectApiName") == spec.object_api]
+        stats[spec.dataset_key] = len(object_records)
+        for batch in chunks(object_records):
+            payload = [
+                {
+                    "id": reference_id(record.get("id")),
+                    **{
+                        field: str(change.get("new") or "")
+                        for field, change in record.get("changes", {}).items()
+                    },
+                }
+                for record in batch
+            ]
+            result = run_cloudcc("update", spec.object_api, {"data": payload}, project)
+            validate_update_result(result, payload, spec.object_api)
     return stats
 
 
-def inspect_existing() -> dict[str, int]:
-    probes = [
-        ("product", "id,cpdm", lambda row: str(row.get("cpdm") or "").startswith("DEMO-")),
-        ("Opportunity", "id,description", lambda row: BATCH in str(row.get("description") or "")),
-        ("contract", "id,beizhu", lambda row: BATCH in str(row.get("beizhu") or "")),
-        ("cloudccorder", "id,description", lambda row: BATCH in str(row.get("description") or "")),
-        ("cloudccorderitem", "id,description", lambda row: BATCH in str(row.get("description") or "")),
-        ("opportunitypdt", "id,description", lambda row: BATCH in str(row.get("description") or "")),
-    ]
+def write_backup_manifest(path: Path, manifest: dict[str, Any]) -> None:
+    if not path.parent.exists():
+        raise RuntimeError(f"backup directory does not exist: {path.parent}")
+    with path.open("x", encoding="utf-8") as handle:
+        json.dump(manifest, handle, ensure_ascii=False, indent=2)
+        handle.write("\n")
+
+
+def extract_rollback_manifest(path: Path) -> dict[str, Any]:
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, dict):
+        raise RuntimeError("rollback file root must be an object")
+    if isinstance(value.get("migrationPlan"), dict):
+        value = value["migrationPlan"]
+    if isinstance(value.get("rollbackManifest"), dict):
+        value = value["rollbackManifest"]
+    if not isinstance(value.get("records"), list):
+        raise RuntimeError("rollback manifest records are missing")
+    return value
+
+
+def build_rollback_plan(current_plan: dict[str, Any], manifest: dict[str, Any]) -> dict[str, Any]:
+    if manifest.get("sourceBatch") != BATCH:
+        raise RuntimeError("rollback manifest batch mismatch")
+    records = manifest.get("records")
+    expected_total = sum(EXPECTED_MIGRATION_COUNTS.values())
+    if not isinstance(records, list) or len(records) != expected_total:
+        raise RuntimeError(f"rollback manifest count mismatch: expected {expected_total}")
+    current_records = {
+        str(record.get("id")): record
+        for record in current_plan["rollbackManifest"]["records"]
+    }
+    manifest_ids = [reference_id(record.get("id")) for record in records if isinstance(record, dict)]
+    if len(manifest_ids) != expected_total or len(set(manifest_ids)) != expected_total:
+        raise RuntimeError("rollback manifest has missing or duplicate id")
+    if set(manifest_ids) != set(current_records):
+        raise RuntimeError("rollback manifest record boundary mismatch")
+
+    allowed_objects = {spec.object_api for spec in MIGRATION_SPECS}
+    rollback_updates: list[dict[str, Any]] = []
+    owner_changes = 0
+    account_changes = 0
+    for record in records:
+        object_api = str(record.get("objectApiName") or "")
+        record_id = reference_id(record.get("id"))
+        if object_api not in allowed_objects:
+            raise RuntimeError("rollback manifest object mismatch")
+        current = current_records[record_id]
+        if current.get("objectApiName") != object_api:
+            raise RuntimeError("rollback manifest id/object mismatch")
+        if reference_id(record.get("targetOwnerId")) != TARGET_OWNER_ID:
+            raise RuntimeError("rollback manifest target owner mismatch")
+        old_owner_id = reference_id(record.get("oldOwnerId"))
+        if old_owner_id not in {SOURCE_OWNER_ID, TARGET_OWNER_ID}:
+            raise RuntimeError("rollback manifest old owner mismatch")
+        current_owner_id = reference_id(current.get("oldOwnerId"))
+        if current_owner_id not in {old_owner_id, TARGET_OWNER_ID}:
+            raise RuntimeError("rollback refused: current owner differs from both old and target values")
+        changes: dict[str, dict[str, str]] = {}
+        if current_owner_id != old_owner_id:
+            changes["ownerid"] = {"old": current_owner_id, "new": old_owner_id}
+            owner_changes += 1
+
+        target_account_id = reference_id(record.get("targetAccountId"))
+        old_account_id = reference_id(record.get("oldAccountId"))
+        current_account_id = reference_id(current.get("oldAccountId"))
+        account_field = next(
+            (
+                spec.account_field
+                for spec in MIGRATION_SPECS
+                if spec.object_api == object_api
+            ),
+            None,
+        )
+        if account_field:
+            if not target_account_id or not old_account_id:
+                raise RuntimeError("rollback manifest old account is missing")
+            if current_account_id not in {old_account_id, target_account_id}:
+                raise RuntimeError("rollback refused: current account differs from both old and target values")
+            if current_account_id != old_account_id:
+                changes[account_field] = {"old": current_account_id, "new": old_account_id}
+                account_changes += 1
+        elif target_account_id or old_account_id:
+            raise RuntimeError("rollback manifest has unexpected account relation")
+        if changes:
+            rollback_updates.append(
+                {
+                    "objectApiName": object_api,
+                    "id": record_id,
+                    "key": str(record.get("key") or ""),
+                    "changes": changes,
+                }
+            )
     return {
-        object_api: sum(1 for row in page_query_all(object_api, fields) if predicate(row))
-        for object_api, fields, predicate in probes
+        "summary": {
+            "plannedRecordUpdates": len(rollback_updates),
+            "ownerChanges": owner_changes,
+            "accountChanges": account_changes,
+            "fieldChanges": owner_changes + account_changes,
+            "creates": 0,
+        },
+        "records": rollback_updates,
     }
 
 
+def verify_rollback(current_plan: dict[str, Any], manifest: dict[str, Any]) -> None:
+    current = {
+        str(record.get("id")): record
+        for record in current_plan["rollbackManifest"]["records"]
+    }
+    for expected in manifest["records"]:
+        record_id = reference_id(expected.get("id"))
+        actual = current.get(record_id)
+        if actual is None:
+            raise RuntimeError("rollback verification record missing")
+        if reference_id(actual.get("oldOwnerId")) != reference_id(expected.get("oldOwnerId")):
+            raise RuntimeError("rollback verification owner mismatch")
+        if reference_id(actual.get("oldAccountId")) != reference_id(expected.get("oldAccountId")):
+            raise RuntimeError("rollback verification account mismatch")
+
+
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Seed high-fidelity CloudCC CRM analytics demo data.")
+    parser = argparse.ArgumentParser(description="Repair the existing TASK-205 CRM analytics demo batch.")
     mode = parser.add_mutually_exclusive_group()
-    mode.add_argument("--dry-run", action="store_true", help="Build and inspect the plan without writes (default).")
-    mode.add_argument("--execute", action="store_true", help="Create or update only TASK-205 batch records.")
-    parser.add_argument("--offline", action="store_true", help="Skip all CloudCC reads; useful for contract tests.")
+    mode.add_argument("--dry-run", action="store_true", help="Build the read-only plan (default).")
+    mode.add_argument("--execute", action="store_true", help="Apply the validated plan using update only.")
+    parser.add_argument("--offline", action="store_true", help="Skip all CloudCC reads and print the contract only.")
+    parser.add_argument("--snapshot", type=Path, help="Use a local read-only CloudCC snapshot instead of live reads.")
+    parser.add_argument("--cloudcc-project", type=Path, default=ROOT, help="Directory containing CloudCC CLI config.")
+    parser.add_argument("--backup-file", type=Path, help="New file required before execute; existing files are refused.")
+    parser.add_argument("--rollback-from", type=Path, help="With --execute, restore a prior rollback manifest.")
     parser.add_argument("--as-of", type=date.fromisoformat, default=date.today(), help="Dataset anchor date YYYY-MM-DD.")
     parser.add_argument("--json", action="store_true", help="Print machine-readable JSON only.")
     return parser.parse_args()
 
 
+def validate_args(args: argparse.Namespace) -> None:
+    if args.offline and args.snapshot:
+        raise RuntimeError("--offline cannot be combined with --snapshot")
+    if args.execute and (args.offline or args.snapshot):
+        raise RuntimeError("--execute requires fresh live CloudCC reads")
+    if args.execute and args.backup_file is None:
+        raise RuntimeError("--execute requires --backup-file")
+    if not args.execute and args.backup_file is not None:
+        raise RuntimeError("--backup-file is only valid with --execute")
+    if args.rollback_from is not None and not args.execute:
+        raise RuntimeError("--rollback-from requires --execute")
+
+
 def main() -> int:
     args = parse_args()
-    if args.execute and args.offline:
-        raise SystemExit("--execute cannot be combined with --offline")
+    validate_args(args)
     dataset = build_dataset(args.as_of)
     report = summarize(dataset, args.as_of)
-    if args.execute:
-        report["mode"] = "EXECUTE"
-        report["writeStats"] = execute(dataset)
-    elif not args.offline:
-        if not CLOUDCC.exists():
-            raise SystemExit(f"CloudCC CLI not found: {CLOUDCC}")
-        report["remoteExisting"] = inspect_existing()
+    if args.offline:
+        report["migrationPlan"]["status"] = "OFFLINE_CONTRACT"
+    else:
+        snapshot = load_snapshot(args.snapshot) if args.snapshot else read_remote_snapshot(args.cloudcc_project)
+        migration_plan = build_migration_plan(dataset, snapshot)
+        report["migrationPlan"] = migration_plan
+        if args.execute:
+            write_backup_manifest(args.backup_file, migration_plan["rollbackManifest"])
+            if args.rollback_from:
+                rollback_manifest = extract_rollback_manifest(args.rollback_from)
+                rollback_plan = build_rollback_plan(migration_plan, rollback_manifest)
+                report["mode"] = "ROLLBACK"
+                report["rollbackPlan"] = rollback_plan
+                report["writeStats"] = apply_update_plan(rollback_plan, args.cloudcc_project)
+                after = build_migration_plan(dataset, read_remote_snapshot(args.cloudcc_project))
+                verify_rollback(after, rollback_manifest)
+                report["verification"] = {"status": "VERIFIED", "restoredRecords": len(rollback_manifest["records"])}
+            else:
+                report["mode"] = "EXECUTE"
+                report["writeStats"] = apply_update_plan(migration_plan["updatePlan"], args.cloudcc_project)
+                after = build_migration_plan(dataset, read_remote_snapshot(args.cloudcc_project))
+                if after["updatePlan"]["summary"]["plannedRecordUpdates"] != 0:
+                    raise RuntimeError("execute verification failed: updates remain")
+                report["verification"] = {
+                    "status": "VERIFIED",
+                    "plannedRecordUpdatesAfterExecute": 0,
+                    "recordCounts": EXPECTED_MIGRATION_COUNTS,
+                }
 
     if args.json:
         print(json.dumps(report, ensure_ascii=False, separators=(",", ":")))
@@ -579,4 +985,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except (RuntimeError, ValueError, OSError, json.JSONDecodeError) as error:
+        print(json.dumps({"mode": "FAILED", "error": str(error)}, ensure_ascii=False), file=sys.stderr)
+        sys.exit(2)
