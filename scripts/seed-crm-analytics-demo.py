@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 from collections import defaultdict
@@ -423,10 +424,11 @@ def run_cloudcc(
     object_api: str,
     payload: dict[str, Any],
     project: Path,
+    cloudcc_cli: Path = CLOUDCC,
 ) -> dict[str, Any]:
     body = json.dumps({"objectApiName": object_api, **payload}, ensure_ascii=False, separators=(",", ":"))
     process = subprocess.run(
-        [str(CLOUDCC), action, "openapi", str(project), body],
+        [str(cloudcc_cli), action, "openapi", str(project), body],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,
@@ -445,7 +447,12 @@ def run_cloudcc(
     return result
 
 
-def page_query_all(object_api: str, fields: str, project: Path) -> list[dict[str, Any]]:
+def page_query_all(
+    object_api: str,
+    fields: str,
+    project: Path,
+    cloudcc_cli: Path = CLOUDCC,
+) -> list[dict[str, Any]]:
     records: list[dict[str, Any]] = []
     page = 1
     while page <= 50:
@@ -454,6 +461,7 @@ def page_query_all(object_api: str, fields: str, project: Path) -> list[dict[str
             object_api,
             {"fields": fields, "pageNUM": page, "pageSize": 200},
             project,
+            cloudcc_cli,
         )
         batch = result.get("data")
         if not isinstance(batch, list):
@@ -504,15 +512,15 @@ def load_snapshot(path: Path) -> dict[str, Any]:
     return value
 
 
-def read_remote_snapshot(project: Path) -> dict[str, Any]:
-    if not CLOUDCC.exists():
-        raise RuntimeError(f"CloudCC CLI not found: {CLOUDCC}")
+def read_remote_snapshot(project: Path, cloudcc_cli: Path = CLOUDCC) -> dict[str, Any]:
+    if not cloudcc_cli.exists():
+        raise RuntimeError(f"CloudCC CLI not found: {cloudcc_cli}")
     snapshot: dict[str, Any] = {
-        "users": page_query_all("ccuser", "id,name,loginname,isusing", project),
-        "accounts": page_query_all("Account", "id,name,ownerid,beizhu", project),
+        "users": page_query_all("ccuser", "id,name,loginname,isusing", project, cloudcc_cli),
+        "accounts": page_query_all("Account", "id,name,ownerid,beizhu", project, cloudcc_cli),
     }
     for spec in MIGRATION_SPECS:
-        snapshot[spec.dataset_key] = page_query_all(spec.object_api, spec.fields, project)
+        snapshot[spec.dataset_key] = page_query_all(spec.object_api, spec.fields, project, cloudcc_cli)
     return snapshot
 
 
@@ -766,11 +774,17 @@ def validate_update_result(result: dict[str, Any], expected: list[dict[str, Any]
             returned_id = reference_id(returned.get("id"))
         else:
             returned_id = reference_id(returned)
-        if returned_id and returned_id != reference_id(expected_row.get("id")):
+        if not returned_id:
+            raise RuntimeError(f"CloudCC update {object_api} returned missing id")
+        if returned_id != reference_id(expected_row.get("id")):
             raise RuntimeError(f"CloudCC update {object_api} returned mismatched id")
 
 
-def apply_update_plan(update_plan: dict[str, Any], project: Path) -> dict[str, int]:
+def apply_update_plan(
+    update_plan: dict[str, Any],
+    project: Path,
+    cloudcc_cli: Path = CLOUDCC,
+) -> dict[str, int]:
     records = update_plan.get("records")
     if not isinstance(records, list):
         raise RuntimeError("update plan records are invalid")
@@ -789,7 +803,7 @@ def apply_update_plan(update_plan: dict[str, Any], project: Path) -> dict[str, i
                 }
                 for record in batch
             ]
-            result = run_cloudcc("update", spec.object_api, {"data": payload}, project)
+            result = run_cloudcc("update", spec.object_api, {"data": payload}, project, cloudcc_cli)
             validate_update_result(result, payload, spec.object_api)
     return stats
 
@@ -797,9 +811,18 @@ def apply_update_plan(update_plan: dict[str, Any], project: Path) -> dict[str, i
 def write_backup_manifest(path: Path, manifest: dict[str, Any]) -> None:
     if not path.parent.exists():
         raise RuntimeError(f"backup directory does not exist: {path.parent}")
-    with path.open("x", encoding="utf-8") as handle:
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
         json.dump(manifest, handle, ensure_ascii=False, indent=2)
         handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    directory_flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    directory_descriptor = os.open(path.parent, directory_flags)
+    try:
+        os.fsync(directory_descriptor)
+    finally:
+        os.close(directory_descriptor)
 
 
 def extract_rollback_manifest(path: Path) -> dict[str, Any]:
@@ -922,6 +945,7 @@ def parse_args() -> argparse.Namespace:
     mode.add_argument("--execute", action="store_true", help="Apply the validated plan using update only.")
     parser.add_argument("--offline", action="store_true", help="Skip all CloudCC reads and print the contract only.")
     parser.add_argument("--snapshot", type=Path, help="Use a local read-only CloudCC snapshot instead of live reads.")
+    parser.add_argument("--cloudcc-cli", type=Path, default=CLOUDCC, help="CloudCC CLI executable path.")
     parser.add_argument("--cloudcc-project", type=Path, default=ROOT, help="Directory containing CloudCC CLI config.")
     parser.add_argument("--backup-file", type=Path, help="New file required before execute; existing files are refused.")
     parser.add_argument("--rollback-from", type=Path, help="With --execute, restore a prior rollback manifest.")
@@ -951,7 +975,11 @@ def main() -> int:
     if args.offline:
         report["migrationPlan"]["status"] = "OFFLINE_CONTRACT"
     else:
-        snapshot = load_snapshot(args.snapshot) if args.snapshot else read_remote_snapshot(args.cloudcc_project)
+        snapshot = (
+            load_snapshot(args.snapshot)
+            if args.snapshot
+            else read_remote_snapshot(args.cloudcc_project, args.cloudcc_cli)
+        )
         migration_plan = build_migration_plan(dataset, snapshot)
         report["migrationPlan"] = migration_plan
         if args.execute:
@@ -961,18 +989,33 @@ def main() -> int:
                 rollback_plan = build_rollback_plan(migration_plan, rollback_manifest)
                 report["mode"] = "ROLLBACK"
                 report["rollbackPlan"] = rollback_plan
-                report["writeStats"] = apply_update_plan(rollback_plan, args.cloudcc_project)
-                after = build_migration_plan(dataset, read_remote_snapshot(args.cloudcc_project))
+                report["writeStats"] = apply_update_plan(
+                    rollback_plan,
+                    args.cloudcc_project,
+                    args.cloudcc_cli,
+                )
+                after = build_migration_plan(
+                    dataset,
+                    read_remote_snapshot(args.cloudcc_project, args.cloudcc_cli),
+                )
                 verify_rollback(after, rollback_manifest)
                 report["verification"] = {"status": "VERIFIED", "restoredRecords": len(rollback_manifest["records"])}
             else:
                 report["mode"] = "EXECUTE"
-                report["writeStats"] = apply_update_plan(migration_plan["updatePlan"], args.cloudcc_project)
-                after = build_migration_plan(dataset, read_remote_snapshot(args.cloudcc_project))
+                report["writeStats"] = apply_update_plan(
+                    migration_plan["updatePlan"],
+                    args.cloudcc_project,
+                    args.cloudcc_cli,
+                )
+                after = build_migration_plan(
+                    dataset,
+                    read_remote_snapshot(args.cloudcc_project, args.cloudcc_cli),
+                )
                 if after["updatePlan"]["summary"]["plannedRecordUpdates"] != 0:
                     raise RuntimeError("execute verification failed: updates remain")
                 report["verification"] = {
-                    "status": "VERIFIED",
+                    "status": "CONFIGURED_PROJECT_FIELD_STATE_VERIFIED",
+                    "externalAcceptance": "REQUIRED",
                     "plannedRecordUpdatesAfterExecute": 0,
                     "recordCounts": EXPECTED_MIGRATION_COUNTS,
                 }
