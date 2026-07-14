@@ -20,6 +20,7 @@
 - 填入本地假凭据 `pixel-lock@example.com` / 本地测试密码后，按钮变为可用；账号、掩码密码、焦点边框和单一按钮文案可读，未提交假凭据。
 - `document.documentElement.scrollWidth <= window.innerWidth`，控制台 `error/warning=0`。
 - 交互图：`output/playwright/task209-reference-engaged-1672x941.png`。
+- 生产 `2.7.2`：同尺寸默认态的背景 URL 为带 hash 的 `platform-login-reference-1672x941` 资产，根尺寸/背景尺寸/透明覆盖层契约与本地一致；线上拼接图为 `output/playwright/task209-reference-production-comparison-2.7.2.png`，默认截图为 `output/playwright/task209-reference-production-2.7.2-1672x941.jpg`，交互态截图为 `output/playwright/task209-reference-production-engaged-2.7.2-1672x941.jpg`。
 
 ## 结论
 

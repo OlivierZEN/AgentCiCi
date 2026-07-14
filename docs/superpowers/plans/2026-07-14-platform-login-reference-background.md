@@ -125,19 +125,19 @@ Expected: 全量 Vitest 和 Vite production build 成功。
 - Consumes: 已验证 commit、`scripts/release-acr.sh`、生产 runbook。
 - Produces: 生产 `2.7.2`、ACR digest、备份目录、健康与浏览器回读证据。
 
-- [ ] **Step 1: 运行 dry-run**
+- [x] **Step 1: 运行 dry-run**
 
 Run: `./scripts/release-acr.sh --dry-run --version 2.7.2`
 
 Expected: backend/frontend 镜像、Git tag 和全部版本变量均为 `2.7.2`。
 
-- [ ] **Step 2: 备份并正式发布**
+- [x] **Step 2: 备份并正式发布**
 
 Run: `ALLOW_DIRTY_RELEASE=true ./scripts/release-acr.sh --version 2.7.2`
 
 Expected: ACR inspect 与 Git tag push 成功，然后按 `docs/production-release-runbook.md` 更新线上 backend/frontend。
 
-- [ ] **Step 3: 生产验收**
+- [x] **Step 3: 生产验收**
 
 检查 `/actuator/health`、`/system/version`、x/onechat HTTPS 与 `1672 × 941` 浏览器默认态；更新发布记录。
 
