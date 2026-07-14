@@ -1,15 +1,15 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T17:28:00Z
+updated_at: 2026-07-14T23:22:06Z
 updated_by: MANAGER-001
-phase: post-crm-analysis-production-acceptance
-active_task: "TASK-210"
-next_action: "Complete TASK-210's independent final production visual evidence while preserving the accepted 2.7.5 CRM analysis release."
+phase: crm-streaming-correction-design-review
+active_task: "TASK-211"
+next_action: "Obtain written FEAT-114 review, then execute the approved server-side multi-delta CRM streaming fix through TDD."
 read_next:
   goals: false
   decisions: false
-  issue_list: false
+  issue_list: true
   task_board: true
   active_task_status: true
   test_report: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-211 is ready on `codex/TASK-211-crm-streaming-output`. Production evidence proves the deterministic CRM path emits one 2,383-character `delta` instead of a real stream; the frontend and Nginx are healthy. The user approved server-side controlled chunking, and implementation waits only for written FEAT-114 review.
 - TASK-210 is preserved in production `2.7.5 / be80eea665c0`: FEAT-116 renders the public standard WeChat mark and distinct Lucide business-source icons, preserves the compact timeline across all eight themes, and removes duplicate-key console errors from CRM event id collisions. Frontend 16 files / 89 tests and production build passed; independent final production visual evidence remains with TASK-210.
 - TASK-208 is complete in production `2.7.5 / be80eea665c0`. SalesA now receives a deterministic five-layer CRM answer with direct conclusion, product Top 5, business diagnosis, forward signals, actions and data coverage; SSE, persisted messages, blocking, OpenAPI and desktop UI do not expose the internal tool result or trigger the false “等待确认” state.
 - TASK-209 remains preserved in production `2.7.5`; the platform login is still locked to the approved reference image.
@@ -44,6 +45,7 @@ read_next:
 
 ## Read Next
 
+- `.claw/tasks/TASK-211.md`, `.claw/assignments/TASK-211.yaml` and the TASK-211 section in `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md` - approved CRM true-stream correction awaiting written review.
 - `.claw/tasks/TASK-210.md`, `.claw/assignments/TASK-210.yaml` and `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md` - active customer workbench standard source icon repair.
 - `.claw/tasks/TASK-208.md`, `.claw/assignments/TASK-208.yaml` and `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md` - completed CRM stability, deep-analysis, SalesA migration and production acceptance record.
 - `.claw/tasks/TASK-209.md` and `docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md` - production login source that TASK-208 must preserve.
@@ -52,9 +54,5 @@ read_next:
 - `.claw/tasks/TASK-205.md` and `.claw/assignments/TASK-205.yaml` - completed CRM analysis baseline and superseded authorization history.
 - `docs/specs/FEAT-111-crm-business-analysis-skill.md` - approved architecture, object map, field dictionary, tool contract, demo-data design and acceptance source.
 
-- `.claw/tasks/TASK-204.md` and `.claw/assignments/TASK-204.yaml` - approved Agent Builder polish task and authorization.
-- `docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md` - guide spacing, avatar interaction and acceptance source.
-- `.claw/tasks/TASK-203.md` and `.claw/assignments/TASK-203.yaml` - active comprehensive demo-data task and authorization.
-- `docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md` - scenario matrix, data scale, visibility and acceptance source.
 - `.claw/task-board.md` - compact task index.
 - `.claw/test-report.md` - latest verified commands.

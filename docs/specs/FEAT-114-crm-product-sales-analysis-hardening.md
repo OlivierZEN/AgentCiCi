@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-114
 title: CRM 产品销售经营分析稳定性与深度治理
-status: implemented
+status: approved
 owner_role: project-manager
-task_ids: TASK-208
+task_ids: TASK-208,TASK-211
 related_decisions: FEAT-015,FEAT-021,FEAT-028,FEAT-031,FEAT-109,FEAT-111
-related_issues: none
-updated_at: 2026-07-14T17:28:00Z
+related_issues: ISSUE-2026-07-15-crm-deterministic-stream-single-delta
+updated_at: 2026-07-14T23:22:06Z
 updated_by: MANAGER-001
 ---
 
@@ -291,3 +291,54 @@ Order -> Contract                              合同与续约信号
 - 5 组持久化消息与 SSE 正文一致；内部 blocking、OpenAPI blocking/streaming 和 SalesB 对照均返回同一事实。OpenAPI observation 只保留脱敏运行状态，不含工具名、参数、记录 ID、owner ID 或原始 payload。
 - 生产桌面页面真实新建会话并重新询问后，Top 5 表格和五层分析正常渲染，状态收敛为“已完成本轮处理”；DOM 中不存在 `crm_product_sales_rank`、`tool_call/tool_result`、原始 JSON 或错误“等待确认”，浏览器控制台 error 为 0。
 - OpenAPI 验收使用的一次性 Key 已撤销，临时 api channel 已恢复为原渠道集合；生产未遗留额外外部访问凭据或入口。
+
+## TASK-211 真实流式输出纠偏设计（2026-07-15）
+
+### 已验证问题
+
+- 生产 `2.7.5` 的 5 份真实 CRM SSE 证据均为 `phase × 3 → delta × 1 → done × 1`；唯一正文 `delta` 一次承载 2,383 个字符，因此页面表现为等待后整段出现。
+- Agent OpenAPI streaming 同样为 `agent_thought × 3 → message × 1 → message_end × 1`，唯一 `message` 也承载完整 2,383 字正文。
+- 根因位于 `ChatOrchestratorService` 的 CRM 确定性分支：格式化器生成完整安全正文后只调用一次 `safeSendDelta(emitter, finalText)`。普通模型路径会按上游 piece 多次发送，因此不受影响。
+- 前端 `streamChat.ts` 已在每个 `delta` 后立即更新并主动让出宏任务；Nginx `/ai/` 与 `/openapi/` 均已关闭 buffering。问题不在前端、React 或代理缓存。
+- 现有测试只校验所有 `delta` 拼接后的正文，单个全文 `delta` 也能通过，未覆盖“真实多分片”契约。
+
+### 方案比较与用户决策
+
+1. **方案 A（已批准）**：保留确定性格式化器，在服务端复用现有 `safeSendDeltaInChunks`，按最多 18 个 Java 字符、相邻分片约 18ms 的节奏发送正文。
+2. 方案 B：前端收到完整正文后模拟打字。只能改善网页视觉，OpenAPI 仍是假流式，拒绝采用。
+3. 方案 C：恢复最终 LLM 二次生成。会重新引入事实漂移、额外延迟和潜在原始工具结果泄漏，拒绝采用。
+
+用户于 2026-07-15 明确批准方案 A。
+
+### 设计与事件契约
+
+```text
+CRM 高阶只读工具
+  → 确定性分析与完整安全正文
+  → safeSendDeltaInChunks
+  → /ai/chat/stream: phase... → delta × N → done
+  → OpenAPI bridge: agent_thought... → message × N → message_end
+```
+
+- 只把 CRM 确定性正文从单个事件改为多个有序事件；不改变分析、排序、格式化、权限、持久化或计费事实。
+- `/ai/chat/stream` 对非空长正文必须产生 `N > 1` 个非空 `delta`，每片不超过 18 个 Java 字符；全部片段拼接必须逐字等于阻塞式正文和持久化正文。
+- `done` 只能在最后一个 `delta` 之后发送且仅发送一次。中断或客户端断开继续沿用现有 SSE 错误处理，不补发第二份正文。
+- Agent OpenAPI bridge 一对一把内部 `delta` 映射为 `message`，因此 streaming 也必须产生多个 `message`；拼接正文与 blocking 完全一致。
+- `/ai/chat` blocking 仍一次返回完整正文；数据库仍只保存一条完整 assistant 消息。
+- 不恢复最终 LLM，不发送 `tool_call`、`tool_result`、工具名、原始 JSON、内部记录 ID、token、cookie 或凭据。
+- 不修改前端生产代码、不修改 CloudCC 数据或元数据，也不改变 TASK-208 已验收的 Top 5 与五层经营分析内容。
+
+### TDD 与验收标准
+
+- 先扩展 CRM 编排回归，使当前单 `delta` 实现因 `deltaCount == 1` 明确失败，再做一处最小生产代码替换。
+- CRM SSE 回归必须验证：`deltaCount > 1`、单片上限、分片非空、第一片不是完整正文、片段拼接等于 blocking/persistence、所有 `delta` 位于 `done` 前、无工具或原始数据泄漏、最终 LLM 零调用。
+- Agent OpenAPI streaming 回归必须验证：`messageCount > 1`、顺序与拼接正文一致、`message_end` 位于所有正文片段之后、`agent_thought` 仍只含脱敏状态。
+- 完整后端定向测试、相关前端现有流式测试与生产构建必须通过；无前端生产代码变更时不新增视觉语言或移动端验收范围。
+- 按正式 runbook 发布新的不可变版本，不覆盖 `2.7.5`。发布后使用 SalesA 连续 5 个新会话记录事件数、首片与末片时间、正文拼接哈希和页面中间态；SalesB 做一次对照。
+- 真实桌面页面必须能观察到同一助手气泡从首片逐步增长到完整五层分析，最终 Top 5、金额冠军、持久化正文与 TASK-208 基准一致，浏览器 console error 为 0。
+
+### 风险与回滚
+
+- 服务端节奏发送会略微延长单轮连接占用；沿用已有 18 字/18ms 参数，避免新增配置和调度器。若生产长回答耗时超出既有 SSE 600 秒上限或并发指标异常，回滚新版本即可。
+- 若分片导致 Markdown 中间态短暂不完整，最终 Markdown 仍由同一完整正文收敛；不为此引入前端双缓冲或另一套打字状态机。
+- 回滚只涉及 AgentCiCi 应用版本；本任务没有 CRM 写入、数据库迁移或 CloudCC 元数据变更。
