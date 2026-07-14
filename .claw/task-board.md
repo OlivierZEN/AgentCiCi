@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T15:55:28Z
+updated_at: 2026-07-14T16:40:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -28,25 +28,25 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `project-manager`
 - spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
 - task_status_path: `.claw/tasks/TASK-208.md`
 - assignment_path: `.claw/assignments/TASK-208.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment, push the allocation-only commit to origin/main, then begin TDD in the isolated implementation worktree.
+- next_action: Preserve the live TASK-209 `2.7.2` source in the release branch, publish a new immutable version, migrate CRM data, then complete five-session production acceptance.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md`
 - task_status_path: `.claw/tasks/TASK-207.md`
 - assignment_path: `.claw/assignments/TASK-207.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment, create the implementation plan, then audit and repair every authenticated frontend surface.
+- next_action: Done on `codex/TASK-207-frontend-theme-alignment-audit`; merge after review, with production release handled separately.
 
 ### TASK-206 - CloudCC 嵌入身份同步自动恢复
 
@@ -876,6 +876,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-209 - 运营平台登录页原图像素锁定复刻
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md`
+- task_status_path: `.claw/tasks/TASK-209.md`
+- assignment_path: `.claw/assignments/TASK-209.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.2 / ddcda0ef6111`; preserve the released background asset and transparent interaction layer in later releases.
 
 ### TASK-196 - 客户互动整理上下文与队列丢失修复
 

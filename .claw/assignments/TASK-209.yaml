@@ -1,0 +1,68 @@
+task_id: TASK-209
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: completed
+assigned_at: 2026-07-14T14:20:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md
+task_status_path: .claw/tasks/TASK-209.md
+branch: codex/TASK-209-platform-login-cosmic-visual-refresh
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/**
+  - docs/specs/**
+  - docs/superpowers/plans/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - DESIGN.md
+  - DESIGN.json
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - design-qa.md
+scope_files:
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md
+  - docs/superpowers/plans/2026-07-14-platform-login-cosmic-visual-refresh.md
+  - .claw/tasks/TASK-209.md
+  - .claw/assignments/TASK-209.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - design-qa.md
+  - frontend/src/assets/platform-login-reference-1672x941.png
+  - frontend/src/platform/PlatformLogin.tsx
+  - frontend/src/platform/PlatformLogin.test.tsx
+  - frontend/src/styles.css
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-053-platform-account-orgless-auth-context.md
+task_boundary:
+  - "只改 /platform/login 的桌面端页面视觉与语义结构，不改变平台账号认证逻辑。"
+  - "以用户提供的 1672×941 原图作为 /platform/login 默认态全页背景，并用与原图坐标对齐的透明交互层承载真实表单。"
+  - "原图默认态必须像素级匹配；输入、按钮和 notice 仅在用户交互后显示可读覆盖层。不得新增移动端布局、后端接口或主题偏好逻辑。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user supplied the exact reference image and explicitly required it to become the full-page background for a 1:1 implementation and production release."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Reopened after user rejected the 2.7.1 CSS/SVG approximation. Preserve user changes in diagrams/ and do not include unrelated files. This iteration uses the supplied source image as the pixel-locked default desktop background."

@@ -1,0 +1,69 @@
+# FEAT-115 运营平台登录页原图像素锁定复刻
+
+## 状态
+
+- 状态：`done`
+- 任务：`TASK-209`
+- 发布：生产 `2.7.2 / ddcda0ef6111`
+- 视觉真值：用户提供 `/var/folders/ld/pqvgd4g52h555q74hhmy47ch0000gn/T/codex-clipboard-fe3f07a0-c764-4a22-9731-739b7212a088.png`，尺寸 `1672 × 941`
+
+## 决策与目标
+
+用户明确否决先前的 CSS/SVG 近似重绘，要求默认登录画面与视觉真值完全一致。本次将视觉真值无损复制为前端受控资产 `frontend/src/assets/platform-login-reference-1672x941.png`，并作为 `/platform/login` 的整页背景。
+
+在 `1672 × 941` 桌面视口且表单未交互时，页面可见像素必须只来自该背景图，不叠加重新绘制的标题、轨道、星云、边框、标签、占位符或禁用按钮。真实登录表单保留在与原图坐标对齐的透明交互层中，确保默认态高保真与原认证功能同时成立。
+
+## 用户、场景与成功标准
+
+- 用户：平台运营、治理和审计人员。
+- 场景：打开 `/platform/login`，先看到与批准图完全一致的页面，随后输入账号和密码登录。
+- 成功标准：默认态在原始尺寸下可逐像素对齐，账号和密码输入仍能使用，空值按钮保持禁用，现有平台认证链路完全不变。
+
+## 视觉实现契约
+
+### 原图资产
+
+- 只使用用户提供的原图，不重新生成、不裁切、不压缩、不以 CSS、SVG 或 HTML 近似替代其中任何可见视觉元素。
+- 默认桌面态在 `1672 × 941` 中使用 `background-size: 100% 100%`、`background-position: center` 和不透明背景，保证源图像素一一映射到页面像素。
+- 非原始桌面比例仍全屏缩放显示同一原图，不新增第二套视觉语言或移动端布局。
+
+### 交互覆盖层
+
+- 真实表单用 `main`、唯一 `h1`、关联 `label`、两个 `input`、真实 `button` 和 `aria-live` notice 实现。
+- 默认态：语义元素仍可被辅助技术访问，但视觉上透明，不覆盖或复制背景图中的文字、描边和按钮。
+- 控件可点击区域严格按原图坐标定位：邮箱/手机框、密码框和登录按钮分别覆盖原图对应控件区域。
+- 用户 focus 或输入后，当前字段和按钮显示可读的深色覆盖层，确保输入、焦点、禁用、登录中和错误状态可用；这类交互态不承担默认像素对比要求。
+- 不新增登录接口、请求字段、角色校验、token key、路由或移动端行为。
+
+## 认证行为契约
+
+以下行为不得改变：
+
+1. `POST /auth/platform/password/login`。
+2. 请求体继续使用 `identifier: identifier.trim()` 和 `password`。
+3. 继续经 `safeFetchJson` 验证 `success` 与 `data.token`。
+4. 继续要求至少一个 `PLATFORM_` 角色。
+5. 成功后继续写入 `LS_PLATFORM_TOKEN`，提示“登录成功。”并替换跳转到 `/platform`。
+6. 账号或密码为空时登录按钮继续禁用。
+
+## 验收与发布门
+
+- TDD：先让测试要求 `platform-login--reference` 和真实登录交互层存在，观察失败后再实现。
+- 原图像素门：浏览器在 `1672 × 941` 默认态截图与原图并排比较，`design-qa.md` 不得保留 P0、P1 或 P2 差异。
+- 交互门：空表单按钮禁用，填入本地假凭据后按钮可用，焦点/输入/notice 仍可读，且不提交假凭据。
+- 工程门：聚焦测试、前端全量测试、`npm run build`、`DESIGN.json` 解析、`git diff --check` 通过。
+- 发布门：先执行 `./scripts/release-acr.sh --dry-run`，再以同一版本用于 ACR tag、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与线上 `CICI_IMAGE_TAG`；先备份，再更新线上 backend/frontend，完成健康、公网和浏览器验收。
+
+## 发布结果
+
+- `2.7.2` 的 backend/frontend ACR 镜像、Git annotated tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与线上 `CICI_IMAGE_TAG` 已全部一致；提交为 `ddcda0ef6111`。
+- 发布前备份：`/opt/cici/backups/20260715-001809-before-2.7.2-task209-reference-login`，包含环境、PostgreSQL、知识库和 Qdrant 快照。
+- 生产 backend/frontend 均为 `2.7.2` healthy；`/actuator/health=UP`，`/system/version` 返回 `2.7.2 / ddcda0ef6111`，Nginx 配置有效。
+- `x.agentcici.com` 的 HTTP 为 301、HTTPS `/platform/login` 为 200；`onechat.agentcici.com` 经生产 IP resolve 的 HTTP 为 301、HTTPS 为 200。
+- 线上浏览器在 `1672 × 941` 默认态加载同一哈希前端资产，背景为 `100% 100%`，透明控件层未参与默认可见像素；表单唯一、初始按钮禁用，填写本地假凭据后按钮可用，未发起登录请求，控制台 error/warning 为 0。
+
+## 范围与例外
+
+- 修改：`PlatformLogin.tsx`、`styles.css`、新的背景资产、测试、设计事实源、TASK-209 记录、设计 QA 与发布记录。
+- 不修改：后端、认证业务、路由、认证后 `/platform/*`、移动端布局、主题偏好。
+- 本路由例外有意覆盖此前“不可将截图作为页面背景”的规则，原因是用户将该截图指定为唯一视觉真值并要求默认态 1:1。

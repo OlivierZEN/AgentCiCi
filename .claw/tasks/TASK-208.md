@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-208
-status: ready
-updated_at: 2026-07-14T13:16:37Z
+status: in_progress
+updated_at: 2026-07-14T16:37:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -22,13 +22,14 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 ## Current State
 
 - 方案 A 已由用户明确批准，根因、能力路径、数据边界和验收矩阵已写入 FEAT-114。
-- TASK-205 五次成功验收使用 SalesB；实际页面用户 SalesA 看不到该批次订单主表。
-- 当前只完成分配准备，尚未修改产品代码或生产 CRM 数据。
+- TASK-208 的确定性五层经营分析、权限不完整状态、防工具结果泄漏、意图路由和受控 CRM 迁移脚本已合入 `origin/main`；143 项定向后端测试通过。
+- 为避免回退已在生产运行的 TASK-209 `2.7.2`，生产集成分支已同时包含 `2.7.2` 与 TASK-208 `2.7.3` 两条发布线；完整前端 86 项测试和生产构建通过。
+- 生产仍运行健康的 `2.7.2`，尚未切换应用版本，也尚未执行 CRM 数据迁移。
 
 ## Next Action
 
-- 验证 assignment 并把分配提交单独推送到 `origin/main`。
-- 从更新后的主线创建独立实现 worktree，先运行基线测试，再按 FEAT-114 的 Task 2 进入 TDD。
+- 完成生产集成审查并合入 `origin/main`，发布新的不可变版本 `2.7.4`。
+- 应用健康验收后执行受控 CRM 数据迁移，再以 SalesA 连续五个新会话和 SalesB 对照完成结构、Top 5、深度分析与防泄漏验收。
 
 ## Constraints
 

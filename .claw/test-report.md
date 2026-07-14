@@ -1,14 +1,41 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T12:35:00Z
+updated_at: 2026-07-14T16:39:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T12:35:00Z
+last_run_at: 2026-07-14T16:39:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-208 生产发布线整合门禁（2026-07-15）
+
+- `ancestry`: 整合提交同时包含生产 `2.7.2 / ddcda0ef6111` 与 TASK-208 `2.7.3 / 85b92c2d1f63` 两条不可变发布线；两次 `git merge-base --is-ancestor` 均通过。
+- `content-preservation`: CRM 后端、内置 `crm-business-analysis` Skill、CRM 测试和受控迁移脚本与 TASK-208 `2.7.3` 树一致；完整 `frontend/` 与 `DESIGN.md`、`DESIGN.json` 与生产 `2.7.2` 树一致，`design-qa.md` 仅追加同一版本的生产验收证据。
+- `backend-focused`: 8 个 Surefire 报告共 143 项通过，0 failure / 0 error；覆盖路由、五层经营分析、格式化、高阶工具、阻塞/SSE/OpenAPI 防泄漏和 CRM 数据契约。
+- `frontend-full`: Vitest 16 个文件、86 项通过；TypeScript/Vite 生产构建成功，共转换 1,935 个模块，仅保留既有大 chunk 提示。
+- `identity/assignment`: MANAGER-001 SSH 持钥、GitHub 身份、TASK-208 当前集成分支与状态文件代表路径均为 `allowed`；TASK-209 前端与设计事实源由其已完成 assignment 覆盖。
+- `release-guard`: 已发布的 `2.7.3` 未部署，生产保持健康的 `2.7.2`；原因是 `2.7.3` 首次构建未包含刚上线但尚未进入主干的 TASK-209 源码。下一次只能发布新的不可变版本。
+
+## TASK-209 运营平台登录页原图像素锁定（2026-07-15）
+
+- `release`: `2.7.2 / ddcda0ef6111` 已上线；backend index `sha256:f4ec61fc0532be5593a4cc6c3646906d026770ee56e55b5aebdea936c1d29979`、amd64 `sha256:3403aad868f7f06d08c6b6ac685fafd8b4f39ef3a0f5ab36dcfe35deac8e562f`；frontend index `sha256:2ae803bf615cbb84bf7ddf451716b0f94df452c2d94e6936e01eacf59a18e918`、amd64 `sha256:21ef8d647026f1ffb361c82cfb3230770da8b8cf1098fa314e4cef5cd9538eda`。
+- `production`: 备份 `/opt/cici/backups/20260715-001809-before-2.7.2-task209-reference-login`；backend/frontend 与四个状态服务均 healthy，运行版本和 Git 提交一致。
+- `browser`: 生产 `1672 × 941` 默认态使用无损原图整页背景，透明交互层坐标对齐；无横向溢出，控制台 error/warning 为 0，输入后真实按钮可用且未提交假凭据。
+
+## TASK-207 前台主题一致性与视觉对齐（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通用与 TASK-207 SSH challenge 均为 `allowed`；前端、设计事实源、规格、任务状态和测试报告代表文件通过 assignment 检查。
+- `tdd-focused`: 先验证组织首字符函数、四套主题序列色、数据图 class 和智能体身份色旧内联样式的失败状态，再实现转绿；最终聚焦测试 10 项通过。
+- `frontend-full`: Vitest 15 个文件、85 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示。
+- `static`: `DESIGN.json` JSON parse、`git diff --check` 均通过。
+- `browser-eight-themes`: 真实本地账号逐一应用 `gilded`、`crm-blue`、`ocean`、`sakura`、`lavender`、`avocado`、`wine`、`galaxy`；根主题、画布、设置面板和轨道表面均正确切换，验收后恢复 `gilded`。
+- `browser-pages`: 在 `1600 × 1000` 下验证助手工作台、智能体/会话层级、AI 应用菜单、客户互动工作台、互动整理弹窗、数据洞察、客户洞察、知微画像、个人设置、专属记忆和 CRM 外层壳；`gilded`、`sakura`、`galaxy` 重点表面均读取对应主题 token。
+- `browser-layout`: 数据看板四列闭合，同一行卡片同顶同高；AI 应用菜单五行均为 44px 且左锚点一致；互动弹窗左右栏同顶同高；`document/body scrollWidth == clientWidth == 1600`。
+- `browser-org`: 当前组织 `CloudCC 智能体应用DEMO` 的左下角入口显示 `C`，不再显示固定 `CB`。
+- `browser-console`: error/warning 为 0。截图证据见 `output/playwright/task207-*.png`，设计结论见 `design-qa.md`。
 
 ## TASK-206 CloudCC 嵌入身份同步自动恢复（2026-07-14）
 

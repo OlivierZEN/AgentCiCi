@@ -6,6 +6,19 @@ export function getDisplayInitial(value: string, fallback = "?") {
   return text.slice(0, 2);
 }
 
+export function getOrganizationMonogram(value: string) {
+  const first = (value ?? "").trim().slice(0, 1);
+  if (!first) return "组";
+  return /^[a-z]$/i.test(first) ? first.toUpperCase() : first;
+}
+
+export function getThemeSeriesClass(seed: string) {
+  const text = (seed ?? "").trim();
+  if (!text) return "is-series-1";
+  const index = Array.from(text).reduce((sum, char) => sum + (char.codePointAt(0) ?? 0), 0) % 4;
+  return `is-series-${index + 1}`;
+}
+
 export function validateAvatarFile(file: File) {
   const mimeType = (file.type || "").toLowerCase();
   if (!(mimeType.includes("png") || mimeType.includes("jpeg") || mimeType.includes("jpg") || mimeType.includes("webp"))) {
