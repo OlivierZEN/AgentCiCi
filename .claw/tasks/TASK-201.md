@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-201
-status: review
-updated_at: 2026-07-14T00:31:25Z
+status: done
+updated_at: 2026-07-14T00:44:28Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -58,5 +58,5 @@ spec_path: docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
 ## Handoff
 
 - 目标分支：`codex/TASK-201-agent-builder-layout`。
-- 本地实现与桌面端验收完成，待合并或进入后续发布流程；本任务未执行生产发布。
+- 实现与桌面端验收完成，已合入 `origin/main`；本任务未执行生产发布。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。

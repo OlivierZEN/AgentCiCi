@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T00:31:25Z
+updated_at: 2026-07-14T00:44:28Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-202 - 用户级产品主题偏好
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-108-user-selectable-product-themes.md`
+- task_status_path: `.claw/tasks/TASK-202.md`
+- assignment_path: `.claw/assignments/TASK-202.yaml`
+- blocked_by: `none`
+- next_action: Implement account-level persistence, eight theme tokens, the personal settings selector, cross-shell synchronization and desktop visual verification.
+
 ### TASK-201 - 智能体构建页布局与模型治理收敛
 
-- status: `review`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md`
 - task_status_path: `.claw/tasks/TASK-201.md`
 - assignment_path: `.claw/assignments/TASK-201.yaml`
 - blocked_by: `none`
-- next_action: Local implementation and desktop verification passed on `codex/TASK-201-agent-builder-layout`; merge or release when requested.
+- next_action: Merged to `origin/main`; production release was not requested.
 
 ### TASK-200 - 多租户智能体评测控制面生产落地
 

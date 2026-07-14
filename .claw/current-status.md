@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T00:31:25Z
+updated_at: 2026-07-14T00:44:28Z
 updated_by: MANAGER-001
-phase: agent-builder-layout-review
-active_task: "TASK-201"
-next_action: "Review and merge codex/TASK-201-agent-builder-layout when desired; production release was not requested."
+phase: user-theme-preferences-implementation
+active_task: "TASK-202"
+next_action: "Implement FEAT-108 account-level theme persistence, shared design tokens, personal settings selection, cross-shell synchronization and desktop verification."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,8 @@ read_next:
 
 ## Snapshot
 
+- TASK-202 is active for per-user selectable product themes. The approved catalog is Gilded Ledger, CRM Standard Blue, Blue Ocean, Sakura, Lavender, Avocado, Red Wine and Galaxy; all themes preserve one layout/component system and persist at account level across application and CRM embed entry points.
+- TASK-201 is complete and merged to `origin/main` at `f6be64e`; it was not released to production.
 - TASK-201 is locally implemented and in review: the concrete model selector is removed while internal model compatibility remains; the definition form is balanced into equal columns; avatar actions and four strategy buttons share one row; evaluation and publish channels now live in the lower version-control lifecycle workspace. All 68 frontend tests, production build, diff check and real 1280x720 desktop browser verification passed; no production release was performed.
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
 - FEAT-106 supersedes FEAT-031 as the delivered full-system design while preserving the existing V67 evaluation tables and compatibility APIs. Agent Builder now has an independent “评测” Tab；“发布渠道” contains only IM/Web/Open API delivery entries.
@@ -49,8 +51,9 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact task index.
-- `.claw/tasks/TASK-201.md` and `.claw/assignments/TASK-201.yaml` - active layout task and authorization.
-- `docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md` - approved scope, information architecture and acceptance criteria.
+- `.claw/tasks/TASK-202.md` and `.claw/assignments/TASK-202.yaml` - active theme task and authorization.
+- `docs/specs/FEAT-108-user-selectable-product-themes.md` - approved theme catalog, persistence, synchronization and acceptance source.
+- `.claw/tasks/TASK-201.md` and `.claw/assignments/TASK-201.yaml` - completed layout task and authorization.
 - `.claw/tasks/TASK-200.md` and `.claw/assignments/TASK-200.yaml` - completed task evidence and authorization.
 - `docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md` - production-ready design and acceptance source.
 - `.claw/test-report.md` - latest verified commands.

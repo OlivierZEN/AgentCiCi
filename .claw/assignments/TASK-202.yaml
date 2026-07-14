@@ -1,0 +1,58 @@
+task_id: TASK-202
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T00:44:28Z
+expires_at: none
+spec_path: docs/specs/FEAT-108-user-selectable-product-themes.md
+task_status_path: .claw/tasks/TASK-202.md
+branch: codex/TASK-202-user-theme-preferences
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/test/java/com/codehouse/ciciassistant/auth/**
+  - backend/src/main/resources/db/migration/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-108-user-selectable-product-themes.md
+  - .claw/tasks/TASK-202.md
+  - .claw/assignments/TASK-202.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-108-user-selectable-product-themes.md
+task_boundary:
+  - "主题以账号偏好持久化；组织用户跨组织一致，平台用户使用独立平台账号偏好。"
+  - "只切换语义化视觉令牌，不改变页面结构、业务行为、CRM 权限或双向登录规则。"
+  - "提供 gilded、crm-blue、ocean、sakura、lavender、avocado、wine、galaxy 八套白名单主题。"
+  - "覆盖主应用、设置、管理端、平台端和 CRM 嵌入客户互动工作台的关键产品表面。"
+  - "不增加任意颜色编辑、组织强制主题、主题位图背景或移动端范围。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user approved per-user selectable themes and requested implementation."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created full-stack task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+
