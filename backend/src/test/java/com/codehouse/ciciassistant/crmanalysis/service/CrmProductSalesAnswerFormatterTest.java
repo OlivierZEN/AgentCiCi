@@ -151,6 +151,36 @@ class CrmProductSalesAnswerFormatterTest {
                 .doesNotContain("管道金额 ¥", "管道金额 $", "管道金额 USD");
     }
 
+    @Test
+    void doesNotInventMultiCurrencyCauseWhenSingleCurrencyAmountsAreIncomplete() {
+        CrmProductSalesAnalysisService.SalesRankResult base = successResult(
+                CrmProductSalesAnalysisService.ResultStatus.PARTIAL,
+                List.of("订单明细金额数据不完整"));
+        CrmProductSalesAnalysisService.SalesRankRow row = base.rows().getFirst();
+        CrmProductSalesAnalysisService.SalesRankRow quantityOnlyRow =
+                new CrmProductSalesAnalysisService.SalesRankRow(
+                        row.rank(), row.productId(), row.productName(), row.productCode(), row.unit(),
+                        row.salesQuantity(), null, row.orderCount(), row.customerCount(),
+                        row.previousValue(), row.changeRate(), row.quantityContributionRate(),
+                        null, null, null, null, row.quantityRank(), row.amountRank(),
+                        row.pipeline(), row.contracts());
+        CrmProductSalesAnalysisService.SalesSummary quantityOnlySummary =
+                new CrmProductSalesAnalysisService.SalesSummary(
+                        row.salesQuantity(), null, row.orderCount(), row.customerCount(), "CNY", false,
+                        base.summary().quantityLeader(), null);
+        CrmProductSalesAnalysisService.SalesRankResult result =
+                new CrmProductSalesAnalysisService.SalesRankResult(
+                        base.status(), base.metric(), base.startDate(), base.endDate(), base.dataAsOf(),
+                        base.sourceObjects(), List.of(quantityOnlyRow), base.coverage(), base.warnings(),
+                        quantityOnlySummary, base.insights());
+
+        String answer = formatter.format(result);
+
+        assertThat(answer)
+                .contains("金额数据不完整或币种不可比")
+                .doesNotContain("存在未折算的多币种", "存在多币种", "未提供可靠汇率");
+    }
+
     @ParameterizedTest
     @MethodSource("nonSuccessStatuses")
     void formatsEveryNonSuccessStateAsSafeNaturalLanguage(

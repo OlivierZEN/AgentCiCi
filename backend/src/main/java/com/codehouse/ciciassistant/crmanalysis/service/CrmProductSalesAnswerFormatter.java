@@ -109,7 +109,7 @@ public class CrmProductSalesAnswerFormatter {
                 answer.append("量与值的冠军不同，建议分别管理交付保障与高价值场景复制。");
             }
         } else {
-            answer.append("由于存在未折算的多币种，本次只比较净销量，不合并金额。");
+            answer.append("由于金额数据不完整或币种不可比，本次只比较净销量，不合并金额。");
         }
         if (result.status() == CrmProductSalesAnalysisService.ResultStatus.PARTIAL) {
             answer.append("\n\n> 部分增强数据不可用；下方排行仍基于可验证的订单销售事实，未用模型补造数值。");
@@ -260,7 +260,7 @@ public class CrmProductSalesAnswerFormatter {
                 .append(sourceLabels(sourceObjects))
                 .append("。订单销售额是经营口径，不等同于履约后财务报表中的已确认收入。");
         if (!summary.amountComparable()) {
-            answer.append("\n- 币种：存在多币种且未提供可靠汇率，所以金额、均价和基于金额的集中度未合并。");
+            answer.append("\n- 金额口径：金额数据不完整或币种不可比，所以金额、均价和基于金额的集中度未合并。");
         }
     }
 
