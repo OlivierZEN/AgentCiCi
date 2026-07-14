@@ -15,10 +15,12 @@ last_run_status: passed
 - `identity/assignment`: MANAGER-001 通用与 TASK-210 SSH challenge 均为 `allowed`；客户工作台源码、样式、依赖、规格、任务状态和测试报告代表文件通过 assignment 检查。
 - `tdd`: 新增来源语义测试先以缺少 `timelineSourceKind`/`lifecycleSourceLabel` 失败，再实现转绿；重复 CRM 事件键测试先以缺少 `timelineItemKey` 失败，再实现转绿。
 - `frontend`: Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示；`git diff --check` 通过。
+- `production-baseline`: ECS 回读确认真实线上为 `2.7.2 / ddcda0ef6111`，不是仅存在 Git 标签的 `2.7.3`；发布分支已撤销 `2.7.3` 合并并合入 `2.7.2`，避免把未部署 CRM 分析改动捎带上线。
+- `backend-baseline`: 在误合并 `2.7.3` 时完整后端套件暴露共享数据库重复账号夹具、内置 `crm-business-analysis` 版本漂移、历史非空字段夹具和连接池耗尽，共运行 325 项并出现 58 failure / 5 error；该合并已撤销。本次最终基线的后端 `-DskipTests package` 与 Compose config 通过，TASK-210 不改后端代码。
 - `icon-source`: 微信渠道使用 Simple Icons 公开维护的规范路径和 `#07C160` 品牌色；电话、会议、邮件、CRM 任务、CRM 日程、客户反馈使用项目既有 Lucide 标准图标，不含自绘 SVG 路径。
 - `browser-local`: 真实演示组织 CRM 数据在 `1600 × 1000` 桌面端加载；CRM 任务显示清单图标、CRM 日程显示日历图标；以只读请求拦截将一条现有记录标记为微信后，规范双气泡图标与实际轴线、日期和内容列共同通过视觉检查。证据：`output/playwright/task210-local-standard-icons.png`、`output/playwright/task210-local-wechat-standard-icon-detail.png`。
 - `browser-console`: 完整时间线曾暴露重复 CRM event id 的 React key 错误；加入事件 ID、发生时间和行号组合键后，重新加载并展开完整时间线只有 React DevTools info，新增 error/warning 为 0。
-- `release`: 待执行统一 `release-acr.sh` dry-run、生产备份、发布和真实线上复验。
+- `release-dry-run`: 统一脚本生成 `2.7.4`，backend/frontend 镜像、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与 `CICI_IMAGE_TAG` 一致；待执行生产备份、正式发布和真实线上复验。
 
 ## TASK-207 前台主题一致性与视觉对齐（2026-07-14）
 

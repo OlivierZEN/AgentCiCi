@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-210.md`
 - assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
-- next_action: Validate against the 2.7.3 production baseline, release 2.7.4 through the canonical runbook, and complete AgentCiCi plus CloudCC embed acceptance.
+- next_action: Release 2.7.4 from the verified 2.7.2 production baseline through the canonical runbook, then complete AgentCiCi plus CloudCC embed acceptance.
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
