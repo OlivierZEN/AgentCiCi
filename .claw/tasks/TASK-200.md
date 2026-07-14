@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-200
-status: in_progress
-updated_at: 2026-07-14T07:43:07+08:00
+status: done
+updated_at: 2026-07-13T23:58:40Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -48,6 +48,8 @@ spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
 - 本地桌面浏览器验证 `/admin/evaluation`、Builder“评测/发布渠道”隔离和 `/platform/evaluation`；无页面错误、无横向溢出、控制台 error/warning 为 0。
 - `./scripts/release-acr.sh --dry-run` 成功，生成统一候选版本 `2.6.3`，未构建、推送或创建 tag。
 - 完整后端基线仍存在仓库既有的无关 fixture/auth/model 测试漂移；TASK-200 聚焦及相关安全回归均为绿色，明细见 `.claw/test-report.md`。
+- 生产发布前复跑 20 项后端聚焦/相邻回归、67 项前端测试、生产构建、Compose 与 diff 检查，全部通过。
+- 生产 V79 从 78 正向迁移成功；租户/平台评测 API、双向 403 权限隔离和桌面端三入口通过。
 
 ## Changed Files
 
@@ -58,14 +60,17 @@ spec_path: docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
 - `.claw/current-status.md`
 - `.claw/goals.md`
 - `.claw/decisions.md`
+- `deploy/nginx.cici.conf`
+- `deploy/nginx.cici.ssl.conf`
 
 ## Handoff
 
 - 目标分支：`codex/TASK-200-agent-evaluation-control-plane`。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
-- 功能已达到生产发布就绪；合并后按 `docs/production-release-runbook.md` 使用统一版本 `2.6.3` 或重新 dry-run 得到的下一版本发布。
+- 最终生产版本：`2.6.4 / d88f4293759f`；`2.6.3` 因新评测 API 未进入 Nginx 代理而被立即替代，不作为回滚目标。
 
 ## Release Status
 
 - 用户已于 2026-07-14 明确授权发布到线上环境。
-- 当前阶段：生产发布门禁、备份、镜像发布、部署与验收执行中。
+- 生产 `2.6.4` 已完成镜像、Git tag、配置同步、容器切换、V79、API、RBAC、页面、日志和稳定窗口验收。
+- 最终备份：`/opt/cici/backups/20260714-075215-before-2.6.4-task200-nginx-hotfix`；初始迁移前备份：`/opt/cici/backups/20260714-074613-before-2.6.3-task200-agent-evaluation`。

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T07:43:07+08:00
+updated_at: 2026-07-13T23:58:40Z
 updated_by: MANAGER-001
-phase: agent-evaluation-production-release
-active_task: "TASK-200"
-next_action: "Run production release gates, create the pre-release backup, deploy the unified TASK-200 version, and complete production acceptance."
+phase: agent-evaluation-production
+active_task: "none"
+next_action: "Monitor production 2.6.4 evaluation usage, seed reviewed platform and tenant cases, and resume TASK-170 when prioritized."
 read_next:
   goals: false
   decisions: false
@@ -22,9 +22,9 @@ read_next:
 
 ## Snapshot
 
-- TASK-200 is production-ready on `codex/TASK-200-agent-evaluation-control-plane`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are complete.
+- TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
 - FEAT-106 supersedes FEAT-031 as the delivered full-system design while preserving the existing V67 evaluation tables and compatibility APIs. Agent Builder now has an independent “评测” Tab；“发布渠道” contains only IM/Web/Open API delivery entries.
-- TASK-200 evidence: 7 focused backend tests and related platform/RBAC/Trace regression suites passed; 67 frontend tests, production build, Compose validation, desktop browser checks and `2.6.3` release dry-run passed. Full backend baseline retains unrelated pre-existing fixture/auth/model failures documented in `.claw/test-report.md`.
+- TASK-200 evidence: 20 focused/adjacent backend tests and 67 frontend tests passed; production build, Compose, two release dry-runs, V79 migration, tenant/platform RBAC API smoke and desktop browser checks passed. Release `2.6.3` exposed an Nginx API routing gap and was immediately superseded by `2.6.4`; it is not a rollback target.
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-199 production evidence: a real old-customer interaction generated one 100%-confidence `CREATE_OPPORTUNITY` action for the independent mobile-inspection expansion, linked to its interaction event/batch and original sentence; repeated confirmation stayed idempotent at one action. The action was intentionally not written to CRM.
 
@@ -41,7 +41,7 @@ read_next:
 
 - Earlier TASK-191 through TASK-193 production evidence remains in `.claw/test-report.md` and `.claw/devops.md`; no regression was observed during this release.
 
-- Current work branch: `codex/TASK-200-agent-evaluation-control-plane`; the user authorized production release of commit `af9d902e4d44f53acc2c2c40b9bef20dfa7d7a9a`. Production remains on `2.6.2` / `b87bbe43dd0d` until the release gates, backup and deployment complete.
+- Production runs `2.6.4 / d88f4293759f`; backend/frontend are healthy, state services remain healthy on `2.3.4`, Flyway is at V79, and the release backup is `/opt/cici/backups/20260714-075215-before-2.6.4-task200-nginx-hotfix`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

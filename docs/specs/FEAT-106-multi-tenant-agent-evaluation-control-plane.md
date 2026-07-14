@@ -2,20 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-106
 title: 多租户智能体评测控制面与生产发布门禁
-status: production_ready
+status: verified
 owner_role: product-agent-quality
-task_ids:
-  - TASK-200
-related_decisions:
-  - DEC-020
-  - DEC-021
-  - DEC-027
-related_features:
-  - FEAT-031
-  - FEAT-019
-  - FEAT-022
-  - FEAT-080
-updated_at: 2026-07-14T01:22:40+08:00
+task_ids: [TASK-200]
+related_decisions: [DEC-020, DEC-021, DEC-027]
+related_features: [FEAT-031, FEAT-019, FEAT-022, FEAT-080]
+updated_at: 2026-07-13T23:58:40Z
 updated_by: MANAGER-001
 ---
 
@@ -364,3 +356,4 @@ GET    /platform/evaluation/runs
 - 2026-07-14：完成平台“智能体质量”、租户“AI 质量”、Builder 独立“评测”Tab、Ops Trace“加入回归集”和质量问题闭环；“发布渠道”仅保留企微、钉钉、飞书、Web、Open API 等运行入口。
 - 2026-07-14：完成平台角色最小权限、跨租户/跨智能体引用校验、隐藏结果脱敏、Trace 手机/邮箱/身份证/凭据脱敏和平台审计。
 - 2026-07-14：聚焦后端测试、相关 RBAC/平台/Trace 回归、前端 67 项测试、生产构建、桌面浏览器、Compose 与 `2.6.3` release dry-run 均通过，进入生产发布就绪状态。
+- 2026-07-14：生产 V79、租户/平台 API、双向 403 隔离和三处桌面入口验收完成；首个 `2.6.3` smoke 发现 Nginx API 路由缺口，补齐后以不可变版本 `2.6.4 / d88f4293759f` 正式完成生产发布，`2.6.3` 不作为回滚目标。

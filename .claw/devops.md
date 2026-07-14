@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-12T15:38:41Z
+updated_at: 2026-07-13T23:58:40Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,15 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.6.4 TASK-200 多租户智能体评测控制面 on 2026-07-14:
+  - Git commit/tag `d88f4293759f` / `2.6.4`; V79 adds platform core, standard application, industry and tenant-private evaluation assets, deterministic multi-assertion runs, snapshots/comparison/staleness, release gates, Trace regression capture and quality issues.
+  - Images: backend index `sha256:58983c43796896d05dc4a07059dedf1d10d26cdb6413567e7056e771a77b0388`, amd64 `sha256:fe378b7652eb52a3c2b58e3d43dfc68c00bbe16d3fa44d4011eea3aec0e5c846`; frontend index `sha256:0ffa36646860570eabe0f21cfe28514d2450608a11e981f04184971689fd2f90`, amd64 `sha256:187b2b7c3a13b518cea186187cc8e7e2a09dd7fc24a8b6b9b71cef4d54f33582`.
+  - Backup: `/opt/cici/backups/20260714-075215-before-2.6.4-task200-nginx-hotfix` includes non-empty env, both Nginx configs, PostgreSQL, KB and Qdrant artifacts; initial pre-migration backup is `/opt/cici/backups/20260714-074613-before-2.6.3-task200-agent-evaluation`.
+  - Runtime: backend/frontend healthy on `2.6.4`; database, Redis, RabbitMQ and Qdrant remain healthy on `2.3.4`. Health `UP`, version `2.6.4 / d88f4293759f`, V79 successful, Nginx valid, stable backend errors and frontend 5xx both zero.
+  - Acceptance: tenant and platform evaluation APIs return JSON with role isolation in both directions; platform has one draft standard suite. Tenant AI quality, Builder evaluation/publish-channel separation and platform intelligent-agent quality passed at 1280x720 with no horizontal overflow or console error/warning.
+  - Release correction: `2.6.3 / ca12a9ed804f` briefly applied V79 but exposed missing production Nginx proxy routes for evaluation APIs. It was immediately superseded by `2.6.4` and is not a rollback target; use `2.6.2` for rollback if required.
+  - Public: `x.agentcici.com` HTTP redirects 301 and HTTPS root/new routes return 200; explicit production-IP smoke for `onechat.agentcici.com` returns 200 while the existing local DNS resolution gap remains.
 
 - 2.6.2 TASK-199 互动驱动的客户经营动作 on 2026-07-12:
   - Git commit/tag `b87bbe43dd0d` / `2.6.2`; V78 adds source event/batch, action key, trigger type and validity to customer recommendations. Fixed first-open generation is removed in favor of evidence-backed candidates from confirmed interactions.

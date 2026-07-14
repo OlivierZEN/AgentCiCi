@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-12T06:36:16Z
+updated_at: 2026-07-13T23:58:40Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-12T06:36:16Z
+last_run_at: 2026-07-13T23:58:40Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-200 多租户智能体评测控制面生产验收（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通用和 TASK-200 SSH challenge 均为 allowed；状态、规格、后端/前端、V79 与两个 Nginx 配置均通过 assignment 检查。
+- `backend`: `AgentProductionReadinessIntegrationTest,AgentEvaluationControlPlaneIntegrationTest,AgentEvaluationAssertionEngineTest,RbacProductionReadinessIntegrationTest,PlatformAuthIntegrationTest,PlatformGovernanceIntegrationTest,AgentRunTraceIntegrationTest` 共 20 项，0 failure / 0 error。
+- `frontend`: 12 个 Vitest 文件、67 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示；Compose config 与 `git diff --check` 通过。
+- `migration/runtime`: 生产从 V78 正向迁移到 V79 `agent evaluation control plane`，`success=true`；六服务 healthy，后端 `/actuator/health=UP`，`/system/version=2.6.4 / d88f4293759f`，Nginx 配置有效。
+- `production-api`: demo-org 的 `/evaluation/overview|suites|runs|issues` 均返回 JSON success；平台 `/platform/evaluation/overview|suites|runs` 均成功且平台标准套件为 1；租户访问平台接口与平台账号访问租户接口均返回 403。
+- `production-browser`: 1280x720 下租户“AI 质量”、Builder 独立“评测”Tab、仅含飞书/钉钉/企微等入口的“发布渠道”、平台“智能体质量”均通过；页面显示 `2.6.4`，无横向溢出，console error/warning 为 0。
+- `release`: 最终 `2.6.4 / d88f4293759f`；backend index `sha256:58983c43796896d05dc4a07059dedf1d10d26cdb6413567e7056e771a77b0388`、amd64 `sha256:fe378b7652eb52a3c2b58e3d43dfc68c00bbe16d3fa44d4011eea3aec0e5c846`；frontend index `sha256:0ffa36646860570eabe0f21cfe28514d2450608a11e981f04184971689fd2f90`、amd64 `sha256:187b2b7c3a13b518cea186187cc8e7e2a09dd7fc24a8b6b9b71cef4d54f33582`。
+- `release-correction`: `2.6.3` 首次 smoke 发现评测 API 被生产 Nginx 当作 SPA HTML，补齐只代理带尾部子路径的 `/evaluation/*` 与 `/platform/evaluation/*` 后以不可变新版本 `2.6.4` 替代；`/platform/evaluation` 页面继续返回 HTML。`2.6.3` 不作为回滚目标。
+- `backup/ops`: 最终备份 `/opt/cici/backups/20260714-075215-before-2.6.4-task200-nginx-hotfix` 六项非空；初始迁移前备份 `/opt/cici/backups/20260714-074613-before-2.6.3-task200-agent-evaluation` 四项非空。稳定窗口 backend error=0、frontend 5xx=0；x 域名 HTTP 301/HTTPS 200，onechat 生产 IP 解析 smoke 200，本机 DNS 空结果风险保留。
 
 ## TASK-197 客户互动档案、动态记忆与按需检索生产验收（2026-07-12）
 
