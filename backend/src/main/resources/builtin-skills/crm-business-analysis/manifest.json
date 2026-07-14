@@ -10,20 +10,20 @@
   "bindingPolicy": "OPTIONAL",
   "updatePolicy": "AUTO",
   "riskLevel": "LOW",
-  "version": 2,
+  "version": 3,
   "documentRoot": ".",
   "entrypoint": "SKILL.md",
   "defaultActivationMode": "always-on",
   "toolWhitelist": ["crm_product_sales_rank"],
   "kbWhitelist": [],
   "handoffRule": "CRM 未绑定、核心权限不足、权限覆盖不完整、数据质量阻断、对象结构不兼容或查询失败时，使用确定性状态说明下一步，不猜测、不补造销量数据。",
-  "outputContract": "回答必须包含直接结论、Top 5、事实依据支撑的经营诊断、前瞻信号、具体建议动作和口径覆盖；不展示原始工具结果或内部标识。",
+  "outputContract": "回答必须包含直接结论、Top N、事实依据支撑的经营诊断、前瞻信号、具体建议动作、统计口径与覆盖；不展示原始工具结果或内部标识。",
   "modules": [
     {
       "code": "product-sales",
       "name": "产品销售排行",
       "files": ["introduction.md", "api.md"],
-      "triggerHints": ["销量", "销售最好", "热销", "销售额", "卖得最多", "产品排行"]
+      "triggerHints": ["销量", "销售最好", "热销", "销售额", "订单数", "客户覆盖", "卖得最多", "产品排行"]
     }
   ]
 }
