@@ -30,6 +30,7 @@ scope_files:
   - .claw/task-board.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/devops.md
 protected_paths:
   - .claw/assignments/**
   - .claw/developers/**
