@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T09:05:01Z
+updated_at: 2026-07-14T09:28:46Z
 updated_by: MANAGER-001
-phase: agent-builder-guide-avatar-design-review
-active_task: "TASK-204"
-next_action: "User reviews FEAT-110, then create the implementation plan and start the authorized frontend work."
+phase: comprehensive-demo-data
+active_task: "TASK-203"
+next_action: "Continue the authorized TASK-203 comprehensive demo-data implementation and acceptance."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-204 is ready: the approved design removes the nested frame and excess inset around the Agent Builder guide, then replaces the two persistent avatar buttons with an accessible avatar-triggered upload/change/remove menu. FEAT-110 awaits written user review before implementation.
+- TASK-204 is complete on `codex/TASK-204-agent-builder-avatar-polish`: the Agent Builder guide is transparent, borderless and compact, while the avatar is now the only persistent edit entry with an accessible upload/change/conditional-remove menu. Frontend 76 tests, production build, diff check and authenticated desktop browser acceptance passed with zero overflow or console warnings/errors.
 - TASK-203 is in progress to expand the bound CloudCC CRM and AgentCiCi demo organization into a 16-customer V2 dataset covering every new-customer, existing-customer, interaction archive, memory, dynamic score and evidence-driven action scenario. Owen/SalesA currently has a valid CRM session but zero visible Accounts because the TASK-172 core records are all owned by SalesB.
 - TASK-202 is complete in production `2.6.6 / 4caaa4800b3d`. The hotfix keeps agent bar, chat panel, sidebar metrics and machine lanes transparent and removes avatar scaling/shadows across all eight themes.
 - TASK-202 evidence: 13 frontend test files / 73 tests, production build, diff check, eight-theme 2048×1152 browser matrix, Product Design QA and authenticated production browser acceptance all passed. Production showed fixed 42×42 avatars, zero outer overflow and zero console errors.

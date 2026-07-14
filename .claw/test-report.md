@@ -6378,3 +6378,25 @@ last_run_status: passed
   - Command: `./scripts/release-acr.sh --dry-run`.
   - Result: success; generated canonical production candidate `2.6.3` for backend/frontend images, `CICI_APP_VERSION`, `VITE_CICI_APP_VERSION`, `CICI_IMAGE_TAG` and Git tag.
   - Notes: dry-run only; no image, Git tag, production data or deployment state was changed.
+
+## 2026-07-14 TASK-204 智能体构建说明与头像交互精修
+
+- Authorization:
+  - Result: success.
+  - Notes: `MANAGER-001` passed TASK-204 identity and assignment checks for the scoped assistant frontend, FEAT-110 and task-state files.
+- TDD and frontend tests:
+  - Red checks: the new avatar action resolver/accessibility assertions initially failed; the guide CSS guard initially detected the legacy card border/background and the admin override.
+  - Command: `npm test -- --run` in `frontend/`.
+  - Result: success; 13 test files / 76 tests passed with zero failures.
+- Production build:
+  - Command: `npm run build` in `frontend/`.
+  - Result: success; TypeScript and Vite completed, with only the existing large-chunk warning.
+- Static check:
+  - Command: `git diff --check`.
+  - Result: success; no whitespace errors.
+- Authenticated desktop browser validation:
+  - Target: local `/admin/agent-builder/cici-system` at 1280×720.
+  - Result: success; the guide computed to transparent background, zero border/shadow and compact `2px 4px 6px` padding. The avatar trigger remained 58×58 with `transform: none` and `box-shadow: none`; menu upload/change and conditional removal states rendered correctly.
+  - Interaction: outside click and Escape closed the menu; Escape returned focus to the avatar. Removing the custom avatar immediately showed the name fallback, changed the menu to “上传头像”, hid “移除头像” and did not persist because the draft was not saved.
+  - Quality: no horizontal overflow and zero browser console errors/warnings.
+  - Evidence: `output/playwright/task204-agent-builder-avatar-menu-desktop.png`.
