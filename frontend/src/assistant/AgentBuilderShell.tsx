@@ -145,6 +145,17 @@ export type BaseModelOption = {
 export const MODEL_CONFIG_REQUIRED_NOTICE = "请先配置模型";
 export const AGENT_MODEL_GOVERNANCE_NOTICE = "运行模型由平台统一策略自动选择，并由运营方集中管理路由、降级与成本控制。";
 
+export function resolveAgentAvatarMenuActions(avatarBase64: string): {
+  primaryLabel: "上传头像" | "更换头像";
+  canRemove: boolean;
+} {
+  const canRemove = Boolean(avatarBase64.trim());
+  return {
+    primaryLabel: canRemove ? "更换头像" : "上传头像",
+    canRemove,
+  };
+}
+
 export function resolveAgentCreationModel(
   draftModel: string,
   modelOptions: BaseModelOption[],
@@ -1547,6 +1558,10 @@ export default function AgentBuilderShell({
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
   const [isDeletingAgent, setIsDeletingAgent] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  const avatarTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const setNotice = (message: string) => {
     setNoticeText(message);
@@ -1572,6 +1587,27 @@ export default function AgentBuilderShell({
     const timer = window.setTimeout(() => setNoticeVisible(false), 2600);
     return () => window.clearTimeout(timer);
   }, [noticeTick, notice]);
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!avatarMenuRef.current?.contains(event.target as Node)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setAvatarMenuOpen(false);
+      avatarTriggerRef.current?.focus();
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [avatarMenuOpen]);
 
   useEffect(() => {
     if (!token) return;
@@ -1775,6 +1811,7 @@ export default function AgentBuilderShell({
   const selectedAgentPermissions = selectedAgentAccess.permissions ?? [];
   const canEditSelectedAgent = Boolean(selectedAgentAccess.canEdit);
   const canPublishSelectedAgent = selectedAgentPermissions.includes("PUBLISH");
+  const avatarMenuActions = resolveAgentAvatarMenuActions(draft.avatarBase64);
   const selectedModel = modelOptions.find((option) => option.value === draft.model);
   const openApiBaseUrl = `${window.location.origin}/openapi/v1`;
   const readinessCount = [draft.name, draft.specText, draft.channels.length > 0, draft.knowledgeBaseIds.length > 0, draft.toolIds.length > 0].filter(Boolean).length;
@@ -3666,33 +3703,73 @@ export default function AgentBuilderShell({
                   <div className="cici-builder-field">
                     {renderFieldTitle("智能体头像", false, "用于工作台、会话消息和智能体档案展示")}
                     <div className="cici-builder-avatar-row">
-                      <AvatarView
-                        src={draft.avatarBase64}
-                        fallback={getDisplayInitial(draft.name || "A", "A")}
-                        className="cici-builder-avatar-preview"
-                        alt={`${draft.name || "Agent"} 头像`}
-                      />
-                      <div className="cici-builder-avatar-actions">
-                        <label className="cici-builder__action cici-builder__action--ghost cici-builder-avatar-upload">
-                          上传图片
-                          <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              event.currentTarget.value = "";
-                              if (!file) return;
-                              void beginAvatarCrop(file);
-                            }}
-                          />
-                        </label>
+                      <div className="cici-builder-avatar-menu" ref={avatarMenuRef}>
                         <button
+                          ref={avatarTriggerRef}
                           type="button"
-                          className="cici-builder__action cici-builder__action--ghost"
-                          onClick={() => updateDraft("avatarBase64", "")}
+                          className="cici-builder-avatar-trigger"
+                          aria-label={`编辑 ${draft.name || "Agent"} 头像`}
+                          aria-haspopup="menu"
+                          aria-expanded={avatarMenuOpen}
+                          disabled={!canEditSelectedAgent}
+                          onClick={() => setAvatarMenuOpen((current) => !current)}
                         >
-                          清除头像
+                          <AvatarView
+                            src={draft.avatarBase64}
+                            fallback={getDisplayInitial(draft.name || "A", "A")}
+                            className="cici-builder-avatar-preview"
+                            alt={`${draft.name || "Agent"} 头像`}
+                          />
+                          <span className="cici-builder-avatar-trigger__overlay" aria-hidden>
+                            <svg viewBox="0 0 24 24">
+                              <path d="M8.5 7 10 5h4l1.5 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5Z" />
+                              <circle cx="12" cy="13" r="3" />
+                            </svg>
+                            <span>编辑</span>
+                          </span>
                         </button>
+                        <input
+                          ref={avatarFileInputRef}
+                          className="cici-builder-avatar-file-input"
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          tabIndex={-1}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.currentTarget.value = "";
+                            setAvatarMenuOpen(false);
+                            if (!file) return;
+                            void beginAvatarCrop(file);
+                          }}
+                        />
+                        {avatarMenuOpen ? (
+                          <div className="cici-builder-avatar-popover" role="menu" aria-label="头像操作">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setAvatarMenuOpen(false);
+                                avatarFileInputRef.current?.click();
+                              }}
+                            >
+                              {avatarMenuActions.primaryLabel}
+                            </button>
+                            {avatarMenuActions.canRemove ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="is-danger"
+                                onClick={() => {
+                                  updateDraft("avatarBase64", "");
+                                  setAvatarMenuOpen(false);
+                                  window.requestAnimationFrame(() => avatarTriggerRef.current?.focus());
+                                }}
+                              >
+                                移除头像
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>

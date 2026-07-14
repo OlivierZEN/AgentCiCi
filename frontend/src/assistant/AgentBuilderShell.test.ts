@@ -1,4 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+// @ts-expect-error Vitest executes this test in Node; production sources do not depend on Node types.
+import { readFileSync } from "node:fs";
+import AgentBuilderShell from "./AgentBuilderShell";
 import {
   AGENT_BUILDER_LIFECYCLE_TABS,
   AGENT_MODEL_GOVERNANCE_NOTICE,
@@ -10,6 +15,8 @@ import {
   resolveAgentDetailTarget,
   type BaseModelOption,
 } from "./AgentBuilderShell";
+
+const assistantCss = readFileSync(new URL("./cici-ui.css", import.meta.url), "utf8");
 
 describe("Agent Builder information architecture", () => {
   it("places evaluation and delivery channels in the lower version lifecycle", () => {
@@ -33,6 +40,68 @@ describe("Agent Builder information architecture", () => {
   it("keeps concrete model choice under platform governance", () => {
     expect(AGENT_MODEL_GOVERNANCE_NOTICE).toContain("平台统一策略自动选择");
     expect(AGENT_MODEL_GOVERNANCE_NOTICE).toContain("运营方集中管理");
+  });
+});
+
+describe("Agent Builder avatar editing", () => {
+  it("resolves upload and remove actions from the current avatar draft", async () => {
+    const agentBuilderModule = await import("./AgentBuilderShell") as unknown as {
+      resolveAgentAvatarMenuActions?: (avatarBase64: string) => {
+        primaryLabel: string;
+        canRemove: boolean;
+      };
+    };
+
+    expect(typeof agentBuilderModule.resolveAgentAvatarMenuActions).toBe("function");
+    expect(agentBuilderModule.resolveAgentAvatarMenuActions?.("")).toEqual({
+      primaryLabel: "上传头像",
+      canRemove: false,
+    });
+    expect(agentBuilderModule.resolveAgentAvatarMenuActions?.("data:image/png;base64,avatar")).toEqual({
+      primaryLabel: "更换头像",
+      canRemove: true,
+    });
+  });
+
+  it("renders the avatar itself as the only persistent edit entry", () => {
+    const previousWindow = globalThis.window;
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      value: { location: { origin: "http://localhost" } },
+    });
+    let html = "";
+    try {
+      html = renderToStaticMarkup(createElement(AgentBuilderShell, {
+        kbs: [],
+        orgId: "org-test",
+        token: "",
+      }));
+    } finally {
+      Object.defineProperty(globalThis, "window", {
+        configurable: true,
+        value: previousWindow,
+      });
+    }
+
+    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('aria-label="编辑 未命名 Agent 头像"');
+    expect(html).not.toContain("上传图片");
+    expect(html).not.toContain("清除头像");
+  });
+});
+
+describe("Agent Builder guide presentation", () => {
+  it("keeps the builder guide frameless with a compact page inset", () => {
+    const guideBlocks = [...assistantCss.matchAll(/\.cici-builder__guide\s*\{([^}]*)\}/g)]
+      .map((match) => match[1] ?? "");
+
+    expect(guideBlocks.length).toBeGreaterThanOrEqual(2);
+    expect(guideBlocks[0]).toContain("margin: 0 0 6px");
+    expect(guideBlocks[0]).toContain("padding: 2px 4px 6px");
+    expect(guideBlocks.every((block) => block.includes("background: transparent"))).toBe(true);
+    expect(guideBlocks.every((block) => block.includes("border: 0"))).toBe(true);
+    expect(guideBlocks.every((block) => block.includes("border-radius: 0"))).toBe(true);
   });
 });
 
