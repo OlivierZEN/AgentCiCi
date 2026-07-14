@@ -160,23 +160,30 @@ public class CloudccAccessTokenService {
         }
         try {
             CloudccGatewayContext gateway = getConfiguredGateway(orgId).orElse(null);
-            if (gateway == null || gateway.setupSvc().isBlank()) {
+            if (gateway == null || gateway.baseUrl().isBlank()) {
                 return Optional.empty();
             }
-            String url = trimTrailingSlash(gateway.setupSvc()) + "/api/customObject/standardObjList";
+            String url = trimTrailingSlash(gateway.baseUrl()) + "/openApi/common";
+            String validationBody = objectMapper.createObjectNode()
+                    .put("serviceName", "pageQueryWithRoleRight")
+                    .put("objectApiName", "Account")
+                    .put("fields", "id")
+                    .put("pageNUM", 1)
+                    .put("pageSize", 1)
+                    .toString();
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(url))
                     .timeout(HTTP_TIMEOUT)
                     .header("Content-Type", "application/json")
                     .header("accessToken", accessToken.trim())
-                    .POST(HttpRequest.BodyPublishers.ofString("{}", StandardCharsets.UTF_8))
+                    .POST(HttpRequest.BodyPublishers.ofString(validationBody, StandardCharsets.UTF_8))
                     .build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300 || resp.body() == null || resp.body().isBlank()) {
                 return Optional.empty();
             }
             JsonNode root = objectMapper.readTree(resp.body());
-            if (!looksLikeSuccessfulCloudccValidation(root)) {
+            if (!looksLikeValidatedCloudccOpenApi(root)) {
                 return Optional.empty();
             }
             JsonNode jwtPayload = parseJwtPayload(accessToken).orElse(null);
@@ -376,6 +383,42 @@ public class CloudccAccessTokenService {
         String code = firstText(root, "code", "status", "returnCode");
         return !code.isBlank()
                 && ("0".equals(code) || "1".equals(code) || "200".equals(code) || "SUCCESS".equalsIgnoreCase(code));
+    }
+
+    private boolean isCloudccAuthenticationFailure(JsonNode root) {
+        if (root == null || root.isMissingNode() || root.isNull()) {
+            return true;
+        }
+        if (looksLikeSuccessfulCloudccValidation(root)) {
+            return false;
+        }
+        String code = firstText(root, "returnCode", "code", "status").toLowerCase();
+        String message = firstText(root, "returnInfo", "message", "error").toLowerCase();
+        return code.contains("unauthorized")
+                || code.contains("invalid_token")
+                || code.contains("invalid_session")
+                || message.contains("access token")
+                || message.contains("访问令牌")
+                || message.contains("登录失败")
+                || message.contains("重新登录");
+    }
+
+    private boolean looksLikeValidatedCloudccOpenApi(JsonNode root) {
+        if (looksLikeSuccessfulCloudccValidation(root)) {
+            return true;
+        }
+        if (isCloudccAuthenticationFailure(root)) {
+            return false;
+        }
+        String code = firstText(root, "returnCode", "code", "status").toLowerCase();
+        String message = firstText(root, "returnInfo", "message", "error").toLowerCase();
+        return code.contains("permission")
+                || code.contains("forbidden")
+                || code.contains("access_denied")
+                || message.contains("权限")
+                || message.contains("无权")
+                || message.contains("permission")
+                || message.contains("forbidden");
     }
 
     private String firstText(JsonNode root, String... paths) {

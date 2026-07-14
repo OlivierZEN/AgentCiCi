@@ -54,6 +54,16 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
     expect(publishedBundle).not.toContain("JSON.stringify(body)");
   });
 
+  it("maps backend identity failures to truthful safe user guidance", () => {
+    expect(componentSource).toContain("safeSsoFailureMessage(body && body.message, response.status)");
+    expect(componentSource).toContain("CloudCC 登录凭证校验失败，请从 CRM 重新打开客户互动工作台。");
+    expect(componentSource).toContain("CloudCC 当前用户尚未绑定到 AgentCiCi 成员，请联系管理员配置账号绑定。");
+    expect(publishedBundle).toContain("safeFallbackSsoFailureMessage(body && body.message, response.status)");
+    expect(publishedBundle).not.toContain(
+      "CloudCC 当前用户与 AgentCiCi 账号未正确映射，请联系管理员检查账号绑定。",
+    );
+  });
+
   it("recovers from a transient ticket failure without reopening the CRM page", async () => {
     let fetchCalls = 0;
     const documentStub = {

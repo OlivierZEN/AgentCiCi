@@ -168,7 +168,8 @@ export default {
           return this.retryOrFinishSso(
             attemptIndex,
             response.ok ? true : this.isRetryableSsoStatus(response.status),
-            response.status
+            response.status,
+            this.safeSsoFailureMessage(body && body.message, response.status)
           );
         }
         this.clearSsoRetryTimer();
@@ -180,18 +181,18 @@ export default {
         return this.retryOrFinishSso(attemptIndex, true, 0);
       }
     },
-    retryOrFinishSso(attemptIndex, retryable, status) {
+    retryOrFinishSso(attemptIndex, retryable, status, message = "") {
       if (retryable && attemptIndex + 1 < SSO_RETRY_DELAYS.length) {
         return this.runSsoAttempt(attemptIndex + 1);
       }
-      this.finishSsoFailure(retryable, status);
+      this.finishSsoFailure(retryable, status, message);
       return undefined;
     },
-    finishSsoFailure(retryable, status) {
+    finishSsoFailure(retryable, status, message = "") {
       this.clearSsoRetryTimer();
       this.ssoStarted = false;
-      if (status === 401 || status === 403) {
-        this.ssoMessage = "CloudCC 当前用户与 AgentCiCi 账号未正确映射，请联系管理员检查账号绑定。";
+      if (message) {
+        this.ssoMessage = message;
       } else if (status === 400) {
         this.ssoMessage = "CloudCC 身份信息不完整，请从 CRM 重新打开客户互动工作台。";
       } else {
@@ -204,6 +205,27 @@ export default {
           this.bootstrapSso();
         }, SSO_RECOVERY_DELAY);
       }
+    },
+    safeSsoFailureMessage(serverMessage, status) {
+      const message = String(serverMessage || "");
+      if (message === "CloudCC runtime token 校验失败") {
+        return "CloudCC 登录凭证校验失败，请从 CRM 重新打开客户互动工作台。";
+      }
+      if (message === "CloudCC runtime token 未返回用户身份，无法确保数据权限一致"
+        || message === "CloudCC runtime token 用户与当前页面用户不一致") {
+        return "CloudCC 登录用户身份不一致，请退出 CRM 后重新登录再打开工作台。";
+      }
+      if (message === "CloudCC 用户尚未绑定到 AgentCiCi 成员"
+        || message === "CloudCC 用户未绑定到当前 AgentCiCi 成员") {
+        return "CloudCC 当前用户尚未绑定到 AgentCiCi 成员，请联系管理员配置账号绑定。";
+      }
+      if (message === "当前 AgentCiCi 成员无法生成 CloudCC accessToken") {
+        return "当前成员的 CloudCC 连接凭据不可用，请联系管理员检查账号配置。";
+      }
+      if (status === 401 || status === 403) {
+        return "CloudCC 身份同步被拒绝，请从 CRM 重新打开工作台；如仍失败请联系管理员。";
+      }
+      return "";
     },
     isRetryableSsoStatus(status) {
       return !status || status === 408 || status === 425 || status === 429 || status >= 500;
