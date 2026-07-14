@@ -3547,8 +3547,9 @@
 
 .cici-builder-editor-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.95fr);
-  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
 }
 
 .cici-builder-editor-section {
@@ -3562,6 +3563,38 @@
 
 .cici-builder-editor-section--policy {
   background: transparent;
+}
+
+.cici-builder-editor-section--prompt {
+  min-height: 0;
+}
+
+.cici-builder-avatar-policy-row {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.cici-builder-field--policy-inline {
+  min-width: 0;
+}
+
+.cici-builder-field--policy-inline .cici-builder-choice-row {
+  align-items: center;
+  align-content: center;
+  min-height: 58px;
+  flex-wrap: nowrap;
+  gap: 5px;
+}
+
+.cici-builder-model-governance-note {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid rgba(222, 210, 187, 0.68);
+  color: #756955;
+  font-size: 11px;
+  line-height: 1.6;
 }
 
 .cici-builder-publish-hub {
@@ -6155,6 +6188,10 @@
   .cici-builder-editor-grid,
   .cici-builder-publish-hub {
     grid-template-columns: 1fr;
+  }
+  .cici-builder-avatar-policy-row {
+    grid-template-columns: 1fr;
+    align-items: stretch;
   }
   .cici-builder-publish-panel__stats,
   .cici-builder-publish-form {
@@ -12972,6 +13009,21 @@
   background: #b99652;
 }
 
+.cici-builder-tabs__item:focus-visible {
+  outline: none;
+  color: #876223;
+}
+
+.cici-builder-tabs__item:focus-visible::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  background: #b99652;
+}
+
 .cici-builder-picker__tabs {
   border-bottom: 1px solid #ded2bb;
   gap: 18px;
@@ -13373,6 +13425,25 @@
   line-height: 1;
   vertical-align: top;
   appearance: none;
+}
+
+.admin-main > .cici-builder--full .cici-builder-avatar-policy-row .cici-builder-avatar-row {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.admin-main > .cici-builder--full .cici-builder-avatar-policy-row .cici-builder-avatar-actions {
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.admin-main > .cici-builder--full .cici-builder-avatar-policy-row .cici-builder-avatar-actions .cici-builder__action {
+  padding-inline: 8px;
+}
+
+.admin-main > .cici-builder--full .cici-builder-field--policy-inline .cici-choice-chip {
+  padding-inline: 5px;
+  font-size: 11px;
 }
 
 .admin-main > .cici-builder--full .cici-builder-resource__list {

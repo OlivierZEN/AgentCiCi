@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-13T23:58:40Z
+updated_at: 2026-07-14T00:31:25Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-13T23:58:40Z
+last_run_at: 2026-07-14T00:31:25Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-201 智能体构建页布局与模型治理本地验收（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通用与 TASK-201 SSH challenge 均为 allowed；Builder 源码、样式、测试、规格、任务状态和测试报告代表文件通过 assignment 检查。
+- `frontend-focused`: `npm test -- src/assistant/AgentBuilderShell.test.ts` -> 1 个文件、14 项通过，覆盖生命周期页签顺序、评测/渠道语义隔离、平台模型治理提示和既有模型默认解析。
+- `frontend-full`: `npm test` -> 12 个文件、68 项通过；`npm run build` -> success，仅保留既有 Vite 大 chunk 提示；`git diff --check` -> success。
+- `browser-definition`: 本地真实 1280x720 管理后台打开“客户成功” Agent；定义区左右栏均为 452.5px × 687px，起止边界一致；头像 58px、上传/清除与四个 56px 策略按钮处于同一视觉行；Builder 与主区域 `scrollWidth == clientWidth`，无横向溢出。
+- `browser-model`: Agent 定义区 `基础模型` 文本不存在、`selectCount=0`；只读说明明确运行模型由平台统一策略自动选择，内部 `draft.model` 和新建 Agent 默认模型解析未删除。
+- `browser-lifecycle`: 下方“版本控制与交付”依次包含流程图预览、触发与调度、试运行、评测、版本历史、发布渠道、执行记录、编译摘要、流程代码、Manifest；评测内容和企微/钉钉/飞书/Web/Open API 渠道内容分别打开，active/focus 使用文本与金色下划线，无按钮框、阴影或横向溢出。
+- `browser-console`: error/warning 为 0；本地后端以 local profile 启动，Flyway V79 up to date，登录和 Agent 数据均来自真实本地 API。
+- `release`: 未执行生产发布；当前证据仅覆盖本地实现与桌面端验收。
 
 ## TASK-200 多租户智能体评测控制面生产验收（2026-07-14）
 

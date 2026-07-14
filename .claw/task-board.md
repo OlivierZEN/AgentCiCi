@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T00:16:48Z
+updated_at: 2026-07-14T00:31:25Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-201 - 智能体构建页布局与模型治理收敛
 
-- status: `ready`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md`
 - task_status_path: `.claw/tasks/TASK-201.md`
 - assignment_path: `.claw/assignments/TASK-201.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment, implement the Agent definition layout and lifecycle tabs, then run focused frontend and desktop browser verification.
+- next_action: Local implementation and desktop verification passed on `codex/TASK-201-agent-builder-layout`; merge or release when requested.
 
 ### TASK-200 - 多租户智能体评测控制面生产落地
 

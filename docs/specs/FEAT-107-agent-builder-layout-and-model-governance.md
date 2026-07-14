@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-107
 title: 智能体构建页布局与模型治理收敛
-status: active
+status: implemented
 owner_role: project-manager
 task_ids: TASK-201
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-14T00:16:48Z
+updated_at: 2026-07-14T00:31:25Z
 updated_by: MANAGER-001
 ---
 
@@ -106,8 +106,11 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 已完成需求与信息架构设计。
-- 待完成前端实现、测试、构建和桌面端浏览器验收。
+- 已移除 Agent Builder 用户可见的具体模型选择入口，保留内部模型字段、新建默认解析和平台统一路由事实源。
+- 已完成定义区等宽双栏、系统提示词右置、业务/兜底/版本字段左置和头像策略单行布局。
+- 已将评测、发布渠道并入下方“版本控制与交付”，并保留两类内容的独立语义和行为。
+- 聚焦 14 项、全量前端 68 项、生产构建、diff 检查和真实 1280x720 桌面浏览器验收通过。
+- 当前为本地已实现状态，未执行生产发布。
 
 ## 交接说明
 

@@ -143,6 +143,7 @@ export type BaseModelOption = {
 };
 
 export const MODEL_CONFIG_REQUIRED_NOTICE = "请先配置模型";
+export const AGENT_MODEL_GOVERNANCE_NOTICE = "运行模型由平台统一策略自动选择，并由运营方集中管理路由、降级与成本控制。";
 
 export function resolveAgentCreationModel(
   draftModel: string,
@@ -329,12 +330,18 @@ type DebugRuntimePayload = {
   contextSnapshot?: Record<string, unknown>;
 };
 
-type CompileTab = "preview" | "triggers" | "executions" | "history" | "summary" | "code" | "manifest" | "debug";
-type EditorTab = "definition" | "evaluation" | "publish";
-export const AGENT_BUILDER_EDITOR_TABS: ReadonlyArray<{ id: EditorTab; label: string; purpose: string }> = [
-  { id: "definition", label: "Agent 定义", purpose: "definition" },
+type CompileTab = "preview" | "triggers" | "debug" | "evaluation" | "history" | "publish" | "executions" | "summary" | "code" | "manifest";
+export const AGENT_BUILDER_LIFECYCLE_TABS: ReadonlyArray<{ id: CompileTab; label: string; purpose: string }> = [
+  { id: "preview", label: "流程图预览", purpose: "workflow-preview" },
+  { id: "triggers", label: "触发与调度", purpose: "runtime-triggers" },
+  { id: "debug", label: "试运行", purpose: "candidate-debug" },
   { id: "evaluation", label: "评测", purpose: "quality-governance" },
+  { id: "history", label: "版本历史", purpose: "version-history" },
   { id: "publish", label: "发布渠道", purpose: "delivery-channels" },
+  { id: "executions", label: "执行记录", purpose: "runtime-executions" },
+  { id: "summary", label: "编译摘要", purpose: "compile-summary" },
+  { id: "code", label: "流程代码", purpose: "compiled-code" },
+  { id: "manifest", label: "Manifest", purpose: "governance-manifest" },
 ];
 
 type AgentExecutionSource = "try_run" | "manual" | "schedule" | "channel" | "unknown";
@@ -1493,7 +1500,6 @@ export default function AgentBuilderShell({
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDebugging, setIsDebugging] = useState(false);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
-  const [activeEditorTab, setActiveEditorTab] = useState<EditorTab>("definition");
   const [activePublishChannel, setActivePublishChannel] = useState<PublishChannelId>("feishu");
   const [activeCompileTab, setActiveCompileTab] = useState<CompileTab>("preview");
   const [executionRecordsFromServer, setExecutionRecordsFromServer] = useState<AgentExecutionRecord[]>([]);
@@ -1616,7 +1622,7 @@ export default function AgentBuilderShell({
         setPublishReadyFromCompile(false);
         resetProductionGateState();
         setCompileArtifact(generateCompileArtifact(preferred.draft, kbs, toolCatalog));
-        setActiveEditorTab("definition");
+        setActiveCompileTab("preview");
         setActivePublishChannel(preferred.draft.channels.includes("feishu") ? "feishu" : preferred.draft.channels[0] ?? "feishu");
         setNotice("已从后端加载 Agent 草稿。你现在的修改会保存到数据库。");
       } catch {
@@ -2041,10 +2047,10 @@ export default function AgentBuilderShell({
   }, [activeCompileTab, loadRuntimeExecutions, loadRuntimeTriggers, loadVersionHistory, selectedAgentId, token]);
 
   useEffect(() => {
-    if (!token || !selectedAgentId || activeEditorTab !== "evaluation") return;
+    if (!token || !selectedAgentId || activeCompileTab !== "evaluation") return;
     void loadProductionReadiness();
     void loadEvaluationSuites();
-  }, [activeEditorTab, loadEvaluationSuites, loadProductionReadiness, selectedAgentId, token]);
+  }, [activeCompileTab, loadEvaluationSuites, loadProductionReadiness, selectedAgentId, token]);
 
   const updateDraft = <K extends keyof AgentDraft>(key: K, value: AgentDraft[K]) => {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -2276,7 +2282,6 @@ export default function AgentBuilderShell({
       setRuntimeExecutionsError(null);
       setRuntimeTriggersError(null);
       setCompileArtifact(generateCompileArtifact(refreshed.draft, kbs, toolCatalog));
-      setActiveEditorTab("definition");
       setActivePublishChannel(refreshed.draft.channels.includes("feishu") ? "feishu" : refreshed.draft.channels[0] ?? "feishu");
       setActiveCompileTab("preview");
       setDebugTrace(null);
@@ -2300,7 +2305,6 @@ export default function AgentBuilderShell({
     setRuntimeExecutionsError(null);
     setRuntimeTriggersError(null);
     setCompileArtifact(generateCompileArtifact(target.draft, kbs, toolCatalog));
-    setActiveEditorTab("definition");
     setActivePublishChannel(target.draft.channels.includes("feishu") ? "feishu" : target.draft.channels[0] ?? "feishu");
     setActiveCompileTab("preview");
     setDebugTrace(null);
@@ -2372,7 +2376,6 @@ export default function AgentBuilderShell({
       setRuntimeExecutionsError(null);
       setRuntimeTriggersError(null);
       setCompileArtifact(generateCompileArtifact(nextAgent.draft, kbs, toolCatalog));
-      setActiveEditorTab("definition");
       setActivePublishChannel("feishu");
       setActiveCompileTab("preview");
       setDebugTrace(null);
@@ -2400,7 +2403,6 @@ export default function AgentBuilderShell({
     setRuntimeExecutionsError(null);
     setRuntimeTriggersError(null);
     setCompileArtifact(generateCompileArtifact(fallbackDraft, kbs, toolCatalog));
-    setActiveEditorTab("definition");
     setActivePublishChannel("feishu");
     setActiveCompileTab("preview");
     setDebugTrace(null);
@@ -2439,7 +2441,6 @@ export default function AgentBuilderShell({
           setRuntimeExecutionsError(null);
           setRuntimeTriggersError(null);
           setCompileArtifact(generateCompileArtifact(fallbackAgent.draft, kbs, toolCatalog));
-          setActiveEditorTab("definition");
           setActivePublishChannel(fallbackAgent.draft.channels.includes("feishu") ? "feishu" : fallbackAgent.draft.channels[0] ?? "feishu");
           setActiveCompileTab("preview");
           setDebugTrace(null);
@@ -2891,7 +2892,7 @@ export default function AgentBuilderShell({
           </div>
         ))}
         {!productionReadiness && !readinessError ? (
-          <p className="cici-builder-production-gate__empty">打开发布页后会自动读取后端 readiness。发布前也会强制刷新一次。</p>
+          <p className="cici-builder-production-gate__empty">打开评测页签后会自动读取后端 readiness。发布前也会强制刷新一次。</p>
         ) : null}
       </div>
     </section>
@@ -2974,7 +2975,7 @@ export default function AgentBuilderShell({
       setLatestCompiledVersionNo(latestVersionNo);
       const readiness = await loadProductionReadiness(latestVersionNo);
       if (readiness?.blocked) {
-        setActiveEditorTab("publish");
+        setActiveCompileTab(readiness.checks.some((check) => check.code.toLowerCase().includes("eval") && check.status !== "passed") ? "evaluation" : "publish");
         setNotice("发布已停止：生产就绪检查仍有阻塞项，请先处理检查清单。");
         return;
       }
@@ -3650,28 +3651,18 @@ export default function AgentBuilderShell({
         <div className="cici-builder__grid">
           <section className="cici-builder-card cici-builder-card--wide cici-builder-editor-card">
             <div className="cici-builder-card__head cici-builder-card__head--editor">
-              <div className="cici-builder-tabs cici-builder-tabs--editor">
-                {AGENT_BUILDER_EDITOR_TABS.map((tab) => (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    className={`cici-builder-tabs__item${activeEditorTab === tab.id ? " is-active" : ""}`}
-                    onClick={() => setActiveEditorTab(tab.id)}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-              <span>{activeEditorTab === "definition" ? "Identity" : activeEditorTab === "evaluation" ? "Quality" : "Channels"}</span>
+              <h2>Agent 定义</h2>
+              <span>Identity</span>
             </div>
 
-            {activeEditorTab === "definition" ? (
-              <div className="cici-builder-editor-grid">
-                <section className="cici-builder-editor-section">
-                  <label className="cici-builder-field">
-                    {renderFieldTitle("Agent 名称", true, "用于身份标识与编译摘要")}
-                    <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例如：售前跟进 Agent" />
-                  </label>
+            <div className="cici-builder-editor-grid">
+              <section className="cici-builder-editor-section">
+                <label className="cici-builder-field">
+                  {renderFieldTitle("Agent 名称", true, "用于身份标识与编译摘要")}
+                  <input value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="例如：售前跟进 Agent" />
+                </label>
+
+                <div className="cici-builder-avatar-policy-row">
                   <div className="cici-builder-field">
                     {renderFieldTitle("智能体头像", false, "用于工作台、会话消息和智能体档案展示")}
                     <div className="cici-builder-avatar-row">
@@ -3705,118 +3696,55 @@ export default function AgentBuilderShell({
                       </div>
                     </div>
                   </div>
-                  <label className="cici-builder-field">
-                    {renderFieldTitle("开场白", false, "仅用于会话欢迎文案展示")}
-                    <textarea rows={3} value={draft.greeting} onChange={(event) => updateDraft("greeting", event.target.value)} placeholder="用户首次进入时看到的欢迎语。" />
-                  </label>
-                  <label className="cici-builder-field cici-builder-field--grow">
-                    {renderFieldTitle("系统提示词", true, "直接影响执行策略与输出风格")}
-                    <textarea
-                      className="cici-builder-editor__prompt"
-                      rows={7}
-                      value={draft.systemPrompt}
-                      onChange={(event) => updateDraft("systemPrompt", event.target.value)}
-                      placeholder="告诉智能体如何回答、何时调用工具、何时转人工。"
-                    />
-                  </label>
-                </section>
-
-                <section className="cici-builder-editor-section cici-builder-editor-section--policy">
-                  <div className="cici-builder-field__title">
-                    <span>策略开关</span>
-                    <span className="cici-builder-field__impact is-runtime">影响执行</span>
-                    <span className="cici-builder-field__hint">控制安全等级与自动执行策略</span>
-                  </div>
-                  <div className="cici-builder-choice-row">
-                    <button type="button" className={`cici-choice-chip${draft.safetyLevel === "balanced" ? " is-active" : ""}`} onClick={() => updateDraft("safetyLevel", "balanced")}>平衡模式</button>
-                    <button type="button" className={`cici-choice-chip${draft.safetyLevel === "strict" ? " is-active" : ""}`} onClick={() => updateDraft("safetyLevel", "strict")}>严格审批</button>
-                    <button type="button" className={`cici-choice-chip${draft.executionMode === "copilot" ? " is-active" : ""}`} onClick={() => updateDraft("executionMode", "copilot")}>协作副驾</button>
-                    <button type="button" className={`cici-choice-chip${draft.executionMode === "auto" ? " is-active" : ""}`} onClick={() => updateDraft("executionMode", "auto")}>自动执行</button>
-                  </div>
-                  <div className="cici-builder-inline-divider" aria-hidden="true" />
-                  <label className="cici-builder-field">
-                    {renderFieldTitle("业务定位", false, "描述信息，参与编译元数据与版本比对")}
-                    <textarea rows={3} value={draft.summary} onChange={(event) => updateDraft("summary", event.target.value)} placeholder="描述这个 Agent 负责解决什么问题。" />
-                  </label>
-                  <label className="cici-builder-field">
-                    {renderFieldTitle("人工兜底规则", true, "命中条件时触发转人工")}
-                    <textarea rows={3} value={draft.handoffRule} onChange={(event) => updateDraft("handoffRule", event.target.value)} placeholder="定义何时必须转人工或升级审批。" />
-                  </label>
-                  <label className="cici-builder-field">
-                    {renderFieldTitle("基础模型", true, "决定推理模型与执行成本")}
-                    <select
-                      value={draft.model}
-                      onChange={(event) => updateDraft("model", event.target.value)}
-                      disabled={modelOptions.length === 0}
-                    >
-                      {modelOptions.length === 0 ? (
-                        <option value="">暂无可用模型（请联系平台运营启用模型厂商）</option>
-                      ) : null}
-                      {modelOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="cici-builder-field">
-                    {renderFieldTitle("发布备注（可选）", false, "仅用于版本说明与追溯")}
-                    <input
-                      value={draft.version}
-                      onChange={(event) => updateDraft("version", event.target.value)}
-                      placeholder="例如：Q2-审批优化、飞书灰度"
-                    />
-                  </label>
-                </section>
-              </div>
-            ) : activeEditorTab === "evaluation" ? (
-              <div className="cici-builder-publish-stack cici-builder-evaluation-workspace">
-                <div className="cici-builder-evaluation-workspace__intro">
-                  <div>
-                    <h2>版本质量与发布门禁</h2>
-                    <p>运行当前候选版本的适用评测集，检查平台基线、标准应用、行业包和组织私有回归用例。</p>
-                  </div>
-                  <a className="cici-builder-evaluation-workspace__link" href="/admin/evaluation">打开 AI 质量中心</a>
-                </div>
-                {renderProductionGatePanel()}
-                {renderEvaluationGatePanel()}
-              </div>
-            ) : (
-              <div className="cici-builder-publish-stack">
-                <div className="cici-builder-publish-hub">
-                  <aside className="cici-builder-publish-menu" aria-label="发布渠道菜单">
-                    {CHANNEL_OPTIONS.map((channel) => {
-                      const enabled = draft.channels.includes(channel.id);
-                      return (
-                        <button
-                          key={channel.id}
-                          type="button"
-                          className={`cici-builder-publish-menu__item${activePublishChannel === channel.id ? " is-active" : ""}`}
-                          onClick={() => setActivePublishChannel(channel.id)}
-                        >
-                          <span className="cici-builder-publish-menu__label-row">
-                            <strong>{channel.label}</strong>
-                            <span className={`cici-builder-publish-menu__status${enabled ? " is-enabled" : ""}`}>
-                              {enabled ? "已启用" : "未启用"}
-                            </span>
-                          </span>
-                          <small>{channel.tone}</small>
-                        </button>
-                      );
-                    })}
-                  </aside>
-
-                  <section className="cici-builder-publish-panel">
-                    <div className="cici-builder-publish-panel__head">
-                      <div>
-                        <span className="cici-builder-publish-panel__eyebrow">Publish Channel</span>
-                        <h2>{activePublishMeta.label}</h2>
-                      </div>
-                      <span>{activePublishEnabled ? "已纳入当前 Agent 的发布计划" : "当前未纳入发布计划"}</span>
+                  <div className="cici-builder-field cici-builder-field--policy-inline">
+                    {renderFieldTitle("策略开关", true, "控制安全等级与自动执行策略")}
+                    <div className="cici-builder-choice-row">
+                      <button type="button" className={`cici-choice-chip${draft.safetyLevel === "balanced" ? " is-active" : ""}`} onClick={() => updateDraft("safetyLevel", "balanced")}>平衡模式</button>
+                      <button type="button" className={`cici-choice-chip${draft.safetyLevel === "strict" ? " is-active" : ""}`} onClick={() => updateDraft("safetyLevel", "strict")}>严格审批</button>
+                      <button type="button" className={`cici-choice-chip${draft.executionMode === "copilot" ? " is-active" : ""}`} onClick={() => updateDraft("executionMode", "copilot")}>协作副驾</button>
+                      <button type="button" className={`cici-choice-chip${draft.executionMode === "auto" ? " is-active" : ""}`} onClick={() => updateDraft("executionMode", "auto")}>自动执行</button>
                     </div>
-                    {renderPublishChannelPanel()}
-                  </section>
+                  </div>
                 </div>
-              </div>
-            )}
+
+                <label className="cici-builder-field">
+                  {renderFieldTitle("开场白", false, "仅用于会话欢迎文案展示")}
+                  <textarea rows={3} value={draft.greeting} onChange={(event) => updateDraft("greeting", event.target.value)} placeholder="用户首次进入时看到的欢迎语。" />
+                </label>
+                <label className="cici-builder-field">
+                  {renderFieldTitle("业务定位", false, "描述信息，参与编译元数据与版本比对")}
+                  <textarea rows={3} value={draft.summary} onChange={(event) => updateDraft("summary", event.target.value)} placeholder="描述这个 Agent 负责解决什么问题。" />
+                </label>
+                <label className="cici-builder-field">
+                  {renderFieldTitle("人工兜底规则", true, "命中条件时触发转人工")}
+                  <textarea rows={3} value={draft.handoffRule} onChange={(event) => updateDraft("handoffRule", event.target.value)} placeholder="定义何时必须转人工或升级审批。" />
+                </label>
+                <label className="cici-builder-field">
+                  {renderFieldTitle("发布备注（可选）", false, "仅用于版本说明与追溯")}
+                  <input
+                    value={draft.version}
+                    onChange={(event) => updateDraft("version", event.target.value)}
+                    placeholder="例如：Q2-审批优化、飞书灰度"
+                  />
+                </label>
+              </section>
+
+              <section className="cici-builder-editor-section cici-builder-editor-section--prompt">
+                <label className="cici-builder-field cici-builder-field--grow">
+                  {renderFieldTitle("系统提示词", true, "直接影响执行策略与输出风格")}
+                  <textarea
+                    className="cici-builder-editor__prompt"
+                    rows={18}
+                    value={draft.systemPrompt}
+                    onChange={(event) => updateDraft("systemPrompt", event.target.value)}
+                    placeholder="告诉智能体如何回答、何时调用工具、何时转人工。"
+                  />
+                </label>
+                <p className="cici-builder-model-governance-note">
+                  {AGENT_MODEL_GOVERNANCE_NOTICE}
+                </p>
+              </section>
+            </div>
           </section>
 
           <div className="cici-builder-composer cici-builder-card--wide">
@@ -4033,18 +3961,20 @@ export default function AgentBuilderShell({
           <section className="cici-builder-card cici-builder-card--wide cici-builder-compile-panel">
             <div className="cici-builder-card__head cici-builder-card__head--compile">
               <div className="cici-builder-card__head-row">
-                <h2>编译结果</h2>
-                <span>Compiler</span>
+                <h2>版本控制与交付</h2>
+                <span>Lifecycle</span>
               </div>
               <div className="cici-builder-tabs cici-builder-tabs--compile">
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "preview" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("preview")}>流程图预览</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "triggers" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("triggers")}>触发与调度</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "executions" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("executions")}>执行记录</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "history" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("history")}>版本历史</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "summary" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("summary")}>编译摘要</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "code" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("code")}>流程代码</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "manifest" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("manifest")}>Manifest</button>
-                <button type="button" className={`cici-builder-tabs__item${activeCompileTab === "debug" ? " is-active" : ""}`} onClick={() => setActiveCompileTab("debug")}>试运行</button>
+                {AGENT_BUILDER_LIFECYCLE_TABS.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`cici-builder-tabs__item${activeCompileTab === tab.id ? " is-active" : ""}`}
+                    onClick={() => setActiveCompileTab(tab.id)}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
               </div>
             </div>
             <div className="cici-builder-compile cici-builder-compile--stacked">
@@ -4068,6 +3998,59 @@ export default function AgentBuilderShell({
               {activeCompileTab === "executions" ? renderExecutionsRuntimePanel() : null}
 
               {activeCompileTab === "history" ? renderVersionHistoryPanel() : null}
+
+              {activeCompileTab === "evaluation" ? (
+                <div className="cici-builder-publish-stack cici-builder-evaluation-workspace">
+                  <div className="cici-builder-evaluation-workspace__intro">
+                    <div>
+                      <h2>版本质量与发布门禁</h2>
+                      <p>运行当前候选版本的适用评测集，检查平台基线、标准应用、行业包和组织私有回归用例。</p>
+                    </div>
+                    <a className="cici-builder-evaluation-workspace__link" href="/admin/evaluation">打开 AI 质量中心</a>
+                  </div>
+                  {renderProductionGatePanel()}
+                  {renderEvaluationGatePanel()}
+                </div>
+              ) : null}
+
+              {activeCompileTab === "publish" ? (
+                <div className="cici-builder-publish-stack">
+                  <div className="cici-builder-publish-hub">
+                    <aside className="cici-builder-publish-menu" aria-label="发布渠道菜单">
+                      {CHANNEL_OPTIONS.map((channel) => {
+                        const enabled = draft.channels.includes(channel.id);
+                        return (
+                          <button
+                            key={channel.id}
+                            type="button"
+                            className={`cici-builder-publish-menu__item${activePublishChannel === channel.id ? " is-active" : ""}`}
+                            onClick={() => setActivePublishChannel(channel.id)}
+                          >
+                            <span className="cici-builder-publish-menu__label-row">
+                              <strong>{channel.label}</strong>
+                              <span className={`cici-builder-publish-menu__status${enabled ? " is-enabled" : ""}`}>
+                                {enabled ? "已启用" : "未启用"}
+                              </span>
+                            </span>
+                            <small>{channel.tone}</small>
+                          </button>
+                        );
+                      })}
+                    </aside>
+
+                    <section className="cici-builder-publish-panel">
+                      <div className="cici-builder-publish-panel__head">
+                        <div>
+                          <span className="cici-builder-publish-panel__eyebrow">Publish Channel</span>
+                          <h2>{activePublishMeta.label}</h2>
+                        </div>
+                        <span>{activePublishEnabled ? "已纳入当前 Agent 的发布计划" : "当前未纳入发布计划"}</span>
+                      </div>
+                      {renderPublishChannelPanel()}
+                    </section>
+                  </div>
+                </div>
+              ) : null}
 
               {activeCompileTab === "summary" ? (
                 <div className="cici-builder-compile__summary-grid">

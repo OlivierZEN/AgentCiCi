@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  AGENT_BUILDER_LIFECYCLE_TABS,
+  AGENT_MODEL_GOVERNANCE_NOTICE,
   applyAgentDetailToList,
-  AGENT_BUILDER_EDITOR_TABS,
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
   resolveAgentAfterDelete,
@@ -11,13 +12,27 @@ import {
 } from "./AgentBuilderShell";
 
 describe("Agent Builder information architecture", () => {
-  it("keeps evaluation governance separate from delivery channels", () => {
-    expect(AGENT_BUILDER_EDITOR_TABS).toEqual([
-      { id: "definition", label: "Agent 定义", purpose: "definition" },
-      { id: "evaluation", label: "评测", purpose: "quality-governance" },
-      { id: "publish", label: "发布渠道", purpose: "delivery-channels" },
+  it("places evaluation and delivery channels in the lower version lifecycle", () => {
+    expect(AGENT_BUILDER_LIFECYCLE_TABS.map((tab) => tab.id)).toEqual([
+      "preview",
+      "triggers",
+      "debug",
+      "evaluation",
+      "history",
+      "publish",
+      "executions",
+      "summary",
+      "code",
+      "manifest",
     ]);
-    expect(AGENT_BUILDER_EDITOR_TABS.find((tab) => tab.id === "publish")?.purpose).not.toContain("quality");
+    expect(AGENT_BUILDER_LIFECYCLE_TABS.find((tab) => tab.id === "evaluation")?.purpose).toBe("quality-governance");
+    expect(AGENT_BUILDER_LIFECYCLE_TABS.find((tab) => tab.id === "publish")?.purpose).toBe("delivery-channels");
+    expect(AGENT_BUILDER_LIFECYCLE_TABS.some((tab) => tab.id === ("definition" as never))).toBe(false);
+  });
+
+  it("keeps concrete model choice under platform governance", () => {
+    expect(AGENT_MODEL_GOVERNANCE_NOTICE).toContain("平台统一策略自动选择");
+    expect(AGENT_MODEL_GOVERNANCE_NOTICE).toContain("运营方集中管理");
   });
 });
 
