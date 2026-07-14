@@ -214,11 +214,13 @@ public class CrmProductSalesAnalysisService {
         Set<String> unverifiableCustomerOrderIds = new LinkedHashSet<>();
         Set<String> currentCurrencies = new LinkedHashSet<>();
         Set<String> previousCurrencies = new LinkedHashSet<>();
+        boolean currentCurrencyMissing = false;
+        boolean previousCurrencyMissing = false;
+        Map<String, Integer> currentItemCountsByProduct = new LinkedHashMap<>();
         Set<String> referencedOrderIds = new LinkedHashSet<>();
         int unknownItemStatusCount = 0;
         int invalidCurrentAmountCount = 0;
         int invalidPreviousAmountCount = 0;
-        int includedItems = 0;
         for (Map<String, Object> item : items) {
             StatusClassification itemStatus = classifyItemStatus(item.get("status"));
             if (itemStatus == StatusClassification.INVALID) {
@@ -259,10 +261,12 @@ public class CrmProductSalesAnalysisService {
                 }
                 current.computeIfAbsent(productId, ignored -> new Aggregate())
                         .add(orderId, customerId, currentOrder.contractId(), quantity, safeAmount);
-                if (!currentOrder.currency().isBlank()) {
+                currentItemCountsByProduct.merge(productId, 1, Integer::sum);
+                if (currentOrder.currency().isBlank()) {
+                    currentCurrencyMissing = true;
+                } else {
                     currentCurrencies.add(currentOrder.currency().toUpperCase(Locale.ROOT));
                 }
-                includedItems++;
                 continue;
             }
             OrderInfo previousOrder = previousOrders.get(orderId);
@@ -278,7 +282,9 @@ public class CrmProductSalesAnalysisService {
                 }
                 previous.computeIfAbsent(productId, ignored -> new Aggregate())
                         .add(orderId, customerId, previousOrder.contractId(), quantity, safeAmount);
-                if (!previousOrder.currency().isBlank()) {
+                if (previousOrder.currency().isBlank()) {
+                    previousCurrencyMissing = true;
+                } else {
                     previousCurrencies.add(previousOrder.currency().toUpperCase(Locale.ROOT));
                 }
             }
@@ -350,6 +356,8 @@ public class CrmProductSalesAnalysisService {
         if (metric == Metric.CUSTOMER_COUNT && !currentFactOrderIds.isEmpty()
                 && unverifiableCustomerOrderIds.size() == currentFactOrderIds.size()) {
             warnings.add("当前期有效销售订单的客户引用全部缺失或对当前账号不可见，客户数主指标不可验证");
+            int contributingOrders = contributingOrderCount(current, productById.keySet());
+            int contributingItems = contributingItemCount(currentItemCountsByProduct, productById.keySet());
             return new SalesRankResult(
                     ResultStatus.DATA_ACCESS_INCOMPLETE,
                     metric,
@@ -359,8 +367,8 @@ public class CrmProductSalesAnalysisService {
                     optionalData.sourceObjects(),
                     List.of(),
                     new Coverage(
-                            orders.size(), currentOrders.size(), Math.max(0, orders.size() - currentOrders.size()),
-                            items.size(), includedItems, Math.max(0, items.size() - includedItems)),
+                            orders.size(), contributingOrders, Math.max(0, orders.size() - contributingOrders),
+                            items.size(), contributingItems, Math.max(0, items.size() - contributingItems)),
                     warnings.stream().distinct().toList()
             );
         }
@@ -382,8 +390,8 @@ public class CrmProductSalesAnalysisService {
                     optionalData.sourceObjects(),
                     List.of(),
                     new Coverage(
-                            orders.size(), currentOrders.size(), Math.max(0, orders.size() - currentOrders.size()),
-                            items.size(), includedItems, Math.max(0, items.size() - includedItems)),
+                            orders.size(), 0, orders.size(),
+                            items.size(), 0, items.size()),
                     warnings.stream().distinct().toList()
             );
         }
@@ -392,15 +400,20 @@ public class CrmProductSalesAnalysisService {
             invisibleProductIds.forEach(current::remove);
             invisibleProductIds.forEach(previous::remove);
         }
+        int includedItems = contributingItemCount(currentItemCountsByProduct, current.keySet());
 
         boolean currentAmountComplete = invalidCurrentAmountCount == 0;
         boolean previousAmountComplete = invalidPreviousAmountCount == 0;
-        boolean currentCurrencyComparable = currentCurrencies.size() <= 1;
+        boolean currentCurrencyComparable = !currentCurrencyMissing && currentCurrencies.size() == 1;
         boolean amountComparable = currentAmountComplete && currentCurrencyComparable;
-        if (!currentCurrencyComparable) {
+        if (currentCurrencyMissing) {
+            warnings.add("统计范围内存在币种缺失的有效金额事实，当前无法验证金额可比性");
+        }
+        if (currentCurrencies.size() > 1) {
             warnings.add("统计范围内存在多币种订单，当前无可靠汇率折算，不合并输出金额或经济价值排行");
         }
         if (!amountComparable && metric == Metric.SALES_AMOUNT) {
+            int contributingOrders = contributingOrderCount(current);
             return new SalesRankResult(
                     ResultStatus.DATA_QUALITY_BLOCKED,
                     metric,
@@ -411,20 +424,34 @@ public class CrmProductSalesAnalysisService {
                     List.of(),
                     new Coverage(
                             orders.size(),
-                            currentOrders.size(),
-                            Math.max(0, orders.size() - currentOrders.size()),
+                            contributingOrders,
+                            Math.max(0, orders.size() - contributingOrders),
                             items.size(),
                             includedItems,
                             Math.max(0, items.size() - includedItems)),
-                    List.copyOf(warnings)
+                    List.copyOf(warnings),
+                    new SalesSummary(
+                            current.values().stream()
+                                    .map(value -> value.salesQuantity)
+                                    .reduce(BigDecimal.ZERO, BigDecimal::add),
+                            null,
+                            contributingOrders,
+                            contributingCustomerCount(current),
+                            "",
+                            false,
+                            null,
+                            null),
+                    List.of()
             );
         }
         if (!currentCurrencyComparable) {
-            warnings.add("统计范围内存在多币种订单；保留净销量排行，不合并订单销售额、实现均价或客户金额集中度");
+            warnings.add("统计范围内币种缺失或存在多币种订单；保留可验证的非金额排行，不输出订单销售额、实现均价或客户金额集中度");
         }
         boolean amountTrendsComparable = amountComparable && previousAmountComplete;
         if (comparePrevious && !previous.isEmpty()
-                && !periodCurrenciesComparable(currentCurrencies, previousCurrencies)) {
+                && !periodCurrenciesComparable(
+                        currentCurrencies, currentCurrencyMissing,
+                        previousCurrencies, previousCurrencyMissing)) {
             amountTrendsComparable = false;
             warnings.add("当前期与上期币种不一致或币种缺失，未计算订单销售额增长和实现均价变化");
         }
@@ -448,7 +475,7 @@ public class CrmProductSalesAnalysisService {
                 : List.of();
         Map<String, Integer> quantityRanks = rankPositions(quantityRanking);
         Map<String, Integer> amountRanks = rankPositions(amountRanking);
-        String currency = currentCurrencies.stream().findFirst().orElse("");
+        String currency = amountComparable ? currentCurrencies.iterator().next() : "";
         SalesSummary summary = new SalesSummary(
                 totalSalesQuantity,
                 totalSalesAmount,
@@ -459,10 +486,39 @@ public class CrmProductSalesAnalysisService {
                 leader(quantityRanking, productById, Metric.SALES_QUANTITY),
                 leader(amountRanking, productById, Metric.SALES_AMOUNT)
         );
-        Map<String, OpportunityInfo> opportunityById = mapOpportunities(optionalData.opportunities(), warnings);
-        Map<String, PipelineAggregate> pipelineByProduct = aggregatePipeline(
-                optionalData.opportunityProducts(), opportunityById);
+        List<String> effectiveSourceObjects = new ArrayList<>(optionalData.sourceObjects());
+        boolean pipelineAvailable = optionalData.pipelineAvailable();
+        if (pipelineAvailable && (hasBrokenOpportunityMasterReference(
+                optionalData.opportunityProducts(), optionalData.opportunities())
+                || hasBrokenOpportunityProductReference(
+                optionalData.opportunityProducts(), productById.keySet()))) {
+            pipelineAvailable = false;
+            effectiveSourceObjects.remove("Opportunity");
+            effectiveSourceObjects.remove("opportunitypdt");
+            warnings.add("商机产品的商机或产品引用缺失、不可见或不可验证，"
+                    + "发生关联可见性断链，商机管道与续约缺口增强不可用");
+        }
+        Map<String, OpportunityInfo> opportunityById = pipelineAvailable
+                ? mapOpportunities(optionalData.opportunities(), warnings) : Map.of();
+        Map<String, PipelineAggregate> pipelineByProduct = pipelineAvailable
+                ? aggregatePipeline(optionalData.opportunityProducts(), opportunityById) : Map.of();
         Map<String, ContractInfo> contractById = mapContracts(optionalData.contracts(), warnings);
+        boolean contractsAvailable = optionalData.contractsAvailable();
+        if (contractsAvailable && hasBrokenContractMasterReference(current, contractById.keySet())) {
+            contractsAvailable = false;
+            effectiveSourceObjects.remove("contract");
+            contractById = Map.of();
+            warnings.add("订单引用的合同与合同主表发生可见性断链，合同与续约增强不可用");
+        }
+        boolean renewalLinkageAvailable = pipelineAvailable
+                && contractsAvailable
+                && optionalData.accountsAvailable();
+        if (renewalLinkageAvailable && !renewalCustomerReferencesVerifiable(
+                pipelineByProduct, opportunityById, current, contractById, visibleAccountIds)) {
+            renewalLinkageAvailable = false;
+            effectiveSourceObjects.remove("Account");
+            warnings.add("商机或合同的续约客户引用缺失或对当前账号不可见，续约关联增强不可用");
+        }
 
         List<Map.Entry<String, Aggregate>> ranked = rankAll(current, metric, productById, amountComparable).stream()
                 .limit(topN)
@@ -489,11 +545,11 @@ public class CrmProductSalesAnalysisService {
             PipelineAggregate pipeline = pipelineByProduct.getOrDefault(productId, new PipelineAggregate());
             boolean pipelineAmountComparable = pipeline.amountComparableWith(currency, amountComparable);
             if (!pipeline.opportunityIds.isEmpty() && !pipelineAmountComparable) {
-                warnings.add("产品 " + product.code + " 的管道币种与已实现销售币种不一致或不可比，未合并管道金额");
+                warnings.add("产品 " + product.code + " 的管道币种缺失、与已实现销售币种不一致或不可比，未合并管道金额");
             }
             ProductContractSignal contractSignal = contractSignal(
                     value, contractById, pipeline, endDate,
-                    optionalData.pipelineAvailable(), optionalData.contractsAvailable());
+                    renewalLinkageAvailable, contractsAvailable);
             rows.add(new SalesRankRow(
                     index + 1,
                     product.id,
@@ -520,7 +576,7 @@ public class CrmProductSalesAnalysisService {
         List<BusinessInsight> insights = buildInsights(
                 rows, current, previous, pipelineByProduct, productById,
                 amountTrendsComparable,
-                optionalData.pipelineAvailable(), optionalData.contractsAvailable());
+                pipelineAvailable, renewalLinkageAvailable);
 
         return new SalesRankResult(
                 warnings.isEmpty() ? ResultStatus.SUCCESS : ResultStatus.PARTIAL,
@@ -528,12 +584,12 @@ public class CrmProductSalesAnalysisService {
                 startDate,
                 endDate,
                 OffsetDateTime.now(clock),
-                optionalData.sourceObjects(),
+                List.copyOf(effectiveSourceObjects),
                 List.copyOf(rows),
                 new Coverage(
                         orders.size(),
-                        currentOrders.size(),
-                        Math.max(0, orders.size() - currentOrders.size()),
+                        allOrderIds.size(),
+                        Math.max(0, orders.size() - allOrderIds.size()),
                         items.size(),
                         includedItems,
                         Math.max(0, items.size() - includedItems)
@@ -595,6 +651,60 @@ public class CrmProductSalesAnalysisService {
         return result;
     }
 
+    private static boolean hasBrokenOpportunityMasterReference(
+            List<Map<String, Object>> opportunityProducts,
+            List<Map<String, Object>> opportunities) {
+        Set<String> visibleOpportunityIds = opportunities.stream()
+                .map(opportunity -> recordId(opportunity.get("id")))
+                .filter(opportunityId -> !opportunityId.isBlank())
+                .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+        return opportunityProducts.stream()
+                .map(opportunityProduct -> recordId(opportunityProduct.get("opportunity")))
+                .anyMatch(opportunityId -> opportunityId.isBlank()
+                        || !visibleOpportunityIds.contains(opportunityId));
+    }
+
+    private static boolean hasBrokenOpportunityProductReference(
+            List<Map<String, Object>> opportunityProducts,
+            Set<String> visibleProductIds) {
+        return opportunityProducts.stream()
+                .map(opportunityProduct -> recordId(opportunityProduct.get("product2")))
+                .anyMatch(productId -> productId.isBlank() || !visibleProductIds.contains(productId));
+    }
+
+    private static boolean hasBrokenContractMasterReference(
+            Map<String, Aggregate> current,
+            Set<String> visibleContractIds) {
+        return current.values().stream()
+                .flatMap(aggregate -> aggregate.contractIds.stream())
+                .anyMatch(contractId -> !visibleContractIds.contains(contractId));
+    }
+
+    private static boolean renewalCustomerReferencesVerifiable(
+            Map<String, PipelineAggregate> pipelineByProduct,
+            Map<String, OpportunityInfo> opportunityById,
+            Map<String, Aggregate> current,
+            Map<String, ContractInfo> contractById,
+            Set<String> visibleAccountIds) {
+        Set<String> pipelineOpportunityIds = new LinkedHashSet<>();
+        pipelineByProduct.values().forEach(
+                pipeline -> pipelineOpportunityIds.addAll(pipeline.opportunityIds));
+        boolean opportunitiesVerifiable = pipelineOpportunityIds.stream()
+                .map(opportunityById::get)
+                .allMatch(opportunity -> opportunity != null
+                        && !opportunity.accountId().isBlank()
+                        && visibleAccountIds.contains(opportunity.accountId()));
+        if (!opportunitiesVerifiable) {
+            return false;
+        }
+        return current.values().stream()
+                .flatMap(aggregate -> aggregate.contractIds.stream())
+                .map(contractById::get)
+                .allMatch(contract -> contract != null
+                        && !contract.accountId().isBlank()
+                        && visibleAccountIds.contains(contract.accountId()));
+    }
+
     private static Map<String, ContractInfo> mapContracts(List<Map<String, Object>> contracts,
                                                           List<String> warnings) {
         Map<String, ContractInfo> result = new LinkedHashMap<>();
@@ -624,7 +734,7 @@ public class CrmProductSalesAnalysisService {
                                                         Map<String, ContractInfo> contractById,
                                                         PipelineAggregate pipeline,
                                                         LocalDate periodEnd,
-                                                        boolean pipelineAvailable,
+                                                        boolean renewalLinkageAvailable,
                                                         boolean contractsAvailable) {
         if (!contractsAvailable) {
             return ProductContractSignal.empty();
@@ -641,7 +751,7 @@ public class CrmProductSalesAnalysisService {
             active++;
             if (contract.endDate() != null && !contract.endDate().isAfter(expiryThreshold)) {
                 expiring++;
-                if (pipelineAvailable
+                if (renewalLinkageAvailable
                         && (contract.accountId().isBlank() || !pipeline.accountIds.contains(contract.accountId()))) {
                     expiringWithoutRenewal++;
                 }
@@ -658,7 +768,7 @@ public class CrmProductSalesAnalysisService {
             Map<String, ProductInfo> productById,
             boolean amountTrendsComparable,
             boolean pipelineAvailable,
-            boolean contractsAvailable) {
+            boolean renewalLinkageAvailable) {
         List<BusinessInsight> insights = new ArrayList<>();
         for (SalesRankRow row : rows) {
             Aggregate currentValue = current.get(row.productId());
@@ -721,7 +831,7 @@ public class CrmProductSalesAnalysisService {
                         "优先从已购客户中识别增购或替换需求，建立明确的商机产品与预计签约日期"
                 ));
             }
-            if (pipelineAvailable && contractsAvailable
+            if (renewalLinkageAvailable
                     && row.contracts().expiringWithoutRenewalCount() > 0) {
                 insights.add(new BusinessInsight(
                         "RENEWAL_RISK",
@@ -859,14 +969,42 @@ public class CrmProductSalesAnalysisService {
     }
 
     private static boolean periodCurrenciesComparable(Set<String> currentCurrencies,
-                                                      Set<String> previousCurrencies) {
-        if (currentCurrencies.size() > 1 || previousCurrencies.size() > 1) {
+                                                      boolean currentCurrencyMissing,
+                                                      Set<String> previousCurrencies,
+                                                      boolean previousCurrencyMissing) {
+        if (currentCurrencyMissing || previousCurrencyMissing
+                || currentCurrencies.size() != 1 || previousCurrencies.size() != 1) {
             return false;
         }
-        if (currentCurrencies.isEmpty() || previousCurrencies.isEmpty()) {
-            return currentCurrencies.isEmpty() && previousCurrencies.isEmpty();
-        }
         return currentCurrencies.iterator().next().equals(previousCurrencies.iterator().next());
+    }
+
+    private static int contributingOrderCount(Map<String, Aggregate> aggregates) {
+        return contributingOrderCount(aggregates, aggregates.keySet());
+    }
+
+    private static int contributingOrderCount(Map<String, Aggregate> aggregates,
+                                              Set<String> retainedProductIds) {
+        return (int) aggregates.entrySet().stream()
+                .filter(entry -> retainedProductIds.contains(entry.getKey()))
+                .flatMap(entry -> entry.getValue().orderIds.stream())
+                .distinct()
+                .count();
+    }
+
+    private static int contributingCustomerCount(Map<String, Aggregate> aggregates) {
+        return (int) aggregates.values().stream()
+                .flatMap(aggregate -> aggregate.customerIds.stream())
+                .distinct()
+                .count();
+    }
+
+    private static int contributingItemCount(Map<String, Integer> itemCountsByProduct,
+                                             Set<String> retainedProductIds) {
+        return itemCountsByProduct.entrySet().stream()
+                .filter(entry -> retainedProductIds.contains(entry.getKey()))
+                .mapToInt(Map.Entry::getValue)
+                .sum();
     }
 
     private static BigDecimal customerConcentration(Aggregate aggregate, int customerLimit) {
@@ -1293,6 +1431,7 @@ public class CrmProductSalesAnalysisService {
         private final Set<String> opportunityIds = new LinkedHashSet<>();
         private final Set<String> accountIds = new LinkedHashSet<>();
         private final Set<String> currencies = new LinkedHashSet<>();
+        private boolean currencyMissing;
         private BigDecimal quantity = BigDecimal.ZERO;
         private BigDecimal amount = BigDecimal.ZERO;
         private LocalDate nearestExpectedCloseDate;
@@ -1310,6 +1449,9 @@ public class CrmProductSalesAnalysisService {
             }
             quantity = quantity.add(itemQuantity);
             amount = amount.add(itemAmount);
+            currencyMissing = currencyMissing
+                    || text(itemCurrency).isBlank()
+                    || text(opportunityCurrency).isBlank();
             addCurrency(itemCurrency);
             addCurrency(opportunityCurrency);
             if (expectedCloseDate != null
@@ -1322,7 +1464,7 @@ public class CrmProductSalesAnalysisService {
             if (opportunityIds.isEmpty()) {
                 return true;
             }
-            if (!salesAmountComparable || currencies.size() > 1) {
+            if (!salesAmountComparable || currencyMissing || currencies.size() > 1) {
                 return false;
             }
             String normalizedSalesCurrency = text(salesCurrency).toUpperCase(Locale.ROOT);

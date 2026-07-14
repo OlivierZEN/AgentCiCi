@@ -121,6 +121,28 @@ class CrmProductSalesAnswerFormatterTest {
     }
 
     @Test
+    void distinguishesUnavailableRenewalLinkageFromVerifiedZeroWhileKeepingPipelineAndContracts() {
+        CrmProductSalesAnalysisService.SalesRankResult base = successResult(
+                CrmProductSalesAnalysisService.ResultStatus.PARTIAL,
+                List.of("续约关联增强不可用"));
+        CrmProductSalesAnalysisService.SalesRankResult result =
+                new CrmProductSalesAnalysisService.SalesRankResult(
+                        base.status(), base.metric(), base.startDate(), base.endDate(), base.dataAsOf(),
+                        List.of("product", "cloudccorder", "cloudccorderitem",
+                                "Opportunity", "opportunitypdt", "contract"),
+                        base.rows(), base.coverage(), base.warnings(), base.summary(), List.of(
+                                new CrmProductSalesAnalysisService.BusinessInsight(
+                                        "RENEWAL_RISK", "DEMO-X1", "X1 存在续约缺口",
+                                        "临期合同没有续约商机", "立即建立续约清单")));
+
+        String answer = formatter.format(result);
+
+        assertThat(answer)
+                .contains("续约关联不可用", "开放商机 2 个", "活跃合同 3 份")
+                .doesNotContain("未关联续约商机", "X1 存在续约缺口", "立即建立续约清单");
+    }
+
+    @Test
     void formatsIncomparablePipelineAmountWithoutApplyingRealizedSalesCurrency() {
         CrmProductSalesAnalysisService.SalesRankResult base = successResult(
                 CrmProductSalesAnalysisService.ResultStatus.PARTIAL,

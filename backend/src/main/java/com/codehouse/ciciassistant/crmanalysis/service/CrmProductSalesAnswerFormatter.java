@@ -169,11 +169,18 @@ public class CrmProductSalesAnswerFormatter {
         boolean pipelineAvailable = hasSource(sourceObjects, "Opportunity")
                 && hasSource(sourceObjects, "opportunitypdt");
         boolean contractsAvailable = hasSource(sourceObjects, "contract");
+        boolean renewalLinkageAvailable = pipelineAvailable
+                && contractsAvailable
+                && hasSource(sourceObjects, "Account");
         if (!pipelineAvailable) {
             answer.append("- 商机前瞻不可用：当前用户未能完整读取商机与商机产品；不将缺失解读为零管道。\n");
         }
         if (!contractsAvailable) {
             answer.append("- 合同信号不可用：当前用户未能读取合同增强数据；不将缺失解读为零合同。\n");
+        }
+        if (pipelineAvailable && contractsAvailable && !renewalLinkageAvailable) {
+            answer.append("- 续约关联不可用：商机或合同的客户引用缺失、不可见或不可验证；"
+                    + "不将无法关联解读为零续约缺口。\n");
         }
         boolean appended = false;
         for (CrmProductSalesAnalysisService.SalesRankRow row : rows) {
@@ -210,7 +217,7 @@ public class CrmProductSalesAnswerFormatter {
                 answer.append("活跃合同 ").append(Math.max(0, contracts.activeContractCount()))
                         .append(" 份，90 天内到期 ")
                         .append(Math.max(0, contracts.expiringWithin90DaysCount())).append(" 份");
-                if (pipelineAvailable) {
+                if (renewalLinkageAvailable) {
                     answer.append("，其中未关联续约商机 ")
                             .append(Math.max(0, contracts.expiringWithoutRenewalCount())).append(" 份");
                 }
@@ -357,10 +364,13 @@ public class CrmProductSalesAnswerFormatter {
         boolean pipelineAvailable = hasSource(sourceObjects, "Opportunity")
                 && hasSource(sourceObjects, "opportunitypdt");
         boolean contractsAvailable = hasSource(sourceObjects, "contract");
+        boolean renewalLinkageAvailable = pipelineAvailable
+                && contractsAvailable
+                && hasSource(sourceObjects, "Account");
         return safeInsights(insights).stream()
                 .filter(insight -> switch (label(insight.code(), "")) {
                     case "PIPELINE_GAP", "POTENTIAL_GROWTH" -> pipelineAvailable;
-                    case "RENEWAL_RISK" -> pipelineAvailable && contractsAvailable;
+                    case "RENEWAL_RISK" -> renewalLinkageAvailable;
                     default -> true;
                 })
                 .toList();

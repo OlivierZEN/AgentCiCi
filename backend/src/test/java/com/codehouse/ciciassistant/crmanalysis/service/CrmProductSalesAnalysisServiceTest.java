@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class CrmProductSalesAnalysisServiceTest {
 
@@ -744,6 +746,8 @@ class CrmProductSalesAnalysisServiceTest {
 
         assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.DATA_ACCESS_INCOMPLETE);
         assertThat(result.rows()).isEmpty();
+        assertThat(result.coverage().includedOrders()).isZero();
+        assertThat(result.coverage().includedItems()).isZero();
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("产品主数据") && warning.contains("权限"));
     }
 
@@ -840,6 +844,302 @@ class CrmProductSalesAnalysisServiceTest {
         String answer = new CrmProductSalesAnswerFormatter(new ObjectMapper().findAndRegisterModules())
                 .format(result);
         assertThat(answer).contains("无可比基期").doesNotContain("+60%");
+    }
+
+    @Test
+    void missingCurrencyInAnyCurrentFactSuppressesAmountsAndBlocksAmountRanking() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"),
+                            map("id", "p2", "name", "产品二", "cpdm", "P-2", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"),
+                            orderWithCurrency("o2", "2026-07-11", "已完成", "a2", ""));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"),
+                            item("i2", "o2", "p2", "5", "200", "1000", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult quantityResult = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_QUANTITY,
+                        null, null, 5, false));
+
+        assertThat(quantityResult.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(quantityResult.summary().amountComparable()).isFalse();
+        assertThat(quantityResult.summary().totalSalesAmount()).isNull();
+        assertThat(quantityResult.rows()).allSatisfy(row -> {
+            assertThat(row.salesAmount()).isNull();
+            assertThat(row.amountContributionRate()).isNull();
+            assertThat(row.realizedAveragePrice()).isNull();
+            assertThat(row.top1CustomerConcentration()).isNull();
+            assertThat(row.amountRank()).isZero();
+        });
+        assertThat(quantityResult.insights())
+                .extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .doesNotContain("CORE_GROWTH", "DISCOUNT_DRIVEN", "CUSTOMER_CONCENTRATION", "HIGH_VALUE_PRODUCT");
+        assertThat(quantityResult.warnings()).anyMatch(warning -> warning.contains("币种缺失"));
+
+        CrmProductSalesAnalysisService.SalesRankResult amountResult = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_AMOUNT,
+                        null, null, 5, false));
+
+        assertThat(amountResult.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.DATA_QUALITY_BLOCKED);
+        assertThat(amountResult.rows()).isEmpty();
+        assertThat(amountResult.summary().amountComparable()).isFalse();
+        assertThat(amountResult.summary().totalSalesAmount()).isNull();
+    }
+
+    @Test
+    void allCurrentCurrenciesMissingAlsoFailsClosedForAmounts() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", ""));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult quantityResult = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_QUANTITY,
+                        null, null, 5, false));
+        CrmProductSalesAnalysisService.SalesRankResult amountResult = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_AMOUNT,
+                        null, null, 5, false));
+
+        assertThat(quantityResult.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(quantityResult.rows()).hasSize(1);
+        assertThat(quantityResult.rows().getFirst().salesQuantity()).isEqualByComparingTo("10");
+        assertThat(quantityResult.rows().getFirst().salesAmount()).isNull();
+        assertThat(quantityResult.summary().amountComparable()).isFalse();
+        assertThat(quantityResult.warnings()).anyMatch(warning -> warning.contains("币种缺失"));
+        assertThat(amountResult.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.DATA_QUALITY_BLOCKED);
+        assertThat(amountResult.rows()).isEmpty();
+        assertThat(amountResult.summary().amountComparable()).isFalse();
+        assertThat(amountResult.summary().totalSalesAmount()).isNull();
+    }
+
+    @Test
+    void missingPipelineCurrencySuppressesPipelineAmount() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"));
+                    case "Opportunity" -> List.of(
+                            opportunity("op1", "a1", "3-提出方案", "CNY"));
+                    case "opportunitypdt" -> List.of(
+                            opportunityItem("opd1", "op1", "p1", ""));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.rows().getFirst().pipeline().openOpportunityCount()).isEqualTo(1);
+        assertThat(result.rows().getFirst().pipeline().quantity()).isEqualByComparingTo("1");
+        assertThat(result.rows().getFirst().pipeline().amount()).isNull();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("管道") && warning.contains("币种"));
+    }
+
+    @Test
+    void opportunityProductMasterVisibilityGapDisablesPipelineAndRenewalAbsenceInsights() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithRelations("o1", "2026-07-10", "a1", "c1", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"));
+                    case "Account" -> List.of(map("id", "a1", "name", "客户一"));
+                    case "Opportunity" -> List.of();
+                    case "opportunitypdt" -> List.of(
+                            opportunityItem("opd-hidden", "op-hidden", "p1", "CNY"));
+                    case "contract" -> List.of(
+                            map("id", "c1", "khmc", Map.of("id", "a1"), "zhuangtai", "已生效",
+                                    "htjsrq", "2026-08-30", "currency", "CNY"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.sourceObjects()).doesNotContain("Opportunity", "opportunitypdt");
+        assertThat(result.rows().getFirst().pipeline().openOpportunityCount()).isZero();
+        assertThat(result.rows().getFirst().contracts().activeContractCount()).isEqualTo(1);
+        assertThat(result.rows().getFirst().contracts().expiringWithin90DaysCount()).isEqualTo(1);
+        assertThat(result.rows().getFirst().contracts().expiringWithoutRenewalCount()).isZero();
+        assertThat(result.insights()).extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .doesNotContain("PIPELINE_GAP", "RENEWAL_RISK");
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("商机产品")
+                && warning.contains("可见性") && warning.contains("不可用"));
+    }
+
+    @Test
+    void referencedContractVisibilityGapDisablesContractEnhancement() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithRelations("o1", "2026-07-10", "a1", "contract-hidden", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"));
+                    case "contract" -> List.of();
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.sourceObjects()).doesNotContain("contract");
+        assertThat(result.rows().getFirst().contracts().activeContractCount()).isZero();
+        assertThat(result.insights()).extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .doesNotContain("RENEWAL_RISK");
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("订单")
+                && warning.contains("合同") && warning.contains("可见性") && warning.contains("不可用"));
+    }
+
+    @Test
+    void coverageCountsOnlyOrdersAndItemsThatContributeVerifiedSalesFacts() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"),
+                            orderWithCurrency("o2", "2026-07-11", "已完成", "a2", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"),
+                            item("i2", "o2", "p-hidden", "5", "100", "500", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.coverage().scannedOrders()).isEqualTo(2);
+        assertThat(result.coverage().includedOrders()).isEqualTo(1);
+        assertThat(result.coverage().excludedOrders()).isEqualTo(1);
+        assertThat(result.coverage().scannedItems()).isEqualTo(2);
+        assertThat(result.coverage().includedItems()).isEqualTo(1);
+        assertThat(result.coverage().excludedItems()).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "p-hidden"})
+    void blankOrInvisibleOpportunityProductReferenceDisablesPipelineEnhancement(String opportunityProductId) {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"));
+                    case "Account" -> List.of(map("id", "a1", "name", "客户一"));
+                    case "Opportunity" -> List.of(
+                            opportunity("op1", "a1", "3-提出方案", "CNY"));
+                    case "opportunitypdt" -> List.of(
+                            opportunityItem("opd1", "op1", opportunityProductId, "CNY"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.sourceObjects()).doesNotContain("Opportunity", "opportunitypdt");
+        assertThat(result.rows().getFirst().pipeline().openOpportunityCount()).isZero();
+        assertThat(result.insights()).extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .doesNotContain("PIPELINE_GAP", "POTENTIAL_GROWTH");
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("商机产品")
+                && warning.contains("产品引用") && warning.contains("不可用"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "a-hidden"})
+    void missingOrInvisibleOpportunityCustomerDisablesRenewalLinkage(String opportunityAccountId) {
+        stubRenewalLinkageFacts(opportunityAccountId, "a1");
+
+        assertRenewalLinkageUnavailable(service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "a-hidden"})
+    void missingOrInvisibleContractCustomerDisablesRenewalLinkage(String contractAccountId) {
+        stubRenewalLinkageFacts("a1", contractAccountId);
+
+        assertRenewalLinkageUnavailable(service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false)));
+    }
+
+    private void stubRenewalLinkageFacts(String opportunityAccountId, String contractAccountId) {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithRelations("o1", "2026-07-10", "a1", "c1", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"));
+                    case "Account" -> List.of(map("id", "a1", "name", "客户一"));
+                    case "Opportunity" -> List.of(
+                            opportunity("op1", opportunityAccountId, "3-提出方案", "CNY"));
+                    case "opportunitypdt" -> List.of(
+                            opportunityItem("opd1", "op1", "p1", "CNY"));
+                    case "contract" -> List.of(
+                            map("id", "c1", "khmc", Map.of("id", contractAccountId),
+                                    "zhuangtai", "已生效", "htjsrq", "2026-08-30", "currency", "CNY"));
+                    default -> List.of();
+                });
+    }
+
+    private void assertRenewalLinkageUnavailable(CrmProductSalesAnalysisService.SalesRankResult result) {
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.sourceObjects())
+                .contains("Opportunity", "opportunitypdt", "contract")
+                .doesNotContain("Account");
+        CrmProductSalesAnalysisService.SalesRankRow row = result.rows().getFirst();
+        assertThat(row.pipeline().openOpportunityCount()).isEqualTo(1);
+        assertThat(row.contracts().activeContractCount()).isEqualTo(1);
+        assertThat(row.contracts().expiringWithin90DaysCount()).isEqualTo(1);
+        assertThat(row.contracts().expiringWithoutRenewalCount()).isZero();
+        assertThat(result.insights()).extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .doesNotContain("RENEWAL_RISK");
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("续约")
+                && warning.contains("客户引用") && warning.contains("不可用"));
+        String answer = new CrmProductSalesAnswerFormatter(new ObjectMapper().findAndRegisterModules())
+                .format(result);
+        assertThat(answer).contains("续约关联不可用")
+                .doesNotContain("未关联续约商机 0 份", "存在续约缺口");
     }
 
     private void stubInvalidCurrentTotalPrice() {
