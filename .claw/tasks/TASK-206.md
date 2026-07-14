@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-206
 status: in_progress
-updated_at: 2026-07-14T11:30:00Z
+updated_at: 2026-07-14T12:15:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -24,7 +24,7 @@ spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
 - 当前 `bootstrapSso` / `bootstrapFallbackSso` 在任何失败后都保留 started 标志，且没有重试。
 - 截图发生时的一次失败因此被放大为当前页面永久失败，需要重开 CRM 页面才能恢复。
 - 后续普通销售用户复测仍被拒绝；Nginx 响应长度与后端安全文案精确对应为 `CloudCC runtime token 校验失败`，并非页面所显示的“账号未映射”。
-- pagecomponent 优先读取 `$CCDK.CCToken.getOpenApiToken()`，但后端把该 OpenAPI token 发送到 `setup/api/customObject/standardObjList` 元数据接口校验。该接口属于实施/管理能力，普通销售用户会因权限不足被误判为无效令牌；管理员测试账号因此掩盖了问题。
+- CloudCC CRM 前端源码确认 `$CCDK.CCToken.getToken()` 才是同步读取当前用户会话的方法；`getOpenApiToken(clientId, secretKey, ...)` 是需要应用凭据的异步换票方法。pagecomponent 将后者误当成回调接口调用，导致发送给 AgentCiCi 的并非可验证的当前 CRM 会话，后端因此返回 `ccapi-10003` 并被前端误显示为账号未映射。
 
 ## Delivery Result
 
@@ -35,10 +35,10 @@ spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
 
 ## Reopened Work
 
-- 使用 `/openApi/common` 的角色权限查询入口验证 OpenAPI token；仅把认证失败视为无效，业务对象无权限不得误判令牌无效。
-- 继续从已远端验证的 JWT 载荷提取 actor/org，并保持 token 用户、页面用户、AgentCiCi 成员三方一致。
+- pagecomponent 只使用 `$CCDK.CCToken.getToken()` 读取当前 CRM 会话，不再调用需要 clientId/secretKey 的 `getOpenApiToken`。
+- 后端通过组织绑定网关的 `/api/user/getUserInfo` 验证该会话，并从 CloudCC 返回的登录标识和组织标识提取 actor/org，保持会话用户、页面用户、AgentCiCi 成员三方一致。
 - 前端读取服务端安全消息，按真实原因展示可行动提示；不得显示 token、原始响应或内部异常。
-- 增加普通用户、失效 token、权限拒绝和身份不一致的聚焦测试，完成应用发布、pagecomponent 发布和真实 CRM 复验。
+- 增加普通用户、失效会话和身份不一致的聚焦测试，完成应用发布、pagecomponent 发布和真实 CRM 复验。
 
 ## Constraints
 

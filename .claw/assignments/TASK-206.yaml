@@ -54,10 +54,10 @@ task_boundary:
   - "Vue 挂载与 UMD fallback 必须保持相同重试和失败释放行为。"
   - "CloudCC 高代码资产发布与验证必须通过 cc-customization-expert-msapi。"
   - "不得输出、提交或记录 token、cookie、密码、原始客户数据或其他可复用凭据。"
-  - "修复 OpenAPI token 被错误送往 setup 元数据接口校验的问题；远端校验必须使用普通业务用户可访问、且保留角色权限边界的 CloudCC OpenAPI。"
+  - "修复将 getOpenApiToken(clientId, secretKey) 错当回调接口的问题；pagecomponent 只读取 CRM getToken() 当前会话，并通过 /api/user/getUserInfo 远端验证。"
   - "401/403 前端提示必须区分 runtime token 校验、页面身份不一致、成员未绑定和成员凭据不可用，不得再把所有拒绝归因为账号映射。"
 change_manifest_required: true
-signature: "MANAGER-001 SSH challenge allowed 2026-07-14; reopened after ordinary CloudCC user reproduced OpenAPI-token validation rejection against the setup metadata endpoint."
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; root cause corrected after CloudCC SDK source review proved getOpenApiToken was called with the wrong signature."
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
