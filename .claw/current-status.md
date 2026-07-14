@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T12:35:00Z
+updated_at: 2026-07-14T13:07:01Z
 updated_by: MANAGER-001
-phase: customer-workbench-comprehensive-demo-scenarios
-active_task: "TASK-203"
-next_action: "Continue TASK-203 comprehensive customer-workbench demo data after the completed TASK-206 CloudCC embedded SSO repair."
+phase: frontend-theme-consistency-and-alignment
+active_task: "TASK-207"
+next_action: "Audit and repair every authenticated frontend page for theme consistency, organization monogram correctness and desktop alignment."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-207 is ready for implementation: FEAT-113 covers the authenticated assistant shell, all front-office AI applications, personal settings and shared overlays across eight themes. The organization switcher will use the current organization name's first visible character, and every checked page must pass desktop alignment, overflow and console gates.
 - TASK-206 is complete in production `2.6.11 / c540988655cb`. The pagecomponent now reads the current CRM session with `$CCDK.CCToken.getToken()`, the backend validates it through `/api/user/getUserInfo`, and strict session-user/page-user/AgentCiCi-member consistency remains in force. Real CRM initial load plus two refreshes produced three HTTP 200 ticket/consume pairs with no mapping error.
 - TASK-205 is complete in production `2.6.8 / 095094300a25`: the platform-standard CRM business analysis Skill, deterministic intent gate and `crm_product_sales_rank` tool are live; `cici-system` published version 3 pins the Skill. Five new sessions returned the same quantity Top 5 and server logs show exactly five skill-scoped high-level tool calls with no atomic CRM exploration.
 - CloudCC batch `TASK-205-CRM-ANALYTICS-DEMO-V1` is idempotently present with 12 products, 16 reused accounts, 24 opportunities, 72 opportunity products, 16 contracts, 48 orders and 144 order items. Final readback preserves quantity Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`, while amount ranking differs as designed.
@@ -40,6 +41,7 @@ read_next:
 
 ## Read Next
 
+- `.claw/tasks/TASK-207.md`, `.claw/assignments/TASK-207.yaml` and `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md` - active full frontend theme and alignment governance.
 - `.claw/tasks/TASK-206.md` and `docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md` - completed CloudCC embed SSO recovery and verification evidence.
 - `.claw/tasks/TASK-205.md` and `.claw/assignments/TASK-205.yaml` - active CRM analysis delivery and authorization.
 - `docs/specs/FEAT-111-crm-business-analysis-skill.md` - approved architecture, object map, field dictionary, tool contract, demo-data design and acceptance source.

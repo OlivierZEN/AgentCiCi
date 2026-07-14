@@ -1,0 +1,58 @@
+task_id: TASK-207
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T13:07:01Z
+expires_at: none
+spec_path: docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
+task_status_path: .claw/tasks/TASK-207.md
+branch: codex/TASK-207-frontend-theme-alignment-audit
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - DESIGN.md
+  - DESIGN.json
+  - design-qa.md
+  - docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
+  - docs/specs/FEAT-113-frontend-theme-consistency-and-alignment-plan.md
+  - .claw/tasks/TASK-207.md
+  - .claw/assignments/TASK-207.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-108-user-selectable-product-themes.md
+  - docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
+task_boundary:
+  - "只治理认证后普通用户前台 /app 的主题一致性、组织入口首字符和桌面端视觉对齐。"
+  - "八套主题保持同一结构、密度、尺寸、图标、交互和滚动规则，只映射语义颜色。"
+  - "不得把透明结构 wrapper 重新绘制成嵌套卡片，不得使用全局粗暴 !important 覆盖管理端或平台端。"
+  - "组织图标只从当前组织名称派生，名称为空时回退为‘组’，不新增持久化字段。"
+  - "不修改业务 API、数据结构、权限、CRM 身份同步、移动端布局或外部品牌实现命名。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user explicitly requested full frontend theme and alignment implementation."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created frontend visual-governance task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+

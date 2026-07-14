@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T12:35:00Z
+updated_at: 2026-07-14T13:07:01Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-207 - 前台主题一致性与视觉对齐全量治理
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md`
+- task_status_path: `.claw/tasks/TASK-207.md`
+- assignment_path: `.claw/assignments/TASK-207.yaml`
+- blocked_by: `none`
+- next_action: Validate assignment, create the implementation plan, then audit and repair every authenticated frontend surface.
 
 ### TASK-206 - CloudCC 嵌入身份同步自动恢复
 
