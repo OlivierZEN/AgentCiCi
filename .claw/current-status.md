@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T10:34:25Z
+updated_at: 2026-07-14T10:46:00Z
 updated_by: MANAGER-001
 phase: cloudcc-embed-sso-recovery
 active_task: "TASK-206"
@@ -23,8 +23,8 @@ read_next:
 ## Snapshot
 
 - TASK-206 is in progress for a real CloudCC CRM embedded identity-sync failure. Online component/customPage binding is correct and the same test user now completes ticket/consume/data reads with HTTP 200; the verified defect is that a single transient failure leaves the pagecomponent SSO lock set forever with no retry or token refresh.
-- TASK-205 is ready: the user approved a platform-standard CRM business analysis Skill plus deterministic `crm_product_sales_rank` tool and requested rich high-fidelity data in the bound CloudCC demo tenant, ending with repeated real-chat acceptance for “销量最好的产品有哪些”.
-- FEAT-111 is the design source. A read-only CloudCC `standard-catalog` scan confirmed `product`, `cloudccorder`, `cloudccorderitem`, `contract`, `Opportunity`, `opportunitypdt` and their required quantity/amount/date/status/reference fields; no metadata change is planned.
+- TASK-205 is complete in production `2.6.8 / 095094300a25`: the platform-standard CRM business analysis Skill, deterministic intent gate and `crm_product_sales_rank` tool are live; `cici-system` published version 3 pins the Skill. Five new sessions returned the same quantity Top 5 and server logs show exactly five skill-scoped high-level tool calls with no atomic CRM exploration.
+- CloudCC batch `TASK-205-CRM-ANALYTICS-DEMO-V1` is idempotently present with 12 products, 16 reused accounts, 24 opportunities, 72 opportunity products, 16 contracts, 48 orders and 144 order items. Final readback preserves quantity Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`, while amount ranking differs as designed.
 
 - TASK-204 is ready: the approved design removes the nested frame and excess inset around the Agent Builder guide, then replaces the two persistent avatar buttons with an accessible avatar-triggered upload/change/remove menu. FEAT-110 awaits written user review before implementation.
 - TASK-203 is in progress to expand the bound CloudCC CRM and AgentCiCi demo organization into a 16-customer V2 dataset covering every new-customer, existing-customer, interaction archive, memory, dynamic score and evidence-driven action scenario. Owen/SalesA currently has a valid CRM session but zero visible Accounts because the TASK-172 core records are all owned by SalesB.
@@ -33,7 +33,7 @@ read_next:
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
-- Production currently runs `2.6.6 / 4caaa4800b3d`; backend/frontend and state services are healthy, Flyway is at V80, and the release backup is `/opt/cici/backups/20260714-142848-before-2.6.6-task202-theme-visual-hotfix`.
+- Production currently runs `2.6.8 / 095094300a25`; backend/frontend and four state services are healthy, Flyway remains at V80, and the final release backup is `/opt/cici/backups/20260714-184006-before-2.6.8-task205-deterministic-routing`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
 - Known DNS risk remains: this workstation cannot resolve `onechat.agentcici.com`; production-IP resolved smoke previously returned HTTP 200.

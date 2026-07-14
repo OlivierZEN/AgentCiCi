@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T06:54:48Z
+updated_at: 2026-07-14T10:46:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T06:54:48Z
+last_run_at: 2026-07-14T10:46:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-205 CRM 经营分析与高仿真销售数据生产验收（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 的 TASK-205 代表文件授权检查为 `allowed`；`git diff --check`、离线种子契约和后端打包通过，未包含用户 `diagrams/` 或任何凭据。
+- `backend-focused`: `CrmProductSalesAnalysisServiceTest,CrmProductSalesAnalysisToolServiceTest,CrmProductSalesIntentRouterTest,ToolOrchestratorServiceTest,CrmAnalyticsDemoDatasetContractTest,FileBackedBuiltinSkillIntegrationTest` 共 17 项通过，0 failure / 0 error；路由测试按 TDD 先观察到缺类编译失败再转绿。
+- `backend-full-baseline`: 全量 274 项运行完成，15 failure / 3 error；均来自既有认证夹具、平台模型/技能配置漂移、停用模型厂商、历史非空字段夹具和 PostgreSQL 连接数耗尽，与 TASK-205 定向测试无关。
+- `crm-write/readback`: 默认 dry-run 后显式 execute 写入批次 `TASK-205-CRM-ANALYTICS-DEMO-V1`；第二次 execute 创建数均为 0。最终回读为产品 12、客户 16、商机 24、商机产品 72、合同 16、订单 48、订单产品 144，4 张当前草稿高销量订单被排除，关联完整性和销量/销售额排行差异检查均通过。
+- `crm-ranking`: 最近 30 天有效订单销量 Top 5 为 `DEMO-X1 130`、`DEMO-G5 110`、`DEMO-S2 95`、`DEMO-MP 75`、`DEMO-PA 65`；对应销售额为 884000、1408000、304000、2850000、1690000。
+- `runtime-correction`: `2.6.7` 首轮真实会话暴露发布版 `cici-system` 未锁定新 Skill，模型仍探测原子对象；新增确定性意图门并将 `crm-business-analysis` 纳入 `cici-system` 发布版本 3 后，以不可变版本 `2.6.8` 修正。`2.6.7` 不作为回滚目标。
+- `production-chat`: 5 个全新会话同问“嗯，销量最好的产品有哪些？”均包含同一 Top 5、最近 30 天、销售数量口径、截止时间和 `product/cloudccorder/cloudccorderitem` 来源；服务器日志恰好 5 次 `crm_product_sales_rank` 且均为 `skill_scoped`，无原子 CRM 工具调用。
+- `release`: `2.6.8 / 095094300a25`；backend index `sha256:27c985366695339a298ad3f6a333cd03827fc08fc334f9f1161242f584b7f2aa`、amd64 `sha256:ea08a7a86b8c64aa565ceef1ce768b0af367550e081a3ad6781d078b23811265`；frontend index `sha256:784504e1a57a5463d722a74941b0a15085ebf04bf2be08cef276cdb8eadfca0c`、amd64 `sha256:277a476b3cf0c1b495ab8202f3380674af0119794e7898172ce4dcda2964ed4f`。
+- `production`: 最终备份 `/opt/cici/backups/20260714-184006-before-2.6.8-task205-deterministic-routing` 四类数据非空；六服务 healthy、健康 `UP`、版本一致、V80 无迁移、Nginx 有效，稳定窗口 backend error 与精确 Nginx 5xx 均为 0；`x` HTTPS 200/HTTP 301，`onechat` 生产 IP smoke 200。
 
 ## TASK-202 用户级产品主题偏好本地验收（2026-07-14）
 

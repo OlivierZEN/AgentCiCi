@@ -293,3 +293,8 @@ standard-catalog
 - 运行 trace 能看到 Skill、工具、参数摘要、覆盖度和最终回答。
 - `.claw/test-report.md` 记录全部真实验证命令和结果。
 
+## 生产交付记录
+
+- 2026-07-14 发布 `2.6.8 / 095094300a25`，`cici-system` 发布版本 3 固化 `crm-business-analysis`。
+- 真实 CloudCC 批次回读为 12 产品、16 客户、24 商机、72 商机产品、16 合同、48 订单、144 订单产品；重复 execute 未创建重复记录。
+- 5 个全新生产会话全部仅调用 `crm_product_sales_rank`，销量 Top 5 和数值完全一致；首次发布快照遗漏 Skill 的问题已通过确定性意图门和新智能体版本修正。

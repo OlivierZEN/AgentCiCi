@@ -28,14 +28,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-205 - CRM 经营分析 Skill 与产品销售演示数据
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `project-manager`
 - spec_path: `docs/specs/FEAT-111-crm-business-analysis-skill.md`
 - task_status_path: `.claw/tasks/TASK-205.md`
 - assignment_path: `.claw/assignments/TASK-205.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment scope, push allocation records to `origin/main`, then implement the deterministic analysis tool, Skill and CloudCC demo data on the assigned branch.
+- next_action: Done in production `2.6.8 / 095094300a25`; monitor the deterministic CRM sales-rank route and expand only through governed high-level analysis tools.
 
 ### TASK-204 - 智能体构建说明与头像交互精修
 

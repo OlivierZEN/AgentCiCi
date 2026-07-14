@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T06:54:48Z
+updated_at: 2026-07-14T10:46:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.6.8 TASK-205 CRM 经营分析确定性路由与高仿真数据 on 2026-07-14:
+  - Git commit/tag `095094300a25` / `2.6.8`; platform-standard `crm-business-analysis` is pinned in `cici-system` published version 3, and product sales ranking intent is forced through `crm_product_sales_rank` before final language generation.
+  - Images: backend index `sha256:27c985366695339a298ad3f6a333cd03827fc08fc334f9f1161242f584b7f2aa`, amd64 `sha256:ea08a7a86b8c64aa565ceef1ce768b0af367550e081a3ad6781d078b23811265`; frontend index `sha256:784504e1a57a5463d722a74941b0a15085ebf04bf2be08cef276cdb8eadfca0c`, amd64 `sha256:277a476b3cf0c1b495ab8202f3380674af0119794e7898172ce4dcda2964ed4f`.
+  - Backup: `/opt/cici/backups/20260714-184006-before-2.6.8-task205-deterministic-routing`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Runtime: backend/frontend healthy on `2.6.8`; database, Redis, RabbitMQ and Qdrant remain healthy on `2.3.4`. Health `UP`, version `2.6.8 / 095094300a25`, V80 unchanged, Nginx valid, post-acceptance backend errors and precise Nginx 5xx both zero.
+  - Acceptance: five fresh production chats returned the same last-30-day quantity Top 5 (`X1 130`, `G5 110`, `S2 95`, `MP 75`, `PA 65`); backend logs contain exactly five skill-scoped `crm_product_sales_rank` calls and no atomic CRM discovery calls.
+  - Release correction: `2.6.7 / a20be3195dcb` exposed that the pre-existing published agent snapshot did not include the new Skill and was immediately superseded. It is not a rollback target; use `2.6.6` if rollback is required.
 
 - 2.6.6 TASK-202 主题视觉层级修复 on 2026-07-14:
   - Git commit/tag `4caaa4800b3d` / `2.6.6`; theme switching remains account-scoped while structural wrappers stay transparent and agent avatars keep fixed geometry across all eight themes.
