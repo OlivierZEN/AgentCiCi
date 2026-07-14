@@ -20,6 +20,8 @@ import com.codehouse.ciciassistant.ai.service.RuntimeContextPromptService.Runtim
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesIntentRouter;
 import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
@@ -414,6 +416,11 @@ public class ChatOrchestratorService {
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
         appendConfirmedPendingEmailBodyToolResult(
                 messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        boolean forcedCrmProductSales = appendForcedCrmProductSalesToolResult(
+                messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        if (forcedCrmProductSales) {
+            tools = List.of();
+        }
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId);
@@ -627,6 +634,11 @@ public class ChatOrchestratorService {
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
                 appendConfirmedPendingEmailBodyToolResult(
                         messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                boolean forcedCrmProductSales = appendForcedCrmProductSalesToolResult(
+                        messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                if (forcedCrmProductSales) {
+                    tools = List.of();
+                }
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
                 boolean pendingApprovalsUsed = resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
@@ -1183,6 +1195,46 @@ public class ChatOrchestratorService {
                 "content", toolResult
         ));
         return toolResult;
+    }
+
+    private boolean appendForcedCrmProductSalesToolResult(List<Map<String, Object>> messages,
+                                                          String orgId,
+                                                          String userId,
+                                                          String sessionId,
+                                                          ResolvedSkillContext skillContext,
+                                                          SseEmitter emitter,
+                                                          List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+                                                          String runId,
+                                                          String question) {
+        if (!skillContext.skillCodes().contains("crm-business-analysis")) {
+            return false;
+        }
+        Optional<String> arguments = CrmProductSalesIntentRouter.route(question);
+        if (arguments.isEmpty()) {
+            return false;
+        }
+        String toolResult = executeAndAppendSyntheticToolCall(
+                messages,
+                orgId,
+                userId,
+                sessionId,
+                skillContext,
+                emitter,
+                toolCallTraces,
+                runId,
+                CrmProductSalesAnalysisToolService.TOOL_NAME,
+                arguments.get(),
+                "auto_crm_sales_");
+        if (emitter != null) {
+            safeSendToolResult(emitter, CrmProductSalesAnalysisToolService.TOOL_NAME, toolResult);
+        }
+        messages.add(Map.of(
+                "role", "system",
+                "content", "CRM 产品销售排行已由平台确定性工具完成。必须直接依据上一条工具结果回答，"
+                        + "保持产品名称、排名和数值原样，说明指标口径、时间范围、数据截止时间与来源；"
+                        + "不得再调用任何原子 CRM 工具，不得声称尚未形成结论。"
+        ));
+        return true;
     }
 
     private Optional<PendingEmailState> pendingEmailFromState(String orgId, String sessionId) {
