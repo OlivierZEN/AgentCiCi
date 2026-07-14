@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T16:47:00Z
+updated_at: 2026-07-14T16:51:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T16:47:00Z
+last_run_at: 2026-07-14T16:51:00Z
 last_run_status: passed
 ---
 
@@ -12,12 +12,12 @@ last_run_status: passed
 
 ## TASK-208 生产发布线整合门禁（2026-07-15）
 
-- `ancestry`: 整合提交同时包含生产 `2.7.2 / ddcda0ef6111` 与 TASK-208 `2.7.3 / 85b92c2d1f63` 两条不可变发布线；两次 `git merge-base --is-ancestor` 均通过。
-- `content-preservation`: CRM 后端、内置 `crm-business-analysis` Skill、CRM 测试和受控迁移脚本与 TASK-208 `2.7.3` 树一致；完整 `frontend/` 与 `DESIGN.md`、`DESIGN.json` 与生产 `2.7.2` 树一致，`design-qa.md` 仅追加同一版本的生产验收证据。
+- `ancestry`: 整合提交同时包含 TASK-209 `2.7.2 / ddcda0ef6111`、TASK-208 `2.7.3 / 85b92c2d1f63` 与当前生产 TASK-210 `2.7.4 / 3206fdbc196f` 三条不可变发布线；三次 `git merge-base --is-ancestor` 均通过。
+- `content-preservation`: CRM 后端、内置 `crm-business-analysis` Skill、CRM 测试和受控迁移脚本与 TASK-208 `2.7.3` 树一致；完整 `frontend/` 与当前生产 `2.7.4` 树一致，TASK-209 原图登录资产保留。
 - `backend-focused`: 8 个 Surefire 报告共 143 项通过，0 failure / 0 error；覆盖路由、五层经营分析、格式化、高阶工具、阻塞/SSE/OpenAPI 防泄漏和 CRM 数据契约。
-- `frontend-full`: Vitest 16 个文件、86 项通过；TypeScript/Vite 生产构建成功，共转换 1,935 个模块，仅保留既有大 chunk 提示。
+- `frontend-full`: 合并后的锁文件执行 `npm ci` 后，Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建成功，共转换 1,936 个模块，仅保留既有大 chunk 提示。
 - `identity/assignment`: MANAGER-001 SSH 持钥、GitHub 身份、TASK-208 当前集成分支与状态文件代表路径均为 `allowed`；TASK-209 前端与设计事实源由其已完成 assignment 覆盖。
-- `release-guard`: `2.7.3` 从未部署；第一次整合保留了 TASK-209。随后并发 TASK-210 以 `2.7.4` 上线并有意排除 TASK-208，因此最终发布还必须把 `2.7.4` 作为新的生产父线并恢复同一组 CRM 路径。
+- `release-guard`: `2.7.3` 从未部署；并发 TASK-210 以 `2.7.4` 上线并有意排除 TASK-208。最终分支将 `2.7.4` 作为生产父线并正向撤销其 TASK-208 revert，下一次只能发布新的不可变版本 `2.7.5`。
 
 ## TASK-209 运营平台登录页原图像素锁定（2026-07-15）
 

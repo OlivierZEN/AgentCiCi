@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T16:47:00Z
+updated_at: 2026-07-14T16:51:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-210.md`
 - assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
-- next_action: Release 2.7.4 from the verified 2.7.2 production baseline through the canonical runbook, then complete AgentCiCi plus CloudCC embed acceptance.
+- next_action: Production runs `2.7.4`; complete AgentCiCi plus CloudCC embed visual acceptance and close TASK-210 independently.
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
@@ -35,7 +35,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-208.md`
 - assignment_path: `.claw/assignments/TASK-208.yaml`
 - blocked_by: `none`
-- next_action: Preserve the live TASK-209 `2.7.2` source in the release branch, publish a new immutable version, migrate CRM data, then complete five-session production acceptance.
+- next_action: Merge the verified `2.7.2 + 2.7.3 + 2.7.4` integration, publish `2.7.5`, migrate CRM data, then complete five-session production acceptance.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 
