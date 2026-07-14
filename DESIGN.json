@@ -155,7 +155,9 @@
         "Theme selection is an account preference. Apply a local cached value before render, then let the authenticated server preference win without a full-page reload.",
         "CRM embedded customer workbench uses the current AgentCiCi identity preference and must not derive a theme from CloudCC tokens.",
         "Galaxy is the only dark palette. It remains a restrained enterprise workspace and must preserve WCAG-readable text, controls, forms, dividers, statuses, and focus states.",
-        "Theme option UI uses compact radio rows, three-color swatches, one structural boundary, and no nested cards, hover movement, shadows, or decorative illustrations."
+        "Theme option UI uses compact radio rows, three-color swatches, one structural boundary, and no nested cards, hover movement, shadows, or decorative illustrations.",
+        "Authenticated frontend data visualizations use four theme-owned semantic series tokens. Business modules must not bypass the selected theme with fixed chart, identity, status, or panel colors.",
+        "The organization switcher monogram is derived from the first visible character of the current organization name. Latin initials are uppercase and empty names fall back to the Chinese character 组; fixed vendor or product abbreviations are forbidden."
       ]
     },
     "breakpoints": {

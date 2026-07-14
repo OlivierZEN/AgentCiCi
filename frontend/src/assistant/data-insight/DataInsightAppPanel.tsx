@@ -267,8 +267,12 @@ function SegmentTile({ title, items, total }: { title: string; items: DataInsigh
     <section className="cici-data-card cici-data-card--segment">
       <h3>{title}</h3>
       <div>
-        {items.map((item) => (
-          <span key={item.code} style={{ inlineSize: `${Math.max(10, (item.value / base) * 100)}%`, background: item.color }}>
+        {items.map((item, index) => (
+          <span
+            key={item.code}
+            className={`is-series-${(index % 4) + 1}`}
+            style={{ inlineSize: `${Math.max(10, (item.value / base) * 100)}%` }}
+          >
             {segmentLabel(item.code)} {item.value}
           </span>
         ))}

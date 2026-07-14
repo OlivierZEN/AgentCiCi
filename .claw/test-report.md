@@ -1,14 +1,26 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T12:35:00Z
+updated_at: 2026-07-14T13:38:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T12:35:00Z
+last_run_at: 2026-07-14T13:38:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-207 前台主题一致性与视觉对齐（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通用与 TASK-207 SSH challenge 均为 `allowed`；前端、设计事实源、规格、任务状态和测试报告代表文件通过 assignment 检查。
+- `tdd-focused`: 先验证组织首字符函数、四套主题序列色、数据图 class 和智能体身份色旧内联样式的失败状态，再实现转绿；最终聚焦测试 10 项通过。
+- `frontend-full`: Vitest 15 个文件、85 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示。
+- `static`: `DESIGN.json` JSON parse、`git diff --check` 均通过。
+- `browser-eight-themes`: 真实本地账号逐一应用 `gilded`、`crm-blue`、`ocean`、`sakura`、`lavender`、`avocado`、`wine`、`galaxy`；根主题、画布、设置面板和轨道表面均正确切换，验收后恢复 `gilded`。
+- `browser-pages`: 在 `1600 × 1000` 下验证助手工作台、智能体/会话层级、AI 应用菜单、客户互动工作台、互动整理弹窗、数据洞察、客户洞察、知微画像、个人设置、专属记忆和 CRM 外层壳；`gilded`、`sakura`、`galaxy` 重点表面均读取对应主题 token。
+- `browser-layout`: 数据看板四列闭合，同一行卡片同顶同高；AI 应用菜单五行均为 44px 且左锚点一致；互动弹窗左右栏同顶同高；`document/body scrollWidth == clientWidth == 1600`。
+- `browser-org`: 当前组织 `CloudCC 智能体应用DEMO` 的左下角入口显示 `C`，不再显示固定 `CB`。
+- `browser-console`: error/warning 为 0。截图证据见 `output/playwright/task207-*.png`，设计结论见 `design-qa.md`。
 
 ## TASK-206 CloudCC 嵌入身份同步自动恢复（2026-07-14）
 

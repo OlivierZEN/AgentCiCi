@@ -16,7 +16,7 @@ import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ASSISTANT_TOKEN } from "../constants";
 import { MeetingMinutesPanel } from "../meeting/MeetingMinutesPanel";
 import AppVersionBadge from "../shared/AppVersionBadge";
-import { getDisplayInitial } from "../shared/avatar";
+import { getDisplayInitial, getOrganizationMonogram, getThemeSeriesClass } from "../shared/avatar";
 import { useAsrVoiceInput } from "../shared/useAsrVoiceInput";
 import { safeFetchJson } from "../utils/http";
 import MyEmailAccountsModal from "./MyEmailAccountsModal";
@@ -920,8 +920,7 @@ function WorkbenchAgentBar({
                 <AvatarView
                   src={agent.avatarBase64}
                   fallback={agent.short}
-                  className="cici-workbench__agent-avatar"
-                  style={{ background: agent.color }}
+                  className={`cici-workbench__agent-avatar ${getThemeSeriesClass(agent.key)}`}
                   alt={`${agent.name} 头像`}
                 />
                 <span className="cici-workbench__agent-label">{agent.label}</span>
@@ -948,8 +947,7 @@ function WorkbenchStateCard({
       <AvatarView
         src={agent.avatarBase64}
         fallback={agent.short}
-        className="cici-workbench__top-activity-icon"
-        style={{ background: agent.color }}
+        className={`cici-workbench__top-activity-icon ${getThemeSeriesClass(agent.key)}`}
         alt={`${agent.name} 状态头像`}
       />
       <div className="cici-workbench__top-activity-machine">
@@ -3872,7 +3870,7 @@ export default function AssistantApp() {
             aria-label={`切换组织，当前组织：${currentOrgName}`}
             aria-expanded={organizationMenuOpen}
           >
-            <div className="cici-rail__logo-icon">CB</div>
+            <div className="cici-rail__logo-icon">{getOrganizationMonogram(currentOrgName)}</div>
           </button>
           <AppVersionBadge compact />
         </div>
@@ -4039,8 +4037,7 @@ export default function AssistantApp() {
                             <AvatarView
                               src={activeWorkbenchAgent.avatarBase64}
                               fallback={activeWorkbenchAgent.short}
-                              className="cici-workbench__message-avatar"
-                              style={{ background: activeWorkbenchAgent.color }}
+                              className={`cici-workbench__message-avatar ${getThemeSeriesClass(activeWorkbenchAgent.key)}`}
                               alt={`${activeWorkbenchAgent.name} 消息头像`}
                             />
                           ) : null}
@@ -4766,8 +4763,7 @@ export default function AssistantApp() {
                 <AvatarView
                   src={activeAgent.avatarBase64}
                   fallback={activeAgent.avatar}
-                  className="cici-threads__agent-avatar"
-                  style={{ background: activeAgent.accent }}
+                  className={`cici-threads__agent-avatar ${getThemeSeriesClass(activeAgent.id)}`}
                   alt={`${activeAgent.name} 头像`}
                 />
                 <div>
@@ -4824,7 +4820,7 @@ export default function AssistantApp() {
                   className={`cici-thread-item${activeConversation?.id === thread.id ? " is-active" : ""}`}
                   onClick={() => setActiveConversationId(thread.id)}
                 >
-                  <div className="cici-thread-item__avatar" style={{ background: getAvatarColor(thread.participantName) }}>
+                  <div className={`cici-thread-item__avatar ${getThemeSeriesClass(thread.participantName)}`}>
                     {thread.avatarUrl ? (
                       <img
                         src={thread.avatarUrl}
@@ -4862,8 +4858,7 @@ export default function AssistantApp() {
                 <AvatarView
                   src={activeAgent.avatarBase64}
                   fallback={activeAgent.avatar}
-                  className="cici-chat__header-avatar"
-                  style={{ background: activeAgent.accent }}
+                  className={`cici-chat__header-avatar ${getThemeSeriesClass(activeAgent.id)}`}
                   alt={`${activeAgent.name} 头像`}
                 />
                 <div>
@@ -4970,8 +4965,7 @@ export default function AssistantApp() {
                 <AvatarView
                   src={activeAgent.avatarBase64}
                   fallback={activeAgent.avatar}
-                  className="cici-right-card__avatar"
-                  style={{ background: activeAgent.accent }}
+                  className={`cici-right-card__avatar ${getThemeSeriesClass(activeAgent.id)}`}
                   alt={`${activeAgent.name} 档案头像`}
                 />
                 <div>
@@ -5084,8 +5078,7 @@ function AgentCard({ agent, conversations, active, onSelect }: AgentCardProps) {
         <AvatarView
           src={agent.avatarBase64}
           fallback={agent.avatar}
-          className="cici-agent-card__avatar"
-          style={{ background: agent.accent }}
+          className={`cici-agent-card__avatar ${getThemeSeriesClass(agent.id)}`}
           alt={`${agent.name} 头像`}
         />
         <div className="cici-agent-card__meta">
@@ -5102,11 +5095,6 @@ function AgentCard({ agent, conversations, active, onSelect }: AgentCardProps) {
       </div>
     </button>
   );
-}
-
-function getAvatarColor(seed: string) {
-  const hue = Array.from(seed).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 360;
-  return `hsl(${hue} 68% 58%)`;
 }
 
 function buildPendingApprovalsHtml(raw: string): string {
