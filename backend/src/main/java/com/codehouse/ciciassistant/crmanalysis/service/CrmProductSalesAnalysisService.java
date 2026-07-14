@@ -216,6 +216,8 @@ public class CrmProductSalesAnalysisService {
         Set<String> previousCurrencies = new LinkedHashSet<>();
         Set<String> referencedOrderIds = new LinkedHashSet<>();
         int unknownItemStatusCount = 0;
+        int invalidCurrentAmountCount = 0;
+        int invalidPreviousAmountCount = 0;
         int includedItems = 0;
         for (Map<String, Object> item : items) {
             StatusClassification itemStatus = classifyItemStatus(item.get("status"));
@@ -234,12 +236,18 @@ public class CrmProductSalesAnalysisService {
             referencedOrderIds.add(orderId);
             BigDecimal quantity = decimal(item.get("quantity"));
             Object rawTotalPrice = item.get("totalprice");
-            BigDecimal amount = decimal(rawTotalPrice);
+            BigDecimal amount = nullableDecimal(rawTotalPrice);
             if (rawTotalPrice == null || text(rawTotalPrice).isBlank()) {
-                amount = quantity.multiply(decimal(item.get("unitprice")));
+                BigDecimal unitPrice = nullableDecimal(item.get("unitprice"));
+                amount = unitPrice == null ? null : quantity.multiply(unitPrice);
             }
+            boolean amountValid = amount != null;
+            BigDecimal safeAmount = amountValid ? amount : BigDecimal.ZERO;
             OrderInfo currentOrder = currentOrders.get(orderId);
             if (currentOrder != null) {
+                if (!amountValid) {
+                    invalidCurrentAmountCount++;
+                }
                 String customerId = currentOrder.accountId();
                 if (metric == Metric.CUSTOMER_COUNT) {
                     currentFactOrderIds.add(orderId);
@@ -250,7 +258,7 @@ public class CrmProductSalesAnalysisService {
                     }
                 }
                 current.computeIfAbsent(productId, ignored -> new Aggregate())
-                        .add(orderId, customerId, currentOrder.contractId(), quantity, amount);
+                        .add(orderId, customerId, currentOrder.contractId(), quantity, safeAmount);
                 if (!currentOrder.currency().isBlank()) {
                     currentCurrencies.add(currentOrder.currency().toUpperCase(Locale.ROOT));
                 }
@@ -259,6 +267,9 @@ public class CrmProductSalesAnalysisService {
             }
             OrderInfo previousOrder = previousOrders.get(orderId);
             if (comparePrevious && previousOrder != null) {
+                if (!amountValid) {
+                    invalidPreviousAmountCount++;
+                }
                 String customerId = previousOrder.accountId();
                 if (metric == Metric.CUSTOMER_COUNT
                         && (customerId.isBlank()
@@ -266,7 +277,7 @@ public class CrmProductSalesAnalysisService {
                     customerId = "";
                 }
                 previous.computeIfAbsent(productId, ignored -> new Aggregate())
-                        .add(orderId, customerId, previousOrder.contractId(), quantity, amount);
+                        .add(orderId, customerId, previousOrder.contractId(), quantity, safeAmount);
                 if (!previousOrder.currency().isBlank()) {
                     previousCurrencies.add(previousOrder.currency().toUpperCase(Locale.ROOT));
                 }
@@ -279,6 +290,14 @@ public class CrmProductSalesAnalysisService {
         }
         if (unknownItemStatusCount > 0) {
             warnings.add("发现 " + unknownItemStatusCount + " 条订单明细状态未知，已按 fail-closed 从销售事实排除");
+        }
+        if (invalidCurrentAmountCount > 0) {
+            warnings.add("发现 " + invalidCurrentAmountCount
+                    + " 条当前期订单明细金额不可解析，已排除金额指标但保留可验证的数量、订单和客户事实");
+        }
+        if (invalidPreviousAmountCount > 0) {
+            warnings.add("发现 " + invalidPreviousAmountCount
+                    + " 条上期订单明细金额不可解析，未计算订单销售额增长和实现均价变化");
         }
         Set<String> invisibleOrderReferences = referencedOrderIds.stream()
                 .filter(orderId -> !visibleOrderIds.contains(orderId))
@@ -298,7 +317,21 @@ public class CrmProductSalesAnalysisService {
             );
         }
         if (!invisibleOrderReferences.isEmpty()) {
-            warnings.add("部分有效订单明细的订单引用在当前账号可见订单主表中不可见，已保留可验证销售事实");
+            warnings.add("部分有效订单明细的订单引用因当前账号权限在订单主表中不可见，已保留可验证销售事实");
+            if (current.isEmpty()) {
+                warnings.add("不可见订单引用可能属于当前统计期，无法证明统计期内确无有效销售");
+                return new SalesRankResult(
+                        ResultStatus.DATA_ACCESS_INCOMPLETE,
+                        metric,
+                        startDate,
+                        endDate,
+                        OffsetDateTime.now(clock),
+                        optionalData.sourceObjects(),
+                        List.of(),
+                        new Coverage(orders.size(), 0, orders.size(), items.size(), 0, items.size()),
+                        warnings.stream().distinct().toList()
+                );
+            }
         }
         if (current.isEmpty()) {
             warnings.add("统计范围内没有可计入的有效订单明细");
@@ -360,9 +393,14 @@ public class CrmProductSalesAnalysisService {
             invisibleProductIds.forEach(previous::remove);
         }
 
-        boolean amountComparable = currentCurrencies.size() <= 1;
-        if (!amountComparable && metric == Metric.SALES_AMOUNT) {
+        boolean currentAmountComplete = invalidCurrentAmountCount == 0;
+        boolean previousAmountComplete = invalidPreviousAmountCount == 0;
+        boolean currentCurrencyComparable = currentCurrencies.size() <= 1;
+        boolean amountComparable = currentAmountComplete && currentCurrencyComparable;
+        if (!currentCurrencyComparable) {
             warnings.add("统计范围内存在多币种订单，当前无可靠汇率折算，不合并输出金额或经济价值排行");
+        }
+        if (!amountComparable && metric == Metric.SALES_AMOUNT) {
             return new SalesRankResult(
                     ResultStatus.DATA_QUALITY_BLOCKED,
                     metric,
@@ -381,10 +419,10 @@ public class CrmProductSalesAnalysisService {
                     List.copyOf(warnings)
             );
         }
-        if (!amountComparable) {
+        if (!currentCurrencyComparable) {
             warnings.add("统计范围内存在多币种订单；保留净销量排行，不合并订单销售额、实现均价或客户金额集中度");
         }
-        boolean amountTrendsComparable = amountComparable;
+        boolean amountTrendsComparable = amountComparable && previousAmountComplete;
         if (comparePrevious && !previous.isEmpty()
                 && !periodCurrenciesComparable(currentCurrencies, previousCurrencies)) {
             amountTrendsComparable = false;
@@ -441,11 +479,13 @@ public class CrmProductSalesAnalysisService {
                 warnings.add("产品 " + productId + " 未出现在当前用户可见的产品列表中");
             }
             Aggregate previousAggregate = previous.get(productId);
-            BigDecimal previousValue = comparePrevious
+            boolean metricPeriodComparable = metric != Metric.SALES_AMOUNT || amountTrendsComparable;
+            BigDecimal previousValue = comparePrevious && metricPeriodComparable
                     ? metricValue(previousAggregate == null ? new Aggregate() : previousAggregate, metric)
                     : null;
             BigDecimal currentValue = metricValue(value, metric);
-            BigDecimal changeRate = comparePrevious ? changeRate(currentValue, previousValue) : null;
+            BigDecimal changeRate = comparePrevious && metricPeriodComparable
+                    ? changeRate(currentValue, previousValue) : null;
             PipelineAggregate pipeline = pipelineByProduct.getOrDefault(productId, new PipelineAggregate());
             boolean pipelineAmountComparable = pipeline.amountComparableWith(currency, amountComparable);
             if (!pipeline.opportunityIds.isEmpty() && !pipelineAmountComparable) {
@@ -909,6 +949,8 @@ public class CrmProductSalesAnalysisService {
     private static StatusClassification classifyItemStatus(Object rawStatus) {
         String status = normalizeStatus(rawStatus);
         if (status.isBlank()) {
+            // CloudCC standard order lines may leave their optional status unset. The line is only
+            // eligible after its master order has passed the explicit valid-order whitelist above.
             return StatusClassification.VALID;
         }
         if (INVALID_STATUS_MARKERS.stream().anyMatch(status::contains)) {
@@ -952,6 +994,27 @@ public class CrmProductSalesAnalysisService {
             return new BigDecimal(raw);
         } catch (NumberFormatException ex) {
             return BigDecimal.ZERO;
+        }
+    }
+
+    private static BigDecimal nullableDecimal(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof BigDecimal decimal) {
+            return decimal;
+        }
+        if (value instanceof Number number) {
+            return new BigDecimal(number.toString());
+        }
+        String raw = text(value).replace(",", "").trim();
+        if (raw.isBlank()) {
+            return null;
+        }
+        try {
+            return new BigDecimal(raw);
+        } catch (NumberFormatException ex) {
+            return null;
         }
     }
 

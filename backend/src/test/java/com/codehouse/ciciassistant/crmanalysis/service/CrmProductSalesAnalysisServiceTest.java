@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Instant;
@@ -203,6 +204,31 @@ class CrmProductSalesAnalysisServiceTest {
     }
 
     @Test
+    void reportsDataAccessIncompleteWhenVisibleReferencesAreOutsidePeriodAndAnotherReferenceIsInvisible() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "智能巡检终端 X1", "cpdm", "DEMO-X1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            order("visible-old", "2026-05-01", "已完成", "a1"));
+                    case "cloudccorderitem" -> List.of(
+                            item("old-item", "visible-old", "p1", "1", "100", "100", "已生效"),
+                            item("hidden-item", "hidden-order", "p1", "9", "100", "900", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "sales-a",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.DATA_ACCESS_INCOMPLETE);
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("订单引用")
+                && warning.contains("不可见") && warning.contains("权限"));
+        assertThat(result.warnings()).noneMatch(warning -> warning.contains("没有可计入"));
+    }
+
+    @Test
     void blocksCustomerCountWhenEveryCurrentSalesOrderHasMissingOrInvisibleAccountReference() {
         when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
@@ -262,7 +288,7 @@ class CrmProductSalesAnalysisServiceTest {
     }
 
     @Test
-    void failsClosedForUnknownOrderAndItemStatusesButKeepsBlankItemStatus() {
+    void blankItemStatusInheritsWhitelistedOrderStatusWhileNonblankUnknownStatusFailsClosed() {
         when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
                 .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
                     case "product" -> List.of(
@@ -357,6 +383,56 @@ class CrmProductSalesAnalysisServiceTest {
         assertThat(result.rows().getFirst().salesQuantity()).isEqualByComparingTo("5");
         assertThat(result.rows().getFirst().salesAmount()).isEqualByComparingTo("300");
         assertThat(result.rows().getFirst().realizedAveragePrice()).isEqualByComparingTo("100");
+    }
+
+    @Test
+    void blocksSalesAmountWhenNonblankTotalPriceIsInvalid() {
+        stubInvalidCurrentTotalPrice();
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_AMOUNT,
+                        null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.DATA_QUALITY_BLOCKED);
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("订单明细金额")
+                && warning.contains("不可解析") && warning.contains("排除金额指标"));
+    }
+
+    @Test
+    void keepsNonAmountFactsButSuppressesAmountMetricsWhenTotalPriceIsInvalid() {
+        stubInvalidCurrentTotalPrice();
+
+        for (CrmProductSalesAnalysisService.Metric metric : List.of(
+                CrmProductSalesAnalysisService.Metric.SALES_QUANTITY,
+                CrmProductSalesAnalysisService.Metric.ORDER_COUNT,
+                CrmProductSalesAnalysisService.Metric.CUSTOMER_COUNT)) {
+            CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                    "org-1", "user-1",
+                    new CrmProductSalesAnalysisService.SalesRankRequest(metric, null, null, 5, false));
+
+            assertThat(result.status()).as(metric.name())
+                    .isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+            assertThat(result.rows()).as(metric.name()).hasSize(1);
+            CrmProductSalesAnalysisService.SalesRankRow row = result.rows().getFirst();
+            assertThat(row.salesQuantity()).as(metric.name()).isEqualByComparingTo("3");
+            assertThat(row.orderCount()).as(metric.name()).isEqualTo(1);
+            assertThat(row.customerCount()).as(metric.name()).isEqualTo(1);
+            assertThat(row.salesAmount()).as(metric.name()).isNull();
+            assertThat(row.amountContributionRate()).as(metric.name()).isNull();
+            assertThat(row.realizedAveragePrice()).as(metric.name()).isNull();
+            assertThat(row.top1CustomerConcentration()).as(metric.name()).isNull();
+            assertThat(row.amountRank()).as(metric.name()).isZero();
+            assertThat(result.summary().totalSalesAmount()).as(metric.name()).isNull();
+            assertThat(result.summary().amountComparable()).as(metric.name()).isFalse();
+            assertThat(result.insights()).as(metric.name())
+                    .extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                    .doesNotContain("CORE_GROWTH", "DISCOUNT_DRIVEN", "CUSTOMER_CONCENTRATION", "HIGH_VALUE_PRODUCT");
+            assertThat(result.warnings()).as(metric.name())
+                    .anyMatch(warning -> warning.contains("订单明细金额") && warning.contains("不可解析"));
+        }
     }
 
     @Test
@@ -735,6 +811,49 @@ class CrmProductSalesAnalysisServiceTest {
                 .doesNotContain("CORE_GROWTH", "DISCOUNT_DRIVEN");
         assertThat(result.warnings()).anyMatch(warning -> warning.contains("当前期")
                 && warning.contains("上期") && warning.contains("币种"));
+    }
+
+    @Test
+    void doesNotExposeSalesAmountGrowthAcrossDifferentPeriodCurrencies() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "现有产品", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("current", "2026-07-10", "已完成", "a1", "CNY"),
+                            orderWithCurrency("previous", "2026-06-10", "已完成", "a1", "USD"));
+                    case "cloudccorderitem" -> List.of(
+                            item("current-item", "current", "p1", "20", "80", "1600", "已生效"),
+                            item("previous-item", "previous", "p1", "10", "100", "1000", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_AMOUNT,
+                        null, null, 5, true));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.rows().getFirst().previousValue()).isNull();
+        assertThat(result.rows().getFirst().changeRate()).isNull();
+        String answer = new CrmProductSalesAnswerFormatter(new ObjectMapper().findAndRegisterModules())
+                .format(result);
+        assertThat(answer).contains("无可比基期").doesNotContain("+60%");
+    }
+
+    private void stubInvalidCurrentTotalPrice() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "智能巡检终端 X1", "cpdm", "DEMO-X1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已生效", "a1", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("invalid-total", "o1", "p1", "3", "100", "not-a-number", ""));
+                    case "Account" -> List.of(map("id", "a1", "name", "可见客户"));
+                    default -> List.of();
+                });
     }
 
     private List<Map<String, Object>> records(String objectApiName) {

@@ -90,6 +90,37 @@ class CrmProductSalesAnswerFormatterTest {
     }
 
     @Test
+    void omitsUnverifiableRenewalGapWhenContractsAreAvailableButPipelineIsNot() {
+        CrmProductSalesAnalysisService.SalesRankResult base = successResult(
+                CrmProductSalesAnalysisService.ResultStatus.PARTIAL,
+                List.of("商机增强数据不可用，已保留订单销售事实"));
+        CrmProductSalesAnalysisService.SalesRankRow original = base.rows().getFirst();
+        CrmProductSalesAnalysisService.SalesRankRow contractOnly =
+                new CrmProductSalesAnalysisService.SalesRankRow(
+                        original.rank(), original.productId(), original.productName(), original.productCode(),
+                        original.unit(), original.salesQuantity(), original.salesAmount(), original.orderCount(),
+                        original.customerCount(), original.previousValue(), original.changeRate(),
+                        original.quantityContributionRate(), original.amountContributionRate(),
+                        original.realizedAveragePrice(), original.top1CustomerConcentration(),
+                        original.top3CustomerConcentration(), original.quantityRank(), original.amountRank(),
+                        new CrmProductSalesAnalysisService.ProductPipelineSignal(
+                                0, BigDecimal.ZERO, BigDecimal.ZERO, null),
+                        new CrmProductSalesAnalysisService.ProductContractSignal(1, 1, 0));
+        CrmProductSalesAnalysisService.SalesRankResult result =
+                new CrmProductSalesAnalysisService.SalesRankResult(
+                        base.status(), base.metric(), base.startDate(), base.endDate(), base.dataAsOf(),
+                        List.of("product", "cloudccorder", "cloudccorderitem", "contract"),
+                        List.of(contractOnly), base.coverage(), base.warnings(), base.summary(), List.of());
+
+        String answer = formatter.format(result);
+
+        assertThat(answer)
+                .contains("商机前瞻不可用")
+                .contains("活跃合同 1 份", "90 天内到期 1 份")
+                .doesNotContain("未关联续约商机 0 份", "续约缺口");
+    }
+
+    @Test
     void formatsIncomparablePipelineAmountWithoutApplyingRealizedSalesCurrency() {
         CrmProductSalesAnalysisService.SalesRankResult base = successResult(
                 CrmProductSalesAnalysisService.ResultStatus.PARTIAL,

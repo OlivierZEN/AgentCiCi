@@ -209,8 +209,11 @@ public class CrmProductSalesAnswerFormatter {
             if (hasContractSignal) {
                 answer.append("活跃合同 ").append(Math.max(0, contracts.activeContractCount()))
                         .append(" 份，90 天内到期 ")
-                        .append(Math.max(0, contracts.expiringWithin90DaysCount())).append(" 份，其中未关联续约商机 ")
-                        .append(Math.max(0, contracts.expiringWithoutRenewalCount())).append(" 份");
+                        .append(Math.max(0, contracts.expiringWithin90DaysCount())).append(" 份");
+                if (pipelineAvailable) {
+                    answer.append("，其中未关联续约商机 ")
+                            .append(Math.max(0, contracts.expiringWithoutRenewalCount())).append(" 份");
+                }
             }
             answer.append("。\n");
         }
