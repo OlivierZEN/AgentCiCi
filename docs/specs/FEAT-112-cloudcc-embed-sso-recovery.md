@@ -69,6 +69,7 @@ CloudCC 运行时可能走 Vue 挂载，也可能走 UMD DOM fallback。源码�
 
 - Vue 组件与 UMD fallback 已使用同一重试常量、错误分类、锁释放和页面销毁清理规则。
 - 故障注入验证第一次 ticket 请求返回 503、第二次返回成功时，无需重开 CRM 页面即可写入 `ssoTicket` 并清空错误提示。
-- `cloudcc package pagecomponent customer-workbench . --dry-run` 通过；pagecomponent V13 已发布为 `6a561531e4b0a577cbba2080`。
-- `customer_interaction_workbench` 已更新为 customPage V7，并精确引用 V13 组件 ID、嵌入模式和生产工作台 URL。
-- CloudCC 验证接口未返回 runtime version，因此版本字段校验仍报告已知的 `stale_component_reference`；在线组件查询确认该 ID 为 V13，真实 CRM 运行时首次加载和连续刷新均成功完成身份同步并展示客户数据。
+- `cloudcc package pagecomponent customer-workbench . --dry-run` 通过；pagecomponent V15 已发布为 `6a5628cee4b0a577cbba2088`。
+- `customer_interaction_workbench` 已更新为 customPage V9，并精确引用 V15 组件 ID、嵌入模式和生产工作台 URL。
+- AgentCiCi `2.6.11 / c540988655cb` 已发布；六个生产服务健康，版本、镜像 tag 与 Git tag 一致。
+- 真实 CRM 首次加载和连续两次刷新均完成身份同步并展示 `CCAdmin` 权限内客户数据；Nginx 记录三次 `/ticket` 与三次 `/consume` 均为 HTTP 200，页面不存在账号映射失败提示，后端同期无会话验证拒绝。

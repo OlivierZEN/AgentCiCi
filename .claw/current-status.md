@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T11:30:00Z
+updated_at: 2026-07-14T12:35:00Z
 updated_by: MANAGER-001
 phase: customer-workbench-comprehensive-demo-scenarios
-active_task: "TASK-206"
-next_action: "Repair ordinary-user CloudCC OpenAPI token validation and truthful embedded SSO error mapping, then release and reverify in CRM."
+active_task: "TASK-203"
+next_action: "Continue TASK-203 comprehensive customer-workbench demo data after the completed TASK-206 CloudCC embedded SSO repair."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-206 is reopened. Retry recovery works, but an ordinary CRM user exposed a second root cause: the pagecomponent supplies an OpenAPI token while the backend validates it against the privileged setup metadata endpoint, and the frontend mislabels every 401/403 as account mapping failure. The fix must move validation to role-aware CloudCC OpenAPI without relaxing three-way identity matching.
+- TASK-206 is complete in production `2.6.11 / c540988655cb`. The pagecomponent now reads the current CRM session with `$CCDK.CCToken.getToken()`, the backend validates it through `/api/user/getUserInfo`, and strict session-user/page-user/AgentCiCi-member consistency remains in force. Real CRM initial load plus two refreshes produced three HTTP 200 ticket/consume pairs with no mapping error.
 - TASK-205 is complete in production `2.6.8 / 095094300a25`: the platform-standard CRM business analysis Skill, deterministic intent gate and `crm_product_sales_rank` tool are live; `cici-system` published version 3 pins the Skill. Five new sessions returned the same quantity Top 5 and server logs show exactly five skill-scoped high-level tool calls with no atomic CRM exploration.
 - CloudCC batch `TASK-205-CRM-ANALYTICS-DEMO-V1` is idempotently present with 12 products, 16 reused accounts, 24 opportunities, 72 opportunity products, 16 contracts, 48 orders and 144 order items. Final readback preserves quantity Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`, while amount ranking differs as designed.
 
@@ -33,7 +33,7 @@ read_next:
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
-- Production currently runs `2.6.8 / 095094300a25`; backend/frontend and four state services are healthy, Flyway remains at V80, and CloudCC pagecomponent V13/customPage V7 are the active embedded assets. The final app release backup is `/opt/cici/backups/20260714-184006-before-2.6.8-task205-deterministic-routing`.
+- Production currently runs `2.6.11 / c540988655cb`; backend/frontend and four state services are healthy, Flyway remains at V80, and CloudCC pagecomponent V15/customPage V9 are the active embedded assets. The release backup is `/opt/cici/backups/20260714-202718-before-2.6.11-task206-cloudcc-session-sso`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
 - Known DNS risk remains: this workstation cannot resolve `onechat.agentcici.com`; production-IP resolved smoke previously returned HTTP 200.

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T10:51:08Z
+updated_at: 2026-07-14T12:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T10:51:08Z
+last_run_at: 2026-07-14T12:35:00Z
 last_run_status: passed
 ---
 
@@ -13,12 +13,15 @@ last_run_status: passed
 ## TASK-206 CloudCC 嵌入身份同步自动恢复（2026-07-14）
 
 - `identity/assignment`: MANAGER-001 通过 TASK-206 assignment 检查；pagecomponent 源码、预构建 bundle、配置、测试与任务状态均在授权范围内。
-- `frontend-focused`: `npm test -- src/assistant/customer-workbench/CloudccEmbedSso.test.ts` 通过，1 个文件、5 项；覆盖双路径策略一致、每次重取 token/用户、临时/身份错误分类、敏感信息不外泄和首次 503 后自动恢复。
-- `frontend-full`: `npm test` 通过，14 个文件、78 项；`npm run build` 成功，仅保留既有 Vite 大 chunk 提示；UMD `node --check` 与 `git diff --check` 通过。
+- `backend-focused`: `CloudccAccessTokenServiceTest,CloudccOpenApiServiceTest` 共 6 项通过；覆盖 `/api/user/getUserInfo` GET、`accessToken` 会话头、actor/org 提取和失效会话拒绝。
+- `backend-full-baseline`: 全量测试完成但存在既有非 TASK-206 失败，集中在停用模型厂商、`onekeytoken` 历史配置、非空 `source_type` 旧夹具和平台技能/租户生命周期预期漂移；TASK-206 聚焦测试全部通过。
+- `frontend-focused`: `CloudccEmbedSso.test.ts` 通过 7 项；明确锁定源码和发布 bundle 只能调用 `getToken()`，不得调用需要 clientId/secretKey 的 `getOpenApiToken`。
+- `frontend-full`: `npm test` 通过，14 个文件、80 项；`npm run build` 成功，仅保留既有 Vite 大 chunk 提示；UMD `node --check` 与 `git diff --check` 通过。
 - `cloudcc-package`: `cloudcc package pagecomponent customer-workbench . --dry-run` 通过，确认使用 `frontend/build/customer-workbench.umd.min.js` 且不打包本地凭据与状态文件。
-- `cloudcc-publish`: 通过 `cc-customization-expert-msapi 2.1.279-msapi` 发布 pagecomponent V13，ID `6a561531e4b0a577cbba2080`；customPage dry-run 后更新为 V7，精确引用该组件、`embedded=true` 和生产工作台 URL。
-- `cloudcc-readback`: 在线 pagecomponent 查询确认 ID/V13；injectionPage 回读确认 customPage V7 组件 ID 和 URL。验证接口因 runtime snapshot 不返回版本字段报告已知 `stale_component_reference`，不影响 ID/在线版本和真实运行时验收。
-- `browser-production`: 真实 CloudCC CRM 注入页显示“CloudCC CRM 已连接”、`CCAdmin / 组织管理员`、客户队列和详情数据；连续两次刷新结果均为 `connected=true / failed=false / blank=false / hasCustomers=true`。
+- `cloudcc-publish`: 通过 `cc-customization-expert-msapi 2.1.279-msapi` 发布 pagecomponent V15，ID `6a5628cee4b0a577cbba2088`；customPage dry-run 后更新为 V9，精确引用该组件、`embedded=true` 和生产工作台 URL。
+- `release`: `2.6.11 / c540988655cb`；backend index `sha256:9be1120bc9a26e507068d75fbd5c9eb6db0e61ef24dc3785be9e9f8330bb5f4b`、amd64 `sha256:3694fa2545aeb136c234e9cc2ab7df64f684720f21b2ea25c424ed120eb82e69`；frontend index `sha256:ba57516fe20e08574f6b029e75f191cfb812caae29f8029454d1d981439822c5`、amd64 `sha256:4752c464acca6c864afda592e6769345173b4497ce9f0634a7f0e62168ba1079`。
+- `production`: 备份 `/opt/cici/backups/20260714-202718-before-2.6.11-task206-cloudcc-session-sso` 四类文件非空；六服务 healthy，健康 `UP`，运行版本与 Git 提交一致，Nginx 配置有效，`x` 工作台和 `onechat` 生产 IP smoke 均为 200。
+- `browser-production`: 真实 CloudCC CRM 注入页首次加载和连续两次刷新均显示“CloudCC CRM 已连接”、`CCAdmin / 组织管理员`、客户队列和详情数据；三次 `/ticket` 与三次 `/consume` 全部 HTTP 200，账号映射失败提示为 false，后端同期无会话验证拒绝或 ERROR。
 
 ## TASK-205 CRM 经营分析与高仿真销售数据生产验收（2026-07-14）
 

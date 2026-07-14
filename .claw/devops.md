@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T10:51:08Z
+updated_at: 2026-07-14T12:35:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -10,7 +10,7 @@ status: active
 
 ## CloudCC Embedded Asset
 
-- 2026-07-14 TASK-206: `component-customer-workbench` pagecomponent V13 is active at ID `6a561531e4b0a577cbba2080`; `customer_interaction_workbench` customPage V7 references that ID with `embedded=true` and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`.
+- 2026-07-14 TASK-206: `component-customer-workbench` pagecomponent V15 is active at ID `6a5628cee4b0a577cbba2088`; `customer_interaction_workbench` customPage V9 references that ID with `embedded=true` and `https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm`.
 - Publish, dry-run binding, update and readback were executed only through `cc-customization-expert-msapi 2.1.279-msapi`. The real CRM injection page passed initial load and two consecutive refreshes with connected identity and customer data.
 
 ## Production Capacity Snapshot
@@ -21,6 +21,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.6.11 TASK-206 CloudCC 当前会话嵌入 SSO 修复 on 2026-07-14:
+  - Git commit/tag `c540988655cb` / `2.6.11`; pagecomponent uses `$CCDK.CCToken.getToken()` and backend validates the CRM session through `/api/user/getUserInfo` while retaining strict three-way identity matching.
+  - Images: backend index `sha256:9be1120bc9a26e507068d75fbd5c9eb6db0e61ef24dc3785be9e9f8330bb5f4b`, amd64 `sha256:3694fa2545aeb136c234e9cc2ab7df64f684720f21b2ea25c424ed120eb82e69`; frontend index `sha256:ba57516fe20e08574f6b029e75f191cfb812caae29f8029454d1d981439822c5`, amd64 `sha256:4752c464acca6c864afda592e6769345173b4497ce9f0634a7f0e62168ba1079`.
+  - Backup: `/opt/cici/backups/20260714-202718-before-2.6.11-task206-cloudcc-session-sso`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Runtime: backend/frontend healthy on `2.6.11`; database, Redis, RabbitMQ and Qdrant remain healthy on `2.3.4`. Health `UP`, version `2.6.11 / c540988655cb`, Nginx valid and public routes return 200.
+  - Acceptance: real CRM initial load plus two refreshes remained connected with customer data; Nginx recorded three HTTP 200 ticket requests and three HTTP 200 consume requests, with no backend session validation rejection.
 
 - 2.6.8 TASK-205 CRM 经营分析确定性路由与高仿真数据 on 2026-07-14:
   - Git commit/tag `095094300a25` / `2.6.8`; platform-standard `crm-business-analysis` is pinned in `cici-system` published version 3, and product sales ranking intent is forced through `crm_product_sales_rank` before final language generation.

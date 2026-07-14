@@ -1,7 +1,7 @@
 task_id: TASK-206
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-14T10:34:25Z
 expires_at: none
 spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-206
-status: in_progress
-updated_at: 2026-07-14T12:15:00Z
+status: done
+updated_at: 2026-07-14T12:35:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -30,8 +30,9 @@ spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
 
 - Vue pagecomponent 与 UMD fallback 均已实现 `0/800/2000/4000ms` 有限退避、每次重新读取 token/用户、终态释放锁和一次 5 秒恢复轮次。
 - HTTP 400/401/403 保持失败关闭，不降低用户映射和数据权限校验；状态提示不包含 token、原始响应或内部堆栈。
-- CloudCC pagecomponent V13（`6a561531e4b0a577cbba2080`）和 customPage V7 已通过 `cc-customization-expert-msapi` 发布、绑定和回读。
+- CloudCC pagecomponent V15（`6a5628cee4b0a577cbba2088`）和 customPage V9 已通过 `cc-customization-expert-msapi` 发布、绑定和回读。
 - 真实 CloudCC CRM 页面首次加载及连续两次刷新均显示“CloudCC CRM 已连接”，客户列表与详情正常，无白屏或身份失败提示。
+- 生产 `2.6.11 / c540988655cb` 已上线；三次 ticket 和三次 consume 均为 HTTP 200，近期后端无会话校验或身份绑定错误。
 
 ## Reopened Work
 
