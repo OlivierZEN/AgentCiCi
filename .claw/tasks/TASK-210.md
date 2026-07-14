@@ -29,7 +29,7 @@ spec_path: docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md
 
 ## Next Action
 
-- 提交实现，执行统一发布 dry-run、生产备份、`2.7.2` 发布与 AgentCiCi/CloudCC 嵌入页复验。
+- 在 `2.7.3` 生产基线上完成复测，执行统一发布 dry-run、生产备份、`2.7.4` 发布与 AgentCiCi/CloudCC 嵌入页复验。
 
 ## Changed Files
 

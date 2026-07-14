@@ -5,7 +5,7 @@ updated_at: 2026-07-14T16:22:41Z
 updated_by: MANAGER-001
 phase: customer-workbench-standard-channel-icons
 active_task: "TASK-210"
-next_action: "Commit TASK-210 implementation, run the canonical release dry-run, then publish and verify version 2.7.2 in AgentCiCi and the CloudCC embedded workbench."
+next_action: "Validate TASK-210 on top of the 2.7.3 production baseline, run the canonical release dry-run, then publish and verify version 2.7.4 in AgentCiCi and the CloudCC embedded workbench."
 read_next:
   goals: false
   decisions: false
