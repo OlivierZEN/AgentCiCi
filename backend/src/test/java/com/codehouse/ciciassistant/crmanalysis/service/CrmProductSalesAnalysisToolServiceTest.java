@@ -27,7 +27,9 @@ class CrmProductSalesAnalysisToolServiceTest {
                 .extracting(JsonNode::asText)
                 .containsExactly("SALES_QUANTITY", "SALES_AMOUNT", "ORDER_COUNT", "CUSTOMER_COUNT");
         assertThat(schema.path("properties").path("topN").path("maximum").asInt()).isEqualTo(20);
-        assertThat(CrmProductSalesAnalysisToolService.toolDescription()).contains("不要自行查询多个 CRM 对象");
+        assertThat(CrmProductSalesAnalysisToolService.toolDescription())
+                .contains("不要自行查询多个 CRM 对象")
+                .contains("确定性", "贡献率", "商机", "合同");
     }
 
     @Test
