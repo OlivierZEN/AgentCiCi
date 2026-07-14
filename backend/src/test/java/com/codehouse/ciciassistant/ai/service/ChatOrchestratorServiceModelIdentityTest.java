@@ -500,6 +500,51 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldProjectSensitiveAnswerMessageAndErrorFieldsBeforeGenericFallback() {
+        List<String> sensitivePayloads = List.of(
+                "{\"success\":true,\"answer\":\"productId=p-secret ownerId=005-secret\"}",
+                "{\"success\":true,\"message\":\"toolName=private_lookup arguments={\\\"recordId\\\":\\\"a49-secret\\\"}\"}",
+                "{\"success\":false,\"error\":\"accessToken=token-secret credentials=private\"}",
+                "{\"success\":true,\"summary\":\"内部记录 00520264AE58B11bw6gE\"}");
+
+        for (String payload : sensitivePayloads) {
+            String fallback = ChatOrchestratorService.buildToolResultFallbackMessage(List.of(Map.of(
+                    "role", "tool",
+                    "content", payload
+            )));
+
+            assertThat(fallback)
+                    .containsAnyOf("已隐藏", "请检查参数后重试")
+                    .doesNotContain("productId", "p-secret", "ownerId", "005-secret",
+                            "toolName", "private_lookup", "arguments", "recordId", "a49-secret",
+                            "accessToken", "token-secret", "credentials", "00520264AE58B11bw6gE", "{\\\"");
+        }
+    }
+
+    @Test
+    void shouldProjectSensitiveTrustedFieldsInsideToolLimitSummary() {
+        List<Map<String, Object>> messages = List.of(
+                Map.of(
+                        "role", "assistant",
+                        "content", "",
+                        "tool_calls", List.of(Map.of(
+                                "id", "call-sensitive",
+                                "type", "function",
+                                "function", Map.of("name", "private_lookup", "arguments", "{\"ownerId\":\"005-secret\"}")))),
+                Map.of(
+                        "role", "tool",
+                        "tool_call_id", "call-sensitive",
+                        "content", "{\"success\":true,\"answer\":\"recordId=a49-secret payload={\\\"token\\\":\\\"secret\\\"}\"}"));
+
+        String fallback = ChatOrchestratorService.buildToolLimitReachedFallbackMessage(messages, 2);
+
+        assertThat(fallback)
+                .contains("已隐藏")
+                .doesNotContain("private_lookup", "ownerId", "005-secret", "recordId", "a49-secret",
+                        "payload", "token", "secret", "arguments", "call-sensitive", "{\\\"");
+    }
+
+    @Test
     void shouldUseCrmFormatterForCrmToolFallbackInsteadOfRawPayload() {
         String crmJson = """
                 {"status":"EMPTY","metric":"SALES_QUANTITY","startDate":"2026-06-15",

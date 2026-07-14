@@ -87,6 +87,15 @@ public class ChatOrchestratorService {
     private static final Pattern TOOL_FIELD_COUNT_PATTERN = Pattern.compile("对象字段列表（标准字段\\s*(\\d+)\\s*条[，,]\\s*自定义字段\\s*(\\d+)\\s*条）");
     private static final Pattern TOOL_OBJECT_COUNT_PATTERN = Pattern.compile("所有对象列表（标准对象:\\s*(\\d+)\\s*条[，,]\\s*自定义对象:\\s*(\\d+)\\s*条[，,]\\s*总计:\\s*(\\d+)\\s*条）");
     private static final Pattern EMAIL_SEARCH_MESSAGE_ID_PATTERN = Pattern.compile("(?m)\\bid=([^\\s\\r\\n]+)");
+    private static final Pattern PROTECTED_TOOL_DISPLAY_KEY_PATTERN = Pattern.compile(
+            "(?i)(?:^|[\\s{\\[,;])(?:product|owner|record|internal|object|session|user|org|tenant|tool|call|access|refresh)?"
+                    + "[_-]?(?:id|token|secret|credentials?|password|arguments?|payload)\\s*[:=]");
+    private static final Pattern PROTECTED_TOOL_DISPLAY_ID_PATTERN = Pattern.compile(
+            "(?i)(?<![\\p{Alnum}_])(?:005|a49)[a-z0-9_-]{6,}(?![\\p{Alnum}_])");
+    private static final Pattern NESTED_TOOL_DISPLAY_JSON_PATTERN = Pattern.compile(
+            "(?:^|[=:：])\\s*[\\[{].{0,800}[\\]}]", Pattern.DOTALL);
+    private static final String PROTECTED_TOOL_DISPLAY_FALLBACK =
+            "工具返回的可读结果包含受保护的内部字段，已隐藏。";
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
@@ -2535,7 +2544,7 @@ public class ChatOrchestratorService {
         if (normalized.startsWith("{") || normalized.startsWith("[")) {
             return "工具返回了暂不支持安全展示的结构化结果，原始字段已隐藏。";
         }
-        return clipStatic(firstLine(normalized), 360);
+        return clipStatic(projectToolDisplayText(firstLine(normalized), PROTECTED_TOOL_DISPLAY_FALLBACK), 360);
     }
 
     private static String buildStructuredToolResultFallbackMessage(String toolContent) {
@@ -2547,18 +2556,13 @@ public class ChatOrchestratorService {
             String answer = nodeText(root, "answer");
             if (!answer.isBlank()) {
                 return "工具已返回可读结果：\n\n"
-                        + clipStatic(answer, 1200);
+                        + clipStatic(projectToolDisplayText(answer, PROTECTED_TOOL_DISPLAY_FALLBACK), 1200);
             }
             boolean failed = booleanFieldIsFalse(root, "success")
                     || booleanFieldIsFalse(root, "ok")
                     || booleanFieldIsFalse(root, "result");
             if (failed) {
-                String message = firstNonBlank(
-                        nodeText(root, "message"),
-                        nodeText(root, "error"),
-                        nodeText(root, "reason"));
-                return "工具调用未完成。"
-                        + (message.isBlank() ? "请检查参数后重试。" : "原因：" + clipStatic(message, 500));
+                return "工具调用未完成。请检查参数后重试。";
             }
             JsonNode results = root.path("results");
             if (results.isArray()) {
@@ -2571,7 +2575,7 @@ public class ChatOrchestratorService {
             String message = firstNonBlank(nodeText(root, "message"), nodeText(root, "summary"));
             if (!message.isBlank()) {
                 return "工具已返回摘要：\n\n"
-                        + clipStatic(message, 1000);
+                        + clipStatic(projectToolDisplayText(message, PROTECTED_TOOL_DISPLAY_FALLBACK), 1000);
             }
             return "";
         } catch (Exception ignored) {
@@ -2603,9 +2607,13 @@ public class ChatOrchestratorService {
         int limit = Math.min(5, count);
         for (int i = 0; i < limit; i++) {
             JsonNode item = results.get(i);
-            String title = firstNonBlank(nodeText(item, "title"), nodeText(item, "name"), "结果 " + (i + 1));
-            String url = nodeText(item, "url");
-            String snippet = firstNonBlank(nodeText(item, "snippet"), nodeText(item, "content"), nodeText(item, "description"));
+            String title = projectToolDisplayText(
+                    firstNonBlank(nodeText(item, "title"), nodeText(item, "name")),
+                    "结果 " + (i + 1));
+            String url = projectToolDisplayUrl(nodeText(item, "url"));
+            String snippet = projectToolDisplayText(
+                    firstNonBlank(nodeText(item, "snippet"), nodeText(item, "content"), nodeText(item, "description")),
+                    "");
             summary.append("\n").append(i + 1).append(". ").append(clipStatic(title, 180));
             if (!url.isBlank()) {
                 summary.append("\n   来源：").append(clipStatic(url, 260));
@@ -2630,11 +2638,14 @@ public class ChatOrchestratorService {
         int limit = Math.min(5, count);
         for (int i = 0; i < limit; i++) {
             JsonNode item = data.get(i);
-            String title = firstNonBlank(nodeText(item, "name"), "记录 " + (i + 1));
+            String title = projectToolDisplayText(nodeText(item, "name"), "记录 " + (i + 1));
             summary.append("\n").append(i + 1).append(". ").append(clipStatic(title, 160));
-            String person = firstNonBlank(nodeText(item, "bkhrccname"), nodeText(item, "khperson"));
-            String period = firstNonBlank(nodeText(item, "khy"), nodeText(item, "kaoheyuefen"), nodeText(item, "khyquarter"));
-            String score = firstNonBlank(nodeText(item, "kpitotal"), nodeText(item, "mbzs"));
+            String person = projectToolDisplayText(
+                    firstNonBlank(nodeText(item, "bkhrccname"), nodeText(item, "khperson")), "");
+            String period = projectToolDisplayText(
+                    firstNonBlank(nodeText(item, "khy"), nodeText(item, "kaoheyuefen"), nodeText(item, "khyquarter")), "");
+            String score = projectToolDisplayText(
+                    firstNonBlank(nodeText(item, "kpitotal"), nodeText(item, "mbzs")), "");
             List<String> meta = new ArrayList<>();
             if (!person.isBlank()) meta.add("人员：" + person);
             if (!period.isBlank()) meta.add("期间：" + period);
@@ -2647,6 +2658,32 @@ public class ChatOrchestratorService {
             summary.append("\n其余 ").append(count - limit).append(" 条记录已省略。");
         }
         return summary.toString();
+    }
+
+    private static String projectToolDisplayText(String value, String unsafeFallback) {
+        String normalized = value == null ? "" : value
+                .replaceAll("[\\p{Cntrl}&&[^\\r\\n\\t]]", "")
+                .trim();
+        if (normalized.isBlank()) {
+            return unsafeFallback == null ? "" : unsafeFallback;
+        }
+        if (PROTECTED_TOOL_DISPLAY_KEY_PATTERN.matcher(normalized).find()
+                || PROTECTED_TOOL_DISPLAY_ID_PATTERN.matcher(normalized).find()
+                || NESTED_TOOL_DISPLAY_JSON_PATTERN.matcher(normalized).find()) {
+            return unsafeFallback == null ? "" : unsafeFallback;
+        }
+        return normalized;
+    }
+
+    private static String projectToolDisplayUrl(String value) {
+        String projected = projectToolDisplayText(value, "");
+        if (projected.isBlank()
+                || !(projected.startsWith("https://") || projected.startsWith("http://"))
+                || projected.contains("@")
+                || projected.matches(".*\\s+.*")) {
+            return "";
+        }
+        return projected;
     }
 
     private static boolean booleanFieldIsFalse(JsonNode root, String field) {
