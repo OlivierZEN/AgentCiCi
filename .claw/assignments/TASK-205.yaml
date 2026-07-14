@@ -1,7 +1,7 @@
 task_id: TASK-205
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-14T09:43:14Z
 expires_at: none
 spec_path: docs/specs/FEAT-111-crm-business-analysis-skill.md
@@ -65,4 +65,4 @@ signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user explicitly approv
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-notes: "PM-created full-stack and external CRM demo-data task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+notes: "Completed by TASK-205 delivery. Superseded for overlapping CRM analysis files by TASK-208 after the production identity and output-leak regression was verified. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."

@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T13:07:01Z
+updated_at: 2026-07-14T13:16:37Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
+- task_status_path: `.claw/tasks/TASK-208.md`
+- assignment_path: `.claw/assignments/TASK-208.yaml`
+- blocked_by: `none`
+- next_action: Validate assignment, push the allocation-only commit to origin/main, then begin TDD in the isolated implementation worktree.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 

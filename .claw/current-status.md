@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T13:07:01Z
+updated_at: 2026-07-14T13:16:37Z
 updated_by: MANAGER-001
-phase: frontend-theme-consistency-and-alignment
-active_task: "TASK-207"
-next_action: "Audit and repair every authenticated frontend page for theme consistency, organization monogram correctness and desktop alignment."
+phase: crm-product-sales-analysis-hardening
+active_task: "TASK-208"
+next_action: "Validate TASK-208 assignment, push the allocation-only commit, then start TDD in an isolated worktree without touching TASK-207 frontend changes."
 read_next:
   goals: false
   decisions: false
@@ -22,13 +22,14 @@ read_next:
 
 ## Snapshot
 
+- TASK-208 is approved and ready for implementation. Verified production root causes are SalesA order-master invisibility caused by TASK-205 SalesB ownership, plus CRM raw tool-result/fallback leakage. FEAT-114 requires deterministic deep analysis, SalesA batch migration, release and five-session real acceptance.
 - TASK-207 is ready for implementation: FEAT-113 covers the authenticated assistant shell, all front-office AI applications, personal settings and shared overlays across eight themes. The organization switcher will use the current organization name's first visible character, and every checked page must pass desktop alignment, overflow and console gates.
 - TASK-206 is complete in production `2.6.11 / c540988655cb`. The pagecomponent now reads the current CRM session with `$CCDK.CCToken.getToken()`, the backend validates it through `/api/user/getUserInfo`, and strict session-user/page-user/AgentCiCi-member consistency remains in force. Real CRM initial load plus two refreshes produced three HTTP 200 ticket/consume pairs with no mapping error.
 - TASK-205 is complete in production `2.6.8 / 095094300a25`: the platform-standard CRM business analysis Skill, deterministic intent gate and `crm_product_sales_rank` tool are live; `cici-system` published version 3 pins the Skill. Five new sessions returned the same quantity Top 5 and server logs show exactly five skill-scoped high-level tool calls with no atomic CRM exploration.
 - CloudCC batch `TASK-205-CRM-ANALYTICS-DEMO-V1` is idempotently present with 12 products, 16 reused accounts, 24 opportunities, 72 opportunity products, 16 contracts, 48 orders and 144 order items. Final readback preserves quantity Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`, while amount ranking differs as designed.
 
 - TASK-204 is ready: the approved design removes the nested frame and excess inset around the Agent Builder guide, then replaces the two persistent avatar buttons with an accessible avatar-triggered upload/change/remove menu. FEAT-110 awaits written user review before implementation.
-- TASK-203 is in progress to expand the bound CloudCC CRM and AgentCiCi demo organization into a 16-customer V2 dataset covering every new-customer, existing-customer, interaction archive, memory, dynamic score and evidence-driven action scenario. Owen/SalesA currently has a valid CRM session but zero visible Accounts because the TASK-172 core records are all owned by SalesB.
+- TASK-203 remains unintegrated on its dedicated branch, while production CloudCC already contains 16 TASK-203 V2 Accounts owned by and visible to SalesA. TASK-208 may read and reference those accounts but must not modify TASK-203's exclusive seeder.
 - TASK-202 is complete in production `2.6.6 / 4caaa4800b3d`. The hotfix keeps agent bar, chat panel, sidebar metrics and machine lanes transparent and removes avatar scaling/shadows across all eight themes.
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
@@ -41,9 +42,10 @@ read_next:
 
 ## Read Next
 
+- `.claw/tasks/TASK-208.md`, `.claw/assignments/TASK-208.yaml` and `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md` - approved CRM stability, deep-analysis, SalesA migration and production acceptance source.
 - `.claw/tasks/TASK-207.md`, `.claw/assignments/TASK-207.yaml` and `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md` - active full frontend theme and alignment governance.
 - `.claw/tasks/TASK-206.md` and `docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md` - completed CloudCC embed SSO recovery and verification evidence.
-- `.claw/tasks/TASK-205.md` and `.claw/assignments/TASK-205.yaml` - active CRM analysis delivery and authorization.
+- `.claw/tasks/TASK-205.md` and `.claw/assignments/TASK-205.yaml` - completed CRM analysis baseline and superseded authorization history.
 - `docs/specs/FEAT-111-crm-business-analysis-skill.md` - approved architecture, object map, field dictionary, tool contract, demo-data design and acceptance source.
 
 - `.claw/tasks/TASK-204.md` and `.claw/assignments/TASK-204.yaml` - approved Agent Builder polish task and authorization.
