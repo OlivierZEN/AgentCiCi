@@ -180,10 +180,17 @@ public class CloudccAccessTokenService {
                     .build();
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300 || resp.body() == null || resp.body().isBlank()) {
+                log.warn("CloudCC runtime OpenAPI validation returned no usable response for org={}, status={}",
+                        orgId, resp.statusCode());
                 return Optional.empty();
             }
             JsonNode root = objectMapper.readTree(resp.body());
             if (!looksLikeValidatedCloudccOpenApi(root)) {
+                log.warn("CloudCC runtime OpenAPI validation was not proven for org={}, status={}, returnCode={}, authFailure={}",
+                        orgId,
+                        resp.statusCode(),
+                        firstText(root, "returnCode", "code", "status"),
+                        isCloudccAuthenticationFailure(root));
                 return Optional.empty();
             }
             JsonNode jwtPayload = parseJwtPayload(accessToken).orElse(null);
