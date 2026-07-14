@@ -33,6 +33,13 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
     expect(publishedBundle).toContain("return readCloudccRuntimeToken()");
   });
 
+  it("uses the current CRM session token without invoking credential-based OpenAPI conversion", () => {
+    expect(componentSource).toContain("tokenApi.getToken()");
+    expect(componentSource).not.toContain("tokenApi.getOpenApiToken");
+    expect(publishedBundle).toContain("tokenApi.getToken()");
+    expect(publishedBundle).not.toContain("tokenApi.getOpenApiToken");
+  });
+
   it("retries only transient statuses and releases both SSO locks", () => {
     const retryableStatuses = "status === 408 || status === 425 || status === 429 || status >= 500";
     const fallbackRetryableStatuses = "statusCode === 408 || statusCode === 425 || statusCode === 429 || statusCode >= 500";
@@ -109,8 +116,8 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
         };
       },
       $CCDK: {
-        CCToken: { getOpenApiToken: (done: (value: unknown) => void) => done({ accessToken: "runtime-token" }) },
-        CCUser: { getUserInfo: (done: (value: unknown) => void) => done({ username: "crm-user" }) },
+        CCToken: { getToken: () => "runtime-token" },
+        CCUser: { getUserInfo: () => ({ username: "crm-user" }) },
       },
     };
     browserContext.self = browserContext;

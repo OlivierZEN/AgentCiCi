@@ -12,7 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.util.Base64;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -26,15 +25,15 @@ import org.junit.jupiter.api.Test;
 class CloudccAccessTokenServiceTest {
 
     @Test
-    void validatesOrdinaryUserOpenApiTokenWithoutSetupMetadataPermission() throws Exception {
-        AtomicInteger openApiRequests = new AtomicInteger();
-        List<String> requestBodies = new ArrayList<>();
+    void validatesCurrentCloudccSessionThroughCurrentUserEndpoint() throws Exception {
+        AtomicInteger userInfoRequests = new AtomicInteger();
+        List<String> accessTokenHeaders = new ArrayList<>();
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/lightningapi/openApi/common", exchange -> {
-            openApiRequests.incrementAndGet();
-            requestBodies.add(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+        server.createContext("/lightningapi/api/user/getUserInfo", exchange -> {
+            userInfoRequests.incrementAndGet();
+            accessTokenHeaders.add(exchange.getRequestHeaders().getFirst("accessToken"));
             byte[] body = """
-                    {"result":false,"returnCode":"NO_OBJECT_PERMISSION","returnInfo":"无对象权限"}
+                    {"result":true,"data":{"userId":"cloudcc-user","loginName":"sales@example.com","orgId":"cloudcc-org"}}
                     """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length);
@@ -54,29 +53,26 @@ class CloudccAccessTokenServiceTest {
                     new ObjectMapper());
 
             Optional<CloudccAccessTokenService.ValidatedCloudccToken> validated = service
-                    .validateRuntimeAccessToken(orgId, jwt("sales@example.com", "cloudcc-org"));
+                    .validateRuntimeAccessToken(orgId, "current-crm-session-token");
 
             assertThat(validated).get()
                     .satisfies(token -> {
                         assertThat(token.actorId()).isEqualTo("sales@example.com");
                         assertThat(token.cloudccOrgId()).isEqualTo("cloudcc-org");
                     });
-            assertThat(openApiRequests).hasValue(1);
-            assertThat(requestBodies).singleElement().asString()
-                    .contains("\"serviceName\":\"pageQueryWithRoleRight\"")
-                    .contains("\"objectApiName\":\"Account\"")
-                    .contains("\"pageSize\":1");
+            assertThat(userInfoRequests).hasValue(1);
+            assertThat(accessTokenHeaders).containsExactly("current-crm-session-token");
         } finally {
             server.stop(0);
         }
     }
 
     @Test
-    void rejectsOpenApiResponseThatDoesNotProveAuthenticationOrAuthorization() throws Exception {
+    void rejectsCurrentUserResponseThatDoesNotProveAuthentication() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
-        server.createContext("/lightningapi/openApi/common", exchange -> {
+        server.createContext("/lightningapi/api/user/getUserInfo", exchange -> {
             byte[] body = """
-                    {"result":false,"returnCode":"SYSTEM_BUSY","returnInfo":"Unexpected server error"}
+                    {"result":false,"returnCode":"10002","returnInfo":"Token认证过期，请重新登录"}
                     """.getBytes(StandardCharsets.UTF_8);
             exchange.getResponseHeaders().add("Content-Type", "application/json");
             exchange.sendResponseHeaders(200, body.length);
@@ -96,7 +92,7 @@ class CloudccAccessTokenServiceTest {
 
             assertThat(service.validateRuntimeAccessToken(
                     orgId,
-                    jwt("forged@example.com", "cloudcc-org"))).isEmpty();
+                    "expired-crm-session-token")).isEmpty();
         } finally {
             server.stop(0);
         }
@@ -174,11 +170,4 @@ class CloudccAccessTokenServiceTest {
         return repository;
     }
 
-    private String jwt(String username, String orgId) {
-        Base64.Encoder encoder = Base64.getUrlEncoder().withoutPadding();
-        String header = encoder.encodeToString("{\"alg\":\"none\"}".getBytes(StandardCharsets.UTF_8));
-        String payload = encoder.encodeToString(("{\"username\":\"%s\",\"orgId\":\"%s\"}"
-                .formatted(username, orgId)).getBytes(StandardCharsets.UTF_8));
-        return header + "." + payload + ".signature";
-    }
 }

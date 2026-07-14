@@ -275,32 +275,10 @@ export default {
     },
     async readCloudccRuntimeToken() {
       const tokenApi = window.$CCDK && window.$CCDK.CCToken;
-      if (!tokenApi) {
+      if (!tokenApi || typeof tokenApi.getToken !== "function") {
         return "";
       }
-      const openApiTokenValue = await this.callCcdk((done) => {
-        if (typeof tokenApi.getOpenApiToken === "function") {
-          return tokenApi.getOpenApiToken(done);
-        }
-        return "";
-      });
-      const openApiToken = this.firstString(openApiTokenValue, [
-        "accessToken",
-        "token",
-        "data.accessToken",
-        "data.token",
-        "result.accessToken",
-        "result.token"
-      ]);
-      if (openApiToken) {
-        return openApiToken;
-      }
-      const runtimeTokenValue = await this.callCcdk((done) => {
-        if (typeof tokenApi.getToken === "function") {
-          return tokenApi.getToken(done);
-        }
-        return "";
-      });
+      const runtimeTokenValue = await this.callCcdk(() => tokenApi.getToken());
       return this.firstString(runtimeTokenValue, [
         "accessToken",
         "token",
@@ -314,7 +292,7 @@ export default {
       const userApi = window.$CCDK && window.$CCDK.CCUser;
       let user = null;
       if (userApi && typeof userApi.getUserInfo === "function") {
-        user = await this.callCcdk((done) => userApi.getUserInfo(done));
+        user = await this.callCcdk(() => userApi.getUserInfo());
       }
       if (user && typeof user === "object") {
         return user;
