@@ -73,12 +73,14 @@ public class CrmProductSalesAnswerFormatter {
             return GENERIC_UPSTREAM_MESSAGE;
         }
         CrmProductSalesAnalysisService.SalesSummary summary = normalizedSummary(result.summary(), rows);
+        List<CrmProductSalesAnalysisService.BusinessInsight> insights = availableInsights(
+                result.insights(), result.sourceObjects());
         StringBuilder answer = new StringBuilder();
         appendDirectConclusion(answer, result, summary, rows);
         appendRanking(answer, result, summary, rows);
-        appendDiagnostics(answer, result.insights());
+        appendDiagnostics(answer, insights);
         appendForwardSignals(answer, summary, rows, result.sourceObjects());
-        appendActions(answer, result.insights(), rows);
+        appendActions(answer, insights, rows);
         appendCoverage(answer, result, summary, result.sourceObjects());
         return answer.toString().trim();
     }
@@ -344,6 +346,21 @@ public class CrmProductSalesAnswerFormatter {
             return List.of();
         }
         return insights.stream().filter(java.util.Objects::nonNull).limit(12).toList();
+    }
+
+    private static List<CrmProductSalesAnalysisService.BusinessInsight> availableInsights(
+            List<CrmProductSalesAnalysisService.BusinessInsight> insights,
+            List<String> sourceObjects) {
+        boolean pipelineAvailable = hasSource(sourceObjects, "Opportunity")
+                && hasSource(sourceObjects, "opportunitypdt");
+        boolean contractsAvailable = hasSource(sourceObjects, "contract");
+        return safeInsights(insights).stream()
+                .filter(insight -> switch (label(insight.code(), "")) {
+                    case "PIPELINE_GAP", "POTENTIAL_GROWTH" -> pipelineAvailable;
+                    case "RENEWAL_RISK" -> pipelineAvailable && contractsAvailable;
+                    default -> true;
+                })
+                .toList();
     }
 
     private static String dateRange(CrmProductSalesAnalysisService.SalesRankResult result) {

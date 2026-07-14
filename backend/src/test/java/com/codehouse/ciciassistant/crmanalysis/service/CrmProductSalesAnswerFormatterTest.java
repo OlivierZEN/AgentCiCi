@@ -69,7 +69,14 @@ class CrmProductSalesAnswerFormatterTest {
         CrmProductSalesAnalysisService.SalesRankResult result = new CrmProductSalesAnalysisService.SalesRankResult(
                 available.status(), available.metric(), available.startDate(), available.endDate(), available.dataAsOf(),
                 List.of("product", "cloudccorder", "cloudccorderitem"),
-                available.rows(), available.coverage(), available.warnings(), available.summary(), available.insights());
+                available.rows(), available.coverage(), available.warnings(), available.summary(), List.of(
+                        new CrmProductSalesAnalysisService.BusinessInsight(
+                                "PIPELINE_GAP", "DEMO-X1", "X1 存在后续订单断层信号",
+                                "未发现开放商机产品", "立即创建增购商机"),
+                        new CrmProductSalesAnalysisService.BusinessInsight(
+                                "RENEWAL_RISK", "DEMO-X1", "X1 存在续约缺口",
+                                "临期合同没有续约商机", "立即建立续约清单"),
+                        available.insights().getFirst()));
 
         String answer = formatter.format(result);
 
@@ -78,7 +85,39 @@ class CrmProductSalesAnswerFormatterTest {
                 .contains("合同信号不可用")
                 .contains("数据来源：当前用户有权访问的产品、订单、订单明细")
                 .doesNotContain("开放商机 0 个", "活跃合同 0 份")
+                .doesNotContain("后续订单断层", "续约缺口", "立即创建增购商机", "立即建立续约清单")
                 .doesNotContain("客户、商机产品与合同");
+    }
+
+    @Test
+    void formatsIncomparablePipelineAmountWithoutApplyingRealizedSalesCurrency() {
+        CrmProductSalesAnalysisService.SalesRankResult base = successResult(
+                CrmProductSalesAnalysisService.ResultStatus.PARTIAL,
+                List.of("管道币种与已实现销售币种不一致"));
+        CrmProductSalesAnalysisService.SalesRankRow row = base.rows().getFirst();
+        CrmProductSalesAnalysisService.SalesRankRow incomparablePipelineRow =
+                new CrmProductSalesAnalysisService.SalesRankRow(
+                        row.rank(), row.productId(), row.productName(), row.productCode(), row.unit(),
+                        row.salesQuantity(), row.salesAmount(), row.orderCount(), row.customerCount(),
+                        row.previousValue(), row.changeRate(), row.quantityContributionRate(),
+                        row.amountContributionRate(), row.realizedAveragePrice(),
+                        row.top1CustomerConcentration(), row.top3CustomerConcentration(),
+                        row.quantityRank(), row.amountRank(),
+                        new CrmProductSalesAnalysisService.ProductPipelineSignal(
+                                row.pipeline().openOpportunityCount(), row.pipeline().quantity(), null,
+                                row.pipeline().nearestExpectedCloseDate()),
+                        row.contracts());
+        CrmProductSalesAnalysisService.SalesRankResult result =
+                new CrmProductSalesAnalysisService.SalesRankResult(
+                        base.status(), base.metric(), base.startDate(), base.endDate(), base.dataAsOf(),
+                        base.sourceObjects(), List.of(incomparablePipelineRow, base.rows().get(1)),
+                        base.coverage(), base.warnings(), base.summary(), base.insights());
+
+        String answer = formatter.format(result);
+
+        assertThat(answer)
+                .contains("管道金额 不可比")
+                .doesNotContain("管道金额 ¥", "管道金额 $", "管道金额 USD");
     }
 
     @ParameterizedTest
