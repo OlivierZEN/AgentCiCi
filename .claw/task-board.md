@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T16:37:00Z
+updated_at: 2026-07-14T16:40:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -25,6 +25,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
 - next_action: Validate and push the allocation-only commit, then implement source mapping and standard icons with tests.
+
+### TASK-209 - 运营平台登录页原图像素锁定复刻
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md`
+- task_status_path: `.claw/tasks/TASK-209.md`
+- assignment_path: `.claw/assignments/TASK-209.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.2 / ddcda0ef6111`; preserve the released background asset and transparent interaction layer in later releases.
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
