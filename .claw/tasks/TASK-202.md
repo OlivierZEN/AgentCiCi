@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-202
-status: done
-updated_at: 2026-07-14T01:30:00Z
+status: in_progress
+updated_at: 2026-07-14T05:54:33Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -42,10 +42,12 @@ spec_path: docs/specs/FEAT-108-user-selectable-product-themes.md
 - `browser`: 真实桌面浏览器完成八主题设置页逐项切换；鎏金、CRM 蓝、海洋、樱花、熏衣紫、牛油果、红酒与星河均保持同一布局。主应用、管理端、平台端和客户互动工作台完成跨壳层检查；星河主题的平台卡片硬编码浅色已改为公共语义令牌。
 - `persistence`: 普通账号主题在刷新和管理端重载后保持，平台账号星河主题刷新后仍恢复；验收结束后本地演示账号恢复鎏金默认主题。
 - `release`: 未执行生产发布；实现将在当前任务提交合入 `origin/main`，等待独立发布指令。
+- `theme-visual-hotfix`: 用户反馈 `2.6.5` 主题把助手工作台结构容器错误绘制成多层背景盒。修复后 13 个 Vitest 文件、73 项通过，生产构建和 diff check 通过；2048×1152 浏览器复验覆盖八主题，结构容器透明、头像无阴影/缩放、横向溢出为 0，`design-qa.md` 最终结果为 `passed`。
+- `release-hotfix`: `2.6.5` 已上线并暴露上述视觉回归；当前正在按用户要求发布不可变修复版本 `2.6.6`。
 
 ## Handoff
 
 - 目标分支：`codex/TASK-202-user-theme-preferences`。
 - 不触碰未跟踪 `diagrams/`。
 - 数据库测试必须使用独立 schema；共享 `agentcici_test` 保留历史固定手机号，直接复跑注册套件会受到夹具污染。
-- 本任务不执行生产发布，除非用户另行明确要求。
+- 用户已明确要求线上发布；完成 `2.6.6` 生产验收后关闭任务。

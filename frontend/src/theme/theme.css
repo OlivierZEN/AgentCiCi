@@ -245,23 +245,45 @@
   border-color: var(--theme-line);
 }
 
-:root[data-theme] .cici-workbench,
-:root[data-theme] .cici-workbench__canvas,
-:root[data-theme] .cici-workbench__layout,
-:root[data-theme] .cici-workbench__main {
+:root[data-theme] .cici-workbench {
   color: var(--theme-text);
   background: var(--theme-canvas);
   background-image: none;
+  --workbench-ink: var(--theme-text);
+  --workbench-muted: var(--theme-text-muted);
+  --workbench-gold: var(--theme-line);
+  --workbench-gold-strong: var(--theme-line-strong);
+  --workbench-soft-bg: var(--theme-surface);
+}
+
+:root[data-theme] .cici-workbench__canvas {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  background-image: none;
+}
+
+:root[data-theme] .cici-workbench__layout,
+:root[data-theme] .cici-workbench__main,
+:root[data-theme] .cici-workbench__agent-bar,
+:root[data-theme] .cici-workbench__chat-panel,
+:root[data-theme] .cici-workbench__composer,
+:root[data-theme] .cici-workbench__sidebar,
+:root[data-theme] .cici-workbench__sidebar-card {
+  color: var(--theme-text);
+  background: transparent;
+  background-image: none;
+  box-shadow: none;
 }
 
 :root[data-theme] .cici-workbench__agent-bar,
-:root[data-theme] .cici-workbench__chat-panel,
+:root[data-theme] .cici-workbench__sidebar {
+  border-color: var(--theme-line);
+}
+
 :root[data-theme] .cici-workbench__chat-thread,
-:root[data-theme] .cici-workbench__composer,
 :root[data-theme] .cici-workbench__composer-shell,
-:root[data-theme] .cici-workbench__sidebar,
-:root[data-theme] .cici-workbench__sidebar-card,
-:root[data-theme] .cici-workbench__bubble,
+:root[data-theme] .cici-workbench__bubble:not(.is-user),
+:root[data-theme] .cici-workbench__top-activity,
 :root[data-theme] .cici-meeting-drawer,
 :root[data-theme] .cici-approval-drawer {
   color: var(--theme-text);
@@ -271,19 +293,25 @@
   box-shadow: none;
 }
 
-:root[data-theme] .cici-workbench__top-activity,
+:root[data-theme] .cici-workbench__bubble.is-user {
+  color: #ffffff;
+  background: var(--theme-accent);
+  background-image: none;
+  border-color: var(--theme-accent);
+  box-shadow: none;
+}
+
+:root[data-theme="galaxy"] .cici-workbench__bubble.is-user {
+  color: #101521;
+}
+
 :root[data-theme] .cici-workbench__metric,
 :root[data-theme] .cici-workbench__machine-lane,
 :root[data-theme] .cici-workbench__sidebar-block {
   color: var(--theme-text);
-  background: var(--theme-surface-muted);
+  background: transparent;
   background-image: none;
-  border-color: var(--theme-line);
   box-shadow: none;
-}
-
-:root[data-theme] .cici-workbench__machine-lane.is-current {
-  background: var(--theme-accent-soft);
 }
 
 :root[data-theme] .cici-workbench__agent-chip,
@@ -298,7 +326,17 @@
   box-shadow: none;
 }
 
-:root[data-theme] .cici-workbench__agent-chip.is-active,
+:root[data-theme] .cici-workbench__agent-chip:hover,
+:root[data-theme] .cici-workbench__agent-chip:focus,
+:root[data-theme] .cici-workbench__agent-chip:focus-visible,
+:root[data-theme] .cici-workbench__agent-chip:active,
+:root[data-theme] .cici-workbench__agent-chip.is-active {
+  color: var(--theme-accent-strong);
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
 :root[data-theme] .cici-composer-tool:hover,
 :root[data-theme] .cici-composer-tool:focus-visible,
 :root[data-theme] .cici-workbench__new-session-btn:hover,

@@ -1,17 +1,17 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T01:30:00Z
+updated_at: 2026-07-14T05:54:33Z
 updated_by: MANAGER-001
-phase: user-theme-preferences-complete
-active_task: "none"
-next_action: "TASK-202 is locally complete and verified; await an explicit production release request."
+phase: user-theme-visual-hotfix-release
+active_task: "TASK-202"
+next_action: "Publish the verified theme visual hotfix as 2.6.6 and complete production browser acceptance."
 read_next:
   goals: false
   decisions: false
   issue_list: false
   task_board: true
-  active_task_status: false
+  active_task_status: true
   test_report: true
   devops: true
 ---
@@ -22,10 +22,9 @@ read_next:
 
 ## Snapshot
 
-- TASK-202 is complete locally: every organization user and platform account can select one of eight shared product themes, with immediate preview, local first-paint caching, account-level persistence and reload synchronization across the main app, management console, operations platform and CRM embedded customer workbench. The catalog is 鎏金账房、CRM 标准蓝、蓝色海洋、樱花粉语、熏衣紫语、牛油果小调、红酒醇香和星河幻境。
-- TASK-202 evidence: V80 migrated a clean PostgreSQL schema; 22 authentication integration tests and 71 frontend tests passed; production build and diff check passed. Real desktop verification covered all theme choices plus app/admin/platform/customer-workbench surfaces, including a public-token fix for dark platform cards. No production release was performed.
+- TASK-202 theme preferences are live in `2.6.5`; a user-reported visual regression showed structural wrappers repainted as background boxes. The verified `2.6.6` hotfix keeps agent bar, chat panel, sidebar metrics and machine lanes transparent and removes avatar scaling/shadows across all eight themes.
+- TASK-202 hotfix evidence: 13 frontend test files / 73 tests, production build, diff check, eight-theme 2048×1152 browser matrix, zero horizontal overflow and Product Design QA all passed. Production release `2.6.6` is in progress.
 - TASK-201 is complete and merged to `origin/main` at `f6be64e`; it was not released to production.
-- TASK-201 is locally implemented and in review: the concrete model selector is removed while internal model compatibility remains; the definition form is balanced into equal columns; avatar actions and four strategy buttons share one row; evaluation and publish channels now live in the lower version-control lifecycle workspace. All 68 frontend tests, production build, diff check and real 1280x720 desktop browser verification passed; no production release was performed.
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
 - FEAT-106 supersedes FEAT-031 as the delivered full-system design while preserving the existing V67 evaluation tables and compatibility APIs. Agent Builder now has an independent “评测” Tab；“发布渠道” contains only IM/Web/Open API delivery entries.
 - TASK-200 evidence: 20 focused/adjacent backend tests and 67 frontend tests passed; production build, Compose, two release dry-runs, V79 migration, tenant/platform RBAC API smoke and desktop browser checks passed. Release `2.6.3` exposed an Nginx API routing gap and was immediately superseded by `2.6.4`; it is not a rollback target.
@@ -39,7 +38,7 @@ read_next:
 - TASK-195 is done in production `2.5.8`: compact and full customer interaction timelines display `YYYY-MM-DD` plus `HH:mm` on two stable lines, with no date-internal wrapping.
 - TASK-194 is done in production `2.5.6`: customer-name search now queries all Accounts visible to the current CloudCC identity, bypasses new/existing mode, queue filter and projection-cache limits, loads cache-external detail on demand, and aligns the workspace to the matched customer's actual mode.
 - Earlier TASK-191 through TASK-193 production evidence remains in `.claw/test-report.md` and `.claw/devops.md`; no regression was observed during this release.
-- Production runs `2.6.4 / d88f4293759f`; backend/frontend are healthy, state services remain healthy on `2.3.4`, Flyway is at V79, and the release backup is `/opt/cici/backups/20260714-075215-before-2.6.4-task200-nginx-hotfix`.
+- Production currently runs `2.6.5 / fc8a6d117bde`; backend/frontend and state services are healthy, Flyway is at V80, and the release backup is `/opt/cici/backups/20260714-102055-before-2.6.5-task202-user-themes`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.

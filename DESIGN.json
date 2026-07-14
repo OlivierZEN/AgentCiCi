@@ -148,6 +148,8 @@
       ],
       "rules": [
         "All themes share one layout, component tree, typography scale, density, icon vocabulary, interaction geometry, and overflow model; themes only remap semantic design tokens.",
+        "Theme tokens must not paint structural wrappers such as workbench layout, agent bar, chat panel, sidebar card, metric groups, or machine lanes. Those wrappers preserve the base component's transparent or explicitly framed treatment across every theme.",
+        "Agent selectors preserve fixed geometry in default, hover, focus, active, and selected states. Theme changes may alter text or accent color but must not add chip backgrounds, avatar shadows, scaling, movement, or a second frame.",
         "Gilded remains the default and fallback for historical accounts, unknown values, and unavailable server preferences.",
         "Do not add user-supplied CSS, arbitrary colors, bitmap backgrounds, decorative gradients, glassmorphism, bokeh, glow, or theme-specific page structures.",
         "Theme selection is an account preference. Apply a local cached value before render, then let the authenticated server preference win without a full-page reload.",
