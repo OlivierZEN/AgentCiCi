@@ -298,6 +298,90 @@ class CrmAnalyticsDemoDatasetContractTest {
     }
 
     @Test
+    void rollbackFailsClosedWhenOwnerDriftsBeforeFirstBatch(@TempDir Path tempDir) throws Exception {
+        FakeCloudcc fake = createFakeCloudcc(tempDir.resolve("fake"), buildSnapshot(), List.of("success"));
+        Path originalBackup = tempDir.resolve("before-execute.json");
+        ScriptResult execute = runScript(
+                fakeEnvironment(fake, originalBackup),
+                "--execute",
+                "--backup-file", originalBackup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+        assertThat(execute.exitCode()).withFailMessage(execute.output()).isZero();
+
+        configureFake(fake, List.of("success"));
+        configureLiveDrift(fake, "product", "PRODUCT-1", "ownerid", "EXTERNAL-OWNER", 2);
+        Path rollbackBackup = tempDir.resolve("before-rollback.json");
+        ScriptResult rollback = runScript(
+                fakeEnvironment(fake, rollbackBackup),
+                "--execute",
+                "--rollback-from", originalBackup.toString(),
+                "--backup-file", rollbackBackup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+
+        assertThat(rollback.exitCode()).isNotZero();
+        assertThat(rollback.output())
+                .contains("rollback update aborted", "live drift", "product", "ownerid", "before batch write")
+                .doesNotContain("Traceback");
+        assertSecureCompleteBackup(rollbackBackup);
+        ObjectNode state = readFakeState(fake);
+        assertThat(state.path("_control").path("driftApplied").asBoolean()).isTrue();
+        assertThat(state.path("_control").path("updateCalls").asInt()).isZero();
+        assertThat(updateActionCount(state)).isZero();
+        assertThat(state.path("products").path(0).path("ownerid").asText()).isEqualTo("EXTERNAL-OWNER");
+        assertThat(state.path("products").path(1).path("ownerid").asText()).isEqualTo(TARGET_OWNER);
+    }
+
+    @Test
+    void rollbackDetectsAccountDriftBeforeSecondBatchWithoutUpdatingThatObject(@TempDir Path tempDir)
+            throws Exception {
+        FakeCloudcc fake = createFakeCloudcc(tempDir.resolve("fake"), buildSnapshot(), List.of("success"));
+        Path originalBackup = tempDir.resolve("before-execute.json");
+        ScriptResult execute = runScript(
+                fakeEnvironment(fake, originalBackup),
+                "--execute",
+                "--backup-file", originalBackup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+        assertThat(execute.exitCode()).withFailMessage(execute.output()).isZero();
+
+        configureFake(fake, List.of("success"));
+        configureLiveDrift(fake, "Opportunity", "OPPORTUNITY-ID-1", "khmc", "EXTERNAL-ACCOUNT", 2);
+        Path rollbackBackup = tempDir.resolve("before-rollback.json");
+        ScriptResult rollback = runScript(
+                fakeEnvironment(fake, rollbackBackup),
+                "--execute",
+                "--rollback-from", originalBackup.toString(),
+                "--backup-file", rollbackBackup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+
+        assertThat(rollback.exitCode()).isNotZero();
+        assertThat(rollback.output())
+                .contains("rollback update aborted", "live drift", "Opportunity", "khmc", "before batch write")
+                .doesNotContain("Traceback");
+        assertSecureCompleteBackup(rollbackBackup);
+        ObjectNode state = readFakeState(fake);
+        assertThat(state.path("_control").path("driftApplied").asBoolean()).isTrue();
+        assertThat(state.path("_control").path("updateCalls").asInt()).isEqualTo(1);
+        assertThat(updateActionCountForObject(state, "product")).isEqualTo(1);
+        assertThat(updateActionCountForObject(state, "Opportunity")).isZero();
+        assertThat(state.path("products")).allSatisfy(row ->
+                assertThat(row.path("ownerid").asText()).isEqualTo(SOURCE_OWNER));
+        assertThat(state.path("opportunities").path(0).path("ownerid").asText()).isEqualTo(TARGET_OWNER);
+        assertThat(state.path("opportunities").path(0).path("khmc").asText()).isEqualTo("EXTERNAL-ACCOUNT");
+    }
+
+    @Test
     void executeRejectsMalformedUpdateResponses(@TempDir Path tempDir) throws Exception {
         Map<String, String> scenarios = Map.of(
                 "count", "unexpected result count",
@@ -485,6 +569,7 @@ class CrmAnalyticsDemoDatasetContractTest {
         drift.put("field", field);
         drift.put("value", value);
         drift.put("queryNumber", queryNumber);
+        drift.put("applyBeforeUpdateFallback", true);
         Files.writeString(fake.state(), JSON.writeValueAsString(state), StandardCharsets.UTF_8);
     }
 
@@ -502,6 +587,17 @@ class CrmAnalyticsDemoDatasetContractTest {
         int count = 0;
         for (JsonNode action : state.path("_actions")) {
             if (action.path("action").asText().equals("update")) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private static int updateActionCountForObject(ObjectNode state, String objectApi) {
+        int count = 0;
+        for (JsonNode action : state.path("_actions")) {
+            if (action.path("action").asText().equals("update")
+                    && action.path("object").asText().equals(objectApi)) {
                 count++;
             }
         }
@@ -579,6 +675,16 @@ class CrmAnalyticsDemoDatasetContractTest {
                 def save():
                     state_path.write_text(json.dumps(state, ensure_ascii=False), encoding="utf-8")
 
+                def apply_drift():
+                    drift = control.get("drift") or {}
+                    if not drift or control.get("driftApplied"):
+                        return
+                    drift_rows = state[OBJECT_KEYS[str(drift["object"])]]
+                    rows_by_id = {str(row.get("id")): row for row in drift_rows}
+                    drift_row = rows_by_id[str(drift["recordId"])]
+                    drift_row[str(drift["field"])] = str(drift["value"])
+                    control["driftApplied"] = True
+
                 if action == "pageQuery":
                     rows = state[OBJECT_KEYS[object_api]]
                     query_counts = control.setdefault("queryCounts", {})
@@ -588,10 +694,7 @@ class CrmAnalyticsDemoDatasetContractTest {
                     if (drift.get("object") == object_api
                             and int(drift.get("queryNumber", 0)) == query_number
                             and not control.get("driftApplied")):
-                        rows_by_id = {str(row.get("id")): row for row in rows}
-                        drift_row = rows_by_id[str(drift["recordId"])]
-                        drift_row[str(drift["field"])] = str(drift["value"])
-                        control["driftApplied"] = True
+                        apply_drift()
                     page = int(body.get("pageNUM") or body.get("pageNum") or 1)
                     size = int(body.get("pageSize") or 200)
                     start = (page - 1) * size
@@ -611,6 +714,10 @@ class CrmAnalyticsDemoDatasetContractTest {
 
                 if action != "update":
                     raise SystemExit(80)
+
+                drift = control.get("drift") or {}
+                if drift.get("applyBeforeUpdateFallback") and not control.get("driftApplied"):
+                    apply_drift()
 
                 updates = body.get("data", [])
                 call = int(control.get("updateCalls", 0)) + 1
