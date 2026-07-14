@@ -216,6 +216,88 @@ class CrmAnalyticsDemoDatasetContractTest {
     }
 
     @Test
+    void executeFailsClosedWhenOwnerDriftsBeforeFirstForwardBatch(@TempDir Path tempDir) throws Exception {
+        FakeCloudcc fake = createFakeCloudcc(tempDir.resolve("fake"), buildSnapshot(), List.of("success"));
+        configureLiveDrift(fake, "product", "PRODUCT-1", "ownerid", "EXTERNAL-OWNER", 2);
+        Path backup = tempDir.resolve("before-execute.json");
+
+        ScriptResult result = runScript(
+                fakeEnvironment(fake, backup),
+                "--execute",
+                "--backup-file", backup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+
+        assertThat(result.exitCode()).isNotZero();
+        assertThat(result.output())
+                .contains("forward update aborted", "live drift", "product", "ownerid", "before batch write")
+                .doesNotContain("Traceback");
+        assertSecureCompleteBackup(backup);
+        ObjectNode state = readFakeState(fake);
+        assertThat(state.path("_control").path("driftApplied").asBoolean()).isTrue();
+        assertThat(state.path("_control").path("updateCalls").asInt()).isZero();
+        assertThat(updateActionCount(state)).isZero();
+        assertThat(state.path("products").path(0).path("ownerid").asText()).isEqualTo("EXTERNAL-OWNER");
+        assertThat(state.path("products").path(1).path("ownerid").asText()).isEqualTo(SOURCE_OWNER);
+    }
+
+    @Test
+    void executeDetectsAccountDriftBeforeSecondBatchAndFullBackupRecoversFirstBatch(@TempDir Path tempDir)
+            throws Exception {
+        FakeCloudcc fake = createFakeCloudcc(tempDir.resolve("fake"), buildSnapshot(), List.of("success"));
+        configureLiveDrift(fake, "Opportunity", "OPPORTUNITY-ID-1", "khmc", "EXTERNAL-ACCOUNT", 2);
+        Path originalBackup = tempDir.resolve("before-execute.json");
+
+        ScriptResult execute = runScript(
+                fakeEnvironment(fake, originalBackup),
+                "--execute",
+                "--backup-file", originalBackup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+
+        assertThat(execute.exitCode()).isNotZero();
+        assertThat(execute.output())
+                .contains("forward update aborted", "live drift", "Opportunity", "khmc", "before batch write")
+                .doesNotContain("Traceback");
+        assertSecureCompleteBackup(originalBackup);
+        ObjectNode partialState = readFakeState(fake);
+        assertThat(partialState.path("_control").path("driftApplied").asBoolean()).isTrue();
+        assertThat(partialState.path("_control").path("updateCalls").asInt()).isEqualTo(1);
+        assertThat(updateActionCount(partialState)).isEqualTo(1);
+        assertThat(partialState.path("products")).allSatisfy(row ->
+                assertThat(row.path("ownerid").asText()).isEqualTo(TARGET_OWNER));
+        assertThat(partialState.path("opportunities").path(0).path("ownerid").asText())
+                .isEqualTo(SOURCE_OWNER);
+        assertThat(partialState.path("opportunities").path(0).path("khmc").asText())
+                .isEqualTo("EXTERNAL-ACCOUNT");
+
+        ((ObjectNode) partialState.path("opportunities").path(0)).put("khmc", "OLD-ACCOUNT-1");
+        Files.writeString(fake.state(), JSON.writeValueAsString(partialState), StandardCharsets.UTF_8);
+        configureFake(fake, List.of("success"));
+        Path rollbackBackup = tempDir.resolve("before-rollback.json");
+        ScriptResult rollback = runScript(
+                fakeEnvironment(fake, rollbackBackup),
+                "--execute",
+                "--rollback-from", originalBackup.toString(),
+                "--backup-file", rollbackBackup.toString(),
+                "--cloudcc-cli", fake.executable().toString(),
+                "--cloudcc-project", tempDir.toString(),
+                "--as-of", "2026-07-14",
+                "--json");
+
+        assertThat(rollback.exitCode()).withFailMessage(rollback.output()).isZero();
+        assertSecureCompleteBackup(rollbackBackup);
+        assertThat(JSON.readTree(rollback.output())
+                .path("rollbackPlan").path("summary").path("plannedRecordUpdates").asInt()).isEqualTo(12);
+        assertThat(readFakeState(fake).path("products")).allSatisfy(row ->
+                assertThat(row.path("ownerid").asText()).isEqualTo(SOURCE_OWNER));
+    }
+
+    @Test
     void executeRejectsMalformedUpdateResponses(@TempDir Path tempDir) throws Exception {
         Map<String, String> scenarios = Map.of(
                 "count", "unexpected result count",
@@ -388,6 +470,24 @@ class CrmAnalyticsDemoDatasetContractTest {
         Files.writeString(fake.state(), JSON.writeValueAsString(state), StandardCharsets.UTF_8);
     }
 
+    private static void configureLiveDrift(
+            FakeCloudcc fake,
+            String objectApi,
+            String recordId,
+            String field,
+            String value,
+            int queryNumber) throws Exception {
+        ObjectNode state = readFakeState(fake);
+        ObjectNode control = (ObjectNode) state.path("_control");
+        ObjectNode drift = control.putObject("drift");
+        drift.put("object", objectApi);
+        drift.put("recordId", recordId);
+        drift.put("field", field);
+        drift.put("value", value);
+        drift.put("queryNumber", queryNumber);
+        Files.writeString(fake.state(), JSON.writeValueAsString(state), StandardCharsets.UTF_8);
+    }
+
     private static ObjectNode readFakeState(FakeCloudcc fake) throws Exception {
         return (ObjectNode) JSON.readTree(Files.readString(fake.state(), StandardCharsets.UTF_8));
     }
@@ -481,6 +581,17 @@ class CrmAnalyticsDemoDatasetContractTest {
 
                 if action == "pageQuery":
                     rows = state[OBJECT_KEYS[object_api]]
+                    query_counts = control.setdefault("queryCounts", {})
+                    query_number = int(query_counts.get(object_api, 0)) + 1
+                    query_counts[object_api] = query_number
+                    drift = control.get("drift") or {}
+                    if (drift.get("object") == object_api
+                            and int(drift.get("queryNumber", 0)) == query_number
+                            and not control.get("driftApplied")):
+                        rows_by_id = {str(row.get("id")): row for row in rows}
+                        drift_row = rows_by_id[str(drift["recordId"])]
+                        drift_row[str(drift["field"])] = str(drift["value"])
+                        control["driftApplied"] = True
                     page = int(body.get("pageNUM") or body.get("pageNum") or 1)
                     size = int(body.get("pageSize") or 200)
                     start = (page - 1) * size

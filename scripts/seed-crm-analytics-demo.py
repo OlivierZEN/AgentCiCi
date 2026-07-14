@@ -780,10 +780,59 @@ def validate_update_result(result: dict[str, Any], expected: list[dict[str, Any]
             raise RuntimeError(f"CloudCC update {object_api} returned mismatched id")
 
 
+def verify_forward_batch_old_values(
+    batch: list[dict[str, Any]],
+    spec: MigrationSpec,
+    project: Path,
+    cloudcc_cli: Path,
+) -> None:
+    current_rows = page_query_all(spec.object_api, spec.fields, project, cloudcc_cli)
+    current_by_id: dict[str, dict[str, Any]] = {}
+    duplicate_ids: set[str] = set()
+    for row in current_rows:
+        record_id = reference_id(row.get("id"))
+        if not record_id:
+            continue
+        if record_id in current_by_id:
+            duplicate_ids.add(record_id)
+        current_by_id[record_id] = row
+
+    allowed_fields = {"ownerid"}
+    if spec.account_field:
+        allowed_fields.add(spec.account_field)
+    for record in batch:
+        record_id = reference_id(record.get("id"))
+        record_label = str(record.get("key") or record_id or "unknown")
+        if not record_id or record_id in duplicate_ids or record_id not in current_by_id:
+            raise RuntimeError(
+                f"forward update aborted: live record lookup mismatch for "
+                f"{spec.object_api} record {record_label} before batch write"
+            )
+        changes = record.get("changes")
+        if not isinstance(changes, dict) or not changes:
+            raise RuntimeError(
+                f"forward update aborted: invalid changes for "
+                f"{spec.object_api} record {record_label} before batch write"
+            )
+        current = current_by_id[record_id]
+        for field, change in changes.items():
+            if field not in allowed_fields or not isinstance(change, dict) or "old" not in change:
+                raise RuntimeError(
+                    f"forward update aborted: invalid change field for "
+                    f"{spec.object_api} record {record_label} before batch write"
+                )
+            if reference_id(current.get(field)) != reference_id(change.get("old")):
+                raise RuntimeError(
+                    f"forward update aborted: live drift detected for "
+                    f"{spec.object_api} record {record_label} field {field} before batch write"
+                )
+
+
 def apply_update_plan(
     update_plan: dict[str, Any],
     project: Path,
     cloudcc_cli: Path = CLOUDCC,
+    verify_forward_state: bool = False,
 ) -> dict[str, int]:
     records = update_plan.get("records")
     if not isinstance(records, list):
@@ -793,6 +842,8 @@ def apply_update_plan(
         object_records = [row for row in records if row.get("objectApiName") == spec.object_api]
         stats[spec.dataset_key] = len(object_records)
         for batch in chunks(object_records):
+            if verify_forward_state:
+                verify_forward_batch_old_values(batch, spec, project, cloudcc_cli)
             payload = [
                 {
                     "id": reference_id(record.get("id")),
@@ -1006,6 +1057,7 @@ def main() -> int:
                     migration_plan["updatePlan"],
                     args.cloudcc_project,
                     args.cloudcc_cli,
+                    verify_forward_state=True,
                 )
                 after = build_migration_plan(
                     dataset,
