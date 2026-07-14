@@ -433,8 +433,8 @@ class ChatOrchestratorServiceModelIdentityTest {
 
         assertThat(fallback)
                 .contains("工具已返回 2 条结果")
-                .contains("Top 10 Semiconductor Companies")
-                .contains("来源：https://example.com/asia")
+                .contains("详细字段已隐藏")
+                .doesNotContain("Top 10 Semiconductor Companies", "https://example.com/asia", "Taiwan Semiconductor")
                 .doesNotContain("模型本轮未能生成最终自然语言总结")
                 .doesNotContain("\"success\"")
                 .doesNotContain("\"results\"");
@@ -495,7 +495,7 @@ class ChatOrchestratorServiceModelIdentityTest {
         )));
 
         assertThat(fallback)
-                .contains("记录 1")
+                .contains("1 条业务记录", "详细字段已隐藏")
                 .doesNotContain("a49-secret-object-id", "ownerId", "005-secret", "payload-secret");
     }
 
@@ -545,6 +545,53 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldFailClosedForUntrustedGenericDisplayFieldsThatDoNotMatchKnownIdPrefixes() {
+        List<String> sensitivePayloads = List.of(
+                "{\"success\":true,\"answer\":\"crm_product_sales_rank\"}",
+                "{\"success\":true,\"answer\":\"结果如下 {\\\"foo\\\":\\\"bar\\\"}\"}",
+                "{\"success\":true,\"results\":[{\"title\":\"private_lookup\","
+                        + "\"url\":\"https://example.com/?access_token=secret\","
+                        + "\"snippet\":\"customerId=CUSTOMER-SECRET\"}]}",
+                "{\"success\":true,\"data\":[{\"name\":\"PRODUCT-UUID-12345678\","
+                        + "\"bkhrccname\":\"private_lookup\",\"khy\":\"2026-07 {\\\"foo\\\":1}\"}]}"
+        );
+
+        for (String payload : sensitivePayloads) {
+            String fallback = ChatOrchestratorService.buildToolResultFallbackMessage(List.of(Map.of(
+                    "role", "tool",
+                    "content", payload
+            )));
+
+            assertThat(fallback)
+                    .contains("已隐藏")
+                    .doesNotContain("crm_product_sales_rank", "private_lookup", "access_token", "secret",
+                            "customerId", "CUSTOMER-SECRET", "PRODUCT-UUID-12345678", "foo", "bar", "{");
+        }
+    }
+
+    @Test
+    void shouldFailClosedForUnstructuredToolLimitContent() {
+        List<Map<String, Object>> messages = List.of(
+                Map.of(
+                        "role", "assistant",
+                        "content", "",
+                        "tool_calls", List.of(Map.of(
+                                "id", "call-untrusted",
+                                "type", "function",
+                                "function", Map.of("name", "private_lookup", "arguments", "{}")))),
+                Map.of(
+                        "role", "tool",
+                        "tool_call_id", "call-untrusted",
+                        "content", "customerId=CUSTOMER-SECRET private_lookup"));
+
+        String fallback = ChatOrchestratorService.buildToolLimitReachedFallbackMessage(messages, 2);
+
+        assertThat(fallback)
+                .contains("已隐藏")
+                .doesNotContain("customerId", "CUSTOMER-SECRET", "private_lookup", "call-untrusted");
+    }
+
+    @Test
     void shouldUseCrmFormatterForCrmToolFallbackInsteadOfRawPayload() {
         String crmJson = """
                 {"status":"EMPTY","metric":"SALES_QUANTITY","startDate":"2026-06-15",
@@ -587,8 +634,8 @@ class ChatOrchestratorServiceModelIdentityTest {
 
         assertThat(guarded)
                 .contains("已返回结果摘要")
-                .contains("白糖现货价格日报")
-                .contains("广西、云南主产区报价小幅上行")
+                .contains("1 条结果", "详细字段已隐藏")
+                .doesNotContain("白糖现货价格日报", "广西、云南主产区报价小幅上行", "https://example.com/sugar")
                 .doesNotContain("本轮不会在完成状态后自动追加回复", "模型本轮未能生成最终自然语言总结");
     }
 

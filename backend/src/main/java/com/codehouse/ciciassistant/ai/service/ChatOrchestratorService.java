@@ -87,13 +87,6 @@ public class ChatOrchestratorService {
     private static final Pattern TOOL_FIELD_COUNT_PATTERN = Pattern.compile("对象字段列表（标准字段\\s*(\\d+)\\s*条[，,]\\s*自定义字段\\s*(\\d+)\\s*条）");
     private static final Pattern TOOL_OBJECT_COUNT_PATTERN = Pattern.compile("所有对象列表（标准对象:\\s*(\\d+)\\s*条[，,]\\s*自定义对象:\\s*(\\d+)\\s*条[，,]\\s*总计:\\s*(\\d+)\\s*条）");
     private static final Pattern EMAIL_SEARCH_MESSAGE_ID_PATTERN = Pattern.compile("(?m)\\bid=([^\\s\\r\\n]+)");
-    private static final Pattern PROTECTED_TOOL_DISPLAY_KEY_PATTERN = Pattern.compile(
-            "(?i)(?:^|[\\s{\\[,;])(?:product|owner|record|internal|object|session|user|org|tenant|tool|call|access|refresh)?"
-                    + "[_-]?(?:id|token|secret|credentials?|password|arguments?|payload)\\s*[:=]");
-    private static final Pattern PROTECTED_TOOL_DISPLAY_ID_PATTERN = Pattern.compile(
-            "(?i)(?<![\\p{Alnum}_])(?:005|a49)[a-z0-9_-]{6,}(?![\\p{Alnum}_])");
-    private static final Pattern NESTED_TOOL_DISPLAY_JSON_PATTERN = Pattern.compile(
-            "(?:^|[=:：])\\s*[\\[{].{0,800}[\\]}]", Pattern.DOTALL);
     private static final String PROTECTED_TOOL_DISPLAY_FALLBACK =
             "工具返回的可读结果包含受保护的内部字段，已隐藏。";
 
@@ -2544,7 +2537,7 @@ public class ChatOrchestratorService {
         if (normalized.startsWith("{") || normalized.startsWith("[")) {
             return "工具返回了暂不支持安全展示的结构化结果，原始字段已隐藏。";
         }
-        return clipStatic(projectToolDisplayText(firstLine(normalized), PROTECTED_TOOL_DISPLAY_FALLBACK), 360);
+        return PROTECTED_TOOL_DISPLAY_FALLBACK;
     }
 
     private static String buildStructuredToolResultFallbackMessage(String toolContent) {
@@ -2555,8 +2548,7 @@ public class ChatOrchestratorService {
             }
             String answer = nodeText(root, "answer");
             if (!answer.isBlank()) {
-                return "工具已返回可读结果：\n\n"
-                        + clipStatic(projectToolDisplayText(answer, PROTECTED_TOOL_DISPLAY_FALLBACK), 1200);
+                return PROTECTED_TOOL_DISPLAY_FALLBACK;
             }
             boolean failed = booleanFieldIsFalse(root, "success")
                     || booleanFieldIsFalse(root, "ok")
@@ -2574,8 +2566,7 @@ public class ChatOrchestratorService {
             }
             String message = firstNonBlank(nodeText(root, "message"), nodeText(root, "summary"));
             if (!message.isBlank()) {
-                return "工具已返回摘要：\n\n"
-                        + clipStatic(projectToolDisplayText(message, PROTECTED_TOOL_DISPLAY_FALLBACK), 1000);
+                return PROTECTED_TOOL_DISPLAY_FALLBACK;
             }
             return "";
         } catch (Exception ignored) {
@@ -2601,31 +2592,8 @@ public class ChatOrchestratorService {
         if (count == 0) {
             return "工具查询已完成，但没有返回匹配结果。你可以换一个行业、地区或筛选条件再试。";
         }
-        StringBuilder summary = new StringBuilder();
-        summary.append("工具已返回 ").append(count)
-                .append(" 条结果。先给你可读摘要，必要时可继续整理成结论：");
-        int limit = Math.min(5, count);
-        for (int i = 0; i < limit; i++) {
-            JsonNode item = results.get(i);
-            String title = projectToolDisplayText(
-                    firstNonBlank(nodeText(item, "title"), nodeText(item, "name")),
-                    "结果 " + (i + 1));
-            String url = projectToolDisplayUrl(nodeText(item, "url"));
-            String snippet = projectToolDisplayText(
-                    firstNonBlank(nodeText(item, "snippet"), nodeText(item, "content"), nodeText(item, "description")),
-                    "");
-            summary.append("\n").append(i + 1).append(". ").append(clipStatic(title, 180));
-            if (!url.isBlank()) {
-                summary.append("\n   来源：").append(clipStatic(url, 260));
-            }
-            if (!snippet.isBlank()) {
-                summary.append("\n   摘要：").append(clipStatic(snippet.replace("\\n", "\n"), 220));
-            }
-        }
-        if (count > limit) {
-            summary.append("\n其余 ").append(count - limit).append(" 条结果已省略，可继续让我按公司、地区或营收规模整理。");
-        }
-        return summary.toString();
+        return "工具已返回 " + count + " 条结果。为保护业务数据，未验证的详细字段已隐藏；"
+                + "请调整筛选条件后重试。";
     }
 
     private static String summarizeBusinessDataArray(JsonNode data) {
@@ -2633,57 +2601,8 @@ public class ChatOrchestratorService {
         if (count == 0) {
             return "工具查询已完成，但没有返回匹配业务记录。你可以确认姓名、月份、对象或筛选字段后再试。";
         }
-        StringBuilder summary = new StringBuilder();
-        summary.append("工具已返回 ").append(count).append(" 条业务记录。先展示前几条可读摘要：");
-        int limit = Math.min(5, count);
-        for (int i = 0; i < limit; i++) {
-            JsonNode item = data.get(i);
-            String title = projectToolDisplayText(nodeText(item, "name"), "记录 " + (i + 1));
-            summary.append("\n").append(i + 1).append(". ").append(clipStatic(title, 160));
-            String person = projectToolDisplayText(
-                    firstNonBlank(nodeText(item, "bkhrccname"), nodeText(item, "khperson")), "");
-            String period = projectToolDisplayText(
-                    firstNonBlank(nodeText(item, "khy"), nodeText(item, "kaoheyuefen"), nodeText(item, "khyquarter")), "");
-            String score = projectToolDisplayText(
-                    firstNonBlank(nodeText(item, "kpitotal"), nodeText(item, "mbzs")), "");
-            List<String> meta = new ArrayList<>();
-            if (!person.isBlank()) meta.add("人员：" + person);
-            if (!period.isBlank()) meta.add("期间：" + period);
-            if (!score.isBlank()) meta.add("分值：" + score);
-            if (!meta.isEmpty()) {
-                summary.append("\n   ").append(String.join("；", meta));
-            }
-        }
-        if (count > limit) {
-            summary.append("\n其余 ").append(count - limit).append(" 条记录已省略。");
-        }
-        return summary.toString();
-    }
-
-    private static String projectToolDisplayText(String value, String unsafeFallback) {
-        String normalized = value == null ? "" : value
-                .replaceAll("[\\p{Cntrl}&&[^\\r\\n\\t]]", "")
-                .trim();
-        if (normalized.isBlank()) {
-            return unsafeFallback == null ? "" : unsafeFallback;
-        }
-        if (PROTECTED_TOOL_DISPLAY_KEY_PATTERN.matcher(normalized).find()
-                || PROTECTED_TOOL_DISPLAY_ID_PATTERN.matcher(normalized).find()
-                || NESTED_TOOL_DISPLAY_JSON_PATTERN.matcher(normalized).find()) {
-            return unsafeFallback == null ? "" : unsafeFallback;
-        }
-        return normalized;
-    }
-
-    private static String projectToolDisplayUrl(String value) {
-        String projected = projectToolDisplayText(value, "");
-        if (projected.isBlank()
-                || !(projected.startsWith("https://") || projected.startsWith("http://"))
-                || projected.contains("@")
-                || projected.matches(".*\\s+.*")) {
-            return "";
-        }
-        return projected;
+        return "工具已返回 " + count + " 条业务记录。为保护业务数据，未验证的详细字段已隐藏；"
+                + "请调整筛选条件后重试。";
     }
 
     private static boolean booleanFieldIsFalse(JsonNode root, String field) {
@@ -2707,14 +2626,6 @@ public class ChatOrchestratorService {
             }
         }
         return "";
-    }
-
-    private static String firstLine(String value) {
-        if (value == null || value.isBlank()) {
-            return "";
-        }
-        int newline = value.indexOf('\n');
-        return newline < 0 ? value.trim() : value.substring(0, newline).trim();
     }
 
     private static int parsePositiveInt(String value) {
