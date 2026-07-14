@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T13:16:37Z
+updated_at: 2026-07-14T15:55:28Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
-### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
+### TASK-210 - 客户互动工作台标准渠道图标治理
 
-- status: `ready`
-- priority: `critical`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
-- task_status_path: `.claw/tasks/TASK-208.md`
-- assignment_path: `.claw/assignments/TASK-208.yaml`
+- status: `in_progress`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md`
+- task_status_path: `.claw/tasks/TASK-210.md`
+- assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment, push the allocation-only commit to origin/main, then begin TDD in the isolated implementation worktree.
+- next_action: Validate and push the allocation-only commit, then implement source mapping and standard icons with tests.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 
