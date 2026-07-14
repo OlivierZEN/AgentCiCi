@@ -1,7 +1,7 @@
 task_id: TASK-209
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-14T14:20:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md

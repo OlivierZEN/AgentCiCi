@@ -6,7 +6,7 @@ assigned_at: 2026-07-14T13:16:37Z
 expires_at: none
 spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 task_status_path: .claw/tasks/TASK-208.md
-branch: codex/TASK-208-crm-analysis-hardening
+branch: codex/TASK-208-prod-integration
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
