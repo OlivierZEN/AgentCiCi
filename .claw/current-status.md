@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T09:43:14Z
+updated_at: 2026-07-14T10:34:25Z
 updated_by: MANAGER-001
-phase: crm-business-analysis-assignment
-active_task: "TASK-205"
-next_action: "Push the verified TASK-205 allocation to origin/main, then implement the CRM analysis Skill, deterministic sales-rank tool and bound CloudCC demo data."
+phase: cloudcc-embed-sso-recovery
+active_task: "TASK-206"
+next_action: "Implement and publish bounded CloudCC pagecomponent SSO recovery, then verify ticket/consume and CRM data in the real embedded page."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-206 is in progress for a real CloudCC CRM embedded identity-sync failure. Online component/customPage binding is correct and the same test user now completes ticket/consume/data reads with HTTP 200; the verified defect is that a single transient failure leaves the pagecomponent SSO lock set forever with no retry or token refresh.
 - TASK-205 is ready: the user approved a platform-standard CRM business analysis Skill plus deterministic `crm_product_sales_rank` tool and requested rich high-fidelity data in the bound CloudCC demo tenant, ending with repeated real-chat acceptance for “销量最好的产品有哪些”.
 - FEAT-111 is the design source. A read-only CloudCC `standard-catalog` scan confirmed `product`, `cloudccorder`, `cloudccorderitem`, `contract`, `Opportunity`, `opportunitypdt` and their required quantity/amount/date/status/reference fields; no metadata change is planned.
 
@@ -39,6 +40,8 @@ read_next:
 
 ## Read Next
 
+- `.claw/tasks/TASK-206.md` and `.claw/assignments/TASK-206.yaml` - active CloudCC embed SSO recovery and authorization.
+- `docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md` - root cause, retry policy, identity boundary and acceptance source.
 - `.claw/tasks/TASK-205.md` and `.claw/assignments/TASK-205.yaml` - active CRM analysis delivery and authorization.
 - `docs/specs/FEAT-111-crm-business-analysis-skill.md` - approved architecture, object map, field dictionary, tool contract, demo-data design and acceptance source.
 

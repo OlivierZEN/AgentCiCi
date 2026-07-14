@@ -1,0 +1,59 @@
+task_id: TASK-206
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T10:34:25Z
+expires_at: none
+spec_path: docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
+task_status_path: .claw/tasks/TASK-206.md
+branch: codex/TASK-206-cloudcc-embed-sso-recovery
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/pagecomponents/customer-workbench/**
+  - frontend/build/**
+  - frontend/src/assistant/customer-workbench/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - frontend/pagecomponents/customer-workbench/customer-workbench.vue
+  - frontend/pagecomponents/customer-workbench/config.json
+  - frontend/build/customer-workbench.umd.min.js
+  - frontend/src/assistant/customer-workbench/CloudccEmbedSso.test.ts
+  - docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
+  - .claw/tasks/TASK-206.md
+  - .claw/assignments/TASK-206.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-081-cloudcc-customization-expert-msapi-gap-report.md
+  - docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md
+task_boundary:
+  - "只修复 CloudCC pagecomponent 身份同步的临时失败恢复、提示和可观测性。"
+  - "保持 CloudCC token 用户、页面用户和 AgentCiCi 成员身份一致性校验。"
+  - "Vue 挂载与 UMD fallback 必须保持相同重试和失败释放行为。"
+  - "CloudCC 高代码资产发布与验证必须通过 cc-customization-expert-msapi。"
+  - "不得输出、提交或记录 token、cookie、密码、原始客户数据或其他可复用凭据。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user reported a real CloudCC CRM embedded SSO failure and explicitly requested diagnosis and repair."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created critical embed recovery task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+
