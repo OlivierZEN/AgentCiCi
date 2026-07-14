@@ -1,0 +1,52 @@
+task_id: TASK-204
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T09:05:01Z
+expires_at: none
+spec_path: docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md
+task_status_path: .claw/tasks/TASK-204.md
+branch: codex/TASK-204-agent-builder-avatar-polish
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md
+  - .claw/tasks/TASK-204.md
+  - .claw/assignments/TASK-204.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
+  - docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md
+task_boundary:
+  - "移除智能体构建说明的背景、边框、圆角和额外大块内边距，但不改变说明文案语义或页面全局 gutter。"
+  - "将头像预览改为可访问的菜单入口，菜单承载上传/更换和条件显示的移除动作。"
+  - "复用现有头像文件选择、裁剪、draft.avatarBase64 与草稿保存链路。"
+  - "不改变 API、数据库、主题 token、跨页面组件语汇、双栏信息架构或移动端范围。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14T09:03Z; user approved option A for the Agent Builder guide and avatar interaction polish."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created frontend task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
