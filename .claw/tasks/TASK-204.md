@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-204
-status: ready
+status: in_progress
 updated_at: 2026-07-14T09:05:01Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -22,15 +22,17 @@ spec_path: docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md
 ## Current State
 
 - 用户已确认采用方案 A：头像为唯一常驻入口，菜单承载上传/更换和条件显示的移除动作。
-- 书面设计已写入 FEAT-110，等待用户复核后进入实现。
+- 用户已复核 FEAT-110 并确认开始实现；详细步骤已写入 FEAT-110 implementation plan。
+- TASK-204 SSH challenge 与 assignment scope 检查均为 `allowed`，当前分支为 `codex/TASK-204-agent-builder-avatar-polish`。
 
 ## Next Action
 
-- 用户复核 FEAT-110 后编写实现计划，并在 TASK-204 分支完成代码与验证。
+- 按实现计划先写失败测试，再实现头像菜单与说明区去框样式。
 
 ## Changed Files
 
 - `docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md`
+- `docs/specs/FEAT-110-agent-builder-guide-avatar-polish-plan.md`
 - `.claw/tasks/TASK-204.md`
 - `.claw/assignments/TASK-204.yaml`
 - `.claw/task-board.md`

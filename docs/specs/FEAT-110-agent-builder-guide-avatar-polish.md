@@ -128,7 +128,8 @@ updated_by: MANAGER-001
 
 - 已完成现状分析、方案比较和设计确认。
 - 用户已确认采用方案 A。
-- 待用户复核本书面规格后进入实现计划与编码。
+- 用户已复核书面规格并确认开始实现。
+- 详细实现计划见 `docs/specs/FEAT-110-agent-builder-guide-avatar-polish-plan.md`。
 
 ## 交接说明
 
