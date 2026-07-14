@@ -1,0 +1,80 @@
+task_id: TASK-208
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T13:16:37Z
+expires_at: none
+spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
+task_status_path: .claw/tasks/TASK-208.md
+branch: codex/TASK-208-crm-analysis-hardening
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/**
+  - backend/src/main/resources/builtin-skills/**
+  - backend/src/test/java/**
+  - scripts/**
+  - docs/specs/**
+  - docs/superpowers/plans/**
+  - .claw/tasks/**
+  - .superpowers/sdd/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/crmanalysis/service/CrmProductSalesAnalysisService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/crmanalysis/service/CrmProductSalesAnalysisToolService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/crmanalysis/service/CrmProductSalesAnswerFormatter.java
+  - backend/src/main/resources/builtin-skills/crm-business-analysis/SKILL.md
+  - backend/src/main/resources/builtin-skills/crm-business-analysis/manifest.json
+  - backend/src/main/resources/builtin-skills/crm-business-analysis/product-sales/api.md
+  - backend/src/main/resources/builtin-skills/crm-business-analysis/product-sales/introduction.md
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/crmanalysis/service/CrmProductSalesAnalysisServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/crmanalysis/service/CrmProductSalesAnalysisToolServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/crmanalysis/service/CrmProductSalesAnswerFormatterTest.java
+  - scripts/seed-crm-analytics-demo.py
+  - scripts/tests/test_seed_crm_analytics_demo.py
+  - docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
+  - .claw/tasks/TASK-208.md
+  - .claw/assignments/TASK-208.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - frontend/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-015-skill-declarative-api-runtime.md
+  - docs/specs/FEAT-021-agent-open-api.md
+  - docs/specs/FEAT-028-file-backed-builtin-skills.md
+  - docs/specs/FEAT-031-agent-evaluation-regression-system.md
+  - docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md
+  - docs/specs/FEAT-111-crm-business-analysis-skill.md
+task_boundary:
+  - "实现 FEAT-114 定义的确定性 CRM 深度经营分析、协议防泄漏和权限不完整状态。"
+  - "CloudCC 侧只复用标准 product、cloudccorder、cloudccorderitem、Account、Opportunity、opportunitypdt、contract 对象。"
+  - "只更新 TASK-205-CRM-ANALYTICS-DEMO-V1 批次并重连 TASK-203-DEMO-V2 客户；默认 dry-run，显式 execute 才写入。"
+  - "所有查询使用当前映射用户权限；不得把组织管理员凭据作为普通对话运行身份。"
+  - "不得输出或提交 token、secret、cookie、数据库凭据、内部原始工具 payload 或真实客户隐私。"
+  - "不修改前端、TASK-203 脚本、数据库迁移、运行配置或 CloudCC 低代码元数据。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user explicitly approved FEAT-114 solution A, including deterministic analysis, SalesA batch migration, production release and real acceptance."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created backend and external CRM business-record task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
