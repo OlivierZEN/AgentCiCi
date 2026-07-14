@@ -8,9 +8,12 @@ import {
   formatTimelineDateTime,
   isCurrentVoiceSession,
   interactionConfirmationOutcome,
+  lifecycleSourceLabel,
   preserveSelectedCustomer,
   scrollConversationToLatest,
   shouldSwitchWorkbenchMode,
+  timelineItemKey,
+  timelineSourceKind,
 } from "./CustomerWorkbenchApp";
 import { customerWorkbenchErrorMessage, parseCustomerAssistantStreamEvent } from "./customerWorkbenchApi";
 
@@ -65,6 +68,32 @@ describe("formatTimelineDateTime", () => {
 
   it("preserves an unparseable source value instead of inventing a date", () => {
     expect(formatTimelineDateTime("时间待确认")).toBe("时间待确认");
+  });
+});
+
+describe("customer timeline source semantics", () => {
+  it("keeps public channels distinct from CRM business records", () => {
+    expect(timelineSourceKind("WECHAT")).toBe("social-chat");
+    expect(timelineSourceKind("PHONE")).toBe("phone");
+    expect(timelineSourceKind("MEETING")).toBe("meeting");
+    expect(timelineSourceKind("EMAIL")).toBe("email");
+    expect(timelineSourceKind("CRM_TASK")).toBe("crm-task");
+    expect(timelineSourceKind("CRM_EVENT")).toBe("crm-event");
+    expect(timelineSourceKind("CUSTOMER_FEEDBACK")).toBe("feedback");
+  });
+
+  it("uses stable user-facing labels and a neutral fallback", () => {
+    expect(lifecycleSourceLabel("CRM_TASK")).toBe("CRM 任务");
+    expect(lifecycleSourceLabel("CRM_EVENT")).toBe("CRM 日程");
+    expect(lifecycleSourceLabel("客户微信沟通")).toBe("微信");
+    expect(lifecycleSourceLabel("")).toBe("客户互动");
+    expect(timelineSourceKind("NEW_CHANNEL")).toBe("generic");
+    expect(lifecycleSourceLabel("NEW_CHANNEL")).toBe("NEW_CHANNEL");
+  });
+
+  it("keeps duplicate CRM event ids distinct in the rendered timeline", () => {
+    expect(timelineItemKey("crm-event-1", "2026-07-14T14:44:00", 0))
+      .not.toBe(timelineItemKey("crm-event-1", "2026-07-14T14:44:00", 1));
   });
 });
 

@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T13:38:00Z
+updated_at: 2026-07-14T16:22:41Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T13:38:00Z
+last_run_at: 2026-07-14T16:22:41Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-210 客户互动工作台标准渠道图标本地验收（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 通用与 TASK-210 SSH challenge 均为 `allowed`；客户工作台源码、样式、依赖、规格、任务状态和测试报告代表文件通过 assignment 检查。
+- `tdd`: 新增来源语义测试先以缺少 `timelineSourceKind`/`lifecycleSourceLabel` 失败，再实现转绿；重复 CRM 事件键测试先以缺少 `timelineItemKey` 失败，再实现转绿。
+- `frontend`: Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示；`git diff --check` 通过。
+- `icon-source`: 微信渠道使用 Simple Icons 公开维护的规范路径和 `#07C160` 品牌色；电话、会议、邮件、CRM 任务、CRM 日程、客户反馈使用项目既有 Lucide 标准图标，不含自绘 SVG 路径。
+- `browser-local`: 真实演示组织 CRM 数据在 `1600 × 1000` 桌面端加载；CRM 任务显示清单图标、CRM 日程显示日历图标；以只读请求拦截将一条现有记录标记为微信后，规范双气泡图标与实际轴线、日期和内容列共同通过视觉检查。证据：`output/playwright/task210-local-standard-icons.png`、`output/playwright/task210-local-wechat-standard-icon-detail.png`。
+- `browser-console`: 完整时间线曾暴露重复 CRM event id 的 React key 错误；加入事件 ID、发生时间和行号组合键后，重新加载并展开完整时间线只有 React DevTools info，新增 error/warning 为 0。
+- `release`: 待执行统一 `release-acr.sh` dry-run、生产备份、发布和真实线上复验。
 
 ## TASK-207 前台主题一致性与视觉对齐（2026-07-14）
 

@@ -4,6 +4,7 @@ import {
   ArrowRightLeft,
   Bell,
   Bot,
+  CalendarCheck2,
   CalendarDays,
   Check,
   ChevronDown,
@@ -21,8 +22,9 @@ import {
   Link2,
   List as ListIcon,
   LoaderCircle,
+  Mail,
   MessageSquare,
-  MessageCircle,
+  MessageSquareText,
   Mic,
   PanelRightClose,
   PanelRightOpen,
@@ -39,6 +41,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { siWechat as publicSocialChannelIcon } from "simple-icons";
 import { useAsrVoiceInput } from "../../shared/useAsrVoiceInput";
 import ChatMarkdown from "../../components/ChatMarkdown";
 import {
@@ -140,6 +143,7 @@ type IconName =
   | "bell"
   | "bot"
   | "calendar"
+  | "calendarCheck"
   | "check"
   | "chevronDown"
   | "clipboard"
@@ -152,7 +156,9 @@ type IconName =
   | "keyboard"
   | "link"
   | "list"
+  | "mail"
   | "message"
+  | "messageText"
   | "mic"
   | "people"
   | "phone"
@@ -163,14 +169,14 @@ type IconName =
   | "send"
   | "sliders"
   | "swap"
-  | "task"
-  | "wechat";
+  | "task";
 
 const workbenchIcons: Record<IconName, LucideIcon> = {
   alert: AlertTriangle,
   bell: Bell,
   bot: Bot,
   calendar: CalendarDays,
+  calendarCheck: CalendarCheck2,
   check: Check,
   chevronDown: ChevronDown,
   clipboard: ClipboardCheck,
@@ -183,7 +189,9 @@ const workbenchIcons: Record<IconName, LucideIcon> = {
   keyboard: Keyboard,
   link: Link2,
   list: ListIcon,
+  mail: Mail,
   message: MessageSquare,
+  messageText: MessageSquareText,
   mic: Mic,
   people: Users,
   phone: Phone,
@@ -195,7 +203,6 @@ const workbenchIcons: Record<IconName, LucideIcon> = {
   sliders: Settings2,
   swap: ArrowRightLeft,
   task: ClipboardList,
-  wechat: MessageCircle,
 };
 
 const segmentLabels: Record<string, string> = {
@@ -336,23 +343,57 @@ function queueStatusClass(account: CustomerWorkbenchAccount) {
   return "is-focus";
 }
 
-function lifecycleSourceLabel(value: string) {
-  if (!value) return "客户互动";
-  const normalized = value.toUpperCase();
-  if (value.includes("微信") || normalized.includes("WECHAT")) return "微信";
-  if (value.includes("电话") || normalized.includes("PHONE")) return "通话录音";
-  if (value.includes("会议") || normalized.includes("MEETING") || normalized.includes("EVENT")) return "会议纪要";
-  if (value.includes("邮件") || normalized.includes("EMAIL")) return "邮件";
-  return value;
+export type TimelineSourceKind =
+  | "social-chat"
+  | "phone"
+  | "meeting"
+  | "email"
+  | "crm-task"
+  | "crm-event"
+  | "feedback"
+  | "generic";
+
+export function timelineSourceKind(value: string): TimelineSourceKind {
+  const source = value.trim();
+  const normalized = source.toUpperCase();
+  if (normalized.includes("CRM_TASK")) return "crm-task";
+  if (normalized.includes("CRM_EVENT")) return "crm-event";
+  if (source.includes("微信") || normalized.includes("WECHAT")) return "social-chat";
+  if (source.includes("电话") || normalized.includes("PHONE")) return "phone";
+  if (source.includes("会议") || normalized.includes("MEETING")) return "meeting";
+  if (source.includes("邮件") || normalized.includes("EMAIL")) return "email";
+  if (source.includes("反馈") || normalized.includes("CUSTOMER_FEEDBACK") || normalized.includes("FEEDBACK")) return "feedback";
+  return "generic";
 }
 
-function sourceIconName(value: string): IconName {
-  const label = lifecycleSourceLabel(value);
-  if (label === "微信") return "wechat";
-  if (label === "通话录音") return "phone";
-  if (label === "会议纪要") return "calendar";
-  if (label === "邮件") return "message";
-  return "message";
+export function lifecycleSourceLabel(value: string) {
+  const source = value.trim();
+  return ({
+    "social-chat": "微信",
+    phone: "通话录音",
+    meeting: "会议纪要",
+    email: "邮件",
+    "crm-task": "CRM 任务",
+    "crm-event": "CRM 日程",
+    feedback: "客户反馈",
+    generic: source || "客户互动",
+  } satisfies Record<TimelineSourceKind, string>)[timelineSourceKind(value)];
+}
+
+export function timelineItemKey(eventId: string, occurredAt: string, index: number) {
+  return `${eventId}:${occurredAt}:${index}`;
+}
+
+function sourceIconName(kind: Exclude<TimelineSourceKind, "social-chat">): IconName {
+  return ({
+    phone: "phone",
+    meeting: "calendar",
+    email: "mail",
+    "crm-task": "clipboard",
+    "crm-event": "calendarCheck",
+    feedback: "messageText",
+    generic: "message",
+  } satisfies Record<Exclude<TimelineSourceKind, "social-chat">, IconName>)[kind];
 }
 
 function metricIconName(label: string): IconName {
@@ -382,6 +423,12 @@ function evidenceLabel(value: unknown) {
 function Icon({ name, className = "" }: { name: IconName; className?: string }) {
   const Component = workbenchIcons[name];
   return <Component className={`customer-workbench-icon${className ? ` ${className}` : ""}`} strokeWidth={1.8} aria-hidden />;
+}
+
+function ChannelBrandIcon() {
+  return <svg className="customer-workbench-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <path d={publicSocialChannelIcon.path} />
+  </svg>;
 }
 
 type CustomerWorkbenchAppProps = {
@@ -1165,11 +1212,11 @@ function Timeline({ detail, onOpenArchive }: { detail: CustomerWorkbenchDetail |
     <div className="customer-workbench-timeline-page">
       <header><h3>互动时间线</h3><select aria-label="互动来源" value={source} onChange={(event) => setSource(event.target.value)}>
         <option value="all">全部类型</option>
-        <option value="wechat">微信</option><option value="phone">电话</option><option value="meeting">会议</option><option value="task">CRM 任务</option>
+        <option value="social-chat">微信</option><option value="phone">电话</option><option value="meeting">会议</option><option value="task">CRM 任务</option>
       </select></header>
       <TimelineCards onOpenArchive={onOpenArchive} detail={{ ...detail, timeline: source === "all" ? events : events.filter((item) => {
         const normalized = item.sourceType.toUpperCase();
-        if (source === "wechat") return normalized.includes("WECHAT");
+        if (source === "social-chat") return normalized.includes("WECHAT");
         if (source === "phone") return normalized.includes("PHONE");
         if (source === "meeting") return normalized.includes("MEETING") || normalized.includes("EVENT");
         return normalized.includes("TASK");
@@ -1185,11 +1232,12 @@ function TimelineCards({ detail, compact = false, onOpenArchive }: {
 }) {
   return (
     <div className={`customer-workbench-timeline${compact ? " is-compact" : ""}`}>
-      {(detail?.timeline ?? []).slice(0, compact ? 5 : undefined).map((item) => (
-        <article key={item.eventId}>
+      {(detail?.timeline ?? []).slice(0, compact ? 5 : undefined).map((item, index) => {
+        const sourceKind = timelineSourceKind(item.sourceType);
+        return <article key={timelineItemKey(item.eventId, item.occurredAt, index)}>
           <time dateTime={item.occurredAt}>{formatTimelineDateTime(item.occurredAt)}</time>
-          <span className={`customer-workbench-timeline__icon is-${lifecycleSourceLabel(item.sourceType)}`} aria-hidden>
-            <Icon name={sourceIconName(item.sourceType)} />
+          <span className={`customer-workbench-timeline__icon is-${sourceKind}`} aria-hidden>
+            {sourceKind === "social-chat" ? <ChannelBrandIcon /> : <Icon name={sourceIconName(sourceKind)} />}
           </span>
           <div>
             <strong>{item.subject}</strong>
@@ -1198,8 +1246,8 @@ function TimelineCards({ detail, compact = false, onOpenArchive }: {
             {item.intentTags?.[0] ? <em>{item.intentTags[0]}</em> : null}
             {item.archiveAvailable && onOpenArchive ? <button type="button" className="customer-workbench-timeline__archive" onClick={() => onOpenArchive(item.eventId)}><Database aria-hidden />查看档案</button> : null}
           </div>
-        </article>
-      ))}
+        </article>;
+      })}
     </div>
   );
 }

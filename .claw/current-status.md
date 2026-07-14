@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T15:55:28Z
+updated_at: 2026-07-14T16:22:41Z
 updated_by: MANAGER-001
 phase: customer-workbench-standard-channel-icons
 active_task: "TASK-210"
-next_action: "Validate and push TASK-210 allocation documents, then implement and visually verify public standard source icons without touching TASK-208 implementation."
+next_action: "Commit TASK-210 implementation, run the canonical release dry-run, then publish and verify version 2.7.2 in AgentCiCi and the CloudCC embedded workbench."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-210 is in progress on `codex/TASK-210-customer-workbench-standard-icons`. FEAT-116 replaces the fake WeChat bubble and generic CRM task fallback with public brand and standard semantic icons while preserving the compact timeline layout and all eight themes.
+- TASK-210 implementation is locally verified on `codex/TASK-210-customer-workbench-standard-icons`. FEAT-116 now renders the public standard WeChat mark and distinct Lucide business-source icons, preserves the compact timeline across all eight themes, and removes duplicate-key console errors from CRM event id collisions. Frontend 16 files / 89 tests, production build and real desktop visual checks passed; production release is next.
 - TASK-208 is approved and ready for implementation. Verified production root causes are SalesA order-master invisibility caused by TASK-205 SalesB ownership, plus CRM raw tool-result/fallback leakage. FEAT-114 requires deterministic deep analysis, SalesA batch migration, release and five-session real acceptance.
 - TASK-207 is complete on `codex/TASK-207-frontend-theme-alignment-audit`: all eight themes now own authenticated frontend surfaces and data/identity colors; the organization entry uses the current organization name's first character; dashboard rows, menus, forms, lists and the interaction-ingestion dialog passed a real `1600 × 1000` desktop audit. Frontend 15 files / 85 tests, production build, JSON validation and diff checks passed; browser console error/warning and outer horizontal overflow are zero.
 - TASK-206 is complete in production `2.6.11 / c540988655cb`. The pagecomponent now reads the current CRM session with `$CCDK.CCToken.getToken()`, the backend validates it through `/api/user/getUserInfo`, and strict session-user/page-user/AgentCiCi-member consistency remains in force. Real CRM initial load plus two refreshes produced three HTTP 200 ticket/consume pairs with no mapping error.

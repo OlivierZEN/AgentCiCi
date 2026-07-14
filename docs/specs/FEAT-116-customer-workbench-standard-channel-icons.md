@@ -42,7 +42,7 @@ task_id: TASK-210
 | `CUSTOMER_FEEDBACK` / 含“反馈” | 客户反馈 | Lucide `MessageSquareText` | 青绿色反馈 |
 | 其他 | 客户互动或原始来源名 | Lucide `MessageSquare` | 中性灰蓝兜底 |
 
-映射必须基于稳定英文语义类名输出 CSS，例如 `is-wechat`、`is-crm-task`，不得继续使用中文展示文案拼接样式类名。
+映射必须基于稳定英文语义类名输出 CSS，例如 `is-social-chat`、`is-crm-task`，不得继续使用中文展示文案拼接样式类名，也不得把外部品牌名称扩散为项目自有标识符。
 
 ## 5. 实现设计
 
@@ -80,3 +80,9 @@ task_id: TASK-210
 - 产品与视觉：`PRODUCT.md`、`DESIGN.md`、`DESIGN.json`。
 - 公开品牌图标：Simple Icons 官方项目与 npm 包，许可证为 CC0-1.0。
 
+## 10. 本地实现与验证结果
+
+- 已引入 `simple-icons` 锁定依赖，并仅读取公开渠道图标的规范 path。
+- 已完成七类来源和中性兜底映射；CRM 任务与 CRM 日程不再回退到消息气泡。
+- 已修复重复 CRM event id 导致的 React key 报错，不改变后端数据或时间线排序。
+- Vitest 16 个文件、89 项与生产构建通过；真实桌面数据和只读微信来源视觉探针通过，等待生产发布。
