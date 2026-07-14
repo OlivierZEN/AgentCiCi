@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T13:16:37Z
+updated_at: 2026-07-14T15:55:28Z
 updated_by: MANAGER-001
-phase: crm-product-sales-analysis-hardening
-active_task: "TASK-208"
-next_action: "Validate TASK-208 assignment, push the allocation-only commit, then start TDD in an isolated worktree without touching TASK-207 frontend changes."
+phase: customer-workbench-standard-channel-icons
+active_task: "TASK-210"
+next_action: "Validate and push TASK-210 allocation documents, then implement and visually verify public standard source icons without touching TASK-208 implementation."
 read_next:
   goals: false
   decisions: false
@@ -22,6 +22,7 @@ read_next:
 
 ## Snapshot
 
+- TASK-210 is in progress on `codex/TASK-210-customer-workbench-standard-icons`. FEAT-116 replaces the fake WeChat bubble and generic CRM task fallback with public brand and standard semantic icons while preserving the compact timeline layout and all eight themes.
 - TASK-208 is approved and ready for implementation. Verified production root causes are SalesA order-master invisibility caused by TASK-205 SalesB ownership, plus CRM raw tool-result/fallback leakage. FEAT-114 requires deterministic deep analysis, SalesA batch migration, release and five-session real acceptance.
 - TASK-207 is ready for implementation: FEAT-113 covers the authenticated assistant shell, all front-office AI applications, personal settings and shared overlays across eight themes. The organization switcher will use the current organization name's first visible character, and every checked page must pass desktop alignment, overflow and console gates.
 - TASK-206 is complete in production `2.6.11 / c540988655cb`. The pagecomponent now reads the current CRM session with `$CCDK.CCToken.getToken()`, the backend validates it through `/api/user/getUserInfo`, and strict session-user/page-user/AgentCiCi-member consistency remains in force. Real CRM initial load plus two refreshes produced three HTTP 200 ticket/consume pairs with no mapping error.
@@ -42,6 +43,7 @@ read_next:
 
 ## Read Next
 
+- `.claw/tasks/TASK-210.md`, `.claw/assignments/TASK-210.yaml` and `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md` - active customer workbench standard source icon repair.
 - `.claw/tasks/TASK-208.md`, `.claw/assignments/TASK-208.yaml` and `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md` - approved CRM stability, deep-analysis, SalesA migration and production acceptance source.
 - `.claw/tasks/TASK-207.md`, `.claw/assignments/TASK-207.yaml` and `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md` - active full frontend theme and alignment governance.
 - `.claw/tasks/TASK-206.md` and `docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md` - completed CloudCC embed SSO recovery and verification evidence.

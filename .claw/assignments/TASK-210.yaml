@@ -1,0 +1,55 @@
+task_id: TASK-210
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T15:55:28Z
+expires_at: none
+spec_path: docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md
+task_status_path: .claw/tasks/TASK-210.md
+branch: codex/TASK-210-customer-workbench-standard-icons
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - frontend/package.json
+  - frontend/package-lock.json
+  - docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md
+  - .claw/tasks/TASK-210.md
+  - .claw/assignments/TASK-210.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-108-user-selectable-product-themes.md
+  - docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md
+task_boundary:
+  - "只治理客户互动工作台时间线的来源识别、标准图标、语义颜色和相关测试。"
+  - "微信使用公开维护的品牌图标数据；通用业务来源使用项目既有 Lucide 图标，不新增手绘路径。"
+  - "保持现有时间线布局、密度、轴线坐标、八主题结构和滚动规则。"
+  - "不修改 CRM 数据、后端投影、身份同步、权限、客户列表、AI 助手或移动端布局。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user explicitly requested standard public WeChat and generic timeline icons."
+notes: "Public icon dependency only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
+
