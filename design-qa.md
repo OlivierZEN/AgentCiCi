@@ -1,3 +1,33 @@
+# TASK-209 运营平台登录页原图像素锁定复刻设计 QA
+
+## 验收范围
+
+- 路由：`/platform/login`。
+- 默认桌面视口：`1672 × 941`，与用户批准原图尺寸一致。
+- 视觉真值：`frontend/src/assets/platform-login-reference-1672x941.png`，SHA-256 为 `1b119105b2079248e91492e1ef44c32cd0cfba3b1d7f3917e452c50d270b37e9`。
+- 默认态只验收原图背景；focus、输入和提示属于功能态，单独检查可读性与可用性。
+
+## 默认态比对
+
+- 左右拼接比较图：`output/playwright/task209-reference-comparison.png`；左侧为受控原图，右侧为 `1672 × 941` 本地浏览器默认态截图。
+- 浏览器读取到根元素背景为受控原图 URL、`background-size: 100% 100%`、`background-position: 50% 50%`，根元素尺寸精确为 `1672 × 941`。
+- 默认态 `is-engaged=false`；输入框的背景、文字、边框均透明/`0px`，按钮背景、文字、边框也均透明/`0px`。因此没有可见 HTML/CSS 重绘层覆盖原图。
+- 截图通道返回 JPEG（即便调用方使用 `.png` 文件名），无法把其压缩后的二进制与 PNG 原件作无损文件比较；视觉拼接、背景引用和所有覆盖层透明的运行时样式共同作为像素锁定证据。
+
+## 交互状态
+
+- 两个 label、输入框和提交按钮均唯一存在；初始按钮禁用。
+- 填入本地假凭据 `pixel-lock@example.com` / 本地测试密码后，按钮变为可用；账号、掩码密码、焦点边框和单一按钮文案可读，未提交假凭据。
+- `document.documentElement.scrollWidth <= window.innerWidth`，控制台 `error/warning=0`。
+- 交互图：`output/playwright/task209-reference-engaged-1672x941.png`。
+
+## 结论
+
+- P0：无。
+- P1：无。
+- P2：无。
+- 默认状态通过原图资产与透明语义层实现，满足用户指定的原图高保真复刻方式；认证逻辑不变。
+
 # TASK-207 前台主题一致性与视觉对齐设计 QA
 
 ## 验收范围
