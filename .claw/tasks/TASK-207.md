@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-207
-status: ready
-updated_at: 2026-07-14T13:07:01Z
+status: in_progress
+updated_at: 2026-07-14T13:13:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -23,15 +23,17 @@ spec_path: docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
 
 - 用户提供七张真实截图，确认 AI 应用菜单、客户互动弹窗、数据洞察、知微画像、智能体工作区、专属记忆和组织菜单存在主题或对齐缺陷。
 - FEAT-113 已将全量前台范围、主题 token、组织首字符和页面验收矩阵写明。
-- 等待 assignment 验证和实现分支创建。
+- MANAGER-001 的 SSH challenge、TASK-207 assignment 与代表文件检查均为 `allowed`。
+- 已创建分支 `codex/TASK-207-frontend-theme-alignment-audit` 和详细实施计划。
 
 ## Next Action
 
-- 验证授权，创建实现计划，然后按 TDD 完成静态主题守卫、组织首字符和逐页 CSS/布局修复。
+- 按 TDD 先实现组织首字符与公共主题 token，再分批治理助手壳层、个人设置、数据应用和客户互动工作台。
 
 ## Changed Files
 
 - `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md`
+- `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment-plan.md`
 - `.claw/tasks/TASK-207.md`
 - `.claw/assignments/TASK-207.yaml`
 - `.claw/task-board.md`
@@ -41,4 +43,3 @@ spec_path: docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
 
 - 目标分支：`codex/TASK-207-frontend-theme-alignment-audit`。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
-
