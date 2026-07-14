@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T06:28:42Z
+updated_at: 2026-07-14T06:55:00Z
 updated_by: MANAGER-001
-phase: customer-workbench-comprehensive-demo-data
-active_task: "TASK-203"
-next_action: "Build and verify the FEAT-109 V2 CRM and AgentCiCi demo dataset with Owen/SalesA visibility."
+phase: user-theme-visual-hotfix-release
+active_task: "TASK-202"
+next_action: "Publish the verified theme visual hotfix as 2.6.6 and complete production browser acceptance."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-203 is in progress to expand the bound CloudCC CRM and AgentCiCi demo organization into a 16-customer V2 dataset covering every new-customer, existing-customer, interaction archive, memory, dynamic score and evidence-driven action scenario. Owen/SalesA currently has a valid CRM session but zero visible Accounts because the TASK-172 core records are all owned by SalesB.
+- TASK-203 is complete: Owen/SalesA now sees 16 V2 CRM customers split 8 new/8 existing, all eight queue filters are nonzero, and 30 interaction archives, 30 memories, 30 five-dimensional signals and 12 evidence-driven pending actions cover FEAT-109. AgentCiCi backup is `/opt/cici/backups/20260714-065319-before-task203-demo-v2`; Contract/Case read permission rollback source is `ope202682B741D7w0fRu`.
 - TASK-202 theme preferences are live in `2.6.5`; a user-reported visual regression showed structural wrappers repainted as background boxes. The verified `2.6.6` hotfix keeps agent bar, chat panel, sidebar metrics and machine lanes transparent and removes avatar scaling/shadows across all eight themes.
 - TASK-202 hotfix evidence: 13 frontend test files / 73 tests, production build, diff check, eight-theme 2048×1152 browser matrix, zero horizontal overflow and Product Design QA all passed. Production release `2.6.6` is in progress.
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
@@ -47,7 +47,7 @@ read_next:
 
 ## Read Next
 
-- `.claw/tasks/TASK-203.md` and `.claw/assignments/TASK-203.yaml` - active comprehensive demo-data task and authorization.
+- `.claw/tasks/TASK-203.md` and `.claw/assignments/TASK-203.yaml` - completed comprehensive demo-data task and authorization.
 - `docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md` - scenario matrix, data scale, visibility and acceptance source.
 - `.claw/task-board.md` - compact task index.
 - `.claw/tasks/TASK-202.md` and `.claw/assignments/TASK-202.yaml` - active theme task and authorization.

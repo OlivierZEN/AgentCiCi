@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-203
 related_decisions: FEAT-081,FEAT-082,FEAT-103,FEAT-104,FEAT-105
 related_issues: none
-updated_at: 2026-07-14T06:28:42Z
+updated_at: 2026-07-14T06:55:00Z
 updated_by: MANAGER-001
 ---
 
@@ -98,9 +98,18 @@ updated_by: MANAGER-001
 - 桌面端 AgentCiCi 与 CloudCC 嵌入入口均完成截图和控制台错误检查。
 - 执行日志不得输出密码、token、secret、cookie、客户真实隐私或数据库凭据。
 
+## 实施结果
+
+- CRM 批次 `TASK-203-DEMO-V2` 已完成 16 Account、30 Contact、8 Lead、21 Opportunity、30 Task、45 Event、8 Contract、8 Case；全部记录所有人为 SalesA。
+- SalesA 的销售简档原本缺少 Contract/Case 读取权限。已通过最小只读权限集 `cac203DemoVis01` 补齐，MetadataService plan `pla202604C39466BxSzs`、operation `ope202682B741D7w0fRu` 状态为 `VERIFIED`。
+- AgentCiCi 已完成 30 个确认批次、30 个互动档案、30 条记忆、30 条动态信号、16 个核心客户评分快照和 12 条证据驱动动作；动作按 `CREATE_TASK / CREATE_OPPORTUNITY / UPDATE_OPPORTUNITY` 各 4 条，均为 `PENDING`，未写回 CRM。
+- Owen/SalesA 回读 `ready=true / visibleAccounts=16 / syncStatus=READY`，新客和老客各 8。筛选实测：新客 `focus=4 / follow=8 / risk=1 / recommendations=7`；老客 `renewal=4 / health=5 / service=5 / expansion=8`。
+- 场景信号实测命中 `OPPORTUNITY_GAP / RELATION_GAP / NEXT_STEP_GAP / OVERDUE_TASK / SERVICE_RISK / RENEWAL_WINDOW / VALUE_STABLE / INTERACTION_GAP`；七种互动来源、七种记忆类型、五个评分维度及 `ACTIVE / PENDING / EXPIRED / SUPERSEDED` 信号状态均已覆盖。
+- 最新 AgentCiCi 备份为 `/opt/cici/backups/20260714-065319-before-task203-demo-v2`。工作站 DNS 无法解析 `onechat.agentcici.com`，因此最终验证使用同一 Owen/SalesA 身份的生产 IP-resolved HTTPS API；浏览器安全页未绕过。
+
 ## 回滚
 
 - CRM 侧保留 V2 记录并依批次标记识别；若必须清理，另行生成显式删除清单并获得批准。
 - AgentCiCi 写入前保存 PostgreSQL 备份；脚本只删除目标组织的 V1/V2 演示聚合记录，失败时恢复备份。
 - 权限调整若发生，必须保存 planId/operationId 和变更前快照，并通过 rollback plan 回退。
-
+- 本次权限回滚入口：source operation `ope202682B741D7w0fRu`，rollback plan `rbp2026D899C178B8m63`（可执行；仅在明确回滚窗口 apply）。

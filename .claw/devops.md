@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-13T23:58:40Z
+updated_at: 2026-07-14T06:55:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,14 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+## Demo Data Operations
+
+- TASK-203 customer-workbench V2 on 2026-07-14:
+  - CloudCC batch `TASK-203-DEMO-V2`: 16 Accounts, 30 Contacts, 8 Leads, 21 Opportunities, 30 Tasks, 45 Events, 8 Contracts and 8 Cases; all V2 records are owned by SalesA.
+  - Minimum read permission: permission set `cac203DemoVis01` grants SalesA Contract/Case read only. MetadataService plan `pla202604C39466BxSzs`, operation `ope202682B741D7w0fRu`, status `VERIFIED`; rollback plan `rbp2026D899C178B8m63` is executable but not applied.
+  - AgentCiCi backup: `/opt/cici/backups/20260714-065319-before-task203-demo-v2`. The committed transaction produced 16 workbench snapshots, 30 confirmed batches/events, 30 memories, 30 dynamic signals, 16 core score snapshots and 12 evidence-backed pending actions.
+  - Owen/SalesA production API acceptance: `READY`, 16 visible Accounts, 8 new and 8 existing; all eight queue filters are nonzero. Local DNS still cannot resolve `onechat.agentcici.com`, so IP-resolved HTTPS API acceptance replaced the blocked desktop screenshot.
 
 - 2.6.4 TASK-200 多租户智能体评测控制面 on 2026-07-14:
   - Git commit/tag `d88f4293759f` / `2.6.4`; V79 adds platform core, standard application, industry and tenant-private evaluation assets, deterministic multi-assertion runs, snapshots/comparison/staleness, release gates, Trace regression capture and quality issues.

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-203
-status: in_progress
-updated_at: 2026-07-14T06:28:42Z
+status: done
+updated_at: 2026-07-14T06:55:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -20,12 +20,11 @@ spec_path: docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.m
 
 ## Current State
 
-- 已验证 Owen/SalesA CRM 会话正常但可见 Account 为 0；CCAdmin/SalesB 可见 110。
-- TASK-172 的 10 个核心客户全部归 SalesB 所有，且脚本创建 Account 时未显式设置 owner。
-- FEAT-109 已给出新客、老客、互动、评分、记忆和动作完整场景矩阵。
+- 已完成 `TASK-203-DEMO-V2`：16 Account、30 Contact、8 Lead、21 Opportunity、30 Task、45 Event、8 Contract、8 Case，全部归 SalesA 所有。
+- AgentCiCi 已写入 30 份确认互动档案、30 条记忆、30 条五维信号、16 个客户评分快照和 12 条证据驱动待确认动作。
+- Owen/SalesA API 回读 `visibleAccounts=16`，新客/老客各 8；八个筛选分别为 `4/8/1/7` 与 `4/5/5/8`，全部非零。
+- SalesA 通过最小权限集 `cac203DemoVis01` 获得 Contract/Case 只读权限；operation `ope202682B741D7w0fRu` 已验证并有可执行 rollback plan。
 
 ## Next Action
 
-- 完成任务授权验证并推送分配记录到 `origin/main`。
-- 扩展 V2 数据脚本，先做 CRM 字段/选项 dry-run 和生产备份，再执行写入。
-
+- 无。工作站 DNS 仍无法解析 `onechat.agentcici.com`，本次桌面浏览器截图由生产 IP-resolved API 验收替代；DNS 恢复后可补拍，不影响数据可用性。

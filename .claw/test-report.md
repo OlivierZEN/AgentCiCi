@@ -6377,3 +6377,25 @@ last_run_status: passed
   - Command: `./scripts/release-acr.sh --dry-run`.
   - Result: success; generated canonical production candidate `2.6.3` for backend/frontend images, `CICI_APP_VERSION`, `VITE_CICI_APP_VERSION`, `CICI_IMAGE_TAG` and Git tag.
   - Notes: dry-run only; no image, Git tag, production data or deployment state was changed.
+
+## 2026-07-14 TASK-203 客户互动工作台全场景演示数据
+
+- Authorization and static validation:
+  - Result: success. `MANAGER-001` passed TASK-203 SSH identity and assignment scope checks; `python3 -m py_compile scripts/seed-demo-environment.py`, `git diff --check` and the no-write `--dry-run` passed.
+- CloudCC CRM V2:
+  - Result: success. Batch `TASK-203-DEMO-V2` created/reused 16 Accounts, 30 Contacts, 8 Leads, 21 Opportunities, 30 Tasks, 45 Events, 8 Contracts and 8 Cases; script owner readback confirmed SalesA for every V2 record.
+  - Idempotence: a second CRM upsert returned the same object counts with no duplicate-name growth.
+- Minimum CRM permission:
+  - Result: success. SalesA's sales profile lacked Contract/Case read access; permission set `cac203DemoVis01` adds read only. MetadataService plan `pla202604C39466BxSzs` and operation `ope202682B741D7w0fRu` reached `VERIFIED`.
+  - Rollback: `rollback-plan` returned executable plan `rbp2026D899C178B8m63`; it was not applied. An earlier overlength permission-set ID plan failed before mutation and was superseded.
+- AgentCiCi V2 transaction:
+  - Result: success and idempotent. Latest backup `/opt/cici/backups/20260714-065319-before-task203-demo-v2`; transaction produced 16 workbench snapshots, 30 confirmed batches/events, 30 memories, 30 dynamic signals, 16 core score snapshots and 12 evidence-backed pending actions.
+  - Coverage: seven source types, seven memory types, five score dimensions and ACTIVE/PENDING/EXPIRED/SUPERSEDED states. Action types are evenly split: 4 CREATE_TASK, 4 CREATE_OPPORTUNITY and 4 UPDATE_OPPORTUNITY; all 12 carry event, batch, action key, trigger and validity, and none was written to CRM.
+  - Legacy cleanup: TASK-172 pending static recommendations are zero; accepted/applied historical acceptance records remain intact.
+- Owen/SalesA production API acceptance:
+  - Result: success. Integration returned `ready=true`, `visibleAccounts=16`, `syncStatus=READY`; queues returned new/all 8 and existing/all 8.
+  - Filter totals: new focus/follow/risk/recommendations = `4/8/1/7`; existing renewal/health/service/expansion = `4/5/5/8`.
+  - Scenario details: OPPORTUNITY_GAP, RELATION_GAP, NEXT_STEP_GAP, OVERDUE_TASK, SERVICE_RISK, RENEWAL_WINDOW, VALUE_STABLE and INTERACTION_GAP all appeared on their designated customers; 25-day and 80-day renewal examples, service issues, expansion opportunities and the zero-timeline silent customer were verified.
+  - Archive/score: archive detail returned confirmation text, analysis and memory; seven sources and all five score dimensions were visible through authenticated APIs.
+- Browser limitation:
+  - The in-app browser could not resolve `onechat.agentcici.com` (`ERR_NAME_NOT_RESOLVED`). No safety interstitial was bypassed; the same Owen/SalesA identity was verified over IP-resolved HTTPS API instead. This is the existing workstation DNS risk, not an application or data failure.

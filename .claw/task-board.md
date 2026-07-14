@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T06:28:42Z
+updated_at: 2026-07-14T06:55:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-203 - 客户互动工作台全场景演示数据
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md`
-- task_status_path: `.claw/tasks/TASK-203.md`
-- assignment_path: `.claw/assignments/TASK-203.yaml`
-- blocked_by: `none`
-- next_action: Extend the idempotent V2 seed, back up production, write CRM/AgentCiCi demo facts, and verify every queue and detail scenario as Owen/SalesA.
 
 ### TASK-202 - 用户级产品主题偏好
 
@@ -810,6 +799,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-203 - 客户互动工作台全场景演示数据
+
+- status: `done`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md`
+- task_status_path: `.claw/tasks/TASK-203.md`
+- assignment_path: `.claw/assignments/TASK-203.yaml`
+- blocked_by: `none`
+- next_action: None; V2 data, minimum Contract/Case read permission, Owen/SalesA API acceptance, backups and rollback evidence are complete.
 
 ### TASK-196 - 客户互动整理上下文与队列丢失修复
 
