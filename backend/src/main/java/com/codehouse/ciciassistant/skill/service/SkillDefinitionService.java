@@ -315,6 +315,7 @@ public class SkillDefinitionService {
                     DefaultBinding.alwaysOn("knowledge-first"),
                     DefaultBinding.alwaysOn("safe-handoff"),
                     DefaultBinding.alwaysOn("general-assistant"),
+                    DefaultBinding.alwaysOn("crm-business-analysis"),
                     DefaultBinding.intentRoute("customer-interaction-workbench"),
                     DefaultBinding.intentRoute("ai-meeting-notetaker"),
                     DefaultBinding.intentRoute("web-search")

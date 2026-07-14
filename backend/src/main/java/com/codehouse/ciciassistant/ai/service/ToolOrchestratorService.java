@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ai.service;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
 import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
@@ -36,6 +37,7 @@ public class ToolOrchestratorService {
 
     private final McpServerService mcpServerService;
     private final CloudccOpenApiService cloudccOpenApiService;
+    private final CrmProductSalesAnalysisToolService crmProductSalesAnalysisToolService;
     private final EmailToolService emailToolService;
     private final UserMemoryService userMemoryService;
     private final TavilyToolService tavilyToolService;
@@ -45,6 +47,7 @@ public class ToolOrchestratorService {
 
     public ToolOrchestratorService(McpServerService mcpServerService,
                                    CloudccOpenApiService cloudccOpenApiService,
+                                   CrmProductSalesAnalysisToolService crmProductSalesAnalysisToolService,
                                    EmailToolService emailToolService,
                                    UserMemoryService userMemoryService,
                                    TavilyToolService tavilyToolService,
@@ -53,6 +56,7 @@ public class ToolOrchestratorService {
                                    ObjectMapper objectMapper) {
         this.mcpServerService = mcpServerService;
         this.cloudccOpenApiService = cloudccOpenApiService;
+        this.crmProductSalesAnalysisToolService = crmProductSalesAnalysisToolService;
         this.emailToolService = emailToolService;
         this.userMemoryService = userMemoryService;
         this.tavilyToolService = tavilyToolService;
@@ -95,6 +99,10 @@ public class ToolOrchestratorService {
         addBuiltInTool(result, normalizedAllowedToolNames, CloudccOpenApiService.toolNameGetObjectFields(),
                 CloudccOpenApiService.toolDescriptionGetObjectFields(),
                 CloudccOpenApiService.toolSchemaGetObjectFields(objectMapper),
+                orgId);
+        addBuiltInTool(result, normalizedAllowedToolNames, CrmProductSalesAnalysisToolService.TOOL_NAME,
+                CrmProductSalesAnalysisToolService.toolDescription(),
+                CrmProductSalesAnalysisToolService.toolSchema(objectMapper),
                 orgId);
 
         // Memory built-in tools (always available, no skill restriction)
@@ -224,6 +232,9 @@ public class ToolOrchestratorService {
         }
 
         // Native built-in tools
+        if (CrmProductSalesAnalysisToolService.TOOL_NAME.equals(canonicalToolName)) {
+            return crmProductSalesAnalysisToolService.dispatch(orgId, userId, argumentsJson);
+        }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
             return executeCloudccPageQuery(orgId, userId, argumentsJson);
         }

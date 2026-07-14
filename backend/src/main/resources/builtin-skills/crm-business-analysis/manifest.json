@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "skillCode": "crm-business-analysis",
+  "name": "CRM 经营分析",
+  "description": "基于当前用户有权访问的 CloudCC CRM 数据，稳定回答产品销量、销售额、订单数和客户数排行。",
+  "category": "crm-analytics",
+  "sourceType": "PLATFORM_STANDARD",
+  "visibility": "VISIBLE",
+  "editPolicy": "CONFIGURABLE",
+  "bindingPolicy": "OPTIONAL",
+  "updatePolicy": "AUTO",
+  "riskLevel": "LOW",
+  "version": 1,
+  "documentRoot": ".",
+  "entrypoint": "SKILL.md",
+  "defaultActivationMode": "always-on",
+  "toolWhitelist": ["crm_product_sales_rank"],
+  "kbWhitelist": [],
+  "handoffRule": "CRM 未绑定、无权限、对象结构不兼容或查询失败时，说明具体状态和下一步，不猜测、不补造销量数据。",
+  "outputContract": "回答必须包含排行、指标统计口径、时间范围、数据截止时间和数据来源；有告警时必须明确披露。",
+  "modules": [
+    {
+      "code": "product-sales",
+      "name": "产品销售排行",
+      "files": ["introduction.md", "api.md"],
+      "triggerHints": ["销量", "销售最好", "热销", "销售额", "卖得最多", "产品排行"]
+    }
+  ]
+}

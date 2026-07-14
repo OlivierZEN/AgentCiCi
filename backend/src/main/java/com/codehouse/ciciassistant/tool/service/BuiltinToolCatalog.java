@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.tool.service;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
 import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
 import java.util.List;
@@ -20,6 +21,8 @@ public final class BuiltinToolCatalog {
                     CloudccOpenApiService.toolDescriptionGetCustomObjects(), "低风险", "crm"),
             new ToolCatalogItem(CloudccOpenApiService.toolNameGetObjectFields(), "CloudCC 对象字段",
                     CloudccOpenApiService.toolDescriptionGetObjectFields(), "低风险", "crm"),
+            new ToolCatalogItem(CrmProductSalesAnalysisToolService.TOOL_NAME, "CRM 产品销售排行",
+                    CrmProductSalesAnalysisToolService.toolDescription(), "低风险", "crm"),
             new ToolCatalogItem("get_pending_approvals", "审批待办拉取", "读取 CloudCC / OA 当前待审批项目。", "中风险", "approval"),
             new ToolCatalogItem(EmailToolService.TOOL_LIST_INBOX, "邮件收件箱",
                     "读取当前用户邮箱最近邮件摘要。", "低风险", "email"),

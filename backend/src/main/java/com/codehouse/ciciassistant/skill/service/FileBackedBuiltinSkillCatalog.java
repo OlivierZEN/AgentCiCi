@@ -278,6 +278,10 @@ public class FileBackedBuiltinSkillCatalog {
             String documentRoot,
             String entrypoint,
             String defaultActivationMode,
+            List<String> toolWhitelist,
+            List<String> kbWhitelist,
+            String handoffRule,
+            String outputContract,
             List<Module> modules
     ) {
         public record Module(

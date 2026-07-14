@@ -59,6 +59,16 @@ public class FileBackedBuiltinSkillSyncService {
         int versionNo = manifest.version() == null ? 1 : manifest.version();
         String promptFragment = catalog.readEntrypoint(bundle).trim();
         String moduleManifestJson = writeJson(moduleManifestPayload(bundle));
+        String toolWhitelist = joinCsv(manifest.toolWhitelist());
+        String kbWhitelist = joinCsv(manifest.kbWhitelist());
+        String handoffRule = policyOrDefault(
+                manifest.handoffRule(),
+                "信息不足或上游不可用时明确说明，不补造事实。"
+        );
+        String outputContract = policyOrDefault(
+                manifest.outputContract(),
+                "优先输出可落地的 CloudCC 二次开发方案；涉及接口、参数或代码时必须依据已加载的官方模块文档。"
+        );
 
         PlatformSkillTemplateEntity template = templateRepository.findByOrgIdAndTemplateCode(orgId, manifest.skillCode())
                 .orElseGet(() -> templateRepository.save(new PlatformSkillTemplateEntity(
@@ -92,10 +102,10 @@ public class FileBackedBuiltinSkillSyncService {
                     manifest.name(),
                     manifest.description(),
                     promptFragment,
-                    null,
-                    null,
-                    null,
-                    "优先输出可落地的 CloudCC 二次开发方案；涉及接口、参数或代码时必须依据已加载的官方模块文档。",
+                    toolWhitelist,
+                    kbWhitelist,
+                    handoffRule,
+                    outputContract,
                     manifest.riskLevel(),
                     "sync from file-backed builtin skill bundle",
                     "PUBLISHED",
@@ -121,10 +131,10 @@ public class FileBackedBuiltinSkillSyncService {
                         true,
                         promptFragment,
                         buildDraftSummary(manifest, bundle),
-                        null,
-                        null,
-                        null,
-                        "优先输出可落地的 CloudCC 二次开发方案；涉及接口、参数或代码时必须依据已加载的官方模块文档。",
+                        toolWhitelist,
+                        kbWhitelist,
+                        handoffRule,
+                        outputContract,
                         normalizeRiskLevel(manifest.riskLevel()),
                         SkillSourceType.PLATFORM_STANDARD,
                         SkillVisibility.VISIBLE,
@@ -139,10 +149,10 @@ public class FileBackedBuiltinSkillSyncService {
                 manifest.description(),
                 promptFragment,
                 buildDraftSummary(manifest, bundle),
-                null,
-                null,
-                null,
-                "优先输出可落地的 CloudCC 二次开发方案；涉及接口、参数或代码时必须依据已加载的官方模块文档。",
+                toolWhitelist,
+                kbWhitelist,
+                handoffRule,
+                outputContract,
                 normalizeRiskLevel(manifest.riskLevel()),
                 manifest.skillCode(),
                 versionNo
@@ -163,9 +173,12 @@ public class FileBackedBuiltinSkillSyncService {
                             "{}",
                             "resourceUri=" + bundle.resourceUri() + "\nbundleChecksum=" + bundle.bundleChecksum(),
                             promptFragment,
-                            "{}",
-                            null,
-                            null,
+                            writeJson(Map.of(
+                                    "handoffRule", handoffRule,
+                                    "outputContract", outputContract
+                            )),
+                            toolWhitelist,
+                            kbWhitelist,
                             normalizeRiskLevel(manifest.riskLevel()),
                             "file-backed builtin skill bundle synced; modules=" + manifest.modules().size(),
                             "",
@@ -247,5 +260,22 @@ public class FileBackedBuiltinSkillSyncService {
             case "LOW", "MEDIUM", "HIGH" -> normalized;
             default -> "MEDIUM";
         };
+    }
+
+    private String joinCsv(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return null;
+        }
+        String joined = values.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::trim)
+                .filter(item -> !item.isBlank())
+                .distinct()
+                .collect(java.util.stream.Collectors.joining(","));
+        return joined.isBlank() ? null : joined;
+    }
+
+    private String policyOrDefault(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value.trim();
     }
 }

@@ -41,6 +41,7 @@ import org.springframework.test.web.servlet.MvcResult;
 class FileBackedBuiltinSkillIntegrationTest {
 
     private static final String SKILL_CODE = "cloudcc-customization-expert-common";
+    private static final String CRM_ANALYSIS_SKILL_CODE = "crm-business-analysis";
 
     @Autowired
     private MockMvc mockMvc;
@@ -92,6 +93,68 @@ class FileBackedBuiltinSkillIntegrationTest {
                 .contains("object", "fields", "triggers", "classes");
         assertThat(catalog.readModuleDocument(SKILL_CODE, "object", "api.md")).isPresent();
         assertThat(catalog.readModuleDocument(SKILL_CODE, "../object", "api.md")).isEmpty();
+    }
+
+    @Test
+    void shouldParseRuntimePoliciesFromFileBackedManifest() throws Exception {
+        FileBackedBuiltinSkillCatalog.FileBackedBuiltinSkillManifest manifest = objectMapper.readValue("""
+                {
+                  "schemaVersion": 1,
+                  "skillCode": "crm-business-analysis",
+                  "name": "CRM 经营分析",
+                  "description": "稳定分析 CRM 经营数据",
+                  "category": "CRM",
+                  "sourceType": "PLATFORM_STANDARD",
+                  "visibility": "VISIBLE",
+                  "editPolicy": "CONFIGURABLE",
+                  "bindingPolicy": "OPTIONAL",
+                  "updatePolicy": "AUTO",
+                  "riskLevel": "LOW",
+                  "version": 1,
+                  "documentRoot": ".",
+                  "entrypoint": "SKILL.md",
+                  "defaultActivationMode": "always-on",
+                  "toolWhitelist": ["crm_product_sales_rank"],
+                  "kbWhitelist": [],
+                  "handoffRule": "查询不可用时说明原因，不猜测销量。",
+                  "outputContract": "必须包含统计口径、时间范围和数据截止时间。",
+                  "modules": []
+                }
+                """, FileBackedBuiltinSkillCatalog.FileBackedBuiltinSkillManifest.class);
+
+        assertThat(manifest.toolWhitelist()).containsExactly("crm_product_sales_rank");
+        assertThat(manifest.kbWhitelist()).isEmpty();
+        assertThat(manifest.handoffRule()).contains("不猜测销量");
+        assertThat(manifest.outputContract()).contains("统计口径");
+    }
+
+    @Test
+    void shouldSyncAndAlwaysActivateCrmBusinessAnalysisSkillWithOnlyHighLevelTool() {
+        FileBackedBuiltinSkillCatalog.FileBackedBuiltinSkillBundle bundle =
+                catalog.findBundle(CRM_ANALYSIS_SKILL_CODE).orElseThrow();
+        assertThat(bundle.manifest().toolWhitelist()).containsExactly("crm_product_sales_rank");
+        assertThat(bundle.manifest().defaultActivationMode()).isEqualTo("always-on");
+
+        skillDefinitionService.ensurePhaseOneDefaults("demo-org");
+        SkillDefinitionEntity skill = skillDefinitionRepository
+                .findByOrgIdAndSkillCode("demo-org", CRM_ANALYSIS_SKILL_CODE)
+                .orElseThrow();
+        assertThat(skill.getToolWhitelist()).isEqualTo("crm_product_sales_rank");
+        assertThat(skill.getKbWhitelist()).isNullOrEmpty();
+        assertThat(skill.getHandoffRule()).contains("不猜测");
+        assertThat(skill.getOutputContract()).contains("统计口径");
+
+        String activationMode = jdbcTemplate.queryForObject("""
+                SELECT activation_mode
+                FROM agent_skill_binding
+                WHERE org_id = ? AND agent_id = 'cici-system' AND skill_id = ?
+                """, String.class, "demo-org", skill.getId());
+        assertThat(activationMode).isEqualTo("always-on");
+
+        SkillResolverService.ResolvedSkillContext context = skillResolverService.resolve(
+                "demo-org", "cici-system", "crm-analysis-default-binding-test");
+        assertThat(context.skillCodes()).contains(CRM_ANALYSIS_SKILL_CODE);
+        assertThat(context.allowedToolNames()).contains("crm_product_sales_rank");
     }
 
     @Test
