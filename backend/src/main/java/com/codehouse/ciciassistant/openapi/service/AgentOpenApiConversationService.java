@@ -726,7 +726,7 @@ public class AgentOpenApiConversationService {
                         "task_id", task.getTaskId(),
                         "message_id", messageId,
                         "thought", eventName,
-                        "observation", data == null ? "" : data)));
+                        "observation", safeAgentThoughtObservation(eventName, data))));
             }
         }
 
@@ -833,6 +833,16 @@ public class AgentOpenApiConversationService {
             }
         }
         return null;
+    }
+
+    static Object safeAgentThoughtObservation(String eventName, Object ignoredData) {
+        String normalizedEvent = eventName == null ? "" : eventName.trim().toLowerCase(Locale.ROOT);
+        return switch (normalizedEvent) {
+            case "tool_call" -> "工具处理中";
+            case "tool_result" -> "工具处理完成";
+            case "phase" -> "运行阶段已更新";
+            default -> "运行状态已更新";
+        };
     }
 
     private String deltaText(Object data) {

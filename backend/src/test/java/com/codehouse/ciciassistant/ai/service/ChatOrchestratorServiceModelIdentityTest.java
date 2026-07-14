@@ -1,11 +1,51 @@
 package com.codehouse.ciciassistant.ai.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
+import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
+import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
+import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
+import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
+import com.codehouse.ciciassistant.ai.domain.ChatMessageRepository;
+import com.codehouse.ciciassistant.ai.domain.ChatSessionRepository;
+import com.codehouse.ciciassistant.ai.domain.ChatSessionStateRepository;
 import com.codehouse.ciciassistant.ai.service.AliyunBailianClient.ToolCallInfo;
+import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnswerFormatter;
+import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
+import com.codehouse.ciciassistant.memory.service.UserMemoryService;
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
+import com.codehouse.ciciassistant.ops.service.AuditService;
+import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
+import com.codehouse.ciciassistant.skill.service.BuiltinSkillRuntimeConfigService;
+import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
+import com.codehouse.ciciassistant.skill.service.SkillResolverService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Executor;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 class ChatOrchestratorServiceModelIdentityTest {
 
@@ -176,6 +216,34 @@ class ChatOrchestratorServiceModelIdentityTest {
     void shouldTreatPromisedEmailBodyReadAsDeferredToolResult() {
         assertThat(ChatOrchestratorService.finalAnswerDefersToolResult("已找到邮件，让我读取正文内容。")).isTrue();
         assertThat(ChatOrchestratorService.finalAnswerDefersToolResult("已找到邮件，正文如下：测试内容。")).isFalse();
+    }
+
+    @Test
+    void shouldNotTreatOptionalCrmDrilldownAfterConcreteConclusionAsDeferred() {
+        String answer = """
+                ### 直接结论
+
+                近 30 天销量冠军是智能巡检终端 X1（130 台），订单销售额冠军是边缘采集网关 G5（¥180000）。
+
+                ### 口径与覆盖
+
+                扫描 48 张订单、144 条明细，计入 40 张订单、120 条明细。
+
+                如需我可以继续查看重点客户、开放商机和临期合同明细。
+                """;
+
+        assertThat(ChatOrchestratorService.finalAnswerDefersToolResult(answer)).isFalse();
+        assertThat(ChatOrchestratorService.appendToolResultFallbackIfDeferred(
+                answer,
+                List.of(Map.of("role", "tool", "content", "{\"status\":\"SUCCESS\"}"))))
+                .isEqualTo(answer);
+    }
+
+    @Test
+    void shouldStillTreatBareOptionalOfferWithoutAConcreteConclusionAsDeferred() {
+        assertThat(ChatOrchestratorService.finalAnswerDefersToolResult(
+                "如需我可以继续查看重点客户、开放商机和临期合同明细。"))
+                .isTrue();
     }
 
     @Test
@@ -365,11 +433,80 @@ class ChatOrchestratorServiceModelIdentityTest {
 
         assertThat(fallback)
                 .contains("工具已返回 2 条结果")
-                .contains("模型本轮未能生成最终自然语言总结")
                 .contains("Top 10 Semiconductor Companies")
                 .contains("来源：https://example.com/asia")
+                .doesNotContain("模型本轮未能生成最终自然语言总结")
                 .doesNotContain("\"success\"")
                 .doesNotContain("\"results\"");
+    }
+
+    @Test
+    void shouldNeverExposeUnknownJsonFromGenericToolFallback() {
+        String unknownJson = """
+                {"status":"mystery","productId":"p-secret","ownerId":"005-secret",
+                 "arguments":{"accessToken":"token-secret"},"rows":[{"internal":"payload-secret"}]}
+                """;
+
+        String fallback = ChatOrchestratorService.buildToolResultFallbackMessage(List.of(Map.of(
+                "role", "tool",
+                "content", unknownJson
+        )));
+
+        assertThat(fallback)
+                .contains("未展示原始结果")
+                .doesNotContain("{", "productId", "p-secret", "ownerId", "005-secret",
+                        "accessToken", "token-secret", "payload-secret", "tool_result");
+    }
+
+    @Test
+    void shouldNeverExposeUnknownJsonFromToolLimitFallback() {
+        List<Map<String, Object>> messages = List.of(
+                Map.of(
+                        "role", "assistant",
+                        "content", "",
+                        "tool_calls", List.of(Map.of(
+                                "id", "unknown-call",
+                                "type", "function",
+                                "function", Map.of("name", "unknown_lookup", "arguments", "{}")))),
+                Map.of(
+                        "role", "tool",
+                        "tool_call_id", "unknown-call",
+                        "content", "{\"mystery\":\"payload-secret\",\"ownerId\":\"005-secret\"}"));
+
+        String fallback = ChatOrchestratorService.buildToolLimitReachedFallbackMessage(messages, 2);
+
+        assertThat(fallback)
+                .contains("原始字段已隐藏")
+                .doesNotContain("{\"mystery\"", "payload-secret", "ownerId", "005-secret");
+    }
+
+    @Test
+    void shouldUseCrmFormatterForCrmToolFallbackInsteadOfRawPayload() {
+        String crmJson = """
+                {"status":"EMPTY","metric":"SALES_QUANTITY","startDate":"2026-06-15",
+                 "endDate":"2026-07-14","dataAsOf":"2026-07-14T12:00:00+08:00",
+                 "sourceObjects":["product","cloudccorder","cloudccorderitem"],"rows":[],
+                 "coverage":{"scannedOrders":0,"includedOrders":0,"excludedOrders":0,
+                 "scannedItems":0,"includedItems":0,"excludedItems":0},"warnings":[]}
+                """;
+        List<Map<String, Object>> messages = List.of(
+                Map.of(
+                        "role", "assistant",
+                        "content", "",
+                        "tool_calls", List.of(Map.of(
+                                "id", "crm-call",
+                                "type", "function",
+                                "function", Map.of(
+                                        "name", "crm_product_sales_rank",
+                                        "arguments", "{\"range\":\"LAST_30_DAYS\"}")))),
+                Map.of("role", "tool", "tool_call_id", "crm-call", "content", crmJson));
+
+        String fallback = ChatOrchestratorService.buildToolResultFallbackMessage(messages);
+
+        assertThat(fallback)
+                .contains("2026-06-15 至 2026-07-14")
+                .contains("没有可计入的有效销售事实")
+                .doesNotContain("{\"status\"", "crm_product_sales_rank", "tool_result");
     }
 
     @Test
@@ -448,5 +585,240 @@ class ChatOrchestratorServiceModelIdentityTest {
                 .contains("下一步可以确认对象名称、人员姓名、月份/季度字段或筛选条件")
                 .doesNotContain("系统保护上限")
                 .doesNotContain("暂时无法继续处理");
+    }
+
+    @Test
+    void shouldUseSameDeterministicCrmBodyForBlockingStreamingAndPersistenceWithoutFinalLlm() {
+        String rawCrmResult = """
+                {"status":"SUCCESS","metric":"SALES_QUANTITY","startDate":"2026-06-15",
+                 "endDate":"2026-07-14","dataAsOf":"2026-07-14T12:00:00+08:00",
+                 "sourceObjects":["product","cloudccorder","cloudccorderitem"],
+                 "rows":[{"rank":1,"productId":"internal-product-id","productName":"智能巡检终端 X1",
+                 "productCode":"DEMO-X1","unit":"台","salesQuantity":130,"salesAmount":130000,
+                 "orderCount":12,"customerCount":8,"previousValue":100,"changeRate":0.3,
+                 "quantityContributionRate":1,"amountContributionRate":1,"realizedAveragePrice":1000,
+                 "top1CustomerConcentration":0.7,"top3CustomerConcentration":0.9,
+                 "quantityRank":1,"amountRank":1,"pipeline":null,"contracts":null}],
+                 "coverage":{"scannedOrders":48,"includedOrders":40,"excludedOrders":8,
+                 "scannedItems":144,"includedItems":120,"excludedItems":24},"warnings":[],
+                 "summary":{"totalSalesQuantity":130,"totalSalesAmount":130000,"orderCount":12,
+                 "customerCount":8,"currency":"CNY","amountComparable":true,
+                 "quantityLeader":{"productName":"智能巡检终端 X1","productCode":"DEMO-X1","unit":"台","value":130},
+                 "amountLeader":{"productName":"智能巡检终端 X1","productCode":"DEMO-X1","unit":"台","value":130000}},
+                 "insights":[]}
+                """;
+        CrmRouteFixture fixture = new CrmRouteFixture(rawCrmResult);
+        String question = "嗯？看一下销量最好的产品有哪些？";
+        String expected = fixture.formatter.formatJson(rawCrmResult);
+
+        Map<String, Object> blocking = fixture.service.chat(
+                "demo-org", "sales-a", "blocking-session", question,
+                List.of(), "agent-cici", "crm-business-analysis");
+        CapturingEmitter emitter = new CapturingEmitter();
+        fixture.service.chatStreamBlocking(
+                "demo-org", "sales-a", "stream-session", question,
+                List.of(), "agent-cici", "crm-business-analysis", emitter);
+
+        assertThat(blocking.get("answer")).isEqualTo(expected);
+        assertThat(emitter.deltaText()).isEqualTo(expected);
+        assertThat(emitter.eventNames()).doesNotContain("tool_call", "tool_result");
+        assertThat(emitter.allDataText())
+                .doesNotContain("{\"status\"", "internal-product-id", "crm_product_sales_rank", "tool_result");
+        assertThat(expected)
+                .contains("销量冠军：智能巡检终端 X1")
+                .contains("产品 Top 5")
+                .doesNotContain("internal-product-id", "{\"status\"");
+        verifyNoInteractions(fixture.aliyunBailianClient);
+
+        ArgumentCaptor<ChatMessageEntity> persisted = ArgumentCaptor.forClass(ChatMessageEntity.class);
+        verify(fixture.chatMessageRepository, times(4)).save(persisted.capture());
+        assertThat(persisted.getAllValues().stream()
+                .filter(message -> "assistant".equals(message.getRoleCode()))
+                .map(ChatMessageEntity::getContent)
+                .toList())
+                .containsExactly(expected, expected);
+    }
+
+    private static final class CrmRouteFixture {
+        private final ChatSessionRepository chatSessionRepository = mock(ChatSessionRepository.class);
+        private final ChatMessageRepository chatMessageRepository = mock(ChatMessageRepository.class);
+        private final ModelRouterService modelRouterService = mock(ModelRouterService.class);
+        private final ModelProviderService modelProviderService = mock(ModelProviderService.class);
+        private final ToolOrchestratorService toolOrchestratorService = mock(ToolOrchestratorService.class);
+        private final RagService ragService = mock(RagService.class);
+        private final ChatThinkingConfigService chatThinkingConfigService = mock(ChatThinkingConfigService.class);
+        private final AuditService auditService = mock(AuditService.class);
+        private final AliyunBailianClient aliyunBailianClient = mock(AliyunBailianClient.class);
+        private final SessionRealtimeEventService sessionRealtimeEventService = mock(SessionRealtimeEventService.class);
+        private final FeishuBotBindingRepository feishuBotBindingRepository = mock(FeishuBotBindingRepository.class);
+        private final SkillResolverService skillResolverService = mock(SkillResolverService.class);
+        private final SkillPromptAssembler skillPromptAssembler = mock(SkillPromptAssembler.class);
+        private final BuiltinSkillDocumentService builtinSkillDocumentService = mock(BuiltinSkillDocumentService.class);
+        private final BuiltinSkillRuntimeConfigService builtinSkillRuntimeConfigService =
+                mock(BuiltinSkillRuntimeConfigService.class);
+        private final UserMemoryService userMemoryService = mock(UserMemoryService.class);
+        private final ChatSessionStateService chatSessionStateService = mock(ChatSessionStateService.class);
+        private final ChatSessionStateRepository chatSessionStateRepository = mock(ChatSessionStateRepository.class);
+        private final RuntimeContextPromptService runtimeContextPromptService = mock(RuntimeContextPromptService.class);
+        private final AgentWorkflowRuntimeService agentWorkflowRuntimeService = mock(AgentWorkflowRuntimeService.class);
+        private final AgentWorkflowVersionRepository agentWorkflowVersionRepository =
+                mock(AgentWorkflowVersionRepository.class);
+        private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService =
+                mock(AgentWorkflowExecutionLogService.class);
+        private final AgentRunTraceService agentRunTraceService = mock(AgentRunTraceService.class);
+        private final AgentAccessControlService agentAccessControlService = mock(AgentAccessControlService.class);
+        private final BillingUsageMeteringService billingUsageMeteringService = mock(BillingUsageMeteringService.class);
+        private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
+        private final CrmProductSalesAnswerFormatter formatter =
+                new CrmProductSalesAnswerFormatter(new ObjectMapper().findAndRegisterModules());
+        private final Executor directExecutor = Runnable::run;
+        private final ChatOrchestratorService service;
+
+        private CrmRouteFixture(String rawCrmResult) {
+            SkillResolverService.ResolvedSkill crmSkill = new SkillResolverService.ResolvedSkill(
+                    "crm-business-analysis", "CRM 经营分析", "", List.of(CrmProductSalesAnalysisToolService.TOOL_NAME),
+                    List.of(), "", "", "LOW", "always-on");
+            SkillResolverService.ResolvedSkillContext skillContext = new SkillResolverService.ResolvedSkillContext(
+                    "agent-cici",
+                    List.of(crmSkill),
+                    List.of("crm-business-analysis"),
+                    List.of(CrmProductSalesAnalysisToolService.TOOL_NAME),
+                    List.of(),
+                    List.of(CrmProductSalesAnalysisToolService.TOOL_NAME),
+                    List.of(CrmProductSalesAnalysisToolService.TOOL_NAME),
+                    List.of(),
+                    List.of(),
+                    "",
+                    "",
+                    "mock-model",
+                    "crm-business-analysis",
+                    4,
+                    null,
+                    List.of(),
+                    List.of(),
+                    SkillResolverService.ResolvedPolicyBundle.EMPTY);
+            BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
+                    new BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs(List.of(), List.of());
+            RuntimeContextPromptService.RuntimeContext runtimeContext = new RuntimeContextPromptService.RuntimeContext(
+                    "Asia/Shanghai", "2026-07-14", "20:00:00", "2026年7月14日", "星期二");
+            AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult =
+                    new AgentWorkflowRuntimeService.RuntimeExecutionResult(
+                            AgentWorkflowExecutionLogService.STATUS_SUCCESS,
+                            "completed",
+                            null,
+                            List.of(),
+                            new AgentWorkflowRuntimeService.RuntimePolicyBundleView("", 0, 0, 0),
+                            List.of(),
+                            new java.util.LinkedHashMap<>());
+
+            when(skillResolverService.resolve(anyString(), anyString(), anyString(), any()))
+                    .thenReturn(skillContext);
+            when(skillResolverService.resolveKnowledgeBaseIds(any(), anyList())).thenReturn(List.of());
+            when(builtinSkillDocumentService.resolveDocs(
+                    any(SkillResolverService.ResolvedSkillContext.class), anyString())).thenReturn(builtinDocs);
+            when(modelRouterService.route(eq("demo-org"), eq("chat"), eq("mock-model")))
+                    .thenReturn(Map.of("provider", "mock", "modelName", "mock-model"));
+            when(chatThinkingConfigService.isEnabled("demo-org")).thenReturn(false);
+            when(toolOrchestratorService.getToolDefinitions(anyString(), anyList(), anyList()))
+                    .thenReturn(List.of());
+            when(toolOrchestratorService.executeTool(
+                    eq("demo-org"), eq("sales-a"), eq(CrmProductSalesAnalysisToolService.TOOL_NAME),
+                    anyString(), anyList(), anyList())).thenReturn(rawCrmResult);
+            when(runtimeContextPromptService.current()).thenReturn(runtimeContext);
+            when(runtimeContextPromptService.buildPromptBlock(runtimeContext)).thenReturn("[runtime]");
+            when(runtimeContextPromptService.toPayload(runtimeContext)).thenReturn(Map.of());
+            when(builtinSkillRuntimeConfigService.resolve(any(), any(), anyString(), anyString()))
+                    .thenReturn(BuiltinSkillRuntimeConfigService.ResolvedBuiltinSkillRuntimeConfig.empty());
+            when(skillPromptAssembler.assemble(anyString(), any(), any(), any())).thenReturn("system");
+            when(userMemoryService.listForInjection(anyString(), anyString(), anyString())).thenReturn(List.of());
+            when(chatSessionStateService.get(anyString(), anyString())).thenReturn(Optional.empty());
+            when(chatMessageRepository.findByOrgIdAndSessionIdOrderByCreatedAtDesc(anyString(), anyString(), any()))
+                    .thenReturn(List.of());
+            when(chatSessionRepository.findById(anyString())).thenReturn(Optional.empty());
+            when(agentWorkflowRuntimeService.evaluateForChat(anyString(), anyString(), anyString(), anyList()))
+                    .thenReturn(executionResult);
+            when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+
+            service = new ChatOrchestratorService(
+                    chatSessionRepository,
+                    chatMessageRepository,
+                    modelRouterService,
+                    modelProviderService,
+                    toolOrchestratorService,
+                    ragService,
+                    chatThinkingConfigService,
+                    auditService,
+                    aliyunBailianClient,
+                    sessionRealtimeEventService,
+                    feishuBotBindingRepository,
+                    skillResolverService,
+                    skillPromptAssembler,
+                    builtinSkillDocumentService,
+                    builtinSkillRuntimeConfigService,
+                    userMemoryService,
+                    chatSessionStateService,
+                    chatSessionStateRepository,
+                    runtimeContextPromptService,
+                    agentWorkflowRuntimeService,
+                    agentWorkflowVersionRepository,
+                    agentWorkflowExecutionLogService,
+                    agentRunTraceService,
+                    agentAccessControlService,
+                    billingUsageMeteringService,
+                    formatter,
+                    new AgentRuntimeConcurrencyService(),
+                    directExecutor,
+                    transactionManager);
+        }
+    }
+
+    private static final class CapturingEmitter extends SseEmitter {
+        private final List<String> eventNames = new ArrayList<>();
+        private final List<Object> eventData = new ArrayList<>();
+
+        private CapturingEmitter() {
+            super(60_000L);
+        }
+
+        @Override
+        public synchronized void send(SseEventBuilder builder) throws IOException {
+            Set<ResponseBodyEmitter.DataWithMediaType> items = builder.build();
+            String eventName = "";
+            Object data = null;
+            for (ResponseBodyEmitter.DataWithMediaType item : items) {
+                Object value = item.getData();
+                if (value instanceof String text && text.startsWith("event:")) {
+                    String framed = text.substring("event:".length());
+                    int lineEnd = framed.indexOf('\n');
+                    eventName = (lineEnd >= 0 ? framed.substring(0, lineEnd) : framed).trim();
+                } else if (!(value instanceof String)) {
+                    data = value;
+                }
+            }
+            eventNames.add(eventName);
+            eventData.add(data);
+        }
+
+        private List<String> eventNames() {
+            return List.copyOf(eventNames);
+        }
+
+        private String deltaText() {
+            StringBuilder text = new StringBuilder();
+            for (int index = 0; index < eventNames.size(); index++) {
+                if (!"delta".equals(eventNames.get(index))) {
+                    continue;
+                }
+                Object data = eventData.get(index);
+                if (data instanceof Map<?, ?> map && map.get("text") != null) {
+                    text.append(map.get("text"));
+                }
+            }
+            return text.toString();
+        }
+
+        private String allDataText() {
+            return eventData.toString();
+        }
     }
 }

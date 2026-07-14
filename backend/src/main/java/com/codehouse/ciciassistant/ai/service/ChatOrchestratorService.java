@@ -21,6 +21,7 @@ import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingEntity;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
 import com.codehouse.ciciassistant.billing.service.BillingUsageMeteringService;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
+import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnswerFormatter;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesIntentRouter;
 import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
@@ -70,11 +71,17 @@ public class ChatOrchestratorService {
     private static final int MAX_TOOL_ROUNDS = 8;
     private static final int MIN_TOOL_ROUNDS = 1;
     private static final int MAX_POLICY_TOOL_ROUNDS = 12;
-    private static final ObjectMapper TOOL_RESULT_OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper TOOL_RESULT_OBJECT_MAPPER = new ObjectMapper().findAndRegisterModules();
+    private static final CrmProductSalesAnswerFormatter CRM_TOOL_RESULT_FALLBACK_FORMATTER =
+            new CrmProductSalesAnswerFormatter(TOOL_RESULT_OBJECT_MAPPER);
     private static final Pattern DEFERRED_TOOL_FINAL_PATTERN = Pattern.compile(
             "(后续|接下来|随后|稍后).{0,18}(继续|重新|再|将|会|我)?.{0,18}(查询|检索|调用|获取|读取|查看|打开|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
                     + "|(让我|我来|我会|我再|将).{0,12}(继续|重新|再)?.{0,12}(查询|检索|调用|获取|读取|查看|打开|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)"
                     + "|(继续|重新|再).{0,8}(查询|检索|调用|获取|读取|查看|打开|处理|尝试|抽取|整理|分析|生成|补充|展示|展现|输出)",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern OPTIONAL_DRILLDOWN_OFFER_PATTERN = Pattern.compile(
+            "(如需|若需|如果需要|需要的话).{0,48}(可以|可)?.{0,12}(继续|进一步).{0,20}"
+                    + "(查询|检索|获取|读取|查看|打开|抽取|整理|分析|展示|展现|输出).*$",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern TOOL_DATA_COUNT_PATTERN = Pattern.compile("返回\\s*(\\d+)\\s*条[，,]\\s*总计\\s*(\\d+)\\s*条");
     private static final Pattern TOOL_FIELD_COUNT_PATTERN = Pattern.compile("对象字段列表（标准字段\\s*(\\d+)\\s*条[，,]\\s*自定义字段\\s*(\\d+)\\s*条）");
@@ -107,6 +114,7 @@ public class ChatOrchestratorService {
     private final AgentAccessControlService agentAccessControlService;
     private final AgentRuntimeConcurrencyService agentRuntimeConcurrencyService;
     private final BillingUsageMeteringService billingUsageMeteringService;
+    private final CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter;
     private final Executor agentRuntimeExecutor;
     private final TransactionTemplate tx;
 
@@ -135,6 +143,7 @@ public class ChatOrchestratorService {
                                    AgentRunTraceService agentRunTraceService,
                                    AgentAccessControlService agentAccessControlService,
                                    BillingUsageMeteringService billingUsageMeteringService,
+                                   CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter,
                                    AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
                                    @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor,
                                    PlatformTransactionManager transactionManager) {
@@ -163,6 +172,7 @@ public class ChatOrchestratorService {
         this.agentRunTraceService = agentRunTraceService;
         this.agentAccessControlService = agentAccessControlService;
         this.billingUsageMeteringService = billingUsageMeteringService;
+        this.crmProductSalesAnswerFormatter = crmProductSalesAnswerFormatter;
         this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
         this.agentRuntimeExecutor = agentRuntimeExecutor;
         this.tx = new TransactionTemplate(transactionManager);
@@ -416,14 +426,12 @@ public class ChatOrchestratorService {
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
         appendConfirmedPendingEmailBodyToolResult(
                 messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-        boolean forcedCrmProductSales = appendForcedCrmProductSalesToolResult(
-                messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-        if (forcedCrmProductSales) {
-            tools = List.of();
-        }
+        Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
+                messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
-        String answer = runToolLoop(modelName, messages, tools, orgId, userId, sessionId,
-                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId);
+        String answer = forcedCrmProductSalesAnswer.orElseGet(() -> runToolLoop(
+                modelName, messages, tools, orgId, userId, sessionId,
+                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId));
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -634,15 +642,13 @@ public class ChatOrchestratorService {
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
                 appendConfirmedPendingEmailBodyToolResult(
                         messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                boolean forcedCrmProductSales = appendForcedCrmProductSalesToolResult(
-                        messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                if (forcedCrmProductSales) {
-                    tools = List.of();
-                }
+                Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
+                        messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
-                boolean pendingApprovalsUsed = resolveToolCalls(
+                boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
-                        showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId);
+                        showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
+                        toolCallTraces, runId);
                 if (pendingApprovalsUsed) {
                     // Keep chat concise when a dedicated approvals page is rendered on frontend.
                     messages.add(Map.of(
@@ -659,72 +665,80 @@ public class ChatOrchestratorService {
                 }
 
                 safeSendPhase(emitter, "generating", modelName);
-                StringBuilder acc = new StringBuilder();
-                log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
-                        sessionId, modelName, messages.size(), 0);
-                long streamStart = System.currentTimeMillis();
-                Instant finalModelStartedAt = Instant.now();
-                String finalModelStatus = "SUCCESS";
-                ChatStreamResult streamResult = new ChatStreamResult(0, 0);
-                try {
-                    if (modelCredentials.hasProviderCredentials()) {
-                        streamResult = aliyunBailianClient.chatStreamWithCredentials(
-                                modelName,
-                                messages,
-                                null,
-                                showThinking,
-                                piece -> {
-                                    acc.append(piece);
-                                    safeSendDelta(emitter, piece);
-                                },
-                                modelCredentials.apiBaseUrl(),
-                                modelCredentials.apiKey());
-                    } else {
-                        streamResult = aliyunBailianClient.chatStreamWithMessages(
-                                modelName,
-                                messages,
-                                null,
-                                showThinking,
-                                piece -> {
-                                    acc.append(piece);
-                                    safeSendDelta(emitter, piece);
-                                });
-                    }
-                    log.info("chatStream LLM stream done: session={} chars={} elapsedMs={}",
-                            sessionId, acc.length(), System.currentTimeMillis() - streamStart);
-                } catch (Exception ex) {
-                    finalModelStatus = "FAILED";
-                    log.warn("chatStream LLM stream failed: session={} elapsedMs={} err={}",
-                            sessionId, System.currentTimeMillis() - streamStart, ex.getMessage());
-                    String fallback = "（生成回复时发生错误，请重试。详情：" + ex.getMessage() + "）";
-                    acc.append(fallback);
-                    safeSendDeltaInChunks(emitter, fallback);
-                } finally {
-                    Instant finalModelEndedAt = Instant.now();
-                    modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
-                            "final_stream",
-                            modelName,
-                            finalModelStatus,
-                            finalModelStartedAt,
-                            finalModelEndedAt,
-                            elapsedMs(finalModelStartedAt, finalModelEndedAt),
-                            0,
-                            acc.length(),
-                            streamResult.promptTokens(),
-                            streamResult.completionTokens(),
-                            "最终流式回复生成。"));
-                }
-
-                String finalText = showThinking ? acc.toString() : AssistantContentSanitizer.stripThinkingSections(acc.toString());
-                if (finalText == null || finalText.trim().isEmpty()) {
-                    finalText = buildToolResultFallbackMessage(messages);
-                    safeSendDeltaInChunks(emitter, finalText);
+                String finalText;
+                if (forcedCrmProductSalesAnswer.isPresent()) {
+                    finalText = forcedCrmProductSalesAnswer.get();
+                    safeSendDelta(emitter, finalText);
                 } else {
-                    String guardedFinalText = appendToolResultFallbackIfDeferred(finalText, messages);
-                    if (!guardedFinalText.equals(finalText)) {
-                        String appended = guardedFinalText.substring(finalText.length());
-                        safeSendDeltaInChunks(emitter, appended);
-                        finalText = guardedFinalText;
+                    StringBuilder acc = new StringBuilder();
+                    log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
+                            sessionId, modelName, messages.size(), 0);
+                    long streamStart = System.currentTimeMillis();
+                    Instant finalModelStartedAt = Instant.now();
+                    String finalModelStatus = "SUCCESS";
+                    ChatStreamResult streamResult = new ChatStreamResult(0, 0);
+                    try {
+                        if (modelCredentials.hasProviderCredentials()) {
+                            streamResult = aliyunBailianClient.chatStreamWithCredentials(
+                                    modelName,
+                                    messages,
+                                    null,
+                                    showThinking,
+                                    piece -> {
+                                        acc.append(piece);
+                                        safeSendDelta(emitter, piece);
+                                    },
+                                    modelCredentials.apiBaseUrl(),
+                                    modelCredentials.apiKey());
+                        } else {
+                            streamResult = aliyunBailianClient.chatStreamWithMessages(
+                                    modelName,
+                                    messages,
+                                    null,
+                                    showThinking,
+                                    piece -> {
+                                        acc.append(piece);
+                                        safeSendDelta(emitter, piece);
+                                    });
+                        }
+                        log.info("chatStream LLM stream done: session={} chars={} elapsedMs={}",
+                                sessionId, acc.length(), System.currentTimeMillis() - streamStart);
+                    } catch (Exception ex) {
+                        finalModelStatus = "FAILED";
+                        log.warn("chatStream LLM stream failed: session={} elapsedMs={} err={}",
+                                sessionId, System.currentTimeMillis() - streamStart, ex.getMessage());
+                        String fallback = "（生成回复时发生错误，请重试。详情：" + ex.getMessage() + "）";
+                        acc.append(fallback);
+                        safeSendDeltaInChunks(emitter, fallback);
+                    } finally {
+                        Instant finalModelEndedAt = Instant.now();
+                        modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
+                                "final_stream",
+                                modelName,
+                                finalModelStatus,
+                                finalModelStartedAt,
+                                finalModelEndedAt,
+                                elapsedMs(finalModelStartedAt, finalModelEndedAt),
+                                0,
+                                acc.length(),
+                                streamResult.promptTokens(),
+                                streamResult.completionTokens(),
+                                "最终流式回复生成。"));
+                    }
+
+                    finalText = showThinking
+                            ? acc.toString()
+                            : AssistantContentSanitizer.stripThinkingSections(acc.toString());
+                    if (finalText == null || finalText.trim().isEmpty()) {
+                        finalText = buildToolResultFallbackMessage(messages);
+                        safeSendDeltaInChunks(emitter, finalText);
+                    } else {
+                        String guardedFinalText = appendToolResultFallbackIfDeferred(finalText, messages);
+                        if (!guardedFinalText.equals(finalText)) {
+                            String appended = guardedFinalText.substring(finalText.length());
+                            safeSendDeltaInChunks(emitter, appended);
+                            finalText = guardedFinalText;
+                        }
                     }
                 }
                 Instant wfStartedAt = Instant.now();
@@ -1197,21 +1211,21 @@ public class ChatOrchestratorService {
         return toolResult;
     }
 
-    private boolean appendForcedCrmProductSalesToolResult(List<Map<String, Object>> messages,
-                                                          String orgId,
-                                                          String userId,
-                                                          String sessionId,
-                                                          ResolvedSkillContext skillContext,
-                                                          SseEmitter emitter,
-                                                          List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
-                                                          String runId,
-                                                          String question) {
+    private Optional<String> appendForcedCrmProductSalesToolResult(
+            List<Map<String, Object>> messages,
+            String orgId,
+            String userId,
+            String sessionId,
+            ResolvedSkillContext skillContext,
+            List<AgentRunTraceService.ToolCallTraceInput> toolCallTraces,
+            String runId,
+            String question) {
         if (!skillContext.skillCodes().contains("crm-business-analysis")) {
-            return false;
+            return Optional.empty();
         }
         Optional<String> arguments = CrmProductSalesIntentRouter.route(question);
         if (arguments.isEmpty()) {
-            return false;
+            return Optional.empty();
         }
         String toolResult = executeAndAppendSyntheticToolCall(
                 messages,
@@ -1219,22 +1233,13 @@ public class ChatOrchestratorService {
                 userId,
                 sessionId,
                 skillContext,
-                emitter,
+                null,
                 toolCallTraces,
                 runId,
                 CrmProductSalesAnalysisToolService.TOOL_NAME,
                 arguments.get(),
                 "auto_crm_sales_");
-        if (emitter != null) {
-            safeSendToolResult(emitter, CrmProductSalesAnalysisToolService.TOOL_NAME, toolResult);
-        }
-        messages.add(Map.of(
-                "role", "system",
-                "content", "CRM 产品销售排行已由平台确定性工具完成。必须直接依据上一条工具结果回答，"
-                        + "保持产品名称、排名和数值原样，说明指标口径、时间范围、数据截止时间与来源；"
-                        + "不得再调用任何原子 CRM 工具，不得声称尚未形成结论。"
-        ));
-        return true;
+        return Optional.of(crmProductSalesAnswerFormatter.formatJson(toolResult));
     }
 
     private Optional<PendingEmailState> pendingEmailFromState(String orgId, String sessionId) {
@@ -2319,6 +2324,15 @@ public class ChatOrchestratorService {
             return false;
         }
         String normalized = content.replaceAll("\\s+", "");
+        Matcher optionalOffer = OPTIONAL_DRILLDOWN_OFFER_PATTERN.matcher(normalized);
+        if (optionalOffer.find()) {
+            String concretePrefix = normalized.substring(0, optionalOffer.start());
+            if (concretePrefix.length() >= 16 && containsAny(concretePrefix, List.of(
+                    "结论", "冠军", "排行", "Top", "TOP", "已完成", "结果如下",
+                    "正文如下", "扫描", "计入", "订单", "客户", "销售额", "销量"))) {
+                normalized = concretePrefix;
+            }
+        }
         return DEFERRED_TOOL_FINAL_PATTERN.matcher(normalized).find();
     }
 
@@ -2373,6 +2387,11 @@ public class ChatOrchestratorService {
     }
 
     static String buildToolResultFallbackMessage(List<Map<String, Object>> messages) {
+        Optional<String> crmToolResult = toolResultForName(
+                messages, CrmProductSalesAnalysisToolService.TOOL_NAME);
+        if (crmToolResult.isPresent()) {
+            return CRM_TOOL_RESULT_FALLBACK_FORMATTER.formatJson(crmToolResult.get());
+        }
         for (int i = messages.size() - 1; i >= 0; i--) {
             Map<String, Object> msg = messages.get(i);
             if (!"tool".equals(String.valueOf(msg.get("role")))) {
@@ -2390,12 +2409,54 @@ public class ChatOrchestratorService {
             if (!structured.isBlank()) {
                 return structured;
             }
-            String clipped = normalized.length() > 4000 ? normalized.substring(0, 4000) + "..." : normalized;
-            return "工具已返回结果，但模型本轮未能生成最终自然语言总结。"
-                    + "该工具返回的是非结构化内容，先展示原始结果前段，必要时请让我继续整理：\n\n"
-                    + clipped;
+            return "工具已返回结果，但当前结构暂不支持安全展示。为保护业务数据，未展示原始结果；"
+                    + "请调整筛选条件后重试。";
         }
-        return "本次工具调用已完成，但模型本轮未能生成可展示的数据摘要。请调整筛选条件后重试。";
+        return "本次工具调用已完成，但没有可安全展示的数据摘要。请调整筛选条件后重试。";
+    }
+
+    private static Optional<String> toolResultForName(List<Map<String, Object>> messages, String expectedToolName) {
+        if (messages == null || messages.isEmpty() || expectedToolName == null || expectedToolName.isBlank()) {
+            return Optional.empty();
+        }
+        Map<String, String> toolNamesByCallId = new LinkedHashMap<>();
+        for (Map<String, Object> message : messages) {
+            Object rawToolCalls = message.get("tool_calls");
+            if (!(rawToolCalls instanceof List<?> toolCalls)) {
+                continue;
+            }
+            for (Object rawToolCall : toolCalls) {
+                if (!(rawToolCall instanceof Map<?, ?> toolCall)) {
+                    continue;
+                }
+                Object functionValue = toolCall.get("function");
+                if (!(functionValue instanceof Map<?, ?> function)) {
+                    continue;
+                }
+                Object callIdValue = toolCall.get("id");
+                Object toolNameValue = function.get("name");
+                String callId = callIdValue == null ? "" : String.valueOf(callIdValue);
+                String toolName = toolNameValue == null ? "" : String.valueOf(toolNameValue);
+                if (!callId.isBlank() && !toolName.isBlank()) {
+                    toolNamesByCallId.put(callId, toolName);
+                }
+            }
+        }
+        for (int index = messages.size() - 1; index >= 0; index--) {
+            Map<String, Object> message = messages.get(index);
+            if (!"tool".equals(String.valueOf(message.get("role")))) {
+                continue;
+            }
+            String callId = String.valueOf(message.getOrDefault("tool_call_id", ""));
+            if (!expectedToolName.equalsIgnoreCase(toolNamesByCallId.getOrDefault(callId, ""))) {
+                continue;
+            }
+            Object content = message.get("content");
+            if (content instanceof String text && !text.isBlank()) {
+                return Optional.of(text);
+            }
+        }
+        return Optional.empty();
     }
 
     private static List<ToolResultSummary> collectToolResultSummaries(List<Map<String, Object>> messages) {
@@ -2475,6 +2536,9 @@ public class ChatOrchestratorService {
         if (!structured.isBlank()) {
             return clipStatic(structured, 360);
         }
+        if (normalized.startsWith("{") || normalized.startsWith("[")) {
+            return "工具返回了暂不支持安全展示的结构化结果，原始字段已隐藏。";
+        }
         return clipStatic(firstLine(normalized), 360);
     }
 
@@ -2486,7 +2550,7 @@ public class ChatOrchestratorService {
             }
             String answer = nodeText(root, "answer");
             if (!answer.isBlank()) {
-                return "工具已返回 answer，但模型本轮未能生成最终自然语言总结。先展示可读结果：\n\n"
+                return "工具已返回可读结果：\n\n"
                         + clipStatic(answer, 1200);
             }
             boolean failed = booleanFieldIsFalse(root, "success")
@@ -2497,7 +2561,7 @@ public class ChatOrchestratorService {
                         nodeText(root, "message"),
                         nodeText(root, "error"),
                         nodeText(root, "reason"));
-                return "工具调用未完成，模型本轮未能生成最终自然语言总结。"
+                return "工具调用未完成。"
                         + (message.isBlank() ? "请检查参数后重试。" : "原因：" + clipStatic(message, 500));
             }
             JsonNode results = root.path("results");
@@ -2510,7 +2574,7 @@ public class ChatOrchestratorService {
             }
             String message = firstNonBlank(nodeText(root, "message"), nodeText(root, "summary"));
             if (!message.isBlank()) {
-                return "工具已返回结果，但模型本轮未能生成最终自然语言总结。先展示工具摘要：\n\n"
+                return "工具已返回摘要：\n\n"
                         + clipStatic(message, 1000);
             }
             return "";
@@ -2539,7 +2603,7 @@ public class ChatOrchestratorService {
         }
         StringBuilder summary = new StringBuilder();
         summary.append("工具已返回 ").append(count)
-                .append(" 条结果，但模型本轮未能生成最终自然语言总结。先给你可读摘要，必要时请让我继续整理成结论：");
+                .append(" 条结果。先给你可读摘要，必要时可继续整理成结论：");
         int limit = Math.min(5, count);
         for (int i = 0; i < limit; i++) {
             JsonNode item = results.get(i);
