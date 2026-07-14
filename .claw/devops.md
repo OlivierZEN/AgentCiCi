@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-13T23:58:40Z
+updated_at: 2026-07-14T06:54:48Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -16,6 +16,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.6.6 TASK-202 主题视觉层级修复 on 2026-07-14:
+  - Git commit/tag `4caaa4800b3d` / `2.6.6`; theme switching remains account-scoped while structural wrappers stay transparent and agent avatars keep fixed geometry across all eight themes.
+  - Images: backend index `sha256:040c77eb89d4ee06b4e7ac615fa1e9bb44a4aecaf3f34a9453aa323c6351b20c`, amd64 `sha256:a57d540cab963a8c108b40471ef0a7cb025dc95aa8cdcc2f06db327ed0caa399`; frontend index `sha256:b8bed46b93bbcba24e9ad3e5face8ede291cb013a28f28de323579c1c6857982`, amd64 `sha256:efb42859509f6ebfe2bf58daa93d2af9bf8aa7ad25568e7915816b347892638d`.
+  - Backup: `/opt/cici/backups/20260714-142848-before-2.6.6-task202-theme-visual-hotfix` contains non-empty env, PostgreSQL, KB and Qdrant artifacts.
+  - Runtime: backend/frontend healthy on `2.6.6`; database, Redis, RabbitMQ and Qdrant remain healthy on `2.3.4`. Health `UP`, version `2.6.6 / 4caaa4800b3d`, V80 successful, Nginx valid, stable backend errors and frontend 5xx both zero.
+  - Public/browser: `x.agentcici.com` HTTP redirects 301 and HTTPS app returns 200; explicit production-IP smoke for `onechat.agentcici.com` returns 200. Authenticated 2048×1152 browser acceptance confirmed transparent structural layers, fixed 42×42 avatars without hover shadow/scale, zero outer overflow and zero console errors.
 
 - 2.6.4 TASK-200 多租户智能体评测控制面 on 2026-07-14:
   - Git commit/tag `d88f4293759f` / `2.6.4`; V79 adds platform core, standard application, industry and tenant-private evaluation assets, deterministic multi-assertion runs, snapshots/comparison/staleness, release gates, Trace regression capture and quality issues.

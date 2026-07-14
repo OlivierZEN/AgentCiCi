@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T06:28:42Z
+updated_at: 2026-07-14T06:54:48Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -28,14 +28,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-202 - 用户级产品主题偏好
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-108-user-selectable-product-themes.md`
 - task_status_path: `.claw/tasks/TASK-202.md`
 - assignment_path: `.claw/assignments/TASK-202.yaml`
 - blocked_by: `none`
-- next_action: Release the theme visual-regression hotfix as production version `2.6.6`, then complete production browser verification.
+- next_action: Done in production `2.6.6`; monitor theme switching, transparent structural wrappers and fixed avatar geometry.
 
 ### TASK-201 - 智能体构建页布局与模型治理收敛
 

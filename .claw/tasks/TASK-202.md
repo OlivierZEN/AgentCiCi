@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-202
-status: in_progress
-updated_at: 2026-07-14T05:54:33Z
+status: done
+updated_at: 2026-07-14T06:54:48Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -38,16 +38,17 @@ spec_path: docs/specs/FEAT-108-user-selectable-product-themes.md
 
 - `identity/assignment`: MANAGER-001 的 TASK-202 SSH challenge 与代表文件授权检查均为 allowed。
 - `backend`: 独立 PostgreSQL schema 从空库迁移到 V80；`AuthFlowIntegrationTest,PlatformAuthIntegrationTest` 共 22 项，0 failure / 0 error，覆盖普通账号和平台账号默认值、保存、刷新/切换组织持久化及非法主题拒绝。
-- `frontend`: Vitest 13 个文件、71 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示；`git diff --check` 通过。
+- `frontend`: 最终 Vitest 13 个文件、73 项通过；TypeScript/Vite 生产构建通过，仅保留既有大 chunk 提示；`git diff --check` 通过。
 - `browser`: 真实桌面浏览器完成八主题设置页逐项切换；鎏金、CRM 蓝、海洋、樱花、熏衣紫、牛油果、红酒与星河均保持同一布局。主应用、管理端、平台端和客户互动工作台完成跨壳层检查；星河主题的平台卡片硬编码浅色已改为公共语义令牌。
 - `persistence`: 普通账号主题在刷新和管理端重载后保持，平台账号星河主题刷新后仍恢复；验收结束后本地演示账号恢复鎏金默认主题。
-- `release`: 未执行生产发布；实现将在当前任务提交合入 `origin/main`，等待独立发布指令。
+- `release`: 主题能力首次随 `2.6.5` 上线；用户反馈的视觉回归由不可变修复版本 `2.6.6` 取代。
 - `theme-visual-hotfix`: 用户反馈 `2.6.5` 主题把助手工作台结构容器错误绘制成多层背景盒。修复后 13 个 Vitest 文件、73 项通过，生产构建和 diff check 通过；2048×1152 浏览器复验覆盖八主题，结构容器透明、头像无阴影/缩放、横向溢出为 0，`design-qa.md` 最终结果为 `passed`。
-- `release-hotfix`: `2.6.5` 已上线并暴露上述视觉回归；当前正在按用户要求发布不可变修复版本 `2.6.6`。
+- `release-hotfix`: `2.6.6 / 4caaa4800b3d` 已发布。backend index `sha256:040c77eb89d4ee06b4e7ac615fa1e9bb44a4aecaf3f34a9453aa323c6351b20c`、frontend index `sha256:b8bed46b93bbcba24e9ad3e5face8ede291cb013a28f28de323579c1c6857982`；备份目录 `/opt/cici/backups/20260714-142848-before-2.6.6-task202-theme-visual-hotfix`。
+- `production-acceptance`: 六服务 healthy、健康检查 UP、Flyway V80 成功、Nginx 配置有效、稳定窗口 backend error/frontend 5xx 均为 0。真实生产浏览器显示 `2.6.6`，结构容器透明、头像固定 42×42 且无阴影/缩放、外层溢出为 0、控制台错误为 0。
 
 ## Handoff
 
 - 目标分支：`codex/TASK-202-user-theme-preferences`。
 - 不触碰未跟踪 `diagrams/`。
 - 数据库测试必须使用独立 schema；共享 `agentcici_test` 保留历史固定手机号，直接复跑注册套件会受到夹具污染。
-- 用户已明确要求线上发布；完成 `2.6.6` 生产验收后关闭任务。
+- 任务已在生产 `2.6.6` 完成；后续只需观察主题切换和助手工作台的视觉回归。

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T05:54:33Z
+updated_at: 2026-07-14T06:54:48Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T05:54:33Z
+last_run_at: 2026-07-14T06:54:48Z
 last_run_status: passed
 ---
 
@@ -19,7 +19,8 @@ last_run_status: passed
 - `browser-cross-shell`: 主应用、管理端、运营平台和客户互动工作台均读取共享语义令牌；星河运营平台最初发现硬编码浅色卡片导致低对比，改为公共 `platform-*` 令牌后复验通过。平台账号刷新后仍恢复星河，普通账号跨管理端读取红酒主题成功；验收结束后本地演示账号恢复鎏金默认。
 - `browser-visual-hotfix`: 2048×1152 真实浏览器逐项检查八主题。智能体栏、会话面板、右侧栏、指标组和当前状态泳道均透明、无阴影、无变换；智能体头像固定 42×42、无阴影/缩放；八主题外层横向溢出均为 0，控制台 error/warning 为 0，验收后恢复鎏金主题。
 - `design-qa`: 原版、问题版与修复版完成同图全景和聚焦对比，`design-qa.md` 最终结果为 `passed`。
-- `release`: `2.6.5 / fc8a6d117bde` 已上线；视觉回归修复版本 `2.6.6` 正在发布。
+- `release`: `2.6.6 / 4caaa4800b3d` 已上线；backend index `sha256:040c77eb89d4ee06b4e7ac615fa1e9bb44a4aecaf3f34a9453aa323c6351b20c`、amd64 `sha256:a57d540cab963a8c108b40471ef0a7cb025dc95aa8cdcc2f06db327ed0caa399`；frontend index `sha256:b8bed46b93bbcba24e9ad3e5face8ede291cb013a28f28de323579c1c6857982`、amd64 `sha256:efb42859509f6ebfe2bf58daa93d2af9bf8aa7ad25568e7915816b347892638d`。
+- `production`: 备份 `/opt/cici/backups/20260714-142848-before-2.6.6-task202-theme-visual-hotfix` 四类数据非空；六服务 healthy、健康 UP、Flyway V80 成功、Nginx 有效、稳定窗口错误扫描为 0。生产浏览器显示版本 2.6.6，头像悬停前后均为 42×42、无阴影/变换，结构层透明、外层溢出 0、控制台错误 0。
 
 ## TASK-201 智能体构建页布局与模型治理本地验收（2026-07-14）
 

@@ -7,6 +7,7 @@
 - 浏览器渲染实现：`output/product-design/task202-theme-regression/03-local-fixed-2048x1152.png`
 - 全图同屏证据：`output/product-design/task202-theme-regression/04-reference-before-after-comparison.jpg`
 - 聚焦结构证据：`output/product-design/task202-theme-regression/05-focused-structure-comparison.jpg`
+- 生产验收证据：`output/product-design/task202-theme-regression/06-production-fixed-2.6.6-2048x1152.png`
 - 验收视口：桌面端 `2048 x 1152`；实现截图的可用页面区域为 `2008 x 1152`。
 - 验收状态：鎏金账房主题、助手工作台空会话；事实源与问题图包含已有会话内容，因此只对共同可见的壳层、智能体栏、会话画布、右侧栏、头像和指标结构做精确判断，不对动态内容高度做虚假像素结论。
 
@@ -40,6 +41,7 @@
 - 已逐项选择并应用 `gilded`、`crm-blue`、`ocean`、`sakura`、`lavender`、`avocado`、`wine`、`galaxy`，验收后恢复 `gilded`。
 - 已检查页面控制台，未发现警告或错误。
 - 已检查外层横向溢出，结果为 `0`。
+- 已在生产 `2.6.6` 完成登录态复验：版本与提交一致，结构层透明；头像悬停前后均为 `42 x 42`、无阴影和变换；控制台错误为 `0`。
 
 ## Findings
 

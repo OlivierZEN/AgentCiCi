@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T06:28:42Z
+updated_at: 2026-07-14T06:54:48Z
 updated_by: MANAGER-001
 phase: customer-workbench-comprehensive-demo-data
 active_task: "TASK-203"
@@ -23,8 +23,8 @@ read_next:
 ## Snapshot
 
 - TASK-203 is in progress to expand the bound CloudCC CRM and AgentCiCi demo organization into a 16-customer V2 dataset covering every new-customer, existing-customer, interaction archive, memory, dynamic score and evidence-driven action scenario. Owen/SalesA currently has a valid CRM session but zero visible Accounts because the TASK-172 core records are all owned by SalesB.
-- TASK-202 theme preferences are live in `2.6.5`; a user-reported visual regression showed structural wrappers repainted as background boxes. The verified `2.6.6` hotfix keeps agent bar, chat panel, sidebar metrics and machine lanes transparent and removes avatar scaling/shadows across all eight themes.
-- TASK-202 hotfix evidence: 13 frontend test files / 73 tests, production build, diff check, eight-theme 2048×1152 browser matrix, zero horizontal overflow and Product Design QA all passed. Production release `2.6.6` is in progress.
+- TASK-202 is complete in production `2.6.6 / 4caaa4800b3d`. The hotfix keeps agent bar, chat panel, sidebar metrics and machine lanes transparent and removes avatar scaling/shadows across all eight themes.
+- TASK-202 evidence: 13 frontend test files / 73 tests, production build, diff check, eight-theme 2048×1152 browser matrix, Product Design QA and authenticated production browser acceptance all passed. Production showed fixed 42×42 avatars, zero outer overflow and zero console errors.
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
 - FEAT-106 supersedes FEAT-031 as the delivered full-system design while preserving the existing V67 evaluation tables and compatibility APIs. Agent Builder now has an independent “评测” Tab；“发布渠道” contains only IM/Web/Open API delivery entries.
 - TASK-200 evidence: 20 focused/adjacent backend tests and 67 frontend tests passed; production build, Compose, two release dry-runs, V79 migration, tenant/platform RBAC API smoke and desktop browser checks passed. Release `2.6.3` exposed an Nginx API routing gap and was immediately superseded by `2.6.4`; it is not a rollback target.
@@ -36,7 +36,7 @@ read_next:
 - TASK-196 is done in production `2.5.9`: interaction confirmation no longer starts a full CRM refresh, queue reloads preserve the selected customer, the interaction editor freezes its Account context, and ordinary old-customer analysis no longer triggers mode navigation.
 - TASK-195 is done in production `2.5.8`: compact and full customer interaction timelines display `YYYY-MM-DD` plus `HH:mm` on two stable lines, with no date-internal wrapping.
 - TASK-194 is done in production `2.5.6`: customer-name search now queries all Accounts visible to the current CloudCC identity, bypasses new/existing mode, queue filter and projection-cache limits, loads cache-external detail on demand, and aligns the workspace to the matched customer's actual mode.
-- Production currently runs `2.6.5 / fc8a6d117bde`; backend/frontend and state services are healthy, Flyway is at V80, and the release backup is `/opt/cici/backups/20260714-102055-before-2.6.5-task202-user-themes`.
+- Production currently runs `2.6.6 / 4caaa4800b3d`; backend/frontend and state services are healthy, Flyway is at V80, and the release backup is `/opt/cici/backups/20260714-142848-before-2.6.6-task202-theme-visual-hotfix`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - Task and Opportunity recommendations now support edit, dismiss, accept, confirm, idempotent CloudCC write, permission-scoped readback, failure/retry and audit. V73 stores signals/follows/write audit and V74 stores user recommendation feedback; demo fallback is explicit and write-disabled.
 - Acceptance passed focused backend tests, 54 frontend tests, production build, Compose validation, desktop browser checks, CloudCC catalog/injection verification, AgentCiCi and CRM dual-entry identity/permission checks, and real Task write/readback verification through `cc-customization-expert-msapi`.
@@ -50,7 +50,7 @@ read_next:
 - `.claw/tasks/TASK-203.md` and `.claw/assignments/TASK-203.yaml` - active comprehensive demo-data task and authorization.
 - `docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md` - scenario matrix, data scale, visibility and acceptance source.
 - `.claw/task-board.md` - compact task index.
-- `.claw/tasks/TASK-202.md` and `.claw/assignments/TASK-202.yaml` - active theme task and authorization.
+- `.claw/tasks/TASK-202.md` and `.claw/assignments/TASK-202.yaml` - completed theme task and authorization.
 - `docs/specs/FEAT-108-user-selectable-product-themes.md` - approved theme catalog, persistence, synchronization and acceptance source.
 - `.claw/tasks/TASK-201.md` and `.claw/assignments/TASK-201.yaml` - completed layout task and authorization.
 - `.claw/tasks/TASK-200.md` and `.claw/assignments/TASK-200.yaml` - completed task evidence and authorization.
