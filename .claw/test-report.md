@@ -19,6 +19,7 @@ last_run_status: passed
 - `frontend-full`: `npm test` 通过，14 个文件、80 项；`npm run build` 成功，仅保留既有 Vite 大 chunk 提示；UMD `node --check` 与 `git diff --check` 通过。
 - `cloudcc-package`: `cloudcc package pagecomponent customer-workbench . --dry-run` 通过，确认使用 `frontend/build/customer-workbench.umd.min.js` 且不打包本地凭据与状态文件。
 - `cloudcc-publish`: 通过 `cc-customization-expert-msapi 2.1.279-msapi` 发布 pagecomponent V15，ID `6a5628cee4b0a577cbba2088`；customPage dry-run 后更新为 V9，精确引用该组件、`embedded=true` 和生产工作台 URL。
+- `cloudcc-readback`: `verify injectionPage` 回读的组件 ID、名称、customPage V9、嵌入标记和 URL 均精确匹配；因接口未返回 `actualVersions` 保留已知 `stale_component_reference` warning，真实 CRM 三轮 HTTP 200 SSO 验收作为运行时版本证据。
 - `release`: `2.6.11 / c540988655cb`；backend index `sha256:9be1120bc9a26e507068d75fbd5c9eb6db0e61ef24dc3785be9e9f8330bb5f4b`、amd64 `sha256:3694fa2545aeb136c234e9cc2ab7df64f684720f21b2ea25c424ed120eb82e69`；frontend index `sha256:ba57516fe20e08574f6b029e75f191cfb812caae29f8029454d1d981439822c5`、amd64 `sha256:4752c464acca6c864afda592e6769345173b4497ce9f0634a7f0e62168ba1079`。
 - `production`: 备份 `/opt/cici/backups/20260714-202718-before-2.6.11-task206-cloudcc-session-sso` 四类文件非空；六服务 healthy，健康 `UP`，运行版本与 Git 提交一致，Nginx 配置有效，`x` 工作台和 `onechat` 生产 IP smoke 均为 200。
 - `browser-production`: 真实 CloudCC CRM 注入页首次加载和连续两次刷新均显示“CloudCC CRM 已连接”、`CCAdmin / 组织管理员`、客户队列和详情数据；三次 `/ticket` 与三次 `/consume` 全部 HTTP 200，账号映射失败提示为 false，后端同期无会话验证拒绝或 ERROR。
