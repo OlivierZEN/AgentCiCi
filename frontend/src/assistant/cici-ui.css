@@ -14514,16 +14514,33 @@
   width: 30px;
   height: 30px;
   border-radius: 999px;
-  background: #22a441;
+  background: #66788a;
   color: #fffdf8;
 }
 
-.customer-workbench-timeline__icon.is-通话录音 {
+.customer-workbench-timeline__icon.is-social-chat {
+  background: #07c160;
+}
+
+.customer-workbench-timeline__icon.is-phone {
   background: #2c83d4;
 }
 
-.customer-workbench-timeline__icon.is-会议纪要 {
+.customer-workbench-timeline__icon.is-meeting,
+.customer-workbench-timeline__icon.is-crm-event {
   background: #df8d22;
+}
+
+.customer-workbench-timeline__icon.is-email {
+  background: #5b6fc7;
+}
+
+.customer-workbench-timeline__icon.is-crm-task {
+  background: #b78324;
+}
+
+.customer-workbench-timeline__icon.is-feedback {
+  background: #258d78;
 }
 
 .customer-workbench-timeline__icon .customer-workbench-icon {

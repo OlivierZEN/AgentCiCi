@@ -86,8 +86,7 @@ public class CrmProductSalesAnalysisToolService {
     }
 
     public static String toolDescription() {
-        return "按当前用户权限完成 CloudCC CRM 产品销售的确定性经营分析，"
-                + "包含销量、订单销售额、订单数、客户数、贡献率、客户集中度、开放商机和合同信号。"
+        return "按当前用户权限统计 CloudCC CRM 产品销量、销售额、订单数或客户数排行。"
                 + "涉及‘销量最好、销售额最高、热销产品’时直接调用本工具，不要自行查询多个 CRM 对象后计算。";
     }
 

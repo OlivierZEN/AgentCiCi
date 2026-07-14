@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T16:40:00Z
+updated_at: 2026-07-14T16:47:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-210.md`
 - assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
-- next_action: Validate and push the allocation-only commit, then implement source mapping and standard icons with tests.
+- next_action: Release 2.7.4 from the verified 2.7.2 production baseline through the canonical runbook, then complete AgentCiCi plus CloudCC embed acceptance.
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
