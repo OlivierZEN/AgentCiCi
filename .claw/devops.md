@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T16:51:00Z
+updated_at: 2026-07-14T17:28:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,15 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.5 TASK-208 CRM 产品销售经营分析稳定性与深度治理 on 2026-07-15:
+  - Git merge commit/tag `be80eea665c0` / `2.7.5`; release line contains TASK-209 `2.7.2`, TASK-208 `2.7.3` and TASK-210 `2.7.4` as ancestors.
+  - Images: backend index `sha256:0a79c77e5c9db8f4db00a7dc310264815de461c4caf9172d29cca062b29c1b1e`, amd64 `sha256:c99ec42f67abd451de6d2e6d371166b28850bfded128f687ccfd2d7c95ecd132`; frontend index `sha256:056e4fd4a064134f3bacce6827a3dbd3206ef6a442d93b50c104e05dbc6c86f4`, amd64 `sha256:cd7477395e25d58cca96b2d08f86a7a30c579cb927ab98e94c918d9f34ec69c7`.
+  - Backup: `/opt/cici/backups/20260715-005545-before-2.7.5-task208-crm-analysis`; env 1,646 bytes, PostgreSQL 2,862,193 bytes, KB 510,994 bytes and Qdrant 1,584,517 bytes, all non-empty.
+  - Deploy: only backend/frontend were force-recreated on `2.7.5`; database, Redis, RabbitMQ and Qdrant container IDs stayed unchanged and remain healthy on `2.6.12`.
+  - Runtime: health `UP`, version `2.7.5 / be80eea665c0`, Nginx valid, `x` HTTP 301/HTTPS 200, and production-IP-resolved `onechat` OpenAPI blocking/streaming passed. Final clean window reports backend error 0, precise frontend 5xx 0 and CRM analysis error 0.
+  - CRM: the governed TASK-205 batch completed 316 update-only writes with 316 owner changes and 88 Account relinks; post-write dry-run reports 0 pending updates, 0 creates and 0 duplicates. No metadata, role, profile or sharing rule was changed.
+  - Acceptance: SalesA five fresh SSE sessions plus persistence, blocking, OpenAPI, desktop UI and SalesB comparison returned the expected Top 5 without raw JSON or internal tool names. Temporary OpenAPI key was revoked and the original agent channels were restored after validation.
 
 - 2.7.4 TASK-210 客户互动工作台标准渠道图标 on 2026-07-15:
   - Git commit/tag `3206fdbc196f` / `2.7.4`; 时间线使用公开维护的微信品牌图标与独立 Lucide 业务来源图标，并修复重复 CRM event id 导致的 React key 冲突。

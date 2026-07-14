@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-114
 title: CRM 产品销售经营分析稳定性与深度治理
-status: approved
+status: implemented
 owner_role: project-manager
 task_ids: TASK-208
 related_decisions: FEAT-015,FEAT-021,FEAT-028,FEAT-031,FEAT-109,FEAT-111
 related_issues: none
-updated_at: 2026-07-14T13:16:37Z
+updated_at: 2026-07-14T17:28:00Z
 updated_by: MANAGER-001
 ---
 
@@ -262,8 +262,32 @@ Order -> Contract                              合同与续约信号
 
 ## 完成定义
 
-- 所有自动化测试和项目状态校验通过。
+- TASK-208 定向自动化测试、交付状态静态检查和代表文件授权校验通过；全仓状态校验的既有历史治理债务不作为本任务完成阻塞，但必须在测试报告中明确披露。
 - CloudCC 受控批次迁移、关系回读和多身份权限验收通过。
 - 新版本按正式 runbook 发布，后端、前端和状态服务健康。
 - 5 次真实 SalesA 问答通过，回答达到本规格的经营分析深度且无内部结果泄漏。
 - TASK-208、FEAT-114、`.claw/test-report.md` 和主线热状态已更新并推送；完成审计无缺项。
+
+## 交付记录（2026-07-15）
+
+### 代码与发布
+
+- 方案 A 已按设计落地：保留平台标准 `CRM 经营分析` Skill 和一个高阶只读工具，以确定性分析服务与专用答案格式化器统一流式、阻塞式和 OpenAPI 正文；未新增独立通用智能体。
+- 最终集成 PR #4 合入 `origin/main`，生产发布 `2.7.5 / be80eea665c0`。该发布同时保留 TASK-209 登录视觉和 TASK-210 标准渠道图标，不回退并发生产能力。
+- 发布前备份为 `/opt/cici/backups/20260715-005545-before-2.7.5-task208-crm-analysis`；env、PostgreSQL、知识库和 Qdrant 四类制品均非空。生产只替换 backend/frontend，四个状态服务容器 ID 未变化。
+- 后端定向 143 项、前端 89 项和 TypeScript/Vite 生产构建通过；运行健康 `UP`，版本提交、Nginx、公网路由和最终干净日志窗口通过。
+
+### CloudCC 数据与权限
+
+- 写前 dry-run 精确命中 12 个产品、16 个 V2 客户、24 个商机、72 条商机产品、16 份合同、48 张订单和 144 条订单明细。
+- 在生成 316 条受保护回滚记录后，执行 316 条 update-only：316 处 owner 切换为 SalesA、88 处商机/合同/订单 Account 重连，共 404 个字段变化；创建、删除、重复、Account 本体写入、角色、简档、元数据和分享规则变更均为 0。
+- 写后二次 live dry-run 为待更新 0、owner 变化 0、Account 变化 0、字段变化 0、创建 0、重复 0；所有订单明细引用均可解析，4 张无效高销量订单继续被排除。
+- 当前组织只有 SalesA/Owen 与 SalesB/CCAdmin 两个验收 persona；没有制造或冒用普通销售身份。SalesB 管理员对照保持全局可见性，SalesA 通过记录所有权和客户关联获得正规可见性。
+
+### 经营分析与协议验收
+
+- SalesA 连续 5 个全新 SSE 会话均得到数量 Top 5：智能巡检终端 X1 130、边缘采集网关 G5 110、安全监测传感器 S2 95、制造运营分析平台 MP 75、预测性维护应用 PA 65；金额冠军为制造运营分析平台 MP，销售额 2,850,000。
+- 每次回答均包含直接结论、产品 Top 5、数量/金额贡献、环比、订单/客户覆盖、经营诊断、商机与合同前瞻信号、建议动作和口径覆盖。回答明确区分“销量冠军”和“销售额冠军”，避免把订单销售额误称为财务确认收入。
+- 5 组持久化消息与 SSE 正文一致；内部 blocking、OpenAPI blocking/streaming 和 SalesB 对照均返回同一事实。OpenAPI observation 只保留脱敏运行状态，不含工具名、参数、记录 ID、owner ID 或原始 payload。
+- 生产桌面页面真实新建会话并重新询问后，Top 5 表格和五层分析正常渲染，状态收敛为“已完成本轮处理”；DOM 中不存在 `crm_product_sales_rank`、`tool_call/tool_result`、原始 JSON 或错误“等待确认”，浏览器控制台 error 为 0。
+- OpenAPI 验收使用的一次性 Key 已撤销，临时 api channel 已恢复为原渠道集合；生产未遗留额外外部访问凭据或入口。

@@ -1,16 +1,16 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T16:51:00Z
+updated_at: 2026-07-14T17:28:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T16:51:00Z
+last_run_at: 2026-07-14T17:28:00Z
 last_run_status: passed
 ---
 
 # Test Report
 
-## TASK-208 生产发布线整合门禁（2026-07-15）
+## TASK-208 生产发布与真实验收（2026-07-15）
 
 - `ancestry`: 整合提交同时包含 TASK-209 `2.7.2 / ddcda0ef6111`、TASK-208 `2.7.3 / 85b92c2d1f63` 与当前生产 TASK-210 `2.7.4 / 3206fdbc196f` 三条不可变发布线；三次 `git merge-base --is-ancestor` 均通过。
 - `content-preservation`: CRM 后端、内置 `crm-business-analysis` Skill、CRM 测试和受控迁移脚本与 TASK-208 `2.7.3` 树一致；完整 `frontend/` 与当前生产 `2.7.4` 树一致，TASK-209 原图登录资产保留。
@@ -18,6 +18,17 @@ last_run_status: passed
 - `frontend-full`: 合并后的锁文件执行 `npm ci` 后，Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建成功，共转换 1,936 个模块，仅保留既有大 chunk 提示。
 - `identity/assignment`: MANAGER-001 SSH 持钥、GitHub 身份、TASK-208 当前集成分支与状态文件代表路径均为 `allowed`；TASK-209 前端与设计事实源由其已完成 assignment 覆盖。
 - `release-guard`: `2.7.3` 从未部署；并发 TASK-210 以 `2.7.4` 上线并有意排除 TASK-208。最终分支将 `2.7.4` 作为生产父线并正向撤销其 TASK-208 revert，下一次只能发布新的不可变版本 `2.7.5`。
+- `release`: PR #4 合入 `origin/main`，发布 `2.7.5 / be80eea665c0`。backend index/amd64 为 `sha256:0a79c77e5c9db8f4db00a7dc310264815de461c4caf9172d29cca062b29c1b1e` / `sha256:c99ec42f67abd451de6d2e6d371166b28850bfded128f687ccfd2d7c95ecd132`；frontend index/amd64 为 `sha256:056e4fd4a064134f3bacce6827a3dbd3206ef6a442d93b50c104e05dbc6c86f4` / `sha256:cd7477395e25d58cca96b2d08f86a7a30c579cb927ab98e94c918d9f34ec69c7`。
+- `backup/deploy`: 发布前备份 `/opt/cici/backups/20260715-005545-before-2.7.5-task208-crm-analysis` 的 env/PostgreSQL/KB/Qdrant 分别为 1,646 / 2,862,193 / 510,994 / 1,584,517 bytes。只重建 backend/frontend；四个状态服务容器 ID 不变并保持 `2.6.12` healthy，应用健康 `UP`、版本提交一致、Nginx 通过。
+- `crm-plan`: 写前 live dry-run 精确发现 12 产品、16 客户、24 商机、72 商机产品、16 合同、48 订单和 144 明细；计划 316 条更新、316 处 owner 变化、88 处 Account 重连、404 个字段变化，创建与重复均为 0，四项数据质量检查均通过。
+- `crm-execute/readback`: 先生成 316 条受保护回滚清单，再对六类对象执行 update-only；执行后结构回读 12/24/72/16/48/144，第二次 live dry-run 为待更新 0、owner 变化 0、Account 变化 0、字段变化 0、创建 0、重复 0。
+- `ranking`: SalesA 最近 30 天数量 Top 5 连续为 `智能巡检终端 X1 130`、`边缘采集网关 G5 110`、`安全监测传感器 S2 95`、`制造运营分析平台 MP 75`、`预测性维护应用 PA 65`；对应销售额 884000、1408000、304000、2850000、1690000，金额冠军为 MP。
+- `salesa-sse/persistence`: Owen/SalesA 登录、组织和 CloudCC 连接均成功，`crm-business-analysis` 启用。5 个全新 SSE 会话均只有 `phase/delta/done`，Top 5 与关键数值一致；5 组持久化消息均为 user + assistant，落库正文与 SSE 正文逐字一致。差异仅为每次真实查询的数据截止时间。
+- `blocking/openapi`: 内部 blocking 正文通过；OpenAPI 临时启用 api channel 并创建 SalesA run-as 标准 Key 后，blocking 与 streaming 正文均一致。`agent_thought` 仅保留 `AgentCiCi runtime completed/completed` 或“运行阶段已更新”的脱敏状态，不含工具、参数、记录 ID 或原始 observation。验收后 Key 已撤销，原 `wechat/dingtalk/feishu/web` 渠道精确恢复。
+- `salesb`: CCAdmin/SalesB 管理员对照查询返回同一 Top 5；当前演示组织不存在第三个普通销售 persona，因此未制造或冒用额外身份，也未扩大 role/profile/sharingRule。
+- `browser-production`: 生产桌面真实新会话输入同一问题，页面显示直接结论、产品 Top 5、经营诊断、前瞻信号、建议动作和口径覆盖；数量/金额冠军、贡献率、环比、订单/客户、商机与合同信号均可见。DOM 中工具名、`tool_call/tool_result`、原始 JSON 和“等待确认”均为 false；状态为“已完成本轮处理”，console error 为 0。
+- `runtime`: 最终独立 blocking smoke 后干净窗口 backend error=0、精确 Nginx 5xx=0、CRM 分析 error=0。较早的全局日志包含客户端关闭 SSE 产生的 broken pipe、客户工作台既有 `customer_signal` 并发死锁一次，以及空白新会话 404 被全局处理器记为 500；均未影响 CRM 分析结果，且不属于 TASK-208 变更路径。
+- `known-baseline`: 全仓状态校验器仍报告 `origin/main` 已存在的历史治理债务，例如旧完成任务仍位于 Active Tasks 与旧规格 front matter 漂移；TASK-208 代表文件、assignment、JSON、`git diff --check` 和最终交付状态单独通过，未宣称全仓历史基线转绿。
 
 ## TASK-209 运营平台登录页原图像素锁定（2026-07-15）
 

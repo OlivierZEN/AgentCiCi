@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-210
 status: in_progress
-updated_at: 2026-07-14T16:22:41Z
+updated_at: 2026-07-14T17:28:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -25,11 +25,12 @@ spec_path: docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md
 - 微信现读取 Simple Icons 规范路径；电话、会议、邮件、CRM 任务、CRM 日程和客户反馈均使用独立 Lucide 语义图标。
 - 样式类已改为稳定英文业务语义，不再由中文展示文本动态拼接；八主题共用相同形状、尺寸和轴线坐标。
 - 完整时间线的重复 CRM event id 已使用组合键隔离，桌面端复验无新增控制台错误。
-- Vitest 16 个文件、89 项与生产构建通过，等待生产发布。
+- Vitest 16 个文件、89 项与生产构建通过；功能先随 `2.7.4` 上线，现由集成版 `2.7.5 / be80eea665c0` 保持且未回退。
+- TASK-210 仍只等待独立的 AgentCiCi 与 CloudCC 嵌入页最终生产视觉证据，不再等待代码发布。
 
 ## Next Action
 
-- 从真实运行的 `2.7.2` 生产基线执行生产备份、`2.7.4` 发布与 AgentCiCi/CloudCC 嵌入页复验；不携带尚未部署且本地后端基线失败的 `2.7.3` 变更。
+- 在当前生产 `2.7.5 / be80eea665c0` 完成 AgentCiCi 与 CloudCC 嵌入页独立视觉复验并归档证据；通过后关闭 TASK-210，不再重复发布代码。
 
 ## Changed Files
 

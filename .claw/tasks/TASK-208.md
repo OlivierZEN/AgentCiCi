@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-208
-status: in_progress
-updated_at: 2026-07-14T16:51:00Z
+status: done
+updated_at: 2026-07-14T17:28:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -22,15 +22,15 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 ## Current State
 
 - 方案 A 已由用户明确批准，根因、能力路径、数据边界和验收矩阵已写入 FEAT-114。
-- TASK-208 的确定性五层经营分析、权限不完整状态、防工具结果泄漏、意图路由和受控 CRM 迁移脚本已合入 `origin/main`；143 项定向后端测试通过。
-- 最终生产集成分支同时包含 TASK-209 `2.7.2`、TASK-208 `2.7.3` 和当前生产 TASK-210 `2.7.4` 三条发布线；CRM 路径与 TASK-208 一致，完整前端与 `2.7.4` 一致。
-- 组合回归通过 CRM 定向后端 143 项、完整前端 89 项和 TypeScript/Vite 生产构建。
-- 生产仍运行健康的 `2.7.4`，尚未切换到 TASK-208，也尚未执行 CRM 数据迁移。
+- TASK-208 的确定性五层经营分析、权限不完整状态、防工具结果泄漏、意图路由和受控 CRM 迁移脚本已合入 `origin/main`；最终生产集成同时保留 TASK-209 与 TASK-210。
+- 生产已发布 `2.7.5 / be80eea665c0`；backend/frontend healthy，PostgreSQL、Redis、RabbitMQ、Qdrant 保持原容器和 `2.6.12` 镜像，Nginx 与公网 smoke 通过。
+- CloudCC 受控批次已完成 316 条既有记录更新、316 处 owner 修正和 88 处客户重连；二次 dry-run 为待更新 0、创建 0、重复 0，结构回读为 12/16/24/72/16/48/144。
+- SalesA 连续 5 个新 SSE 会话、5 组持久化消息、阻塞式、OpenAPI blocking/streaming、生产桌面页面和 SalesB 管理员对照均返回同一 Top 5；页面与协议中无内部工具名、原始 JSON 或错误“等待确认”。
+- 组合回归通过 CRM 定向后端 143 项、完整前端 89 项和 TypeScript/Vite 生产构建；最终干净窗口 backend error、Nginx 5xx 与 CRM 分析错误均为 0。
 
 ## Next Action
 
-- 完成三线生产集成审查并合入 `origin/main`，发布新的不可变版本 `2.7.5`。
-- 应用健康验收后执行受控 CRM 数据迁移，再以 SalesA 连续五个新会话和 SalesB 对照完成结构、Top 5、深度分析与防泄漏验收。
+- 无；生产发布、CRM 迁移、权限回读、多通道对话和桌面端验收均已完成。
 
 ## Constraints
 
