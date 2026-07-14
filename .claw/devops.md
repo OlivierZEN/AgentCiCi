@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T16:39:00Z
+updated_at: 2026-07-14T16:51:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -22,13 +22,20 @@ status: active
 
 ## Latest Release
 
+- 2.7.4 TASK-210 客户互动工作台标准渠道图标 on 2026-07-15:
+  - Git commit/tag `3206fdbc196f` / `2.7.4`; 时间线使用公开维护的微信品牌图标与独立 Lucide 业务来源图标，并修复重复 CRM event id 导致的 React key 冲突。
+  - Images: backend index `sha256:c41eb2d6387e9ccca8c48b6fa0c3f5ddfb26a3b74442224badab5a97dd94bba5`, amd64 `sha256:9fc687f2d33b4645e19196016f097939045a21ba06ce68115b7f52e421b78a7d`; frontend index `sha256:ce61cab1d05b84469254d25c010b16b7d38f8fb8ea05a9ac44b00f907b25e272`, amd64 `sha256:0a1fe7ecfb05c82ee8b31a780f0ab6776a2367e1bea8ba90513884325f23d2f9`.
+  - Backup: `/opt/cici/backups/20260715-003936-before-2.7.4-task210-standard-icons`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Runtime: backend/frontend healthy on `2.7.4`; database, Redis, RabbitMQ and Qdrant remain healthy on `2.6.12`. Health `UP`, version `2.7.4 / 3206fdbc196f`.
+  - Release boundary: this production line preserves TASK-209 but intentionally excludes TASK-208. TASK-208 final release must use `2.7.4` as a parent and publish a new immutable tag; do not deploy or rebuild `2.7.3`.
+
 - 2.7.2 TASK-209 运营平台登录页原图像素锁定 on 2026-07-15:
   - Git commit/tag `ddcda0ef6111` / `2.7.2`; `/platform/login` 使用批准的 1672×941 原图资产作为默认态整页背景，并以透明语义交互层保留真实认证行为。
   - Images: backend index `sha256:f4ec61fc0532be5593a4cc6c3646906d026770ee56e55b5aebdea936c1d29979`, amd64 `sha256:3403aad868f7f06d08c6b6ac685fafd8b4f39ef3a0f5ab36dcfe35deac8e562f`; frontend index `sha256:2ae803bf615cbb84bf7ddf451716b0f94df452c2d94e6936e01eacf59a18e918`, amd64 `sha256:21ef8d647026f1ffb361c82cfb3230770da8b8cf1098fa314e4cef5cd9538eda`.
   - Backup: `/opt/cici/backups/20260715-001809-before-2.7.2-task209-reference-login`.
   - Runtime: backend/frontend healthy on `2.7.2`; database, Redis, RabbitMQ and Qdrant remain healthy on `2.6.12`. Health `UP`, version `2.7.2 / ddcda0ef6111`.
   - Acceptance: production 1672×941 browser confirmed the approved background, transparent default overlays, usable post-input controls, zero horizontal overflow and zero console error/warning.
-  - Release guard: `2.7.3 / 85b92c2d1f63` images and tag exist but were intentionally not deployed because that source line omitted live TASK-209. Production remains `2.7.2`; TASK-208 must publish a new immutable integrated version.
+  - Superseded by production `2.7.4`; `2.7.3 / 85b92c2d1f63` images and tag exist but were intentionally never deployed.
 
 - 2.6.11 TASK-206 CloudCC 当前会话嵌入 SSO 修复 on 2026-07-14:
   - Git commit/tag `c540988655cb` / `2.6.11`; pagecomponent uses `$CCDK.CCToken.getToken()` and backend validates the CRM session through `/api/user/getUserInfo` while retaining strict three-way identity matching.
