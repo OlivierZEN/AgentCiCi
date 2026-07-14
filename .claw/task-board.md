@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T16:22:41Z
+updated_at: 2026-07-14T17:02:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md`
 - task_status_path: `.claw/tasks/TASK-210.md`
 - assignment_path: `.claw/assignments/TASK-210.yaml`
 - blocked_by: `none`
-- next_action: Release 2.7.4 from the verified 2.7.2 production baseline through the canonical runbook, then complete AgentCiCi plus CloudCC embed acceptance.
+- next_action: Released in `2.7.4 / 3206fdbc196f` and reverified after current production advanced to `2.7.5 / be80eea665c0`; monitor source classification and keep Simple Icons/Lucide as the only accepted timeline icon sources.
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 

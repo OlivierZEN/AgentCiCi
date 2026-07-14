@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-14T16:22:41Z
+updated_at: 2026-07-14T17:02:00Z
 updated_by: MANAGER-001
-phase: customer-workbench-standard-channel-icons
-active_task: "TASK-210"
-next_action: "Publish TASK-210 from the verified 2.7.2 production baseline as version 2.7.4, then verify AgentCiCi and the CloudCC embedded workbench."
+phase: crm-product-sales-analysis-hardening
+active_task: "TASK-208"
+next_action: "Begin TASK-208 from its approved FEAT-114 specification and isolated assignment; monitor TASK-210 standard channel icons in current production 2.7.5."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-210 implementation is locally verified on `codex/TASK-210-customer-workbench-standard-icons`. FEAT-116 now renders the public standard WeChat mark and distinct Lucide business-source icons, preserves the compact timeline across all eight themes, and removes duplicate-key console errors from CRM event id collisions. Frontend 16 files / 89 tests, production build and real desktop visual checks passed; production release is next.
+- TASK-210 was released in `2.7.4 / 3206fdbc196f` and remains verified in current production `2.7.5 / be80eea665c0`. FEAT-116 renders the public Simple Icons WeChat mark and distinct Lucide business-source icons, preserves the compact timeline across all eight themes, and removes duplicate-key console errors from CRM event id collisions. Frontend 16 files / 89 tests, production build, AgentCiCi desktop verification and real CloudCC embedded verification passed with zero console errors/warnings and no outer overflow.
 - TASK-208 is approved and ready for implementation. Verified production root causes are SalesA order-master invisibility caused by TASK-205 SalesB ownership, plus CRM raw tool-result/fallback leakage. FEAT-114 requires deterministic deep analysis, SalesA batch migration, release and five-session real acceptance.
 - TASK-207 is complete on `codex/TASK-207-frontend-theme-alignment-audit`: all eight themes now own authenticated frontend surfaces and data/identity colors; the organization entry uses the current organization name's first character; dashboard rows, menus, forms, lists and the interaction-ingestion dialog passed a real `1600 × 1000` desktop audit. Frontend 15 files / 85 tests, production build, JSON validation and diff checks passed; browser console error/warning and outer horizontal overflow are zero.
 - TASK-206 is complete in production `2.6.11 / c540988655cb`. The pagecomponent now reads the current CRM session with `$CCDK.CCToken.getToken()`, the backend validates it through `/api/user/getUserInfo`, and strict session-user/page-user/AgentCiCi-member consistency remains in force. Real CRM initial load plus two refreshes produced three HTTP 200 ticket/consume pairs with no mapping error.
@@ -36,14 +36,14 @@ read_next:
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
-- Production currently runs `2.7.2 / ddcda0ef6111`; backend/frontend and four state services are healthy, Flyway remains at V80, and CloudCC pagecomponent V15/customPage V9 are the active embedded assets. Git tag `2.7.3` exists but is not deployed and is excluded from TASK-210 after its backend baseline failed local verification.
+- Production currently runs `2.7.5 / be80eea665c0`; that integration commit contains TASK-210's `2e5ae02` icon fix and the `2.7.4` production baseline. Backend/frontend and four state services are healthy, Flyway remains at V80, and CloudCC pagecomponent V15/customPage V9 continue to embed the current workspace URL.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
 - Known DNS risk remains: this workstation cannot resolve `onechat.agentcici.com`; production-IP resolved smoke previously returned HTTP 200.
 
 ## Read Next
 
-- `.claw/tasks/TASK-210.md`, `.claw/assignments/TASK-210.yaml` and `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md` - active customer workbench standard source icon repair.
+- `.claw/tasks/TASK-210.md`, `.claw/assignments/TASK-210.yaml` and `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md` - completed production standard source icon repair and acceptance evidence.
 - `.claw/tasks/TASK-208.md`, `.claw/assignments/TASK-208.yaml` and `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md` - approved CRM stability, deep-analysis, SalesA migration and production acceptance source.
 - `.claw/tasks/TASK-207.md`, `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md` and `design-qa.md` - completed frontend theme and alignment delivery plus visual evidence.
 - `.claw/tasks/TASK-206.md` and `docs/specs/FEAT-112-cloudcc-embed-sso-recovery.md` - completed CloudCC embed SSO recovery and verification evidence.

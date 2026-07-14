@@ -1,8 +1,9 @@
 ---
 kind: feature-spec
 feature_id: FEAT-116
-status: approved
-updated_at: 2026-07-14T15:55:28Z
+title: 客户互动工作台标准渠道图标治理
+status: verified
+updated_at: 2026-07-14T17:02:00Z
 updated_by: MANAGER-001
 task_id: TASK-210
 ---
@@ -80,9 +81,12 @@ task_id: TASK-210
 - 产品与视觉：`PRODUCT.md`、`DESIGN.md`、`DESIGN.json`。
 - 公开品牌图标：Simple Icons 官方项目与 npm 包，许可证为 CC0-1.0。
 
-## 10. 本地实现与验证结果
+## 10. 实现与生产验证结果
 
 - 已引入 `simple-icons` 锁定依赖，并仅读取公开渠道图标的规范 path。
 - 已完成七类来源和中性兜底映射；CRM 任务与 CRM 日程不再回退到消息气泡。
 - 已修复重复 CRM event id 导致的 React key 报错，不改变后端数据或时间线排序。
-- Vitest 16 个文件、89 项与生产构建通过；真实桌面数据和只读微信来源视觉探针通过，等待生产发布。
+- Vitest 16 个文件、89 项与生产构建通过；真实桌面数据和只读微信来源视觉探针通过。
+- `2.7.4 / 3206fdbc196f` 已按统一运行手册发布，生产健康检查、公网 smoke、镜像与备份检查通过；当前生产 `2.7.5 / be80eea665c0` 包含本修复并已再次通过真实 CloudCC 嵌入验收。
+- AgentCiCi 与 CloudCC CRM 注入页均使用同一套发布资源完成真实数据验收：微信为 Simple Icons 规范双气泡，电话、CRM 任务和 CRM 日程为 Lucide 标准图标；图标中心、时间线垂直线、日期列和内容列保持对齐。
+- CloudCC 嵌入页微信图标容器为 `30 × 30`、SVG `24 × 24` viewBox 和单一公开 path；工作台外层横纵方向均无溢出，控制台 error/warning 为 0。

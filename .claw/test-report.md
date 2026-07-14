@@ -1,16 +1,16 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T16:22:41Z
+updated_at: 2026-07-14T17:02:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T16:22:41Z
+last_run_at: 2026-07-14T17:02:00Z
 last_run_status: passed
 ---
 
 # Test Report
 
-## TASK-210 客户互动工作台标准渠道图标本地验收（2026-07-14）
+## TASK-210 客户互动工作台标准渠道图标生产验收（2026-07-15）
 
 - `identity/assignment`: MANAGER-001 通用与 TASK-210 SSH challenge 均为 `allowed`；客户工作台源码、样式、依赖、规格、任务状态和测试报告代表文件通过 assignment 检查。
 - `tdd`: 新增来源语义测试先以缺少 `timelineSourceKind`/`lifecycleSourceLabel` 失败，再实现转绿；重复 CRM 事件键测试先以缺少 `timelineItemKey` 失败，再实现转绿。
@@ -20,7 +20,13 @@ last_run_status: passed
 - `icon-source`: 微信渠道使用 Simple Icons 公开维护的规范路径和 `#07C160` 品牌色；电话、会议、邮件、CRM 任务、CRM 日程、客户反馈使用项目既有 Lucide 标准图标，不含自绘 SVG 路径。
 - `browser-local`: 真实演示组织 CRM 数据在 `1600 × 1000` 桌面端加载；CRM 任务显示清单图标、CRM 日程显示日历图标；以只读请求拦截将一条现有记录标记为微信后，规范双气泡图标与实际轴线、日期和内容列共同通过视觉检查。证据：`output/playwright/task210-local-standard-icons.png`、`output/playwright/task210-local-wechat-standard-icon-detail.png`。
 - `browser-console`: 完整时间线曾暴露重复 CRM event id 的 React key 错误；加入事件 ID、发生时间和行号组合键后，重新加载并展开完整时间线只有 React DevTools info，新增 error/warning 为 0。
-- `release-dry-run`: 统一脚本生成 `2.7.4`，backend/frontend 镜像、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与 `CICI_IMAGE_TAG` 一致；待执行生产备份、正式发布和真实线上复验。
+- `release`: 统一脚本已发布 `2.7.4 / 3206fdbc196f`，backend index `sha256:c41eb2d6387e9ccca8c48b6fa0c3f5ddfb26a3b74442224badab5a97dd94bba5`、amd64 `sha256:9fc687f2d33b4645e19196016f097939045a21ba06ce68115b7f52e421b78a7d`；frontend index `sha256:ce61cab1d05b84469254d25c010b16b7d38f8fb8ea05a9ac44b00f907b25e272`、amd64 `sha256:0a1fe7ecfb05c82ee8b31a780f0ab6776a2367e1bea8ba90513884325f23d2f9`。
+- `backup/production`: 备份 `/opt/cici/backups/20260715-003936-before-2.7.4-task210-standard-icons` 中环境、PostgreSQL、知识库和 Qdrant 四类文件均非空；backend/frontend `2.7.4` 与四个状态服务均 healthy，健康 `UP`、Nginx 配置有效、后端 ERROR 和前端 4xx/5xx 扫描均为 0。
+- `public-smoke`: `x` 根路径、客户工作台和 CRM 嵌入路径均返回 HTTP 200，HTTP 根路径 301 跳转 HTTPS，`onechat` 通过生产 IP 解析返回 200。
+- `browser-production`: AgentCiCi 实际组织中微信、电话、CRM 任务、CRM 日程四类记录均显示对应标准图标，17 个图标尺寸和轴线稳定，控制台 error/warning 为 0；证据为 `output/playwright/task210-prod-*-2.7.4.png`。
+- `cloudcc-production`: CloudCC CRM 真实注入页显示“CloudCC CRM 已连接”、`CCAdmin / 组织管理员` 和真实客户数据；完整时间线的两条微信记录使用 Simple Icons 单 path 双气泡，图标 `30 × 30`、SVG `viewBox=0 0 24 24`，工作台 `scrollWidth=clientWidth=1146`、`scrollHeight=clientHeight=792`，控制台 error/warning 为 0。证据：`output/playwright/task210-prod-cloudcc-wechat-standard-icon-2.7.4.png`。
+- `superseding-release`: TASK-210 验收后生产由独立集成流程升级到 `2.7.5 / be80eea665c0`；Git ancestry 确认包含修复提交 `2e5ae02`，重新加载真实 CloudCC 注入页后仍有 2 条 `is-social-chat` 规范图标，尺寸/path/viewBox/无溢出与控制台零错误结果不变。升级稳定后 90 秒窗口 backend ERROR 与 frontend 5xx 均为 0，健康 `UP`。
+- `cloudcc-metadata`: `cc-customization-expert-msapi 2.1.279-msapi` 回读 pagecomponent `6a5628cee4b0a577cbba2088`、`component-customer-workbench`、customPage V9、`embedded=true` 和生产 URL 均匹配；仅保留接口不返回 `actualVersions` 的已知 warning，真实嵌入验收作为运行版本证据。
 
 ## TASK-207 前台主题一致性与视觉对齐（2026-07-14）
 
