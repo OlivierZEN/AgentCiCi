@@ -17811,3 +17811,204 @@ td.skills-data-table__actions > * {
   transform: none;
   appearance: none;
 }
+
+/* FEAT-115: the supplied 1672×941 reference is the default desktop rendering. */
+.platform-login--reference {
+  --platform-login-reference: none;
+  position: relative;
+  display: block;
+  width: 100vw;
+  min-width: 0;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color-scheme: dark;
+  background: #050607 var(--platform-login-reference) center / 100% 100% no-repeat;
+}
+
+.platform-login--reference::before,
+.platform-login--reference::after {
+  content: none;
+}
+
+.platform-login--reference .platform-login__reference-control-layer,
+.platform-login--reference .platform-login__reference-a11y,
+.platform-login--reference .platform-login__form,
+.platform-login--reference .platform-login__actions {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.platform-login--reference .platform-login__reference-control-layer {
+  z-index: 1;
+}
+
+/* Semantic copy remains available to assistive technology while the supplied image owns default pixels. */
+.platform-login--reference .platform-login__intro {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.platform-login--reference .platform-login__form label {
+  position: absolute;
+  z-index: 3;
+  margin: 0;
+  color: transparent;
+  font-size: clamp(11px, 0.85vw, 16px);
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.platform-login--reference label[for="platform-login-identifier"] {
+  top: 40.72%;
+  left: 53.0%;
+}
+
+.platform-login--reference label[for="platform-login-password"] {
+  top: 55.14%;
+  left: 53.0%;
+}
+
+.platform-login--reference .platform-login__form input {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  left: 52.99%;
+  width: 39.17%;
+  height: 6.8%;
+  min-height: 0;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0 1.45%;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font-size: clamp(13px, 1.02vw, 18px);
+  letter-spacing: 0.02em;
+  box-shadow: none;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out, color 160ms ease-out;
+}
+
+.platform-login--reference #platform-login-identifier {
+  top: 44.85%;
+}
+
+.platform-login--reference #platform-login-password {
+  top: 59.3%;
+}
+
+.platform-login--reference .platform-login__form input::placeholder {
+  color: transparent;
+}
+
+.platform-login--reference .platform-login__actions {
+  display: block;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.platform-login--reference .platform-button--primary {
+  position: absolute;
+  top: 70.99%;
+  left: 52.99%;
+  width: 39.17%;
+  height: 6.8%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent !important;
+  color: transparent !important;
+  font-size: clamp(13px, 1.02vw, 18px);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  box-shadow: none;
+  opacity: 1;
+  cursor: not-allowed;
+  pointer-events: auto;
+  transition: border-color 160ms ease-out, background-color 160ms ease-out, box-shadow 160ms ease-out, color 160ms ease-out;
+}
+
+.platform-login--reference .platform-login__reference-a11y.is-engaged input {
+  border: 1px solid rgba(166, 186, 204, 0.46);
+  border-radius: 7px;
+  background: #090a0c;
+  color: #f5f6f8;
+  caret-color: #f5d28a;
+  box-shadow: inset 0 1px 0 rgba(245, 246, 248, 0.035);
+}
+
+.platform-login--reference .platform-login__reference-a11y.is-engaged input::placeholder {
+  color: rgba(176, 188, 198, 0.68);
+}
+
+.platform-login--reference .platform-login__reference-a11y.is-engaged input:focus {
+  border-color: #f5d28a;
+  background: #0a0c10;
+  box-shadow: 0 0 0 3px rgba(245, 210, 138, 0.13), 0 0 20px rgba(245, 210, 138, 0.08);
+}
+
+.platform-login--reference .platform-login__reference-a11y.is-engaged .platform-button--primary {
+  border: 1px solid rgba(245, 210, 138, 0.88);
+  border-radius: 8px;
+  background: #11100d !important;
+  color: #f5f6f8 !important;
+  box-shadow: 0 0 0 1px rgba(245, 210, 138, 0.04), 0 0 22px rgba(245, 210, 138, 0.14);
+  cursor: pointer;
+}
+
+.platform-login--reference .platform-login__reference-a11y.is-engaged .platform-button--primary:disabled {
+  border-color: rgba(245, 210, 138, 0.3);
+  background: rgba(245, 210, 138, 0.02) !important;
+  color: rgba(245, 246, 248, 0.42) !important;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.platform-login--reference .platform-login__reference-a11y.is-engaged .platform-button--primary:hover:not(:disabled) {
+  border-color: #f5d28a;
+  background: rgba(245, 210, 138, 0.1) !important;
+  box-shadow: 0 0 0 1px rgba(245, 210, 138, 0.08), 0 0 30px rgba(245, 210, 138, 0.24);
+  transform: none;
+}
+
+.platform-login--reference .platform-login__notice {
+  position: absolute;
+  top: 79.7%;
+  left: 52.99%;
+  width: 39.17%;
+  margin: 0;
+  color: #f5d28a;
+  font-size: clamp(11px, 0.8vw, 15px);
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+}
+
+@media (max-aspect-ratio: 1 / 1) {
+  .platform-login--reference {
+    background-size: auto 100%;
+  }
+}

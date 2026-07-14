@@ -1,51 +1,74 @@
-# TASK-202 主题视觉回归设计 QA
+# TASK-209 运营平台登录页原图像素锁定复刻设计 QA
 
-## 比较目标
+## 验收范围
 
-- 视觉事实源：`/Users/owenmacbook/Library/Containers/com.tencent.WeWorkMac/Data/Documents/Profiles/D96D68BD864DFEF5C5FF56A849F7C328/Caches/Images/2026-07/281606129b8c0c1ffbb0f07e07661cbb_HD/企业微信截图_50cde0e1-d6ba-4adb-8a12-2f54a2c19848.png`
-- 用户反馈的问题版：`/var/folders/ld/pqvgd4g52h555q74hhmy47ch0000gn/T/codex-clipboard-129c6a61-571e-49c2-8cfa-1fefbb0d28c0.png`
-- 浏览器渲染实现：`output/product-design/task202-theme-regression/03-local-fixed-2048x1152.png`
-- 全图同屏证据：`output/product-design/task202-theme-regression/04-reference-before-after-comparison.jpg`
-- 聚焦结构证据：`output/product-design/task202-theme-regression/05-focused-structure-comparison.jpg`
-- 生产验收证据：`output/product-design/task202-theme-regression/06-production-fixed-2.6.6-2048x1152.png`
-- 验收视口：桌面端 `2048 x 1152`；实现截图的可用页面区域为 `2008 x 1152`。
-- 验收状态：鎏金账房主题、助手工作台空会话；事实源与问题图包含已有会话内容，因此只对共同可见的壳层、智能体栏、会话画布、右侧栏、头像和指标结构做精确判断，不对动态内容高度做虚假像素结论。
+- 路由：`/platform/login`。
+- 默认桌面视口：`1672 × 941`，与用户批准原图尺寸一致。
+- 视觉真值：`frontend/src/assets/platform-login-reference-1672x941.png`，SHA-256 为 `1b119105b2079248e91492e1ef44c32cd0cfba3b1d7f3917e452c50d270b37e9`。
+- 默认态只验收原图背景；focus、输入和提示属于功能态，单独检查可读性与可用性。
 
-## 比较历史
+## 默认态比对
 
-### 第一次比较：blocked
+- 左右拼接比较图：`output/playwright/task209-reference-comparison.png`；左侧为受控原图，右侧为 `1672 × 941` 本地浏览器默认态截图。
+- 浏览器读取到根元素背景为受控原图 URL、`background-size: 100% 100%`、`background-position: 50% 50%`，根元素尺寸精确为 `1672 × 941`。
+- 默认态 `is-engaged=false`；输入框的背景、文字、边框均透明/`0px`，按钮背景、文字、边框也均透明/`0px`。因此没有可见 HTML/CSS 重绘层覆盖原图。
+- 截图通道返回 JPEG（即便调用方使用 `.png` 文件名），无法把其压缩后的二进制与 PNG 原件作无损文件比较；视觉拼接、背景引用和所有覆盖层透明的运行时样式共同作为像素锁定证据。
 
-- `P1` 主题样式把智能体栏、会话区、右侧概览、会话历史和指标组重新绘制成多层背景盒，破坏原版单一画布层级。
-- `P1` 选中智能体入口获得额外底色，头像在悬停或选中时缩放，形成用户指出的托底、阴影和局部跳动观感。
-- `P2` 当前状态泳道和指标块使用强调色或次级表面填充，右侧信息被切成过多矩形区域。
+## 交互状态
 
-修复：主题层只映射画布、必要内容表面、文字、结构线和强调色；结构容器恢复透明。智能体入口所有状态取消背景、阴影和边框，头像取消过渡、缩放和阴影。
+- 两个 label、输入框和提交按钮均唯一存在；初始按钮禁用。
+- 填入本地假凭据 `pixel-lock@example.com` / 本地测试密码后，按钮变为可用；账号、掩码密码、焦点边框和单一按钮文案可读，未提交假凭据。
+- `document.documentElement.scrollWidth <= window.innerWidth`，控制台 `error/warning=0`。
+- 交互图：`output/playwright/task209-reference-engaged-1672x941.png`。
 
-### 第二次比较：passed
+## 结论
 
-- 全图证据中，修复版恢复为与原版一致的单一会话画布和克制分隔线；问题版的大面积米色分区不再出现。
-- 聚焦证据中，智能体入口无第二层选中底框，头像保持固定 `42 x 42`、`box-shadow: none`、`transform: none`。
-- 八主题计算样式矩阵确认智能体栏、会话面板、右侧卡片、指标组和当前状态泳道均为透明背景、无背景图、无阴影、无变换；八套主题横向溢出均为 `0`。
+- P0：无。
+- P1：无。
+- P2：无。
+- 默认状态通过原图资产与透明语义层实现，满足用户指定的原图高保真复刻方式；认证逻辑不变。
 
-## 必查表面
+# TASK-207 前台主题一致性与视觉对齐设计 QA
 
-- 字体与排版：沿用原组件字体、字号、字重、行高和换行规则，主题修复未改变排版。
-- 间距与布局：主区域与右侧栏比例、智能体栏高度、头像尺寸、会话区和输入区布局保持不变；无 hover 几何变化。
-- 颜色与令牌：主题只改变语义颜色；结构容器不再直接使用 `surface` 或 `surface-muted` 形成背景盒。
-- 图像与资产：沿用真实智能体和用户头像资源，未增加占位图、CSS 图形或自绘图标；头像无阴影托底。
-- 文案与内容：未改动产品文案和会话内容。
+## 验收范围
 
-## 浏览器验收
+- 桌面端视口：`1600 × 1000`。
+- 主题矩阵：八套主题均检查设置页、外层画布和轨道；`gilded`、`sakura`、`galaxy` 进一步覆盖智能体工作区、AI 应用菜单、数据洞察、客户洞察、知微画像、客户互动工作台、互动整理弹窗、专属记忆和个人设置。
+- 组织入口：真实组织 `CloudCC 智能体应用DEMO` 显示首字母 `C`，不再显示固定 `CB`。
 
-- 已验证助手工作台、设置页和主题选择主路径。
-- 已逐项选择并应用 `gilded`、`crm-blue`、`ocean`、`sakura`、`lavender`、`avocado`、`wine`、`galaxy`，验收后恢复 `gilded`。
-- 已检查页面控制台，未发现警告或错误。
-- 已检查外层横向溢出，结果为 `0`。
-- 已在生产 `2.6.6` 完成登录态复验：版本与提交一致，结构层透明；头像悬停前后均为 `42 x 42`、无阴影和变换；控制台错误为 `0`。
+## 发现与修正
 
-## Findings
+1. 数据洞察第二、三行只占三列，右侧形成大面积空白。排名和风险卡改为跨两列，四列栅格在桌面端完整闭合，同一行顶部与高度一致。
+2. 数据图、智能体头像、会话对象头像和监控头像仍使用固定蓝、紫、橙、绿。新增四个主题序列 token，并按稳定身份映射到当前主题。
+3. 知微画像原生复选框保留浏览器蓝色。复选框与单选框统一使用当前主题强调色。
+4. AI 应用菜单、组织菜单、客户洞察、数据洞察、知微画像、监控、专属记忆、客户互动弹窗和智能体工作区仍有固定鎏金或固定浅色。改为受控主题画布、表面、文字、结构线、状态和序列色。
+5. 智能体卡片历史玻璃拟态、蓝色阴影和悬停位移与产品视觉不一致。改为不透明主题表面、结构线和无位移选中态。
 
-- 无剩余可执行的 `P0`、`P1` 或 `P2` 视觉问题。
-- 动态会话内容与事实源不同属于测试状态差异，不影响本次主题结构回归结论。
+## 浏览器结果
+
+- 八主题即时预览均正确切换 `data-theme`、画布、设置面板和轨道表面；`galaxy` 为唯一深色主题。
+- `gilded`、`sakura`、`galaxy` 的重点业务表面均读取各自主题 token，没有旧主题白底或固定图表色残留。
+- 数据洞察卡片行高分别在各行保持一致，四列栅格无右侧断档。
+- AI 应用菜单五个条目均为 `44px` 高并共享同一左锚点；互动整理弹窗左右栏同顶、同高。
+- 当前页面 `document/body scrollWidth == clientWidth == 1600`；控制台 error/warning 为 `0`。
+- 八主题验收结束后已恢复 `gilded`。
+
+## 证据
+
+- `output/playwright/task207-workbench-gilded.png`
+- `output/playwright/task207-agent-workspace-gilded.png`
+- `output/playwright/task207-agent-workspace-galaxy.png`
+- `output/playwright/task207-data-insight-gilded.png`
+- `output/playwright/task207-data-insight-sakura.png`
+- `output/playwright/task207-data-insight-galaxy.png`
+- `output/playwright/task207-customer-insight-gilded.png`
+- `output/playwright/task207-customer-workbench-gilded.png`
+- `output/playwright/task207-ingestion-modal-gilded.png`
+- `output/playwright/task207-zhiwei-gilded.png`
+- `output/playwright/task207-zhiwei-galaxy.png`
+- `output/playwright/task207-memory-sakura.png`
+- `output/playwright/task207-ai-menu-sakura.png`
+- `output/playwright/task207-settings-galaxy.png`
+- `output/playwright/task207-settings-sakura.png`
 
 final result: passed

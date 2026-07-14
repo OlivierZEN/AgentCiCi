@@ -1197,7 +1197,9 @@
 }
 
 .cici-data-card--trend,
-.cici-data-card--table {
+.cici-data-card--ranking,
+.cici-data-card--table,
+.cici-data-card--risk {
   grid-column: span 2;
 }
 

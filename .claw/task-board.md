@@ -28,25 +28,25 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `project-manager`
 - spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
 - task_status_path: `.claw/tasks/TASK-208.md`
 - assignment_path: `.claw/assignments/TASK-208.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment, push the allocation-only commit to origin/main, then begin TDD in the isolated implementation worktree.
+- next_action: Preserve the live TASK-209 `2.7.2` source in the release branch, publish a new immutable version, migrate CRM data, then complete five-session production acceptance.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md`
 - task_status_path: `.claw/tasks/TASK-207.md`
 - assignment_path: `.claw/assignments/TASK-207.yaml`
 - blocked_by: `none`
-- next_action: Validate assignment, create the implementation plan, then audit and repair every authenticated frontend surface.
+- next_action: Done on `codex/TASK-207-frontend-theme-alignment-audit`; merge after review, with production release handled separately.
 
 ### TASK-206 - CloudCC 嵌入身份同步自动恢复
 

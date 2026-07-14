@@ -63,6 +63,36 @@
       "fast": "150ms ease-out",
       "standard": "180ms ease-out"
     },
+    "platformLoginSurface": {
+      "purpose": "User-approved pixel-locked route-level visual exception for the unauthenticated platform operations login entry.",
+      "spec": "docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md",
+      "route": "/platform/login",
+      "status": "approved",
+      "sourceAsset": "frontend/src/assets/platform-login-reference-1672x941.png",
+      "sourceDimensions": "1672x941",
+      "layout": {
+        "desktopDefault": "user-approved source image rendered at 100% width and 100% height without a visible reconstructed layer",
+        "semanticOverlay": "transparent coordinate-locked account, password and submit controls align to the source image",
+        "engagedState": "focus, entered values and notices replace only the interactive form surface with a readable dark layer"
+      },
+      "palette": {
+        "cosmicBlack": "#050607",
+        "deepSpace": "#0e0f14",
+        "duskBlue": "#0f1b2a",
+        "nebulaTeal": "#0e1f22",
+        "nightPurple": "#1a1c2a",
+        "softWhite": "#f5f6f8",
+        "stardustGold": "#f5d28a",
+        "signalTeal": "#8bcfc0"
+      },
+      "rules": [
+        "This exception applies only to the unauthenticated /platform/login entry and does not change authenticated platform workbench themes.",
+        "Keep login copy, form semantics, auth request behavior, token storage, role validation and redirect behavior unchanged.",
+        "At the approved 1672x941 default desktop state, use the supplied unmodified image as the full-page background and do not visibly redraw its title, orbital field, labels, borders, placeholders or button.",
+        "Keep semantic HTML controls in a transparent coordinate-locked overlay; expose a readable dark focus/input/notice surface only after interaction.",
+        "This narrowly scoped source-image exception overrides the general no-raster-background preference only for FEAT-115."
+      ]
+    },
     "themePreferences": {
       "purpose": "Account-level selectable palettes for authenticated AgentCiCi, admin, platform, and CloudCC embedded product surfaces.",
       "defaultTheme": "gilded",
@@ -155,7 +185,9 @@
         "Theme selection is an account preference. Apply a local cached value before render, then let the authenticated server preference win without a full-page reload.",
         "CRM embedded customer workbench uses the current AgentCiCi identity preference and must not derive a theme from CloudCC tokens.",
         "Galaxy is the only dark palette. It remains a restrained enterprise workspace and must preserve WCAG-readable text, controls, forms, dividers, statuses, and focus states.",
-        "Theme option UI uses compact radio rows, three-color swatches, one structural boundary, and no nested cards, hover movement, shadows, or decorative illustrations."
+        "Theme option UI uses compact radio rows, three-color swatches, one structural boundary, and no nested cards, hover movement, shadows, or decorative illustrations.",
+        "Authenticated frontend data visualizations use four theme-owned semantic series tokens. Business modules must not bypass the selected theme with fixed chart, identity, status, or panel colors.",
+        "The organization switcher monogram is derived from the first visible character of the current organization name. Latin initials are uppercase and empty names fall back to the Chinese character 组; fixed vendor or product abbreviations are forbidden."
       ]
     },
     "breakpoints": {
