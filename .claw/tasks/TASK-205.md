@@ -31,8 +31,8 @@ spec_path: docs/specs/FEAT-111-crm-business-analysis-skill.md
 
 ## Constraints
 
+- CRM 经营分析数据使用独立 `scripts/seed-crm-analytics-demo.py`，不得修改 TASK-203 独占的 `scripts/seed-demo-environment.py`。
 - 任何 CloudCC 写入必须先 dry-run；只操作 `TASK-205-CRM-ANALYTICS-DEMO-V1` 样例数据。
 - 真实凭据不得进入 prompt、trace、日志、提交或测试夹具。
 - 不修改 CloudCC 元数据；若扫描后发现不可避免的缺口，先暂停并补 MetadataService 计划。
 - 不回退 TASK-203、TASK-204 或用户的 `diagrams/` 改动。
-

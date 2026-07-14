@@ -22,7 +22,7 @@ scope_files:
   - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorService.java
   - backend/src/main/java/com/codehouse/ciciassistant/tool/service/BuiltinToolCatalog.java
   - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
-  - scripts/seed-demo-environment.py
+  - scripts/seed-crm-analytics-demo.py
   - docs/specs/FEAT-111-crm-business-analysis-skill.md
   - docs/superpowers/plans/2026-07-14-crm-business-analysis.md
   - .claw/tasks/TASK-205.md
