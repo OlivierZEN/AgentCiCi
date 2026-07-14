@@ -1,0 +1,53 @@
+task_id: TASK-201
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T00:16:48Z
+expires_at: none
+spec_path: docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
+task_status_path: .claw/tasks/TASK-201.md
+branch: codex/TASK-201-agent-builder-layout
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/assistant/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
+  - .claw/tasks/TASK-201.md
+  - .claw/assignments/TASK-201.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-062-platform-model-provider-governance.md
+  - docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md
+  - docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
+task_boundary:
+  - "移除 Agent Builder 的具体模型选择入口，但保留 draft.model、保存协议和平台统一模型治理。"
+  - "重排 Agent 定义桌面端双栏，并把策略开关与头像放在同一视觉行。"
+  - "将评测和发布渠道移入下方版本控制与交付页签，不混合两类内容。"
+  - "不改变后端 API、数据库、模型路由、评测语义、渠道数据结构或移动端范围。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14T00:16:48Z; user requested the Agent Builder information-architecture and layout adjustment."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created frontend task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."

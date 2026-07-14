@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-13T23:58:40Z
+updated_at: 2026-07-14T00:16:48Z
 updated_by: MANAGER-001
-phase: agent-evaluation-production
-active_task: "none"
-next_action: "Monitor production 2.6.4 evaluation usage, seed reviewed platform and tenant cases, and resume TASK-170 when prioritized."
+phase: agent-builder-layout
+active_task: "TASK-201"
+next_action: "Validate TASK-201 assignment, implement FEAT-107, and complete focused frontend plus desktop browser verification."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-201 is ready: remove the Agent Builder concrete model selector while preserving platform-controlled model governance, rebalance the definition form, align strategy controls with the avatar, and move evaluation/publish channels into the lower version-control lifecycle workspace.
 
 - TASK-200 is complete in production `2.6.4 / d88f4293759f`: V79, four-layer evaluation assets, deterministic assertions, real candidate execution, snapshots/comparison/staleness, publish gates, Trace regression capture, quality issues and platform/tenant/Builder/Ops product surfaces are live.
 - FEAT-106 supersedes FEAT-031 as the delivered full-system design while preserving the existing V67 evaluation tables and compatibility APIs. Agent Builder now has an independent “评测” Tab；“发布渠道” contains only IM/Web/Open API delivery entries.
@@ -54,6 +56,8 @@ read_next:
 ## Read Next
 
 - `.claw/task-board.md` - compact task index.
+- `.claw/tasks/TASK-201.md` and `.claw/assignments/TASK-201.yaml` - active layout task and authorization.
+- `docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md` - approved scope, information architecture and acceptance criteria.
 - `.claw/tasks/TASK-200.md` and `.claw/assignments/TASK-200.yaml` - completed task evidence and authorization.
 - `docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md` - production-ready design and acceptance source.
 - `.claw/test-report.md` - latest verified commands.
