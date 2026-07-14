@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.crmanalysis.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -42,7 +44,9 @@ class CrmProductSalesAnalysisServiceTest {
         assertThat(result.metric()).isEqualTo(CrmProductSalesAnalysisService.Metric.SALES_QUANTITY);
         assertThat(result.startDate()).hasToString("2026-06-15");
         assertThat(result.endDate()).hasToString("2026-07-14");
-        assertThat(result.sourceObjects()).containsExactly("product", "cloudccorder", "cloudccorderitem");
+        assertThat(result.sourceObjects()).containsExactly(
+                "product", "cloudccorder", "cloudccorderitem",
+                "Account", "Opportunity", "opportunitypdt", "contract");
         assertThat(result.rows()).extracting(CrmProductSalesAnalysisService.SalesRankRow::productCode)
                 .containsExactly("DEMO-X1", "DEMO-G5");
 
@@ -100,6 +104,286 @@ class CrmProductSalesAnalysisServiceTest {
         assertThat(result.warnings()).contains("统计范围内没有可计入的有效订单明细");
     }
 
+    @Test
+    void reportsDataAccessIncompleteWhenOrderItemsAreVisibleButOrderMastersAreNot() {
+        List<Map<String, Object>> visibleItems = IntStream.range(0, 1_888)
+                .mapToObj(index -> item("visible-" + index, "hidden-order-" + index,
+                        "p1", "1", "100", "100", "已生效"))
+                .toList();
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(map("id", "p1", "name", "智能巡检终端 X1", "cpdm", "DEMO-X1", "unit", "台"));
+                    case "cloudccorder" -> List.of();
+                    case "cloudccorderitem" -> visibleItems;
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "sales-a",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, true));
+
+        assertThat(result.status().name()).isEqualTo("DATA_ACCESS_INCOMPLETE");
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.coverage().scannedOrders()).isZero();
+        assertThat(result.coverage().scannedItems()).isEqualTo(1_888);
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("权限") && warning.contains("订单主表"));
+    }
+
+    @Test
+    void calculatesContributionAveragePriceAndCustomerConcentrationFromAllFactsBeforeTopN() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "智能巡检终端 X1", "cpdm", "DEMO-X1", "unit", "台"),
+                            map("id", "p2", "name", "边缘采集网关 G5", "cpdm", "DEMO-G5", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"),
+                            orderWithCurrency("o2", "2026-07-11", "已完成", "a2", "CNY"),
+                            orderWithCurrency("o3", "2026-07-12", "已完成", "a3", "CNY"),
+                            orderWithCurrency("o4", "2026-07-13", "已完成", "a4", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "50", "100", "5000", "已生效"),
+                            item("i2", "o2", "p1", "30", "100", "3000", "已生效"),
+                            item("i3", "o3", "p1", "20", "100", "2000", "已生效"),
+                            item("i4", "o4", "p2", "10", "1200", "12000", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_QUANTITY,
+                        null, null, 1, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.SUCCESS);
+        assertThat(result.rows()).hasSize(1);
+        CrmProductSalesAnalysisService.SalesRankRow row = result.rows().getFirst();
+        assertThat(row.productCode()).isEqualTo("DEMO-X1");
+        assertThat(row.quantityContributionRate()).isEqualByComparingTo("0.9091");
+        assertThat(row.amountContributionRate()).isEqualByComparingTo("0.4545");
+        assertThat(row.realizedAveragePrice()).isEqualByComparingTo("100");
+        assertThat(row.top1CustomerConcentration()).isEqualByComparingTo("0.5");
+        assertThat(row.top3CustomerConcentration()).isEqualByComparingTo("1");
+        assertThat(row.quantityRank()).isEqualTo(1);
+        assertThat(row.amountRank()).isEqualTo(2);
+        assertThat(result.summary().totalSalesQuantity()).isEqualByComparingTo("110");
+        assertThat(result.summary().totalSalesAmount()).isEqualByComparingTo("22000");
+        assertThat(result.summary().quantityLeader().productCode()).isEqualTo("DEMO-X1");
+        assertThat(result.summary().amountLeader().productCode()).isEqualTo("DEMO-G5");
+        assertThat(result.summary().currency()).isEqualTo("CNY");
+    }
+
+    @Test
+    void blocksAmountAnalysisWhenVisibleFactsContainMultipleCurrencies() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"),
+                            map("id", "p2", "name", "产品二", "cpdm", "P-2", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"),
+                            orderWithCurrency("o2", "2026-07-11", "已完成", "a2", "USD"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "1", "100", "100", "已生效"),
+                            item("i2", "o2", "p2", "1", "100", "100", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_AMOUNT,
+                        null, null, 5, false));
+
+        assertThat(result.status().name()).isEqualTo("DATA_QUALITY_BLOCKED");
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("多币种"));
+    }
+
+    @Test
+    void addsOpportunityAndContractSignalsWithoutMixingPipelineIntoRealizedSales() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "智能巡检终端 X1", "cpdm", "DEMO-X1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithRelations("o1", "2026-07-10", "a1", "c1", "CNY"),
+                            orderWithRelations("o2", "2026-07-11", "a2", "c2", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "8", "1000", "8000", "已生效"),
+                            item("i2", "o2", "p1", "2", "1000", "2000", "已生效"));
+                    case "Account" -> List.of(
+                            map("id", "a1", "name", "华东智造一厂"),
+                            map("id", "a2", "name", "南方能源集团"));
+                    case "Opportunity" -> List.of(
+                            map("id", "op-renew", "name", "X1 续约扩容", "khmc", Map.of("id", "a1"),
+                                    "jieduan", "商务谈判", "jsrq", "2026-08-20", "currency", "CNY"));
+                    case "opportunitypdt" -> List.of(
+                            map("id", "opd-1", "opportunity", Map.of("id", "op-renew"),
+                                    "product2", Map.of("id", "p1"), "quantity", "20",
+                                    "totalprice", "20000", "unit", "台", "currency", "CNY"));
+                    case "contract" -> List.of(
+                            map("id", "c1", "khmc", Map.of("id", "a1"), "zhuangtai", "执行中",
+                                    "htksrq", "2026-01-01", "htjsrq", "2026-08-30", "currency", "CNY"),
+                            map("id", "c2", "khmc", Map.of("id", "a2"), "zhuangtai", "已生效",
+                                    "htksrq", "2026-01-01", "htjsrq", "2026-09-15", "currency", "CNY"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.SUCCESS);
+        CrmProductSalesAnalysisService.SalesRankRow row = result.rows().getFirst();
+        assertThat(row.salesQuantity()).isEqualByComparingTo("10");
+        assertThat(row.pipeline().openOpportunityCount()).isEqualTo(1);
+        assertThat(row.pipeline().quantity()).isEqualByComparingTo("20");
+        assertThat(row.pipeline().amount()).isEqualByComparingTo("20000");
+        assertThat(row.pipeline().nearestExpectedCloseDate()).hasToString("2026-08-20");
+        assertThat(row.contracts().activeContractCount()).isEqualTo(2);
+        assertThat(row.contracts().expiringWithin90DaysCount()).isEqualTo(2);
+        assertThat(row.contracts().expiringWithoutRenewalCount()).isEqualTo(1);
+        assertThat(result.insights()).extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .contains("CUSTOMER_CONCENTRATION", "RENEWAL_RISK");
+        assertThat(result.insights()).allSatisfy(insight -> {
+            assertThat(insight.evidence()).isNotBlank();
+            assertThat(insight.action()).isNotBlank();
+        });
+    }
+
+    @Test
+    void keepsRealizedSalesWhenOptionalOpportunityQueryIsDenied() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), eq("Opportunity"), anyString(), anyString()))
+                .thenThrow(new CloudccOpenApiService.CloudccApiException("403", "没有商机对象权限"));
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.rows()).isNotEmpty();
+        assertThat(result.rows().getFirst().salesQuantity()).isEqualByComparingTo("15");
+        assertThat(result.rows().getFirst().pipeline().openOpportunityCount()).isZero();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("商机") && warning.contains("已保留订单销售事实"));
+    }
+
+    @Test
+    void keepsQuantityRankingButSuppressesIncomparableAmountsForMultipleCurrencies() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "产品一", "cpdm", "P-1", "unit", "台"),
+                            map("id", "p2", "name", "产品二", "cpdm", "P-2", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithCurrency("o1", "2026-07-10", "已完成", "a1", "CNY"),
+                            orderWithCurrency("o2", "2026-07-11", "已完成", "a2", "USD"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "10", "100", "1000", "已生效"),
+                            item("i2", "o2", "p2", "5", "200", "1000", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(
+                        CrmProductSalesAnalysisService.Metric.SALES_QUANTITY,
+                        null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.PARTIAL);
+        assertThat(result.rows()).extracting(CrmProductSalesAnalysisService.SalesRankRow::productCode)
+                .containsExactly("P-1", "P-2");
+        assertThat(result.rows()).allSatisfy(row -> {
+            assertThat(row.salesAmount()).isNull();
+            assertThat(row.amountContributionRate()).isNull();
+            assertThat(row.realizedAveragePrice()).isNull();
+        });
+        assertThat(result.summary().amountComparable()).isFalse();
+        assertThat(result.summary().totalSalesAmount()).isNull();
+        assertThat(result.summary().amountLeader()).isNull();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("多币种"));
+    }
+
+    @Test
+    void recognizesEnabledAndApprovedContractsAsActiveTenantValues() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(map("id", "p1", "name", "X1", "cpdm", "P-1", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            orderWithRelations("o1", "2026-07-10", "a1", "c1", "CNY"),
+                            orderWithRelations("o2", "2026-07-11", "a2", "c2", "CNY"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "p1", "1", "100", "100", "已生效"),
+                            item("i2", "o2", "p1", "1", "100", "100", "已生效"));
+                    case "contract" -> List.of(
+                            map("id", "c1", "khmc", Map.of("id", "a1"), "zhuangtai", "已启用", "htjsrq", "2026-12-31"),
+                            map("id", "c2", "khmc", Map.of("id", "a2"), "zhuangtai", "审批通过", "htjsrq", "2026-12-31"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1", new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.rows().getFirst().contracts().activeContractCount()).isEqualTo(2);
+    }
+
+    @Test
+    void reportsDataAccessIncompleteWhenEveryReferencedProductIsInvisible() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of();
+                    case "cloudccorder" -> List.of(order("o1", "2026-07-10", "已完成", "a1"));
+                    case "cloudccorderitem" -> List.of(
+                            item("i1", "o1", "hidden-p1", "5", "100", "500", "已生效"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1", new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, false));
+
+        assertThat(result.status()).isEqualTo(CrmProductSalesAnalysisService.ResultStatus.DATA_ACCESS_INCOMPLETE);
+        assertThat(result.rows()).isEmpty();
+        assertThat(result.warnings()).anyMatch(warning -> warning.contains("产品主数据") && warning.contains("权限"));
+    }
+
+    @Test
+    void diagnosesDiscountDrivenGrowthAndPipelineLedPotentialGrowthFromFacts() {
+        when(cloudcc.queryAllRecords(anyString(), anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> switch (invocation.<String>getArgument(2)) {
+                    case "product" -> List.of(
+                            map("id", "p1", "name", "现有产品", "cpdm", "P-1", "unit", "台"),
+                            map("id", "p2", "name", "潜力产品", "cpdm", "P-2", "unit", "台"));
+                    case "cloudccorder" -> List.of(
+                            order("current", "2026-07-10", "已完成", "a1"),
+                            order("previous", "2026-06-10", "已完成", "a1"));
+                    case "cloudccorderitem" -> List.of(
+                            item("current-item", "current", "p1", "20", "80", "1600", "已生效"),
+                            item("previous-item", "previous", "p1", "10", "100", "1000", "已生效"));
+                    case "Opportunity" -> List.of(
+                            map("id", "future-op", "khmc", Map.of("id", "a2"), "jieduan", "3-提出方案",
+                                    "jsrq", "2026-08-25", "currency", "CNY"));
+                    case "opportunitypdt" -> List.of(
+                            map("id", "future-line", "opportunity", Map.of("id", "future-op"),
+                                    "product2", Map.of("id", "p2"), "quantity", "30", "totalprice", "30000"));
+                    default -> List.of();
+                });
+
+        CrmProductSalesAnalysisService.SalesRankResult result = service.analyze(
+                "org-1", "user-1",
+                new CrmProductSalesAnalysisService.SalesRankRequest(null, null, null, 5, true));
+
+        assertThat(result.insights()).extracting(CrmProductSalesAnalysisService.BusinessInsight::code)
+                .contains("DISCOUNT_DRIVEN", "POTENTIAL_GROWTH");
+        assertThat(result.insights()).filteredOn(insight -> "DISCOUNT_DRIVEN".equals(insight.code()))
+                .singleElement()
+                .satisfies(insight -> assertThat(insight.evidence())
+                        .contains("销量增长 100%", "订单销售额增长 60%", "实现均价下降 20%"));
+        assertThat(result.insights()).filteredOn(insight -> "POTENTIAL_GROWTH".equals(insight.code()))
+                .singleElement()
+                .satisfies(insight -> assertThat(insight.evidence())
+                        .contains("当前期无已实现销售", "开放商机 1 个", "管道数量 30"));
+    }
+
     private List<Map<String, Object>> records(String objectApiName) {
         return switch (objectApiName) {
             case "product" -> List.of(
@@ -128,14 +412,33 @@ class CrmProductSalesAnalysisServiceTest {
     }
 
     private Map<String, Object> order(String id, String date, String status, String accountId) {
+        return orderWithCurrency(id, date, status, accountId, "CNY");
+    }
+
+    private Map<String, Object> orderWithCurrency(String id,
+                                                  String date,
+                                                  String status,
+                                                  String accountId,
+                                                  String currency) {
         return map(
                 "id", id,
                 "name", "订单-" + id,
                 "accountid", Map.of("id", accountId, "name", "客户-" + accountId),
                 "podate", date,
                 "status", status,
+                "currency", currency,
                 "totalamount", BigDecimal.ZERO
         );
+    }
+
+    private Map<String, Object> orderWithRelations(String id,
+                                                   String date,
+                                                   String accountId,
+                                                   String contractId,
+                                                   String currency) {
+        Map<String, Object> order = orderWithCurrency(id, date, "已完成", accountId, currency);
+        order.put("contractid", Map.of("id", contractId));
+        return order;
     }
 
     private Map<String, Object> item(String id,
