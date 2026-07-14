@@ -2,9 +2,9 @@
 
 ## 状态
 
-- 状态：`in_progress`
+- 状态：`done`
 - 任务：`TASK-209`
-- 发布基线：生产 `2.7.1 / 5a5e9489035c`
+- 发布：生产 `2.7.2 / ddcda0ef6111`
 - 视觉真值：用户提供 `/var/folders/ld/pqvgd4g52h555q74hhmy47ch0000gn/T/codex-clipboard-fe3f07a0-c764-4a22-9731-739b7212a088.png`，尺寸 `1672 × 941`
 
 ## 决策与目标
@@ -53,6 +53,14 @@
 - 交互门：空表单按钮禁用，填入本地假凭据后按钮可用，焦点/输入/notice 仍可读，且不提交假凭据。
 - 工程门：聚焦测试、前端全量测试、`npm run build`、`DESIGN.json` 解析、`git diff --check` 通过。
 - 发布门：先执行 `./scripts/release-acr.sh --dry-run`，再以同一版本用于 ACR tag、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与线上 `CICI_IMAGE_TAG`；先备份，再更新线上 backend/frontend，完成健康、公网和浏览器验收。
+
+## 发布结果
+
+- `2.7.2` 的 backend/frontend ACR 镜像、Git annotated tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与线上 `CICI_IMAGE_TAG` 已全部一致；提交为 `ddcda0ef6111`。
+- 发布前备份：`/opt/cici/backups/20260715-001809-before-2.7.2-task209-reference-login`，包含环境、PostgreSQL、知识库和 Qdrant 快照。
+- 生产 backend/frontend 均为 `2.7.2` healthy；`/actuator/health=UP`，`/system/version` 返回 `2.7.2 / ddcda0ef6111`，Nginx 配置有效。
+- `x.agentcici.com` 的 HTTP 为 301、HTTPS `/platform/login` 为 200；`onechat.agentcici.com` 经生产 IP resolve 的 HTTP 为 301、HTTPS 为 200。
+- 线上浏览器在 `1672 × 941` 默认态加载同一哈希前端资产，背景为 `100% 100%`，透明控件层未参与默认可见像素；表单唯一、初始按钮禁用，填写本地假凭据后按钮可用，未发起登录请求，控制台 error/warning 为 0。
 
 ## 范围与例外
 
