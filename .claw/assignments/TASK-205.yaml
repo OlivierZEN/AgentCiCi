@@ -1,0 +1,67 @@
+task_id: TASK-205
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-14T09:43:14Z
+expires_at: none
+spec_path: docs/specs/FEAT-111-crm-business-analysis-skill.md
+task_status_path: .claw/tasks/TASK-205.md
+branch: codex/TASK-205-crm-business-analysis
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/**
+  - backend/src/main/resources/builtin-skills/**
+  - backend/src/test/java/**
+  - scripts/**
+  - docs/specs/**
+  - docs/superpowers/plans/**
+  - .claw/tasks/**
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/service/BuiltinToolCatalog.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
+  - scripts/seed-demo-environment.py
+  - docs/specs/FEAT-111-crm-business-analysis-skill.md
+  - docs/superpowers/plans/2026-07-14-crm-business-analysis.md
+  - .claw/tasks/TASK-205.md
+  - .claw/assignments/TASK-205.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-015-skill-declarative-api-runtime.md
+  - docs/specs/FEAT-028-file-backed-builtin-skills.md
+  - docs/specs/FEAT-031-agent-evaluation-regression-system.md
+  - docs/specs/FEAT-081-customer-interaction-workbench.md
+  - docs/specs/FEAT-084-data-insight-ai-app.md
+  - docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md
+task_boundary:
+  - "实现 FEAT-111 定义的 CRM 经营分析 Skill、高阶只读工具和稳定输出合同。"
+  - "CloudCC 侧只复用标准 product、cloudccorder、cloudccorderitem、contract、Opportunity、opportunitypdt、Account 对象。"
+  - "只创建带 TASK-205-CRM-ANALYTICS-DEMO-V1 批次标记的高仿真演示记录，默认 dry-run，显式 execute 才写入。"
+  - "所有查询使用当前映射用户权限；不得把组织管理员凭据作为普通对话运行身份。"
+  - "不得输出或提交 token、secret、cookie、数据库凭据或真实客户隐私。"
+  - "不新增移动端适配，不修改 CloudCC 元数据，不触碰生产发布配置或数据库迁移。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user explicitly approved CRM business analysis Skill, deterministic tool and bound CloudCC high-fidelity demo data goal."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "PM-created full-stack and external CRM demo-data task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."

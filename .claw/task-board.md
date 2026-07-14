@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T09:05:01Z
+updated_at: 2026-07-14T09:43:14Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-205 - CRM 经营分析 Skill 与产品销售演示数据
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-111-crm-business-analysis-skill.md`
+- task_status_path: `.claw/tasks/TASK-205.md`
+- assignment_path: `.claw/assignments/TASK-205.yaml`
+- blocked_by: `none`
+- next_action: Validate assignment scope, push allocation records to `origin/main`, then implement the deterministic analysis tool, Skill and CloudCC demo data on the assigned branch.
 
 ### TASK-204 - 智能体构建说明与头像交互精修
 
