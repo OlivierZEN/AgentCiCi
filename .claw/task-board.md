@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T05:54:33Z
+updated_at: 2026-07-14T06:28:42Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-203 - 客户互动工作台全场景演示数据
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-109-customer-workbench-comprehensive-demo-scenarios.md`
+- task_status_path: `.claw/tasks/TASK-203.md`
+- assignment_path: `.claw/assignments/TASK-203.yaml`
+- blocked_by: `none`
+- next_action: Extend the idempotent V2 seed, back up production, write CRM/AgentCiCi demo facts, and verify every queue and detail scenario as Owen/SalesA.
 
 ### TASK-202 - 用户级产品主题偏好
 
