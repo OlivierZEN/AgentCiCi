@@ -16,7 +16,7 @@
 - Blocking responses and persistence remain one complete deterministic body; no answer facts, ranking, formatter output, permissions, billing facts, or database schema change.
 - Do not restore a final LLM call and do not expose `tool_call`, `tool_result`, tool names, raw JSON, internal record IDs, tokens, cookies, or credentials.
 - Do not modify frontend production code, CRM sample data, CloudCC metadata, roles, profiles, sharing rules, runtime configuration, migrations, or TASK-210 implementation.
-- Release only from merged, clean `main` with the next immutable production version `2.7.6`; never overwrite `2.7.5`.
+- `2.7.6` 已因 OpenAPI 分片边界空白丢失而验收失败并回滚；修复只允许从 merged、clean `main` 发布新的不可变版本 `2.7.7`，不得覆盖 `2.7.5` 或 `2.7.6`。
 - Production rollback target is `2.7.5`; this task has no data or metadata rollback.
 
 ---
@@ -26,6 +26,7 @@
 - `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`: switch the deterministic CRM streaming branch to the existing chunk sender.
 - `backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java`: enforce fragment count, size, order, exact concatenation, persistence equality, and no-LLM/no-leak behavior.
 - `backend/src/test/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationServiceTest.java`: enforce ordered one-to-one OpenAPI fragment mapping and a single terminal event.
+- `backend/src/main/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationService.java`: preserve every non-empty delta exactly, including leading/trailing whitespace.
 - `.claw/tasks/TASK-211.md`, `.claw/current-status.md`, `.claw/task-board.md`, `.claw/issue-list.md`, `.claw/test-report.md`, `.claw/devops.md`, and `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`: record only observed implementation, test, release, and production-acceptance facts.
 
 ### Task 1: Enforce genuine CRM fragments across internal SSE and OpenAPI
@@ -290,15 +291,39 @@ Expected: a signed commit containing only the approved backend source and test f
 
 ---
 
+### Task 2: 修复 OpenAPI 分片边界空白丢失
+
+**Files:**
+- Modify: `backend/src/test/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationServiceTest.java`
+- Modify: `backend/src/main/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationService.java`
+
+- [x] **Step 1: 生产验收定位根因**
+
+`2.7.6` 真实 OpenAPI streaming 产生 133 个 `message`，但拼接后只有 2,342 字，blocking 为 2,383 字。逐片检查证明 `deltaText()` 通过通用 `text()` 调用了 `trim()`，并以 `isBlank()` 丢弃纯空白片段。
+
+- [x] **Step 2: 添加空白敏感 RED 回归**
+
+让桥接测试依次发送尾随空格片段、纯空白片段和前导换行片段；旧实现应把它们裁剪/丢弃，测试明确失败且不能完成预期完整正文。
+
+- [x] **Step 3: 最小保真修复并转绿**
+
+`deltaText()` 只做 null-to-empty，其他字符逐字保留；正文转发条件改为 `!piece.isEmpty()`。测试必须证明外部 `message` 拼接、运行完成入参和持久化答案都等于包含原始空白的完整正文。
+
+- [ ] **Step 4: 完成组合回归、评审和 2.7.7 发布验收**
+
+重复 8 类 CRM 回归与独立评审；发布后同时验证内部 SSE、OpenAPI streaming/blocking/history 的正文精确一致，不能只比较各自持久化。
+
+---
+
 ## Controller Delivery Gates
 
 - Run a fresh task-level spec and code-quality review from the task brief, implementer report, and generated review package. Both verdicts must be approved.
 - Run a fresh whole-branch review against the pre-implementation base; resolve every Critical or Important finding and re-review.
 - From the reviewed branch run the CRM regression set above, `npm test`, `npm run build`, Compose config validation, assignment validation, and `git diff --check`; record actual counts and outputs in `.claw/test-report.md`.
 - Update FEAT-114 and TASK-211 with observed facts only, commit them with the implementation, push the branch, create a PR, run local verification on the PR head, merge, and synchronize a clean local `main` with `origin/main`.
-- On clean merged `main`, run `./scripts/release-acr.sh --dry-run --version 2.7.6` before `./scripts/release-acr.sh --version 2.7.6`. Verify ACR manifests, annotated Git tag, application version, and Git commit all agree.
+- On clean merged `main`, run `./scripts/release-acr.sh --dry-run --version 2.7.7` before `./scripts/release-acr.sh --version 2.7.7`. Verify ACR manifests, annotated Git tag, application version, and Git commit all agree.
 - Before deployment, create the four non-empty production backups required by `docs/production-release-runbook.md`: environment, PostgreSQL, knowledge-base files, and Qdrant. Record the backup directory and sizes.
-- Set production `CICI_IMAGE_TAG=2.7.6` and `CICI_APP_VERSION=2.7.6`, pull and force-recreate backend/frontend only, preserve the four state-service container IDs, and verify six services, health `UP`, `/system/version`, Nginx, and public routes.
+- Set production `CICI_IMAGE_TAG=2.7.7` and `CICI_APP_VERSION=2.7.7`, pull and force-recreate backend/frontend only, preserve the four state-service container IDs, and verify six services, health `UP`, `/system/version`, Nginx, and public routes.
 - Using SalesA, run five fresh `/ai/chat/stream` conversations and record event counts, maximum fragment length, first-fragment and final-fragment timestamps, concatenated-body hash, persisted-body equality, Top 5 facts, amount leader, and leak checks. Every long answer must have multiple `delta` events.
 - Create one temporary SalesA-bound OpenAPI credential, verify multiple ordered `message` events plus one terminal `message_end`, then revoke the credential and restore the original channel set exactly.
 - Run one SalesB control conversation and an authenticated desktop browser check that captures a visibly partial assistant bubble before completion and the final complete five-layer analysis; console errors must be zero.

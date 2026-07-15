@@ -128,7 +128,7 @@ class AgentOpenApiConversationServiceTest {
                 "task-safe", "request-safe", "demo-org", 1L,
                 "agent-safe", "external-safe", "conversation-safe");
         Object input = newChatMessageInput();
-        String fullAnswer = "第一段第二段";
+        String fullAnswer = "第一段    \n第二段";
 
         when(runService.completeChatStreamSuccess(execution, fullAnswer))
                 .thenReturn(new AgentOpenApiRunService.StreamCompletion("trace-safe", 21));
@@ -141,13 +141,14 @@ class AgentOpenApiConversationServiceTest {
         CapturingEmitter clientEmitter = new CapturingEmitter();
         SseEmitter bridge = newOpenApiStreamBridge(service, clientEmitter, task, execution, input);
         bridge.send(SseEmitter.event().name("phase").data(Map.of("internalId", "secret-id")));
-        bridge.send(SseEmitter.event().name("delta").data(Map.of("text", "第一段")));
-        bridge.send(SseEmitter.event().name("delta").data(Map.of("text", "第二段")));
+        bridge.send(SseEmitter.event().name("delta").data(Map.of("text", "第一段 ")));
+        bridge.send(SseEmitter.event().name("delta").data(Map.of("text", "   ")));
+        bridge.send(SseEmitter.event().name("delta").data(Map.of("text", "\n第二段")));
         bridge.send(SseEmitter.event().name("done").data(Map.of()));
 
         assertThat(clientEmitter.eventNames())
-                .containsExactly("agent_thought", "message", "message", "message_end");
-        assertThat(clientEmitter.messageAnswers()).containsExactly("第一段", "第二段");
+                .containsExactly("agent_thought", "message", "message", "message", "message_end");
+        assertThat(clientEmitter.messageAnswers()).containsExactly("第一段 ", "   ", "\n第二段");
         assertThat(String.join("", clientEmitter.messageAnswers())).isEqualTo(fullAnswer);
         assertThat(clientEmitter.eventNames().stream().filter("message_end"::equals).count())
                 .isEqualTo(1L);

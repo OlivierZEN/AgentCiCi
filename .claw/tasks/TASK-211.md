@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-211
-status: review
-updated_at: 2026-07-15T00:13:29Z
+status: active
+updated_at: 2026-07-15T01:01:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -26,10 +26,13 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 - 用户已批准方案 A：复用现有 `safeSendDeltaInChunks`，不恢复最终 LLM，不新增前端模拟打字。
 - TDD 已先证明旧实现只有一个 `delta`，再以一行生产代码切换到现有 18 字/18ms 分片 helper；内部 SSE 与 OpenAPI 回归均通过。
 - 干净测试库 CRM 定向 135 项、前端 89 项、生产构建、Compose、授权和 diff 门禁通过；任务级与整分支独立审查均批准合并。
+- `2.7.6 / 2055947aae07` 生产内部 SSE 已验证 5 次 133 分片与持久化精确一致，但 OpenAPI bridge 对每片调用 `trim()`，使 streaming 比 blocking 丢失 41 个空格/换行，生产验收判定失败。
+- 临时 OpenAPI Key 已撤销并验证 401，Agent bindings 已按 fresh 快照精确恢复；应用只重建 backend/frontend 回滚到健康的 `2.7.5 / be80eea665c0`，状态服务 ID 未改变。
+- 空白敏感回归已按 TDD 先红后绿；最小修复保留所有非空 delta 的首尾空白和纯空白片段，待完成组合回归、独立评审与 `2.7.7` 发布。
 
 ## Next Action
 
-- 推送已审查提交并创建/合并 PR；随后从干净 `main` 发布不可变版本 `2.7.6`，完成生产真实流式验收。
+- 完成 8 类 CRM 组合回归与独立评审，推送新的修复提交并合入 `main`；随后发布不可变版本 `2.7.7`，重新完成内部 SSE、OpenAPI、SalesB、浏览器中间态和日志验收。
 
 ## Constraints
 
@@ -41,6 +44,7 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 ## Changed Files
 
 - `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationService.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java`
 - `backend/src/test/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiConversationServiceTest.java`
 - `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
@@ -56,6 +60,6 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 ## Handoff
 
 - 分支：`codex/TASK-211-crm-streaming-output`。
-- PR：`https://github.com/OlivierZEN/CICI/pull/6`。
+- 首轮 PR：`https://github.com/OlivierZEN/CICI/pull/6`；OpenAPI 保真补丁将创建后续 PR。
 - 先读 FEAT-114 的“TASK-211 真实流式输出纠偏设计”，再读当前单包路径与已有分块 helper。
-- 已审查实现提交：`1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d`；生产发布与真实会话验收尚未执行。
+- 已审查首轮实现提交：`1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d`；`2.7.6` 已失败回滚，当前生产仍为 `2.7.5`。
