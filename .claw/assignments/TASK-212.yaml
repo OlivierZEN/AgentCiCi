@@ -1,13 +1,13 @@
 task_id: TASK-212
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-15T13:48:03Z
 expires_at: none
 spec_path: docs/specs/FEAT-117-skill-dag-governance-phase1.md
 task_status_path: .claw/tasks/TASK-212.md
 branch: codex/TASK-212-skill-dag-governance
-pr_url: none
+pr_url: https://github.com/OlivierZEN/CICI/pull/10
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/**

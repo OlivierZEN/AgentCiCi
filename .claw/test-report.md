@@ -1,16 +1,16 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-15T17:04:57Z
+updated_at: 2026-07-15T17:22:27Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-15T17:04:57Z
+last_run_at: 2026-07-15T17:22:27Z
 last_run_status: passed
 ---
 
 # Test Report
 
-## TASK-212 Skill DAG Phase 1 本地生产门（2026-07-15）
+## TASK-212 Skill DAG Phase 1 本地与生产验收（2026-07-16）
 
 - `tdd/backend-focused`: 先以缺失/脏版本引用、current 指针错配、标准边语义、平台 token 越权、运行时治理快照、Skill 版本变更指纹、历史显式/缺失版本、下游当前 KB/移交边界污染、1,001 条影响上限和 V81 重试安全形成红灯，再完成实现；9 个测试类共 22 项通过，0 failure / 0 error / 0 skipped。真实 `SkillResolverService` 与调试 Runtime 均断言 pinned runtime 不包含当前可变 Skill 边界。
 - `http-security`: 真实 Spring/MockMvc 和本地 API smoke 均验证匿名 Agent 图 401、组织 token 读取 Agent 图 200、平台 token 读取平台图 200、平台 token 访问 Agent 图 403、组织 token 访问平台图 403；显式 `versionNo=1` 返回 200。示例 Agent 图为 5 节点 / 5 边 / 0 warning。
@@ -20,7 +20,13 @@ last_run_status: passed
 - `backend-full-diagnostic`: 独立数据库完整 Maven 诊断汇总为 341 项、3 failure / 7 error；失败位于既有 AutoService 平台身份、PlatformBilling 审计夹具、SkillGovernance 鉴权、AdminOrganizationProfile 非空字段、MeetingMinutes 模型配置及连接池耗尽后的 ChatSession/ModelProvider 上下文，不包含 TASK-212 聚焦测试，未作为全绿门禁。
 - `browser-local`: 应用内 Browser 在 `1600 x 1000` 验证平台 Skill 影响图与 Agent Builder 的 Agent → Workflow Version → Skill → Skill Version → Tool 关系、`COMPILED_AS` / `PINS_SKILL_VERSION` / `USES_SKILL` 节点详情、缩放控制和调试 Skill 解析链；console error/warning 为 0，页面外层横向溢出为 0。
 - `independent-review`: 三轮只读复审发现并推动修复历史显式缺失版本、影响查询与索引、前端正反向选择竞态及 V81 重试问题；最终复核 Critical / Important / Minor 均为 0，`Ready to merge: Yes`。
-- `gates`: MANAGER-001 SSH 身份门禁、assignment 代表路径、Flyway V81、`git diff --check` 与本地 health `UP` 通过；待合并、生产备份、`2.7.8` dry-run/正式发布和线上 smoke 后关闭任务。
+- `merge/release`: PR #10 合并为 `4814d2b9534d8ba70d560b1a8a9b9a3dbe390717`；`scripts/release-acr.sh --dry-run --version 2.7.8` 与正式发布均通过，Git tag `2.7.8` 已推送。backend index/amd64 digest 为 `sha256:4bbc96d6857236ade2122d98c038d70f15cb0148c852553f472631af93eca38e` / `sha256:f15bde1851cb45ee217147e1ce419a5c4d78c2b2390903f578c025c6c88d13b2`；frontend 为 `sha256:ceff96941ae9402a25cf0a28ec9b7c69a2bb4d4da44c9b6848db2934addc30cf` / `sha256:1ebecff3346837c879c041d7f9559f5ac9526791d82fb08ea18e5fd47f3ce056`。
+- `backup/deploy`: `/opt/cici/backups/20260716-011129-before-2.7.8-task212-skill-dag` 中 env/PostgreSQL/KB/Qdrant 分别为 1,646 / 3,007,782 / 511,135 / 1,584,517 bytes，全部非空。仅 pull/force-recreate backend/frontend；database `ce48f99872d8`、Redis `3c3879593463`、RabbitMQ `246a0aa352df`、Qdrant `96bf6c3cad9c` 与发布前 ID 一致。
+- `production-runtime`: 六服务 healthy，health `UP`，`/system/version` 返回 `2.7.8 / 4814d2b9534d`；Flyway V81 成功，两条影响索引均 `indisvalid=true / indisready=true`，Nginx 配置有效。8 分钟稳定窗口 backend ERROR 0、frontend 精确 5xx 0。
+- `production-api`: 真实生产 API 返回匿名 Agent 图 401、组织 token Agent 图 200、显式 `versionNo=50` 200、平台 token Agent 图 403、组织 token 平台图 403、平台 token 平台图 200；Agent 图为 24 节点 / 32 边 / 3 warning，平台图为 6 节点 / 9 边 / 4 warning，请求时延为 0.16-0.21 秒。
+- `browser-production`: 应用内 Browser 在 `1600 x 1000` 验证 Agent Builder 与平台标准技能真实 DAG、缩放和节点详情。两页 `document.scrollWidth == clientWidth == 1600`，平台 main 无横向溢出，console warning/error 为 0；截图为 `output/playwright/task212-prod-agent-skill-dag-2.7.8.png` 与 `output/playwright/task212-prod-platform-skill-dag-2.7.8.png`。
+- `public`: `x.agentcici.com` HTTP 301 / HTTPS 200；公共解析器仍无法解析 `onechat.agentcici.com`，与既有 DNS 风险一致，显式生产 IP vhost 为 HTTP 301 / HTTPS 200。
+- `gates`: MANAGER-001 SSH 身份门禁、assignment 代表路径、Flyway V81、`git diff --check`、签名提交、PR 合并、生产备份、不可变发布、线上 API/browser smoke 与回滚点记录均完成；应用即时回滚点为 `2.7.7 / e47979167af8`，V81 索引可安全保留。
 - `state-validator`: 全仓 `validate-state.py` 仍因 129 条既有历史状态/规格基线退出 1，但输出中 `TASK-212`、`FEAT-117` 与 V81 命中为 0；未在本任务中越界清理旧记录。
 
 ## TASK-211 2.7.6 失败回滚与 2.7.7 生产协议验收（2026-07-15）

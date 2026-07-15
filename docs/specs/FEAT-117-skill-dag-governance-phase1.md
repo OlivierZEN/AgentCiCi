@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-212
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-15T16:40:33Z
+updated_at: 2026-07-15T17:22:27Z
 updated_by: MANAGER-001
 ---
 
@@ -227,8 +227,12 @@ Skill 影响图的层级固定为：
 
 - 已完成：现状审计、差距分析、范围确认、架构设计、TDD 实现、权限与双向竞态加固、版本感知编译指纹、历史引用精确回填与缺失版本全运行链 fail-closed、聚焦后端 22 项验证、前端 110 项测试与生产构建、V81 干净库正向迁移及重复执行验证、真实 API 权限矩阵和桌面端验收。
 - 完整后端诊断：341 项中 3 failure / 7 error，均来自既有平台身份、审计夹具、非空字段、模型配置与连接池基线；TASK-212 聚焦测试无失败，未宣称全量套件通过。
-- 当前：完成最终审查、合并和 `2.7.8` 生产发布。
-- 未完成：生产备份、镜像发布、V81 线上迁移、生产 API/browser smoke 与任务关闭。
+- 合并与发布：PR #10 合并为 `4814d2b9534d`；Git tag、backend/frontend 镜像和应用版本统一为 `2.7.8`。发布前备份目录为 `/opt/cici/backups/20260716-011129-before-2.7.8-task212-skill-dag`，四项产物均非空。
+- 生产迁移：Flyway V81 成功；`idx_agent_workflow_skill_ref_org_skill_impact` 与 `idx_agent_skill_binding_org_skill_impact` 均为 `indisvalid=true / indisready=true`。发布仅重建 backend/frontend，四个状态服务容器 ID 未改变。
+- 生产接口：匿名 Agent 图 401，组织 token Agent 图与显式 `versionNo=50` 均 200，平台 token Agent 图 403；组织 token 平台图 403，平台 token 平台图 200。实测 Agent 图 24 节点 / 32 边，平台图 6 节点 / 9 边，单次请求约 0.16-0.21 秒。
+- 生产桌面验收：Agent Builder 与 `/platform/skills` 在 `1600 x 1000` 下完成真实图、缩放和节点详情点验；页面外层无横向溢出，console warning/error 为 0，稳定窗口 backend ERROR 与 Nginx 精确 5xx 均为 0。
+- 当前：Phase 1 已在生产 `2.7.8 / 4814d2b9534d` 完成并关闭。`onechat.agentcici.com` 仍有既有 DNS 解析风险，显式生产 IP vhost 验证为 HTTP 301 / HTTPS 200；主入口 `x.agentcici.com` 为 HTTP 301 / HTTPS 200。
+- 未完成：无。编辑 DAG、Skill-to-Skill 依赖与独立子流程执行仍属于明确的 Phase 2 候选范围。
 
 ## 12. 交接说明
 

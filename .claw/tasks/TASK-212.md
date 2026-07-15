@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-212
-status: in_progress
-updated_at: 2026-07-15T17:04:57Z
+status: done
+updated_at: 2026-07-15T17:22:27Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -28,13 +28,15 @@ spec_path: docs/specs/FEAT-117-skill-dag-governance-phase1.md
 - 前端 18 个文件 / 110 项测试、生产构建、后端聚焦 9 类 / 22 项测试、HTTP 权限集成测试、后端 package、真实 API 权限矩阵和 `1600 x 1000` 浏览器验收均通过。
 - 完整后端诊断共运行 341 项，出现 3 failure / 7 error，均落在 TASK-212 之外的既有平台身份、审计夹具、非空字段、模型配置及连接池基线；TASK-212 聚焦测试未失败。
 - 最终独立复审确认 Critical / Important / Minor 均为 0，`Ready to merge: Yes`。
-- 实现已达到发布门，生产仍运行 `2.7.7 / e47979167af8`、Flyway V80，待合并后发布不可变版本 `2.7.8`。
+- PR #10 已合并为 `4814d2b9534d`，不可变 Git tag 与 backend/frontend 镜像 `2.7.8` 已推送；发布前四项快照备份位于 `/opt/cici/backups/20260716-011129-before-2.7.8-task212-skill-dag`。
+- 生产只重建 backend/frontend，database、Redis、RabbitMQ、Qdrant 容器 ID 保持不变；六服务健康，版本接口为 `2.7.8 / 4814d2b9534d`，Flyway V81 成功且两个索引均 `indisvalid=true / indisready=true`。
+- 生产 API 验证匿名 Agent 图 401、组织 token Agent 图 200、平台 token Agent 图 403、组织 token 平台图 403、平台 token 平台图 200，显式 Agent `versionNo=50` 返回 200；生产 `1600 x 1000` 两页面、缩放和节点详情通过，外层横向溢出与 console warning/error 均为 0。
+- 稳定窗口 backend ERROR 与 Nginx 精确 5xx 均为 0。`x.agentcici.com` HTTP 301 / HTTPS 200；`onechat.agentcici.com` 继续存在既有 DNS 解析风险，显式生产 IP 的 HTTP 301 / HTTPS 200。
 
 ## Next Action
 
-- 完成最终差异审查、签名提交、PR 合并并同步 `main`。
-- 按发布手册备份生产，执行 `scripts/release-acr.sh --dry-run` 与正式 `2.7.8` 发布，只重建 backend/frontend。
-- 验证六服务健康、版本、V81、API 权限矩阵、Agent Builder/平台 Skill 桌面页面和回滚点后关闭任务。
+- TASK-212 已关闭；持续观察 `2.7.8` 健康、错误率和 DAG 查询时延。
+- 后续 Skill-to-Skill 依赖、图编辑或独立子流程执行必须按 Phase 2 单独立项，不在本任务上继续扩张。
 
 ## Changed Files
 
@@ -56,10 +58,12 @@ spec_path: docs/specs/FEAT-117-skill-dag-governance-phase1.md
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
+- `.claw/devops.md`
 
 ## Handoff
 
-- 分支：`codex/TASK-212-skill-dag-governance`。
+- 分支：`codex/TASK-212-skill-dag-governance`；PR：`https://github.com/OlivierZEN/CICI/pull/10`；合并提交：`4814d2b9534d8ba70d560b1a8a9b9a3dbe390717`。
 - MANAGER-001 本机 SSH challenge-response 门禁与 assignment 代表路径检查均已通过。
 - 生产发布严格使用 `docs/production-release-runbook.md` 和 `scripts/release-acr.sh`。
 - 全量 Maven 的既有基线失败不得误报为 TASK-212 回归或全绿门禁；以聚焦测试、HTTP 权限集成、package 和真实 API/browser 验收作为本任务发布证据。
+- 应用即时回滚点为健康 `2.7.7 / e47979167af8`；V81 仅新增索引，可在应用回滚时安全保留。

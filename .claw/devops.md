@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-15T02:05:24Z
+updated_at: 2026-07-15T17:22:27Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,17 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.8 TASK-212 Skill DAG 只读治理闭环 Phase 1 on 2026-07-16:
+  - Git/发布：PR #10 合并提交 `4814d2b9534d8ba70d560b1a8a9b9a3dbe390717`；`scripts/release-acr.sh --dry-run --version 2.7.8` 与正式发布均成功，annotated tag `2.7.8` 已推送。
+  - 镜像：backend index `sha256:4bbc96d6857236ade2122d98c038d70f15cb0148c852553f472631af93eca38e`、amd64 `sha256:f15bde1851cb45ee217147e1ce419a5c4d78c2b2390903f578c025c6c88d13b2`；frontend index `sha256:ceff96941ae9402a25cf0a28ec9b7c69a2bb4d4da44c9b6848db2934addc30cf`、amd64 `sha256:1ebecff3346837c879c041d7f9559f5ac9526791d82fb08ea18e5fd47f3ce056`。
+  - 备份：`/opt/cici/backups/20260716-011129-before-2.7.8-task212-skill-dag`；env 1,646 bytes、PostgreSQL 3,007,782 bytes、KB 511,135 bytes、Qdrant 1,584,517 bytes，全部非空。
+  - 部署：仅 pull 并强制重建 backend/frontend。database `ce48f99872d8`、Redis `3c3879593463`、RabbitMQ `246a0aa352df`、Qdrant `96bf6c3cad9c` 与发布前容器 ID 完全一致并继续使用 `2.6.12`。
+  - 运行态：六服务 healthy，health `UP`，版本 `2.7.8 / 4814d2b9534d`；Flyway V81 成功，两条 Skill 影响索引均 `indisvalid=true / indisready=true`，Nginx 配置有效。8 分钟稳定窗口 backend ERROR 0、frontend 精确 5xx 0。
+  - API 验收：匿名 Agent DAG 401、组织 token Agent DAG 200、显式 `versionNo=50` 200、平台 token Agent DAG 403、组织 token 平台 DAG 403、平台 token 平台 DAG 200；请求时延约 0.16-0.21 秒。
+  - 桌面验收：应用内 Browser 在 `1600 x 1000` 验证 Agent Builder 24 节点 / 32 边与平台 Skill 6 节点 / 9 边，真实 warning、缩放和节点详情均可用；两页无外层横向溢出，console warning/error 为 0。证据：`output/playwright/task212-prod-agent-skill-dag-2.7.8.png`、`output/playwright/task212-prod-platform-skill-dag-2.7.8.png`。
+  - 公网/回滚：`x.agentcici.com` HTTP 301 / HTTPS 200；`onechat.agentcici.com` 的既有 DNS 解析风险仍在，显式生产 IP vhost 为 HTTP 301 / HTTPS 200。即时应用回滚点为 `2.7.7 / e47979167af8`；V81 仅新增索引，应用回滚时可安全保留。
+  - 质量边界：TASK-212 后端聚焦 9 类 / 22 项、前端 18 文件 / 110 项、生产构建、package、干净库迁移与独立复审通过。完整后端诊断 341 项中的 3 failure / 7 error 属于既有平台身份、审计夹具、非空字段、模型配置与连接池基线，未宣称全量套件通过。
 
 - 2.7.7 TASK-211 CRM 确定性回答真实流式与 OpenAPI 空白保真 on 2026-07-15:
   - Git 合并提交/标签：`e47979167af8` / `2.7.7`；PR #6 复用 18 字/18ms 服务端分片，PR #7 保留每个 OpenAPI delta 的首尾空白、换行与纯空白片段。

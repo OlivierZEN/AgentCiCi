@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-15T17:04:57Z
+updated_at: 2026-07-15T17:22:27Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-212 - Skill DAG 只读治理闭环 Phase 1
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-117-skill-dag-governance-phase1.md`
-- task_status_path: `.claw/tasks/TASK-212.md`
-- assignment_path: `.claw/assignments/TASK-212.yaml`
-- blocked_by: `none`
-- next_action: Merge the production-ready implementation, publish immutable `2.7.8`, verify V81 plus tenant/platform DAG isolation and complete the production browser smoke.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 
@@ -876,6 +865,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-212 - Skill DAG 只读治理闭环 Phase 1
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-117-skill-dag-governance-phase1.md`
+- task_status_path: `.claw/tasks/TASK-212.md`
+- assignment_path: `.claw/assignments/TASK-212.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.8 / 4814d2b9534d`; monitor health and DAG query latency, and scope any editable or Skill-to-Skill graph work as a separate Phase 2.
 
 ### TASK-211 - CRM 确定性回答真实流式输出纠偏
 
