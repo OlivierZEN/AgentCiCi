@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-15T01:35:39Z
+updated_at: 2026-07-15T02:05:24Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -9,13 +9,6 @@ status: active
 # Issue List
 
 ## Open Issues
-
-- ISSUE-2026-07-15-crm-deterministic-stream-single-delta:
-  - Symptom: CRM 产品销量答案能正确返回，但页面等待后一次性出现完整正文，失去普通对话的流式输出体验；Agent OpenAPI streaming 同样只有一个正文事件。
-  - Verified root cause: 生产 5 份 CRM SSE 均为 `phase ×3 → delta ×1 → done ×1`，唯一 `delta` 为 2,383 字符；OpenAPI streaming 也只有一个 2,383 字符 `message`。`ChatOrchestratorService` 的 CRM 确定性分支对完整格式化正文只调用一次 `safeSendDelta`，而前端逐 delta 更新和 Nginx buffering 配置均正常。
-  - Approved resolution: TASK-211 复用服务端现有 `safeSendDeltaInChunks`，保持确定性正文、防泄漏、blocking、持久化和业务结果不变，同时让内部 SSE 与 OpenAPI 产生有序多分片正文事件。
-  - Verification required: TDD 证明当前实现因单片失败；修复后验证分片数量、上限、顺序、拼接正文、结束事件、防泄漏和最终 LLM 零调用，并完成 SalesA 五次生产页面流式验收。
-  - Status: open only for visual evidence. PR #6/#7 are merged and production `2.7.7` passes five SalesA streams, blocking, SalesB, OpenAPI whitespace/history equality, access cleanup, leakage and clean-log gates. The in-app Browser currently has no available instance, so the required same-bubble partial/final screenshot and console evidence remain pending.
 
 - ISSUE-2026-07-15-session-not-found-status-mapped-500:
   - Symptom: a signed-in user requesting another user's non-org-scoped `/ai/sessions/{id}/messages` receives HTTP 500 `Unexpected server error` rather than a non-disclosing 404/403.
@@ -62,6 +55,13 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-2026-07-15-crm-deterministic-stream-single-delta:
+  - Symptom: CRM 产品销量答案能正确返回，但页面等待后一次性出现完整正文，失去普通对话的流式输出体验；Agent OpenAPI streaming 同样只有一个正文事件。
+  - Verified root cause: 生产 5 份 CRM SSE 均为 `phase ×3 → delta ×1 → done ×1`，唯一 `delta` 为 2,383 字符；OpenAPI streaming 也只有一个 2,383 字符 `message`。`ChatOrchestratorService` 的 CRM 确定性分支对完整格式化正文只调用一次 `safeSendDelta`，而前端逐 delta 更新和 Nginx buffering 配置均正常。
+  - Resolution: TASK-211 复用服务端现有 `safeSendDeltaInChunks`，保持确定性正文、防泄漏、blocking、持久化和业务结果不变；OpenAPI bridge 同步修复分片边界空白保真。PR #6/#7 已合并并发布不可变 `2.7.7 / e47979167af8`。
+  - Verification: TDD、135 项干净库 CRM 回归、SalesA 5 次 133-delta 流、blocking、SalesB、OpenAPI 133-message/history、权限清理、防泄漏和干净日志均通过。应用内 Browser fresh 会话在 composer 禁用时捕获同一气泡 50 字 partial，完成后为 2,100 字，console error/warning 0 且无横向溢出。
+  - Status: resolved by TASK-211 on 2026-07-15.
 
 - ISSUE-2026-07-08-customer-workbench-injection-whitepage:
   - Symptom: 用户反馈 CloudCC CRM 菜单“客户互动工作台”已经可见，但打开 `#/injectionComponent?page=customer_interaction_workbench&button=Home` 后页面主体为空白。

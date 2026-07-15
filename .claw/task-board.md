@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-15T01:35:39Z
+updated_at: 2026-07-15T02:05:24Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-211 - CRM 确定性回答真实流式输出纠偏
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `backend-agent`
-- spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
-- task_status_path: `.claw/tasks/TASK-211.md`
-- assignment_path: `.claw/assignments/TASK-211.yaml`
-- blocked_by: `none`
-- next_action: 生产 `2.7.7 / e47979167af8` 已通过 5 次 SalesA 流式、blocking、SalesB、OpenAPI 精确性、清理、防泄漏和干净日志门禁；待应用内 Browser 可用后补录 partial/final 气泡与 console 证据，再关闭 TASK-211。
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 
@@ -876,6 +865,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-211 - CRM 确定性回答真实流式输出纠偏
+
+- status: `done`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
+- task_status_path: `.claw/tasks/TASK-211.md`
+- assignment_path: `.claw/assignments/TASK-211.yaml`
+- blocked_by: `none`
+- next_action: 生产 `2.7.7 / e47979167af8` 已通过协议、持久化、权限隔离、清理、防泄漏、干净日志及应用内 Browser 同气泡 partial/final、console、overflow 全部门禁；TASK-211 已关闭。
 
 ### TASK-208 - CRM 产品销售经营分析稳定性与深度治理
 

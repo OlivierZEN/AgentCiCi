@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-15T01:35:39Z
+updated_at: 2026-07-15T02:17:08Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-15T01:35:39Z
+last_run_at: 2026-07-15T02:17:08Z
 last_run_status: passed
 ---
 
@@ -24,8 +24,10 @@ last_run_status: passed
 - `cleanup/security`: 临时 Key 已撤销，复用该 Key 返回 401 `agent_api_key_invalid`；初始 ACTIVE Key 数与结束时一致为 0，临时 Key 无 ACTIVE 残留，channels/toolIds/knowledgeBaseIds 与 fresh 初始绑定逐字规范化一致。9 份用户答案及脱敏 thought 通过工具名、原始 JSON、内部字段、疑似 CloudCC ID 和敏感信息扫描。
 - `business-depth`: 9 份答案都包含 Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`，金额冠军 MP 2,850,000，以及数量/金额贡献、环比、订单/客户覆盖、商机、合同、退货、建议动作、数据覆盖和“订单销售额不等同于财务确认收入”声明。
 - `clean-logs`: 在另一个 fresh 133-delta、约 2.43 秒且持久化精确一致的成功会话窗口内，backend ERROR 0、CRM failure 0、异常断连 0、Nginx 精确 5xx 0；窗口含 179 条 Nginx 请求日志。
-- `browser-evidence`: 按 `browser:control-in-app-browser` 初始化与排障后，应用内 Browser 返回不可用且实例列表为空。技能禁止使用 Playwright/其他浏览器冒充应用内验收，因此同一 assistant 气泡的可见中间态/最终态、console error 和 overflow 截图仍待环境提供 Browser；未读取或复用浏览器凭据、Token、Cookie 或 Session，未改 CRM/绑定/Key。
-- `governance-gates`: TASK-211 SSH 持钥登录与 9 个变更文件的 assignment 检查均为 allowed，`git diff --check` 通过；全仓 `validate-state.py` 仍因 130 行既有历史状态/规格基线问题退出 1，但不再包含 TASK-211、FEAT-114 或本计划的 finding，未在本任务中越界修复。
+- `browser-evidence`: 应用内 Browser 恢复后，以 fresh SalesA 登录、fresh 工作台会话和 `CRM 经营分析` Skill 询问“嗯，销量最好的产品有哪些？”。正确的 partial 判据为“`直接结论` 已出现且 composer 仍 disabled”：此时同一 assistant 气泡可见文本 50 字；完成后同一气泡为 2,100 字、增长 2,050 字且 composer enabled。partial/final 截图已固化为权限 `0600` 的安全证据；console error/warning 为 0，html/body/workbench/layout/main/chat-panel/chat-thread 的 `scrollWidth` 均不大于 `clientWidth`。
+- `browser-content/security`: 最终可见正文包含直接结论、产品 Top 5、经营诊断、前瞻信号、建议动作、口径与覆盖，Top 5 为 X1 130 / G5 110 / S2 95 / MP 75 / PA 65，金额冠军 MP 2,850,000，并包含收入声明；工具名、`tool_call/tool_result`、原始 JSON、内部字段、凭据和“等待确认”均未出现。最初尝试以气泡 `role=status` 与正文标题同时存在捕获 partial 属于无效探针，因为该 status 只在正文为空时渲染；源码只读复核和 `chatMessageState` 7/7 证明无需前端生产代码修改。
+- `governance-gates`: TASK-211 SSH 持钥登录与 9 个变更文件的 assignment 检查均为 allowed，`git diff --check` 通过；将 TASK-211 从 Active Tasks 移入 Completed Tasks 后，全仓 `validate-state.py` 仍因 129 行既有历史状态/规格基线问题退出 1，但不再包含 TASK-211、FEAT-114 或本计划的 finding，未在本任务中越界修复。
+- `final-recheck`: 完成前使用新建且验收后删除的独立 PostgreSQL 测试库重新执行 8 类 CRM/流式/OpenAPI 回归，合计 135/135 通过；`chatMessageState` 7/7 通过，TypeScript/Vite 生产构建成功并转换 1,936 个模块。生产六服务继续 healthy，health `UP`、版本 `2.7.7 / e47979167af8`；最终 10 分钟窗口为 backend ERROR 0、CRM failure 0、异常断连 0、frontend 5xx 0。较早宽口径窗口中的 500 均命中已独立登记的不可见会话状态映射问题，不属于 CRM 回答链路。
 
 ## TASK-211 CRM 确定性回答真实流式输出本地验收（2026-07-15）
 
@@ -36,7 +38,7 @@ last_run_status: passed
 - `frontend`: Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建成功，转换 1,936 个模块，仅保留既有大 chunk 提示；无前端生产代码变更。
 - `backend-full-diagnostic`: 新建数据库的完整后端诊断到达 Surefire 汇总 326 项，重现 5 failure / 2 error，来自既有平台身份夹具、审计字段、客户洞察、模型厂商/模型清单和旧非空字段夹具；随后在 Hikari 重试窗口人工终止，未作为通过门禁。TASK-211 两个测试类没有失败，定向 135 项保持全绿。
 - `static/gates`: Compose config、`git diff --check`、TASK-211 身份登录和 assignment 检查均通过；签名实现提交为 `1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d`。
-- `reviews`: 任务级审查同时批准规格符合性和代码质量；整分支最终审查为 `Ready to merge: Yes`，Critical / Important / Minor 均为 0。生产 `2.7.6` 的空白保真失败、回滚、TDD 热修、`2.7.7` 发布与协议验收见上节；只剩应用内 Browser 视觉证据。
+- `reviews`: 任务级审查同时批准规格符合性和代码质量；整分支最终审查为 `Ready to merge: Yes`，Critical / Important / Minor 均为 0。生产 `2.7.6` 的空白保真失败、回滚、TDD 热修、`2.7.7` 发布、协议验收与应用内 Browser 视觉证据均已完成，详见上节。
 
 ## TASK-208 生产发布与真实验收（2026-07-15）
 

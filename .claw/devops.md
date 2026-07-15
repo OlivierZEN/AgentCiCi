@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-15T01:35:39Z
+updated_at: 2026-07-15T02:05:24Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -30,7 +30,7 @@ status: active
   - 运行态：health `UP`，版本 `2.7.7 / e47979167af8`，Flyway 当前 V80，Nginx 有效，`x` HTTP 301/HTTPS 200，显式使用生产 IP 的 `onechat` HTTPS 200。最终成功 CRM 窗口为 backend ERROR 0、CRM failure 0、异常断连 0、精确 Nginx 5xx 0。
   - 协议验收：SalesA 5/5 流式调用各产生 133 个 delta，持续约 2.4 秒，最大 18 UTF-16 单元且持久化精确一致；blocking 与 SalesB 仅归一化截止时间后相同。OpenAPI blocking/streaming 均为 2,383 字，streaming 产生 133 个 message、逐字保留空白，并与 history/internal 正文一致。
   - 访问清理：临时 OpenAPI Key 已撤销且返回 401 `agent_api_key_invalid`；没有 ACTIVE Key 残留，原 channels/toolIds/knowledgeBaseIds 精确恢复。用户答案不含内部工具结果、原始 JSON、内部 ID 或凭据材料。
-  - 剩余证据：应用内 Browser 当前没有可用实例，同一气泡的 partial/final 截图及 console/overflow 检查仍待补录。这是证据环境阻塞；协议与生产运行门禁均为绿色。
+  - 桌面验收：应用内 Browser 使用 fresh SalesA 登录与 fresh CRM 会话，在 composer 仍禁用时捕获同一气泡 50 字 partial，完成后为 2,100 字且 composer 恢复可用；console error/warning 0、外层与工作台各级无横向溢出、Top 5/五层经营分析完整、内部工具结果泄漏 0。TASK-211 全部门禁已关闭。
   - 发布纠偏：`2.7.6 / 2055947aae07` 证明内部 SSE 分片有效，但丢失 41 个 OpenAPI 空白字符，随后立即回滚到 `2.7.5`。该版本仅保留为不可变失败验收证据，不是回滚目标；应用回滚目标仍为 `2.7.5 / be80eea665c0`。
 
 - 2.7.5 TASK-208 CRM 产品销售经营分析稳定性与深度治理 on 2026-07-15:
