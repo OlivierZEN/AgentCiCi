@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
+import SkillDependencyGraph, { type SkillDependencyGraphView } from "../../shared/SkillDependencyGraph";
 
 type PlatformSkillImpact = {
   boundAgentCount: number;
@@ -127,6 +128,19 @@ type PolicyBundleDraftForm = {
   handoffRules: string;
   sourceSkillCodes: string;
 };
+
+export function buildPlatformSkillDependencyGraphUrl(skillId: number): string {
+  return `${PLATFORM_API_BASE}/skills/${encodeURIComponent(String(skillId))}/dependency-graph`;
+}
+
+export function isLatestPlatformSkillGraphRequest(requestId: number, latestRequestId: number): boolean {
+  return requestId === latestRequestId;
+}
+
+export function preparePlatformSkillGraphForDisplay(graph: SkillDependencyGraphView): SkillDependencyGraphView {
+  if (graph.summary.agentCount > 0 || graph.summary.workflowVersionCount > 0) return graph;
+  return { ...graph, nodes: [], edges: [] };
+}
 
 function readToken(): string {
   const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
@@ -274,6 +288,9 @@ export default function PlatformSkillsPage() {
   const [policyBundleVersions, setPolicyBundleVersions] = useState<PolicyBundleVersion[]>([]);
   const [selectedSkillId, setSelectedSkillId] = useState<number | null>(null);
   const [versions, setVersions] = useState<PlatformSkillVersion[]>([]);
+  const [dependencyGraph, setDependencyGraph] = useState<SkillDependencyGraphView | null>(null);
+  const [dependencyGraphLoading, setDependencyGraphLoading] = useState(false);
+  const [dependencyGraphError, setDependencyGraphError] = useState("");
   const [draft, setDraft] = useState<DraftForm>({
     name: "",
     description: "",
@@ -301,10 +318,16 @@ export default function PlatformSkillsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const versionRequestIdRef = useRef(0);
+  const dependencyGraphRequestIdRef = useRef(0);
 
   const selectedSkill = useMemo(
     () => skills.find((item) => item.id === selectedSkillId) ?? null,
     [skills, selectedSkillId],
+  );
+  const displayedDependencyGraph = useMemo(
+    () => dependencyGraph ? preparePlatformSkillGraphForDisplay(dependencyGraph) : null,
+    [dependencyGraph],
   );
 
   async function loadSkills(preferredId?: number | null) {
@@ -321,9 +344,13 @@ export default function PlatformSkillsPage() {
       const nextId = preferredId ?? selectedSkillId ?? rows[0]?.id ?? null;
       setSelectedSkillId(nextId);
       if (nextId != null) {
-        await loadVersions(nextId, rows);
+        await Promise.all([loadVersions(nextId, rows), loadSkillDependencyGraph(nextId)]);
       } else {
+        versionRequestIdRef.current += 1;
+        dependencyGraphRequestIdRef.current += 1;
         setVersions([]);
+        setDependencyGraph(null);
+        setDependencyGraphError("");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载平台技能失败");
@@ -365,6 +392,7 @@ export default function PlatformSkillsPage() {
 
   async function loadVersions(skillId: number, skillRows?: PlatformSkill[]) {
     if (!token) return;
+    const requestId = ++versionRequestIdRef.current;
     setError("");
     try {
       const res = await fetch(`${PLATFORM_API_BASE}/skills/${skillId}/versions`, {
@@ -372,6 +400,7 @@ export default function PlatformSkillsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "加载版本失败");
+      if (requestId !== versionRequestIdRef.current) return;
       const rows = (json.data ?? []) as PlatformSkillVersion[];
       setVersions(rows);
       const currentSkill = (skillRows ?? skills).find((item) => item.id === skillId) ?? null;
@@ -390,8 +419,43 @@ export default function PlatformSkillsPage() {
         });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载版本失败");
+      if (requestId === versionRequestIdRef.current) {
+        setError(err instanceof Error ? err.message : "加载版本失败");
+      }
     }
+  }
+
+  async function loadSkillDependencyGraph(skillId: number) {
+    if (!token) return;
+    const requestId = ++dependencyGraphRequestIdRef.current;
+    setDependencyGraph(null);
+    setDependencyGraphLoading(true);
+    setDependencyGraphError("");
+    try {
+      const res = await fetch(buildPlatformSkillDependencyGraphUrl(skillId), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success || !json.data) {
+        throw new Error(json.message || "加载 Skill 依赖失败");
+      }
+      if (!isLatestPlatformSkillGraphRequest(requestId, dependencyGraphRequestIdRef.current)) return;
+      setDependencyGraph(json.data as SkillDependencyGraphView);
+    } catch (err) {
+      if (!isLatestPlatformSkillGraphRequest(requestId, dependencyGraphRequestIdRef.current)) return;
+      setDependencyGraph(null);
+      setDependencyGraphError(err instanceof Error ? err.message : "加载 Skill 依赖失败");
+    } finally {
+      if (isLatestPlatformSkillGraphRequest(requestId, dependencyGraphRequestIdRef.current)) {
+        setDependencyGraphLoading(false);
+      }
+    }
+  }
+
+  function selectSkill(skillId: number) {
+    if (skillId === selectedSkillId) return;
+    setSelectedSkillId(skillId);
+    void Promise.all([loadVersions(skillId), loadSkillDependencyGraph(skillId)]);
   }
 
   async function savePolicyDraft() {
@@ -455,12 +519,6 @@ export default function PlatformSkillsPage() {
     void loadSkills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
-
-  useEffect(() => {
-    if (!selectedSkillId) return;
-    void loadVersions(selectedSkillId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSkillId]);
 
   async function saveDraft() {
     if (!selectedSkill) return;
@@ -710,7 +768,7 @@ export default function PlatformSkillsPage() {
                 <tr
                   key={skill.id}
                   className={`platform-console__select-row${skill.id === selectedSkillId ? " platform-console__row--active" : ""}`}
-                  onClick={() => setSelectedSkillId(skill.id)}
+                  onClick={() => selectSkill(skill.id)}
                 >
                   <td>
                     <div className="skills-data-table__skill-name">{skill.name}</div>
@@ -823,6 +881,24 @@ export default function PlatformSkillsPage() {
                   </ul>
                 </div>
               ) : null}
+
+              <div className="platform-console__section platform-skill-dependency">
+                <p className="platform-section-label">依赖治理</p>
+                <div className="platform-skill-dependency__heading">
+                  <h3 className="platform-console__subheading">依赖关系</h3>
+                  <span>
+                    {dependencyGraph?.summary.workflowVersionCount ?? 0} 个工作流版本 · {dependencyGraph?.summary.agentCount ?? 0} 个 Agent
+                  </span>
+                </div>
+                <SkillDependencyGraph
+                  graph={displayedDependencyGraph}
+                  loading={dependencyGraphLoading}
+                  error={dependencyGraphError}
+                  emptyMessage="当前技能尚未被 Agent 或工作流版本引用。"
+                  ariaLabel={`${selectedSkill.name} 依赖影响图`}
+                  onRetry={() => void loadSkillDependencyGraph(selectedSkill.id)}
+                />
+              </div>
 
               <div className="platform-console__section">
                 <p className="platform-section-label">模板编辑器</p>

@@ -258,6 +258,36 @@ class SkillDependencyGraphServiceTest {
         assertThat(graph.summary().workflowVersionCount()).isEqualTo(1);
     }
 
+    @Test
+    void shouldIgnorePinnedVersionThatBelongsToAnotherSkill() {
+        AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
+                ORG_ID,
+                WORKFLOW_VERSION_ID,
+                SKILL_ID,
+                SKILL_VERSION_ID,
+                "crm-analysis",
+                1,
+                "PINNED_VERSION");
+        SkillVersionEntity mismatchedVersion = skillVersion();
+        ReflectionTestUtils.setField(mismatchedVersion, "skillId", 999L);
+
+        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent()));
+        when(workflowVersionRepository.findByOrgIdAndAgentIdAndVersionNo(ORG_ID, AGENT_ID, 1))
+                .thenReturn(Optional.of(workflowVersion()));
+        when(workflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(ORG_ID, WORKFLOW_VERSION_ID))
+                .thenReturn(List.of(reference));
+        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
+        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID))
+                .thenReturn(Optional.of(mismatchedVersion));
+
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, 1);
+
+        assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
+                .containsExactly("agent:sales-agent", "workflow-version:101", "skill:201");
+        assertThat(graph.warnings()).containsExactly(
+                "工作流引用的 Skill Version 301 不属于 Skill 201，已忽略。");
+    }
+
     private AgentDefinitionEntity agent() {
         AgentDefinitionEntity entity = agent(AGENT_ID, "销售助手");
         entity.setPublishedVersionId(WORKFLOW_VERSION_ID);

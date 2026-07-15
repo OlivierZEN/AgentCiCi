@@ -3,6 +3,9 @@ import {
   AGENT_BUILDER_LIFECYCLE_TABS,
   AGENT_MODEL_GOVERNANCE_NOTICE,
   applyAgentDetailToList,
+  buildAgentSkillDagUrl,
+  buildDebugSkillResolutionChain,
+  isLatestSkillDagRequest,
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
   resolveAgentAfterDelete,
@@ -10,6 +13,48 @@ import {
   resolveAgentDetailTarget,
   type BaseModelOption,
 } from "./AgentBuilderShell";
+
+describe("Agent Builder Skill DAG lifecycle", () => {
+  it("requests an explicit compiled version without leaking the raw agent id", () => {
+    expect(buildAgentSkillDagUrl("agent /售后", 12)).toBe("/agents/agent%20%2F%E5%94%AE%E5%90%8E/skill-dag?versionNo=12");
+    expect(buildAgentSkillDagUrl("agent-current", null)).toBe("/agents/agent-current/skill-dag");
+  });
+
+  it("accepts only the latest dependency graph response", () => {
+    expect(isLatestSkillDagRequest(8, 8)).toBe(true);
+    expect(isLatestSkillDagRequest(7, 8)).toBe(false);
+  });
+
+  it("builds a structured pinned Skill resolution chain for debug", () => {
+    expect(buildDebugSkillResolutionChain(
+      [{
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        skillVersionNo: 3,
+        templateCode: "crm-standard",
+        templateVersionNo: 2,
+      }],
+      [{
+        skillId: 7,
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        riskLevel: "HIGH",
+        activationMode: "intent-route",
+        activationCondition: "需要客户信息",
+        priority: 10,
+        enabled: true,
+      }],
+    )).toEqual([{
+      id: "crm.lookup:3",
+      name: "客户查询",
+      code: "crm.lookup",
+      versionLabel: "v3",
+      referenceLabel: "模板 crm-standard@v2",
+      riskLabel: "高风险",
+      activationLabel: "意图路由",
+    }]);
+  });
+});
 
 describe("Agent Builder information architecture", () => {
   it("places evaluation and delivery channels in the lower version lifecycle", () => {

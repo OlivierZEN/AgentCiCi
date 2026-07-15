@@ -2,6 +2,7 @@ import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AvatarView from "../components/AvatarView";
 import AvatarCropperDialog from "../components/AvatarCropperDialog";
+import SkillDependencyGraph, { type SkillDependencyGraphView } from "../shared/SkillDependencyGraph";
 import { getDisplayInitial, readAvatarFileAsDataUrl } from "../shared/avatar";
 import { safeFetchJson } from "../utils/http";
 import { buildCompileNotice, isCompileRequired, keepRecentVersionHistory } from "./compile-history";
@@ -298,6 +299,19 @@ type DebugTraceResult = {
   outcomeLabel: string;
   activeSkills?: string[];
   governanceChips?: string[];
+  skillResolutionChain?: DebugSkillResolutionItem[];
+  effectiveToolNames?: string[];
+  effectiveKnowledgeBaseIds?: string[];
+};
+
+type DebugSkillResolutionItem = {
+  id: string;
+  name: string;
+  code: string;
+  versionLabel: string;
+  referenceLabel: string;
+  riskLabel: string;
+  activationLabel: string;
 };
 
 type DebugRuntimeSkillVersion = {
@@ -331,6 +345,7 @@ type DebugRuntimePayload = {
 };
 
 type CompileTab = "preview" | "triggers" | "debug" | "evaluation" | "history" | "publish" | "executions" | "summary" | "code" | "manifest";
+type PreviewMode = "workflow" | "skill-dag";
 export const AGENT_BUILDER_LIFECYCLE_TABS: ReadonlyArray<{ id: CompileTab; label: string; purpose: string }> = [
   { id: "preview", label: "流程图预览", purpose: "workflow-preview" },
   { id: "triggers", label: "触发与调度", purpose: "runtime-triggers" },
@@ -867,6 +882,16 @@ function simulateDebugTrace(preview: WorkflowPreview, draft: AgentDraft, input: 
     notes,
     outcomeLabel: shouldHandoff ? "人工接管" : draft.executionMode === "auto" ? "自动执行" : "建议输出",
     governanceChips: ["前端模拟"],
+    skillResolutionChain: buildDebugSkillResolutionChain(
+      draft.skillBindings.filter((binding) => binding.enabled).map((binding) => ({
+        skillCode: binding.skillCode,
+        skillName: binding.skillName,
+        skillVersionNo: null,
+      })),
+      draft.skillBindings,
+    ),
+    effectiveToolNames: draft.toolIds,
+    effectiveKnowledgeBaseIds: draft.knowledgeBaseIds.map(String),
   };
 }
 
@@ -902,6 +927,45 @@ function buildRuntimeSkillSummary(item: DebugRuntimeSkillVersion): string {
     return `${name} ${version} ${templateVersion}`;
   }
   return `${name} ${version}`;
+}
+
+export function buildAgentSkillDagUrl(agentId: string, versionNo?: number | null): string {
+  const base = `/agents/${encodeURIComponent(agentId)}/skill-dag`;
+  return versionNo == null ? base : `${base}?versionNo=${encodeURIComponent(String(versionNo))}`;
+}
+
+export function isLatestSkillDagRequest(requestId: number, latestRequestId: number): boolean {
+  return requestId === latestRequestId;
+}
+
+export function buildDebugSkillResolutionChain(
+  resolvedVersions: DebugRuntimeSkillVersion[],
+  bindings: AgentSkillBindingDraft[],
+): DebugSkillResolutionItem[] {
+  const riskLabels: Record<string, string> = { LOW: "低风险", MEDIUM: "中风险", HIGH: "高风险" };
+  const activationLabels: Record<string, string> = {
+    "always-on": "始终启用",
+    "intent-route": "意图路由",
+    manual: "手动启用",
+  };
+  return resolvedVersions.map((item, index) => {
+    const code = item.skillCode || "";
+    const name = item.skillName || code || `Skill ${index + 1}`;
+    const binding = bindings.find((candidate) => candidate.skillCode === code || candidate.skillName === name);
+    const versionLabel = item.skillVersionNo != null ? `v${item.skillVersionNo}` : "当前草稿";
+    const templateVersion = item.templateVersionNo != null ? `@v${item.templateVersionNo}` : "";
+    return {
+      id: `${code || name}:${item.skillVersionNo ?? "current"}`,
+      name,
+      code: code || "—",
+      versionLabel,
+      referenceLabel: item.templateCode
+        ? `模板 ${item.templateCode}${templateVersion}`
+        : item.skillVersionNo != null ? "工作流钉住版本" : "当前绑定",
+      riskLabel: riskLabels[binding?.riskLevel ?? ""] ?? "未声明",
+      activationLabel: activationLabels[binding?.activationMode ?? ""] ?? "未声明",
+    };
+  });
 }
 
 function buildDebugActiveNodeIds(preview: WorkflowPreview,
@@ -969,6 +1033,9 @@ function buildBackendDebugTrace(preview: WorkflowPreview,
     outcomeLabel: buildDebugOutcomeLabel(payload.executionStatus, payload.runtimeSource, draft),
     activeSkills: payload.activeSkills ?? [],
     governanceChips,
+    skillResolutionChain: buildDebugSkillResolutionChain(payload.resolvedSkillVersions ?? [], draft.skillBindings),
+    effectiveToolNames: payload.effectiveToolNames ?? [],
+    effectiveKnowledgeBaseIds: payload.effectiveKnowledgeBaseIds ?? [],
   };
 }
 
@@ -1502,6 +1569,11 @@ export default function AgentBuilderShell({
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
   const [activePublishChannel, setActivePublishChannel] = useState<PublishChannelId>("feishu");
   const [activeCompileTab, setActiveCompileTab] = useState<CompileTab>("preview");
+  const [previewMode, setPreviewMode] = useState<PreviewMode>("workflow");
+  const [skillDagGraph, setSkillDagGraph] = useState<SkillDependencyGraphView | null>(null);
+  const [skillDagLoading, setSkillDagLoading] = useState(false);
+  const [skillDagError, setSkillDagError] = useState("");
+  const [skillDagVersionNo, setSkillDagVersionNo] = useState<number | null>(null);
   const [executionRecordsFromServer, setExecutionRecordsFromServer] = useState<AgentExecutionRecord[]>([]);
   const [runtimeExecutionsLoading, setRuntimeExecutionsLoading] = useState(false);
   const [runtimeExecutionsError, setRuntimeExecutionsError] = useState<string | null>(null);
@@ -1547,6 +1619,7 @@ export default function AgentBuilderShell({
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
   const [isDeletingAgent, setIsDeletingAgent] = useState(false);
+  const skillDagRequestIdRef = useRef(0);
 
   const setNotice = (message: string) => {
     setNoticeText(message);
@@ -1805,6 +1878,47 @@ export default function AgentBuilderShell({
     setNotice("已切换到「触发与调度」：入口渠道与定时/调度说明与流程图 START 节点对齐。");
   }, []);
 
+  const loadAgentSkillDag = useCallback(async (
+    versionNo: number | null = null,
+    agentIdOverride?: string,
+  ) => {
+    const agentId = agentIdOverride ?? selectedAgentId;
+    if (!token || !agentId || agentId === "draft") {
+      setSkillDagGraph(null);
+      setSkillDagError("请先保存并编译 Agent，再查看 Skill 依赖。");
+      return;
+    }
+    const requestId = ++skillDagRequestIdRef.current;
+    setSkillDagLoading(true);
+    setSkillDagError("");
+    try {
+      const response = await fetch(buildAgentSkillDagUrl(agentId, versionNo), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const { body } = await safeFetchJson<SkillDependencyGraphView>(response);
+      if (!response.ok || !body?.success || !body.data) {
+        throw new Error(body?.message ?? `HTTP ${response.status}`);
+      }
+      if (!isLatestSkillDagRequest(requestId, skillDagRequestIdRef.current)) return;
+      setSkillDagGraph(body.data);
+    } catch (error) {
+      if (!isLatestSkillDagRequest(requestId, skillDagRequestIdRef.current)) return;
+      setSkillDagGraph(null);
+      setSkillDagError(`Skill 依赖加载失败：${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      if (isLatestSkillDagRequest(requestId, skillDagRequestIdRef.current)) setSkillDagLoading(false);
+    }
+  }, [selectedAgentId, token]);
+
+  const openSkillDagVersion = useCallback((versionNo: number) => {
+    setSkillDagVersionNo(versionNo);
+    setSkillDagGraph(null);
+    setSkillDagError("");
+    setPreviewMode("skill-dag");
+    setActiveCompileTab("preview");
+    void loadAgentSkillDag(versionNo);
+  }, [loadAgentSkillDag]);
+
   const loadRuntimeExecutions = useCallback(async () => {
     if (!token || !selectedAgentId) return;
     setRuntimeExecutionsLoading(true);
@@ -2034,6 +2148,31 @@ export default function AgentBuilderShell({
     if (!token || !selectedAgentId) return;
     void loadPublishedVersionNo();
   }, [loadPublishedVersionNo, selectedAgentId, token]);
+
+  useEffect(() => {
+    skillDagRequestIdRef.current += 1;
+    setSkillDagGraph(null);
+    setSkillDagError("");
+    setSkillDagLoading(false);
+    setSkillDagVersionNo(null);
+    setPreviewMode("workflow");
+  }, [selectedAgentId]);
+
+  useEffect(() => {
+    if (!token || !selectedAgentId || activeCompileTab !== "preview" || previewMode !== "skill-dag") return;
+    if (skillDagGraph || skillDagLoading || skillDagError) return;
+    void loadAgentSkillDag(skillDagVersionNo);
+  }, [
+    activeCompileTab,
+    loadAgentSkillDag,
+    previewMode,
+    selectedAgentId,
+    skillDagError,
+    skillDagGraph,
+    skillDagLoading,
+    skillDagVersionNo,
+    token,
+  ]);
 
   useEffect(() => {
     if (!token || !selectedAgentId) return;
@@ -2635,6 +2774,13 @@ export default function AgentBuilderShell({
         if (body.data.draftVersionNo != null) {
           setLatestCompiledVersionNo(body.data.draftVersionNo);
         }
+        const compiledVersionNo = body.data.draftVersionNo ?? null;
+        setSkillDagVersionNo(compiledVersionNo);
+        setSkillDagGraph(null);
+        setSkillDagError("");
+        if (selectedAgentId) {
+          void loadAgentSkillDag(compiledVersionNo, selectedAgentId);
+        }
         setProductionReadiness(null);
         setReadinessError(null);
         setNotice(buildCompileNotice(body.data));
@@ -2645,6 +2791,10 @@ export default function AgentBuilderShell({
         setActiveCompileTab("preview");
         setDebugTrace(null);
         setPublishReadyFromCompile(false);
+        skillDagRequestIdRef.current += 1;
+        setSkillDagGraph(null);
+        setSkillDagLoading(false);
+        setSkillDagError("Skill 依赖需要后端编译结果，当前仅完成了前端模拟编译。");
         setNotice(`后端 compile 接口暂不可用，已回退到前端模拟编译：${error instanceof Error ? error.message : String(error)}`);
       }
     } catch (error) {
@@ -3492,6 +3642,7 @@ export default function AgentBuilderShell({
                 <th>状态</th>
                 <th>发布备注</th>
                 <th>变化内容</th>
+                <th>依赖</th>
               </tr>
             </thead>
             <tbody>
@@ -3509,6 +3660,15 @@ export default function AgentBuilderShell({
                   <td>{remark || "—"}</td>
                   <td className="cici-builder-runtime__ellipsis" title={visibleChanges.join(" / ")}>
                     {visibleChanges.length > 0 ? visibleChanges.join("；") : "—"}
+                  </td>
+                  <td>
+                    <button
+                      type="button"
+                      className="cici-builder-runtime__text-action"
+                      onClick={() => openSkillDagVersion(item.versionNo)}
+                    >
+                      查看 Skill 依赖
+                    </button>
                   </td>
                 </tr>
                   );
@@ -3980,16 +4140,61 @@ export default function AgentBuilderShell({
             <div className="cici-builder-compile cici-builder-compile--stacked">
               {activeCompileTab === "preview" ? (
                 <div className="cici-builder-graph cici-builder-graph--full">
-                  <div className="cici-builder-code__title">
-                    workflow.preview.graph
+                  <div className="cici-builder-graph__modebar">
+                    <div className="cici-product-mode-switch cici-builder-graph__mode-tabs" role="tablist" aria-label="编译结果视图">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={previewMode === "workflow"}
+                        className={previewMode === "workflow" ? "is-active" : ""}
+                        onClick={() => setPreviewMode("workflow")}
+                      >
+                        工作流
+                      </button>
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={previewMode === "skill-dag"}
+                        className={previewMode === "skill-dag" ? "is-active" : ""}
+                        onClick={() => {
+                          setPreviewMode("skill-dag");
+                          if (!skillDagGraph && !skillDagLoading && !skillDagError) {
+                            void loadAgentSkillDag(skillDagVersionNo);
+                          }
+                        }}
+                      >
+                        Skill 依赖
+                      </button>
+                    </div>
+                    <span className="cici-builder-graph__version-note">
+                      {previewMode === "workflow"
+                        ? "当前编译结果"
+                        : skillDagGraph?.scope.versionNo != null
+                          ? `工作流 v${skillDagGraph.scope.versionNo}`
+                          : skillDagVersionNo != null ? `工作流 v${skillDagVersionNo}` : "当前生效版本"}
+                    </span>
                   </div>
-                  <WorkflowPreviewCanvas
-                    preview={compileArtifact.preview}
-                    activeNodeIds={debugTrace?.activeNodeIds ?? []}
-                    startChannelSummary={channelTriggerSummaryLine(draft)}
-                    startScheduleBadge={isAgentPublished ? "定时 ×1" : null}
-                    onInspectStartTriggers={openTriggersFromGraph}
-                  />
+                  {previewMode === "workflow" ? (
+                    <WorkflowPreviewCanvas
+                      preview={compileArtifact.preview}
+                      activeNodeIds={debugTrace?.activeNodeIds ?? []}
+                      startChannelSummary={channelTriggerSummaryLine(draft)}
+                      startScheduleBadge={isAgentPublished ? "定时 ×1" : null}
+                      onInspectStartTriggers={openTriggersFromGraph}
+                    />
+                  ) : (
+                    <SkillDependencyGraph
+                      className="skill-dag--embedded"
+                      graph={skillDagGraph?.summary.skillCount === 0
+                        ? { ...skillDagGraph, nodes: [], edges: [] }
+                        : skillDagGraph}
+                      loading={skillDagLoading}
+                      error={skillDagError}
+                      emptyMessage="当前版本未解析到 Skill 依赖。"
+                      ariaLabel={`${draft.name || "当前 Agent"} Skill 依赖图`}
+                      onRetry={() => void loadAgentSkillDag(skillDagVersionNo)}
+                    />
+                  )}
                 </div>
               ) : null}
 
@@ -4158,6 +4363,40 @@ export default function AgentBuilderShell({
                         <span key={item} className="cici-builder-debug__chip">{item}</span>
                       ))}
                     </div>
+                  ) : null}
+                  {debugTrace?.skillResolutionChain && debugTrace.skillResolutionChain.length > 0 ? (
+                    <section className="cici-builder-debug__skill-chain" aria-label="Skill 解析链路">
+                      <header className="cici-builder-debug__skill-chain-head">
+                        <h3>Skill 解析链路</h3>
+                        <span>{debugTrace.skillResolutionChain.length} 个已解析 Skill</span>
+                      </header>
+                      <div className="cici-builder-debug__skill-rows">
+                        {debugTrace.skillResolutionChain.map((item) => (
+                          <div className="cici-builder-debug__skill-row" key={item.id}>
+                            <div className="cici-builder-debug__skill-name">
+                              <strong>{item.name}</strong>
+                              <span>{item.code}</span>
+                            </div>
+                            <dl>
+                              <div><dt>钉住版本</dt><dd>{item.versionLabel}</dd></div>
+                              <div><dt>当前绑定风险</dt><dd>{item.riskLabel}</dd></div>
+                              <div><dt>引用来源</dt><dd>{item.referenceLabel}</dd></div>
+                              <div><dt>激活方式</dt><dd>{item.activationLabel}</dd></div>
+                            </dl>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="cici-builder-debug__effective-boundaries">
+                        <div>
+                          <span>最终有效工具</span>
+                          <strong>{debugTrace.effectiveToolNames?.length ? debugTrace.effectiveToolNames.join("、") : "无"}</strong>
+                        </div>
+                        <div>
+                          <span>最终有效知识库</span>
+                          <strong>{debugTrace.effectiveKnowledgeBaseIds?.length ? debugTrace.effectiveKnowledgeBaseIds.join("、") : "无"}</strong>
+                        </div>
+                      </div>
+                    </section>
                   ) : null}
                   <ul className="cici-builder-compile__list">
                     {(debugTrace?.notes ?? ["点击“试运行并高亮路径”后，这里会解释为什么命中当前节点。"]).map((line) => (

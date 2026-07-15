@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -193,6 +194,11 @@ public class SkillDependencyGraphService {
             graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId() + " 已不存在。");
             return;
         }
+        if (!Objects.equals(skillVersion.getSkillId(), skill.getId())) {
+            graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId()
+                    + " 不属于 Skill " + skill.getId() + "，已忽略。");
+            return;
+        }
         String versionNodeId = "skill-version:" + skillVersion.getId();
         graph.addNode(skillVersionNode(skillVersion, Map.of(
                 "referenceMode", safe(reference.getReferenceMode())), 1));
@@ -354,6 +360,10 @@ public class SkillDependencyGraphService {
                             "skillId", reference.getSkillId(),
                             "skillVersionId", reference.getSkillVersionId(),
                             "referenceMode", safe(reference.getReferenceMode()))));
+        } else if (!Objects.equals(skillVersion.getSkillId(), reference.getSkillId())) {
+            graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId()
+                    + " 不属于 Skill " + reference.getSkillId() + "，已忽略。");
+            return;
         } else {
             Map<String, Object> referenceMetadata = new LinkedHashMap<>();
             referenceMetadata.put("referenceMode", safe(reference.getReferenceMode()));
