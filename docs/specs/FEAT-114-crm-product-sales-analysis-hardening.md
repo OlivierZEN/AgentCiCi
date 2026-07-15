@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-208,TASK-211
 related_decisions: FEAT-015,FEAT-021,FEAT-028,FEAT-031,FEAT-109,FEAT-111
 related_issues: ISSUE-2026-07-15-crm-deterministic-stream-single-delta
-updated_at: 2026-07-15T01:35:39Z
+updated_at: 2026-07-15T02:05:24Z
 updated_by: MANAGER-001
 ---
 
@@ -367,5 +367,6 @@ CRM 高阶只读工具
 - OpenAPI blocking 与 streaming 均返回 2,383 字五层正文；streaming 为 3 个脱敏 thought、133 个 message、最大 18 UTF-16 单元和唯一尾部 message_end。逐片空格、换行及纯空白保留，streaming、blocking、各自 history 和内部协议正文在只归一化截止时间后完全一致。
 - 临时 OpenAPI Key 已撤销且复用返回 401 `agent_api_key_invalid`；无新增 ACTIVE Key，channels/toolIds/knowledgeBaseIds 与 fresh 初始快照精确相同。9 份用户正文与脱敏 thought 未发现工具名、原始 JSON、内部 ID 或敏感信息。
 - Top 5 仍为 X1 130、G5 110、S2 95、MP 75、PA 65，金额冠军仍为 MP 2,850,000；贡献、环比、订单/客户覆盖、经营诊断、商机、合同、行动、退货与收入声明均保留。最终成功会话日志窗口中 backend ERROR、CRM failure、异常断连和 Nginx 5xx 均为 0。
-- 生产桌面视觉契约尚缺一次证据补录：当前应用内 Browser 不可用且实例列表为空，按 Browser 技能不得以 Playwright 冒充，因此没有同一气泡的 partial/final 截图与 console/overflow 记录。接口逐事件到达时间已证明服务端是真流式，但 TASK-211 保持 active，待 Browser 实例恢复后完成该唯一剩余验收项。
+- 生产桌面视觉契约已通过应用内 Browser 补录：fresh SalesA 登录、fresh 工作台会话和 `CRM 经营分析` Skill 下，当“直接结论”已出现且 composer 仍禁用时，同一 assistant 气泡可见正文为 50 字；完成后同一气泡为 2,100 字、增长 2,050 字且 composer 恢复可用。partial/final 截图已固化，console error/warning 为 0，html/body/workbench/layout/main/chat-panel/chat-thread 均无横向溢出。
+- 最终浏览器正文包含直接结论、产品 Top 5、经营诊断、前瞻信号、建议动作和口径覆盖，Top 5 与金额冠军保持不变，未出现工具名、原始 JSON、内部字段或“等待确认”。气泡 `role=status` 只在正文为空且 busy 时渲染，首个 delta 到达后即切换为 Markdown，因此验收不得再使用“status 与正文标题同时存在”的不可能条件；固定使用“正文已出现 + composer disabled”判定 partial。
 - 权限负向测试同时发现既有状态语义问题：SalesB 无法读取 SalesA 会话且响应无数据，但 `ResponseStatusException` 被通用异常处理映射为 HTTP 500，而非 404/403。数据隔离成立；该问题独立登记，不纳入本流式补丁。

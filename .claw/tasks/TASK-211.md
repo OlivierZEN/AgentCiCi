@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-211
-status: in_progress
-updated_at: 2026-07-15T01:35:39Z
+status: done
+updated_at: 2026-07-15T02:05:24Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -33,11 +33,12 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 - SalesA 5 次 fresh SSE 均为 3 个 phase、133 个 delta、最大 18 UTF-16 单元、约 2.4 秒持续到达、唯一尾部 done，并与各自持久化正文逐字一致；blocking、SalesB 和 5 次结果仅归一化动态截止时间后完全相同。
 - OpenAPI blocking 与 streaming 均为 2,383 字；streaming 为 133 个 message、3 个脱敏 thought 和唯一尾部 message_end，空格/换行逐字保真，并与 OpenAPI 历史、内部协议正文一致。临时 Key 已撤销并验证 401 `agent_api_key_invalid`，Agent bindings 精确恢复且无新增 ACTIVE Key。
 - 9 份用户正文通过工具名、原始 JSON、内部 ID 和敏感字段泄漏扫描；五层经营分析、Top 5、贡献/环比、订单客户覆盖、商机合同、退货口径和收入声明均完整。最终干净日志窗口为 backend ERROR 0、CRM failure 0、异常断连 0、Nginx 5xx 0。
-- 唯一未取得的证据是生产桌面 UI 的“同一气泡中间态/最终态”截图与 console 记录：应用内 Browser 当前不可用且可用实例列表为空，按浏览器技能约束未用 Playwright 冒充。接口到达时间已证明服务端真实流式行为，任务保持 active 直至补齐该视觉证据。
+- 应用内 Browser 恢复后已使用 fresh SalesA 登录、fresh 会话与 `CRM 经营分析` Skill 完成生产桌面验收：当“直接结论”已出现且 composer 仍禁用时，同一 assistant 气泡可见正文为 50 字；完成后同一气泡为 2,100 字、增长 2,050 字且 composer 恢复可用。partial/final 截图已固化，console error/warning 为 0，html/body/workbench/layout/main/chat-panel/chat-thread 均无横向溢出。
+- 浏览器最终正文包含 Top 5、五层经营分析、金额冠军、贡献/环比、订单客户覆盖、商机合同、退货口径与收入声明，未出现工具名、原始 JSON、内部字段或“等待确认”。原先以 `role=status` 与正文标题同时存在作为中间态判据不成立，因为 loading status 只在正文为空时渲染；最终验收使用“正文已出现 + composer disabled”的正确判据。TASK-211 全部门禁通过并关闭。
 
 ## Next Action
 
-- 应用内 Browser 实例恢复后，使用 fresh SalesA 登录补录同一 assistant 气泡的可见中间态、最终态、console error=0 与无横向溢出证据；通过后关闭 TASK-211。生产 `2.7.7` 继续运行并监控。
+- TASK-211 已完成；生产 `2.7.7` 继续运行并按常规监控。跨用户不可见会话被通用异常处理映射为 500 的既有状态语义问题保留为独立 issue，不纳入本任务。
 
 ## Constraints
 
@@ -66,5 +67,5 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 
 - 分支：`codex/TASK-211-crm-streaming-output`。
 - 首轮 PR：`https://github.com/OlivierZEN/CICI/pull/6`；OpenAPI 保真补丁 PR：`https://github.com/OlivierZEN/CICI/pull/7`，已合并。
-- 先读 FEAT-114 的“TASK-211 真实流式输出纠偏设计”，再读当前单包路径与已有分块 helper。
-- 已审查首轮实现提交 `1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d` 与空白保真提交 `eb5e1f7e4dc05f53943094e09289c54cd08d0056`；`2.7.6` 已失败回滚，当前生产为 `2.7.7 / e47979167af8`。
+- FEAT-114 的“TASK-211 真实流式输出纠偏设计”、协议验收与生产桌面验收现已形成完整事实源。
+- 已审查首轮实现提交 `1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d` 与空白保真提交 `eb5e1f7e4dc05f53943094e09289c54cd08d0056`；`2.7.6` 已失败回滚，当前生产为已完成验收的 `2.7.7 / e47979167af8`。

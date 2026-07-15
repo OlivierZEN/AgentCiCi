@@ -41,7 +41,7 @@
 - Produces: internal ordered non-empty `delta` fragments, each no longer than 18 Java characters, whose concatenation is the deterministic formatter body.
 - Produces: external ordered `message` events carrying the same fragments and one `message_end` after all fragments.
 
-- [ ] **Step 1: Add the failing internal SSE assertions and capture helpers**
+- [x] **Step 1: Add the failing internal SSE assertions and capture helpers**
 
 In `shouldUseSameDeterministicCrmBodyForBlockingStreamingAndPersistenceWithoutFinalLlm`, immediately after the existing blocking and streaming invocations, add:
 
@@ -89,7 +89,7 @@ private int lastIndexOf(String eventName) {
 }
 ```
 
-- [ ] **Step 2: Run the internal regression and verify the RED state**
+- [x] **Step 2: Run the internal regression and verify the RED state**
 
 Run:
 
@@ -100,7 +100,7 @@ mvn -q -Dmaven.repo.local=../.m2 -Dtest=ChatOrchestratorServiceModelIdentityTest
 
 Expected: FAIL because the current deterministic CRM branch produces exactly one `delta`, so `hasSizeGreaterThan(1)` reports an actual size of 1. The existing exact-body, persistence, leak, and zero-LLM assertions must remain in the test.
 
-- [ ] **Step 3: Apply the minimal production fix**
+- [x] **Step 3: Apply the minimal production fix**
 
 Change only the deterministic CRM branch in `ChatOrchestratorService.chatStreamBlocking`:
 
@@ -113,13 +113,13 @@ if (forcedCrmProductSalesAnswer.isPresent()) {
 
 Do not change the helper constants, formatter, blocking path, persistence path, OpenAPI production code, or generic LLM streaming path.
 
-- [ ] **Step 4: Re-run the internal regression and verify the GREEN state**
+- [x] **Step 4: Re-run the internal regression and verify the GREEN state**
 
 Run the same Maven command from Step 2.
 
 Expected: PASS. The long deterministic answer has more than one fragment; every fragment is non-empty and at most 18 Java characters; the concatenation, blocking answer, and two persisted assistant bodies remain exactly equal; `done` is last and unique; final LLM interactions remain zero.
 
-- [ ] **Step 5: Add the OpenAPI bridge regression**
+- [x] **Step 5: Add the OpenAPI bridge regression**
 
 Add Mockito imports for `any`, `verify`, and `when`; imports for `AgentApiCredentialEntity`, `AgentApiMessageEntity`, `Instant`, `Optional`, and `ArgumentCaptor`; then add this test:
 
@@ -251,7 +251,7 @@ private List<String> messageAnswers() {
 }
 ```
 
-- [ ] **Step 6: Run the OpenAPI and combined focused tests**
+- [x] **Step 6: Run the OpenAPI and combined focused tests**
 
 Run:
 
@@ -263,7 +263,7 @@ mvn -q -Dmaven.repo.local=../.m2 \
 
 Expected: both classes PASS; no `message_end` precedes a `message`, and the bridge persists the exact concatenated answer once.
 
-- [ ] **Step 7: Run the CRM regression set and static diff gate**
+- [x] **Step 7: Run the CRM regression set and static diff gate**
 
 Run:
 
@@ -277,7 +277,7 @@ git diff --check
 
 Expected: all selected Surefire reports have zero failures and zero errors; `git diff --check` prints nothing and exits 0.
 
-- [ ] **Step 8: Commit the reviewed implementation**
+- [x] **Step 8: Commit the reviewed implementation**
 
 ```bash
 git add \
@@ -309,11 +309,11 @@ Expected: a signed commit containing only the approved backend source and test f
 
 `deltaText()` 只做 null-to-empty，其他字符逐字保留；正文转发条件改为 `!piece.isEmpty()`。测试必须证明外部 `message` 拼接、运行完成入参和持久化答案都等于包含原始空白的完整正文。
 
-- [ ] **Step 4: 完成组合回归、评审和 2.7.7 发布验收**
+- [x] **Step 4: 完成组合回归、评审和 2.7.7 发布验收**
 
 - [x] 重复 8 类 CRM 回归与独立评审，PR #7 合并并从 clean main 发布不可变 `2.7.7`。
 - [x] 完成 5 次 SalesA SSE、blocking、SalesB、OpenAPI streaming/blocking/history、空白保真、访问清理、防泄漏和干净日志验收。
-- [ ] 应用内 Browser 当前没有可用实例；实例恢复后补录同一气泡 partial/final、console error=0 与无横向溢出证据，然后关闭本步骤。
+- [x] 应用内 Browser 已恢复并完成 fresh SalesA 同一气泡验收：partial 为 50 字且 composer disabled，final 为 2,100 字且 composer enabled；console error/warning 0、无横向溢出、Top 5/五层分析完整且无内部结果泄漏。
 
 ---
 
