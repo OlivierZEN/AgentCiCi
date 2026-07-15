@@ -100,12 +100,66 @@ type SkillDependencyGraphProps = {
   onNodeSelect?: (node: SkillDependencyGraphNode) => void;
 };
 
+type SkillDependencyViewportSize = {
+  width: number;
+  height: number;
+};
+
+export function shouldRefitSkillDependencyViewport(
+  previous: SkillDependencyViewportSize | null,
+  current: SkillDependencyViewportSize,
+): boolean {
+  if (!previous) return true;
+  return Math.abs(previous.width - current.width) >= 0.5
+    || Math.abs(previous.height - current.height) >= 0.5;
+}
+
 function compareNodes(a: SkillDependencyGraphNode, b: SkillDependencyGraphNode): number {
   return a.layer - b.layer || NODE_TYPE_ORDER[a.type] - NODE_TYPE_ORDER[b.type] || a.id.localeCompare(b.id);
 }
 
 function compareEdges(a: SkillDependencyGraphEdge, b: SkillDependencyGraphEdge): number {
   return a.source.localeCompare(b.source) || a.target.localeCompare(b.target) || a.type.localeCompare(b.type) || a.id.localeCompare(b.id);
+}
+
+function orderNodesByRelations(
+  rawNodes: SkillDependencyGraphNode[],
+  rawEdges: SkillDependencyGraphEdge[],
+): SkillDependencyGraphNode[] {
+  const nodes = [...rawNodes].sort(compareNodes);
+  const nodeById = new Map(nodes.map((node) => [node.id, node]));
+  const layers = [...new Set(nodes.map((node) => node.layer))].sort((a, b) => a - b);
+  const orderById = new Map<string, number>();
+  const ordered: SkillDependencyGraphNode[] = [];
+
+  layers.forEach((layer) => {
+    const layerNodes = nodes.filter((node) => node.layer === layer);
+    const barycenter = (node: SkillDependencyGraphNode): number | null => {
+      const connectedIndexes = rawEdges.flatMap((edge) => {
+        const counterpartId = edge.source === node.id
+          ? edge.target
+          : edge.target === node.id ? edge.source : null;
+        if (!counterpartId) return [];
+        const counterpart = nodeById.get(counterpartId);
+        const order = orderById.get(counterpartId);
+        return counterpart && counterpart.layer < layer && order != null ? [order] : [];
+      });
+      if (connectedIndexes.length === 0) return null;
+      return connectedIndexes.reduce((sum, value) => sum + value, 0) / connectedIndexes.length;
+    };
+    layerNodes.sort((a, b) => {
+      const aCenter = barycenter(a);
+      const bCenter = barycenter(b);
+      if (aCenter != null && bCenter != null && aCenter !== bCenter) return aCenter - bCenter;
+      if (aCenter != null && bCenter == null) return -1;
+      if (aCenter == null && bCenter != null) return 1;
+      return compareNodes(a, b);
+    });
+    layerNodes.forEach((node, index) => orderById.set(node.id, index));
+    ordered.push(...layerNodes);
+  });
+
+  return ordered;
 }
 
 export function prepareSkillDependencyGraph(graph: SkillDependencyGraphView): SkillDependencyGraphView {
@@ -138,7 +192,7 @@ export function buildSkillDependencyLayout(
   rawNodes: SkillDependencyGraphNode[],
   rawEdges: SkillDependencyGraphEdge[],
 ): SkillDependencyGraphLayout {
-  const nodes = [...rawNodes].sort(compareNodes);
+  const nodes = orderNodesByRelations(rawNodes, rawEdges);
   const layers = [...new Set(nodes.map((node) => node.layer))].sort((a, b) => a - b);
   const grouped = new Map<number, SkillDependencyGraphNode[]>();
   layers.forEach((layer) => grouped.set(layer, nodes.filter((node) => node.layer === layer)));
@@ -295,11 +349,20 @@ export default function SkillDependencyGraph({
   }, [layout]);
 
   useEffect(() => {
-    if (!layout) return;
-    fitGraph();
-    if (typeof ResizeObserver === "undefined" || !viewportRef.current) return;
-    const observer = new ResizeObserver(fitGraph);
-    observer.observe(viewportRef.current);
+    if (!layout || !viewportRef.current) return;
+    const viewport = viewportRef.current;
+    let previousSize: SkillDependencyViewportSize | null = null;
+    const refitWhenBorderBoxChanges = () => {
+      const bounds = viewport.getBoundingClientRect();
+      const currentSize = { width: bounds.width, height: bounds.height };
+      if (!shouldRefitSkillDependencyViewport(previousSize, currentSize)) return;
+      previousSize = currentSize;
+      fitGraph();
+    };
+    refitWhenBorderBoxChanges();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(refitWhenBorderBoxChanges);
+    observer.observe(viewport);
     return () => observer.disconnect();
   }, [fitGraph, layout]);
 
@@ -307,6 +370,14 @@ export default function SkillDependencyGraph({
   const selectedMetadata = selectedNode ? visibleMetadata(selectedNode) : [];
   const selectedRelations = selectedNode && prepared
     ? prepared.edges.filter((edge) => edge.source === selectedNode.id || edge.target === selectedNode.id)
+    : [];
+  const selectedRelationLabels = selectedNode && prepared
+    ? selectedRelations.map((edge) => {
+      const outgoing = edge.source === selectedNode.id;
+      const counterpartId = outgoing ? edge.target : edge.source;
+      const counterpart = prepared.nodes.find((node) => node.id === counterpartId);
+      return `${outgoing ? "出向" : "入向"}：${edge.label}（${edge.type}）· ${counterpart?.label ?? counterpartId}`;
+    })
     : [];
   const rootClassName = `skill-dag${className ? ` ${className}` : ""}`;
 
@@ -339,6 +410,12 @@ export default function SkillDependencyGraph({
         <div className="skill-dag__state" role="status">
           <GitBranch size={20} aria-hidden="true" />
           <strong>{emptyMessage}</strong>
+          {prepared && prepared.warnings.length > 0 ? (
+            <div className="skill-dag__empty-warnings" role="alert">
+              {prepared.warnings.slice(0, 3).map((warning) => <p key={warning}>{warning}</p>)}
+              {prepared.warnings.length > 3 ? <p>另有 {prepared.warnings.length - 3} 条数据告警。</p> : null}
+            </div>
+          ) : null}
         </div>
       </section>
     );
@@ -488,7 +565,13 @@ export default function SkillDependencyGraph({
             {selectedMetadata.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
             <div className="skill-dag__detail-relations">
               <dt>直接关系</dt>
-              <dd>{selectedRelations.length > 0 ? selectedRelations.map((edge) => edge.label).join("、") : "暂无"}</dd>
+              <dd>
+                {selectedRelationLabels.length > 0 ? (
+                  <ul className="skill-dag__relation-list">
+                    {selectedRelationLabels.map((relation) => <li key={relation}>{relation}</li>)}
+                  </ul>
+                ) : "暂无"}
+              </dd>
             </div>
           </dl>
         </aside>

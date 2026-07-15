@@ -8,6 +8,8 @@ public interface SkillVersionRepository extends JpaRepository<SkillVersionEntity
 
     Optional<SkillVersionEntity> findByIdAndOrgId(Long id, String orgId);
 
+    List<SkillVersionEntity> findByOrgIdAndIdIn(String orgId, List<Long> ids);
+
     Optional<SkillVersionEntity> findTopByOrgIdAndSkillIdOrderByVersionNoDesc(String orgId, Long skillId);
 
     Optional<SkillVersionEntity> findByOrgIdAndSkillIdAndVersionNo(String orgId, Long skillId, Integer versionNo);

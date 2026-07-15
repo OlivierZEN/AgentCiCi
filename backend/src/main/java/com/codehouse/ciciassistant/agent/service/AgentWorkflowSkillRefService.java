@@ -89,6 +89,7 @@ public class AgentWorkflowSkillRefService {
             SkillVersionEntity version = resolveSkillVersion(orgId, ref.getSkillId(), ref.getSkillVersionId()).orElse(null);
             String skillCode = skill == null ? ("skill-" + ref.getSkillId()) : skill.getSkillCode();
             String skillName = skill == null ? skillCode : skill.getName();
+            boolean pinnedVersionAvailable = version != null;
             result.add(new RuntimeSkillRef(
                     skillCode,
                     skillName,
@@ -98,16 +99,12 @@ public class AgentWorkflowSkillRefService {
                     ref.getTemplateCode(),
                     ref.getTemplateVersionNo(),
                     normalizeReferenceMode(ref.getReferenceMode()),
-                    firstNonBlank(version == null ? null : version.getCompiledPromptFragment(),
-                            skill == null ? null : skill.getPromptFragment()),
-                    splitCsv(version == null ? null : version.getEffectiveToolWhitelist(),
-                            skill == null ? null : skill.getToolWhitelist()),
-                    splitCsv(version == null ? null : version.getEffectiveKbWhitelist(),
-                            skill == null ? null : skill.getKbWhitelist()),
-                    skill == null ? "" : safe(skill.getHandoffRule()),
-                    skill == null ? "" : safe(skill.getOutputContract()),
-                    firstNonBlank(version == null ? null : version.getRiskLevel(),
-                            skill == null ? null : skill.getRiskLevel())
+                    pinnedVersionAvailable ? safe(version.getCompiledPromptFragment()) : "",
+                    pinnedVersionAvailable ? splitCsv(version.getEffectiveToolWhitelist(), null) : List.of(),
+                    pinnedVersionAvailable ? splitCsv(version.getEffectiveKbWhitelist(), null) : List.of(),
+                    pinnedVersionAvailable && skill != null ? safe(skill.getHandoffRule()) : "",
+                    pinnedVersionAvailable && skill != null ? safe(skill.getOutputContract()) : "",
+                    pinnedVersionAvailable ? safe(version.getRiskLevel()) : ""
             ));
         }
         return List.copyOf(result);
@@ -202,6 +199,10 @@ public class AgentWorkflowSkillRefService {
     private Optional<SkillVersionEntity> resolvePinnedSkillVersion(String orgId,
                                                                    SkillDefinitionEntity skill,
                                                                    Integer explicitVersionNo) {
+        if (explicitVersionNo != null) {
+            return skillVersionRepository.findByOrgIdAndSkillIdAndVersionNo(
+                    orgId, skill.getId(), explicitVersionNo);
+        }
         if (skill.getCurrentPublishedVersionId() != null) {
             Optional<SkillVersionEntity> currentPublished = resolveSkillVersion(
                     orgId, skill.getId(), skill.getCurrentPublishedVersionId());
@@ -214,13 +215,6 @@ public class AgentWorkflowSkillRefService {
         if (published.isPresent()) {
             return published;
         }
-        if (explicitVersionNo != null) {
-            Optional<SkillVersionEntity> explicit = skillVersionRepository.findByOrgIdAndSkillIdAndVersionNo(
-                    orgId, skill.getId(), explicitVersionNo);
-            if (explicit.isPresent()) {
-                return explicit;
-            }
-        }
         return skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId());
     }
 
@@ -228,8 +222,8 @@ public class AgentWorkflowSkillRefService {
         if (skillVersionId == null) {
             return Optional.empty();
         }
-        return skillVersionRepository.findById(skillVersionId)
-                .filter(version -> orgId.equals(version.getOrgId()) && Objects.equals(skillId, version.getSkillId()));
+        return skillVersionRepository.findByIdAndOrgId(skillVersionId, orgId)
+                .filter(version -> Objects.equals(skillId, version.getSkillId()));
     }
 
     private Integer resolveTemplateVersionNo(String orgId,
@@ -334,11 +328,6 @@ public class AgentWorkflowSkillRefService {
                 .filter(item -> !item.isBlank())
                 .distinct()
                 .toList();
-    }
-
-    private static String firstNonBlank(String primary, String fallback) {
-        String first = trimToNull(primary);
-        return first != null ? first : safe(fallback).trim();
     }
 
     private record SnapshotCandidate(

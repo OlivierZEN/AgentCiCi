@@ -1,14 +1,27 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-15T02:17:08Z
+updated_at: 2026-07-15T17:04:57Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-15T02:17:08Z
+last_run_at: 2026-07-15T17:04:57Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-212 Skill DAG Phase 1 本地生产门（2026-07-15）
+
+- `tdd/backend-focused`: 先以缺失/脏版本引用、current 指针错配、标准边语义、平台 token 越权、运行时治理快照、Skill 版本变更指纹、历史显式/缺失版本、下游当前 KB/移交边界污染、1,001 条影响上限和 V81 重试安全形成红灯，再完成实现；9 个测试类共 22 项通过，0 failure / 0 error / 0 skipped。真实 `SkillResolverService` 与调试 Runtime 均断言 pinned runtime 不包含当前可变 Skill 边界。
+- `http-security`: 真实 Spring/MockMvc 和本地 API smoke 均验证匿名 Agent 图 401、组织 token 读取 Agent 图 200、平台 token 读取平台图 200、平台 token 访问 Agent 图 403、组织 token 访问平台图 403；显式 `versionNo=1` 返回 200。示例 Agent 图为 5 节点 / 5 边 / 0 warning。
+- `migration/performance`: 独立干净 PostgreSQL 从空库应用 77 个迁移至 V81；Flyway 明确以 `[non-transactional]` 执行。随后在两个索引已存在时重执行迁移 SQL，`DROP INDEX CONCURRENTLY` / `CREATE INDEX CONCURRENTLY` 全部成功，工作流引用与当前绑定索引最终均 `indisvalid=true / indisready=true`。两类影响查询最多读取 1,001 条并只展示 1,000 条，SkillVersion 使用组织内批量加载。
+- `frontend`: `npm test -- --run` 为 18 个文件 / 110 项全部通过；`npm run build` 成功，仅保留既有大 chunk 提示。覆盖分层布局、关系详情、空态 warning、缩放适配、Agent/Skill 选择加载写门禁、目标操作进行中选择锁定、异步回写序号校验、请求快照和调试解析链。
+- `backend-package`: `mvn -DskipTests package` 通过并生成可执行 JAR。
+- `backend-full-diagnostic`: 独立数据库完整 Maven 诊断汇总为 341 项、3 failure / 7 error；失败位于既有 AutoService 平台身份、PlatformBilling 审计夹具、SkillGovernance 鉴权、AdminOrganizationProfile 非空字段、MeetingMinutes 模型配置及连接池耗尽后的 ChatSession/ModelProvider 上下文，不包含 TASK-212 聚焦测试，未作为全绿门禁。
+- `browser-local`: 应用内 Browser 在 `1600 x 1000` 验证平台 Skill 影响图与 Agent Builder 的 Agent → Workflow Version → Skill → Skill Version → Tool 关系、`COMPILED_AS` / `PINS_SKILL_VERSION` / `USES_SKILL` 节点详情、缩放控制和调试 Skill 解析链；console error/warning 为 0，页面外层横向溢出为 0。
+- `independent-review`: 三轮只读复审发现并推动修复历史显式缺失版本、影响查询与索引、前端正反向选择竞态及 V81 重试问题；最终复核 Critical / Important / Minor 均为 0，`Ready to merge: Yes`。
+- `gates`: MANAGER-001 SSH 身份门禁、assignment 代表路径、Flyway V81、`git diff --check` 与本地 health `UP` 通过；待合并、生产备份、`2.7.8` dry-run/正式发布和线上 smoke 后关闭任务。
+- `state-validator`: 全仓 `validate-state.py` 仍因 129 条既有历史状态/规格基线退出 1，但输出中 `TASK-212`、`FEAT-117` 与 V81 命中为 0；未在本任务中越界清理旧记录。
 
 ## TASK-211 2.7.6 失败回滚与 2.7.7 生产协议验收（2026-07-15）
 

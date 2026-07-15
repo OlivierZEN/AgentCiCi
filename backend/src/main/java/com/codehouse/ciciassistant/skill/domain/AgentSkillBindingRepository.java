@@ -11,7 +11,7 @@ public interface AgentSkillBindingRepository extends JpaRepository<AgentSkillBin
 
     List<AgentSkillBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String orgId, String agentId);
 
-    List<AgentSkillBindingEntity> findByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+    List<AgentSkillBindingEntity> findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
             String orgId, Long skillId);
 
     List<AgentSkillBindingEntity> findByOrgIdAndSkillIdInAndEnabledTrue(String orgId, List<Long> skillIds);

@@ -228,14 +228,16 @@ public class SkillResolverService {
                 skillApiToolService.findRuntimeTools(orgId, runtimeApiVersionIds);
         skillApiTools.stream().map(SkillApiToolService.ResolvedSkillApiTool::toolName).forEach(toolNames::add);
 
-        LinkedHashSet<String> kbIds = new LinkedHashSet<>(
-                capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList());
+        boolean pinnedRuntime = !pinnedSkillRefs.isEmpty();
+        LinkedHashSet<String> kbIds = new LinkedHashSet<>((pinnedRuntime
+                ? capability.agentDirectKnowledgeBaseIds()
+                : capability.effectiveKnowledgeBaseIds()).stream().map(String::valueOf).toList());
         kbIds.addAll(publishedRuntimeBinding.knowledgeBaseIds());
         List<String> handoffRules = new ArrayList<>();
         String outputContract = null;
 
         for (ResolvedSkill skill : skills) {
-            if (capability.effectiveKnowledgeBaseIds().isEmpty()) {
+            if (pinnedRuntime || capability.effectiveKnowledgeBaseIds().isEmpty()) {
                 kbIds.addAll(skill.kbWhitelist());
             }
             if (skill.handoffRule() != null && !skill.handoffRule().isBlank()) {
@@ -246,7 +248,7 @@ public class SkillResolverService {
             }
         }
 
-        capability.effectiveHandoffRules().forEach(rule -> {
+        (pinnedRuntime ? capability.agentDirectHandoffRules() : capability.effectiveHandoffRules()).forEach(rule -> {
             if (!handoffRules.contains(rule)) {
                 handoffRules.add(rule);
             }

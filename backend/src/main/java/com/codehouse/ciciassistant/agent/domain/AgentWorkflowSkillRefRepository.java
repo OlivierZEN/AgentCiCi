@@ -11,7 +11,7 @@ public interface AgentWorkflowSkillRefRepository extends JpaRepository<AgentWork
 
     List<AgentWorkflowSkillRefEntity> findByOrgIdAndWorkflowVersionIdOrderByIdAsc(String orgId, Long workflowVersionId);
 
-    List<AgentWorkflowSkillRefEntity> findByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+    List<AgentWorkflowSkillRefEntity> findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
             String orgId, Long skillId);
 
     List<AgentWorkflowSkillRefEntity> findByOrgIdAndTemplateCodeOrderByTemplateVersionNoDescIdAsc(String orgId,

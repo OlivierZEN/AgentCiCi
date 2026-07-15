@@ -28,6 +28,7 @@ import com.codehouse.ciciassistant.tool.domain.ToolDefinitionRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -125,8 +126,23 @@ class SkillDependencyGraphServiceTest {
                         "COMPILED_AS",
                         "USES_SKILL",
                         "PINS_SKILL_VERSION",
+                        "VERSION_OF",
                         "ALLOWS_TOOL",
                         "ALLOWS_KNOWLEDGE_BASE");
+        assertThat(graph.edges())
+                .filteredOn(edge -> "PINS_SKILL_VERSION".equals(edge.type()))
+                .singleElement()
+                .satisfies(edge -> {
+                    assertThat(edge.source()).isEqualTo("workflow-version:101");
+                    assertThat(edge.target()).isEqualTo("skill-version:301");
+                });
+        assertThat(graph.edges())
+                .filteredOn(edge -> "VERSION_OF".equals(edge.type()))
+                .singleElement()
+                .satisfies(edge -> {
+                    assertThat(edge.source()).isEqualTo("skill-version:301");
+                    assertThat(edge.target()).isEqualTo("skill:201");
+                });
         assertThat(graph.summary().skillVersionCount()).isEqualTo(1);
         assertThat(graph.summary().toolCount()).isEqualTo(1);
         assertThat(graph.summary().knowledgeBaseCount()).isEqualTo(1);
@@ -196,9 +212,47 @@ class SkillDependencyGraphServiceTest {
         assertThat(graph.edges()).extracting(SkillDependencyGraphService.GraphEdge::type)
                 .containsExactly(
                         "BINDS_SKILL",
-                        "PINS_SKILL_VERSION",
+                        "CURRENT_SKILL_VERSION",
                         "ALLOWS_TOOL",
                         "ALLOWS_KNOWLEDGE_BASE");
+    }
+
+    @Test
+    void shouldFallbackWhenCurrentPublishedVersionBelongsToAnotherSkill() {
+        AgentDefinitionEntity agent = agent();
+        agent.setPublishedVersionId(null);
+        SkillDefinitionEntity skill = skill();
+        ReflectionTestUtils.setField(skill, "currentPublishedVersionId", SKILL_VERSION_ID);
+        SkillVersionEntity mismatchedVersion = skillVersion();
+        ReflectionTestUtils.setField(mismatchedVersion, "skillId", 999L);
+        SkillVersionEntity fallbackVersion = skillVersion();
+        ReflectionTestUtils.setField(fallbackVersion, "id", 302L);
+        AgentSkillBindingEntity binding = new AgentSkillBindingEntity(
+                ORG_ID, AGENT_ID, SKILL_ID, "ALWAYS", "", 10, true);
+
+        when(agentDefinitionRepository.findByOrgIdAndAgentId(ORG_ID, AGENT_ID)).thenReturn(Optional.of(agent));
+        when(workflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc(ORG_ID, AGENT_ID))
+                .thenReturn(List.of());
+        when(agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(ORG_ID, AGENT_ID))
+                .thenReturn(List.of(binding));
+        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID))
+                .thenReturn(Optional.of(mismatchedVersion));
+        when(skillVersionRepository.findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
+                ORG_ID, SKILL_ID, "PUBLISHED"))
+                .thenReturn(Optional.of(fallbackVersion));
+        when(toolDefinitionRepository.findByOrgIdAndToolName(ORG_ID, "crm.lookup"))
+                .thenReturn(Optional.empty());
+        when(knowledgeBaseRepository.findByIdAndOrgId(KNOWLEDGE_BASE_ID, ORG_ID))
+                .thenReturn(Optional.empty());
+
+        SkillDependencyGraphService.GraphView graph = service.getAgentGraph(ORG_ID, AGENT_ID, null);
+
+        assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
+                .contains("skill-version:302")
+                .doesNotContain("skill-version:301");
+        assertThat(graph.warnings()).containsExactly(
+                "Skill crm-analysis 的当前发布版本 301 不属于该 Skill，已回退。");
     }
 
     @Test
@@ -225,13 +279,13 @@ class SkillDependencyGraphServiceTest {
         AgentDefinitionEntity draftAgent = agent("draft-agent", "草稿助手");
 
         when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill));
-        when(workflowSkillRefRepository.findByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+        when(workflowSkillRefRepository.findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
                 ORG_ID, SKILL_ID)).thenReturn(List.of(reference));
         when(workflowVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(WORKFLOW_VERSION_ID)))
                 .thenReturn(List.of(workflowVersion));
-        when(skillVersionRepository.findByIdAndOrgId(SKILL_VERSION_ID, ORG_ID))
-                .thenReturn(Optional.of(skillVersion));
-        when(agentSkillBindingRepository.findByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+        when(skillVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(SKILL_VERSION_ID)))
+                .thenReturn(List.of(skillVersion));
+        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
                 ORG_ID, SKILL_ID)).thenReturn(List.of(currentBinding));
         when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(
                 ORG_ID, List.of("draft-agent", AGENT_ID)))
@@ -254,8 +308,107 @@ class SkillDependencyGraphServiceTest {
                         "PINS_SKILL_VERSION",
                         "USED_BY_AGENT",
                         "BINDS_SKILL");
+        assertThat(graph.edges())
+                .filteredOn(edge -> "BINDS_SKILL".equals(edge.type()))
+                .singleElement()
+                .satisfies(edge -> {
+                    assertThat(edge.source()).isEqualTo("agent:draft-agent");
+                    assertThat(edge.target()).isEqualTo("skill:201");
+                });
         assertThat(graph.summary().agentCount()).isEqualTo(2);
         assertThat(graph.summary().workflowVersionCount()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldCapCurrentAgentBindingsInSkillImpactGraph() {
+        List<AgentSkillBindingEntity> bindings = IntStream.rangeClosed(0, 1000)
+                .mapToObj(priority -> new AgentSkillBindingEntity(
+                        ORG_ID,
+                        "draft-agent",
+                        SKILL_ID,
+                        "INTENT",
+                        "客户分析",
+                        priority,
+                        true))
+                .toList();
+
+        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
+        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                ORG_ID, SKILL_ID)).thenReturn(bindings);
+        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(ORG_ID, List.of("draft-agent")))
+                .thenReturn(List.of(agent("draft-agent", "草稿助手")));
+
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+
+        assertThat(graph.warnings()).contains("Agent 当前绑定超过 1000 条，仅展示前 1000 条。");
+        assertThat(graph.edges()).filteredOn(edge -> "BINDS_SKILL".equals(edge.type())).hasSize(1);
+    }
+
+    @Test
+    void shouldKeepWorkflowAndAgentImpactWhenPinnedVersionIsMissing() {
+        AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
+                ORG_ID,
+                WORKFLOW_VERSION_ID,
+                SKILL_ID,
+                SKILL_VERSION_ID,
+                "crm-analysis",
+                1,
+                "PINNED_VERSION");
+
+        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
+        when(workflowSkillRefRepository.findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+                ORG_ID, SKILL_ID)).thenReturn(List.of(reference));
+        when(workflowVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(WORKFLOW_VERSION_ID)))
+                .thenReturn(List.of(workflowVersion()));
+        when(skillVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(SKILL_VERSION_ID))).thenReturn(List.of());
+        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                ORG_ID, SKILL_ID)).thenReturn(List.of());
+        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(ORG_ID, List.of(AGENT_ID)))
+                .thenReturn(List.of(agent()));
+
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+
+        assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
+                .containsExactly(
+                        "skill:201",
+                        "skill-version:301",
+                        "workflow-version:101",
+                        "agent:sales-agent");
+        assertThat(graph.edges()).extracting(SkillDependencyGraphService.GraphEdge::type)
+                .containsExactlyInAnyOrder("VERSION_OF", "PINS_SKILL_VERSION", "USED_BY_AGENT");
+        assertThat(graph.warnings()).containsExactly(
+                "工作流引用的 Skill Version 301 已不存在。");
+    }
+
+    @Test
+    void shouldKeepWorkflowAndAgentImpactWhenReferenceHasNoPinnedVersion() {
+        AgentWorkflowSkillRefEntity reference = new AgentWorkflowSkillRefEntity(
+                ORG_ID,
+                WORKFLOW_VERSION_ID,
+                SKILL_ID,
+                null,
+                "crm-analysis",
+                1,
+                "PINNED_VERSION");
+
+        when(skillDefinitionRepository.findByIdAndOrgId(SKILL_ID, ORG_ID)).thenReturn(Optional.of(skill()));
+        when(workflowSkillRefRepository.findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(
+                ORG_ID, SKILL_ID)).thenReturn(List.of(reference));
+        when(workflowVersionRepository.findByOrgIdAndIdIn(ORG_ID, List.of(WORKFLOW_VERSION_ID)))
+                .thenReturn(List.of(workflowVersion()));
+        when(agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+                ORG_ID, SKILL_ID)).thenReturn(List.of());
+        when(agentDefinitionRepository.findByOrgIdAndAgentIdIn(ORG_ID, List.of(AGENT_ID)))
+                .thenReturn(List.of(agent()));
+
+        SkillDependencyGraphService.GraphView graph = service.getSkillImpactGraph(ORG_ID, SKILL_ID);
+
+        assertThat(graph.nodes()).extracting(SkillDependencyGraphService.GraphNode::id)
+                .containsExactly("skill:201", "workflow-version:101", "agent:sales-agent");
+        assertThat(graph.edges()).extracting(SkillDependencyGraphService.GraphEdge::type)
+                .containsExactlyInAnyOrder("USES_SKILL", "USED_BY_AGENT");
+        assertThat(graph.warnings()).containsExactly(
+                "工作流 101 引用了 Skill，但没有钉住版本。");
     }
 
     @Test
@@ -348,8 +501,8 @@ class SkillDependencyGraphServiceTest {
                 true,
                 "",
                 "",
-                "[\"crm.lookup\"]",
-                "[401]",
+                "crm.lookup",
+                "401",
                 "",
                 "",
                 "MEDIUM",
@@ -376,8 +529,8 @@ class SkillDependencyGraphServiceTest {
                 "",
                 "prompt",
                 "{}",
-                "[\"crm.lookup\"]",
-                "[401]",
+                "crm.lookup",
+                "401",
                 "MEDIUM",
                 "[]",
                 "[]",

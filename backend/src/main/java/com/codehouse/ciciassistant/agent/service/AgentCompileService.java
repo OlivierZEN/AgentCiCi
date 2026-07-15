@@ -51,6 +51,7 @@ public class AgentCompileService {
     private final SkillDefinitionRepository skillDefinitionRepository;
     private final SkillVersionRepository skillVersionRepository;
     private final SpecCompilerService specCompilerService;
+    private final AgentWorkflowSkillRefService agentWorkflowSkillRefService;
     private final ObjectMapper objectMapper;
 
     public AgentCompileService(KnowledgeBaseRepository knowledgeBaseRepository,
@@ -63,6 +64,7 @@ public class AgentCompileService {
                                SkillDefinitionRepository skillDefinitionRepository,
                                SkillVersionRepository skillVersionRepository,
                                SpecCompilerService specCompilerService,
+                               AgentWorkflowSkillRefService agentWorkflowSkillRefService,
                                ObjectMapper objectMapper) {
         this.knowledgeBaseRepository = knowledgeBaseRepository;
         this.toolDefinitionRepository = toolDefinitionRepository;
@@ -74,6 +76,7 @@ public class AgentCompileService {
         this.skillDefinitionRepository = skillDefinitionRepository;
         this.skillVersionRepository = skillVersionRepository;
         this.specCompilerService = specCompilerService;
+        this.agentWorkflowSkillRefService = agentWorkflowSkillRefService;
         this.objectMapper = objectMapper;
     }
 
@@ -181,7 +184,7 @@ public class AgentCompileService {
                 channels,
                 effectiveKnowledgeBaseIds,
                 effectiveToolIds,
-                resolvedSkillCodes);
+                resolvedSkillRefs);
         manifest.put("compileFingerprint", compileFingerprint);
         manifest.put("previewFormat", preview.format());
 
@@ -229,6 +232,7 @@ public class AgentCompileService {
         Optional<AgentWorkflowVersionEntity> previous = agentWorkflowVersionRepository
                 .findTopByOrgIdAndAgentIdOrderByVersionNoDesc(orgId, agentId);
         if (previous.isPresent() && compileFingerprint.equals(safeText(previous.get().getCompileFingerprint()))) {
+            agentWorkflowSkillRefService.ensureWorkflowSkillRefs(orgId, agentId, previous.get());
             return new PersistResult(
                     previous.get().getVersionNo(),
                     false,
@@ -257,6 +261,7 @@ public class AgentCompileService {
                 "DRAFT"
         );
         agentWorkflowVersionRepository.save(created);
+        agentWorkflowSkillRefService.ensureWorkflowSkillRefs(orgId, agentId, created);
         return new PersistResult(nextVersionNo, true, "编译完成并生成新版本。", changeLog);
     }
 
@@ -272,7 +277,7 @@ public class AgentCompileService {
                                            List<String> channels,
                                            List<Long> effectiveKnowledgeBaseIds,
                                            List<String> effectiveToolIds,
-                                           List<String> resolvedSkillCodes) {
+                                           List<ResolvedSkillRef> resolvedSkillRefs) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("agentId", safeText(command.agentId()).trim().toLowerCase());
         payload.put("name", safeText(command.name()));
@@ -284,12 +289,32 @@ public class AgentCompileService {
         payload.put("channels", sortStrings(channels));
         payload.put("knowledgeBaseIds", sortLongs(effectiveKnowledgeBaseIds));
         payload.put("toolIds", sortStrings(effectiveToolIds));
-        payload.put("skillRefs", sortStrings(resolvedSkillCodes));
+        payload.put("skillRefs", sortResolvedSkillRefs(resolvedSkillRefs));
         payload.put("handoffRule", safeText(command.handoffRule()));
         payload.put("safetyLevel", normalizeRiskLevel(command.safetyLevel()));
         payload.put("executionMode", safeText(command.executionMode()));
         payload.put("versionLabel", safeText(command.version()));
         return sha256Hex(toJson(payload));
+    }
+
+    private List<Map<String, Object>> sortResolvedSkillRefs(List<ResolvedSkillRef> refs) {
+        return normalizeList(refs).stream()
+                .sorted(Comparator
+                        .comparing((ResolvedSkillRef ref) -> safeText(ref.skillCode()))
+                        .thenComparing(ref -> ref.skillId() == null ? Long.MIN_VALUE : ref.skillId())
+                        .thenComparing(ref -> ref.versionNo() == null ? Integer.MIN_VALUE : ref.versionNo())
+                        .thenComparing(ref -> safeText(ref.source()))
+                        .thenComparing(ResolvedSkillRef::resolved))
+                .map(ref -> {
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("skillCode", safeText(ref.skillCode()));
+                    item.put("skillId", ref.skillId());
+                    item.put("versionNo", ref.versionNo());
+                    item.put("source", safeText(ref.source()));
+                    item.put("resolved", ref.resolved());
+                    return item;
+                })
+                .toList();
     }
 
     private List<String> buildChangeLog(AgentWorkflowVersionEntity previous,

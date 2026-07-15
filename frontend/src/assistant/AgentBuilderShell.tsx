@@ -320,6 +320,10 @@ type DebugRuntimeSkillVersion = {
   skillVersionNo?: number | null;
   templateCode?: string | null;
   templateVersionNo?: number | null;
+  referenceMode?: string | null;
+  riskLevel?: string | null;
+  toolCount?: number | null;
+  kbCount?: number | null;
 };
 
 type DebugRuntimePolicyBundle = {
@@ -938,6 +942,41 @@ export function isLatestSkillDagRequest(requestId: number, latestRequestId: numb
   return requestId === latestRequestId;
 }
 
+export function isCurrentAgentOperation(
+  operationAgentId: string,
+  selectedAgentId: string,
+  operationId: number,
+  currentOperationId: number,
+): boolean {
+  return operationAgentId === selectedAgentId && operationId === currentOperationId;
+}
+
+export function canStartAgentWriteOperation(
+  selectedAgentId: string,
+  committedAgentId: string,
+  selectionPending: boolean,
+): boolean {
+  return Boolean(selectedAgentId) && selectedAgentId === committedAgentId && !selectionPending;
+}
+
+export function canSelectAgentDuringOperation(
+  saving: boolean,
+  compiling: boolean,
+  publishing: boolean,
+  debugging: boolean,
+): boolean {
+  return !saving && !compiling && !publishing && !debugging;
+}
+
+export function isCurrentAgentSelection(
+  requestId: number,
+  currentRequestId: number,
+  requestedAgentId: string,
+  selectedAgentId: string,
+): boolean {
+  return requestId === currentRequestId && requestedAgentId === selectedAgentId;
+}
+
 export function buildDebugSkillResolutionChain(
   resolvedVersions: DebugRuntimeSkillVersion[],
   bindings: AgentSkillBindingDraft[],
@@ -948,10 +987,17 @@ export function buildDebugSkillResolutionChain(
     "intent-route": "意图路由",
     manual: "手动启用",
   };
+  const referenceActivationLabels: Record<string, string> = {
+    PINNED_VERSION: "工作流钉住",
+    TEMPLATE_VERSION: "模板钉住",
+    CURRENT_PUBLISHED: "发布快照",
+  };
   return resolvedVersions.map((item, index) => {
     const code = item.skillCode || "";
     const name = item.skillName || code || `Skill ${index + 1}`;
     const binding = bindings.find((candidate) => candidate.skillCode === code || candidate.skillName === name);
+    const capabilityFallback = item.referenceMode === "capability-fallback" || item.skillVersionNo == null;
+    const effectiveRisk = capabilityFallback ? (item.riskLevel || binding?.riskLevel) : item.riskLevel;
     const versionLabel = item.skillVersionNo != null ? `v${item.skillVersionNo}` : "当前草稿";
     const templateVersion = item.templateVersionNo != null ? `@v${item.templateVersionNo}` : "";
     return {
@@ -959,11 +1005,15 @@ export function buildDebugSkillResolutionChain(
       name,
       code: code || "—",
       versionLabel,
-      referenceLabel: item.templateCode
+      referenceLabel: capabilityFallback
+        ? "当前绑定"
+        : item.templateCode
         ? `模板 ${item.templateCode}${templateVersion}`
         : item.skillVersionNo != null ? "工作流钉住版本" : "当前绑定",
-      riskLabel: riskLabels[binding?.riskLevel ?? ""] ?? "未声明",
-      activationLabel: activationLabels[binding?.activationMode ?? ""] ?? "未声明",
+      riskLabel: riskLabels[effectiveRisk ?? ""] ?? "未声明",
+      activationLabel: capabilityFallback
+        ? activationLabels[binding?.activationMode ?? ""] ?? "未声明"
+        : referenceActivationLabels[item.referenceMode ?? ""] ?? "工作流快照",
     };
   });
 }
@@ -1567,6 +1617,7 @@ export default function AgentBuilderShell({
   const [isPublishing, setIsPublishing] = useState(false);
   const [isDebugging, setIsDebugging] = useState(false);
   const [isLoadingLibrary, setIsLoadingLibrary] = useState(false);
+  const [isAgentSelectionLoading, setIsAgentSelectionLoading] = useState(false);
   const [activePublishChannel, setActivePublishChannel] = useState<PublishChannelId>("feishu");
   const [activeCompileTab, setActiveCompileTab] = useState<CompileTab>("preview");
   const [previewMode, setPreviewMode] = useState<PreviewMode>("workflow");
@@ -1620,6 +1671,28 @@ export default function AgentBuilderShell({
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
   const [isDeletingAgent, setIsDeletingAgent] = useState(false);
   const skillDagRequestIdRef = useRef(0);
+  const agentSelectionRequestIdRef = useRef(0);
+  const readinessRequestIdRef = useRef(0);
+  const selectedAgentIdRef = useRef("");
+  const agentSelectionPendingRef = useRef(false);
+  const agentOperationPendingRef = useRef(false);
+  const agentOperationIdRef = useRef(0);
+
+  const commitSelectedAgentId = useCallback((agentId: string) => {
+    agentSelectionRequestIdRef.current += 1;
+    selectedAgentIdRef.current = agentId;
+    agentSelectionPendingRef.current = false;
+    agentOperationPendingRef.current = false;
+    agentOperationIdRef.current += 1;
+    skillDagRequestIdRef.current += 1;
+    readinessRequestIdRef.current += 1;
+    setIsSaving(false);
+    setIsCompiling(false);
+    setIsPublishing(false);
+    setIsDebugging(false);
+    setIsAgentSelectionLoading(false);
+    setSelectedAgentId(agentId);
+  }, []);
 
   const setNotice = (message: string) => {
     setNoticeText(message);
@@ -1686,7 +1759,7 @@ export default function AgentBuilderShell({
           setSkillCatalog(skillsBody.data.filter((item) => item.enabled));
         }
         setLibrary(nextLibrary);
-        setSelectedAgentId(preferred.id);
+        commitSelectedAgentId(preferred.id);
         setDraft(cloneDraft(preferred.draft));
         setPublishConfig(clonePublishConfigDraft(preferred.publishConfig));
         setLoadedAgentBaselineDigest(compilePayloadDigest(preferred.draft, orgId));
@@ -1708,7 +1781,7 @@ export default function AgentBuilderShell({
     return () => {
       cancelled = true;
     };
-  }, [focusAgentId, kbs, orgId, token]);
+  }, [commitSelectedAgentId, focusAgentId, kbs, orgId, token]);
 
   useEffect(() => {
     if (!token) return;
@@ -1848,6 +1921,17 @@ export default function AgentBuilderShell({
   const selectedAgentPermissions = selectedAgentAccess.permissions ?? [];
   const canEditSelectedAgent = Boolean(selectedAgentAccess.canEdit);
   const canPublishSelectedAgent = selectedAgentPermissions.includes("PUBLISH");
+  const agentWriteBlocked = !canStartAgentWriteOperation(
+    selectedAgentId,
+    selectedAgentIdRef.current,
+    isAgentSelectionLoading,
+  );
+  const agentSelectionBlocked = !canSelectAgentDuringOperation(
+    isSaving,
+    isCompiling,
+    isPublishing,
+    isDebugging,
+  );
   const selectedModel = modelOptions.find((option) => option.value === draft.model);
   const openApiBaseUrl = `${window.location.origin}/openapi/v1`;
   const readinessCount = [draft.name, draft.specText, draft.channels.length > 0, draft.knowledgeBaseIds.length > 0, draft.toolIds.length > 0].filter(Boolean).length;
@@ -1889,6 +1973,12 @@ export default function AgentBuilderShell({
       return;
     }
     const requestId = ++skillDagRequestIdRef.current;
+    const requestIsCurrent = () => isCurrentAgentOperation(
+      agentId,
+      selectedAgentIdRef.current,
+      requestId,
+      skillDagRequestIdRef.current,
+    );
     setSkillDagLoading(true);
     setSkillDagError("");
     try {
@@ -1899,14 +1989,14 @@ export default function AgentBuilderShell({
       if (!response.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
-      if (!isLatestSkillDagRequest(requestId, skillDagRequestIdRef.current)) return;
+      if (!requestIsCurrent()) return;
       setSkillDagGraph(body.data);
     } catch (error) {
-      if (!isLatestSkillDagRequest(requestId, skillDagRequestIdRef.current)) return;
+      if (!requestIsCurrent()) return;
       setSkillDagGraph(null);
       setSkillDagError(`Skill 依赖加载失败：${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      if (isLatestSkillDagRequest(requestId, skillDagRequestIdRef.current)) setSkillDagLoading(false);
+      if (requestIsCurrent()) setSkillDagLoading(false);
     }
   }, [selectedAgentId, token]);
 
@@ -2006,10 +2096,22 @@ export default function AgentBuilderShell({
     }
   }, [selectedAgentId, token]);
 
-  const loadProductionReadiness = useCallback(async (versionNoOverride?: number | null) => {
-    if (!token || !selectedAgentId) return null;
+  const loadProductionReadiness = useCallback(async (
+    versionNoOverride?: number | null,
+    agentIdOverride?: string,
+  ) => {
+    const targetAgentId = agentIdOverride ?? selectedAgentId;
+    if (!token || !targetAgentId) return null;
+    const requestId = ++readinessRequestIdRef.current;
+    const requestIsCurrent = () => isCurrentAgentOperation(
+      targetAgentId,
+      selectedAgentIdRef.current,
+      requestId,
+      readinessRequestIdRef.current,
+    );
     const versionNo = versionNoOverride ?? targetReadinessVersionNo;
     if (versionNo == null) {
+      if (!requestIsCurrent()) return null;
       setProductionReadiness(null);
       setReadinessError("暂无可检查的编译版本，请先完成智能体编译。");
       return null;
@@ -2017,23 +2119,25 @@ export default function AgentBuilderShell({
     setReadinessLoading(true);
     setReadinessError(null);
     try {
-      const readinessRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/readiness?versionNo=${encodeURIComponent(String(versionNo))}`, {
+      const readinessRes = await fetch(`/agents/${encodeURIComponent(targetAgentId)}/readiness?versionNo=${encodeURIComponent(String(versionNo))}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
       const { body } = await safeFetchJson<AgentReadinessResult>(readinessRes);
+      if (!requestIsCurrent()) return null;
       if (!readinessRes.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${readinessRes.status}`);
       }
       setProductionReadiness(body.data);
       return body.data;
     } catch (error) {
+      if (!requestIsCurrent()) return null;
       const message = error instanceof Error ? error.message : String(error);
       setProductionReadiness(null);
       setReadinessError(message);
       return null;
     } finally {
-      setReadinessLoading(false);
+      if (requestIsCurrent()) setReadinessLoading(false);
     }
   }, [selectedAgentId, targetReadinessVersionNo, token]);
 
@@ -2393,20 +2497,36 @@ export default function AgentBuilderShell({
       onOpenAgent(agentId);
       return;
     }
+    if (agentOperationPendingRef.current || agentSelectionBlocked) return;
     const target = library.find((item) => item.id === agentId);
     if (!target) return;
+    const selectionRequestId = ++agentSelectionRequestIdRef.current;
+    agentSelectionPendingRef.current = true;
+    selectedAgentIdRef.current = agentId;
+    agentOperationIdRef.current += 1;
+    skillDagRequestIdRef.current += 1;
+    readinessRequestIdRef.current += 1;
+    setIsCompiling(false);
+    setIsAgentSelectionLoading(true);
+    const isCurrentSelection = () => isCurrentAgentSelection(
+      selectionRequestId,
+      agentSelectionRequestIdRef.current,
+      agentId,
+      selectedAgentIdRef.current,
+    );
     try {
       const response = await fetch(`/agents/${encodeURIComponent(agentId)}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
       const { body } = await safeFetchJson<AgentApiRecord>(response);
+      if (!isCurrentSelection()) return;
       if (!response.ok || !body?.success || !body.data) {
         throw new Error(body?.message ?? `HTTP ${response.status}`);
       }
       const refreshed = toAgentRecordFromApi(body.data, orgId, kbs);
       setLibrary((current) => current.map((item) => (item.id === agentId ? refreshed : item)));
-      setSelectedAgentId(agentId);
+      commitSelectedAgentId(agentId);
       setDraft(cloneDraft(refreshed.draft));
       setPublishConfig(clonePublishConfigDraft(refreshed.publishConfig));
       setLoadedAgentBaselineDigest(compilePayloadDigest(refreshed.draft, orgId));
@@ -2427,9 +2547,11 @@ export default function AgentBuilderShell({
       setNotice(`已切换到「${refreshed.name}」，并同步后端最新草稿。`);
       return;
     } catch {
+      if (!isCurrentSelection()) return;
       // Fall back to local snapshot for smoother UX.
     }
-    setSelectedAgentId(agentId);
+    if (!isCurrentSelection()) return;
+    commitSelectedAgentId(agentId);
     setDraft(cloneDraft(target.draft));
     setPublishConfig(clonePublishConfigDraft(target.publishConfig));
     setLoadedAgentBaselineDigest(compilePayloadDigest(target.draft, orgId));
@@ -2502,7 +2624,7 @@ export default function AgentBuilderShell({
         setNotice("已创建新的 Agent。");
         return;
       }
-      setSelectedAgentId(nextAgent.id);
+      commitSelectedAgentId(nextAgent.id);
       setDraft(cloneDraft(nextAgent.draft));
       setPublishConfig(clonePublishConfigDraft(nextAgent.publishConfig));
       setLoadedAgentBaselineDigest(compilePayloadDigest(nextAgent.draft, orgId));
@@ -2527,7 +2649,7 @@ export default function AgentBuilderShell({
 
   const resetEditorAfterDeletedLastAgent = () => {
     const fallbackDraft = createDraft(orgId, kbs.slice(0, 1).map((item) => item.id));
-    setSelectedAgentId("");
+    commitSelectedAgentId("");
     setDraft(fallbackDraft);
     setPublishConfig(createPublishConfigDraft());
     setLoadedAgentBaselineDigest(null);
@@ -2565,7 +2687,7 @@ export default function AgentBuilderShell({
       setDeleteTarget(null);
       if (selectedAgentId === deleteTarget.id) {
         if (fallbackAgent) {
-          setSelectedAgentId(fallbackAgent.id);
+          commitSelectedAgentId(fallbackAgent.id);
           setDraft(cloneDraft(fallbackAgent.draft));
           setPublishConfig(clonePublishConfigDraft(fallbackAgent.publishConfig));
           setLoadedAgentBaselineDigest(compilePayloadDigest(fallbackAgent.draft, orgId));
@@ -2601,27 +2723,41 @@ export default function AgentBuilderShell({
     }
   };
 
-  const persistDraftToBackend = async (options?: { silentSuccessNotice?: boolean }) => {
-    if (!selectedAgentId) return;
+  const persistDraftToBackend = async (options?: {
+    silentSuccessNotice?: boolean;
+    targetAgentId?: string;
+    draftSnapshot?: AgentDraft;
+    publishConfigSnapshot?: PublishConfigDraft;
+  }) => {
+    const targetAgentId = options?.targetAgentId ?? selectedAgentId;
+    if (!canStartAgentWriteOperation(
+      selectedAgentId,
+      selectedAgentIdRef.current,
+      agentSelectionPendingRef.current,
+    ) || targetAgentId !== selectedAgentId) {
+      throw new Error("正在切换智能体，请等待草稿加载完成后再操作。");
+    }
+    const operationDraft = options?.draftSnapshot ?? cloneDraft(draft);
+    const operationPublishConfig = options?.publishConfigSnapshot ?? clonePublishConfigDraft(publishConfig);
     const silentSuccessNotice = options?.silentSuccessNotice ?? false;
     try {
-      const definitionRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}`, {
+      const definitionRes = await fetch(`/agents/${encodeURIComponent(targetAgentId)}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          name: draft.name,
-          avatarBase64: draft.avatarBase64,
-          summary: draft.summary,
-          greeting: draft.greeting,
-          model: draft.model,
-          systemPrompt: draft.systemPrompt,
-          handoffRule: draft.handoffRule,
-          safetyLevel: toBackendSafetyLevel(draft.safetyLevel),
-          executionMode: toBackendExecutionMode(draft.executionMode),
-          versionLabel: draft.version,
+          name: operationDraft.name,
+          avatarBase64: operationDraft.avatarBase64,
+          summary: operationDraft.summary,
+          greeting: operationDraft.greeting,
+          model: operationDraft.model,
+          systemPrompt: operationDraft.systemPrompt,
+          handoffRule: operationDraft.handoffRule,
+          safetyLevel: toBackendSafetyLevel(operationDraft.safetyLevel),
+          executionMode: toBackendExecutionMode(operationDraft.executionMode),
+          versionLabel: operationDraft.version,
           enabled: true,
         }),
       });
@@ -2630,29 +2766,29 @@ export default function AgentBuilderShell({
         throw new Error(definitionBody?.message ?? `HTTP ${definitionRes.status}`);
       }
 
-      const specRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/spec`, {
+      const specRes = await fetch(`/agents/${encodeURIComponent(targetAgentId)}/spec`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ specText: draft.specText }),
+        body: JSON.stringify({ specText: operationDraft.specText }),
       });
       const { body: specBody } = await safeFetchJson<unknown>(specRes);
       if (!specRes.ok || !specBody?.success) {
         throw new Error(specBody?.message ?? `HTTP ${specRes.status}`);
       }
 
-      const bindingsRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/bindings`, {
+      const bindingsRes = await fetch(`/agents/${encodeURIComponent(targetAgentId)}/bindings`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          knowledgeBaseIds: draft.knowledgeBaseIds,
-          toolIds: draft.toolIds,
-          channels: draft.channels,
+          knowledgeBaseIds: operationDraft.knowledgeBaseIds,
+          toolIds: operationDraft.toolIds,
+          channels: operationDraft.channels,
         }),
       });
       const { body: bindingsBody } = await safeFetchJson<unknown>(bindingsRes);
@@ -2660,27 +2796,27 @@ export default function AgentBuilderShell({
         throw new Error(bindingsBody?.message ?? `HTTP ${bindingsRes.status}`);
       }
 
-      const publishConfigRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/publish-configs`, {
+      const publishConfigRes = await fetch(`/agents/${encodeURIComponent(targetAgentId)}/publish-configs`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ publishConfigs: { feishu: publishConfig.feishu } }),
+        body: JSON.stringify({ publishConfigs: { feishu: operationPublishConfig.feishu } }),
       });
       const { body: publishConfigBody } = await safeFetchJson<unknown>(publishConfigRes);
       if (!publishConfigRes.ok || !publishConfigBody?.success) {
         throw new Error(publishConfigBody?.message ?? `HTTP ${publishConfigRes.status}`);
       }
 
-      const skillsRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/skills`, {
+      const skillsRes = await fetch(`/agents/${encodeURIComponent(targetAgentId)}/skills`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          bindings: draft.skillBindings.map((item) => ({
+          bindings: operationDraft.skillBindings.map((item) => ({
             skillId: item.skillId,
             skillCode: item.skillCode,
             activationMode: item.activationMode,
@@ -2698,18 +2834,19 @@ export default function AgentBuilderShell({
       const refreshed = toAgentRecordFromApi(
         {
           ...definitionBody.data,
-          specText: draft.specText,
-          knowledgeBaseIds: draft.knowledgeBaseIds,
-          toolIds: draft.toolIds,
-          channels: draft.channels,
-          publishConfigs: { feishu: publishConfig.feishu },
-          skillBindings: skillsBody.data?.bindings ?? draft.skillBindings,
+          specText: operationDraft.specText,
+          knowledgeBaseIds: operationDraft.knowledgeBaseIds,
+          toolIds: operationDraft.toolIds,
+          channels: operationDraft.channels,
+          publishConfigs: { feishu: operationPublishConfig.feishu },
+          skillBindings: skillsBody.data?.bindings ?? operationDraft.skillBindings,
         },
         orgId,
         kbs,
       );
-      setLibrary((current) => current.map((item) => (item.id === selectedAgentId ? refreshed : item)));
-      setPersistedDraftDigest(persistPayloadDigest(draft, publishConfig, orgId));
+      setLibrary((current) => current.map((item) => (item.id === targetAgentId ? refreshed : item)));
+      if (selectedAgentIdRef.current !== targetAgentId) return;
+      setPersistedDraftDigest(persistPayloadDigest(operationDraft, operationPublishConfig, orgId));
       if (!silentSuccessNotice) {
         setNotice("草稿已保存到后端（definition/spec/bindings/skills/publish-configs）。");
       }
@@ -2720,54 +2857,102 @@ export default function AgentBuilderShell({
 
   const saveFramework = async () => {
     if (!selectedAgentId) return;
+    if (agentOperationPendingRef.current) {
+      setNotice("当前智能体操作尚未完成，请稍后再保存。");
+      return;
+    }
+    const operationAgentId = selectedAgentId;
+    const operationId = ++agentOperationIdRef.current;
+    const operationIsCurrent = () => isCurrentAgentOperation(
+      operationAgentId,
+      selectedAgentIdRef.current,
+      operationId,
+      agentOperationIdRef.current,
+    );
+    agentOperationPendingRef.current = true;
     setIsSaving(true);
     try {
       await persistDraftToBackend();
     } catch (error) {
-      setNotice(`保存失败，当前仅保留本地草稿：${error instanceof Error ? error.message : String(error)}`);
+      if (operationIsCurrent()) {
+        setNotice(`保存失败，当前仅保留本地草稿：${error instanceof Error ? error.message : String(error)}`);
+      }
     } finally {
-      setIsSaving(false);
+      if (operationIsCurrent()) {
+        agentOperationPendingRef.current = false;
+        setIsSaving(false);
+      }
     }
   };
 
   const compileWorkflow = async () => {
+    if (!canStartAgentWriteOperation(
+      selectedAgentId,
+      selectedAgentIdRef.current,
+      agentSelectionPendingRef.current,
+    )) {
+      setNotice("正在切换智能体，请等待草稿加载完成后再编译。");
+      return;
+    }
     if (!compileNeedsRebuild) {
       setPublishReadyFromCompile(false);
       setNotice("当前智能体内容无变化，无需重新编译，也不会新增版本。");
       return;
     }
+    if (agentOperationPendingRef.current) {
+      setNotice("当前智能体操作尚未完成，请稍后再编译。");
+      return;
+    }
+    const operationAgentId = selectedAgentId;
+    const operationDraft = cloneDraft(draft);
+    const operationPublishConfig = clonePublishConfigDraft(publishConfig);
+    const operationId = ++agentOperationIdRef.current;
+    const operationIsCurrent = () => isCurrentAgentOperation(
+      operationAgentId,
+      selectedAgentIdRef.current,
+      operationId,
+      agentOperationIdRef.current,
+    );
+    agentOperationPendingRef.current = true;
     setIsCompiling(true);
     setNotice("正在先保存草稿，再进行智能体编译…");
     try {
       if (selectedAgentId) {
         setIsSaving(true);
         try {
-          await persistDraftToBackend({ silentSuccessNotice: true });
+          await persistDraftToBackend({
+            silentSuccessNotice: true,
+            targetAgentId: operationAgentId,
+            draftSnapshot: operationDraft,
+            publishConfigSnapshot: operationPublishConfig,
+          });
         } finally {
           setIsSaving(false);
         }
+        if (!operationIsCurrent()) return;
       }
       try {
-        const response = await fetch(`/agents/${encodeURIComponent(selectedAgentId || "draft")}/compile`, {
+        const response = await fetch(`/agents/${encodeURIComponent(operationAgentId || "draft")}/compile`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
           body: JSON.stringify({
-            ...draft,
+            ...operationDraft,
             orgId,
-            skillRefs: draft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
+            skillRefs: operationDraft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
           }),
         });
         const { body } = await safeFetchJson<CompileResponse>(response);
+        if (!operationIsCurrent()) return;
         if (!response.ok || !body?.success || !body.data) {
           throw new Error(body?.message ?? `HTTP ${response.status}`);
         }
         setCompileArtifact(toCompileArtifact(body.data));
         setActiveCompileTab("preview");
         setDebugTrace(null);
-        const digest = compilePayloadDigest(draft, orgId);
+        const digest = compilePayloadDigest(operationDraft, orgId);
         setLastSuccessfulBackendCompileDigest(digest);
         setLoadedAgentBaselineDigest(digest);
         setPublishReadyFromCompile(body.data.changed === true && body.data.draftVersionNo != null);
@@ -2778,8 +2963,8 @@ export default function AgentBuilderShell({
         setSkillDagVersionNo(compiledVersionNo);
         setSkillDagGraph(null);
         setSkillDagError("");
-        if (selectedAgentId) {
-          void loadAgentSkillDag(compiledVersionNo, selectedAgentId);
+        if (operationAgentId) {
+          void loadAgentSkillDag(compiledVersionNo, operationAgentId);
         }
         setProductionReadiness(null);
         setReadinessError(null);
@@ -2787,6 +2972,7 @@ export default function AgentBuilderShell({
         void loadVersionHistory();
       } catch (error) {
         await new Promise((resolve) => window.setTimeout(resolve, 320));
+        if (!operationIsCurrent()) return;
         setCompileArtifact(generateCompileArtifact(draft, kbs, toolCatalog));
         setActiveCompileTab("preview");
         setDebugTrace(null);
@@ -2798,51 +2984,80 @@ export default function AgentBuilderShell({
         setNotice(`后端 compile 接口暂不可用，已回退到前端模拟编译：${error instanceof Error ? error.message : String(error)}`);
       }
     } catch (error) {
+      if (!operationIsCurrent()) return;
       setPublishReadyFromCompile(false);
       setNotice(`保存失败，已取消本次编译：${error instanceof Error ? error.message : String(error)}`);
     } finally {
-      setIsCompiling(false);
+      if (operationIsCurrent()) {
+        agentOperationPendingRef.current = false;
+        setIsCompiling(false);
+      }
     }
   };
 
   const runDebug = async () => {
-    if (!selectedAgentId) {
+    if (!canStartAgentWriteOperation(
+      selectedAgentId,
+      selectedAgentIdRef.current,
+      agentSelectionPendingRef.current,
+    )) {
       setNotice("请先选择或创建一个 Agent，再试运行。");
       return;
     }
+    if (agentOperationPendingRef.current) {
+      setNotice("当前智能体操作尚未完成，请稍后再试运行。");
+      return;
+    }
+    const operationAgentId = selectedAgentId;
+    const operationDraft = cloneDraft(draft);
+    const operationDebugInput = debugInput;
+    const operationPreview = compileArtifact.preview;
+    const operationId = ++agentOperationIdRef.current;
+    const operationIsCurrent = () => isCurrentAgentOperation(
+      operationAgentId,
+      selectedAgentIdRef.current,
+      operationId,
+      agentOperationIdRef.current,
+    );
+    agentOperationPendingRef.current = true;
     setIsDebugging(true);
     let finalTrace: DebugTraceResult | null = null;
     try {
-      const response = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/debug`, {
+      const response = await fetch(`/agents/${encodeURIComponent(operationAgentId)}/debug`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          input: debugInput,
-          requestedKnowledgeBaseIds: draft.knowledgeBaseIds.map((item) => String(item)),
-          skillRefs: draft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
+          input: operationDebugInput,
+          requestedKnowledgeBaseIds: operationDraft.knowledgeBaseIds.map((item) => String(item)),
+          skillRefs: operationDraft.skillBindings.filter((item) => item.enabled).map((item) => item.skillCode),
         }),
       });
       const { body } = await safeFetchJson<DebugRuntimePayload>(response);
+      if (!operationIsCurrent()) return;
       if (!body?.data) {
         throw new Error("后端未返回调试结果");
       }
-      finalTrace = buildBackendDebugTrace(compileArtifact.preview, draft, debugInput, body.data);
+      finalTrace = buildBackendDebugTrace(operationPreview, operationDraft, operationDebugInput, body.data);
       setDebugTrace(finalTrace);
     } catch (error) {
       await new Promise((resolve) => window.setTimeout(resolve, 240));
-      finalTrace = simulateDebugTrace(compileArtifact.preview, draft, debugInput);
+      if (!operationIsCurrent()) return;
+      finalTrace = simulateDebugTrace(operationPreview, operationDraft, operationDebugInput);
       finalTrace.notes = [
         `后端调试接口暂不可用，已回退到前端模拟路径：${error instanceof Error ? error.message : String(error)}`,
         ...finalTrace.notes,
       ];
       setDebugTrace(finalTrace);
     } finally {
-      setActiveCompileTab("debug");
-      setIsDebugging(false);
-      void loadRuntimeExecutions();
+      if (operationIsCurrent()) {
+        agentOperationPendingRef.current = false;
+        setActiveCompileTab("debug");
+        setIsDebugging(false);
+        void loadRuntimeExecutions();
+      }
     }
   };
 
@@ -2866,12 +3081,14 @@ export default function AgentBuilderShell({
     return persistPayloadDigest(draft, publishConfig, orgId) !== persistedDraftDigest;
   }, [draft, orgId, persistedDraftDigest, publishConfig]);
   const publishBlockedByCompileGate = !publishReadyFromCompile;
-  const publishBlocked = isPublishing || isCompiling || compileStaleBlocksPublish || publishBlockedByCompileGate;
-  const publishBlockedTitle = publishBlockedByCompileGate
-    ? "请先执行「智能体编译」，且编译结果检测到变化并生成新版本后，才可发布。"
-    : (compileStaleBlocksPublish
-      ? "请先完成「智能体编译」，使编译产物与当前草稿一致后再发布。"
-      : undefined);
+  const publishBlocked = agentWriteBlocked || isPublishing || isCompiling || compileStaleBlocksPublish || publishBlockedByCompileGate;
+  const publishBlockedTitle = agentWriteBlocked
+    ? "正在加载选中的智能体。"
+    : (publishBlockedByCompileGate
+      ? "请先执行「智能体编译」，且编译结果检测到变化并生成新版本后，才可发布。"
+      : (compileStaleBlocksPublish
+        ? "请先完成「智能体编译」，使编译产物与当前草稿一致后再发布。"
+        : undefined));
 
   const activePublishMeta = CHANNEL_OPTIONS.find((channel) => channel.id === activePublishChannel) ?? CHANNEL_OPTIONS[0];
   const activePublishEnabled = draft.channels.includes(activePublishChannel);
@@ -3077,13 +3294,13 @@ export default function AgentBuilderShell({
       </div>
       {evaluationError ? <p className="cici-builder-production-gate__error">{evaluationError}</p> : null}
       <div className="cici-builder-evaluation-gate__actions">
-        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void createDefaultEvaluationSuite()} disabled={evaluationLoading || Boolean(activeEvaluationSuite)}>
+        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void createDefaultEvaluationSuite()} disabled={agentWriteBlocked || evaluationLoading || Boolean(activeEvaluationSuite)}>
           创建阻塞评测集
         </button>
-        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void addP0EvaluationCaseAndRun()} disabled={evaluationLoading || !targetReadinessVersionNo}>
+        <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void addP0EvaluationCaseAndRun()} disabled={agentWriteBlocked || evaluationLoading || !targetReadinessVersionNo}>
           添加 P0 用例并运行
         </button>
-        <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void runEvaluationSuite()} disabled={evaluationLoading || !activeEvaluationSuite || !targetReadinessVersionNo}>
+        <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void runEvaluationSuite()} disabled={agentWriteBlocked || evaluationLoading || !activeEvaluationSuite || !targetReadinessVersionNo}>
           运行评测
         </button>
       </div>
@@ -3091,7 +3308,18 @@ export default function AgentBuilderShell({
   );
 
   const publishLatestVersion = async () => {
-    if (!selectedAgentId) return;
+    if (!canStartAgentWriteOperation(
+      selectedAgentId,
+      selectedAgentIdRef.current,
+      agentSelectionPendingRef.current,
+    )) {
+      setNotice("正在切换智能体，请等待草稿加载完成后再发布。");
+      return;
+    }
+    if (agentOperationPendingRef.current) {
+      setNotice("当前智能体操作尚未完成，请稍后再发布。");
+      return;
+    }
     if (publishBlockedByCompileGate) {
       setNotice("请先执行「智能体编译」，且检测到变化生成新版本后，再发布。");
       return;
@@ -3102,14 +3330,24 @@ export default function AgentBuilderShell({
       );
       return;
     }
+    const operationAgentId = selectedAgentId;
+    const operationId = ++agentOperationIdRef.current;
+    const operationIsCurrent = () => isCurrentAgentOperation(
+      operationAgentId,
+      selectedAgentIdRef.current,
+      operationId,
+      agentOperationIdRef.current,
+    );
+    agentOperationPendingRef.current = true;
     setIsPublishing(true);
     try {
       // Step 1: check for existing compiled versions
-      const versionsRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/versions`, {
+      const versionsRes = await fetch(`/agents/${encodeURIComponent(operationAgentId)}/versions`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
       const { body: versionsBody } = await safeFetchJson<Array<{ versionNo: number }>>(versionsRes);
+      if (!operationIsCurrent()) return;
       if (!versionsRes.ok || !versionsBody?.success) {
         throw new Error(versionsBody?.message ?? `获取版本列表失败：HTTP ${versionsRes.status}`);
       }
@@ -3122,8 +3360,14 @@ export default function AgentBuilderShell({
       if (latestVersionNo == null) {
         throw new Error("未找到可发布的新编译版本，请先执行「智能体编译」。");
       }
+      const readiness = await loadProductionReadiness(latestVersionNo, operationAgentId);
+      if (!operationIsCurrent()) return;
+      if (!readiness) {
+        setActiveCompileTab("publish");
+        setNotice("发布已停止：生产就绪检查未完成，请重试检查后再发布。");
+        return;
+      }
       setLatestCompiledVersionNo(latestVersionNo);
-      const readiness = await loadProductionReadiness(latestVersionNo);
       if (readiness?.blocked) {
         setActiveCompileTab(readiness.checks.some((check) => check.code.toLowerCase().includes("eval") && check.status !== "passed") ? "evaluation" : "publish");
         setNotice("发布已停止：生产就绪检查仍有阻塞项，请先处理检查清单。");
@@ -3131,7 +3375,7 @@ export default function AgentBuilderShell({
       }
 
       // Step 3: publish the target version
-      const publishRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/publish`, {
+      const publishRes = await fetch(`/agents/${encodeURIComponent(operationAgentId)}/publish`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3140,13 +3384,14 @@ export default function AgentBuilderShell({
         body: JSON.stringify({ versionNo: latestVersionNo }),
       });
       const { body: publishBody } = await safeFetchJson<{ versionNo: number }>(publishRes);
+      if (!operationIsCurrent()) return;
       const publishPayload = publishBody?.data;
       if (!publishRes.ok || !publishBody?.success || !publishPayload) {
         throw new Error(publishBody?.message ?? `HTTP ${publishRes.status}`);
       }
       setLibrary((current) =>
         current.map((item) =>
-          item.id === selectedAgentId
+          item.id === operationAgentId
             ? { ...item, status: "已发布", lastEdited: "刚刚" }
             : item,
         ),
@@ -3158,26 +3403,52 @@ export default function AgentBuilderShell({
       void loadRuntimeExecutions();
       void loadRuntimeTriggers();
     } catch (error) {
-      setNotice(`发布失败：${error instanceof Error ? error.message : String(error)}`);
+      if (operationIsCurrent()) {
+        setNotice(`发布失败：${error instanceof Error ? error.message : String(error)}`);
+      }
     } finally {
-      setIsPublishing(false);
+      if (operationIsCurrent()) {
+        agentOperationPendingRef.current = false;
+        setIsPublishing(false);
+      }
     }
   };
 
   const rollbackToPreviousVersion = async () => {
-    if (!selectedAgentId) return;
+    if (!canStartAgentWriteOperation(
+      selectedAgentId,
+      selectedAgentIdRef.current,
+      agentSelectionPendingRef.current,
+    )) {
+      setNotice("正在切换智能体，请等待版本信息加载完成后再回滚。");
+      return;
+    }
+    if (agentOperationPendingRef.current) {
+      setNotice("当前智能体操作尚未完成，请稍后再回滚。");
+      return;
+    }
+    const operationAgentId = selectedAgentId;
+    const operationId = ++agentOperationIdRef.current;
+    const operationIsCurrent = () => isCurrentAgentOperation(
+      operationAgentId,
+      selectedAgentIdRef.current,
+      operationId,
+      agentOperationIdRef.current,
+    );
+    agentOperationPendingRef.current = true;
     setIsPublishing(true);
     try {
-      const versionsRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/versions`, {
+      const versionsRes = await fetch(`/agents/${encodeURIComponent(operationAgentId)}/versions`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
       const { body: versionsBody } = await safeFetchJson<Array<{ versionNo: number }>>(versionsRes);
+      if (!operationIsCurrent()) return;
       if (!versionsRes.ok || !versionsBody?.success || !versionsBody.data || versionsBody.data.length < 2) {
         throw new Error(versionsBody?.message ?? "没有可回滚的历史版本。");
       }
       const rollbackVersionNo = versionsBody.data[1].versionNo;
-      const rollbackRes = await fetch(`/agents/${encodeURIComponent(selectedAgentId)}/rollback`, {
+      const rollbackRes = await fetch(`/agents/${encodeURIComponent(operationAgentId)}/rollback`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -3186,6 +3457,7 @@ export default function AgentBuilderShell({
         body: JSON.stringify({ versionNo: rollbackVersionNo }),
       });
       const { body: rollbackBody } = await safeFetchJson<{ versionNo: number }>(rollbackRes);
+      if (!operationIsCurrent()) return;
       if (!rollbackRes.ok || !rollbackBody?.success || !rollbackBody.data) {
         throw new Error(rollbackBody?.message ?? `HTTP ${rollbackRes.status}`);
       }
@@ -3194,9 +3466,14 @@ export default function AgentBuilderShell({
       void loadRuntimeExecutions();
       void loadRuntimeTriggers();
     } catch (error) {
-      setNotice(`回滚失败：${error instanceof Error ? error.message : String(error)}`);
+      if (operationIsCurrent()) {
+        setNotice(`回滚失败：${error instanceof Error ? error.message : String(error)}`);
+      }
     } finally {
-      setIsPublishing(false);
+      if (operationIsCurrent()) {
+        agentOperationPendingRef.current = false;
+        setIsPublishing(false);
+      }
     }
   };
 
@@ -3362,7 +3639,7 @@ export default function AgentBuilderShell({
           <p className="cici-builder-sidebar__eyebrow">Agent 构建</p>
           <p className="cici-builder-sidebar__lead">让业务人员写流程文本，让系统编译成可执行 workflow code。</p>
         </div>
-        <button type="button" className="cici-builder-sidebar__create" onClick={() => void createAgent()} disabled={isLoadingLibrary}>+ 新建 Agent</button>
+        <button type="button" className="cici-builder-sidebar__create" onClick={() => void createAgent()} disabled={isLoadingLibrary || agentSelectionBlocked}>+ 新建 Agent</button>
       </div>
       <div className="cici-sessions__search cici-builder-sidebar__search">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -3373,9 +3650,12 @@ export default function AgentBuilderShell({
           <article
             key={item.id}
             className={`cici-agent-card${pageMode === "editor" && item.id === selectedAgentId ? " is-active" : ""}`}
-            onClick={() => void selectAgent(item.id)}
+            onClick={() => {
+              if (!agentSelectionBlocked) void selectAgent(item.id);
+            }}
+            aria-disabled={agentSelectionBlocked}
           >
-            <button type="button" className="cici-agent-card__select">
+            <button type="button" className="cici-agent-card__select" disabled={agentSelectionBlocked}>
               <div className="cici-agent-card__top">
                 <span className="cici-agent-card__name">{item.name}</span>
                 <div className="cici-agent-card__badges">
@@ -3398,7 +3678,7 @@ export default function AgentBuilderShell({
                     event.stopPropagation();
                     setDeleteTarget(item);
                   }}
-                  disabled={isDeletingAgent && deleteTarget?.id === item.id}
+                  disabled={agentSelectionBlocked || (isDeletingAgent && deleteTarget?.id === item.id)}
                 >
                   删除
                 </button>
@@ -3774,20 +4054,20 @@ export default function AgentBuilderShell({
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
                 onClick={() => void saveFramework()}
-                disabled={isSaving || !hasDraftChanges || !canEditSelectedAgent}
-                title={!canEditSelectedAgent ? "当前账号没有编辑权限。" : !hasDraftChanges ? "当前内容无变化，无需保存草稿。" : undefined}
+                disabled={agentWriteBlocked || isSaving || !hasDraftChanges || !canEditSelectedAgent}
+                title={agentWriteBlocked ? "正在加载选中的智能体。" : !canEditSelectedAgent ? "当前账号没有编辑权限。" : !hasDraftChanges ? "当前内容无变化，无需保存草稿。" : undefined}
               >
                 {isSaving ? "保存中…" : "保存草稿"}
               </button>
-              <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void rollbackToPreviousVersion()} disabled={isPublishing}>
+              <button type="button" className="cici-builder__action cici-builder__action--ghost" onClick={() => void rollbackToPreviousVersion()} disabled={agentWriteBlocked || isPublishing}>
                 {isPublishing ? "处理中…" : "回滚版本"}
               </button>
               <button
                 type="button"
                 className="cici-builder__action cici-builder__action--ghost"
                 onClick={() => void compileWorkflow()}
-                disabled={isCompiling || !canEditSelectedAgent}
-                title={!canEditSelectedAgent ? "当前账号没有编辑权限。" : !compileNeedsRebuild ? "当前编译输入无变化，编译后将提示无变化且不新增版本。" : undefined}
+                disabled={agentWriteBlocked || isCompiling || !canEditSelectedAgent}
+                title={agentWriteBlocked ? "正在加载选中的智能体。" : !canEditSelectedAgent ? "当前账号没有编辑权限。" : !compileNeedsRebuild ? "当前编译输入无变化，编译后将提示无变化且不新增版本。" : undefined}
               >
                 {isCompiling ? "编译中…" : "智能体编译"}
               </button>
@@ -4329,7 +4609,7 @@ export default function AgentBuilderShell({
                     每次试运行结束会在「执行记录」中追加一条，来源为「试运行」（与生产触发共用列表，见 FEAT-004 方案 A）。
                   </p>
                   <div className="cici-builder-debug__actions">
-                    <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void runDebug()} disabled={isDebugging}>
+                    <button type="button" className="cici-builder__action cici-builder__action--primary" onClick={() => void runDebug()} disabled={agentWriteBlocked || isDebugging}>
                       {isDebugging ? "试运行中…" : "试运行并高亮路径"}
                     </button>
                     <button

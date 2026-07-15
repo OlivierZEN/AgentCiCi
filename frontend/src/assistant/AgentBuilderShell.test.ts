@@ -5,6 +5,10 @@ import {
   applyAgentDetailToList,
   buildAgentSkillDagUrl,
   buildDebugSkillResolutionChain,
+  canSelectAgentDuringOperation,
+  canStartAgentWriteOperation,
+  isCurrentAgentOperation,
+  isCurrentAgentSelection,
   isLatestSkillDagRequest,
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
@@ -25,6 +29,32 @@ describe("Agent Builder Skill DAG lifecycle", () => {
     expect(isLatestSkillDagRequest(7, 8)).toBe(false);
   });
 
+  it("rejects compile follow-up work after the selected Agent changes", () => {
+    expect(isCurrentAgentOperation("agent-a", "agent-a", 4, 4)).toBe(true);
+    expect(isCurrentAgentOperation("agent-a", "agent-b", 4, 4)).toBe(false);
+    expect(isCurrentAgentOperation("agent-a", "agent-a", 3, 4)).toBe(false);
+  });
+
+  it("rejects an older Agent detail response after a newer selection starts", () => {
+    expect(isCurrentAgentSelection(6, 6, "agent-b", "agent-b")).toBe(true);
+    expect(isCurrentAgentSelection(5, 6, "agent-a", "agent-b")).toBe(false);
+    expect(isCurrentAgentSelection(6, 6, "agent-a", "agent-b")).toBe(false);
+  });
+
+  it("blocks save and compile while the selected Agent detail is changing", () => {
+    expect(canStartAgentWriteOperation("agent-a", "agent-b", true)).toBe(false);
+    expect(canStartAgentWriteOperation("agent-b", "agent-b", true)).toBe(false);
+    expect(canStartAgentWriteOperation("agent-b", "agent-b", false)).toBe(true);
+  });
+
+  it("blocks Agent selection while target-bound operations are running", () => {
+    expect(canSelectAgentDuringOperation(false, false, false, false)).toBe(true);
+    expect(canSelectAgentDuringOperation(true, false, false, false)).toBe(false);
+    expect(canSelectAgentDuringOperation(false, true, false, false)).toBe(false);
+    expect(canSelectAgentDuringOperation(false, false, true, false)).toBe(false);
+    expect(canSelectAgentDuringOperation(false, false, false, true)).toBe(false);
+  });
+
   it("builds a structured pinned Skill resolution chain for debug", () => {
     expect(buildDebugSkillResolutionChain(
       [{
@@ -33,6 +63,8 @@ describe("Agent Builder Skill DAG lifecycle", () => {
         skillVersionNo: 3,
         templateCode: "crm-standard",
         templateVersionNo: 2,
+        referenceMode: "PINNED_VERSION",
+        riskLevel: "LOW",
       }],
       [{
         skillId: 7,
@@ -50,9 +82,34 @@ describe("Agent Builder Skill DAG lifecycle", () => {
       code: "crm.lookup",
       versionLabel: "v3",
       referenceLabel: "模板 crm-standard@v2",
+      riskLabel: "低风险",
+      activationLabel: "工作流钉住",
+    }]);
+  });
+
+  it("uses draft governance only for capability fallback resolution", () => {
+    expect(buildDebugSkillResolutionChain(
+      [{
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        referenceMode: "capability-fallback",
+        riskLevel: null,
+      }],
+      [{
+        skillId: 7,
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        riskLevel: "HIGH",
+        activationMode: "intent-route",
+        activationCondition: "需要客户信息",
+        priority: 10,
+        enabled: true,
+      }],
+    )[0]).toMatchObject({
+      referenceLabel: "当前绑定",
       riskLabel: "高风险",
       activationLabel: "意图路由",
-    }]);
+    });
   });
 });
 

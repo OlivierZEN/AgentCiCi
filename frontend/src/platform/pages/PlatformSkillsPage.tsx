@@ -137,6 +137,34 @@ export function isLatestPlatformSkillGraphRequest(requestId: number, latestReque
   return requestId === latestRequestId;
 }
 
+export function isCurrentPlatformSkillRequest(
+  requestId: number,
+  latestRequestId: number,
+  requestedSkillId: number,
+  selectedSkillId: number | null,
+  requestEpoch: number,
+  currentEpoch: number,
+): boolean {
+  return requestId === latestRequestId
+    && requestedSkillId === selectedSkillId
+    && requestEpoch === currentEpoch;
+}
+
+export function resolvePlatformSkillRefreshTarget(
+  operationSkillId: number,
+  currentSelectedSkillId: number | null,
+): number {
+  return currentSelectedSkillId ?? operationSkillId;
+}
+
+export function canStartPlatformSkillWriteOperation(
+  selectedSkillId: number | null,
+  loadedSkillId: number | null,
+  selectionLoading: boolean,
+): boolean {
+  return selectedSkillId != null && selectedSkillId === loadedSkillId && !selectionLoading;
+}
+
 export function preparePlatformSkillGraphForDisplay(graph: SkillDependencyGraphView): SkillDependencyGraphView {
   if (graph.summary.agentCount > 0 || graph.summary.workflowVersionCount > 0) return graph;
   return { ...graph, nodes: [], edges: [] };
@@ -271,6 +299,20 @@ function versionToDraft(version: PlatformSkillVersion): DraftForm {
   };
 }
 
+function emptyDraftForm(): DraftForm {
+  return {
+    name: "",
+    description: "",
+    promptFragment: "",
+    toolWhitelist: "",
+    kbWhitelist: "",
+    handoffRule: "",
+    outputContract: "",
+    riskLevel: "MEDIUM",
+    changelog: "",
+  };
+}
+
 function policyVersionToDraft(version: PolicyBundleVersion): PolicyBundleDraftForm {
   return {
     name: version.name ?? "",
@@ -291,17 +333,7 @@ export default function PlatformSkillsPage() {
   const [dependencyGraph, setDependencyGraph] = useState<SkillDependencyGraphView | null>(null);
   const [dependencyGraphLoading, setDependencyGraphLoading] = useState(false);
   const [dependencyGraphError, setDependencyGraphError] = useState("");
-  const [draft, setDraft] = useState<DraftForm>({
-    name: "",
-    description: "",
-    promptFragment: "",
-    toolWhitelist: "",
-    kbWhitelist: "",
-    handoffRule: "",
-    outputContract: "",
-    riskLevel: "MEDIUM",
-    changelog: "",
-  });
+  const [draft, setDraft] = useState<DraftForm>(() => emptyDraftForm());
   const [governance, setGovernance] = useState<GovernanceForm>({
     enabled: true,
     visibility: "VISIBLE",
@@ -315,11 +347,16 @@ export default function PlatformSkillsPage() {
     sourceSkillCodes: "",
   });
   const [loading, setLoading] = useState(false);
+  const [skillSelectionLoading, setSkillSelectionLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const versionRequestIdRef = useRef(0);
   const dependencyGraphRequestIdRef = useRef(0);
+  const skillListRequestIdRef = useRef(0);
+  const selectedSkillIdRef = useRef<number | null>(null);
+  const skillSelectionEpochRef = useRef(0);
+  const skillSelectionLoadingRef = useRef(false);
 
   const selectedSkill = useMemo(
     () => skills.find((item) => item.id === selectedSkillId) ?? null,
@@ -332,20 +369,34 @@ export default function PlatformSkillsPage() {
 
   async function loadSkills(preferredId?: number | null) {
     if (!token) return;
+    const listRequestId = ++skillListRequestIdRef.current;
+    const selectionEpoch = ++skillSelectionEpochRef.current;
     setLoading(true);
     setError("");
     try {
       const res = await fetch(`${PLATFORM_API_BASE}/skills`, { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "加载平台技能失败");
+      if (listRequestId !== skillListRequestIdRef.current || selectionEpoch !== skillSelectionEpochRef.current) return;
       const rows = (json.data ?? []) as PlatformSkill[];
       setSkills(rows);
       await loadPolicyBundle();
-      const nextId = preferredId ?? selectedSkillId ?? rows[0]?.id ?? null;
+      if (listRequestId !== skillListRequestIdRef.current || selectionEpoch !== skillSelectionEpochRef.current) return;
+      const nextId = preferredId ?? selectedSkillIdRef.current ?? rows[0]?.id ?? null;
+      selectedSkillIdRef.current = nextId;
       setSelectedSkillId(nextId);
       if (nextId != null) {
-        await Promise.all([loadVersions(nextId, rows), loadSkillDependencyGraph(nextId)]);
+        skillSelectionLoadingRef.current = true;
+        setSkillSelectionLoading(true);
+        setVersions([]);
+        setDraft(emptyDraftForm());
+        await Promise.all([
+          loadVersions(nextId, rows, selectionEpoch),
+          loadSkillDependencyGraph(nextId, selectionEpoch),
+        ]);
       } else {
+        skillSelectionLoadingRef.current = false;
+        setSkillSelectionLoading(false);
         versionRequestIdRef.current += 1;
         dependencyGraphRequestIdRef.current += 1;
         setVersions([]);
@@ -353,9 +404,13 @@ export default function PlatformSkillsPage() {
         setDependencyGraphError("");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载平台技能失败");
+      if (listRequestId === skillListRequestIdRef.current) {
+        skillSelectionLoadingRef.current = false;
+        setSkillSelectionLoading(false);
+        setError(err instanceof Error ? err.message : "加载平台技能失败");
+      }
     } finally {
-      setLoading(false);
+      if (listRequestId === skillListRequestIdRef.current) setLoading(false);
     }
   }
 
@@ -390,7 +445,11 @@ export default function PlatformSkillsPage() {
     }
   }
 
-  async function loadVersions(skillId: number, skillRows?: PlatformSkill[]) {
+  async function loadVersions(
+    skillId: number,
+    skillRows?: PlatformSkill[],
+    selectionEpoch = skillSelectionEpochRef.current,
+  ) {
     if (!token) return;
     const requestId = ++versionRequestIdRef.current;
     setError("");
@@ -400,7 +459,14 @@ export default function PlatformSkillsPage() {
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "加载版本失败");
-      if (requestId !== versionRequestIdRef.current) return;
+      if (!isCurrentPlatformSkillRequest(
+        requestId,
+        versionRequestIdRef.current,
+        skillId,
+        selectedSkillIdRef.current,
+        selectionEpoch,
+        skillSelectionEpochRef.current,
+      )) return;
       const rows = (json.data ?? []) as PlatformSkillVersion[];
       setVersions(rows);
       const currentSkill = (skillRows ?? skills).find((item) => item.id === skillId) ?? null;
@@ -419,13 +485,35 @@ export default function PlatformSkillsPage() {
         });
       }
     } catch (err) {
-      if (requestId === versionRequestIdRef.current) {
+      if (isCurrentPlatformSkillRequest(
+        requestId,
+        versionRequestIdRef.current,
+        skillId,
+        selectedSkillIdRef.current,
+        selectionEpoch,
+        skillSelectionEpochRef.current,
+      )) {
         setError(err instanceof Error ? err.message : "加载版本失败");
+      }
+    } finally {
+      if (isCurrentPlatformSkillRequest(
+        requestId,
+        versionRequestIdRef.current,
+        skillId,
+        selectedSkillIdRef.current,
+        selectionEpoch,
+        skillSelectionEpochRef.current,
+      )) {
+        skillSelectionLoadingRef.current = false;
+        setSkillSelectionLoading(false);
       }
     }
   }
 
-  async function loadSkillDependencyGraph(skillId: number) {
+  async function loadSkillDependencyGraph(
+    skillId: number,
+    selectionEpoch = skillSelectionEpochRef.current,
+  ) {
     if (!token) return;
     const requestId = ++dependencyGraphRequestIdRef.current;
     setDependencyGraph(null);
@@ -439,23 +527,53 @@ export default function PlatformSkillsPage() {
       if (!res.ok || !json.success || !json.data) {
         throw new Error(json.message || "加载 Skill 依赖失败");
       }
-      if (!isLatestPlatformSkillGraphRequest(requestId, dependencyGraphRequestIdRef.current)) return;
+      if (!isCurrentPlatformSkillRequest(
+        requestId,
+        dependencyGraphRequestIdRef.current,
+        skillId,
+        selectedSkillIdRef.current,
+        selectionEpoch,
+        skillSelectionEpochRef.current,
+      )) return;
       setDependencyGraph(json.data as SkillDependencyGraphView);
     } catch (err) {
-      if (!isLatestPlatformSkillGraphRequest(requestId, dependencyGraphRequestIdRef.current)) return;
+      if (!isCurrentPlatformSkillRequest(
+        requestId,
+        dependencyGraphRequestIdRef.current,
+        skillId,
+        selectedSkillIdRef.current,
+        selectionEpoch,
+        skillSelectionEpochRef.current,
+      )) return;
       setDependencyGraph(null);
       setDependencyGraphError(err instanceof Error ? err.message : "加载 Skill 依赖失败");
     } finally {
-      if (isLatestPlatformSkillGraphRequest(requestId, dependencyGraphRequestIdRef.current)) {
+      if (isCurrentPlatformSkillRequest(
+        requestId,
+        dependencyGraphRequestIdRef.current,
+        skillId,
+        selectedSkillIdRef.current,
+        selectionEpoch,
+        skillSelectionEpochRef.current,
+      )) {
         setDependencyGraphLoading(false);
       }
     }
   }
 
   function selectSkill(skillId: number) {
-    if (skillId === selectedSkillId) return;
+    if (skillId === selectedSkillIdRef.current) return;
+    const selectionEpoch = ++skillSelectionEpochRef.current;
+    skillSelectionLoadingRef.current = true;
+    selectedSkillIdRef.current = skillId;
+    setSkillSelectionLoading(true);
     setSelectedSkillId(skillId);
-    void Promise.all([loadVersions(skillId), loadSkillDependencyGraph(skillId)]);
+    setVersions([]);
+    setDraft(emptyDraftForm());
+    void Promise.all([
+      loadVersions(skillId, undefined, selectionEpoch),
+      loadSkillDependencyGraph(skillId, selectionEpoch),
+    ]);
   }
 
   async function savePolicyDraft() {
@@ -483,7 +601,7 @@ export default function PlatformSkillsPage() {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "保存策略草稿失败");
       setMessage("核心策略草稿版本已创建。");
-      await loadSkills(selectedSkillId);
+      await loadSkills(selectedSkillIdRef.current);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存策略草稿失败");
     } finally {
@@ -507,7 +625,7 @@ export default function PlatformSkillsPage() {
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "应用策略版本失败");
       setMessage(action === "publish" ? `核心策略已发布 v${versionNo}` : `核心策略已回滚到 v${versionNo}`);
-      await loadSkills(selectedSkillId);
+      await loadSkills(selectedSkillIdRef.current);
     } catch (err) {
       setError(err instanceof Error ? err.message : "应用策略版本失败");
     } finally {
@@ -521,47 +639,69 @@ export default function PlatformSkillsPage() {
   }, [token]);
 
   async function saveDraft() {
-    if (!selectedSkill) return;
+    if (!selectedSkill || !canStartPlatformSkillWriteOperation(
+      selectedSkill.id,
+      selectedSkillIdRef.current,
+      skillSelectionLoadingRef.current,
+    )) {
+      setError("正在加载选中的 Skill，请稍候再保存。");
+      return;
+    }
+    const operationSkillId = selectedSkill.id;
+    const operationDraft = { ...draft };
     setSaving(true);
     setError("");
     setMessage("");
     try {
-      const res = await fetch(`${PLATFORM_API_BASE}/skills/${selectedSkill.id}/versions`, {
+      const res = await fetch(`${PLATFORM_API_BASE}/skills/${operationSkillId}/versions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: draft.name,
-          description: draft.description,
-          promptFragment: draft.promptFragment,
-          toolWhitelist: csvToArray(draft.toolWhitelist),
-          kbWhitelist: csvToArray(draft.kbWhitelist),
-          handoffRule: draft.handoffRule,
-          outputContract: draft.outputContract,
-          riskLevel: draft.riskLevel,
-          changelog: draft.changelog,
+          name: operationDraft.name,
+          description: operationDraft.description,
+          promptFragment: operationDraft.promptFragment,
+          toolWhitelist: csvToArray(operationDraft.toolWhitelist),
+          kbWhitelist: csvToArray(operationDraft.kbWhitelist),
+          handoffRule: operationDraft.handoffRule,
+          outputContract: operationDraft.outputContract,
+          riskLevel: operationDraft.riskLevel,
+          changelog: operationDraft.changelog,
         }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "保存草稿失败");
-      setMessage("草稿版本已创建。");
-      await loadSkills(selectedSkill.id);
+      if (selectedSkillIdRef.current === operationSkillId) {
+        setMessage("草稿版本已创建。");
+      }
+      await loadSkills(resolvePlatformSkillRefreshTarget(operationSkillId, selectedSkillIdRef.current));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "保存草稿失败");
+      if (selectedSkillIdRef.current === operationSkillId) {
+        setError(err instanceof Error ? err.message : "保存草稿失败");
+      }
     } finally {
       setSaving(false);
     }
   }
 
   async function applyVersion(versionNo: number, action: "publish" | "rollback") {
-    if (!selectedSkill) return;
+    if (!selectedSkill || !canStartPlatformSkillWriteOperation(
+      selectedSkill.id,
+      selectedSkillIdRef.current,
+      skillSelectionLoadingRef.current,
+    )) {
+      setError("正在加载选中的 Skill，请稍候再应用版本。");
+      return;
+    }
+    const operationSkillId = selectedSkill.id;
+    const operationGovernance = { ...governance };
     setSaving(true);
     setError("");
     setMessage("");
     try {
-      const res = await fetch(`${PLATFORM_API_BASE}/skills/${selectedSkill.id}/${action}`, {
+      const res = await fetch(`${PLATFORM_API_BASE}/skills/${operationSkillId}/${action}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -569,17 +709,21 @@ export default function PlatformSkillsPage() {
         },
         body: JSON.stringify({
           versionNo,
-          enabled: governance.enabled,
-          visibility: governance.visibility,
-          bindingPolicy: governance.bindingPolicy,
+          enabled: operationGovernance.enabled,
+          visibility: operationGovernance.visibility,
+          bindingPolicy: operationGovernance.bindingPolicy,
         }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "应用版本失败");
-      setMessage(action === "publish" ? `已发布 v${versionNo}` : `已回滚到 v${versionNo}`);
-      await loadSkills(selectedSkill.id);
+      if (selectedSkillIdRef.current === operationSkillId) {
+        setMessage(action === "publish" ? `已发布 v${versionNo}` : `已回滚到 v${versionNo}`);
+      }
+      await loadSkills(resolvePlatformSkillRefreshTarget(operationSkillId, selectedSkillIdRef.current));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "应用版本失败");
+      if (selectedSkillIdRef.current === operationSkillId) {
+        setError(err instanceof Error ? err.message : "应用版本失败");
+      }
     } finally {
       setSaving(false);
     }
@@ -977,7 +1121,7 @@ export default function PlatformSkillsPage() {
                   </label>
                 </div>
                 <div className="platform-console__actions">
-                  <button className="platform-button platform-button--primary" disabled={saving} onClick={() => void saveDraft()}>
+                  <button className="platform-button platform-button--primary" disabled={saving || skillSelectionLoading} onClick={() => void saveDraft()}>
                     {saving ? "处理中…" : "保存为新草稿版本"}
                   </button>
                 </div>
@@ -1023,7 +1167,7 @@ export default function PlatformSkillsPage() {
                               {!isCurrent ? (
                                 <button
                                   className="platform-button platform-button--primary"
-                                  disabled={saving}
+                                  disabled={saving || skillSelectionLoading}
                                   onClick={() => void applyVersion(version.versionNo, action)}
                                 >
                                   {action === "rollback" ? "回滚到此版本" : "发布此版本"}

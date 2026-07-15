@@ -9,6 +9,8 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+    postgresql:
+      transactional-lock: false
 
 app:
   auth:

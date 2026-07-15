@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class SkillDependencyGraphService {
 
+    private static final int MAX_IMPACT_REFERENCES = 1000;
+
     private static final Map<String, Integer> NODE_TYPE_ORDER = Map.of(
             "AGENT", 0,
             "WORKFLOW_VERSION", 1,
@@ -120,8 +122,16 @@ public class SkillDependencyGraphService {
         GraphBuilder graph = new GraphBuilder();
         graph.addNode(impactSkillNode(skill));
 
-        List<AgentWorkflowSkillRefEntity> references = workflowSkillRefRepository
-                .findByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(orgId, skillId);
+        List<AgentWorkflowSkillRefEntity> fetchedReferences = workflowSkillRefRepository
+                .findTop1001ByOrgIdAndSkillIdOrderBySkillVersionIdAscWorkflowVersionIdAsc(orgId, skillId);
+        List<AgentWorkflowSkillRefEntity> references;
+        if (fetchedReferences.size() > MAX_IMPACT_REFERENCES) {
+            references = fetchedReferences.subList(0, MAX_IMPACT_REFERENCES);
+            graph.addWarning("影响引用超过 " + MAX_IMPACT_REFERENCES + " 条，仅展示前 "
+                    + MAX_IMPACT_REFERENCES + " 条。");
+        } else {
+            references = fetchedReferences;
+        }
         List<Long> workflowVersionIds = references.stream()
                 .map(AgentWorkflowSkillRefEntity::getWorkflowVersionId)
                 .distinct()
@@ -131,10 +141,28 @@ public class SkillDependencyGraphService {
                 ? Map.of()
                 : workflowVersionRepository.findByOrgIdAndIdIn(orgId, workflowVersionIds).stream()
                 .collect(Collectors.toMap(AgentWorkflowVersionEntity::getId, Function.identity()));
+        List<Long> skillVersionIds = references.stream()
+                .map(AgentWorkflowSkillRefEntity::getSkillVersionId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .toList();
+        Map<Long, SkillVersionEntity> skillVersions = skillVersionIds.isEmpty()
+                ? Map.of()
+                : skillVersionRepository.findByOrgIdAndIdIn(orgId, skillVersionIds).stream()
+                .collect(Collectors.toMap(SkillVersionEntity::getId, Function.identity()));
 
-        List<com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity> bindings =
-                agentSkillBindingRepository.findByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
+        List<com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity> fetchedBindings =
+                agentSkillBindingRepository.findTop1001ByOrgIdAndSkillIdAndEnabledTrueOrderByAgentIdAscPriorityAsc(
                         orgId, skillId);
+        List<com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity> bindings;
+        if (fetchedBindings.size() > MAX_IMPACT_REFERENCES) {
+            bindings = fetchedBindings.subList(0, MAX_IMPACT_REFERENCES);
+            graph.addWarning("Agent 当前绑定超过 " + MAX_IMPACT_REFERENCES + " 条，仅展示前 "
+                    + MAX_IMPACT_REFERENCES + " 条。");
+        } else {
+            bindings = fetchedBindings;
+        }
         Set<String> relatedAgentIds = new LinkedHashSet<>();
         workflowVersions.values().stream()
                 .map(AgentWorkflowVersionEntity::getAgentId)
@@ -151,7 +179,7 @@ public class SkillDependencyGraphService {
                 .collect(Collectors.toMap(AgentDefinitionEntity::getAgentId, Function.identity()));
 
         for (AgentWorkflowSkillRefEntity reference : references) {
-            addImpactReference(orgId, skill, reference, workflowVersions, agents, graph);
+            addImpactReference(skill, reference, workflowVersions, skillVersions, agents, graph);
         }
         for (com.codehouse.ciciassistant.skill.domain.AgentSkillBindingEntity binding : bindings) {
             AgentDefinitionEntity agent = agents.get(binding.getAgentId());
@@ -161,8 +189,8 @@ public class SkillDependencyGraphService {
             }
             graph.addNode(agentNode(agent, 3));
             graph.addEdge(edge(
-                    "skill:" + skill.getId(),
                     "agent:" + agent.getAgentId(),
+                    "skill:" + skill.getId(),
                     "BINDS_SKILL",
                     "当前绑定"));
         }
@@ -177,49 +205,72 @@ public class SkillDependencyGraphService {
                 "SKILL_IMPACT");
     }
 
-    private void addImpactReference(String orgId,
-                                    SkillDefinitionEntity skill,
+    private void addImpactReference(SkillDefinitionEntity skill,
                                     AgentWorkflowSkillRefEntity reference,
                                     Map<Long, AgentWorkflowVersionEntity> workflowVersions,
+                                    Map<Long, SkillVersionEntity> skillVersions,
                                     Map<String, AgentDefinitionEntity> agents,
                                     GraphBuilder graph) {
+        AgentWorkflowVersionEntity workflowVersion = workflowVersions.get(reference.getWorkflowVersionId());
+        if (workflowVersion != null) {
+            graph.addNode(workflowNode(workflowVersion, 2));
+        } else {
+            graph.addWarning("Skill 引用的工作流 " + reference.getWorkflowVersionId() + " 已不存在。");
+        }
+
+        String versionNodeId = null;
         if (reference.getSkillVersionId() == null) {
             graph.addWarning("工作流 " + reference.getWorkflowVersionId() + " 引用了 Skill，但没有钉住版本。");
-            return;
+        } else {
+            SkillVersionEntity skillVersion = skillVersions.get(reference.getSkillVersionId());
+            versionNodeId = "skill-version:" + reference.getSkillVersionId();
+            if (skillVersion == null) {
+                graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId() + " 已不存在。");
+                graph.addNode(new GraphNode(
+                        versionNodeId,
+                        "SKILL_VERSION",
+                        "历史版本",
+                        "缺失版本 " + reference.getSkillVersionId(),
+                        "MISSING",
+                        1,
+                        Map.of(
+                                "skillId", skill.getId(),
+                                "skillVersionId", reference.getSkillVersionId(),
+                                "referenceMode", safe(reference.getReferenceMode()))));
+            } else if (!Objects.equals(skillVersion.getSkillId(), skill.getId())) {
+                graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId()
+                        + " 不属于 Skill " + skill.getId() + "，已忽略。");
+                versionNodeId = null;
+            } else {
+                graph.addNode(skillVersionNode(skillVersion, Map.of(
+                        "referenceMode", safe(reference.getReferenceMode())), 1));
+            }
         }
-        SkillVersionEntity skillVersion = skillVersionRepository
-                .findByIdAndOrgId(reference.getSkillVersionId(), orgId)
-                .orElse(null);
-        if (skillVersion == null) {
-            graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId() + " 已不存在。");
-            return;
-        }
-        if (!Objects.equals(skillVersion.getSkillId(), skill.getId())) {
-            graph.addWarning("工作流引用的 Skill Version " + reference.getSkillVersionId()
-                    + " 不属于 Skill " + skill.getId() + "，已忽略。");
-            return;
-        }
-        String versionNodeId = "skill-version:" + skillVersion.getId();
-        graph.addNode(skillVersionNode(skillVersion, Map.of(
-                "referenceMode", safe(reference.getReferenceMode())), 1));
-        graph.addEdge(edge(
-                "skill:" + skill.getId(),
-                versionNodeId,
-                "VERSION_OF",
-                "版本 v" + skillVersion.getVersionNo()));
 
-        AgentWorkflowVersionEntity workflowVersion = workflowVersions.get(reference.getWorkflowVersionId());
+        if (versionNodeId != null) {
+            graph.addEdge(edge(
+                    versionNodeId,
+                    "skill:" + skill.getId(),
+                    "VERSION_OF",
+                    "归属 Skill"));
+            if (workflowVersion != null) {
+                graph.addEdge(edge(
+                        "workflow-version:" + workflowVersion.getId(),
+                        versionNodeId,
+                        "PINS_SKILL_VERSION",
+                        "钉住版本"));
+            }
+        } else if (workflowVersion != null) {
+            graph.addEdge(edge(
+                    "workflow-version:" + workflowVersion.getId(),
+                    "skill:" + skill.getId(),
+                    "USES_SKILL",
+                    "引用 Skill"));
+        }
+
         if (workflowVersion == null) {
-            graph.addWarning("Skill v" + skillVersion.getVersionNo()
-                    + " 引用的工作流 " + reference.getWorkflowVersionId() + " 已不存在。");
             return;
         }
-        graph.addNode(workflowNode(workflowVersion, 2));
-        graph.addEdge(edge(
-                versionNodeId,
-                "workflow-version:" + workflowVersion.getId(),
-                "PINS_SKILL_VERSION",
-                "被工作流钉住"));
 
         AgentDefinitionEntity agent = agents.get(workflowVersion.getAgentId());
         if (agent == null) {
@@ -287,7 +338,7 @@ public class SkillDependencyGraphService {
                         return;
                     }
 
-                    SkillVersionEntity version = resolveCurrentSkillVersion(orgId, skill);
+                    SkillVersionEntity version = resolveCurrentSkillVersion(orgId, skill, graph);
                     if (version == null) {
                         graph.addWarning("Skill " + skill.getSkillCode() + " 没有可展示的当前版本。");
                         return;
@@ -297,14 +348,28 @@ public class SkillDependencyGraphService {
                             "referenceMode", "CURRENT_BINDING",
                             "activationMode", safe(binding.getActivationMode()),
                             "priority", binding.getPriority())));
-                    graph.addEdge(edge(skillNodeId, versionNodeId, "PINS_SKILL_VERSION", "当前版本"));
+                    graph.addEdge(edge(skillNodeId, versionNodeId, "CURRENT_SKILL_VERSION", "当前版本"));
                     addResources(orgId, version, versionNodeId, graph);
                 });
     }
 
-    private SkillVersionEntity resolveCurrentSkillVersion(String orgId, SkillDefinitionEntity skill) {
+    private SkillVersionEntity resolveCurrentSkillVersion(String orgId,
+                                                          SkillDefinitionEntity skill,
+                                                          GraphBuilder graph) {
         if (skill.getCurrentPublishedVersionId() != null) {
-            return skillVersionRepository.findByIdAndOrgId(skill.getCurrentPublishedVersionId(), orgId).orElse(null);
+            SkillVersionEntity current = skillVersionRepository
+                    .findByIdAndOrgId(skill.getCurrentPublishedVersionId(), orgId)
+                    .orElse(null);
+            if (current != null && Objects.equals(current.getSkillId(), skill.getId())) {
+                return current;
+            }
+            if (current == null) {
+                graph.addWarning("Skill " + skill.getSkillCode() + " 的当前发布版本 "
+                        + skill.getCurrentPublishedVersionId() + " 已不存在，已回退。");
+            } else {
+                graph.addWarning("Skill " + skill.getSkillCode() + " 的当前发布版本 "
+                        + skill.getCurrentPublishedVersionId() + " 不属于该 Skill，已回退。");
+            }
         }
         return skillVersionRepository
                 .findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(orgId, skill.getId(), "PUBLISHED")
@@ -374,7 +439,12 @@ public class SkillDependencyGraphService {
             graph.addNode(skillVersionNode(skillVersion, referenceMetadata));
             addResources(orgId, skillVersion, versionNodeId, graph);
         }
-        graph.addEdge(edge(skillNodeId, versionNodeId, "PINS_SKILL_VERSION", "钉住版本"));
+        graph.addEdge(edge(
+                "workflow-version:" + workflowVersion.getId(),
+                versionNodeId,
+                "PINS_SKILL_VERSION",
+                "钉住版本"));
+        graph.addEdge(edge(versionNodeId, skillNodeId, "VERSION_OF", "归属 Skill"));
     }
 
     private void addResources(String orgId,
@@ -424,24 +494,36 @@ public class SkillDependencyGraphService {
         if (raw == null || raw.isBlank()) {
             return List.of();
         }
-        try {
-            JsonNode parsed = objectMapper.readTree(raw);
-            if (!parsed.isArray()) {
-                graph.addWarning(context + " 不是数组，已忽略。");
-                return List.of();
-            }
+        String normalized = raw.trim();
+        if (!normalized.startsWith("[")) {
             Set<String> values = new LinkedHashSet<>();
-            parsed.forEach(item -> {
-                String value = item.asText("").trim();
+            for (String item : normalized.split(",")) {
+                String value = item.trim();
                 if (!value.isEmpty()) {
                     values.add(value);
                 }
-            });
+            }
             return values.stream().sorted().toList();
-        } catch (Exception ignored) {
-            graph.addWarning(context + " 无法解析，已忽略。");
-            return List.of();
         }
+        try {
+            JsonNode parsed = objectMapper.readTree(normalized);
+            if (parsed.isArray()) {
+                Set<String> values = new LinkedHashSet<>();
+                parsed.forEach(item -> {
+                    String value = item.asText("").trim();
+                    if (!value.isEmpty()) {
+                        values.add(value);
+                    }
+                });
+                return values.stream().sorted().toList();
+            }
+        } catch (Exception ignored) {
+            // Warning below keeps malformed structured boundaries visible to governance users.
+        }
+        if (normalized.startsWith("[")) {
+            graph.addWarning(context + " 无法解析，已忽略。");
+        }
+        return List.of();
     }
 
     private GraphNode agentNode(AgentDefinitionEntity agent) {

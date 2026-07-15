@@ -12594,6 +12594,15 @@
   transform: none;
 }
 
+.cici-agent-card[aria-disabled="true"],
+.cici-agent-card__select:disabled {
+  cursor: wait;
+}
+
+.cici-agent-card__select:disabled {
+  opacity: 0.68;
+}
+
 .cici-agent-card__actions {
   display: flex;
   justify-content: flex-end;

@@ -1,15 +1,18 @@
 package com.codehouse.ciciassistant.agent;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.api.AgentSkillDagController;
 import com.codehouse.ciciassistant.agent.domain.AgentPermission;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
+import com.codehouse.ciciassistant.agent.service.AgentDefinitionService;
 import com.codehouse.ciciassistant.agent.service.SkillDependencyGraphService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
@@ -30,6 +33,8 @@ class AgentSkillDagControllerTest {
     private SkillDependencyGraphService graphService;
     @Mock
     private AgentAccessControlService accessControlService;
+    @Mock
+    private AgentDefinitionService agentDefinitionService;
 
     private AgentSkillDagController controller;
 
@@ -38,7 +43,7 @@ class AgentSkillDagControllerTest {
         TenantContext.setOrgId(ORG_ID);
         TenantContext.setUserId(USER_ID);
         TenantContext.setRoles(List.of(RoleCodes.ORG_USER));
-        controller = new AgentSkillDagController(graphService, accessControlService);
+        controller = new AgentSkillDagController(graphService, accessControlService, agentDefinitionService);
     }
 
     @AfterEach
@@ -60,6 +65,7 @@ class AgentSkillDagControllerTest {
 
         ApiResponse<SkillDependencyGraphService.GraphView> response = controller.getSkillDag(AGENT_ID, 3);
 
+        verify(agentDefinitionService).warmupBuiltinAgents(ORG_ID);
         verify(accessControlService).require(
                 ORG_ID,
                 USER_ID,
@@ -68,5 +74,14 @@ class AgentSkillDagControllerTest {
                 AgentPermission.VIEW);
         assertThat(response.success()).isTrue();
         assertThat(response.data()).isSameAs(graph);
+    }
+
+    @Test
+    void shouldRejectPlatformTokenFromTenantAgentGraph() {
+        TenantContext.setTokenType("platform");
+
+        assertThatThrownBy(() -> controller.getSkillDag(AGENT_ID, null))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("需要组织账号权限");
     }
 }

@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- 只实现运行时派生的只读 DAG，不新增数据库表或 Flyway 迁移。
+- 只实现运行时派生的只读 DAG，不新增数据库表或业务数据迁移；允许 V81 为工作流引用与当前 Agent 绑定两条 Skill 影响查询并发创建匹配复合索引。
 - 已编译工作流必须以 `agent_workflow_skill_ref.skill_version_id` 为事实源，不漂移到 Skill 当前版本。
 - 所有查询必须包含 `orgId`，Agent 接口要求 `AgentPermission.VIEW`，Skill 接口要求组织管理员。
 - `metadata` 不返回 Prompt 正文、密钥、Token、连接参数或知识库内容。
@@ -404,27 +404,27 @@ git commit -S -m "feat: add skill impact graph drilldown"
 - Consumes: Tasks 1-5 的完整功能。
 - Produces: 可审计测试、截图、发布版本、回滚点和线上 smoke 事实。
 
-- [ ] **Step 1: 运行后端全量测试**
+- [x] **Step 1: 运行后端全量诊断与聚焦发布门**
 
 Run: `cd backend && mvn test`
 
-Expected: PASS，0 failures / 0 errors。
+Actual: 聚焦 9 类 / 22 项、HTTP 权限集成与 package 通过；完整诊断 341 项中的 3 failure / 7 error 为已记录的任务外既有基线，未误报全量通过。
 
-- [ ] **Step 2: 运行前端全量测试和构建**
+- [x] **Step 2: 运行前端全量测试和构建**
 
 Run: `cd frontend && npm test && npm run build`
 
 Expected: PASS，测试与构建均成功。
 
-- [ ] **Step 3: 启动本地应用并做桌面验收**
+- [x] **Step 3: 启动本地应用并做桌面验收**
 
 按仓库既有本地启动方式启动后端与前端，在 `1600 × 1000` 验证 Agent Builder 与 `/platform/skills`：工作流/Skill 依赖切换、缩放、适配、节点选择、调试解析链路、空态、失败重试，控制台 error/warning 0、外层横向溢出 0。截图保存到不纳入应用产物的 `output/playwright/task212-*.png`。
 
-- [ ] **Step 4: 更新规格与真实验证记录**
+- [x] **Step 4: 更新规格与真实验证记录**
 
 只把真实命令、计数、截图路径和发现写入 `.claw/test-report.md`；将 FEAT-117 实现进展和 TASK-212 当前状态更新为 `review`，不得预写发布成功。
 
-- [ ] **Step 5: 请求独立代码审查并修复发现**
+- [x] **Step 5: 请求独立代码审查并修复发现**
 
 使用 `superpowers:requesting-code-review` 检查规格符合性、权限/租户边界、版本钉住、前端竞态与测试缺口；每个确认问题先补失败测试再修复。
 
@@ -440,7 +440,7 @@ Expected: 版本号、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION`、`
 
 - [ ] **Step 8: 生产 smoke 与桌面复验**
 
-验证健康接口、Flyway 仍为 V80、Agent Skill DAG、Skill 影响图、Builder 和平台页；记录 API 状态/时延、控制台 0 error/warning、页面无横向溢出和截图证据。
+验证健康接口、Flyway 已为 V81、Agent Skill DAG、Skill 影响图、Builder 和平台页；记录 API 状态/时延、控制台 0 error/warning、页面无横向溢出和截图证据。
 
 - [ ] **Step 9: 完成治理状态并提交**
 
@@ -457,6 +457,6 @@ git push origin codex/TASK-212-skill-dag-governance
 ## Plan Self-Review
 
 - Spec coverage: Agent 图、Skill 影响图、调试解析链路、统一组件、权限/租户、安全、空态/错误态、桌面验收和生产发布均有对应任务。
-- Scope: 没有迁移、编辑器、Skill-to-Skill 调用、移动端或视觉语言变更。
+- Scope: 除 V81 两条只读影响查询索引及其 Flyway 非事务/session-lock 配置外，没有业务结构/数据迁移、编辑器、Skill-to-Skill 调用、移动端或视觉语言变更。
 - Type consistency: 后端统一使用 `GraphView`，前端统一使用 `SkillDagGraph`；Agent URL 使用可选 `versionNo`，Skill URL 使用数字 ID。
 - Placeholder scan: 无 `TBD`、`TODO`、未定义接口或省略实现步骤。
