@@ -324,6 +324,7 @@ CRM 高阶只读工具
 - `/ai/chat/stream` 对非空长正文必须产生 `N > 1` 个非空 `delta`，每片不超过 18 个 Java 字符；全部片段拼接必须逐字等于阻塞式正文和持久化正文。
 - `done` 只能在最后一个 `delta` 之后发送且仅发送一次。中断或客户端断开继续沿用现有 SSE 错误处理，不补发第二份正文。
 - Agent OpenAPI bridge 一对一把内部 `delta` 映射为 `message`，因此 streaming 也必须产生多个 `message`；拼接正文与 blocking 完全一致。
+- OpenAPI bridge 不得对单个 `delta` 做 `trim`、`strip` 或其他逐片规范化；分片首尾空格、换行以及纯空白片段都属于正文，必须原样发送并参与最终持久化。只允许忽略真正的空字符串。
 - `/ai/chat` blocking 仍一次返回完整正文；数据库仍只保存一条完整 assistant 消息。
 - 不恢复最终 LLM，不发送 `tool_call`、`tool_result`、工具名、原始 JSON、内部记录 ID、token、cookie 或凭据。
 - 不修改前端生产代码、不修改 CloudCC 数据或元数据，也不改变 TASK-208 已验收的 Top 5 与五层经营分析内容。
@@ -349,3 +350,12 @@ CRM 高阶只读工具
 - 内部 SSE 回归验证多片、18 字上限、精确拼接、唯一尾部 `done`、blocking/persistence 一致、防泄漏和最终 LLM 零调用；OpenAPI 回归验证多 `message`、精确持久化和唯一尾部 `message_end`。
 - 独立干净数据库 CRM 定向 135 项、前端 89 项、生产构建、Compose、身份/assignment 与 diff 门禁通过；完整后端诊断只重现既有非 TASK-211 基线失败。
 - 任务级规格/质量审查与整分支最终审查均批准合并，生产代码无需再调整；剩余项全部是 `2.7.6` 发布后的真实会话、页面中间态、日志和清理门禁。
+
+### 2.7.6 生产验收发现与回滚（2026-07-15）
+
+- `2.7.6 / 2055947aae07` 上线后，内部 SalesA 连续 5 个成功会话均产生 133 个 `delta`，单片最多 18 个 Java 字符，唯一 `done`，逐次正文与持久化完全一致；方案 A 的内部 SSE 行为成立。
+- OpenAPI streaming 同样产生 133 个 `message`，但生产对比发现拼接正文为 2,342 字，而 blocking 为 2,383 字。丢失的 41 个字符全部是分片边界的空格或换行，Markdown 最终结构因此不能满足“跨协议正文完全一致”的验收标准。
+- 根因是 `OpenApiStreamBridge.deltaText` 复用了会调用 `trim()` 的通用文本规范化函数，并且以 `isBlank()` 丢弃纯空白分片；单全文事件时期该问题不明显，多分片后被稳定放大。
+- 验收失败后已撤销临时 OpenAPI Key、验证撤销后返回 401、精确恢复原 Agent channels/toolIds/knowledgeBaseIds，并只重建 backend/frontend 回滚到健康的 `2.7.5 / be80eea665c0`；四个状态服务容器未改变。
+- 修复要求：`deltaText` 对 `text` 值只做 null-to-empty，不得 trim；转发条件从“非 blank”改为“非 empty”。回归必须包含尾随空格、纯空白片段和前导换行，并证明外部消息拼接、运行完成入参及持久化正文逐字相等。
+- `2.7.6` 保留为失败验收的不可变发布证据，不复用、不覆盖；修复只能发布新的 `2.7.7`。

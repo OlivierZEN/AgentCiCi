@@ -698,7 +698,7 @@ public class AgentOpenApiConversationService {
             Object data = eventData(items);
             if ("delta".equals(eventName)) {
                 String piece = deltaText(data);
-                if (!piece.isBlank()) {
+                if (!piece.isEmpty()) {
                     answer.append(piece);
                     clientEmitter.send(SseEmitter.event().name("message").data(Map.of(
                             "event", "message",
@@ -848,9 +848,10 @@ public class AgentOpenApiConversationService {
 
     private String deltaText(Object data) {
         if (data instanceof Map<?, ?> map) {
-            return text(map.get("text"));
+            Object value = map.get("text");
+            return value == null ? "" : String.valueOf(value);
         }
-        return text(data);
+        return data == null ? "" : String.valueOf(data);
     }
 
     private String errorMessage(Object data) {
