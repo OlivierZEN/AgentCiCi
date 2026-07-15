@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SkillVersionRepository extends JpaRepository<SkillVersionEntity, Long> {
 
+    Optional<SkillVersionEntity> findByIdAndOrgId(Long id, String orgId);
+
     Optional<SkillVersionEntity> findTopByOrgIdAndSkillIdOrderByVersionNoDesc(String orgId, Long skillId);
 
     Optional<SkillVersionEntity> findByOrgIdAndSkillIdAndVersionNo(String orgId, Long skillId, Integer versionNo);

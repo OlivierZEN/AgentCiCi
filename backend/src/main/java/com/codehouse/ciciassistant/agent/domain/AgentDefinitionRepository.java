@@ -12,6 +12,8 @@ public interface AgentDefinitionRepository extends JpaRepository<AgentDefinition
 
     Optional<AgentDefinitionEntity> findByOrgIdAndAgentId(String orgId, String agentId);
 
+    List<AgentDefinitionEntity> findByOrgIdAndAgentIdIn(String orgId, List<String> agentIds);
+
     Optional<AgentDefinitionEntity> findByOrgIdAndAgentIdAndEnabledTrue(String orgId, String agentId);
 
     boolean existsByOrgIdAndAgentId(String orgId, String agentId);

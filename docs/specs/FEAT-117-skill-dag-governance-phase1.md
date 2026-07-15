@@ -103,6 +103,7 @@ Skill 影响图的层级固定为：
 | --- | --- |
 | `COMPILED_AS` | Agent 编译为某工作流版本 |
 | `BINDS_SKILL` | Agent 当前绑定 Skill |
+| `USES_SKILL` | 已编译工作流引用 Skill |
 | `PINS_SKILL_VERSION` | 工作流版本钉住 Skill 版本 |
 | `VERSION_OF` | Skill Version 属于 Skill |
 | `ALLOWS_TOOL` | Skill 版本允许调用 Tool |
@@ -131,10 +132,12 @@ Skill 影响图的层级固定为：
 
 ### 6.2 Skill 依赖影响图
 
-`GET /skills/{id}/dependency-graph`
+后端：`GET /platform/skills/{id}/dependency-graph`
 
-- 权限：组织管理员，与平台技能列表一致。
-- 可见性：沿用 Skill 当前租户可见性检查。
+前端运营入口：`GET /api/platform/skills/{id}/dependency-graph`，由现有代理规则重写到后端 `/platform` 路由。
+
+- 权限：沿用 `PlatformController` 类级 `@RequirePlatformRole`，与平台技能列表一致。
+- 组织边界：使用 `PlatformAccountProperties.governanceOrgId` 的治理组织，禁止使用调用者组织 token 覆盖平台治理范围。
 - 返回：同一图契约，`scope.type = SKILL_IMPACT`；包含当前绑定 Agent、所有被引用 Skill 版本、相关工作流版本与发布状态。
 - 影响图只返回当前组织数据；历史版本存在但工作流已删除时，以 warning 说明，不伪造 Agent。
 

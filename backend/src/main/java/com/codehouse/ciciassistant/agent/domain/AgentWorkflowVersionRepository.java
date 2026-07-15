@@ -10,6 +10,8 @@ public interface AgentWorkflowVersionRepository extends JpaRepository<AgentWorkf
 
     List<AgentWorkflowVersionEntity> findByOrgIdAndAgentIdOrderByVersionNoDesc(String orgId, String agentId);
 
+    List<AgentWorkflowVersionEntity> findByOrgIdAndIdIn(String orgId, List<Long> ids);
+
     Optional<AgentWorkflowVersionEntity> findByOrgIdAndAgentIdAndVersionNo(String orgId, String agentId, Integer versionNo);
 
     Optional<AgentWorkflowVersionEntity> findByOrgIdAndAgentIdAndPublishStatus(String orgId, String agentId, String publishStatus);
