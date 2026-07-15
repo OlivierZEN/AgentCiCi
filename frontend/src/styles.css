@@ -18012,3 +18012,27 @@ td.skills-data-table__actions > * {
     background-size: auto 100%;
   }
 }
+
+/* FEAT-117: platform Skill impact graph keeps the governance panel dense and scannable. */
+.platform-skill-dependency__heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.platform-skill-dependency__heading .platform-console__subheading {
+  margin: 0;
+}
+
+.platform-skill-dependency__heading > span {
+  color: var(--theme-text-muted, #7c6d59);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.platform-skill-dependency .skill-dag__viewport {
+  height: 320px;
+}

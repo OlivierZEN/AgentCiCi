@@ -1,19 +1,19 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-15T13:48:03Z
+updated_at: 2026-07-15T17:04:57Z
 updated_by: MANAGER-001
-phase: skill-dag-phase1-assignment
+phase: skill-dag-phase1-release-ready
 active_task: "TASK-212"
-next_action: "完成 TASK-212 授权验证与分配提交，然后按 TDD 实现 Skill DAG 只读治理闭环并发布生产。"
+next_action: "合并 TASK-212，按发布手册备份并发布不可变版本 2.7.8，验证 V81、API 权限矩阵和生产桌面页面后关闭任务。"
 read_next:
   goals: false
   decisions: false
   issue_list: true
   task_board: true
   active_task_status: true
-  test_report: false
-  devops: false
+  test_report: true
+  devops: true
 ---
 
 # Project Current Status
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-212 已启动：用户批准 FEAT-117 的 Skill DAG Phase 1，只从现有工作流 Skill 版本钉住、Agent 绑定及 Tool/知识库边界派生统一只读图，接入 Agent Builder、调试解析链路和平台 Skill 影响分析；不新增迁移、编辑器、Skill-to-Skill 调用或移动端范围，完成生产级验证后发布线上。
+- TASK-212 已达到发布门：统一只读 Skill DAG 服务、Agent/平台隔离 API、Agent Builder 与平台 Skill 依赖图、调试 Skill 解析链、同步写门禁、操作目标回写保护、版本感知编译指纹、历史显式版本精确回填与缺失版本全链 fail-closed、V81 双影响索引及失败重试治理已完成。pinned runtime 只合并 Agent 直接边界、不可变 Manifest 和钉住版本，不再读取当前可变 Skill 边界。前端 18 文件 / 110 项、生产构建、后端聚焦 9 类 / 22 项、HTTP 权限测试、package、独立干净库 V81 正向迁移与重复执行、真实 API 401/403/200 矩阵及 `1600 x 1000` 浏览器验收通过；两个并发索引均 valid/ready。完整 Maven 诊断的 341 项中 3 failure / 7 error 均为既有平台身份、审计夹具、非空字段、模型配置及连接池基线，TASK-212 聚焦测试无失败。下一步合并并发布 `2.7.8`。
 - TASK-211 is complete in production `2.7.7 / e47979167af8`. PR #6 changed deterministic CRM SSE to the existing 18-character/18ms chunk sender; production `2.7.6` then exposed OpenAPI per-fragment whitespace loss, was rejected and rolled back. PR #7 removed per-delta trim/blank filtering, passed clean-DB CRM 135/135, frontend 89/89 and independent review, and was released as a new immutable version.
 - Fresh production protocol and desktop evidence pass: SalesA 5/5 streams each emitted 133 deltas over about 2.4 seconds with exact persistence; blocking and SalesB match after cutoff-only normalization. OpenAPI blocking/streaming are both 2,383 characters, streaming has 133 messages plus one terminal event, and history/internal bodies are equal. Temporary API access is revoked, bindings are exactly restored, nine answer files have no tool/raw-ID leakage, and the final clean window has zero backend error, CRM failure, abnormal disconnect or Nginx 5xx. A fresh application-internal Browser run captured the same assistant bubble at 50 visible characters while the composer was disabled and at 2,100 characters after completion, with console error/warning 0, no horizontal overflow, complete Top 5/five-layer analysis, and no internal result leakage.
 - TASK-210's `2.7.5 / be80eea665c0` implementation is preserved through production `2.7.7`: FEAT-116 renders the public standard WeChat mark and distinct Lucide business-source icons, preserves the compact timeline across all eight themes, and removes duplicate-key console errors from CRM event id collisions. Frontend 16 files / 89 tests and production build passed; independent final production visual evidence remains with TASK-210.

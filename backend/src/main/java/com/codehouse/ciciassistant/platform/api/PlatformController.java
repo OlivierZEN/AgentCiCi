@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.platform.api;
 
+import com.codehouse.ciciassistant.agent.service.SkillDependencyGraphService;
 import com.codehouse.ciciassistant.auth.RequirePlatformRole;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.config.PlatformAccountProperties;
@@ -32,13 +33,16 @@ public class PlatformController {
     private final PlatformGovernanceService platformGovernanceService;
     private final PlatformAuditService platformAuditService;
     private final PlatformAccountProperties platformAccountProperties;
+    private final SkillDependencyGraphService skillDependencyGraphService;
 
     public PlatformController(PlatformGovernanceService platformGovernanceService,
                               PlatformAuditService platformAuditService,
-                              PlatformAccountProperties platformAccountProperties) {
+                              PlatformAccountProperties platformAccountProperties,
+                              SkillDependencyGraphService skillDependencyGraphService) {
         this.platformGovernanceService = platformGovernanceService;
         this.platformAuditService = platformAuditService;
         this.platformAccountProperties = platformAccountProperties;
+        this.skillDependencyGraphService = skillDependencyGraphService;
     }
 
     @GetMapping("/bootstrap")
@@ -72,6 +76,11 @@ public class PlatformController {
             @PathVariable Long id) {
         String orgId = platformScopeId();
         return ApiResponse.ok(platformGovernanceService.listPlatformSkillVersions(orgId, id));
+    }
+
+    @GetMapping("/skills/{id}/dependency-graph")
+    public ApiResponse<SkillDependencyGraphService.GraphView> skillDependencyGraph(@PathVariable Long id) {
+        return ApiResponse.ok(skillDependencyGraphService.getSkillImpactGraph(platformScopeId(), id));
     }
 
     @GetMapping("/policies/core")

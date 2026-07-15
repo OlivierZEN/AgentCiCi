@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-117
 title: Skill DAG 只读治理闭环 Phase 1
-status: approved
+status: implemented
 owner_role: fullstack-agent
 task_ids: TASK-212
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-15T13:48:03Z
+updated_at: 2026-07-15T16:40:33Z
 updated_by: MANAGER-001
 ---
 
@@ -54,6 +54,7 @@ Phase 1 的目标是在不引入可编辑编排器、不改变运行语义、不
 - Agent Builder 调试结果新增结构化“Skill 解析链路”，复用现有 `resolvedSkillVersions` 事实。
 - 平台标准技能页将影响摘要补齐为可下钻的依赖图。
 - 后端服务、权限、租户隔离、控制器、前端状态与交互测试。
+- V81 为工作流引用与当前 Agent 绑定两条 Skill 影响查询增加匹配的复合索引；索引使用 `CREATE INDEX CONCURRENTLY`、迁移不进入事务，并关闭 Flyway PostgreSQL transaction-level advisory lock，不改变业务数据与执行语义。
 - 桌面端真实页面截图、空态/加载态/错误态和交互检查。
 - 按生产发布手册完成不可变版本发布、健康检查、功能 smoke 和回滚点记录。
 
@@ -62,7 +63,7 @@ Phase 1 的目标是在不引入可编辑编排器、不改变运行语义、不
 - Skill-to-Skill 依赖声明、子 Skill 调用和递归执行。
 - 拖拽、连线、增删节点、保存或发布 DAG。
 - 新增 `invokeSkill` 执行原语或将 Skill 编译为独立子流程。
-- 新增数据库表、迁移、历史数据回填或异步图索引。
+- 新增图持久化表、历史数据回填或异步图索引；除 V81 只读查询索引外不新增业务结构迁移。
 - 通用拓扑编辑、循环依赖编辑校验和跨组织依赖图。
 - 移动端布局、截图或自动化测试。
 
@@ -103,6 +104,8 @@ Skill 影响图的层级固定为：
 | --- | --- |
 | `COMPILED_AS` | Agent 编译为某工作流版本 |
 | `BINDS_SKILL` | Agent 当前绑定 Skill |
+| `CURRENT_SKILL_VERSION` | Skill 当前展示版本；仅用于没有编译版本的当前绑定图 |
+| `USES_SKILL` | 已编译工作流引用 Skill |
 | `PINS_SKILL_VERSION` | 工作流版本钉住 Skill 版本 |
 | `VERSION_OF` | Skill Version 属于 Skill |
 | `ALLOWS_TOOL` | Skill 版本允许调用 Tool |
@@ -117,6 +120,8 @@ Skill 影响图的层级固定为：
 - 未显式指定：优先 `agent_definition.published_version_id` 对应版本；其次最新工作流版本。
 - 没有任何编译版本：返回 Agent 与当前启用 Skill 绑定的只读草稿图，`sourceMode = CURRENT_BINDINGS`。
 - 已编译版本：只以 `agent_workflow_skill_ref` 的钉住引用为准，`sourceMode = PINNED_WORKFLOW_VERSION`；不得静默替换为 Skill 当前版本。
+- 历史工作流引用回填时，Manifest 明确记录的 Skill `versionNo` 必须精确解析；显式版本不存在时保留缺失钉住引用并在图中告警，运行时对 Prompt、Tool、知识库、移交与输出边界 fail-closed，不得回退到可变的当前 Skill 定义。只有 Manifest 未记录版本号时，才按当前发布版本、最新发布版本、最新版本依次降级。
+- 编译指纹必须包含排序后的 Skill 代码、Skill ID、解析版本号、来源和解析状态；同一 Skill 升级版本后即使其他编译输入不变，也必须生成新的工作流版本并固化新引用。
 
 ## 6. API 设计
 
@@ -131,10 +136,12 @@ Skill 影响图的层级固定为：
 
 ### 6.2 Skill 依赖影响图
 
-`GET /skills/{id}/dependency-graph`
+后端：`GET /platform/skills/{id}/dependency-graph`
 
-- 权限：组织管理员，与平台技能列表一致。
-- 可见性：沿用 Skill 当前租户可见性检查。
+前端运营入口：`GET /api/platform/skills/{id}/dependency-graph`，由现有代理规则重写到后端 `/platform` 路由。
+
+- 权限：沿用 `PlatformController` 类级 `@RequirePlatformRole`，与平台技能列表一致。
+- 组织边界：使用 `PlatformAccountProperties.governanceOrgId` 的治理组织，禁止使用调用者组织 token 覆盖平台治理范围。
 - 返回：同一图契约，`scope.type = SKILL_IMPACT`；包含当前绑定 Agent、所有被引用 Skill 版本、相关工作流版本与发布状态。
 - 影响图只返回当前组织数据；历史版本存在但工作流已删除时，以 warning 说明，不伪造 Agent。
 
@@ -142,7 +149,7 @@ Skill 影响图的层级固定为：
 
 - 现有编译、调试、Skill 列表与版本接口字段不删除、不改名。
 - 调试页面继续读取现有 `resolvedSkillVersions`；本阶段只新增展示结构，不改变调试响应语义。
-- 不新增数据库迁移，回滚应用版本即可移除接口与 UI。
+- V81 仅增加 `agent_workflow_skill_ref(org_id, skill_id, skill_version_id, workflow_version_id)` 与 `agent_skill_binding(org_id, skill_id, enabled, agent_id, priority)` 两个查询索引，不写业务数据；应用回滚即可移除接口与 UI，索引可安全保留，无数据回滚步骤。
 
 ## 7. 前端产品设计
 
@@ -174,16 +181,16 @@ Skill 影响图的层级固定为：
 - 所有 Repository 查询必须包含 `orgId`；不得按裸 ID 读取后再在内存中过滤。
 - `metadata` 不返回 Prompt 正文、输出契约、密钥、Token、连接参数或知识库内容。
 - 历史引用中的 Skill Version 缺失时保留 Skill 节点并产生 warning；Tool/KB 元数据缺失时使用稳定业务键作为降级标签。
-- 前端请求竞态以当前选中 Agent/Skill 为准，旧响应不得覆盖新选择。
+- 前端请求竞态以当前选中 Agent/Skill 为准，旧响应不得覆盖新选择；选择详情加载期间所有写入口同步禁用并在函数入口二次校验。保存、编译、发布、回滚或调试操作进行时同步锁住 Agent 选择，操作请求冻结目标 ID、Draft/Governance 快照和操作序号；每次异步回写前必须确认目标与序号仍为当前值。
 
 ## 9. 测试与验收标准
 
 ### 9.1 后端
 
 - 服务测试覆盖：已发布版本优先、显式版本、最新版本回退、无版本当前绑定、版本钉住不漂移、工具/知识库边界、去重和稳定排序。
-- 影响图覆盖：当前绑定、已发布工作流、历史钉住版本、缺失历史引用、跨租户不可见。
+- 影响图覆盖：当前绑定、已发布工作流、历史钉住版本、缺失历史引用、跨租户不可见，以及工作流引用和当前绑定分别超过 1,000 条时的稳定截断与 warning。
 - 控制器覆盖 Agent `VIEW` 与 Skill 组织管理员权限。
-- 相关 Maven 测试和完整后端测试通过。
+- 相关 Maven 测试必须通过；完整后端诊断不得出现 TASK-212 新增失败，若命中仓库既有基线，必须逐项记录来源且不得误报全绿。
 
 ### 9.2 前端
 
@@ -205,22 +212,23 @@ Skill 影响图的层级固定为：
 - 先按 `docs/production-release-runbook.md` 执行 `./scripts/release-acr.sh --dry-run`。
 - 版本号、Git tag、镜像 tag 与前后端版本变量保持一致并使用不可变版本。
 - 发布前备份，记录当前可回滚应用版本；状态服务不得无故重建。
-- 发布后验证应用健康、数据库迁移版本不变、Agent Skill DAG、Skill 影响图、构建页和平台页真实请求。
+- 发布后验证应用健康、V81 成功、Agent Skill DAG、Skill 影响图、构建页和平台页真实请求。
 - 生产桌面 smoke 的控制台、网络错误和关键页面截图通过后方可标记完成。
 
 ## 10. 风险与回滚
 
 - 图节点较多导致布局过宽：组件提供适配与缩放，默认限制展示区域高度，页面外层不横向溢出。
 - 历史引用数据不完整：以 warning 降级，不修改历史数据。
-- 影响查询放大数据库负载：仅按当前组织和目标 Agent/Skill 查询，使用现有外键/索引字段，不做全库扫描；生产 smoke 记录接口时延。
-- 前端竞态显示错误依赖：请求使用序列标识或取消机制，仅接受最新选择结果。
-- 上线失败：回滚到发布前不可变应用版本；本功能无迁移，无数据回滚步骤。
+- 影响查询放大数据库负载：仅按当前组织和目标 Agent/Skill 查询，将工作流引用与当前绑定各限制为 1,000 条，并由 V81 两个匹配复合索引支撑；两个索引并发创建，避免阻塞生产写入。迁移在创建前并发删除同名索引，确保失败遗留的 INVALID 索引在 Flyway repair 后可安全重建；生产 smoke 记录接口时延。
+- 前端竞态显示错误依赖或旧操作结果：依赖图、就绪检查和目标操作均使用序列标识，只接受当前选择的最新请求；目标操作进行期间禁用对象切换作为交互层第二道保护。
+- 上线失败：回滚到发布前不可变应用版本；V81 只有可安全保留的索引，无业务数据回滚步骤。
 
 ## 11. 实现进展
 
-- 已完成：现状审计、差距分析、Phase 1 范围确认、架构与验收设计。
-- 当前：创建 TASK-212 授权与实现计划。
-- 未完成：TDD 实现、全量验证、桌面验收、生产发布与线上 smoke。
+- 已完成：现状审计、差距分析、范围确认、架构设计、TDD 实现、权限与双向竞态加固、版本感知编译指纹、历史引用精确回填与缺失版本全运行链 fail-closed、聚焦后端 22 项验证、前端 110 项测试与生产构建、V81 干净库正向迁移及重复执行验证、真实 API 权限矩阵和桌面端验收。
+- 完整后端诊断：341 项中 3 failure / 7 error，均来自既有平台身份、审计夹具、非空字段、模型配置与连接池基线；TASK-212 聚焦测试无失败，未宣称全量套件通过。
+- 当前：完成最终审查、合并和 `2.7.8` 生产发布。
+- 未完成：生产备份、镜像发布、V81 线上迁移、生产 API/browser smoke 与任务关闭。
 
 ## 12. 交接说明
 

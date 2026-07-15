@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-15T13:48:03Z
+updated_at: 2026-07-15T17:04:57Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-212.md`
 - assignment_path: `.claw/assignments/TASK-212.yaml`
 - blocked_by: `none`
-- next_action: Complete assignment preflight, then implement the unified read-only dependency graph with TDD and release it to production.
+- next_action: Merge the production-ready implementation, publish immutable `2.7.8`, verify V81 plus tenant/platform DAG isolation and complete the production browser smoke.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

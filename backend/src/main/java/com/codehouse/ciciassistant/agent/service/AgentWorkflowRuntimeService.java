@@ -226,15 +226,7 @@ public class AgentWorkflowRuntimeService {
                 : agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, publishedVersion.getId());
         if (!pinnedSkillRefs.isEmpty()) {
             return pinnedSkillRefs.stream()
-                    .map(item -> new RuntimeSkillGovernanceView(
-                            item.skillCode(),
-                            item.skillVersionNo(),
-                            item.templateCode(),
-                            item.templateVersionNo(),
-                            item.referenceMode(),
-                            item.toolWhitelist().size(),
-                            item.kbWhitelist().size()
-                    ))
+                    .map(AgentWorkflowRuntimeService::toRuntimeSkillGovernanceView)
                     .toList();
         }
         return runtimeResolution.skillCodes().stream()
@@ -243,11 +235,28 @@ public class AgentWorkflowRuntimeService {
                         null,
                         null,
                         null,
+                        null,
                         "capability-fallback",
+                        null,
                         0,
                         0
                 ))
                 .toList();
+    }
+
+    static RuntimeSkillGovernanceView toRuntimeSkillGovernanceView(
+            AgentWorkflowSkillRefService.RuntimeSkillRef item) {
+        return new RuntimeSkillGovernanceView(
+                item.skillCode(),
+                item.skillName(),
+                item.skillVersionNo(),
+                item.templateCode(),
+                item.templateVersionNo(),
+                item.referenceMode(),
+                item.riskLevel(),
+                item.toolWhitelist().size(),
+                item.kbWhitelist().size()
+        );
     }
 
     private List<String> buildGovernanceNotes(String runtimeSource,
@@ -347,18 +356,25 @@ public class AgentWorkflowRuntimeService {
         effectiveTools.addAll(skillDeclaredToolNames);
         LinkedHashSet<String> skillScopedTools = new LinkedHashSet<>(skillDeclaredToolNames);
         skillScopedTools.removeAll(new LinkedHashSet<>(agentDirectToolNames));
-        LinkedHashSet<String> kbIds = new LinkedHashSet<>(capability.effectiveKnowledgeBaseIds().stream().map(String::valueOf).toList());
-        if (kbIds.isEmpty()) {
-            pinnedSkillRefs.forEach(item -> kbIds.addAll(item.kbWhitelist()));
-        }
         return new RuntimeResolution(
                 pinnedSkillRefs.stream().map(AgentWorkflowSkillRefService.RuntimeSkillRef::skillCode).toList(),
                 List.copyOf(effectiveTools),
                 agentDirectToolNames,
                 skillDeclaredToolNames,
                 List.copyOf(skillScopedTools),
-                List.copyOf(kbIds)
+                resolvePinnedKnowledgeBaseIds(capability, pinnedSkillRefs)
         );
+    }
+
+    static List<String> resolvePinnedKnowledgeBaseIds(
+            AgentCapabilityResolverService.AgentCapabilityResolution capability,
+            List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs) {
+        LinkedHashSet<String> kbIds = new LinkedHashSet<>(capability.agentDirectKnowledgeBaseIds()
+                .stream()
+                .map(String::valueOf)
+                .toList());
+        pinnedSkillRefs.forEach(item -> kbIds.addAll(item.kbWhitelist()));
+        return List.copyOf(kbIds);
     }
 
     private ExecutionResult executeWorkflow(AgentWorkflowVersionEntity publishedVersion,
@@ -609,10 +625,12 @@ public class AgentWorkflowRuntimeService {
 
     public record RuntimeSkillGovernanceView(
             String skillCode,
+            String skillName,
             Integer skillVersionNo,
             String templateCode,
             Integer templateVersionNo,
             String referenceMode,
+            String riskLevel,
             Integer toolCount,
             Integer kbCount
     ) {

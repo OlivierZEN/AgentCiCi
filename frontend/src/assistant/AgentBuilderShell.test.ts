@@ -3,6 +3,13 @@ import {
   AGENT_BUILDER_LIFECYCLE_TABS,
   AGENT_MODEL_GOVERNANCE_NOTICE,
   applyAgentDetailToList,
+  buildAgentSkillDagUrl,
+  buildDebugSkillResolutionChain,
+  canSelectAgentDuringOperation,
+  canStartAgentWriteOperation,
+  isCurrentAgentOperation,
+  isCurrentAgentSelection,
+  isLatestSkillDagRequest,
   MODEL_CONFIG_REQUIRED_NOTICE,
   resolveAgentCreationModel,
   resolveAgentAfterDelete,
@@ -10,6 +17,101 @@ import {
   resolveAgentDetailTarget,
   type BaseModelOption,
 } from "./AgentBuilderShell";
+
+describe("Agent Builder Skill DAG lifecycle", () => {
+  it("requests an explicit compiled version without leaking the raw agent id", () => {
+    expect(buildAgentSkillDagUrl("agent /售后", 12)).toBe("/agents/agent%20%2F%E5%94%AE%E5%90%8E/skill-dag?versionNo=12");
+    expect(buildAgentSkillDagUrl("agent-current", null)).toBe("/agents/agent-current/skill-dag");
+  });
+
+  it("accepts only the latest dependency graph response", () => {
+    expect(isLatestSkillDagRequest(8, 8)).toBe(true);
+    expect(isLatestSkillDagRequest(7, 8)).toBe(false);
+  });
+
+  it("rejects compile follow-up work after the selected Agent changes", () => {
+    expect(isCurrentAgentOperation("agent-a", "agent-a", 4, 4)).toBe(true);
+    expect(isCurrentAgentOperation("agent-a", "agent-b", 4, 4)).toBe(false);
+    expect(isCurrentAgentOperation("agent-a", "agent-a", 3, 4)).toBe(false);
+  });
+
+  it("rejects an older Agent detail response after a newer selection starts", () => {
+    expect(isCurrentAgentSelection(6, 6, "agent-b", "agent-b")).toBe(true);
+    expect(isCurrentAgentSelection(5, 6, "agent-a", "agent-b")).toBe(false);
+    expect(isCurrentAgentSelection(6, 6, "agent-a", "agent-b")).toBe(false);
+  });
+
+  it("blocks save and compile while the selected Agent detail is changing", () => {
+    expect(canStartAgentWriteOperation("agent-a", "agent-b", true)).toBe(false);
+    expect(canStartAgentWriteOperation("agent-b", "agent-b", true)).toBe(false);
+    expect(canStartAgentWriteOperation("agent-b", "agent-b", false)).toBe(true);
+  });
+
+  it("blocks Agent selection while target-bound operations are running", () => {
+    expect(canSelectAgentDuringOperation(false, false, false, false)).toBe(true);
+    expect(canSelectAgentDuringOperation(true, false, false, false)).toBe(false);
+    expect(canSelectAgentDuringOperation(false, true, false, false)).toBe(false);
+    expect(canSelectAgentDuringOperation(false, false, true, false)).toBe(false);
+    expect(canSelectAgentDuringOperation(false, false, false, true)).toBe(false);
+  });
+
+  it("builds a structured pinned Skill resolution chain for debug", () => {
+    expect(buildDebugSkillResolutionChain(
+      [{
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        skillVersionNo: 3,
+        templateCode: "crm-standard",
+        templateVersionNo: 2,
+        referenceMode: "PINNED_VERSION",
+        riskLevel: "LOW",
+      }],
+      [{
+        skillId: 7,
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        riskLevel: "HIGH",
+        activationMode: "intent-route",
+        activationCondition: "需要客户信息",
+        priority: 10,
+        enabled: true,
+      }],
+    )).toEqual([{
+      id: "crm.lookup:3",
+      name: "客户查询",
+      code: "crm.lookup",
+      versionLabel: "v3",
+      referenceLabel: "模板 crm-standard@v2",
+      riskLabel: "低风险",
+      activationLabel: "工作流钉住",
+    }]);
+  });
+
+  it("uses draft governance only for capability fallback resolution", () => {
+    expect(buildDebugSkillResolutionChain(
+      [{
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        referenceMode: "capability-fallback",
+        riskLevel: null,
+      }],
+      [{
+        skillId: 7,
+        skillCode: "crm.lookup",
+        skillName: "客户查询",
+        riskLevel: "HIGH",
+        activationMode: "intent-route",
+        activationCondition: "需要客户信息",
+        priority: 10,
+        enabled: true,
+      }],
+    )[0]).toMatchObject({
+      referenceLabel: "当前绑定",
+      riskLabel: "高风险",
+      activationLabel: "意图路由",
+    });
+  });
+});
 
 describe("Agent Builder information architecture", () => {
   it("places evaluation and delivery channels in the lower version lifecycle", () => {

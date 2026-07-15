@@ -80,10 +80,11 @@ public class AgentCapabilityResolverService {
         List<String> effectiveToolNames = mergeToolUnion(normalizedAgentToolBoundary, normalizedSkillToolUnion);
         List<Long> effectiveKnowledgeBaseIds = mergeBoundaryLong(agentKbBoundary, skillKbUnion);
 
-        List<String> effectiveHandoffRules = new ArrayList<>();
-        agentDefinition.map(AgentDefinitionEntity::getHandoffRule)
+        List<String> agentDirectHandoffRules = agentDefinition.map(AgentDefinitionEntity::getHandoffRule)
                 .filter(item -> item != null && !item.isBlank())
-                .ifPresent(effectiveHandoffRules::add);
+                .map(List::of)
+                .orElseGet(List::of);
+        List<String> effectiveHandoffRules = new ArrayList<>(agentDirectHandoffRules);
         runtimeSkills.stream()
                 .map(SkillDefinitionEntity::getHandoffRule)
                 .filter(item -> item != null && !item.isBlank())
@@ -125,6 +126,8 @@ public class AgentCapabilityResolverService {
                 agentDefinition.map(AgentDefinitionEntity::getSystemPrompt).orElse(null),
                 agentDefinition.map(AgentDefinitionEntity::getModel).orElse(null),
                 List.copyOf(normalizedAgentToolBoundary),
+                List.copyOf(agentKbBoundary),
+                List.copyOf(agentDirectHandoffRules),
                 List.copyOf(normalizedSkillToolUnion),
                 List.copyOf(skillScopedToolOnly)
         );
@@ -247,6 +250,10 @@ public class AgentCapabilityResolverService {
             String agentModel,
             /** Tools bound directly on the agent (allowed_tools). */
             List<String> agentDirectToolNames,
+            /** Knowledge bases bound directly on the agent. */
+            List<Long> agentDirectKnowledgeBaseIds,
+            /** Handoff rules declared directly on the agent. */
+            List<String> agentDirectHandoffRules,
             /** Union of toolWhitelist from selected skills (required + optional). */
             List<String> skillDeclaredToolNames,
             /** Tools declared only on skills, not in agent direct bindings (for audit/UI). */
