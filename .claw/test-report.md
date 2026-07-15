@@ -1,14 +1,25 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T17:28:00Z
+updated_at: 2026-07-15T00:13:29Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T17:28:00Z
+last_run_at: 2026-07-15T00:13:29Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-211 CRM 确定性回答真实流式输出本地验收（2026-07-15）
+
+- `tdd-red`: 新增多分片断言后，原实现的单方法回归按预期失败：1 项运行、1 failure，实际 `delta` 分片数为 1。
+- `minimal-fix`: 生产代码只把 CRM 确定性分支的 `safeSendDelta(emitter, finalText)` 替换为现有 `safeSendDeltaInChunks(emitter, finalText)`；18 字/18ms 参数、blocking、持久化、格式化器、最终 LLM 和通用模型流式路径均未改变。
+- `focused-green`: `ChatOrchestratorServiceModelIdentityTest,AgentOpenApiConversationServiceTest` 共 44 项通过；覆盖多 `delta`、单片上限、精确拼接、唯一尾部 `done`、多 `message`、唯一尾部 `message_end`、精确持久化、脱敏状态和最终 LLM 零调用。
+- `crm-clean-db`: 独立干净 PostgreSQL 数据库上的 8 类 CRM 回归共 135 项通过，0 failure / 0 error / 0 skipped；默认共享测试库的既有 Skill v3 checksum 污染未被修改，也未作为绿色证据。
+- `frontend`: Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建成功，转换 1,936 个模块，仅保留既有大 chunk 提示；无前端生产代码变更。
+- `backend-full-diagnostic`: 新建数据库的完整后端诊断到达 Surefire 汇总 326 项，重现 5 failure / 2 error，来自既有平台身份夹具、审计字段、客户洞察、模型厂商/模型清单和旧非空字段夹具；随后在 Hikari 重试窗口人工终止，未作为通过门禁。TASK-211 两个测试类没有失败，定向 135 项保持全绿。
+- `static/gates`: Compose config、`git diff --check`、TASK-211 身份登录和 assignment 检查均通过；签名实现提交为 `1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d`。
+- `reviews`: 任务级审查同时批准规格符合性和代码质量；整分支最终审查为 `Ready to merge: Yes`，Critical / Important / Minor 均为 0。生产五次 SalesA、OpenAPI、SalesB、浏览器中间态和日志门禁仍待 `2.7.6` 发布后执行。
 
 ## TASK-208 生产发布与真实验收（2026-07-15）
 

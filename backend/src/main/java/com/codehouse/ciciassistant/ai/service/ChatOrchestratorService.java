@@ -670,7 +670,7 @@ public class ChatOrchestratorService {
                 String finalText;
                 if (forcedCrmProductSalesAnswer.isPresent()) {
                     finalText = forcedCrmProductSalesAnswer.get();
-                    safeSendDelta(emitter, finalText);
+                    safeSendDeltaInChunks(emitter, finalText);
                 } else {
                     StringBuilder acc = new StringBuilder();
                     log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
