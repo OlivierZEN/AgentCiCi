@@ -23,6 +23,7 @@ scope_files:
   - backend/src/main/resources/db/migration/V81__skill_dag_impact_index.sql
   - backend/src/main/resources/db/migration/V81__skill_dag_impact_index.sql.conf
   - backend/src/main/resources/application.yml
+  - backend/src/test/resources/application.yml
   - .claw/tasks/TASK-212.md
   - .claw/assignments/TASK-212.yaml
   - .claw/task-board.md
@@ -58,12 +59,12 @@ shared_contracts:
 task_boundary:
   - "只实现由现有 Agent、工作流版本、Skill 版本、Tool 与知识库事实派生的只读 DAG。"
   - "允许新增查询 API、统一图 DTO/服务、后端测试、共享前端图组件及 Agent Builder/平台 Skill 页接入。"
-  - "允许且仅允许新增 V81 Skill 影响查询复合索引、对应 Flyway 非事务配置，以及在 application.yml 关闭 PostgreSQL transactional lock 以支持并发建索引；不得新增业务表、数据回填、DAG 编辑保存、Skill-to-Skill 调用或独立子流程执行语义。"
+  - "允许且仅允许新增 V81 Skill 影响查询复合索引、对应 Flyway 非事务配置，以及在主配置与测试配置 application.yml 关闭 PostgreSQL transactional lock 以支持并发建索引；不得新增业务表、数据回填、DAG 编辑保存、Skill-to-Skill 调用或独立子流程执行语义。"
   - "不得修改 TASK-210、TASK-203、TASK-204 或 TASK-170 的专属实现与交付文件。"
   - "生产发布只执行已批准的 runbook；不得提交密钥、Token、Cookie、生产数据或可复用凭据。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
-signature: "MANAGER-001 SSH challenge allowed 2026-07-15; user explicitly approved FEAT-117 Phase 1 and production release; V81 index-only amendment approved by MANAGER-001 for bounded production impact-query performance; 2026-07-16 review amendments authorize the matching binding-impact index, non-transactional concurrent index creation, and the required PostgreSQL Flyway session-lock setting."
-notes: "全栈只读治理任务。后端与前端必须共享稳定图契约，保持租户/权限边界和版本钉住语义；V81 仅可并发创建 agent_workflow_skill_ref(org_id, skill_id, skill_version_id, workflow_version_id) 与 agent_skill_binding(org_id, skill_id, enabled, agent_id, priority) 两个查询索引，通过同名 .sql.conf 设置 executeInTransaction=false，并在 application.yml 仅设置 spring.flyway.postgresql.transactional-lock=false 以避免 Flyway 自锁，不得写业务数据；生产发布前必须完成 dry-run、备份、不可变版本、桌面 smoke 与回滚点记录。"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-15; user explicitly approved FEAT-117 Phase 1 and production release; V81 index-only amendment approved by MANAGER-001 for bounded production impact-query performance; 2026-07-16 review amendments authorize the matching binding-impact index, non-transactional concurrent index creation, and the required PostgreSQL Flyway session-lock setting in runtime and test configuration."
+notes: "全栈只读治理任务。后端与前端必须共享稳定图契约，保持租户/权限边界和版本钉住语义；V81 仅可并发创建 agent_workflow_skill_ref(org_id, skill_id, skill_version_id, workflow_version_id) 与 agent_skill_binding(org_id, skill_id, enabled, agent_id, priority) 两个查询索引，通过同名 .sql.conf 设置 executeInTransaction=false，并在主配置与测试配置 application.yml 仅设置 spring.flyway.postgresql.transactional-lock=false 以避免 Flyway 自锁，不得写业务数据；生产发布前必须完成 dry-run、备份、不可变版本、桌面 smoke 与回滚点记录。"
