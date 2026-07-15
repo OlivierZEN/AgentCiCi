@@ -732,6 +732,17 @@ class ChatOrchestratorServiceModelIdentityTest {
                 "demo-org", "sales-a", "stream-session", question,
                 List.of(), "agent-cici", "crm-business-analysis", emitter);
 
+        List<String> deltaChunks = emitter.deltaChunks();
+
+        assertThat(deltaChunks).hasSizeGreaterThan(1);
+        assertThat(deltaChunks).allSatisfy(chunk -> {
+            assertThat(chunk).isNotBlank();
+            assertThat(chunk.length()).isLessThanOrEqualTo(18);
+        });
+        assertThat(deltaChunks.getFirst()).isNotEqualTo(expected);
+        assertThat(String.join("", deltaChunks)).isEqualTo(expected);
+        assertThat(emitter.eventNames().stream().filter("done"::equals).count()).isEqualTo(1L);
+        assertThat(emitter.lastIndexOf("delta")).isLessThan(emitter.firstIndexOf("done"));
         assertThat(blocking.get("answer")).isEqualTo(expected);
         assertThat(emitter.deltaText()).isEqualTo(expected);
         assertThat(emitter.eventNames()).doesNotContain("tool_call", "tool_result");
@@ -916,18 +927,30 @@ class ChatOrchestratorServiceModelIdentityTest {
             return List.copyOf(eventNames);
         }
 
-        private String deltaText() {
-            StringBuilder text = new StringBuilder();
+        private List<String> deltaChunks() {
+            List<String> chunks = new ArrayList<>();
             for (int index = 0; index < eventNames.size(); index++) {
                 if (!"delta".equals(eventNames.get(index))) {
                     continue;
                 }
                 Object data = eventData.get(index);
                 if (data instanceof Map<?, ?> map && map.get("text") != null) {
-                    text.append(map.get("text"));
+                    chunks.add(String.valueOf(map.get("text")));
                 }
             }
-            return text.toString();
+            return List.copyOf(chunks);
+        }
+
+        private String deltaText() {
+            return String.join("", deltaChunks());
+        }
+
+        private int firstIndexOf(String eventName) {
+            return eventNames.indexOf(eventName);
+        }
+
+        private int lastIndexOf(String eventName) {
+            return eventNames.lastIndexOf(eventName);
         }
 
         private String allDataText() {
