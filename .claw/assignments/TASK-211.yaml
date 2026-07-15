@@ -7,7 +7,7 @@ expires_at: none
 spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 task_status_path: .claw/tasks/TASK-211.md
 branch: codex/TASK-211-crm-streaming-output
-pr_url: n/a
+pr_url: https://github.com/OlivierZEN/CICI/pull/6
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/**

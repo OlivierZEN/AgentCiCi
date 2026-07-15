@@ -56,5 +56,6 @@ spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 ## Handoff
 
 - 分支：`codex/TASK-211-crm-streaming-output`。
+- PR：`https://github.com/OlivierZEN/CICI/pull/6`。
 - 先读 FEAT-114 的“TASK-211 真实流式输出纠偏设计”，再读当前单包路径与已有分块 helper。
 - 已审查实现提交：`1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d`；生产发布与真实会话验收尚未执行。
