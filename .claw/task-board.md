@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-15T00:13:29Z
+updated_at: 2026-07-15T01:35:39Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-211 - CRM 确定性回答真实流式输出纠偏
 
-- status: `review`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md`
 - task_status_path: `.claw/tasks/TASK-211.md`
 - assignment_path: `.claw/assignments/TASK-211.yaml`
 - blocked_by: `none`
-- next_action: Merge the independently approved branch, publish immutable `2.7.6` from clean main, then complete five SalesA streams, OpenAPI, SalesB, browser and log acceptance.
+- next_action: 生产 `2.7.7 / e47979167af8` 已通过 5 次 SalesA 流式、blocking、SalesB、OpenAPI 精确性、清理、防泄漏和干净日志门禁；待应用内 Browser 可用后补录 partial/final 气泡与 console 证据，再关闭 TASK-211。
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

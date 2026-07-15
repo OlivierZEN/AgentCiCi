@@ -7,7 +7,7 @@ expires_at: none
 spec_path: docs/specs/FEAT-114-crm-product-sales-analysis-hardening.md
 task_status_path: .claw/tasks/TASK-211.md
 branch: codex/TASK-211-crm-streaming-output
-pr_url: https://github.com/OlivierZEN/CICI/pull/6
+pr_url: https://github.com/OlivierZEN/CICI/pull/7
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/**
@@ -59,4 +59,4 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 signature: "MANAGER-001 SSH challenge allowed 2026-07-15; user explicitly approved solution A for true multi-delta CRM streaming."
-notes: "Backend-only corrective task. No private keys, passwords, bearer tokens, production cookies, customer raw data, record IDs, or reusable secrets may be committed."
+notes: "仅后端纠偏任务。PR #6 实现内部真实分片，PR #7 保留 OpenAPI 空白且已随 2.7.7 上线。生产协议验收通过；当前未暴露 Browser 实例，只剩应用内 Browser 视觉证据。不得提交私钥、密码、Bearer Token、生产 Cookie、客户原始数据、记录 ID 或可复用密钥。"

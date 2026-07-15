@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T17:28:00Z
+updated_at: 2026-07-15T01:35:39Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,17 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.7 TASK-211 CRM 确定性回答真实流式与 OpenAPI 空白保真 on 2026-07-15:
+  - Git 合并提交/标签：`e47979167af8` / `2.7.7`；PR #6 复用 18 字/18ms 服务端分片，PR #7 保留每个 OpenAPI delta 的首尾空白、换行与纯空白片段。
+  - 镜像：backend index `sha256:315623e0ea90f087cf332acfc5b981efca91d493c814a0b8a2023a7b6433a475`、amd64 `sha256:9c6b10448df2a7f1bda6b37dfdaf09ec2eacc28bd050055afbf6150279af4ddc`；frontend index `sha256:515c760bc654c8e491a8914cf48a37397fe4c3200529b0df972d397e6b3f9f24`、amd64 `sha256:96d176f71a276962ba87be12f788ecf73c3d68009d7a9804077af12fa4a082ab`。
+  - 备份：`/opt/cici/backups/20260715-091243-before-2.7.7-task211-openapi-whitespace`；env 1,646 bytes、PostgreSQL 2,925,720 bytes、KB 511,065 bytes、Qdrant 1,584,517 bytes，全部非空。
+  - 部署：`2.7.7` 只强制重建 backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 保持不变并继续健康运行在 `2.6.12`。
+  - 运行态：health `UP`，版本 `2.7.7 / e47979167af8`，Flyway 当前 V80，Nginx 有效，`x` HTTP 301/HTTPS 200，显式使用生产 IP 的 `onechat` HTTPS 200。最终成功 CRM 窗口为 backend ERROR 0、CRM failure 0、异常断连 0、精确 Nginx 5xx 0。
+  - 协议验收：SalesA 5/5 流式调用各产生 133 个 delta，持续约 2.4 秒，最大 18 UTF-16 单元且持久化精确一致；blocking 与 SalesB 仅归一化截止时间后相同。OpenAPI blocking/streaming 均为 2,383 字，streaming 产生 133 个 message、逐字保留空白，并与 history/internal 正文一致。
+  - 访问清理：临时 OpenAPI Key 已撤销且返回 401 `agent_api_key_invalid`；没有 ACTIVE Key 残留，原 channels/toolIds/knowledgeBaseIds 精确恢复。用户答案不含内部工具结果、原始 JSON、内部 ID 或凭据材料。
+  - 剩余证据：应用内 Browser 当前没有可用实例，同一气泡的 partial/final 截图及 console/overflow 检查仍待补录。这是证据环境阻塞；协议与生产运行门禁均为绿色。
+  - 发布纠偏：`2.7.6 / 2055947aae07` 证明内部 SSE 分片有效，但丢失 41 个 OpenAPI 空白字符，随后立即回滚到 `2.7.5`。该版本仅保留为不可变失败验收证据，不是回滚目标；应用回滚目标仍为 `2.7.5 / be80eea665c0`。
 
 - 2.7.5 TASK-208 CRM 产品销售经营分析稳定性与深度治理 on 2026-07-15:
   - Git merge commit/tag `be80eea665c0` / `2.7.5`; release line contains TASK-209 `2.7.2`, TASK-208 `2.7.3` and TASK-210 `2.7.4` as ancestors.

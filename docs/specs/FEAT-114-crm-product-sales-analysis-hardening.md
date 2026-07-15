@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-208,TASK-211
 related_decisions: FEAT-015,FEAT-021,FEAT-028,FEAT-031,FEAT-109,FEAT-111
 related_issues: ISSUE-2026-07-15-crm-deterministic-stream-single-delta
-updated_at: 2026-07-14T23:22:06Z
+updated_at: 2026-07-15T01:35:39Z
 updated_by: MANAGER-001
 ---
 
@@ -359,3 +359,13 @@ CRM 高阶只读工具
 - 验收失败后已撤销临时 OpenAPI Key、验证撤销后返回 401、精确恢复原 Agent channels/toolIds/knowledgeBaseIds，并只重建 backend/frontend 回滚到健康的 `2.7.5 / be80eea665c0`；四个状态服务容器未改变。
 - 修复要求：`deltaText` 对 `text` 值只做 null-to-empty，不得 trim；转发条件从“非 blank”改为“非 empty”。回归必须包含尾随空格、纯空白片段和前导换行，并证明外部消息拼接、运行完成入参及持久化正文逐字相等。
 - `2.7.6` 保留为失败验收的不可变发布证据，不复用、不覆盖；修复只能发布新的 `2.7.7`。
+
+### 2.7.7 生产协议验收结果（2026-07-15）
+
+- 空白保真提交 `eb5e1f7e4dc05f53943094e09289c54cd08d0056` 经 PR #7 合并为 `e47979167af8`；不可变 tag/image `2.7.7` 通过统一 release dry-run 后发布。部署仅重建 backend/frontend，四个状态服务容器身份不变，六服务健康，V80、版本指纹、Nginx 与公网入口通过。
+- SalesA 5 个 fresh SSE 会话均为 3 个 phase、133 个非空 delta、最大 18 UTF-16 单元、唯一尾部 done；每次首末片约跨 2.4 秒，且 SSE 拼接与自身两条持久化消息逐字一致。五次答案、SalesA blocking 与 SalesB SSE 仅归一化动态“数据截止”后完全相同。
+- OpenAPI blocking 与 streaming 均返回 2,383 字五层正文；streaming 为 3 个脱敏 thought、133 个 message、最大 18 UTF-16 单元和唯一尾部 message_end。逐片空格、换行及纯空白保留，streaming、blocking、各自 history 和内部协议正文在只归一化截止时间后完全一致。
+- 临时 OpenAPI Key 已撤销且复用返回 401 `agent_api_key_invalid`；无新增 ACTIVE Key，channels/toolIds/knowledgeBaseIds 与 fresh 初始快照精确相同。9 份用户正文与脱敏 thought 未发现工具名、原始 JSON、内部 ID 或敏感信息。
+- Top 5 仍为 X1 130、G5 110、S2 95、MP 75、PA 65，金额冠军仍为 MP 2,850,000；贡献、环比、订单/客户覆盖、经营诊断、商机、合同、行动、退货与收入声明均保留。最终成功会话日志窗口中 backend ERROR、CRM failure、异常断连和 Nginx 5xx 均为 0。
+- 生产桌面视觉契约尚缺一次证据补录：当前应用内 Browser 不可用且实例列表为空，按 Browser 技能不得以 Playwright 冒充，因此没有同一气泡的 partial/final 截图与 console/overflow 记录。接口逐事件到达时间已证明服务端是真流式，但 TASK-211 保持 active，待 Browser 实例恢复后完成该唯一剩余验收项。
+- 权限负向测试同时发现既有状态语义问题：SalesB 无法读取 SalesA 会话且响应无数据，但 `ResponseStatusException` 被通用异常处理映射为 HTTP 500，而非 404/403。数据隔离成立；该问题独立登记，不纳入本流式补丁。

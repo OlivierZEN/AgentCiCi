@@ -311,7 +311,9 @@ Expected: a signed commit containing only the approved backend source and test f
 
 - [ ] **Step 4: 完成组合回归、评审和 2.7.7 发布验收**
 
-重复 8 类 CRM 回归与独立评审；发布后同时验证内部 SSE、OpenAPI streaming/blocking/history 的正文精确一致，不能只比较各自持久化。
+- [x] 重复 8 类 CRM 回归与独立评审，PR #7 合并并从 clean main 发布不可变 `2.7.7`。
+- [x] 完成 5 次 SalesA SSE、blocking、SalesB、OpenAPI streaming/blocking/history、空白保真、访问清理、防泄漏和干净日志验收。
+- [ ] 应用内 Browser 当前没有可用实例；实例恢复后补录同一气泡 partial/final、console error=0 与无横向溢出证据，然后关闭本步骤。
 
 ---
 
