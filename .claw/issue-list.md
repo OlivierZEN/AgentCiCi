@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-15T00:13:29Z
+updated_at: 2026-07-15T01:35:39Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -15,7 +15,14 @@ status: active
   - Verified root cause: 生产 5 份 CRM SSE 均为 `phase ×3 → delta ×1 → done ×1`，唯一 `delta` 为 2,383 字符；OpenAPI streaming 也只有一个 2,383 字符 `message`。`ChatOrchestratorService` 的 CRM 确定性分支对完整格式化正文只调用一次 `safeSendDelta`，而前端逐 delta 更新和 Nginx buffering 配置均正常。
   - Approved resolution: TASK-211 复用服务端现有 `safeSendDeltaInChunks`，保持确定性正文、防泄漏、blocking、持久化和业务结果不变，同时让内部 SSE 与 OpenAPI 产生有序多分片正文事件。
   - Verification required: TDD 证明当前实现因单片失败；修复后验证分片数量、上限、顺序、拼接正文、结束事件、防泄漏和最终 LLM 零调用，并完成 SalesA 五次生产页面流式验收。
-  - Status: open (TASK-211 local implementation and independent reviews passed; production release and acceptance pending).
+  - Status: open only for visual evidence. PR #6/#7 are merged and production `2.7.7` passes five SalesA streams, blocking, SalesB, OpenAPI whitespace/history equality, access cleanup, leakage and clean-log gates. The in-app Browser currently has no available instance, so the required same-bubble partial/final screenshot and console evidence remain pending.
+
+- ISSUE-2026-07-15-session-not-found-status-mapped-500:
+  - Symptom: a signed-in user requesting another user's non-org-scoped `/ai/sessions/{id}/messages` receives HTTP 500 `Unexpected server error` rather than a non-disclosing 404/403.
+  - Verified facts: the response contains no `data` and no other user's content, so tenant/user isolation holds. `queryVisibleSession` correctly returns empty and throws `ResponseStatusException(HttpStatus.NOT_FOUND)`, but `GlobalExceptionHandler` has no dedicated handler and its generic exception path maps the status exception to 500 while producing ERROR logs.
+  - Scope: pre-existing HTTP/error-observability semantics discovered during TASK-211's negative permission check; it does not affect CRM ranking, SSE/OpenAPI text integrity, or data isolation and is not included in TASK-211's backend-only stream patch.
+  - Recommended resolution: add a focused red/green controller exception-mapping test, preserve the non-disclosing reason, return the intended status without ERROR-level generic logging, and run cross-user/session regression separately.
+  - Status: open; requires a separately assigned task.
 
 - ISSUE-2026-07-09-cloudcc-custompage-bind-skill-gap:
   - Symptom: TASK-171 SSO closure requires updating a CloudCC customPage to the latest pagecomponent id through `cc-customization-expert-msapi`, but the skill write path fails even though publish and runtime loading work.

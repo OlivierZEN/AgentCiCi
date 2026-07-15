@@ -1,14 +1,31 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-15T00:13:29Z
+updated_at: 2026-07-15T01:35:39Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-15T00:13:29Z
+last_run_at: 2026-07-15T01:35:39Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-211 2.7.6 失败回滚与 2.7.7 生产协议验收（2026-07-15）
+
+- `2.7.6-go/no-go`: `2.7.6 / 2055947aae07` 的 SalesA 5 次内部 SSE 均为 133 个 delta、最大 18 字符、唯一 done 且与持久化精确一致；但 OpenAPI streaming 只有 2,342 字，blocking 为 2,383 字，41 个分片边界空格/换行丢失。临时 Key 撤销后返回 401，bindings 精确恢复，随后只重建 backend/frontend 回滚到健康 `2.7.5`，四个状态服务 ID 未变化。
+- `openapi-tdd-hotfix`: 旧实现面对“尾随空格 + 纯空白 + 前导换行”片段稳定红灯；`deltaText` 改为 null-to-empty 且转发条件改为非空后转绿。两类聚焦测试 44 项、独立干净数据库 8 类 CRM 测试 135 项、前端 16 文件 89 项、1,936 模块生产构建、Compose、身份/assignment 与 diff 门禁全部通过；独立审查 Critical / Important / Minor 均为 0。
+- `merge/release`: PR #7 合并为 `e47979167af8`，签名实现提交为 `eb5e1f7e4dc05f53943094e09289c54cd08d0056`；`scripts/release-acr.sh --dry-run --version 2.7.7` 与真实 release 均成功，Git tag `2.7.7` 已推送。
+- `images`: backend index `sha256:315623e0ea90f087cf332acfc5b981efca91d493c814a0b8a2023a7b6433a475`、amd64 `sha256:9c6b10448df2a7f1bda6b37dfdaf09ec2eacc28bd050055afbf6150279af4ddc`；frontend index `sha256:515c760bc654c8e491a8914cf48a37397fe4c3200529b0df972d397e6b3f9f24`、amd64 `sha256:96d176f71a276962ba87be12f788ecf73c3d68009d7a9804077af12fa4a082ab`。
+- `backup/deploy`: `/opt/cici/backups/20260715-091243-before-2.7.7-task211-openapi-whitespace` 中 env 1,646、PostgreSQL 2,925,720、KB 511,065、Qdrant 1,584,517 bytes，全部非空。只 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器身份逐项与部署前一致。
+- `runtime`: 六服务健康，health `UP`，`/system/version` 返回 `2.7.7 / e47979167af8`，Flyway 最新成功版本为 V80，Nginx 配置有效；`x` HTTP 301、HTTPS 200，生产 IP 显式解析的 `onechat` HTTPS 200。
+- `salesa-stream`: 5 个 fresh SalesA 会话均为 `run → model → generating`、133 个非空 delta、最大 18 UTF-16 单元、唯一尾部 done；首末 delta 到达跨度依次为 2,398.082 / 2,395.707 / 2,398.149 / 2,395.634 / 2,394.114 ms，证明不是最终突发。每次 SSE 拼接与自身两条持久化消息逐字一致，五次正文仅归一化秒级“数据截止”后哈希唯一。
+- `blocking/salesb/isolation`: SalesA blocking 与自身历史逐字一致；fresh SalesB SSE 同为 133 个 delta、最大 18 UTF-16 单元并与自身历史一致，和 SalesA 截止时间归一化后相同。SalesB 读取 SalesA 会话没有返回数据；因既有 `ResponseStatusException` 映射缺口响应为通用 500，已登记独立 issue，不作为数据泄漏或 TASK-211 流式回归。
+- `openapi`: fresh 临时 Key 下 blocking 与 streaming 正文均为 2,383 字；streaming 为 3 个脱敏 `agent_thought`、133 个 `message`、最大 18 UTF-16 单元、唯一尾部 `message_end`。仅归一化动态截止时间后，streaming、blocking、各自 OpenAPI history 和内部协议正文完全一致，空格与换行无丢失。
+- `cleanup/security`: 临时 Key 已撤销，复用该 Key 返回 401 `agent_api_key_invalid`；初始 ACTIVE Key 数与结束时一致为 0，临时 Key 无 ACTIVE 残留，channels/toolIds/knowledgeBaseIds 与 fresh 初始绑定逐字规范化一致。9 份用户答案及脱敏 thought 通过工具名、原始 JSON、内部字段、疑似 CloudCC ID 和敏感信息扫描。
+- `business-depth`: 9 份答案都包含 Top 5 `X1 130 / G5 110 / S2 95 / MP 75 / PA 65`，金额冠军 MP 2,850,000，以及数量/金额贡献、环比、订单/客户覆盖、商机、合同、退货、建议动作、数据覆盖和“订单销售额不等同于财务确认收入”声明。
+- `clean-logs`: 在另一个 fresh 133-delta、约 2.43 秒且持久化精确一致的成功会话窗口内，backend ERROR 0、CRM failure 0、异常断连 0、Nginx 精确 5xx 0；窗口含 179 条 Nginx 请求日志。
+- `browser-evidence`: 按 `browser:control-in-app-browser` 初始化与排障后，应用内 Browser 返回不可用且实例列表为空。技能禁止使用 Playwright/其他浏览器冒充应用内验收，因此同一 assistant 气泡的可见中间态/最终态、console error 和 overflow 截图仍待环境提供 Browser；未读取或复用浏览器凭据、Token、Cookie 或 Session，未改 CRM/绑定/Key。
+- `governance-gates`: TASK-211 SSH 持钥登录与 9 个变更文件的 assignment 检查均为 allowed，`git diff --check` 通过；全仓 `validate-state.py` 仍因 130 行既有历史状态/规格基线问题退出 1，但不再包含 TASK-211、FEAT-114 或本计划的 finding，未在本任务中越界修复。
 
 ## TASK-211 CRM 确定性回答真实流式输出本地验收（2026-07-15）
 
@@ -19,7 +36,7 @@ last_run_status: passed
 - `frontend`: Vitest 16 个文件、89 项通过；TypeScript/Vite 生产构建成功，转换 1,936 个模块，仅保留既有大 chunk 提示；无前端生产代码变更。
 - `backend-full-diagnostic`: 新建数据库的完整后端诊断到达 Surefire 汇总 326 项，重现 5 failure / 2 error，来自既有平台身份夹具、审计字段、客户洞察、模型厂商/模型清单和旧非空字段夹具；随后在 Hikari 重试窗口人工终止，未作为通过门禁。TASK-211 两个测试类没有失败，定向 135 项保持全绿。
 - `static/gates`: Compose config、`git diff --check`、TASK-211 身份登录和 assignment 检查均通过；签名实现提交为 `1e7fcc7a6228c19bad193bb46787fb8fb3bd5b2d`。
-- `reviews`: 任务级审查同时批准规格符合性和代码质量；整分支最终审查为 `Ready to merge: Yes`，Critical / Important / Minor 均为 0。生产五次 SalesA、OpenAPI、SalesB、浏览器中间态和日志门禁仍待 `2.7.6` 发布后执行。
+- `reviews`: 任务级审查同时批准规格符合性和代码质量；整分支最终审查为 `Ready to merge: Yes`，Critical / Important / Minor 均为 0。生产 `2.7.6` 的空白保真失败、回滚、TDD 热修、`2.7.7` 发布与协议验收见上节；只剩应用内 Browser 视觉证据。
 
 ## TASK-208 生产发布与真实验收（2026-07-15）
 
