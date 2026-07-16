@@ -64,9 +64,25 @@ public class OntologyDataSourceEntity extends AbstractOntologyWorkspaceEntity {
     public Instant getLastValidatedAt() { return lastValidatedAt; }
     public String getCreatedBy() { return createdBy; }
 
-    public void updateDraft(String name, String sourceType, String configJson) {
+    public boolean definitionMatches(
+            String key,
+            String sourceType,
+            String configJson,
+            String sampleDataJson) {
+        return java.util.Objects.equals(this.key, key)
+                && java.util.Objects.equals(this.sourceType, sourceType)
+                && java.util.Objects.equals(this.configJson, configJson)
+                && java.util.Objects.equals(this.sampleDataJson, sampleDataJson);
+    }
+
+    public void updateDraft(
+            String name,
+            String sourceType,
+            String configJson,
+            String sampleDataJson) {
         this.name = name;
         this.sourceType = sourceType;
         this.configJson = configJson;
+        this.sampleDataJson = sampleDataJson;
     }
 }

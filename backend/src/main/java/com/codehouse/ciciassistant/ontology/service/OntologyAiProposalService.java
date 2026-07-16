@@ -583,7 +583,8 @@ public class OntologyAiProposalService {
             }
             requireKey(source.key(), 128);
             requireName(source.name(), 160);
-            if (!allowServerDataSourceConfig && !isBlank(source.configJson())) {
+            if (!allowServerDataSourceConfig
+                    && (!isBlank(source.configJson()) || !isBlank(source.sampleDataJson()))) {
                 throw invalid("AI_DATA_SOURCE_CONFIG_FORBIDDEN");
             }
         }
@@ -776,7 +777,7 @@ public class OntologyAiProposalService {
             List<OntologyDocument.DataSource> sources) {
         return safe(sources).stream()
                 .map(source -> new OntologyDocument.DataSource(
-                        source.id(), source.key(), source.name(), source.type(), null))
+                        source.id(), source.key(), source.name(), source.type(), null, null))
                 .toList();
     }
 

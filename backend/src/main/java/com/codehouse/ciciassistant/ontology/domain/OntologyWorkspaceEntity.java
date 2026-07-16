@@ -119,13 +119,31 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
     }
 
     public void applyDraftMetadata(
-            String key,
             String name,
             String description,
             String updatedBy) {
-        this.key = key;
         this.name = name;
         this.description = description;
+        this.status = "DRAFT";
+        this.draftRevision = this.draftRevision == null ? 1L : this.draftRevision + 1L;
+        this.updatedBy = updatedBy;
+        this.updatedAt = Instant.now();
+    }
+
+    public void updateMetadata(String name, String description, String updatedBy) {
+        this.name = name;
+        this.description = description;
+        this.updatedBy = updatedBy;
+        this.updatedAt = Instant.now();
+    }
+
+    public void archive(String updatedBy) {
+        this.status = "ARCHIVED";
+        this.updatedBy = updatedBy;
+        this.updatedAt = Instant.now();
+    }
+
+    public void advanceDraftRevision(String updatedBy) {
         this.status = "DRAFT";
         this.draftRevision = this.draftRevision == null ? 1L : this.draftRevision + 1L;
         this.updatedBy = updatedBy;

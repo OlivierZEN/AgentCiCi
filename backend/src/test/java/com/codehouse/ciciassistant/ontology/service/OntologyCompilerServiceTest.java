@@ -219,7 +219,13 @@ class OntologyCompilerServiceTest {
                 "delivery-source",
                 "交付数据",
                 OntologyDocument.SourceType.INLINE_SAMPLE,
-                "{}");
+                "{}",
+                """
+                        {
+                          "projects": [{"id":"p-1","name":"语义平台","budget":100000,"task_id":"p-1"}],
+                          "tasks": [{"id":"t-1","project_id":"p-1","status":"ACTIVE"}]
+                        }
+                        """);
 
         return new OntologyDocument(
                 "project-delivery",

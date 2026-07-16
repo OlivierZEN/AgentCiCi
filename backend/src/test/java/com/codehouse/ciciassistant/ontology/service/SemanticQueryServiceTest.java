@@ -332,13 +332,13 @@ class SemanticQueryServiceTest {
 
         assertThatThrownBy(() -> service.execute(
                 "org-a", "user-a", querySelecting("name")))
-                .hasMessage("CONNECTOR_READ_FAILED");
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
 
         ArgumentCaptor<OntologyQueryAuditEntity> audit =
                 ArgumentCaptor.forClass(OntologyQueryAuditEntity.class);
         org.mockito.Mockito.verify(auditWriter).write(audit.capture());
         assertThat(audit.getValue().getStatus()).isEqualTo("FAILED");
-        assertThat(audit.getValue().getErrorCode()).isEqualTo("CONNECTOR_READ_FAILED");
+        assertThat(audit.getValue().getErrorCode()).isEqualTo("DATA_SOURCE_UNAVAILABLE");
         assertThat(SemanticQueryService.class
                 .getMethod(
                         "execute",
@@ -665,6 +665,7 @@ class SemanticQueryServiceTest {
                 "delivery-source",
                 "交付数据",
                 OntologyDocument.SourceType.INLINE_SAMPLE,
+                "{}",
                 """
                         {"tasks":[
                           {"name":"语义平台设计","status":"IN_PROGRESS","private_note":"secret"},
@@ -709,6 +710,7 @@ class SemanticQueryServiceTest {
                 "status-source",
                 "状态数据",
                 OntologyDocument.SourceType.INLINE_SAMPLE,
+                "{}",
                 "{\"tasks\":[]}");
         return new OntologyDocument(
                 base.key(),
@@ -755,6 +757,7 @@ class SemanticQueryServiceTest {
                 "relation-source",
                 "关系数据",
                 OntologyDocument.SourceType.INLINE_SAMPLE,
+                "{}",
                 "{\"tasks\":[]}");
         OntologyDocument.Mapping relationMapping = new OntologyDocument.Mapping(
                 "RELATION",
@@ -791,7 +794,12 @@ class SemanticQueryServiceTest {
             String projectObject,
             String taskObject) {
         OntologyDocument.DataSource source = new OntologyDocument.DataSource(
-                11L, "delivery-source", "交付数据", sourceType, configJson);
+                11L,
+                "delivery-source",
+                "交付数据",
+                sourceType,
+                sourceType == OntologyDocument.SourceType.INLINE_SAMPLE ? "{}" : configJson,
+                sourceType == OntologyDocument.SourceType.INLINE_SAMPLE ? configJson : null);
         OntologyDocument.Concept project = new OntologyDocument.Concept(
                 "project", "项目", "项目", "", OntologyDocument.ConceptType.ENTITY,
                 "name", 0, 0, true, true,

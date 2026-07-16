@@ -94,4 +94,40 @@ public class OntologyMappingEntity extends AbstractOntologyWorkspaceEntity {
         this.validationStatus = valid ? "VALID" : "INVALID";
         this.lastValidatedAt = Instant.now();
     }
+
+    public boolean definitionMatches(
+            String physicalObjectKey,
+            String physicalFieldKey,
+            String relationTargetFieldKey,
+            String transform,
+            BigDecimal confidence) {
+        return java.util.Objects.equals(this.physicalObjectKey, physicalObjectKey)
+                && java.util.Objects.equals(this.physicalFieldKey, physicalFieldKey)
+                && java.util.Objects.equals(this.relationTargetFieldKey, relationTargetFieldKey)
+                && java.util.Objects.equals(this.transform, transform)
+                && this.confidence != null
+                && confidence != null
+                && this.confidence.compareTo(confidence) == 0;
+    }
+
+    public void updateDefinition(
+            String physicalObjectKey,
+            String physicalFieldKey,
+            String relationTargetFieldKey,
+            String transform,
+            BigDecimal confidence,
+            String source) {
+        this.physicalObjectKey = physicalObjectKey;
+        this.physicalFieldKey = physicalFieldKey;
+        this.relationTargetFieldKey = relationTargetFieldKey;
+        this.transform = transform;
+        this.confidence = confidence;
+        this.source = source;
+        markPending();
+    }
+
+    public void markPending() {
+        this.validationStatus = "PENDING";
+        this.lastValidatedAt = null;
+    }
 }

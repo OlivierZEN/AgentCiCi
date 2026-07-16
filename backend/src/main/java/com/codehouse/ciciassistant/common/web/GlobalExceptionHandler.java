@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.common.web;
 
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.common.error.ConflictException;
+import com.codehouse.ciciassistant.common.error.DataSourceUnavailableException;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
@@ -81,6 +82,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(CloudccApiException.class)
     public ResponseEntity<ApiResponse<Void>> handleCloudccApi(CloudccApiException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(ApiResponse.fail(ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataSourceUnavailableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataSourceUnavailable(
+            DataSourceUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(ApiResponse.fail("DATA_SOURCE_UNAVAILABLE"));
     }
 
     @ExceptionHandler(Exception.class)

@@ -9,6 +9,8 @@ public interface OntologyMappingRepository extends Repository<OntologyMappingEnt
     Optional<OntologyMappingEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
     List<OntologyMappingEntity> findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKey(
             Long workspaceId, String orgId, String targetType, String targetKey);
+    Optional<OntologyMappingEntity> findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+            Long workspaceId, String orgId, String targetType, String targetKey, Long dataSourceId);
     long deleteByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
     long deleteByWorkspaceIdAndOrgId(Long workspaceId, String orgId);
 }

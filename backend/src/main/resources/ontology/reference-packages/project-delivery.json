@@ -1,0 +1,97 @@
+{
+  "id": "project-delivery",
+  "title": "项目交付",
+  "description": "以内置小型样例数据演示项目、任务与负责人的通用本体。",
+  "document": {
+    "key": "project-delivery",
+    "name": "项目交付",
+    "description": "领域中立的项目交付参考本体",
+    "concepts": [
+      {
+        "key": "project",
+        "name": "项目",
+        "pluralName": "项目",
+        "description": "需要按计划交付的工作单元",
+        "conceptType": "ENTITY",
+        "displayPropertyKey": "name",
+        "positionX": 120,
+        "positionY": 120,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"项目编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"name","name":"项目名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"status","name":"项目状态","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["PLANNED","ACTIVE","DONE"]}
+        ]
+      },
+      {
+        "key": "task",
+        "name": "任务",
+        "pluralName": "任务",
+        "description": "项目内可跟踪的交付任务",
+        "conceptType": "EVENT",
+        "displayPropertyKey": "title",
+        "positionX": 440,
+        "positionY": 120,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"任务编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"title","name":"任务名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"status","name":"任务状态","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["TODO","IN_PROGRESS","DONE"]},
+          {"key":"project-id","name":"所属项目编号","description":null,"dataType":"REFERENCE","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"owner-id","name":"负责人编号","description":null,"dataType":"REFERENCE","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key": "owner",
+        "name": "负责人",
+        "pluralName": "负责人",
+        "description": "负责交付工作的成员",
+        "conceptType": "ENTITY",
+        "displayPropertyKey": "name",
+        "positionX": 440,
+        "positionY": 340,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"人员编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"name","name":"姓名","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      }
+    ],
+    "relations": [
+      {"key":"contains-task","name":"包含任务","description":"项目包含任务","sourceConceptKey":"project","targetConceptKey":"task","cardinality":"ONE_TO_MANY","forwardLabel":"包含","reverseLabel":"属于","queryable":true,"enabled":true},
+      {"key":"assigned-owner","name":"分配负责人","description":"任务由负责人承担","sourceConceptKey":"task","targetConceptKey":"owner","cardinality":"MANY_TO_ONE","forwardLabel":"负责人","reverseLabel":"负责任务","queryable":true,"enabled":true}
+    ],
+    "metrics": [],
+    "actions": [],
+    "dataSources": [
+      {
+        "id": -1,
+        "key": "project-sample",
+        "name": "项目交付样例",
+        "type": "INLINE_SAMPLE",
+        "configJson": "{}",
+        "sampleDataJson": "{\"projects\":[{\"id\":\"p-1\",\"name\":\"语义平台一期\",\"status\":\"ACTIVE\"},{\"id\":\"p-2\",\"name\":\"知识治理升级\",\"status\":\"PLANNED\"}],\"tasks\":[{\"id\":\"t-1\",\"title\":\"完成本体设计\",\"status\":\"DONE\",\"project_id\":\"p-1\",\"owner_id\":\"u-1\"},{\"id\":\"t-2\",\"title\":\"上线查询接口\",\"status\":\"IN_PROGRESS\",\"project_id\":\"p-1\",\"owner_id\":\"u-2\"},{\"id\":\"t-3\",\"title\":\"梳理业务术语\",\"status\":\"TODO\",\"project_id\":\"p-2\",\"owner_id\":\"u-1\"}],\"owners\":[{\"id\":\"u-1\",\"name\":\"林经理\"},{\"id\":\"u-2\",\"name\":\"周顾问\"}]}"
+      }
+    ],
+    "mappings": [
+      {"targetType":"CONCEPT","targetKey":"project","dataSourceId":-1,"physicalObjectKey":"projects","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"project.id","dataSourceId":-1,"physicalObjectKey":"projects","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"project.name","dataSourceId":-1,"physicalObjectKey":"projects","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"project.status","dataSourceId":-1,"physicalObjectKey":"projects","physicalFieldKey":"status","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"CONCEPT","targetKey":"task","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"task.id","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"task.title","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":"title","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"task.status","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":"status","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"task.project-id","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":"project_id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"task.owner-id","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":"owner_id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"CONCEPT","targetKey":"owner","dataSourceId":-1,"physicalObjectKey":"owners","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"owner.id","dataSourceId":-1,"physicalObjectKey":"owners","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"owner.name","dataSourceId":-1,"physicalObjectKey":"owners","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"contains-task","dataSourceId":-1,"physicalObjectKey":"projects","physicalFieldKey":"id","relationTargetFieldKey":"project_id","transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"assigned-owner","dataSourceId":-1,"physicalObjectKey":"tasks","physicalFieldKey":"owner_id","relationTargetFieldKey":"id","transform":"DIRECT","confidence":1,"source":"REFERENCE","validationStatus":"PENDING"}
+    ]
+  }
+}

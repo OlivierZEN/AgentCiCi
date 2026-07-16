@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMetricEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMetricRepository;
+import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalObjectRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyPropertyEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyPropertyRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyRelationEntity;
@@ -27,9 +28,13 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,8 +48,10 @@ public class OntologyDraftService {
     private final OntologyMetricRepository metrics;
     private final OntologyActionRepository actions;
     private final OntologyDataSourceRepository dataSources;
+    private final OntologyPhysicalObjectRepository physicalObjects;
     private final OntologyMappingRepository mappings;
     private final OntologyTenantPersistence persistence;
+    private final OntologyDataSourcePolicy dataSourcePolicy;
     private final ObjectMapper objectMapper;
 
     public OntologyDraftService(
@@ -55,8 +62,10 @@ public class OntologyDraftService {
             OntologyMetricRepository metrics,
             OntologyActionRepository actions,
             OntologyDataSourceRepository dataSources,
+            OntologyPhysicalObjectRepository physicalObjects,
             OntologyMappingRepository mappings,
             OntologyTenantPersistence persistence,
+            OntologyDataSourcePolicy dataSourcePolicy,
             ObjectMapper objectMapper) {
         this.workspaces = workspaces;
         this.concepts = concepts;
@@ -65,8 +74,10 @@ public class OntologyDraftService {
         this.metrics = metrics;
         this.actions = actions;
         this.dataSources = dataSources;
+        this.physicalObjects = physicalObjects;
         this.mappings = mappings;
         this.persistence = persistence;
+        this.dataSourcePolicy = dataSourcePolicy;
         this.objectMapper = objectMapper;
     }
 
@@ -83,17 +94,36 @@ public class OntologyDraftService {
         if (!Objects.equals(workspace.getDraftRevision(), expectedRevision)) {
             throw new ConflictException("ONTOLOGY_REVISION_CONFLICT");
         }
+        if ("ARCHIVED".equals(workspace.getStatus())) {
+            throw new ConflictException("ONTOLOGY_WORKSPACE_ARCHIVED");
+        }
+        if (!Objects.equals(workspace.getKey(), document.key())) {
+            throw new ConflictException("ONTOLOGY_KEY_IMMUTABLE");
+        }
 
+        List<OntologyMappingEntity> existingMappings =
+                mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId);
+        Set<String> changedRelationKeys = changedRelationKeys(orgId, workspaceId, document);
         deleteDraftChildren(workspaceId, orgId);
         Map<String, Long> conceptIds = saveConcepts(orgId, workspaceId, document);
-        Map<Long, Long> dataSourceIds = saveDataSources(orgId, userId, workspaceId, document);
+        SavedDataSources savedSources = saveDataSources(
+                orgId, userId, workspaceId, document);
+        clearChangedCatalog(orgId, workspaceId, savedSources.changedIds());
         saveRelations(orgId, workspaceId, document, conceptIds);
         saveMetrics(orgId, workspaceId, document, conceptIds);
         saveActions(orgId, workspaceId, document, conceptIds);
-        saveMappings(orgId, userId, workspaceId, document, dataSourceIds);
+        saveMappings(
+                orgId,
+                userId,
+                workspaceId,
+                document,
+                savedSources.ids(),
+                existingMappings,
+                changedRelationKeys,
+                savedSources.changedIds());
 
         workspace.applyDraftMetadata(
-                document.key(), document.name(), document.description(), userId);
+                document.name(), document.description(), userId);
         return persistence.saveForCurrentOrg(workspace);
     }
 
@@ -176,7 +206,8 @@ public class OntologyDraftService {
                                 entity.getKey(),
                                 entity.getName(),
                                 OntologyDocument.SourceType.valueOf(entity.getSourceType()),
-                                entity.getConfigJson()))
+                                entity.getConfigJson(),
+                                entity.getSampleDataJson()))
                         .toList();
         List<OntologyDocument.Mapping> mappingDocuments =
                 mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
@@ -205,7 +236,6 @@ public class OntologyDraftService {
     }
 
     private void deleteDraftChildren(Long workspaceId, String orgId) {
-        mappings.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
         properties.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
         relations.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
         metrics.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
@@ -255,13 +285,15 @@ public class OntologyDraftService {
         return conceptIds;
     }
 
-    private Map<Long, Long> saveDataSources(
+    private SavedDataSources saveDataSources(
             String orgId,
             String userId,
             Long workspaceId,
             OntologyDocument document) {
         Map<Long, Long> sourceIds = new HashMap<>();
+        Set<Long> changedIds = new LinkedHashSet<>();
         for (OntologyDocument.DataSource source : safe(document.dataSources())) {
+            dataSourcePolicy.validate(source);
             OntologyDataSourceEntity entity = source.id() == null
                     ? null
                     : dataSources.findByIdAndWorkspaceIdAndOrgId(
@@ -278,10 +310,23 @@ public class OntologyDraftService {
                         source.name(),
                         source.type().name(),
                         source.configJson(),
-                        null,
+                        source.sampleDataJson(),
                         userId);
+            } else if (!Objects.equals(entity.getKey(), source.key())) {
+                throw new ConflictException("ONTOLOGY_DATA_SOURCE_KEY_IMMUTABLE");
             } else {
-                entity.updateDraft(source.name(), source.type().name(), source.configJson());
+                if (!entity.definitionMatches(
+                        source.key(),
+                        source.type().name(),
+                        source.configJson(),
+                        source.sampleDataJson())) {
+                    changedIds.add(entity.getId());
+                }
+                entity.updateDraft(
+                        source.name(),
+                        source.type().name(),
+                        source.configJson(),
+                        source.sampleDataJson());
             }
             OntologyDataSourceEntity saved = persistence.saveForCurrentOrg(entity);
             if (source.id() != null) {
@@ -289,7 +334,7 @@ public class OntologyDraftService {
             }
             sourceIds.put(saved.getId(), saved.getId());
         }
-        return sourceIds;
+        return new SavedDataSources(Map.copyOf(sourceIds), Set.copyOf(changedIds));
     }
 
     private void saveRelations(
@@ -356,25 +401,142 @@ public class OntologyDraftService {
             String userId,
             Long workspaceId,
             OntologyDocument document,
-            Map<Long, Long> dataSourceIds) {
+            Map<Long, Long> dataSourceIds,
+            List<OntologyMappingEntity> existingMappings,
+            Set<String> changedRelationKeys,
+            Set<Long> changedDataSourceIds) {
+        Map<String, OntologyMappingEntity> existingByIdentity = new LinkedHashMap<>();
+        for (OntologyMappingEntity existing : safe(existingMappings)) {
+            String identity = mappingIdentity(
+                    existing.getTargetType(),
+                    existing.getTargetKey(),
+                    existing.getDataSourceId());
+            if (existingByIdentity.putIfAbsent(identity, existing) != null) {
+                throw new IllegalStateException("MAPPING_AMBIGUOUS");
+            }
+        }
+        Set<String> seen = new LinkedHashSet<>();
         for (OntologyDocument.Mapping mapping : safe(document.mappings())) {
             Long dataSourceId = requiredId(
                     dataSourceIds, mapping.dataSourceId(), "mapping data source");
-            persistence.saveForCurrentOrg(new OntologyMappingEntity(
-                    orgId,
-                    workspaceId,
-                    mapping.targetType(),
-                    mapping.targetKey(),
-                    dataSourceId,
+            String targetType = normalizedTargetType(mapping.targetType());
+            String identity = mappingIdentity(targetType, mapping.targetKey(), dataSourceId);
+            if (!seen.add(identity)) {
+                throw new IllegalArgumentException("MAPPING_DUPLICATE_IDENTITY");
+            }
+            BigDecimal confidence = BigDecimal.valueOf(mapping.confidence());
+            OntologyMappingEntity existing = existingByIdentity.get(identity);
+            if (existing == null) {
+                persistence.saveForCurrentOrg(new OntologyMappingEntity(
+                        orgId,
+                        workspaceId,
+                        targetType,
+                        mapping.targetKey(),
+                        dataSourceId,
+                        mapping.physicalObjectKey(),
+                        mapping.physicalFieldKey(),
+                        mapping.relationTargetFieldKey(),
+                        mapping.transform(),
+                        confidence,
+                        serverOrigin(mapping.source()),
+                        "PENDING",
+                        userId));
+                continue;
+            }
+            if ("RELATION".equals(targetType)
+                    && changedRelationKeys.contains(mapping.targetKey())) {
+                existing.markPending();
+                persistence.saveForCurrentOrg(existing);
+                continue;
+            }
+            if (changedDataSourceIds.contains(dataSourceId)) {
+                existing.markPending();
+                persistence.saveForCurrentOrg(existing);
+                continue;
+            }
+            if (!existing.definitionMatches(
                     mapping.physicalObjectKey(),
                     mapping.physicalFieldKey(),
                     mapping.relationTargetFieldKey(),
                     mapping.transform(),
-                    BigDecimal.valueOf(mapping.confidence()),
-                    mapping.source(),
-                    mapping.validationStatus(),
-                    userId));
+                    confidence)) {
+                existing.updateDefinition(
+                        mapping.physicalObjectKey(),
+                        mapping.physicalFieldKey(),
+                        mapping.relationTargetFieldKey(),
+                        mapping.transform(),
+                        confidence,
+                        serverOrigin(mapping.source()));
+                persistence.saveForCurrentOrg(existing);
+            }
         }
+        existingByIdentity.forEach((identity, entity) -> {
+            if (!seen.contains(identity)) {
+                persistence.deleteForCurrentOrg(
+                        orgId,
+                        () -> mappings.deleteByIdAndWorkspaceIdAndOrgId(
+                                entity.getId(), workspaceId, orgId));
+            }
+        });
+    }
+
+    private void clearChangedCatalog(
+            String orgId,
+            Long workspaceId,
+            Set<Long> changedDataSourceIds) {
+        for (Long dataSourceId : changedDataSourceIds) {
+            persistence.deleteForCurrentOrg(
+                    orgId,
+                    () -> physicalObjects.deleteByDataSourceIdAndWorkspaceIdAndOrgId(
+                            dataSourceId, workspaceId, orgId));
+        }
+    }
+
+    private Set<String> changedRelationKeys(
+            String orgId,
+            Long workspaceId,
+            OntologyDocument document) {
+        Map<Long, String> conceptKeys = new HashMap<>();
+        concepts.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId)
+                .forEach(concept -> conceptKeys.put(concept.getId(), concept.getKey()));
+        Map<String, String> existingEndpoints = new HashMap<>();
+        relations.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId)
+                .forEach(relation -> existingEndpoints.put(
+                        relation.getKey(),
+                        conceptKeys.get(relation.getSourceConceptId())
+                                + "\u0000"
+                                + conceptKeys.get(relation.getTargetConceptId())));
+        Set<String> changed = new LinkedHashSet<>();
+        for (OntologyDocument.Relation relation : safe(document.relations())) {
+            String previous = existingEndpoints.get(relation.key());
+            if (previous != null
+                    && !previous.equals(
+                    relation.sourceConceptKey() + "\u0000" + relation.targetConceptKey())) {
+                changed.add(relation.key());
+            }
+        }
+        return Set.copyOf(changed);
+    }
+
+    private String mappingIdentity(String targetType, String targetKey, Long dataSourceId) {
+        return normalizedTargetType(targetType) + "\u0000" + targetKey + "\u0000" + dataSourceId;
+    }
+
+    private String normalizedTargetType(String targetType) {
+        if (targetType == null || targetType.isBlank()) {
+            throw new IllegalArgumentException("MAPPING_TARGET_TYPE_REQUIRED");
+        }
+        return targetType.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String serverOrigin(String requested) {
+        if ("AI".equalsIgnoreCase(requested)) {
+            return "AI";
+        }
+        if ("REFERENCE".equalsIgnoreCase(requested)) {
+            return "REFERENCE";
+        }
+        return "MANUAL";
     }
 
     private OntologyDocument.Property toDocumentProperty(OntologyPropertyEntity entity) {
@@ -438,5 +600,8 @@ public class OntologyDraftService {
 
     private static <T> List<T> safe(List<T> values) {
         return values == null ? List.of() : values;
+    }
+
+    private record SavedDataSources(Map<Long, Long> ids, Set<Long> changedIds) {
     }
 }

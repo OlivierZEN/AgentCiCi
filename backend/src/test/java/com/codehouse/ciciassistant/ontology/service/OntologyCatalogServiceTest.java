@@ -3,8 +3,9 @@ package com.codehouse.ciciassistant.ontology.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -15,33 +16,22 @@ import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.Da
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.MappingValidation;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalField;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalObject;
-import com.codehouse.ciciassistant.ontology.domain.OntologyDataSourceEntity;
-import com.codehouse.ciciassistant.ontology.domain.OntologyDataSourceRepository;
-import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
-import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
-import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalFieldEntity;
-import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalFieldRepository;
-import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalObjectEntity;
-import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalObjectRepository;
-import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
+import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
+import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingCommit;
+import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingKey;
+import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingPreparation;
+import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.SourcePreparation;
 import com.codehouse.ciciassistant.tenant.TenantContext;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.mockito.InOrder;
 
 class OntologyCatalogServiceTest {
 
-    private final OntologyDataSourceRepository dataSources = mock(OntologyDataSourceRepository.class);
-    private final OntologyPhysicalObjectRepository objects = mock(OntologyPhysicalObjectRepository.class);
-    private final OntologyPhysicalFieldRepository fields = mock(OntologyPhysicalFieldRepository.class);
-    private final OntologyMappingRepository mappings = mock(OntologyMappingRepository.class);
-    private final OntologyTenantPersistence persistence = mock(OntologyTenantPersistence.class);
+    private final OntologyCatalogTransactionService transactions =
+            mock(OntologyCatalogTransactionService.class);
     private final OntologyDataSourceAdapter adapter = mock(OntologyDataSourceAdapter.class);
     private OntologyCatalogService service;
 
@@ -49,22 +39,8 @@ class OntologyCatalogServiceTest {
     void setUp() {
         TenantContext.setOrgId("org-a");
         TenantContext.setUserId("user-a");
-        service = new OntologyCatalogService(
-                dataSources,
-                objects,
-                fields,
-                mappings,
-                persistence,
-                List.of(adapter),
-                new ObjectMapper());
+        service = new OntologyCatalogService(transactions, List.of(adapter));
         when(adapter.supports(any(DataSourceConfig.class))).thenReturn(true);
-        when(persistence.saveForCurrentOrg(any()))
-                .thenAnswer(invocation -> invocation.getArgument(0));
-        doAnswer(invocation -> {
-            invocation.<Runnable>getArgument(1).run();
-            return null;
-        }).when(persistence).deleteForCurrentOrg(
-                org.mockito.ArgumentMatchers.eq("org-a"), any(Runnable.class));
     }
 
     @AfterEach
@@ -73,167 +49,138 @@ class OntologyCatalogServiceTest {
     }
 
     @Test
-    void refreshesDiscoveredObjectsAndDeletesOnlyStaleScopedRows() {
-        OntologyDataSourceEntity source = source();
-        OntologyPhysicalObjectEntity current = object(81L, "Account", "旧名称");
-        OntologyPhysicalObjectEntity stale = object(82L, "Removed__c", "待清理");
-        when(dataSources.findByIdAndWorkspaceIdAndOrgId(7L, 41L, "org-a"))
-                .thenReturn(Optional.of(source));
-        when(objects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                7L, 41L, "org-a"))
-                .thenReturn(List.of(current, stale));
-        when(adapter.discoverObjects(any(), any())).thenReturn(List.of(
-                new PhysicalObject("Account", "客户", "STANDARD", "{\"prefix\":\"001\"}"),
-                new PhysicalObject("Delivery__c", "交付", "CUSTOM", "{\"prefix\":\"a10\"}")));
+    void invokesExternalObjectDiscoveryBeforeShortCommit() {
+        SourcePreparation prepared = prepared(null, null);
+        List<PhysicalObject> discovered = List.of(
+                new PhysicalObject("projects", "项目", "INLINE", "{}"));
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, null))
+                .thenReturn(prepared);
+        when(adapter.discoverObjects(any(), any())).thenReturn(discovered);
+        when(transactions.commitObjects(prepared, "user-a", discovered)).thenReturn(4L);
 
-        List<PhysicalObject> result = service.discoverObjects(
-                "org-a", "user-a", 41L, 7L);
+        OntologyCatalogService.CatalogMutation<PhysicalObject> result = service.discoverObjects(
+                "org-a", "user-a", 41L, 7L, 3L);
 
-        assertThat(result).extracting(PhysicalObject::key)
-                .containsExactly("Account", "Delivery__c");
-        assertThat(current.getName()).isEqualTo("客户");
-        assertThat(current.getMetadataJson()).contains("001");
-        verify(objects).deleteByIdAndWorkspaceIdAndOrgId(82L, 41L, "org-a");
-        verify(persistence).deleteForCurrentOrg(
-                org.mockito.ArgumentMatchers.eq("org-a"), any(Runnable.class));
-        ArgumentCaptor<OntologyPhysicalObjectEntity> saved =
-                ArgumentCaptor.forClass(OntologyPhysicalObjectEntity.class);
-        verify(persistence, org.mockito.Mockito.times(2)).saveForCurrentOrg(saved.capture());
-        assertThat(saved.getAllValues()).extracting(OntologyPhysicalObjectEntity::getObjectKey)
-                .containsExactly("Account", "Delivery__c");
-        verify(adapter).discoverObjects(
-                new AdapterContext("org-a", "user-a"),
-                new DataSourceConfig(
-                        7L, 41L, "business-source", "业务数据",
-                        com.codehouse.ciciassistant.ontology.model.OntologyDocument.SourceType.CONNECTOR,
-                        "example", "{\"adapterKey\":\"example\"}", null));
+        assertThat(result.revision()).isEqualTo(4L);
+        assertThat(result.items()).extracting(PhysicalObject::key).containsExactly("projects");
+        InOrder order = inOrder(adapter, transactions);
+        order.verify(adapter).discoverObjects(new AdapterContext("org-a", "user-a"), prepared.source());
+        order.verify(transactions).commitObjects(prepared, "user-a", discovered);
     }
 
     @Test
-    void refreshesFieldsForTheSelectedPersistedObject() {
-        OntologyDataSourceEntity source = source();
-        OntologyPhysicalObjectEntity object = object(81L, "Account", "客户");
-        OntologyPhysicalFieldEntity current = field(91L, "name", "旧客户名称");
-        OntologyPhysicalFieldEntity stale = field(92L, "removed", "待清理");
-        when(dataSources.findByIdAndWorkspaceIdAndOrgId(7L, 41L, "org-a"))
-                .thenReturn(Optional.of(source));
-        when(objects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                7L, 41L, "org-a"))
-                .thenReturn(List.of(object));
-        when(fields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                81L, 41L, "org-a"))
-                .thenReturn(List.of(current, stale));
-        when(adapter.discoverFields(any(), any(), org.mockito.ArgumentMatchers.eq("Account")))
-                .thenReturn(List.of(
-                        new PhysicalField("Account", "name", "客户名称", "text", false, false, "{}"),
-                        new PhysicalField("Account", "status", "状态", "select", true, false, "{}")));
+    void invokesExternalFieldDiscoveryBeforeShortCommit() {
+        SourcePreparation prepared = prepared("projects", 81L);
+        List<PhysicalField> discovered = List.of(
+                new PhysicalField("projects", "name", "项目名称", "text", false, false, "{}"));
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, "projects"))
+                .thenReturn(prepared);
+        when(adapter.discoverFields(any(), any(), any())).thenReturn(discovered);
+        when(transactions.commitFields(prepared, "user-a", discovered)).thenReturn(4L);
 
-        List<PhysicalField> result = service.discoverFields(
-                "org-a", "user-a", 41L, 7L, "Account");
+        OntologyCatalogService.CatalogMutation<PhysicalField> result = service.discoverFields(
+                "org-a", "user-a", 41L, 7L, "projects", 3L);
 
-        assertThat(result).extracting(PhysicalField::key)
-                .containsExactly("name", "status");
-        assertThat(current.getName()).isEqualTo("客户名称");
-        assertThat(current.isNullable()).isFalse();
-        verify(fields).deleteByIdAndWorkspaceIdAndOrgId(92L, 41L, "org-a");
-        verify(persistence).deleteForCurrentOrg(
-                org.mockito.ArgumentMatchers.eq("org-a"), any(Runnable.class));
-        ArgumentCaptor<OntologyPhysicalFieldEntity> saved =
-                ArgumentCaptor.forClass(OntologyPhysicalFieldEntity.class);
-        verify(persistence, org.mockito.Mockito.times(2)).saveForCurrentOrg(saved.capture());
-        assertThat(saved.getAllValues()).extracting(OntologyPhysicalFieldEntity::getFieldKey)
-                .containsExactly("name", "status");
+        assertThat(result.revision()).isEqualTo(4L);
+        assertThat(result.items()).extracting(PhysicalField::key).containsExactly("name");
+        InOrder order = inOrder(adapter, transactions);
+        order.verify(adapter).discoverFields(
+                new AdapterContext("org-a", "user-a"), prepared.source(), "projects");
+        order.verify(transactions).commitFields(prepared, "user-a", discovered);
     }
 
     @Test
-    void persistsAdapterMappingValidationThroughTenantPersistence() {
-        OntologyDataSourceEntity source = source();
-        OntologyMappingEntity mapping = mapping();
-        when(mappings.findByIdAndWorkspaceIdAndOrgId(101L, 41L, "org-a"))
-                .thenReturn(Optional.of(mapping));
-        when(dataSources.findByIdAndWorkspaceIdAndOrgId(7L, 41L, "org-a"))
-                .thenReturn(Optional.of(source));
-        when(adapter.validateMapping(any(), any(), any()))
-                .thenReturn(MappingValidation.invalid(
-                        "PHYSICAL_FIELD_NOT_FOUND", "Mapped field was not discovered"));
+    void validatesByStableIdentityAndCommitsOnlyAfterAdapterReturns() {
+        MappingKey key = new MappingKey("property", "task.status", 7L);
+        OntologyDocument.Mapping mapping = new OntologyDocument.Mapping(
+                "PROPERTY", "task.status", 7L, "tasks", "status", null,
+                "DIRECT", 1, "MANUAL", "PENDING");
+        MappingPreparation prepared = new MappingPreparation(
+                "org-a", 41L, 3L, key, source(), mapping);
+        MappingValidation adapterResult = MappingValidation.success();
+        MappingCommit committed = new MappingCommit(adapterResult, 4L);
+        when(transactions.prepareMapping("org-a", 41L, 3L, key)).thenReturn(prepared);
+        when(adapter.validateMapping(any(), any(), any())).thenReturn(adapterResult);
+        when(transactions.commitMappingValidation(prepared, "user-a", adapterResult))
+                .thenReturn(committed);
 
-        MappingValidation result = service.validateMapping(
-                "org-a", "user-a", 41L, 101L);
+        MappingCommit result = service.validateMapping(
+                "org-a", "user-a", 41L, 3L, key);
 
-        assertThat(result.valid()).isFalse();
-        assertThat(mapping.getValidationStatus()).isEqualTo("INVALID");
-        assertThat(mapping.getLastValidatedAt()).isNotNull();
-        verify(persistence).saveForCurrentOrg(mapping);
+        assertThat(result).isEqualTo(committed);
+        InOrder order = inOrder(adapter, transactions);
+        order.verify(adapter).validateMapping(
+                new AdapterContext("org-a", "user-a"), source(), mapping);
+        order.verify(transactions).commitMappingValidation(prepared, "user-a", adapterResult);
     }
 
     @Test
-    void rejectsImpersonatedCatalogContextBeforeRepositoryAccess() {
-        assertThatThrownBy(() -> service.discoverObjects(
-                "org-a", "user-b", 41L, 7L))
-                .hasMessageContaining("ONTOLOGY_CATALOG_CONTEXT_MISMATCH");
-
-        verifyNoInteractions(dataSources, objects, fields, mappings);
-    }
-
-    @Test
-    void preservesTheLastSuccessfulDirectoryWhenDiscoveryFails() {
-        when(dataSources.findByIdAndWorkspaceIdAndOrgId(7L, 41L, "org-a"))
-                .thenReturn(Optional.of(source()));
+    void preservesCatalogWhenExternalDiscoveryFails() {
+        SourcePreparation prepared = prepared(null, null);
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, null))
+                .thenReturn(prepared);
         when(adapter.discoverObjects(any(), any()))
                 .thenThrow(new IllegalStateException("CONNECTOR_DISCOVERY_FAILED"));
 
         assertThatThrownBy(() -> service.discoverObjects(
-                "org-a", "user-a", 41L, 7L))
-                .hasMessage("CONNECTOR_DISCOVERY_FAILED");
+                "org-a", "user-a", 41L, 7L, 3L))
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
 
-        verifyNoInteractions(objects, fields, mappings);
-        verify(persistence, org.mockito.Mockito.never()).saveForCurrentOrg(any());
+        verify(transactions, never()).commitObjects(any(), any(), any());
     }
 
-    private OntologyDataSourceEntity source() {
-        OntologyDataSourceEntity source = new OntologyDataSourceEntity(
-                "org-a",
+    @Test
+    void failsClosedWithoutPartialCommitWhenOneBatchValidationThrowsOrLeaksDetails() {
+        MappingKey firstKey = new MappingKey("PROPERTY", "task.status", 7L);
+        MappingKey secondKey = new MappingKey("PROPERTY", "project.name", 7L);
+        OntologyDocument.Mapping firstMapping = new OntologyDocument.Mapping(
+                "PROPERTY", "task.status", 7L, "tasks", "status", null,
+                "DIRECT", 1, "MANUAL", "PENDING");
+        OntologyDocument.Mapping secondMapping = new OntologyDocument.Mapping(
+                "PROPERTY", "project.name", 7L, "projects", "name", null,
+                "DIRECT", 1, "MANUAL", "PENDING");
+        MappingPreparation firstPrepared = new MappingPreparation(
+                "org-a", 41L, 3L, firstKey, source(), firstMapping);
+        MappingPreparation secondPrepared = new MappingPreparation(
+                "org-a", 41L, 3L, secondKey, source(), secondMapping);
+        when(transactions.prepareMapping("org-a", 41L, 3L, firstKey))
+                .thenReturn(firstPrepared);
+        when(transactions.prepareMapping("org-a", 41L, 3L, secondKey))
+                .thenReturn(secondPrepared);
+        when(adapter.validateMapping(any(), any(), any()))
+                .thenReturn(MappingValidation.success())
+                .thenThrow(new IllegalStateException("secret-token=should-not-leak"));
+
+        assertThatThrownBy(() -> service.validateMappings(
+                "org-a", "user-a", 41L, 3L, List.of(firstKey, secondKey)))
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
+
+        verify(transactions, never()).commitMappingValidations(any(), any(), any());
+    }
+
+    @Test
+    void rejectsImpersonatedContextBeforePreparingDatabaseWork() {
+        assertThatThrownBy(() -> service.discoverObjects(
+                "org-a", "user-b", 41L, 7L, 3L))
+                .hasMessage("ONTOLOGY_CATALOG_CONTEXT_MISMATCH");
+
+        verifyNoInteractions(transactions);
+    }
+
+    private SourcePreparation prepared(String objectKey, Long objectId) {
+        return new SourcePreparation(
+                "org-a", 41L, 3L, source(), objectKey, objectId);
+    }
+
+    private DataSourceConfig source() {
+        return new DataSourceConfig(
+                7L,
                 41L,
                 "business-source",
                 "业务数据",
-                "CONNECTOR",
+                OntologyDocument.SourceType.CONNECTOR,
+                "example",
                 "{\"adapterKey\":\"example\"}",
-                null,
-                "creator");
-        ReflectionTestUtils.setField(source, "id", 7L);
-        return source;
-    }
-
-    private OntologyPhysicalObjectEntity object(Long id, String key, String name) {
-        OntologyPhysicalObjectEntity object = new OntologyPhysicalObjectEntity(
-                "org-a", 41L, 7L, key, name, "OLD", "{}");
-        ReflectionTestUtils.setField(object, "id", id);
-        return object;
-    }
-
-    private OntologyPhysicalFieldEntity field(Long id, String key, String name) {
-        OntologyPhysicalFieldEntity field = new OntologyPhysicalFieldEntity(
-                "org-a", 41L, 81L, key, name, "old", true, false, "{}");
-        ReflectionTestUtils.setField(field, "id", id);
-        return field;
-    }
-
-    private OntologyMappingEntity mapping() {
-        OntologyMappingEntity mapping = new OntologyMappingEntity(
-                "org-a",
-                41L,
-                "PROPERTY",
-                "task.status",
-                7L,
-                "Task__c",
-                "status__c",
-                null,
-                "DIRECT",
-                BigDecimal.ONE,
-                "MANUAL",
-                "PENDING",
-                "creator");
-        ReflectionTestUtils.setField(mapping, "id", 101L);
-        return mapping;
+                null);
     }
 }

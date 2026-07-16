@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
+import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingKey;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.util.List;
 import java.util.UUID;
@@ -51,6 +52,9 @@ class OntologyDraftPublishIntegrationTest {
     private OntologyPublishService publisher;
 
     @Autowired
+    private OntologyCatalogService catalog;
+
+    @Autowired
     private PlatformTransactionManager transactionManager;
 
     @AfterEach
@@ -65,7 +69,7 @@ class OntologyDraftPublishIntegrationTest {
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         "org-task-213-service",
-                        "initial-key",
+                        "project-delivery",
                         "初始名称",
                         "初始描述",
                         "human-a"));
@@ -83,14 +87,17 @@ class OntologyDraftPublishIntegrationTest {
         assertThat(mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
                 workspace.getId(), "org-task-213-service")).hasSize(6);
 
+        long publishRevision = discoverAndValidateMappings(
+                "org-task-213-service", "human-a", workspace.getId(), savedDraft);
+
         OntologyVersionEntity published = publisher.publish(
                 "org-task-213-service",
                 "human-a",
                 workspace.getId(),
-                1L);
+                publishRevision);
 
         assertThat(published.getVersionNo()).isEqualTo(1);
-        assertThat(published.getSourceDraftRevision()).isEqualTo(1L);
+        assertThat(published.getSourceDraftRevision()).isEqualTo(publishRevision);
         assertThat(published.getContentHash()).hasSize(64);
         assertThat(published.getGraphqlSdl()).contains("type Project", "type Query");
         assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
@@ -111,9 +118,9 @@ class OntologyDraftPublishIntegrationTest {
                 "org-task-213-service",
                 "human-b",
                 workspace.getId(),
-                1L,
+                publishRevision,
                 OntologyCompilerServiceTest.projectDeliveryDocument());
-        assertThat(revisedDraft.getDraftRevision()).isEqualTo(2L);
+        assertThat(revisedDraft.getDraftRevision()).isEqualTo(publishRevision + 1);
         assertThat(revisedDraft.getStatus()).isEqualTo("DRAFT");
         assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
                 workspace.getId(), "org-task-213-service"))
@@ -125,7 +132,7 @@ class OntologyDraftPublishIntegrationTest {
                 "org-task-213-service",
                 "human-b",
                 workspace.getId(),
-                2L);
+                publishRevision + 1);
 
         assertThat(secondVersion.getVersionNo()).isEqualTo(2);
         assertThat(secondVersion.getContentHash()).isNotEqualTo(firstHash);
@@ -150,7 +157,7 @@ class OntologyDraftPublishIntegrationTest {
         TenantContext.setUserId("human-a");
         Long workspaceId = new TransactionTemplate(transactionManager).execute(status ->
                 persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
-                        orgId, "delivery", "交付", "并发修订", "human-a")).getId());
+                        orgId, "project-delivery", "交付", "并发修订", "human-a")).getId());
         TenantContext.clear();
 
         CountDownLatch ready = new CountDownLatch(2);
@@ -200,5 +207,33 @@ class OntologyDraftPublishIntegrationTest {
                 TenantContext.clear();
             }
         }, executor);
+    }
+
+    private long discoverAndValidateMappings(
+            String orgId,
+            String userId,
+            Long workspaceId,
+            OntologyWorkspaceEntity workspace) {
+        Long sourceId = drafts.loadDraft(orgId, workspaceId, workspace)
+                .dataSources().getFirst().id();
+        long revision = catalog.discoverObjects(
+                orgId, userId, workspaceId, sourceId, workspace.getDraftRevision()).revision();
+        revision = catalog.discoverFields(
+                orgId, userId, workspaceId, sourceId, "projects", revision).revision();
+        revision = catalog.discoverFields(
+                orgId, userId, workspaceId, sourceId, "tasks", revision).revision();
+        for (var mapping : mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId)) {
+            revision = catalog.validateMapping(
+                    orgId,
+                    userId,
+                    workspaceId,
+                    revision,
+                    new MappingKey(
+                            mapping.getTargetType(),
+                            mapping.getTargetKey(),
+                            mapping.getDataSourceId()))
+                    .revision();
+        }
+        return revision;
     }
 }

@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ontology.service;
 
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.common.error.DataSourceUnavailableException;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.AdapterContext;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.DataSourceConfig;
@@ -85,10 +86,8 @@ public class SemanticQueryService {
         try {
             resolved = resolve(scope, normalized);
             AdapterContext adapterContext = new AdapterContext(orgId, userId);
-            PhysicalResult physicalResult = resolved.adapter().executeRead(
-                    adapterContext,
-                    resolved.source(),
-                    resolved.physicalQuery());
+            PhysicalResult physicalResult = executeRead(
+                    resolved.adapter(), adapterContext, resolved.source(), resolved.physicalQuery());
             totalCount = physicalResult.totalCount();
             moreAvailable = physicalResult.moreAvailable();
             Map<String, RelationRows> relationRows = executeRelations(
@@ -230,10 +229,14 @@ public class SemanticQueryService {
         }
 
         DataSourceConfig source = toConfig(workspace.getId(), sourceDocument);
-        OntologyDataSourceAdapter adapter = adapters.stream()
-                .filter(candidate -> candidate.supports(source))
-                .findFirst()
-                .orElseThrow(() -> new IllegalStateException("ONTOLOGY_ADAPTER_NOT_AVAILABLE"));
+        List<OntologyDataSourceAdapter> matchingAdapters = adapters.stream()
+                .filter(candidate -> supports(candidate, source))
+                .limit(2)
+                .toList();
+        if (matchingAdapters.size() != 1) {
+            throw new DataSourceUnavailableException();
+        }
+        OntologyDataSourceAdapter adapter = matchingAdapters.getFirst();
 
         List<ResolvedField> selectedFields = query.select().stream()
                 .map(allFields::get)
@@ -541,7 +544,7 @@ public class SemanticQueryService {
                 source.type(),
                 adapterKey(source.configJson()),
                 source.configJson(),
-                null);
+                source.sampleDataJson());
     }
 
     private String adapterKey(String configJson) {
@@ -601,8 +604,8 @@ public class SemanticQueryService {
                         List.of(),
                         MAX_RELATION_ROWS);
                 resolved.adapter().validateQuery(resolved.source(), targetQuery);
-                PhysicalResult targetResult = resolved.adapter().executeRead(
-                        context, resolved.source(), targetQuery);
+                PhysicalResult targetResult = executeRead(
+                        resolved.adapter(), context, resolved.source(), targetQuery);
                 if (targetResult.moreAvailable()
                         || targetResult.totalCount() > targetResult.rows().size()
                         || targetResult.totalCount() > MAX_RELATION_ROWS) {
@@ -833,6 +836,32 @@ public class SemanticQueryService {
             return message;
         }
         return "ADAPTER_READ_FAILED";
+    }
+
+    private boolean supports(OntologyDataSourceAdapter adapter, DataSourceConfig source) {
+        try {
+            return adapter.supports(source);
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
+    private PhysicalResult executeRead(
+            OntologyDataSourceAdapter adapter,
+            AdapterContext context,
+            DataSourceConfig source,
+            PhysicalQuery query) {
+        try {
+            PhysicalResult result = adapter.executeRead(context, source, query);
+            if (result == null) {
+                throw new DataSourceUnavailableException();
+            }
+            return result;
+        } catch (DataSourceUnavailableException exception) {
+            throw exception;
+        } catch (RuntimeException exception) {
+            throw new DataSourceUnavailableException(exception);
+        }
     }
 
     private long elapsedMs(long startedAt) {

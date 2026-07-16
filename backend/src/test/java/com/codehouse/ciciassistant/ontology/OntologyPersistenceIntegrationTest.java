@@ -137,7 +137,7 @@ class OntologyPersistenceIntegrationTest {
                         "owner", "负责人", OntologyDocument.DataType.REFERENCE, true)));
         OntologyDocument.DataSource source = new OntologyDocument.DataSource(
                 1L, "delivery-source", "交付数据", connector,
-                "{\"adapterKey\":\"delivery-api\"}");
+                "{\"adapterKey\":\"delivery-api\"}", null);
         OntologyDocument.Mapping statusMapping = new OntologyDocument.Mapping(
                 "PROPERTY", "task.status", 1L, "tasks", "state", null,
                 "ENUM_MAP", 0.95, "MANUAL", "VALID");

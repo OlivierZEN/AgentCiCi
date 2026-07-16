@@ -4,6 +4,8 @@ import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
+import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
+import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
@@ -24,6 +26,8 @@ public class OntologyPublishService {
     private final OntologyValidationService validation;
     private final OntologyCompilerService compiler;
     private final OntologyTenantPersistence persistence;
+    private final OntologyMappingRepository mappings;
+    private final OntologyMappingIntegrityService mappingIntegrity;
     private final ObjectMapper objectMapper;
 
     public OntologyPublishService(
@@ -32,12 +36,16 @@ public class OntologyPublishService {
             OntologyValidationService validation,
             OntologyCompilerService compiler,
             OntologyTenantPersistence persistence,
+            OntologyMappingRepository mappings,
+            OntologyMappingIntegrityService mappingIntegrity,
             ObjectMapper objectMapper) {
         this.workspaces = workspaces;
         this.drafts = drafts;
         this.validation = validation;
         this.compiler = compiler;
         this.persistence = persistence;
+        this.mappings = mappings;
+        this.mappingIntegrity = mappingIntegrity;
         this.objectMapper = objectMapper;
     }
 
@@ -54,6 +62,9 @@ public class OntologyPublishService {
         if (!Objects.equals(workspace.getDraftRevision(), expectedRevision)) {
             throw new ConflictException("ONTOLOGY_REVISION_CONFLICT");
         }
+        if ("ARCHIVED".equals(workspace.getStatus())) {
+            throw new ConflictException("ONTOLOGY_WORKSPACE_ARCHIVED");
+        }
 
         OntologyDocument document = drafts.loadDraft(orgId, workspaceId, workspace);
         List<OntologyValidationService.ValidationIssue> issues = validation.validate(document, true);
@@ -61,6 +72,7 @@ public class OntologyPublishService {
                 issue.severity() == OntologyValidationService.Severity.ERROR)) {
             throw new ConflictException("ONTOLOGY_VALIDATION_FAILED");
         }
+        requireFreshServerMappings(orgId, workspaceId, document);
 
         int nextVersion = workspace.getPublishedVersion() == null
                 ? 1 : workspace.getPublishedVersion() + 1;
@@ -81,6 +93,45 @@ public class OntologyPublishService {
         workspace.markPublished(nextVersion, userId);
         persistence.saveForCurrentOrg(workspace);
         return savedVersion;
+    }
+
+    private void requireFreshServerMappings(
+            String orgId,
+            Long workspaceId,
+            OntologyDocument document) {
+        for (OntologyDocument.Mapping mapping : document.mappings() == null
+                ? List.<OntologyDocument.Mapping>of()
+                : document.mappings()) {
+            String targetType = mapping.targetType() == null
+                    ? ""
+                    : mapping.targetType().trim().toUpperCase(java.util.Locale.ROOT);
+            OntologyMappingEntity stored = mappings
+                    .findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                            workspaceId,
+                            orgId,
+                            targetType,
+                            mapping.targetKey(),
+                            mapping.dataSourceId())
+                    .orElseThrow(() -> new ConflictException(
+                            "ONTOLOGY_MAPPING_VALIDATION_REQUIRED"));
+            if (!stored.definitionMatches(
+                    mapping.physicalObjectKey(),
+                    mapping.physicalFieldKey(),
+                    mapping.relationTargetFieldKey(),
+                    mapping.transform(),
+                    java.math.BigDecimal.valueOf(mapping.confidence()))
+                    || !"VALID".equals(stored.getValidationStatus())
+                    || stored.getLastValidatedAt() == null
+                    || !mappingIntegrity.validate(orgId, workspaceId, document, mapping).valid()
+                    || !mappingIntegrity.isFresh(
+                    orgId,
+                    workspaceId,
+                    document,
+                    mapping,
+                    stored.getLastValidatedAt())) {
+                throw new ConflictException("ONTOLOGY_MAPPING_VALIDATION_REQUIRED");
+            }
+        }
     }
 
     private void requireCurrentOrg(String orgId) {

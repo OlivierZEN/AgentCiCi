@@ -64,6 +64,11 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
     }
 
     @Override
+    public Set<String> publicConfigKeys() {
+        return Set.of("adapterKey", "objectPrefixes");
+    }
+
+    @Override
     public List<PhysicalObject> discoverObjects(
             AdapterContext context,
             DataSourceConfig source) {
@@ -152,7 +157,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
                             "PHYSICAL_FIELD_NOT_FOUND", "Mapped field was not discovered");
         } catch (RuntimeException exception) {
             return MappingValidation.invalid(
-                    "CONNECTOR_MAPPING_VALIDATION_FAILED", exception.getMessage());
+                    "DATA_SOURCE_UNAVAILABLE", "Data source is unavailable");
         }
     }
 

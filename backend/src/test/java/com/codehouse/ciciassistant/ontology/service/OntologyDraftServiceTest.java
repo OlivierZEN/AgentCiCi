@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.ontology.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
@@ -37,6 +38,7 @@ import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Optional;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -72,6 +74,8 @@ class OntologyDraftServiceTest {
     private OntologyMappingRepository mappings;
     @Mock
     private OntologyTenantPersistence persistence;
+    @Mock
+    private OntologyDataSourcePolicy dataSourcePolicy;
 
     private OntologyDraftService service;
 
@@ -85,8 +89,10 @@ class OntologyDraftServiceTest {
                 metrics,
                 actions,
                 dataSources,
+                physicalObjects,
                 mappings,
                 persistence,
+                dataSourcePolicy,
                 new ObjectMapper());
         TenantContext.setOrgId("org-a");
     }
@@ -147,9 +153,12 @@ class OntologyDraftServiceTest {
         assertThat(saved.getDraftRevision()).isEqualTo(1L);
         assertThat(saved.getKey()).isEqualTo("project-delivery");
         assertThat(saved.getStatus()).isEqualTo("DRAFT");
-        verify(mappings).deleteByWorkspaceIdAndOrgId(41L, "org-a");
+        verify(mappings, never()).deleteByWorkspaceIdAndOrgId(41L, "org-a");
         verify(physicalFields, never()).deleteByWorkspaceIdAndOrgId(41L, "org-a");
-        verify(physicalObjects, never()).deleteByWorkspaceIdAndOrgId(41L, "org-a");
+        ArgumentCaptor<Runnable> catalogDelete = ArgumentCaptor.forClass(Runnable.class);
+        verify(persistence).deleteForCurrentOrg(eq("org-a"), catalogDelete.capture());
+        catalogDelete.getValue().run();
+        verify(physicalObjects).deleteByDataSourceIdAndWorkspaceIdAndOrgId(99L, 41L, "org-a");
         verify(properties).deleteByWorkspaceIdAndOrgId(41L, "org-a");
         verify(relations).deleteByWorkspaceIdAndOrgId(41L, "org-a");
         verify(metrics).deleteByWorkspaceIdAndOrgId(41L, "org-a");
@@ -171,7 +180,9 @@ class OntologyDraftServiceTest {
                 ArgumentCaptor.forClass(OntologyDataSourceEntity.class);
         verify(persistence).saveForCurrentOrg(sourceCaptor.capture());
         assertThat(sourceCaptor.getValue()).isSameAs(existingSource);
-        assertThat(sourceCaptor.getValue().getSampleDataJson()).isEqualTo("[{\"id\":1}]");
+        assertThat(sourceCaptor.getValue().getSampleDataJson())
+                .contains("\"projects\"")
+                .contains("\"tasks\"");
         assertThat(sourceCaptor.getValue().getName()).isEqualTo("交付数据");
         ArgumentCaptor<OntologyMappingEntity> mappingCaptor =
                 ArgumentCaptor.forClass(OntologyMappingEntity.class);
@@ -181,9 +192,110 @@ class OntologyDraftServiceTest {
                 .containsOnly(sourceCaptor.getValue().getId());
     }
 
+    @Test
+    void preservesStableMappingIdentityAndServerValidationUntilDefinitionChanges() {
+        OntologyWorkspaceEntity workspace = workspace(41L, 0L);
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        OntologyDocument.DataSource unchangedSource =
+                OntologyCompilerServiceTest.projectDeliveryDocument().dataSources().getFirst();
+        OntologyDataSourceEntity existingSource = new OntologyDataSourceEntity(
+                "org-a", 41L, "delivery-source", "交付数据", "INLINE_SAMPLE",
+                unchangedSource.configJson(), unchangedSource.sampleDataJson(), "creator");
+        ReflectionTestUtils.setField(existingSource, "id", 99L);
+        when(dataSources.findByIdAndWorkspaceIdAndOrgId(1L, 41L, "org-a"))
+                .thenReturn(Optional.empty());
+        when(dataSources.findByWorkspaceIdAndOrgIdAndKey(41L, "org-a", "delivery-source"))
+                .thenReturn(Optional.of(existingSource));
+        OntologyMappingEntity validated = new OntologyMappingEntity(
+                "org-a", 41L, "PROPERTY", "project.name", 99L,
+                "projects", "name", null, "DIRECT",
+                java.math.BigDecimal.ONE, "MANUAL", "PENDING", "creator");
+        ReflectionTestUtils.setField(validated, "id", 501L);
+        validated.applyValidation(true);
+        when(mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(41L, "org-a"))
+                .thenReturn(List.of(validated));
+        AtomicLong ids = new AtomicLong(600L);
+        when(persistence.saveForCurrentOrg(any())).thenAnswer(invocation -> {
+            OntologyTenantEntity entity = invocation.getArgument(0);
+            if (entity instanceof AbstractOntologyWorkspaceEntity child && child.getId() == null) {
+                ReflectionTestUtils.setField(child, "id", ids.incrementAndGet());
+            }
+            return entity;
+        });
+
+        service.saveDraft(
+                "org-a", "user-a", 41L, 0L,
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+
+        assertThat(validated.getId()).isEqualTo(501L);
+        assertThat(validated.getValidationStatus()).isEqualTo("VALID");
+        assertThat(validated.getLastValidatedAt()).isNotNull();
+        verify(mappings, never()).deleteByIdAndWorkspaceIdAndOrgId(501L, 41L, "org-a");
+
+        OntologyDocument current = OntologyCompilerServiceTest.projectDeliveryDocument();
+        List<OntologyDocument.Mapping> changedMappings = current.mappings().stream()
+                .map(mapping -> "project.name".equals(mapping.targetKey())
+                        ? new OntologyDocument.Mapping(
+                                mapping.targetType(), mapping.targetKey(), mapping.dataSourceId(),
+                                mapping.physicalObjectKey(), "renamed_name", mapping.relationTargetFieldKey(),
+                                mapping.transform(), mapping.confidence(), "AI", "VALID")
+                        : mapping)
+                .toList();
+        OntologyDocument changed = new OntologyDocument(
+                current.key(), current.name(), current.description(), current.concepts(),
+                current.relations(), current.metrics(), current.actions(), current.dataSources(), changedMappings);
+        ReflectionTestUtils.setField(workspace, "draftRevision", 1L);
+
+        service.saveDraft("org-a", "user-a", 41L, 1L, changed);
+
+        assertThat(validated.getId()).isEqualTo(501L);
+        assertThat(validated.getPhysicalFieldKey()).isEqualTo("renamed_name");
+        assertThat(validated.getSource()).isEqualTo("AI");
+        assertThat(validated.getValidationStatus()).isEqualTo("PENDING");
+        assertThat(validated.getLastValidatedAt()).isNull();
+    }
+
+    @Test
+    void rejectsArchivedWorkspaceAndImmutableKeyChangesBeforeMutatingChildren() {
+        OntologyWorkspaceEntity archived = workspace(41L, 0L);
+        ReflectionTestUtils.setField(archived, "status", "ARCHIVED");
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(archived));
+
+        assertThatThrownBy(() -> service.saveDraft(
+                "org-a", "user-a", 41L, 0L,
+                OntologyCompilerServiceTest.projectDeliveryDocument()))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("ONTOLOGY_WORKSPACE_ARCHIVED");
+
+        OntologyWorkspaceEntity active = workspace(42L, 0L);
+        when(workspaces.findForUpdateByIdAndOrgId(42L, "org-a"))
+                .thenReturn(Optional.of(active));
+        OntologyDocument original = OntologyCompilerServiceTest.projectDeliveryDocument();
+        OntologyDocument changedKey = new OntologyDocument(
+                "renamed-key",
+                original.name(),
+                original.description(),
+                original.concepts(),
+                original.relations(),
+                original.metrics(),
+                original.actions(),
+                original.dataSources(),
+                original.mappings());
+
+        assertThatThrownBy(() -> service.saveDraft(
+                "org-a", "user-a", 42L, 0L, changedKey))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("ONTOLOGY_KEY_IMMUTABLE");
+
+        verify(mappings, never()).deleteByWorkspaceIdAndOrgId(any(), any());
+        verify(concepts, never()).deleteByWorkspaceIdAndOrgId(any(), any());
+    }
+
     private OntologyWorkspaceEntity workspace(Long id, Long draftRevision) {
         OntologyWorkspaceEntity workspace = new OntologyWorkspaceEntity(
-                "org-a", "old-key", "旧名称", "旧描述", "creator");
+                "org-a", "project-delivery", "旧名称", "旧描述", "creator");
         ReflectionTestUtils.setField(workspace, "id", id);
         ReflectionTestUtils.setField(workspace, "draftRevision", draftRevision);
         return workspace;

@@ -83,7 +83,17 @@ public record OntologyDocument(
             String key,
             String name,
             SourceType type,
-            String configJson) {
+            String configJson,
+            String sampleDataJson) {
+
+        public DataSource(
+                Long id,
+                String key,
+                String name,
+                SourceType type,
+                String configJson) {
+            this(id, key, name, type, configJson, null);
+        }
     }
 
     public record Mapping(

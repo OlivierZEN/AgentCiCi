@@ -10,5 +10,6 @@ public interface OntologyPhysicalObjectRepository extends Repository<OntologyPhy
             Long dataSourceId, Long workspaceId, String orgId);
     Optional<OntologyPhysicalObjectEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
     long deleteByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
+    long deleteByDataSourceIdAndWorkspaceIdAndOrgId(Long dataSourceId, Long workspaceId, String orgId);
     long deleteByWorkspaceIdAndOrgId(Long workspaceId, String orgId);
 }

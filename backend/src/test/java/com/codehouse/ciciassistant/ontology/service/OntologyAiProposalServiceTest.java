@@ -910,7 +910,7 @@ class OntologyAiProposalServiceTest {
         when(drafts.saveDraft("org-a", "user-a", 41L, 3L, current))
                 .thenAnswer(invocation -> {
                     workspace.applyDraftMetadata(
-                            current.key(), current.name(), current.description(), "user-a");
+                            current.name(), current.description(), "user-a");
                     return workspace;
                 });
         when(persistence.saveForCurrentOrg(proposal)).thenReturn(proposal);

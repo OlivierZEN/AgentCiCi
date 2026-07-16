@@ -20,7 +20,7 @@ final class OntologyAiProposalPromptPolicy {
             Use only the fields and enum values in the supplied OntologyDocument contract.
             DOMAIN_FIRST must return empty dataSources and mappings arrays.
             DATA_SOURCE_FIRST may reference only the explicitly supplied source, object, and field whitelist,
-            must leave every data-source configJson null, and must not invent a source, object, or field.
+            must leave every data-source configJson and sampleDataJson null, and must not invent a source, object, or field.
             """;
     private static final String DOCUMENT_CONTRACT = """
             OntologyDocument contract (all fields are required; use JSON null only where marked nullable):
@@ -32,7 +32,7 @@ final class OntologyAiProposalPromptPolicy {
             QueryFilter{property:string,operator:Operator,value:null|string|number|boolean|array(max depth 2)}
             Action{key:string,name:string,conceptKey:string,description:string|null,parameters:ActionParameter[]}
             ActionParameter{key:string,name:string,dataType:DataType,required:boolean}
-            DataSource{id:integer,key:string,name:string,type:SourceType,configJson:null}; configJson must be null.
+            DataSource{id:integer,key:string,name:string,type:SourceType,configJson:null,sampleDataJson:null}; configJson must be null and sampleDataJson must be null.
             Mapping{targetType:string,targetKey:string,dataSourceId:integer,physicalObjectKey:string,physicalFieldKey:string|null,relationTargetFieldKey:string|null,transform:string|null,confidence:number,source:string|null,validationStatus:string|null}
             ConceptType=[ENTITY,EVENT]
             DataType=[TEXT,LONG_TEXT,INTEGER,DECIMAL,BOOLEAN,DATE,DATETIME,ENUM,REFERENCE]

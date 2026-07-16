@@ -15,6 +15,7 @@ import com.codehouse.ciciassistant.ai.service.ModelRouterService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ontology.domain.OntologyAiProposalEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyAiProposalRepository;
+import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalFieldEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalObjectEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
@@ -55,6 +56,9 @@ class OntologyAiProposalApplyIntegrationTest {
 
     @Autowired
     private OntologyVersionRepository versions;
+
+    @Autowired
+    private OntologyMappingRepository mappings;
 
     @Autowired
     private OntologyDraftService drafts;
@@ -350,7 +354,6 @@ class OntologyAiProposalApplyIntegrationTest {
 
     private Fixture createReadyPublishedFixture() throws Exception {
         PublishedFixture fixture = createPublishedFixture();
-        seedProjectTaskCatalog(fixture);
         stubModelRoute(fixture.orgId());
         when(modelClient.chatCompletionWithCredentials(
                 eq("model-a"), anyList(), isNull(), eq(true),
@@ -406,13 +409,21 @@ class OntologyAiProposalApplyIntegrationTest {
         String orgId = "org-ai-proposal-" + UUID.randomUUID();
         TenantContext.setOrgId(orgId);
         TenantContext.setUserId("user-a");
-        OntologyDocument input = withLargePrivateConfig(
+        OntologyDocument input = withLargePrivateSample(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
-                        orgId, "initial", "初始领域", "AI 提案原子测试", "user-a"));
+                        orgId, input.key(), "初始领域", "AI 提案原子测试", "user-a"));
         OntologyWorkspaceEntity savedWorkspace = drafts.saveDraft(
                 orgId, "user-a", workspace.getId(), 0L, input);
+        OntologyDocument pendingDraft = drafts.loadDraft(
+                orgId, workspace.getId(), savedWorkspace);
+        seedProjectTaskCatalog(orgId, workspace.getId(), pendingDraft);
+        mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspace.getId(), orgId)
+                .forEach(mapping -> {
+                    mapping.applyValidation(true);
+                    persistence.saveForCurrentOrg(mapping);
+                });
         OntologyDocument original = drafts.loadDraft(
                 orgId, workspace.getId(), savedWorkspace);
         OntologyVersionEntity version = publisher.publish(
@@ -435,12 +446,15 @@ class OntologyAiProposalApplyIntegrationTest {
                 "apiKey", "test-key"));
     }
 
-    private void seedProjectTaskCatalog(PublishedFixture fixture) {
-        Long dataSourceId = fixture.original().dataSources().getFirst().id();
+    private void seedProjectTaskCatalog(
+            String orgId,
+            Long workspaceId,
+            OntologyDocument original) {
+        Long dataSourceId = original.dataSources().getFirst().id();
         OntologyPhysicalObjectEntity projects = persistence.saveForCurrentOrg(
                 new OntologyPhysicalObjectEntity(
-                        fixture.orgId(),
-                        fixture.workspaceId(),
+                        orgId,
+                        workspaceId,
                         dataSourceId,
                         "projects",
                         "项目",
@@ -448,26 +462,32 @@ class OntologyAiProposalApplyIntegrationTest {
                         "{}"));
         OntologyPhysicalObjectEntity tasks = persistence.saveForCurrentOrg(
                 new OntologyPhysicalObjectEntity(
-                        fixture.orgId(),
-                        fixture.workspaceId(),
+                        orgId,
+                        workspaceId,
                         dataSourceId,
                         "tasks",
                         "任务",
                         "TABLE",
                         "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                fixture.orgId(),
-                fixture.workspaceId(),
+                orgId,
+                workspaceId,
                 projects.getId(),
                 "task_id",
-                "任务编号",
+                "任务关联编号",
                 "TEXT",
                 false,
                 false,
                 "{}"));
         persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
-                fixture.orgId(),
-                fixture.workspaceId(),
+                orgId, workspaceId, projects.getId(), "name", "项目名称",
+                "TEXT", false, false, "{}"));
+        persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
+                orgId, workspaceId, projects.getId(), "budget", "项目预算",
+                "DECIMAL", false, false, "{}"));
+        persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
+                orgId,
+                workspaceId,
                 tasks.getId(),
                 "project_id",
                 "项目编号",
@@ -475,6 +495,9 @@ class OntologyAiProposalApplyIntegrationTest {
                 false,
                 false,
                 "{}"));
+        persistence.saveForCurrentOrg(new OntologyPhysicalFieldEntity(
+                orgId, workspaceId, tasks.getId(), "status", "任务状态",
+                "TEXT", false, false, "{}"));
     }
 
     private long proposalCount(PublishedFixture fixture) {
@@ -527,12 +550,16 @@ class OntologyAiProposalApplyIntegrationTest {
                 List.of());
     }
 
-    private OntologyDocument withLargePrivateConfig(OntologyDocument document) {
+    private OntologyDocument withLargePrivateSample(OntologyDocument document) {
         OntologyDocument.DataSource source = document.dataSources().getFirst();
-        String config = "{\"apiKey\":\"server-secret\",\"records\":[{\"name\":\"private-row\","
-                + "\"padding\":\""
-                + "x".repeat(OntologyAiProposalService.MAX_RESPONSE_BYTES + 1_024)
-                + "\"}]}";
+        String padding = String.join(
+                "\",\"",
+                java.util.Collections.nCopies(100, "x".repeat(2_000)));
+        String sample = """
+                {"projects":[{"id":"p-1","name":"private-row","budget":100000,"task_id":"p-1",
+                "private_note":"server-secret","padding":["%s"]}],
+                "tasks":[{"id":"t-1","project_id":"p-1","status":"ACTIVE"}]}
+                """.formatted(padding);
         return new OntologyDocument(
                 document.key(),
                 document.name(),
@@ -542,7 +569,7 @@ class OntologyAiProposalApplyIntegrationTest {
                 document.metrics(),
                 document.actions(),
                 List.of(new OntologyDocument.DataSource(
-                        source.id(), source.key(), source.name(), source.type(), config)),
+                        source.id(), source.key(), source.name(), source.type(), "{}", sample)),
                 document.mappings());
     }
 

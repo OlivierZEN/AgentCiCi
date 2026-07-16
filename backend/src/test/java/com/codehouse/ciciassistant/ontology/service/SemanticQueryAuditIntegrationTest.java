@@ -130,6 +130,7 @@ class SemanticQueryAuditIntegrationTest {
                 "inline",
                 "内置样例",
                 OntologyDocument.SourceType.INLINE_SAMPLE,
+                "{}",
                 "{\"tasks\":[]}");
         return new OntologyDocument(
                 ontologyKey,

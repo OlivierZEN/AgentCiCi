@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Domain-neutral read adapter contract for ontology catalog discovery and execution.
@@ -14,6 +15,14 @@ import java.util.Map;
 public interface OntologyDataSourceAdapter {
 
     boolean supports(DataSourceConfig source);
+
+    /**
+     * Public, non-secret root configuration keys accepted by this adapter.
+     * Unknown keys are rejected before persistence.
+     */
+    default Set<String> publicConfigKeys() {
+        return Set.of("adapterKey");
+    }
 
     List<PhysicalObject> discoverObjects(AdapterContext context, DataSourceConfig source);
 

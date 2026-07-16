@@ -12,6 +12,8 @@ import static org.mockito.Mockito.when;
 import com.codehouse.ciciassistant.common.error.ConflictException;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
+import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
+import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
@@ -22,6 +24,7 @@ import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.math.BigDecimal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -44,6 +47,10 @@ class OntologyPublishServiceTest {
     private OntologyCompilerService compiler;
     @Mock
     private OntologyTenantPersistence persistence;
+    @Mock
+    private OntologyMappingRepository mappings;
+    @Mock
+    private OntologyMappingIntegrityService mappingIntegrity;
 
     private OntologyPublishService service;
 
@@ -55,6 +62,8 @@ class OntologyPublishServiceTest {
                 validation,
                 compiler,
                 persistence,
+                mappings,
+                mappingIntegrity,
                 new ObjectMapper());
         TenantContext.setOrgId("org-a");
         TenantContext.setUserId("human-a");
@@ -98,6 +107,7 @@ class OntologyPublishServiceTest {
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(document);
         when(validation.validate(document, true)).thenReturn(List.of());
+        stubValidatedMappings(document);
         when(compiler.compile(document, 4)).thenReturn(contracts);
         when(persistence.saveForCurrentOrg(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -132,6 +142,27 @@ class OntologyPublishServiceTest {
     }
 
     @Test
+    void rejectsClientClaimedValidMappingWithoutFreshServerValidation() {
+        OntologyWorkspaceEntity workspace = workspace(41L, 2L, null);
+        OntologyDocument document = OntologyCompilerServiceTest.projectDeliveryDocument();
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(document);
+        when(validation.validate(document, true)).thenReturn(List.of());
+        OntologyDocument.Mapping first = document.mappings().getFirst();
+        OntologyMappingEntity pending = mapping(first);
+        when(mappings.findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                41L, "org-a", first.targetType(), first.targetKey(), first.dataSourceId()))
+                .thenReturn(Optional.of(pending));
+
+        assertThatThrownBy(() -> service.publish("org-a", "human-a", 41L, 2L))
+                .isInstanceOf(ConflictException.class)
+                .hasMessage("ONTOLOGY_MAPPING_VALIDATION_REQUIRED");
+
+        verifyNoInteractions(compiler, persistence);
+    }
+
+    @Test
     void exposesOnlyTheExplicitHumanPublishOperation() {
         assertThat(Arrays.stream(OntologyPublishService.class.getDeclaredMethods())
                 .filter(method -> Modifier.isPublic(method.getModifiers()))
@@ -162,5 +193,37 @@ class OntologyPublishServiceTest {
         ReflectionTestUtils.setField(workspace, "draftRevision", draftRevision);
         ReflectionTestUtils.setField(workspace, "publishedVersion", publishedVersion);
         return workspace;
+    }
+
+    private void stubValidatedMappings(OntologyDocument document) {
+        for (OntologyDocument.Mapping value : document.mappings()) {
+            OntologyMappingEntity entity = mapping(value);
+            entity.applyValidation(true);
+            when(mappings.findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
+                    41L, "org-a", value.targetType(), value.targetKey(), value.dataSourceId()))
+                    .thenReturn(Optional.of(entity));
+            when(mappingIntegrity.validate("org-a", 41L, document, value))
+                    .thenReturn(com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.MappingValidation.success());
+            when(mappingIntegrity.isFresh(
+                    "org-a", 41L, document, value, entity.getLastValidatedAt()))
+                    .thenReturn(true);
+        }
+    }
+
+    private OntologyMappingEntity mapping(OntologyDocument.Mapping value) {
+        return new OntologyMappingEntity(
+                "org-a",
+                41L,
+                value.targetType(),
+                value.targetKey(),
+                value.dataSourceId(),
+                value.physicalObjectKey(),
+                value.physicalFieldKey(),
+                value.relationTargetFieldKey(),
+                value.transform(),
+                BigDecimal.valueOf(value.confidence()),
+                "MANUAL",
+                "PENDING",
+                "human-a");
     }
 }

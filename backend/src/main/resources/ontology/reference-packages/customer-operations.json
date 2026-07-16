@@ -1,0 +1,57 @@
+{
+  "id": "customer-operations",
+  "title": "客户经营",
+  "description": "面向客户经营场景的候选概念与连接器映射，安装后必须先真实发现并验证。",
+  "document": {
+    "key": "customer-operations",
+    "name": "客户经营",
+    "description": "客户经营领域参考本体",
+    "concepts": [
+      {
+        "key":"customer",
+        "name":"客户",
+        "pluralName":"客户",
+        "description":null,
+        "conceptType":"ENTITY",
+        "displayPropertyKey":"name",
+        "positionX":120,
+        "positionY":120,
+        "queryable":true,
+        "enabled":true,
+        "properties":[
+          {"key":"name","name":"客户名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key":"opportunity",
+        "name":"商机",
+        "pluralName":"商机",
+        "description":null,
+        "conceptType":"EVENT",
+        "displayPropertyKey":"name",
+        "positionX":440,
+        "positionY":120,
+        "queryable":true,
+        "enabled":true,
+        "properties":[
+          {"key":"name","name":"商机名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      }
+    ],
+    "relations":[
+      {"key":"has-opportunity","name":"拥有商机","description":null,"sourceConceptKey":"customer","targetConceptKey":"opportunity","cardinality":"ONE_TO_MANY","forwardLabel":"拥有","reverseLabel":"属于","queryable":true,"enabled":true}
+    ],
+    "metrics":[],
+    "actions":[],
+    "dataSources":[
+      {"id":-1,"key":"business-connector","name":"业务系统连接器","type":"CONNECTOR","configJson":"{\"adapterKey\":\"cloudcc\"}","sampleDataJson":null}
+    ],
+    "mappings":[
+      {"targetType":"CONCEPT","targetKey":"customer","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"customer.name","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"CONCEPT","targetKey":"opportunity","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.name","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"has-opportunity","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"id","relationTargetFieldKey":"accountId","transform":"DIRECT","confidence":0.7,"source":"REFERENCE","validationStatus":"PENDING"}
+    ]
+  }
+}
