@@ -129,6 +129,50 @@ class CloudccOntologyAdapterTest {
     }
 
     @Test
+    void compilesPlainAndQuotedContainsLiterals() {
+        when(cloudcc.pageQueryRecords(
+                "org-a", "user-a", "Account", "name",
+                "name like '%alpha%'", 1, 20))
+                .thenReturn(new CloudccOpenApiService.PageRecords(List.of(), 1, 0, 0));
+        when(cloudcc.pageQueryRecords(
+                "org-a", "user-a", "Account", "name",
+                "name like '%O''Brien%'", 1, 20))
+                .thenReturn(new CloudccOpenApiService.PageRecords(List.of(), 1, 0, 0));
+
+        adapter.executeRead(
+                new AdapterContext("org-a", "user-a"),
+                source("cloudcc"),
+                containsQuery("alpha"));
+        adapter.executeRead(
+                new AdapterContext("org-a", "user-a"),
+                source("cloudcc"),
+                containsQuery("O'Brien"));
+
+        verify(cloudcc).pageQueryRecords(
+                "org-a", "user-a", "Account", "name",
+                "name like '%alpha%'", 1, 20);
+        verify(cloudcc).pageQueryRecords(
+                "org-a", "user-a", "Account", "name",
+                "name like '%O''Brien%'", 1, 20);
+    }
+
+    @Test
+    void rejectsContainsWildcardCharactersBeforeCallingTheConnector() {
+        assertThatThrownBy(() -> adapter.executeRead(
+                new AdapterContext("org-a", "user-a"),
+                source("cloudcc"),
+                containsQuery("north%region")))
+                .hasMessage("QUERY_FILTER_VALUE_UNSAFE");
+        assertThatThrownBy(() -> adapter.executeRead(
+                new AdapterContext("org-a", "user-a"),
+                source("cloudcc"),
+                containsQuery("north_region")))
+                .hasMessage("QUERY_FILTER_VALUE_UNSAFE");
+
+        verifyNoInteractions(cloudcc);
+    }
+
+    @Test
     void escapesFilterLiteralsButNeverAcceptsAnUnmappedIdentifier() {
         when(cloudcc.pageQueryRecords(
                 "org-a", "user-a", "Account", "name",
@@ -241,6 +285,16 @@ class CloudccOntologyAdapterTest {
                 .hasMessage("QUERY_ORDER_NOT_SUPPORTED");
 
         verifyNoInteractions(cloudcc);
+    }
+
+    private PhysicalQuery containsQuery(String value) {
+        return new PhysicalQuery(
+                "Account",
+                List.of("name"),
+                List.of(new PhysicalFilter(
+                        "name", OntologyDocument.Operator.CONTAINS, value)),
+                List.of(),
+                20);
     }
 
     private DataSourceConfig source(String adapterKey) {

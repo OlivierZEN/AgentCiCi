@@ -341,6 +341,8 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
         String text = String.valueOf(value);
         if (text.length() > MAX_LITERAL_LENGTH
                 || text.indexOf('\\') >= 0
+                || text.indexOf('%') >= 0
+                || text.indexOf('_') >= 0
                 || containsControlCharacter(text)) {
             throw new IllegalArgumentException("QUERY_FILTER_VALUE_UNSAFE");
         }

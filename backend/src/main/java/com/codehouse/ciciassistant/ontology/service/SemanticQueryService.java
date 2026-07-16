@@ -39,9 +39,12 @@ public class SemanticQueryService {
 
     private static final int DEFAULT_LIMIT = 50;
     private static final int MAX_LIMIT = 200;
+    private static final int MAX_SELECT_FIELDS = 50;
     private static final int MAX_FILTERS = 20;
     private static final int MAX_ORDER_BY = 5;
     private static final int MAX_IN_VALUES = 100;
+    private static final int MAX_RELATION_SELECT_FIELDS = 20;
+    private static final int MAX_RELATION_PLANS = 5;
     private static final int MAX_RELATION_ROWS = 200;
 
     private final OntologyWorkspaceRepository workspaces;
@@ -344,6 +347,9 @@ public class SemanticQueryService {
         if (select.isEmpty() || select.stream().anyMatch(field -> !hasText(field))) {
             throw new IllegalArgumentException("QUERY_FIELDS_REQUIRED");
         }
+        if (select.size() > MAX_SELECT_FIELDS) {
+            throw new IllegalArgumentException("QUERY_SELECT_LIMIT_EXCEEDED");
+        }
         List<Filter> filters = safe(query.filters());
         if (filters.stream().anyMatch(Objects::isNull)) {
             throw new IllegalArgumentException("QUERY_FILTER_REQUIRED");
@@ -361,6 +367,19 @@ public class SemanticQueryService {
         filters.forEach(filter -> validateFilterValue(
                 parseOperator(filter.operator()), filter.value()));
         select.forEach(this::requireHopBudget);
+        List<String> relationSelects = select.stream()
+                .filter(this::isRelationField)
+                .toList();
+        if (relationSelects.size() > MAX_RELATION_SELECT_FIELDS) {
+            throw new IllegalArgumentException("QUERY_RELATION_SELECT_LIMIT_EXCEEDED");
+        }
+        long relationPlanCount = relationSelects.stream()
+                .map(field -> field.substring(0, field.indexOf('.')))
+                .distinct()
+                .count();
+        if (relationPlanCount > MAX_RELATION_PLANS) {
+            throw new IllegalArgumentException("QUERY_RELATION_PLAN_LIMIT_EXCEEDED");
+        }
         filters.stream()
                 .map(Filter::field)
                 .forEach(this::requireHopBudget);

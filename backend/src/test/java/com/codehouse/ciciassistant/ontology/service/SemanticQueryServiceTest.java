@@ -139,6 +139,39 @@ class SemanticQueryServiceTest {
     }
 
     @Test
+    void rejectsGlobalSelectAndRelationComplexityBeforeSnapshotResolution() {
+        OntologyDataSourceAdapter adapter = mock(OntologyDataSourceAdapter.class);
+        SemanticQueryService service = serviceWith(adapter);
+        List<String> oversizedSelect = IntStream.range(0, 51)
+                .mapToObj(index -> "field-" + index)
+                .toList();
+        List<String> oversizedRelationSelect = IntStream.range(0, 21)
+                .mapToObj(index -> "tasks.field-" + index)
+                .toList();
+        List<String> oversizedRelationPlans = IntStream.range(0, 6)
+                .mapToObj(index -> "relation-" + index + ".name")
+                .toList();
+
+        assertThatThrownBy(() -> service.explain(
+                "org-a", "user-a", new SemanticQueryService.SemanticQuery(
+                        "project-delivery", 1, "task", oversizedSelect,
+                        List.of(), List.of(), 50)))
+                .hasMessage("QUERY_SELECT_LIMIT_EXCEEDED");
+        assertThatThrownBy(() -> service.explain(
+                "org-a", "user-a", new SemanticQueryService.SemanticQuery(
+                        "project-delivery", 1, "task", oversizedRelationSelect,
+                        List.of(), List.of(), 50)))
+                .hasMessage("QUERY_RELATION_SELECT_LIMIT_EXCEEDED");
+        assertThatThrownBy(() -> service.explain(
+                "org-a", "user-a", new SemanticQueryService.SemanticQuery(
+                        "project-delivery", 1, "task", oversizedRelationPlans,
+                        List.of(), List.of(), 50)))
+                .hasMessage("QUERY_RELATION_PLAN_LIMIT_EXCEEDED");
+
+        verifyNoInteractions(adapter, workspaces, versions, auditWriter);
+    }
+
+    @Test
     void rejectsOversizedOrNullInValuesBeforeSnapshotResolution() {
         OntologyDataSourceAdapter adapter = mock(OntologyDataSourceAdapter.class);
         SemanticQueryService service = serviceWith(adapter);
