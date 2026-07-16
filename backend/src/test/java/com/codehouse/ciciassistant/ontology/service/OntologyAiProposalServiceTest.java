@@ -3,6 +3,8 @@ package com.codehouse.ciciassistant.ontology.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -110,7 +112,7 @@ class OntologyAiProposalServiceTest {
                 "apiBaseUrl", "https://models.invalid/v1",
                 "apiKey", "credential-value"));
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant",
                         objectMapper.writeValueAsString(withoutAssets(current)),
@@ -141,10 +143,32 @@ class OntologyAiProposalServiceTest {
         assertThat(result.status()).isEqualTo("READY");
         assertThat(result.baseRevision()).isEqualTo(3L);
         assertThat(result.candidate().dataSources())
-                .containsExactlyInAnyOrderElementsOf(current.dataSources());
+                .extracting(OntologyDocument.DataSource::configJson)
+                .containsOnlyNulls();
+        assertThat(result.candidate().dataSources())
+                .extracting(
+                        OntologyDocument.DataSource::id,
+                        OntologyDocument.DataSource::key,
+                        OntologyDocument.DataSource::name,
+                        OntologyDocument.DataSource::type)
+                .containsExactlyInAnyOrderElementsOf(current.dataSources().stream()
+                        .map(source -> org.assertj.core.groups.Tuple.tuple(
+                                source.id(), source.key(), source.name(), source.type()))
+                        .toList());
         assertThat(result.candidate().mappings())
                 .containsExactlyInAnyOrderElementsOf(current.mappings());
         assertThat(result.diff().baseRevision()).isEqualTo(3L);
+        assertThat(objectMapper.writeValueAsString(result))
+                .doesNotContain("server-secret", "private-row");
+        ArgumentCaptor<OntologyAiProposalEntity> savedProposal =
+                ArgumentCaptor.forClass(OntologyAiProposalEntity.class);
+        verify(persistence, org.mockito.Mockito.atLeast(2))
+                .saveForCurrentOrg(savedProposal.capture());
+        OntologyAiProposalEntity ready = savedProposal.getAllValues().getLast();
+        assertThat(ready.getPayloadJson())
+                .doesNotContain("server-secret", "private-row");
+        assertThat(ready.getDiffJson())
+                .doesNotContain("server-secret", "private-row");
         verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
         verify(modelRouter).route("org-a", "ontology-modeling");
         verify(modelProviders).credentialsForProvider("org-a", "provider-a");
@@ -153,7 +177,9 @@ class OntologyAiProposalServiceTest {
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> messages = ArgumentCaptor.forClass(List.class);
         verify(modelClient).chatCompletionWithCredentials(
-                any(), messages.capture(), any(), any(Boolean.class), any(), any());
+                any(), messages.capture(), any(), any(Boolean.class), any(), any(),
+                eq(OntologyAiProposalService.MAX_OUTPUT_TOKENS),
+                eq(OntologyAiProposalService.MAX_RESPONSE_BYTES));
         String prompt = messages.getValue().toString();
         assertThat(prompt)
                 .contains("credentials", "SQL", "scripts", "publishing", "write-back")
@@ -177,6 +203,22 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
+    void rejectsArchivedWorkspaceBeforeDraftLoadProposalSaveOrModelCall() {
+        OntologyWorkspaceEntity archived = workspace(41L, 3L);
+        ReflectionTestUtils.setField(archived, "status", "ARCHIVED");
+        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(archived));
+
+        assertThatThrownBy(() -> service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        assertThat(archived.getStatus()).isEqualTo("ARCHIVED");
+        assertThat(archived.getDraftRevision()).isEqualTo(3L);
+        verifyNoInteractions(drafts, modelRouter, modelProviders, modelClient, persistence);
+    }
+
+    @Test
     void rejectsMalformedJsonVariantsAsFailedWithoutChangingDraft() throws Exception {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
@@ -197,7 +239,7 @@ class OntologyAiProposalServiceTest {
 
         for (String invalid : invalidResponses) {
             when(modelClient.chatCompletionWithCredentials(
-                    any(), any(), any(), any(Boolean.class), any(), any()))
+                    any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                     .thenReturn(new ChatCompletionResult(
                             "assistant", invalid, List.of(), "stop", 10, 20));
 
@@ -222,13 +264,54 @@ class OntologyAiProposalServiceTest {
         stubWorkspaceAndRoute(current, new AtomicLong(800L));
         String candidate = objectMapper.writeValueAsString(withoutAssets(current));
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant", "```json\n" + candidate + "\n```", List.of(), "stop", 10, 20));
         OntologyAiProposalService.ProposalView result = service.propose(
                 "org-a", "user-a", 41L, domainFirstCommand());
 
         assertThat(result.status()).isEqualTo("READY");
+    }
+
+    @Test
+    void blankWorkspacePromptContainsCompleteDomainNeutralDocumentContract() throws Exception {
+        OntologyDocument empty = new OntologyDocument(
+                "generic-domain", "通用领域", "", List.of(), List.of(), List.of(),
+                List.of(), List.of(), List.of());
+        stubWorkspaceAndRoute(empty, new AtomicLong(850L));
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new ChatCompletionResult(
+                        "assistant", objectMapper.writeValueAsString(empty),
+                        List.of(), "stop", 10, 20));
+        when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
+
+        OntologyAiProposalService.ProposalView result = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+
+        assertThat(result.status()).isEqualTo("READY");
+        @SuppressWarnings("unchecked")
+        ArgumentCaptor<List<Map<String, Object>>> messages = ArgumentCaptor.forClass(List.class);
+        verify(modelClient).chatCompletionWithCredentials(
+                any(), messages.capture(), any(), any(Boolean.class), any(), any(),
+                eq(OntologyAiProposalService.MAX_OUTPUT_TOKENS),
+                eq(OntologyAiProposalService.MAX_RESPONSE_BYTES));
+        String prompt = messages.getValue().toString();
+        assertThat(prompt)
+                .contains(
+                        "OntologyDocument",
+                        "Concept{",
+                        "Property{",
+                        "Relation{",
+                        "Mapping{",
+                        "ConceptType=[ENTITY,EVENT]",
+                        "DataType=[TEXT,LONG_TEXT,INTEGER,DECIMAL,BOOLEAN,DATE,DATETIME,ENUM,REFERENCE]",
+                        "Cardinality=[ONE_TO_ONE,ONE_TO_MANY,MANY_TO_ONE,MANY_TO_MANY]",
+                        "Aggregation=[COUNT,SUM,AVG,MIN,MAX]",
+                        "SourceType=[INLINE_SAMPLE,CONNECTOR]",
+                        "Operator=[EQ,NE,IN,CONTAINS,GT,GTE,LT,LTE,BETWEEN,IS_NULL]",
+                        "all fields are required",
+                        "configJson must be null");
     }
 
     @Test
@@ -260,13 +343,31 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
+    void noChoicesSentinelIsReportedAsModelUnavailable() {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        stubWorkspaceAndRoute(current, new AtomicLong(950L));
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new ChatCompletionResult(
+                        "assistant", "No choices in response.", List.of(), "stop", 10, 0));
+
+        OntologyAiProposalService.ProposalView result = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+
+        assertThat(result.status()).isEqualTo("FAILED");
+        assertThat(result.diagnosticCode()).isEqualTo("AI_MODEL_UNAVAILABLE");
+        assertThat(result.diagnosticMessage()).isEqualTo("AI_MODEL_ERROR_SENTINEL");
+    }
+
+    @Test
     void truncatedOrOversizedModelResponseProducesStableFailedDiagnostic() throws Exception {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         stubWorkspaceAndRoute(current, new AtomicLong(1_000L));
         String candidate = objectMapper.writeValueAsString(withoutAssets(current));
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(
                         new ChatCompletionResult(
                                 "assistant", candidate, List.of(), "length", 10, 20),
@@ -283,6 +384,41 @@ class OntologyAiProposalServiceTest {
         assertThat(truncated.diagnosticMessage()).isEqualTo("AI_RESPONSE_TRUNCATED");
         assertThat(oversized.status()).isEqualTo("FAILED");
         assertThat(oversized.diagnosticMessage()).isEqualTo("AI_RESPONSE_TOO_LARGE");
+    }
+
+    @Test
+    void rejectsOversizedNormalizedPayloadBeforeReadyState() throws Exception {
+        OntologyDocument base = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        List<OntologyDocument.Mapping> serverMappings = java.util.stream.IntStream
+                .range(0, 5_000)
+                .mapToObj(index -> new OntologyDocument.Mapping(
+                        "PROPERTY", "project.name-" + index, 1L, "projects", "name",
+                        null, "DIRECT", 1.0, "MANUAL", "VALID"))
+                .toList();
+        OntologyDocument current = new OntologyDocument(
+                base.key(), base.name(), base.description(), base.concepts(), base.relations(),
+                base.metrics(), base.actions(), base.dataSources(), serverMappings);
+        stubWorkspaceAndRoute(current, new AtomicLong(1_050L));
+        String modelResponse = objectMapper.writeValueAsString(withoutAssets(base));
+        assertThat(modelResponse.getBytes(StandardCharsets.UTF_8).length)
+                .isLessThan(OntologyAiProposalService.MAX_RESPONSE_BYTES);
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new ChatCompletionResult(
+                        "assistant", modelResponse, List.of(), "stop", 10, 20));
+        when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
+
+        OntologyAiProposalService.ProposalView result = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+
+        assertThat(result.status()).isEqualTo("FAILED");
+        assertThat(result.diagnosticCode()).isEqualTo("AI_PROPOSAL_INVALID");
+        assertThat(result.diagnosticMessage()).isEqualTo("AI_PROPOSAL_PAYLOAD_TOO_LARGE");
+        ArgumentCaptor<OntologyAiProposalEntity> saved =
+                ArgumentCaptor.forClass(OntologyAiProposalEntity.class);
+        verify(persistence, org.mockito.Mockito.atLeast(2)).saveForCurrentOrg(saved.capture());
+        assertThat(saved.getAllValues().getLast().getPayloadJson()).isEqualTo("{}");
     }
 
     @Test
@@ -325,7 +461,7 @@ class OntologyAiProposalServiceTest {
                 List.of(),
                 List.of());
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant",
                         objectMapper.writeValueAsString(tooManyConcepts),
@@ -396,7 +532,7 @@ class OntologyAiProposalServiceTest {
                         "AI",
                         "PENDING")));
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant",
                         objectMapper.writeValueAsString(generated),
@@ -418,13 +554,15 @@ class OntologyAiProposalServiceTest {
 
         assertThat(result.status()).isEqualTo("READY");
         assertThat(result.candidate().dataSources())
-                .containsExactlyInAnyOrderElementsOf(current.dataSources());
+                .isEqualTo(sanitizedAssets(current).dataSources());
         assertThat(result.candidate().mappings())
                 .containsExactlyInAnyOrderElementsOf(current.mappings());
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> messages = ArgumentCaptor.forClass(List.class);
         verify(modelClient).chatCompletionWithCredentials(
-                any(), messages.capture(), any(), any(Boolean.class), any(), any());
+                any(), messages.capture(), any(), any(Boolean.class), any(), any(),
+                eq(OntologyAiProposalService.MAX_OUTPUT_TOKENS),
+                eq(OntologyAiProposalService.MAX_RESPONSE_BYTES));
         String prompt = messages.getValue().toString();
         assertThat(prompt)
                 .contains("delivery-source", "projects", "项目台账", "name", "项目名称", "TEXT")
@@ -460,6 +598,72 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
+    void rejectsMoreThanFiveHundredSelectedFieldsBeforeProposalOrModelCall() {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyWorkspaceEntity workspace = workspace(41L, 3L);
+        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
+        List<OntologyPhysicalObjectEntity> objects = java.util.stream.IntStream.range(0, 6)
+                .mapToObj(index -> physicalObject(
+                        200L + index, "object-" + index, "对象 " + index))
+                .toList();
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                1L, 41L, "org-a")).thenReturn(objects);
+        List<OntologyAiProposalService.SourceSelection> selections = new java.util.ArrayList<>();
+        for (int objectIndex = 0; objectIndex < objects.size(); objectIndex++) {
+            int fieldCount = objectIndex < 5 ? 100 : 1;
+            Long objectId = objects.get(objectIndex).getId();
+            List<OntologyPhysicalFieldEntity> fields = java.util.stream.IntStream
+                    .range(0, fieldCount)
+                    .mapToObj(fieldIndex -> physicalField(
+                            objectId * 1_000 + fieldIndex,
+                            objectId,
+                            "f" + fieldIndex,
+                            "字段 " + fieldIndex))
+                    .toList();
+            if (objectIndex < 5) {
+                when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                        objectId, 41L, "org-a")).thenReturn(fields);
+            }
+            selections.add(new OntologyAiProposalService.SourceSelection(
+                    1L,
+                    objects.get(objectIndex).getObjectKey(),
+                    fields.stream().map(OntologyPhysicalFieldEntity::getFieldKey).toList()));
+        }
+
+        assertThatThrownBy(() -> service.propose(
+                "org-a",
+                "user-a",
+                41L,
+                new OntologyAiProposalService.ProposalCommand(
+                        "字段预算测试", List.copyOf(selections), "DATA_SOURCE_FIRST")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        verifyNoInteractions(modelRouter, modelProviders, modelClient, persistence);
+    }
+
+    @Test
+    void rejectsOversizedFinalPromptBeforeProposalOrModelCall() {
+        OntologyDocument base = OntologyCompilerServiceTest.projectDeliveryDocument();
+        OntologyDocument current = new OntologyDocument(
+                base.key(), base.name(), "x".repeat(OntologyAiProposalService.MAX_RESPONSE_BYTES),
+                base.concepts(), base.relations(), base.metrics(), base.actions(),
+                base.dataSources(), base.mappings());
+        OntologyWorkspaceEntity workspace = workspace(41L, 3L);
+        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
+
+        assertThatThrownBy(() -> service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        verifyNoInteractions(modelRouter, modelProviders, modelClient, persistence);
+    }
+
+    @Test
     void rejectsModelMappingOutsideSelectedObjectAndFieldWhitelist() throws Exception {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
@@ -482,7 +686,7 @@ class OntologyAiProposalServiceTest {
                         "PROPERTY", "project.name", 1L, "projects", "unselected-field", null,
                         "DIRECT", 0.8, "AI", "PENDING")));
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant", objectMapper.writeValueAsString(generated),
                         List.of(), "stop", 10, 20));
@@ -503,10 +707,94 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
+    void relationTargetFieldMustBelongToMappedTargetConceptObject() throws Exception {
+        OntologyDocument base = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyDocument current = new OntologyDocument(
+                base.key(), base.name(), base.description(), base.concepts(), base.relations(),
+                base.metrics(), base.actions(), base.dataSources(), List.of());
+        stubWorkspaceAndRoute(current, new AtomicLong(1_350L));
+
+        OntologyPhysicalObjectEntity projects = physicalObject(91L, "projects", "项目");
+        OntologyPhysicalObjectEntity tasks = physicalObject(92L, "tasks", "任务");
+        OntologyPhysicalObjectEntity unrelated = physicalObject(93L, "audit-log", "无关审计");
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                1L, 41L, "org-a")).thenReturn(List.of(projects, tasks, unrelated));
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                91L, 41L, "org-a")).thenReturn(List.of(
+                        physicalField(911L, 91L, "task_id", "任务编号")));
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                92L, 41L, "org-a")).thenReturn(List.of(
+                        physicalField(921L, 92L, "project_id", "项目编号")));
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                93L, 41L, "org-a")).thenReturn(List.of(
+                        physicalField(931L, 93L, "task_id", "同名任务编号"),
+                        physicalField(932L, 93L, "audit_id", "不同名审计编号")));
+
+        OntologyDocument sameNamedThirdObjectField = generatedRelationDocument(
+                current, "task_id");
+        OntologyDocument differentlyNamedThirdObjectField = generatedRelationDocument(
+                current, "audit_id");
+        OntologyDocument targetObjectField = generatedRelationDocument(current, "project_id");
+        when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(
+                        new ChatCompletionResult(
+                                "assistant",
+                                objectMapper.writeValueAsString(sameNamedThirdObjectField),
+                                List.of(), "stop", 10, 20),
+                        new ChatCompletionResult(
+                                "assistant",
+                                objectMapper.writeValueAsString(differentlyNamedThirdObjectField),
+                                List.of(), "stop", 10, 20),
+                        new ChatCompletionResult(
+                                "assistant",
+                                objectMapper.writeValueAsString(targetObjectField),
+                                List.of(), "stop", 10, 20));
+        OntologyAiProposalService.ProposalCommand command =
+                new OntologyAiProposalService.ProposalCommand(
+                        "根据三个对象生成关系",
+                        List.of(
+                                new OntologyAiProposalService.SourceSelection(
+                                        1L, "projects", List.of("task_id")),
+                                new OntologyAiProposalService.SourceSelection(
+                                        1L, "tasks", List.of("project_id")),
+                                new OntologyAiProposalService.SourceSelection(
+                                        1L, "audit-log", List.of("task_id", "audit_id"))),
+                        "DATA_SOURCE_FIRST");
+
+        OntologyAiProposalService.ProposalView sameNamed = service.propose(
+                "org-a", "user-a", 41L, command);
+        OntologyAiProposalService.ProposalView differentlyNamed = service.propose(
+                "org-a", "user-a", 41L, command);
+        OntologyAiProposalService.ProposalView validTarget = service.propose(
+                "org-a", "user-a", 41L, command);
+
+        assertThat(List.of(sameNamed, differentlyNamed))
+                .allSatisfy(result -> {
+                    assertThat(result.status()).isEqualTo("FAILED");
+                    assertThat(result.diagnosticMessage())
+                            .isEqualTo("AI_MAPPING_REFERENCE_NOT_ALLOWED");
+                });
+        assertThat(validTarget.status()).isEqualTo("READY");
+        assertThat(validTarget.candidate().mappings())
+                .filteredOn(mapping -> "RELATION".equals(mapping.targetType()))
+                .singleElement()
+                .satisfies(mapping -> {
+                    assertThat(mapping.relationTargetFieldKey()).isEqualTo("project_id");
+                    assertThat(mapping.source()).isEqualTo("AI");
+                    assertThat(mapping.validationStatus()).isEqualTo("PENDING");
+                });
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
+    }
+
+    @Test
     void atomicallyAppliesReadyProposalOnceAfterWorkspaceAndProposalLocks() throws Exception {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
-        OntologyAiProposalEntity proposal = readyProposal(1_401L, current, 3L);
+        OntologyDocument sanitizedCandidate = sanitizedAssets(current);
+        OntologyAiProposalEntity proposal = readyProposal(1_401L, sanitizedCandidate, 3L);
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
         when(proposals.findWorkspaceIdByIdAndOrgId(1_401L, "org-a"))
                 .thenReturn(Optional.of(41L));
@@ -528,7 +816,9 @@ class OntologyAiProposalServiceTest {
                 "org-a", "user-a", 1_401L, 3L);
 
         assertThat(applied.status()).isEqualTo("APPLIED");
-        assertThat(applied.candidate()).isEqualTo(current);
+        assertThat(applied.candidate()).isEqualTo(sanitizedCandidate);
+        assertThat(objectMapper.writeValueAsString(applied))
+                .doesNotContain("server-secret", "private-row");
         assertThat(proposal.getAppliedBy()).isEqualTo("user-a");
         assertThat(proposal.getAppliedAt()).isNotNull();
         verify(drafts).saveDraft("org-a", "user-a", 41L, 3L, current);
@@ -602,12 +892,70 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
+    void rejectsTamperedStoredDiffWithoutChangingDraft() throws Exception {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyDocument candidate = sanitizedAssets(current);
+        OntologyAiProposalEntity proposal = readyProposal(1_406L, candidate, 3L);
+        String payload = objectMapper.writeValueAsString(candidate);
+        String hash = HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
+                .digest(payload.getBytes(StandardCharsets.UTF_8)));
+        ReflectionTestUtils.setField(
+                proposal,
+                "diffJson",
+                objectMapper.writeValueAsString(new OntologyAiProposalService.ProposalDiff(
+                        3L, hash, List.of("concept:forged"), List.of(), List.of())));
+        OntologyWorkspaceEntity workspace = workspace(41L, 3L);
+        when(proposals.findWorkspaceIdByIdAndOrgId(1_406L, "org-a"))
+                .thenReturn(Optional.of(41L));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        when(proposals.findForUpdateByIdAndOrgId(1_406L, "org-a"))
+                .thenReturn(Optional.of(proposal));
+        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
+
+        assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_406L, 3L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        assertThat(proposal.getStatus()).isEqualTo("READY");
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
+        verifyNoInteractions(persistence);
+    }
+
+    @Test
     void rejectsCrossTenantApplyBeforeProposalLookup() {
         assertThatThrownBy(() -> service.apply("org-b", "user-b", 1_405L, 3L))
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessage("AI_PROPOSAL_INVALID");
 
         verifyNoInteractions(proposals, workspaces, drafts, validation, persistence);
+    }
+
+    @Test
+    void rejectsArchivedWorkspaceInsideApplyLocksWithoutRevivingDraft() throws Exception {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyAiProposalEntity proposal = readyProposal(
+                1_407L, sanitizedAssets(current), 3L);
+        OntologyWorkspaceEntity archived = workspace(41L, 3L);
+        ReflectionTestUtils.setField(archived, "status", "ARCHIVED");
+        when(proposals.findWorkspaceIdByIdAndOrgId(1_407L, "org-a"))
+                .thenReturn(Optional.of(41L));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(archived));
+        when(proposals.findForUpdateByIdAndOrgId(1_407L, "org-a"))
+                .thenReturn(Optional.of(proposal));
+
+        assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_407L, 3L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        assertThat(archived.getStatus()).isEqualTo("ARCHIVED");
+        assertThat(archived.getDraftRevision()).isEqualTo(3L);
+        assertThat(proposal.getStatus()).isEqualTo("READY");
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
+        verifyNoInteractions(drafts, validation, persistence);
     }
 
     @Test
@@ -633,7 +981,7 @@ class OntologyAiProposalServiceTest {
                 current.key(), current.name(), current.description(), concepts,
                 current.relations(), current.metrics(), current.actions(), List.of(), List.of());
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant", objectMapper.writeValueAsString(generated),
                         List.of(), "stop", 10, 20));
@@ -672,7 +1020,7 @@ class OntologyAiProposalServiceTest {
                 current.key(), current.name(), current.description(), changedConcepts,
                 current.relations(), current.metrics(), current.actions(), List.of(), List.of());
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant", objectMapper.writeValueAsString(generated),
                         List.of(), "stop", 10, 20));
@@ -697,12 +1045,6 @@ class OntologyAiProposalServiceTest {
 
     @Test
     void rejectsCredentialOrUrlInstructionsBeforeProposalOrModelCall() {
-        OntologyDocument current = withSecretConfig(
-                OntologyCompilerServiceTest.projectDeliveryDocument());
-        OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
-        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
-
         assertThatThrownBy(() -> service.propose(
                 "org-a",
                 "user-a",
@@ -715,6 +1057,55 @@ class OntologyAiProposalServiceTest {
                 .hasMessage("AI_PROPOSAL_INVALID");
 
         verifyNoInteractions(modelRouter, modelProviders, modelClient, persistence);
+    }
+
+    @Test
+    void rejectsInstructionWithNonStorableUnicodeBeforePendingProposalSave() {
+        assertThatThrownBy(() -> service.propose(
+                "org-a",
+                "user-a",
+                41L,
+                new OntologyAiProposalService.ProposalCommand(
+                        "项目\u0000交付", List.of(), "DOMAIN_FIRST")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        verifyNoInteractions(modelRouter, modelProviders, modelClient, persistence);
+    }
+
+    @Test
+    void escapedNulOrUnpairedSurrogateFromModelProducesFailedProposal() throws Exception {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        stubWorkspaceAndRoute(current, new AtomicLong(1_750L));
+        String valid = objectMapper.writeValueAsString(withoutAssets(current));
+        String nul = valid.replaceFirst(
+                "\\\"description\\\":\\\"[^\\\"]*\\\"",
+                "\\\"description\\\":\\\"bad\\\\u0000text\\\"");
+        String unpaired = valid.replaceFirst(
+                "\\\"description\\\":\\\"[^\\\"]*\\\"",
+                "\\\"description\\\":\\\"bad\\\\uD800text\\\"");
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(
+                        new ChatCompletionResult(
+                                "assistant", nul, List.of(), "stop", 10, 20),
+                        new ChatCompletionResult(
+                                "assistant", unpaired, List.of(), "stop", 10, 20));
+
+        OntologyAiProposalService.ProposalView nulResult = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+        OntologyAiProposalService.ProposalView surrogateResult = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+
+        assertThat(List.of(nulResult, surrogateResult))
+                .allSatisfy(result -> {
+                    assertThat(result.status()).isEqualTo("FAILED");
+                    assertThat(result.diagnosticCode()).isEqualTo("AI_PROPOSAL_INVALID");
+                    assertThat(result.diagnosticMessage())
+                            .isEqualTo("ONTOLOGY_TEXT_NOT_STORABLE");
+                });
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -733,7 +1124,7 @@ class OntologyAiProposalServiceTest {
                 List.of(),
                 List.of());
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant", objectMapper.writeValueAsString(generated),
                         List.of(), "stop", 10, 20));
@@ -762,7 +1153,7 @@ class OntologyAiProposalServiceTest {
         assertThat(response.getBytes(StandardCharsets.UTF_8).length)
                 .isLessThanOrEqualTo(OntologyAiProposalService.MAX_RESPONSE_BYTES);
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(new ChatCompletionResult(
                         "assistant", response, List.of(), "stop", 10, 20));
         when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
@@ -784,7 +1175,7 @@ class OntologyAiProposalServiceTest {
         OntologyDocument perConceptOverflow = generatedPropertyDocument(1, 101, 0);
         OntologyDocument totalOverflow = generatedPropertyDocument(10, 100, 1);
         when(modelClient.chatCompletionWithCredentials(
-                any(), any(), any(), any(Boolean.class), any(), any()))
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
                 .thenReturn(
                         new ChatCompletionResult(
                                 "assistant", objectMapper.writeValueAsString(perConceptOverflow),
@@ -897,6 +1288,64 @@ class OntologyAiProposalServiceTest {
                 document.actions(),
                 List.of(),
                 List.of());
+    }
+
+    private OntologyDocument sanitizedAssets(OntologyDocument document) {
+        return new OntologyDocument(
+                document.key(),
+                document.name(),
+                document.description(),
+                document.concepts(),
+                document.relations(),
+                document.metrics(),
+                document.actions(),
+                document.dataSources().stream()
+                        .map(source -> new OntologyDocument.DataSource(
+                                source.id(), source.key(), source.name(), source.type(), null))
+                        .toList(),
+                document.mappings());
+    }
+
+    private OntologyPhysicalObjectEntity physicalObject(Long id, String key, String name) {
+        OntologyPhysicalObjectEntity object = new OntologyPhysicalObjectEntity(
+                "org-a", 41L, 1L, key, name, "TABLE", "{}");
+        ReflectionTestUtils.setField(object, "id", id);
+        return object;
+    }
+
+    private OntologyPhysicalFieldEntity physicalField(
+            Long id,
+            Long objectId,
+            String key,
+            String name) {
+        OntologyPhysicalFieldEntity field = new OntologyPhysicalFieldEntity(
+                "org-a", 41L, objectId, key, name, "TEXT", false, false, "{}");
+        ReflectionTestUtils.setField(field, "id", id);
+        return field;
+    }
+
+    private OntologyDocument generatedRelationDocument(
+            OntologyDocument current,
+            String relationTargetFieldKey) {
+        return new OntologyDocument(
+                current.key(),
+                current.name(),
+                current.description(),
+                current.concepts(),
+                current.relations(),
+                current.metrics(),
+                current.actions(),
+                List.of(),
+                List.of(
+                        new OntologyDocument.Mapping(
+                                "CONCEPT", "project", 1L, "projects", null, null,
+                                "DIRECT", 0.9, "AI", "PENDING"),
+                        new OntologyDocument.Mapping(
+                                "CONCEPT", "task", 1L, "tasks", null, null,
+                                "DIRECT", 0.9, "AI", "PENDING"),
+                        new OntologyDocument.Mapping(
+                                "RELATION", "contains-task", 1L, "projects", "task_id",
+                                relationTargetFieldKey, "DIRECT", 0.9, "AI", "PENDING")));
     }
 
     private OntologyDocument generatedPropertyDocument(

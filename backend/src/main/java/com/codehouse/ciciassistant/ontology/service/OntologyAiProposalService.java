@@ -45,6 +45,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class OntologyAiProposalService {
 
     static final int MAX_RESPONSE_BYTES = 256 * 1024;
+    static final int MAX_PROMPT_BYTES = OntologyAiProposalPromptPolicy.MAX_PROMPT_BYTES;
+    static final int MAX_OUTPUT_TOKENS = OntologyAiProposalPromptPolicy.MAX_OUTPUT_TOKENS;
+    static final int MAX_SELECTED_FIELDS = 500;
     static final String SCENE_CODE = "ontology-modeling";
     private static final String DOMAIN_FIRST = "DOMAIN_FIRST";
     private static final String DATA_SOURCE_FIRST = "DATA_SOURCE_FIRST";
@@ -62,17 +65,8 @@ public class OntologyAiProposalService {
     private static final Set<String> MODEL_ERROR_SENTINELS = Set.of(
             "aliyun api key is not configured.",
             "empty response.",
-            "model returned empty response.");
-    private static final String SYSTEM_PROMPT = """
-            You generate one complete, domain-neutral OntologyDocument JSON object for business ontology modeling.
-            Return JSON only, optionally wrapped by one outer ```json code fence. Do not include any text outside it.
-            Never include credentials, secrets, SQL, scripts, executable code, remote URLs, publishing instructions,
-            archive operations, system writes, or external write-back actions. Actions are contracts only.
-            Use only the fields and enum values in the supplied OntologyDocument contract.
-            DOMAIN_FIRST must return empty dataSources and mappings arrays.
-            DATA_SOURCE_FIRST may reference only the explicitly supplied source, object, and field whitelist,
-            must leave every data-source configJson null, and must not invent a source, object, or field.
-            """;
+            "model returned empty response.",
+            "no choices in response.");
 
     private final OntologyWorkspaceRepository workspaces;
     private final OntologyAiProposalRepository proposals;
@@ -86,6 +80,7 @@ public class OntologyAiProposalService {
     private final OntologyTenantPersistence persistence;
     private final ObjectMapper objectMapper;
     private final ObjectMapper strictMapper;
+    private final OntologyAiProposalPromptPolicy promptPolicy;
 
     public OntologyAiProposalService(
             OntologyWorkspaceRepository workspaces,
@@ -110,6 +105,7 @@ public class OntologyAiProposalService {
         this.modelClient = modelClient;
         this.persistence = persistence;
         this.objectMapper = objectMapper;
+        this.promptPolicy = new OntologyAiProposalPromptPolicy(objectMapper);
         this.strictMapper = objectMapper.copy()
                 .enable(JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
                 .enable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
@@ -127,11 +123,17 @@ public class OntologyAiProposalService {
         requireCurrentContext(orgId, userId);
         Objects.requireNonNull(command, "command");
         String mode = normalizeMode(command.mode());
+        String instruction = requireInstruction(command.instruction());
         OntologyWorkspaceEntity workspace = workspaces.findByIdAndOrgId(workspaceId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("AI_PROPOSAL_INVALID"));
+        if ("ARCHIVED".equals(workspace.getStatus())) {
+            throw applyInvalid();
+        }
         OntologyDocument current = drafts.loadDraft(orgId, workspaceId, workspace);
         AllowedSelection allowedSelection = prepareSelection(
                 orgId, workspaceId, command, mode, current);
+        List<Map<String, Object>> messages = promptPolicy.messages(
+                instruction, mode, current, allowedSelection.metadata());
         long baseRevision = workspace.getDraftRevision();
         ProposalDiff pendingDiff = new ProposalDiff(
                 baseRevision, "", List.of(), List.of(), List.of());
@@ -140,7 +142,7 @@ public class OntologyAiProposalService {
                         orgId,
                         workspaceId,
                         mode,
-                        requireInstruction(command.instruction()),
+                        instruction,
                         "{}",
                         writeJson(pendingDiff),
                         writeJson(List.of()),
@@ -148,7 +150,7 @@ public class OntologyAiProposalService {
 
         ChatCompletionResult response;
         try {
-            response = invokeModel(orgId, command, mode, current, allowedSelection);
+            response = invokeModel(orgId, messages);
         } catch (Exception exception) {
             return fail(proposal, baseRevision, "AI_MODEL_UNAVAILABLE", "AI_MODEL_CALL_FAILED");
         }
@@ -165,7 +167,9 @@ public class OntologyAiProposalService {
                 throw invalid("MODEL_DOCUMENT_INVALID");
             }
             String payloadJson = writeJson(candidate);
-            ProposalDiff diff = diff(baseRevision, current, candidate, sha256(payloadJson));
+            requirePayloadBudget(payloadJson);
+            ProposalDiff diff = diff(
+                    baseRevision, sanitizeServerAssets(current), candidate, sha256(payloadJson));
             proposal.markReady(payloadJson, writeJson(diff), writeJson(issues));
             persistence.saveForCurrentOrg(proposal);
             return new ProposalView(
@@ -204,7 +208,8 @@ public class OntologyAiProposalService {
         OntologyAiProposalEntity proposal = proposals
                 .findForUpdateByIdAndOrgId(proposalId, orgId)
                 .orElseThrow(() -> new ResourceNotFoundException("AI_PROPOSAL_INVALID"));
-        if (!Objects.equals(proposal.getWorkspaceId(), workspaceId)
+        if ("ARCHIVED".equals(workspace.getStatus())
+                || !Objects.equals(proposal.getWorkspaceId(), workspaceId)
                 || !"READY".equals(proposal.getStatus())) {
             throw applyInvalid();
         }
@@ -222,13 +227,23 @@ public class OntologyAiProposalService {
         OntologyDocument candidate = readStoredCandidate(proposal.getPayloadJson());
         OntologyDocument current = drafts.loadDraft(orgId, workspaceId, workspace);
         requireServerAssetsPreserved(current, candidate);
-        List<OntologyValidationService.ValidationIssue> issues = validation.validate(candidate, false);
+        ProposalDiff recalculatedDiff = diff(
+                diff.baseRevision(),
+                sanitizeServerAssets(current),
+                candidate,
+                sha256(proposal.getPayloadJson()));
+        if (!Objects.equals(diff, recalculatedDiff)) {
+            throw applyInvalid();
+        }
+        OntologyDocument hydratedCandidate = hydrateServerAssets(current, candidate);
+        List<OntologyValidationService.ValidationIssue> issues =
+                validation.validate(hydratedCandidate, false);
         if (issues == null || issues.stream().anyMatch(issue ->
                 issue == null || issue.severity() == OntologyValidationService.Severity.ERROR)) {
             throw applyInvalid();
         }
 
-        drafts.saveDraft(orgId, userId, workspaceId, expectedRevision, candidate);
+        drafts.saveDraft(orgId, userId, workspaceId, expectedRevision, hydratedCandidate);
         proposal.markApplied(userId);
         persistence.saveForCurrentOrg(proposal);
         return new ProposalView(
@@ -272,7 +287,7 @@ public class OntologyAiProposalService {
                 throw applyInvalid();
             }
             OntologyDocument candidate = strictMapper.readValue(json, OntologyDocument.class);
-            validateDocumentShape(candidate, true);
+            validateDocumentShape(candidate, false);
             validateSafeGeneratedContent(candidate);
             return candidate;
         } catch (RuntimeException exception) {
@@ -286,7 +301,7 @@ public class OntologyAiProposalService {
             OntologyDocument current,
             OntologyDocument candidate) {
         List<OntologyDocument.DataSource> currentSources = sorted(
-                current.dataSources(), value -> value.id() + ":" + value.key());
+                sanitizeDataSources(current.dataSources()), value -> value.id() + ":" + value.key());
         List<OntologyDocument.DataSource> candidateSources = sorted(
                 candidate.dataSources(), value -> value.id() + ":" + value.key());
         if (!Objects.equals(currentSources, candidateSources)
@@ -295,16 +310,28 @@ public class OntologyAiProposalService {
         }
     }
 
+    private OntologyDocument hydrateServerAssets(
+            OntologyDocument current,
+            OntologyDocument candidate) {
+        return new OntologyDocument(
+                candidate.key(),
+                candidate.name(),
+                candidate.description(),
+                candidate.concepts(),
+                candidate.relations(),
+                candidate.metrics(),
+                candidate.actions(),
+                current.dataSources(),
+                candidate.mappings());
+    }
+
     private IllegalArgumentException applyInvalid() {
         return new IllegalArgumentException("AI_PROPOSAL_INVALID");
     }
 
     private ChatCompletionResult invokeModel(
             String orgId,
-            ProposalCommand command,
-            String mode,
-            OntologyDocument current,
-            AllowedSelection allowedSelection) {
+            List<Map<String, Object>> messages) {
         Map<String, String> route = modelRouter.route(orgId, SCENE_CODE);
         String provider = requiredRouteValue(route, "provider");
         String modelName = requiredRouteValue(route, "modelName");
@@ -318,14 +345,13 @@ public class OntologyAiProposalService {
         }
         return modelClient.chatCompletionWithCredentials(
                 modelName,
-                List.of(
-                        Map.of("role", "system", "content", SYSTEM_PROMPT),
-                        Map.of("role", "user", "content", buildUserPrompt(
-                                command, mode, current, allowedSelection))),
+                messages,
                 null,
                 true,
                 credentials.get("apiBaseUrl"),
-                credentials.get("apiKey"));
+                credentials.get("apiKey"),
+                MAX_OUTPUT_TOKENS,
+                MAX_RESPONSE_BYTES);
     }
 
     private ProposalView fail(
@@ -568,6 +594,9 @@ public class OntologyAiProposalService {
             addText(values, action.name(), action.description());
             action.parameters().forEach(parameter -> addText(values, parameter.name()));
         }
+        if (values.stream().filter(Objects::nonNull).anyMatch(value -> !isStorableText(value))) {
+            throw invalid("ONTOLOGY_TEXT_NOT_STORABLE");
+        }
         if (values.stream().filter(Objects::nonNull).anyMatch(this::containsUnsafeContent)) {
             throw invalid("AI_GENERATED_CONTENT_UNSAFE");
         }
@@ -597,18 +626,27 @@ public class OntologyAiProposalService {
     }
 
     private void requireKey(String value, int maxLength) {
-        if (isBlank(value) || value.length() > maxLength || !SAFE_KEY.matcher(value).matches()) {
+        if (isBlank(value)
+                || !isStorableText(value)
+                || value.length() > maxLength
+                || !SAFE_KEY.matcher(value).matches()) {
             throw invalid("ONTOLOGY_DOCUMENT_KEY_INVALID");
         }
     }
 
     private void requireName(String value, int maxLength) {
+        if (value != null && !isStorableText(value)) {
+            throw invalid("ONTOLOGY_TEXT_NOT_STORABLE");
+        }
         if (isBlank(value) || value.length() > maxLength) {
             throw invalid("ONTOLOGY_DOCUMENT_NAME_INVALID");
         }
     }
 
     private void requireOptionalLength(String value, int maxLength) {
+        if (value != null && !isStorableText(value)) {
+            throw invalid("ONTOLOGY_TEXT_NOT_STORABLE");
+        }
         if (value != null && value.length() > maxLength) {
             throw invalid("ONTOLOGY_DOCUMENT_LENGTH_INVALID");
         }
@@ -657,7 +695,7 @@ public class OntologyAiProposalService {
         if (DATA_SOURCE_FIRST.equals(mode)) {
             validateGeneratedAssetReferences(generated, current, allowedSelection);
         }
-        List<OntologyDocument.DataSource> dataSources = current.dataSources();
+        List<OntologyDocument.DataSource> dataSources = sanitizeDataSources(current.dataSources());
         List<OntologyDocument.Mapping> mappings = DOMAIN_FIRST.equals(mode)
                 ? current.mappings()
                 : mergeMappings(current.mappings(), generated.mappings());
@@ -676,25 +714,32 @@ public class OntologyAiProposalService {
                         + ":" + mapping.dataSourceId()));
     }
 
-    private String buildUserPrompt(
-            ProposalCommand command,
-            String mode,
-            OntologyDocument current,
-            AllowedSelection allowedSelection) {
-        OntologyDocument safeCurrent = new OntologyDocument(
-                current.key(),
-                current.name(),
-                current.description(),
-                current.concepts(),
-                current.relations(),
-                current.metrics(),
-                current.actions(),
-                List.of(),
-                List.of());
-        return "mode=" + mode
-                + "\ninstruction=" + command.instruction().trim()
-                + "\ncurrentSemanticDraft=" + writeJson(safeCurrent)
-                + "\nselectedMetadata=" + writeJson(allowedSelection.metadata());
+    private OntologyDocument sanitizeServerAssets(OntologyDocument document) {
+        return new OntologyDocument(
+                document.key(),
+                document.name(),
+                document.description(),
+                document.concepts(),
+                document.relations(),
+                document.metrics(),
+                document.actions(),
+                sanitizeDataSources(document.dataSources()),
+                document.mappings());
+    }
+
+    private List<OntologyDocument.DataSource> sanitizeDataSources(
+            List<OntologyDocument.DataSource> sources) {
+        return safe(sources).stream()
+                .map(source -> new OntologyDocument.DataSource(
+                        source.id(), source.key(), source.name(), source.type(), null))
+                .toList();
+    }
+
+    private void requirePayloadBudget(String payloadJson) {
+        if (payloadJson == null
+                || payloadJson.getBytes(StandardCharsets.UTF_8).length > MAX_RESPONSE_BYTES) {
+            throw invalid("AI_PROPOSAL_PAYLOAD_TOO_LARGE");
+        }
     }
 
     private AllowedSelection prepareSelection(
@@ -716,6 +761,7 @@ public class OntologyAiProposalService {
 
         LinkedHashSet<String> uniqueSelections = new LinkedHashSet<>();
         List<SelectedMetadata> metadata = new ArrayList<>();
+        int totalSelectedFields = 0;
         for (SourceSelection selection : requested) {
             if (selection == null
                     || selection.dataSourceId() == null
@@ -724,6 +770,10 @@ public class OntologyAiProposalService {
                     || selection.fieldKeys() == null
                     || selection.fieldKeys().isEmpty()
                     || selection.fieldKeys().size() > 100) {
+                throw new IllegalArgumentException("AI_PROPOSAL_INVALID");
+            }
+            totalSelectedFields += selection.fieldKeys().size();
+            if (totalSelectedFields > MAX_SELECTED_FIELDS) {
                 throw new IllegalArgumentException("AI_PROPOSAL_INVALID");
             }
             String uniqueKey = selection.dataSourceId() + "\u0000" + selection.objectKey();
@@ -788,6 +838,14 @@ public class OntologyAiProposalService {
             AllowedSelection allowedSelection) {
         Map<Long, OntologyDocument.DataSource> serverSources = new LinkedHashMap<>();
         safe(current.dataSources()).forEach(source -> serverSources.put(source.id(), source));
+        List<OntologyDocument.Mapping> effectiveMappings =
+                mergeMappings(current.mappings(), generated.mappings());
+        Map<String, OntologyDocument.Relation> generatedRelations = new LinkedHashMap<>();
+        for (OntologyDocument.Relation relation : safe(generated.relations())) {
+            if (generatedRelations.putIfAbsent(relation.key(), relation) != null) {
+                throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
+            }
+        }
         Set<Long> allowedSourceIds = allowedSelection.metadata().stream()
                 .map(SelectedMetadata::dataSourceId)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
@@ -811,10 +869,34 @@ public class OntologyAiProposalService {
             if (selectedObject.isEmpty()
                     || (mapping.physicalFieldKey() != null
                     && selectedObject.get().fields().stream().noneMatch(field ->
-                            Objects.equals(field.fieldKey(), mapping.physicalFieldKey())))
-                    || (mapping.relationTargetFieldKey() != null
-                    && sourceMetadata.stream().flatMap(item -> item.fields().stream()).noneMatch(field ->
-                            Objects.equals(field.fieldKey(), mapping.relationTargetFieldKey())))) {
+                            Objects.equals(field.fieldKey(), mapping.physicalFieldKey())))) {
+                throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
+            }
+            if ("RELATION".equalsIgnoreCase(mapping.targetType())) {
+                OntologyDocument.Relation relation = generatedRelations.get(mapping.targetKey());
+                if (relation == null || isBlank(mapping.relationTargetFieldKey())) {
+                    throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
+                }
+                List<OntologyDocument.Mapping> targetConceptMappings = effectiveMappings.stream()
+                        .filter(candidate -> "CONCEPT".equalsIgnoreCase(candidate.targetType()))
+                        .filter(candidate -> Objects.equals(
+                                candidate.targetKey(), relation.targetConceptKey()))
+                        .filter(candidate -> Objects.equals(
+                                candidate.dataSourceId(), mapping.dataSourceId()))
+                        .toList();
+                if (targetConceptMappings.size() != 1) {
+                    throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
+                }
+                String targetObjectKey = targetConceptMappings.getFirst().physicalObjectKey();
+                List<SelectedMetadata> targetObjects = sourceMetadata.stream()
+                        .filter(item -> Objects.equals(item.objectKey(), targetObjectKey))
+                        .toList();
+                if (targetObjects.size() != 1
+                        || targetObjects.getFirst().fields().stream().noneMatch(field ->
+                        Objects.equals(field.fieldKey(), mapping.relationTargetFieldKey()))) {
+                    throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
+                }
+            } else if (mapping.relationTargetFieldKey() != null) {
                 throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
             }
         }
@@ -957,10 +1039,37 @@ public class OntologyAiProposalService {
         if (instruction == null
                 || instruction.isBlank()
                 || instruction.length() > 12_000
+                || !isStorableText(instruction)
                 || containsUnsafeContent(instruction)) {
             throw new IllegalArgumentException("AI_PROPOSAL_INVALID");
         }
         return instruction.trim();
+    }
+
+    private boolean isStorableText(String value) {
+        if (value == null) {
+            return true;
+        }
+        for (int index = 0; index < value.length(); index++) {
+            char current = value.charAt(index);
+            if (Character.isHighSurrogate(current)) {
+                if (index + 1 >= value.length()
+                        || !Character.isLowSurrogate(value.charAt(index + 1))) {
+                    return false;
+                }
+                index++;
+                continue;
+            }
+            if (Character.isLowSurrogate(current)
+                    || current == '\u0000'
+                    || (Character.isISOControl(current)
+                    && current != '\n'
+                    && current != '\r'
+                    && current != '\t')) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private String normalizeMode(String mode) {

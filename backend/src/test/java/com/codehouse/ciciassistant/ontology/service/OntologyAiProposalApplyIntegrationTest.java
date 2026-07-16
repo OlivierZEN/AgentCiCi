@@ -83,7 +83,7 @@ class OntologyAiProposalApplyIntegrationTest {
     }
 
     @Test
-    void concurrentApplySucceedsOnceAndLeavesPublishedVersionImmutable() throws Exception {
+    void concurrentApplyWithLargePrivateConfigSucceedsOnceAndLeavesVersionImmutable() throws Exception {
         Fixture fixture = createReadyPublishedFixture();
         TenantContext.clear();
 
@@ -178,11 +178,44 @@ class OntologyAiProposalApplyIntegrationTest {
         assertThat(unchangedDraft).isEqualTo(fixture.original());
     }
 
+    @Test
+    void archivedWorkspaceRejectsApplyWithoutChangingDraftProposalOrVersion() throws Exception {
+        Fixture fixture = createReadyPublishedFixture();
+        jdbcTemplate.update(
+                "UPDATE ontology_workspace SET status = 'ARCHIVED' WHERE id = ? AND org_id = ?",
+                fixture.workspaceId(), fixture.orgId());
+
+        assertThatThrownBy(() -> proposalService.apply(
+                fixture.orgId(), "user-a", fixture.proposalId(), 1L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        OntologyWorkspaceEntity workspace = workspaces
+                .findByIdAndOrgId(fixture.workspaceId(), fixture.orgId()).orElseThrow();
+        OntologyAiProposalEntity proposal = proposals
+                .findByIdAndWorkspaceIdAndOrgId(
+                        fixture.proposalId(), fixture.workspaceId(), fixture.orgId())
+                .orElseThrow();
+        List<OntologyVersionEntity> storedVersions = versions
+                .findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
+                        fixture.workspaceId(), fixture.orgId());
+
+        assertThat(workspace.getStatus()).isEqualTo("ARCHIVED");
+        assertThat(workspace.getDraftRevision()).isEqualTo(1L);
+        assertThat(proposal.getStatus()).isEqualTo("READY");
+        assertThat(storedVersions).hasSize(1);
+        assertThat(storedVersions.getFirst().getContentHash()).isEqualTo(fixture.versionHash());
+        assertThat(storedVersions.getFirst().getSnapshotJson()).isEqualTo(fixture.versionSnapshot());
+        assertThat(drafts.loadDraft(fixture.orgId(), fixture.workspaceId(), workspace))
+                .isEqualTo(fixture.original());
+    }
+
     private Fixture createReadyPublishedFixture() throws Exception {
         String orgId = "org-ai-proposal-" + UUID.randomUUID();
         TenantContext.setOrgId(orgId);
         TenantContext.setUserId("user-a");
-        OntologyDocument input = OntologyCompilerServiceTest.projectDeliveryDocument();
+        OntologyDocument input = withLargePrivateConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         orgId, "initial", "初始领域", "AI 提案原子测试", "user-a"));
@@ -202,7 +235,9 @@ class OntologyAiProposalApplyIntegrationTest {
                 "apiKey", "test-key"));
         when(modelClient.chatCompletionWithCredentials(
                 eq("model-a"), anyList(), isNull(), eq(true),
-                eq("https://models.invalid/v1"), eq("test-key")))
+                eq("https://models.invalid/v1"), eq("test-key"),
+                eq(OntologyAiProposalService.MAX_OUTPUT_TOKENS),
+                eq(OntologyAiProposalService.MAX_RESPONSE_BYTES)))
                 .thenReturn(new ChatCompletionResult(
                         "assistant",
                         objectMapper.writeValueAsString(withoutAssets(original)),
@@ -220,6 +255,20 @@ class OntologyAiProposalApplyIntegrationTest {
                         List.of(),
                         "DOMAIN_FIRST"));
         assertThat(proposal.status()).isEqualTo("READY");
+        assertThat(proposal.candidate().dataSources())
+                .extracting(OntologyDocument.DataSource::configJson)
+                .containsOnlyNulls();
+        assertThat(objectMapper.writeValueAsString(proposal))
+                .doesNotContain("server-secret", "private-row");
+        Map<String, Object> storedProposal = jdbcTemplate.queryForMap(
+                "SELECT payload_json, diff_json, validation_json, instruction "
+                        + "FROM ontology_ai_proposal WHERE id = ?",
+                proposal.id());
+        assertThat(objectMapper.writeValueAsString(storedProposal))
+                .doesNotContain("server-secret", "private-row");
+        assertThat(String.valueOf(storedProposal.get("payload_json"))
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8).length)
+                .isLessThanOrEqualTo(OntologyAiProposalService.MAX_RESPONSE_BYTES);
         assertThat(workspaces.findByIdAndOrgId(workspace.getId(), orgId).orElseThrow()
                 .getDraftRevision()).isEqualTo(1L);
         assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
@@ -271,6 +320,25 @@ class OntologyAiProposalApplyIntegrationTest {
                 document.actions(),
                 List.of(),
                 List.of());
+    }
+
+    private OntologyDocument withLargePrivateConfig(OntologyDocument document) {
+        OntologyDocument.DataSource source = document.dataSources().getFirst();
+        String config = "{\"apiKey\":\"server-secret\",\"records\":[{\"name\":\"private-row\","
+                + "\"padding\":\""
+                + "x".repeat(OntologyAiProposalService.MAX_RESPONSE_BYTES + 1_024)
+                + "\"}]}";
+        return new OntologyDocument(
+                document.key(),
+                document.name(),
+                document.description(),
+                document.concepts(),
+                document.relations(),
+                document.metrics(),
+                document.actions(),
+                List.of(new OntologyDocument.DataSource(
+                        source.id(), source.key(), source.name(), source.type(), config)),
+                document.mappings());
     }
 
     private record Fixture(
