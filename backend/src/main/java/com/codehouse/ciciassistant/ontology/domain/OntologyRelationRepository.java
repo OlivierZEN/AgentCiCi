@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyRelationRepository extends Repository<OntologyRelationEntity, Long> {
-    OntologyRelationEntity save(OntologyRelationEntity entity);
     List<OntologyRelationEntity> findByWorkspaceIdAndOrgIdOrderByIdAsc(Long workspaceId, String orgId);
     Optional<OntologyRelationEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
     Optional<OntologyRelationEntity> findByWorkspaceIdAndOrgIdAndKey(Long workspaceId, String orgId, String key);

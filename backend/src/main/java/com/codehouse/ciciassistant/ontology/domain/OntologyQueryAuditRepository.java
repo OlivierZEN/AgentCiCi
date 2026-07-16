@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyQueryAuditRepository extends Repository<OntologyQueryAuditEntity, Long> {
-    OntologyQueryAuditEntity save(OntologyQueryAuditEntity entity);
     List<OntologyQueryAuditEntity> findByWorkspaceIdAndOrgIdOrderByCreatedAtDesc(Long workspaceId, String orgId);
     List<OntologyQueryAuditEntity> findByOrgIdOrderByCreatedAtDesc(String orgId);
     Optional<OntologyQueryAuditEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);

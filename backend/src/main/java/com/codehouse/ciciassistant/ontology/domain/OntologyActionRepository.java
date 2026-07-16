@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyActionRepository extends Repository<OntologyActionEntity, Long> {
-    OntologyActionEntity save(OntologyActionEntity entity);
     List<OntologyActionEntity> findByWorkspaceIdAndOrgIdOrderByIdAsc(Long workspaceId, String orgId);
     Optional<OntologyActionEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
     Optional<OntologyActionEntity> findByWorkspaceIdAndOrgIdAndKey(Long workspaceId, String orgId, String key);

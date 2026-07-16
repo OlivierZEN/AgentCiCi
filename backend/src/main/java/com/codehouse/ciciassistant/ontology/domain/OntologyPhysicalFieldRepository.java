@@ -5,7 +5,6 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyPhysicalFieldRepository extends Repository<OntologyPhysicalFieldEntity, Long> {
-    OntologyPhysicalFieldEntity save(OntologyPhysicalFieldEntity entity);
     List<OntologyPhysicalFieldEntity> findByWorkspaceIdAndOrgIdOrderByIdAsc(Long workspaceId, String orgId);
     List<OntologyPhysicalFieldEntity> findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
             Long physicalObjectId, Long workspaceId, String orgId);

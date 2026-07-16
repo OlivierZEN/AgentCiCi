@@ -10,7 +10,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "ontology_workspace")
-public class OntologyWorkspaceEntity {
+public class OntologyWorkspaceEntity implements OntologyTenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

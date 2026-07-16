@@ -6,8 +6,6 @@ import org.springframework.data.repository.Repository;
 
 public interface OntologyWorkspaceRepository extends Repository<OntologyWorkspaceEntity, Long> {
 
-    OntologyWorkspaceEntity save(OntologyWorkspaceEntity entity);
-
     List<OntologyWorkspaceEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
 
     Optional<OntologyWorkspaceEntity> findByIdAndOrgId(Long id, String orgId);

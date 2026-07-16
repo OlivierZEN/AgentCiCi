@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.ontology;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.ontology.domain.OntologyActionRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyAiProposalRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyConceptRepository;
@@ -14,15 +15,18 @@ import com.codehouse.ciciassistant.ontology.domain.OntologyPhysicalObjectReposit
 import com.codehouse.ciciassistant.ontology.domain.OntologyPropertyRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyQueryAuditRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyRelationRepository;
+import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
+import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -47,9 +51,18 @@ class OntologyPersistenceIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private OntologyTenantPersistence persistence;
+
+    @AfterEach
+    void clearTenantContext() {
+        TenantContext.clear();
+    }
+
     @Test
     void scopesWorkspaceLookupToOrganization() {
-        OntologyWorkspaceEntity saved = workspaces.save(
+        TenantContext.setOrgId("org-a");
+        OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         "org-a",
                         "project-delivery",
@@ -63,17 +76,18 @@ class OntologyPersistenceIntegrationTest {
 
     @Test
     void ordersVersionsWithinWorkspaceAndScopesToOrganization() {
-        OntologyWorkspaceEntity workspace = workspaces.save(
+        TenantContext.setOrgId("org-version-a");
+        OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                 new OntologyWorkspaceEntity(
                         "org-version-a",
                         "service-operations",
                         "服务运营",
                         "版本隔离样例",
                         "user-a"));
-        versions.save(new OntologyVersionEntity(
+        persistence.saveForCurrentOrg(new OntologyVersionEntity(
                 "org-version-a", workspace.getId(), 1, 1L, "hash-1", "{}",
                 "{}", "type Query { ping: String }", "{}", "{}", "user-a"));
-        versions.save(new OntologyVersionEntity(
+        persistence.saveForCurrentOrg(new OntologyVersionEntity(
                 "org-version-a", workspace.getId(), 2, 2L, "hash-2", "{}",
                 "{}", "type Query { pong: String }", "{}", "{}", "user-a"));
 
@@ -158,7 +172,8 @@ class OntologyPersistenceIntegrationTest {
                 OntologyAiProposalRepository.class,
                 OntologyVersionRepository.class,
                 OntologyQueryAuditRepository.class);
-        Set<String> dangerousMethods = Set.of("findById", "findAll", "deleteById", "deleteAll");
+        Set<String> dangerousMethods = Set.of(
+                "save", "findById", "findAll", "deleteById", "deleteAll");
 
         for (Class<?> repositoryType : repositoryTypes) {
             assertThat(CrudRepository.class.isAssignableFrom(repositoryType))
@@ -174,7 +189,8 @@ class OntologyPersistenceIntegrationTest {
 
     @Test
     void rejectsWorkspaceChildWhoseOrganizationDoesNotMatchItsParent() {
-        OntologyWorkspaceEntity workspace = workspaces.save(new OntologyWorkspaceEntity(
+        TenantContext.setOrgId("org-parent-a");
+        OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-parent-a", "delivery-a", "交付 A", "组织边界", "user-a"));
 
         assertThatThrownBy(() -> jdbcTemplate.update("""
@@ -187,9 +203,10 @@ class OntologyPersistenceIntegrationTest {
 
     @Test
     void rejectsNestedPropertyWhoseWorkspaceDoesNotMatchItsConcept() {
-        OntologyWorkspaceEntity workspaceA = workspaces.save(new OntologyWorkspaceEntity(
+        TenantContext.setOrgId("org-nested");
+        OntologyWorkspaceEntity workspaceA = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-nested", "delivery-a", "交付 A", "父工作区", "user-a"));
-        OntologyWorkspaceEntity workspaceB = workspaces.save(new OntologyWorkspaceEntity(
+        OntologyWorkspaceEntity workspaceB = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-nested", "delivery-b", "交付 B", "伪造子工作区", "user-a"));
         Long conceptId = jdbcTemplate.queryForObject("""
                         INSERT INTO ontology_concept
@@ -210,15 +227,40 @@ class OntologyPersistenceIntegrationTest {
 
     @Test
     void publishedVersionPreventsWorkspaceDeletion() {
-        OntologyWorkspaceEntity workspace = workspaces.save(new OntologyWorkspaceEntity(
+        TenantContext.setOrgId("org-version-retention");
+        OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
                 "org-version-retention", "delivery", "交付", "保留发布版本", "user-a"));
-        versions.save(new OntologyVersionEntity(
+        persistence.saveForCurrentOrg(new OntologyVersionEntity(
                 "org-version-retention", workspace.getId(), 1, 1L, "hash-1", "{}",
                 "{}", "type Query { ping: String }", "{}", "{}", "user-a"));
 
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "DELETE FROM ontology_workspace WHERE id = ?", workspace.getId()))
                 .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void rejectsEntityFromAnotherOrganizationWithoutWritingIt() {
+        TenantContext.setOrgId("org-write-a");
+        OntologyWorkspaceEntity foreignWorkspace = new OntologyWorkspaceEntity(
+                "org-write-b", "forbidden-write", "越界写入", "不应持久化", "user-a");
+
+        assertThatThrownBy(() -> persistence.saveForCurrentOrg(foreignWorkspace))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("organization");
+        assertThat(workspaces.findByOrgIdAndKey("org-write-b", "forbidden-write")).isEmpty();
+    }
+
+    @Test
+    void persistsEntityOnlyForTheCurrentOrganization() {
+        TenantContext.setOrgId("org-write-a");
+        OntologyWorkspaceEntity workspace = new OntologyWorkspaceEntity(
+                "org-write-a", "allowed-write", "同租户写入", "允许持久化", "user-a");
+
+        OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(workspace);
+
+        assertThat(saved.getId()).isNotNull();
+        assertThat(workspaces.findByIdAndOrgId(saved.getId(), "org-write-a")).contains(saved);
     }
 
     @Test

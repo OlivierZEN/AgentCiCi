@@ -8,7 +8,7 @@ import jakarta.persistence.MappedSuperclass;
 import java.time.Instant;
 
 @MappedSuperclass
-public abstract class AbstractOntologyWorkspaceEntity {
+public abstract class AbstractOntologyWorkspaceEntity implements OntologyTenantEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
