@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-201
 status: done
-updated_at: 2026-07-16T08:08:54Z
+updated_at: 2026-07-16T08:23:31Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -45,6 +45,8 @@ spec_path: docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
 - 2026-07-16 增量修复：右栏模型治理说明、说明分隔线与旧说明常量已移除，右栏仅保留系统提示词。
 - `npm test -- src/assistant/AgentBuilderShell.test.ts`：22 项通过；`npm test`：18 个文件、110 项通过；`npm run build` 与 `git diff --check` 通过。
 - 本地 1600×1000 浏览器测量：左右编辑列均为 745.5px × 682.5px，top 220.6953125、bottom 903.1953125；系统提示词与左侧发布备注输入底边均为 897.1953125，横向溢出 0，console error/warning 0。
+- PR #11 已合并为 `c04e992b38407097db448d52ea5c5e8b6473f7fc`，生产发布 `2.7.9`；镜像/tag、四项非空备份、六服务健康、版本提交一致和公网 smoke 均通过。
+- 线上 1600×1000 浏览器测量：左右编辑列均为 612.5px × 604px，top 227.1953125、bottom 831.1953125；系统提示词与发布备注输入底边均为 825.1953125，模型治理说明节点与文案均为 0，横向溢出和当前生产 console error/warning 均为 0。
 
 ## Changed Files
 
@@ -61,5 +63,5 @@ spec_path: docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
 ## Handoff
 
 - 目标分支：`codex/TASK-201-agent-builder-layout`。
-- 原实现已合入 `origin/main`；2026-07-16 增量对齐修复已完成本地验收，进入生产发布流程。
+- 原实现及 2026-07-16 增量对齐修复均已合入 `origin/main`；生产运行 `2.7.9 / c04e992b3840`，即时应用回滚点为 `2.7.8 / 4814d2b9534d`。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
