@@ -15,6 +15,9 @@ allowed_write_roots:
   - backend/src/main/resources/ontology/reference-packages/**
   - backend/src/test/java/**
   - frontend/src/**
+  - frontend/vite.config.ts
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - docs/specs/**
   - .claw/tasks/**
   - .superpowers/sdd/**
@@ -26,6 +29,9 @@ scope_files:
   - backend/src/main/resources/ontology/reference-packages/customer-operations.json
   - .superpowers/sdd/task-5-report.md
   - .superpowers/sdd/progress.md
+  - frontend/vite.config.ts
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - DESIGN.md
   - DESIGN.json
   - .claw/tasks/TASK-213.md
