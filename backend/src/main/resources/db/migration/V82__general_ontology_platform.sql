@@ -11,13 +11,14 @@ CREATE TABLE ontology_workspace (
     updated_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ontology_workspace_id_org UNIQUE (id, org_id),
     CONSTRAINT uq_ontology_workspace_org_key UNIQUE (org_id, key)
 );
 
 CREATE TABLE ontology_concept (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     key VARCHAR(128) NOT NULL,
     name VARCHAR(160) NOT NULL,
     plural_name VARCHAR(160),
@@ -30,14 +31,18 @@ CREATE TABLE ontology_concept (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ontology_concept_id_scope UNIQUE (id, workspace_id, org_id),
+    CONSTRAINT fk_ontology_concept_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_concept_workspace_key UNIQUE (workspace_id, key)
 );
 
 CREATE TABLE ontology_property (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
-    concept_id BIGINT NOT NULL REFERENCES ontology_concept(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
+    concept_id BIGINT NOT NULL,
     key VARCHAR(128) NOT NULL,
     name VARCHAR(160) NOT NULL,
     description TEXT,
@@ -51,18 +56,24 @@ CREATE TABLE ontology_property (
     display_strategy VARCHAR(64),
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_property_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_property_concept
+        FOREIGN KEY (concept_id, workspace_id, org_id)
+        REFERENCES ontology_concept(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_property_concept_key UNIQUE (concept_id, key)
 );
 
 CREATE TABLE ontology_relation (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     key VARCHAR(128) NOT NULL,
     name VARCHAR(160) NOT NULL,
     description TEXT,
-    source_concept_id BIGINT NOT NULL REFERENCES ontology_concept(id) ON DELETE CASCADE,
-    target_concept_id BIGINT NOT NULL REFERENCES ontology_concept(id) ON DELETE CASCADE,
+    source_concept_id BIGINT NOT NULL,
+    target_concept_id BIGINT NOT NULL,
     cardinality VARCHAR(32) NOT NULL,
     forward_label VARCHAR(160),
     reverse_label VARCHAR(160),
@@ -70,16 +81,25 @@ CREATE TABLE ontology_relation (
     enabled BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_relation_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_relation_source
+        FOREIGN KEY (source_concept_id, workspace_id, org_id)
+        REFERENCES ontology_concept(id, workspace_id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_relation_target
+        FOREIGN KEY (target_concept_id, workspace_id, org_id)
+        REFERENCES ontology_concept(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_relation_workspace_key UNIQUE (workspace_id, key)
 );
 
 CREATE TABLE ontology_metric (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     key VARCHAR(128) NOT NULL,
     name VARCHAR(160) NOT NULL,
-    concept_id BIGINT NOT NULL REFERENCES ontology_concept(id) ON DELETE CASCADE,
+    concept_id BIGINT NOT NULL,
     aggregation VARCHAR(32) NOT NULL,
     measure_property_key VARCHAR(128),
     group_by_property_keys_json TEXT,
@@ -87,27 +107,39 @@ CREATE TABLE ontology_metric (
     filters_json TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_metric_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_metric_concept
+        FOREIGN KEY (concept_id, workspace_id, org_id)
+        REFERENCES ontology_concept(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_metric_workspace_key UNIQUE (workspace_id, key)
 );
 
 CREATE TABLE ontology_action (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     key VARCHAR(128) NOT NULL,
     name VARCHAR(160) NOT NULL,
-    concept_id BIGINT NOT NULL REFERENCES ontology_concept(id) ON DELETE CASCADE,
+    concept_id BIGINT NOT NULL,
     description TEXT,
     parameters_json TEXT NOT NULL DEFAULT '[]',
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_action_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_action_concept
+        FOREIGN KEY (concept_id, workspace_id, org_id)
+        REFERENCES ontology_concept(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_action_workspace_key UNIQUE (workspace_id, key)
 );
 
 CREATE TABLE ontology_data_source (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     key VARCHAR(128) NOT NULL,
     name VARCHAR(160) NOT NULL,
     source_type VARCHAR(32) NOT NULL,
@@ -118,14 +150,18 @@ CREATE TABLE ontology_data_source (
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ontology_source_id_scope UNIQUE (id, workspace_id, org_id),
+    CONSTRAINT fk_ontology_source_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_source_workspace_key UNIQUE (workspace_id, key)
 );
 
 CREATE TABLE ontology_physical_object (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
-    data_source_id BIGINT NOT NULL REFERENCES ontology_data_source(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
+    data_source_id BIGINT NOT NULL,
     object_key VARCHAR(256) NOT NULL,
     name VARCHAR(160) NOT NULL,
     object_type VARCHAR(64),
@@ -133,14 +169,21 @@ CREATE TABLE ontology_physical_object (
     discovered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ontology_object_id_scope UNIQUE (id, workspace_id, org_id),
+    CONSTRAINT fk_ontology_object_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_object_source
+        FOREIGN KEY (data_source_id, workspace_id, org_id)
+        REFERENCES ontology_data_source(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_object_source_key UNIQUE (data_source_id, object_key)
 );
 
 CREATE TABLE ontology_physical_field (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
-    physical_object_id BIGINT NOT NULL REFERENCES ontology_physical_object(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
+    physical_object_id BIGINT NOT NULL,
     field_key VARCHAR(256) NOT NULL,
     name VARCHAR(160) NOT NULL,
     data_type VARCHAR(64) NOT NULL,
@@ -150,16 +193,22 @@ CREATE TABLE ontology_physical_field (
     discovered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_field_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_field_object
+        FOREIGN KEY (physical_object_id, workspace_id, org_id)
+        REFERENCES ontology_physical_object(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_field_object_key UNIQUE (physical_object_id, field_key)
 );
 
 CREATE TABLE ontology_mapping (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     target_type VARCHAR(32) NOT NULL,
     target_key VARCHAR(256) NOT NULL,
-    data_source_id BIGINT NOT NULL REFERENCES ontology_data_source(id) ON DELETE CASCADE,
+    data_source_id BIGINT NOT NULL,
     physical_object_key VARCHAR(256) NOT NULL,
     physical_field_key VARCHAR(256),
     relation_target_field_key VARCHAR(256),
@@ -171,6 +220,12 @@ CREATE TABLE ontology_mapping (
     created_by VARCHAR(64) NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_mapping_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE,
+    CONSTRAINT fk_ontology_mapping_source
+        FOREIGN KEY (data_source_id, workspace_id, org_id)
+        REFERENCES ontology_data_source(id, workspace_id, org_id) ON DELETE CASCADE,
     CONSTRAINT uq_ontology_mapping_target_source
         UNIQUE (workspace_id, target_type, target_key, data_source_id)
 );
@@ -178,7 +233,7 @@ CREATE TABLE ontology_mapping (
 CREATE TABLE ontology_ai_proposal (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     proposal_type VARCHAR(32) NOT NULL,
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
     instruction TEXT,
@@ -189,13 +244,16 @@ CREATE TABLE ontology_ai_proposal (
     applied_by VARCHAR(64),
     applied_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_proposal_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE CASCADE
 );
 
 CREATE TABLE ontology_version (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
+    workspace_id BIGINT NOT NULL,
     version_no INTEGER NOT NULL,
     source_draft_revision BIGINT NOT NULL,
     content_hash VARCHAR(128) NOT NULL,
@@ -208,15 +266,19 @@ CREATE TABLE ontology_version (
     published_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_ontology_version_id_scope UNIQUE (id, workspace_id, org_id),
+    CONSTRAINT fk_ontology_version_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE RESTRICT,
     CONSTRAINT uq_ontology_version_workspace_no UNIQUE (workspace_id, version_no)
 );
 
 CREATE TABLE ontology_query_audit (
     id BIGSERIAL PRIMARY KEY,
     org_id VARCHAR(64) NOT NULL,
-    workspace_id BIGINT NOT NULL REFERENCES ontology_workspace(id) ON DELETE CASCADE,
-    version_id BIGINT NOT NULL REFERENCES ontology_version(id) ON DELETE CASCADE,
-    data_source_id BIGINT REFERENCES ontology_data_source(id) ON DELETE SET NULL,
+    workspace_id BIGINT NOT NULL,
+    version_id BIGINT NOT NULL,
+    data_source_id BIGINT,
     user_id VARCHAR(64) NOT NULL,
     concept_key VARCHAR(128) NOT NULL,
     query_json TEXT NOT NULL,
@@ -227,7 +289,17 @@ CREATE TABLE ontology_query_audit (
     error_code VARCHAR(64),
     sensitive_values_redacted BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_ontology_audit_workspace
+        FOREIGN KEY (workspace_id, org_id)
+        REFERENCES ontology_workspace(id, org_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ontology_audit_version
+        FOREIGN KEY (version_id, workspace_id, org_id)
+        REFERENCES ontology_version(id, workspace_id, org_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ontology_audit_source
+        FOREIGN KEY (data_source_id, workspace_id, org_id)
+        REFERENCES ontology_data_source(id, workspace_id, org_id)
+        ON DELETE SET NULL (data_source_id)
 );
 
 CREATE INDEX idx_ontology_workspace_org_updated

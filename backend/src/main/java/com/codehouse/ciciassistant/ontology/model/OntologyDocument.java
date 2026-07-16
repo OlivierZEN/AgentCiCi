@@ -136,7 +136,7 @@ public record OntologyDocument(
 
     public enum SourceType {
         INLINE_SAMPLE,
-        CLOUDCC
+        CONNECTOR
     }
 
     public enum Operator {
