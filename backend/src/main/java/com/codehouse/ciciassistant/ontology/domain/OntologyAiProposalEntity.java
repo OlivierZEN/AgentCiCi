@@ -67,4 +67,26 @@ public class OntologyAiProposalEntity extends AbstractOntologyWorkspaceEntity {
     public String getCreatedBy() { return createdBy; }
     public String getAppliedBy() { return appliedBy; }
     public Instant getAppliedAt() { return appliedAt; }
+
+    public void markReady(String payloadJson, String diffJson, String validationJson) {
+        this.status = "READY";
+        this.payloadJson = payloadJson;
+        this.diffJson = diffJson;
+        this.validationJson = validationJson;
+        touchUpdatedAt();
+    }
+
+    public void markFailed(String validationJson) {
+        this.status = "FAILED";
+        this.payloadJson = "{}";
+        this.validationJson = validationJson;
+        touchUpdatedAt();
+    }
+
+    public void markApplied(String userId) {
+        this.status = "APPLIED";
+        this.appliedBy = userId;
+        this.appliedAt = Instant.now();
+        touchUpdatedAt();
+    }
 }

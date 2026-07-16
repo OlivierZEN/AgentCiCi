@@ -38,6 +38,7 @@ class ModelProviderServiceIntegrationTest {
                         ModelProviderService.PROVIDER_DEEPSEEK,
                         ModelProviderService.PROVIDER_OLLAMA,
                         ModelProviderService.PROVIDER_LMSTUDIO,
+                        ModelProviderService.PROVIDER_ONEKEYTOKEN,
                         ModelProviderService.PROVIDER_ANTHROPIC,
                         ModelProviderService.PROVIDER_OPENAI
                 );
@@ -141,5 +142,20 @@ class ModelProviderServiceIntegrationTest {
         Map<String, String> preferredRoute = modelRouterService.route(orgId, "chat", "qwen3.5-omni-flash");
         assertThat(preferredRoute.get("modelName")).isEqualTo("qwen3.5-omni-flash");
         assertThat(preferredRoute.get("routeSource")).isEqualTo("agent_preferred");
+    }
+
+    @Test
+    void exposesDomainNeutralOntologyModelingSceneRoute() {
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> routes = (List<Map<String, Object>>)
+                modelProviderService.platformModelRouteSettings().get("routes");
+
+        assertThat(routes)
+                .anySatisfy(route -> {
+                    assertThat(route.get("sceneCode")).isEqualTo("ontology-modeling");
+                    assertThat(route.get("displayName")).isEqualTo("本体建模");
+                    assertThat(route.get("description").toString())
+                            .contains("业务语义", "草稿");
+                });
     }
 }

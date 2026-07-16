@@ -55,4 +55,8 @@ public abstract class AbstractOntologyWorkspaceEntity implements OntologyTenantE
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+    protected void touchUpdatedAt() {
+        this.updatedAt = Instant.now();
+    }
 }

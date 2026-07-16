@@ -42,6 +42,7 @@ public class ModelProviderService {
     private static final List<SceneRouteDef> SCENE_ROUTES = List.of(
             new SceneRouteDef("chat", "智能体对话", "员工工作台、渠道消息和 OpenAPI chat 默认模型。"),
             new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。"),
+            new SceneRouteDef("ontology-modeling", "本体建模", "业务语义建模、草稿提案与结构化本体生成模型。"),
             new SceneRouteDef("meeting-minutes", "AI 听记", "会议纪要、行动项和拜访记录生成模型。"),
             new SceneRouteDef("customer-insight", "客户洞察", "客户洞察摘要、一客一策和客户经营分析模型。")
     );
