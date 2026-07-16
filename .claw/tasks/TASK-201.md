@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-201
 status: done
-updated_at: 2026-07-14T00:44:28Z
+updated_at: 2026-07-16T08:08:54Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -42,6 +42,9 @@ spec_path: docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
 - `git diff --check`：成功。
 - 本地真实 1280x720 管理后台桌面验收：定义区等宽等高、无横向溢出，头像/上传/清除/四个策略按钮同一视觉行，系统提示词位于右栏，具体模型入口不存在。
 - “评测”和“发布渠道”在下方“版本控制与交付”分别打开；active/focus 状态、内容隔离和浏览器 console 0 error / 0 warning 通过。
+- 2026-07-16 增量修复：右栏模型治理说明、说明分隔线与旧说明常量已移除，右栏仅保留系统提示词。
+- `npm test -- src/assistant/AgentBuilderShell.test.ts`：22 项通过；`npm test`：18 个文件、110 项通过；`npm run build` 与 `git diff --check` 通过。
+- 本地 1600×1000 浏览器测量：左右编辑列均为 745.5px × 682.5px，top 220.6953125、bottom 903.1953125；系统提示词与左侧发布备注输入底边均为 897.1953125，横向溢出 0，console error/warning 0。
 
 ## Changed Files
 
@@ -58,5 +61,5 @@ spec_path: docs/specs/FEAT-107-agent-builder-layout-and-model-governance.md
 ## Handoff
 
 - 目标分支：`codex/TASK-201-agent-builder-layout`。
-- 实现与桌面端验收完成，已合入 `origin/main`；本任务未执行生产发布。
+- 原实现已合入 `origin/main`；2026-07-16 增量对齐修复已完成本地验收，进入生产发布流程。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。

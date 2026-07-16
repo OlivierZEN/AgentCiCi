@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-15T17:22:27Z
+updated_at: 2026-07-16T08:08:54Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-15T17:22:27Z
+last_run_at: 2026-07-16T08:08:54Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-201 智能体构建页右栏说明移除与双栏对齐增量验收（2026-07-16）
+
+- `identity/assignment`: MANAGER-001 SSH challenge-response 登录、GitHub 身份、TASK-201 分支与前端源码/测试/样式/规格/状态代表路径均返回 `allowed`。
+- `tdd`: 新增“右栏只承载系统提示词且不显示模型治理说明”的布局契约测试；旧实现先因仍包含说明节点与样式按预期失败，移除说明后聚焦测试 22/22 通过。
+- `frontend-full`: `npm test` 为 18 个文件 / 110 项全部通过；`npm run build` 成功转换 1,938 个模块，仅保留既有大 chunk 提示；`git diff --check` 通过。
+- `browser-local`: 应用内 Browser 在 1600×1000 验证左右编辑列均为 745.5px × 682.5px，top 均为 220.6953125、bottom 均为 903.1953125；系统提示词与左侧发布备注输入底边均为 897.1953125。模型治理说明节点为 0，document/body 横向溢出均为 0，console error/warning 为 0。
+- `scope`: 未改变 `draft.model`、模型路由、API、数据库、主题 token、生命周期页签或移动端范围；生产发布与线上验收待后续记录。
 
 ## TASK-212 Skill DAG Phase 1 本地与生产验收（2026-07-16）
 
