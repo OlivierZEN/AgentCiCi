@@ -39,4 +39,14 @@ public class OntologyTenantPersistence {
         }
         entityManager.flush();
     }
+
+    @Transactional
+    public void deleteForCurrentOrg(String orgId, Runnable scopedDelete) {
+        String currentOrgId = TenantContext.requireOrgId();
+        if (!currentOrgId.equals(orgId)) {
+            throw new ForbiddenException(
+                    "Ontology organization does not match the current organization");
+        }
+        Objects.requireNonNull(scopedDelete, "scopedDelete").run();
+    }
 }

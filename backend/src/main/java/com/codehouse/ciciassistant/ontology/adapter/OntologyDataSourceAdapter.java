@@ -27,6 +27,14 @@ public interface OntologyDataSourceAdapter {
             DataSourceConfig source,
             OntologyDocument.Mapping mapping);
 
+    /**
+     * Validates an already governed physical query without performing external I/O.
+     * Implementations may reject capabilities that cannot be executed faithfully.
+     */
+    default void validateQuery(DataSourceConfig source, PhysicalQuery query) {
+        // Most adapters support the complete bounded query contract.
+    }
+
     PhysicalResult executeRead(
             AdapterContext context,
             DataSourceConfig source,
@@ -105,13 +113,24 @@ public interface OntologyDataSourceAdapter {
         }
     }
 
-    record PhysicalResult(List<Map<String, Object>> rows, int totalCount) {
+    record PhysicalResult(
+            List<Map<String, Object>> rows,
+            int totalCount,
+            boolean moreAvailable) {
+        public PhysicalResult(List<Map<String, Object>> rows, int totalCount) {
+            this(rows, totalCount, totalCount > (rows == null ? 0 : rows.size()));
+        }
+
         public PhysicalResult {
             rows = rows == null
                     ? List.of()
                     : rows.stream()
                             .map(row -> Collections.unmodifiableMap(new LinkedHashMap<>(row)))
                             .toList();
+            if (totalCount < rows.size()) {
+                throw new IllegalArgumentException("PHYSICAL_RESULT_COUNT_INVALID");
+            }
+            moreAvailable = moreAvailable || totalCount > rows.size();
         }
     }
 }

@@ -149,7 +149,7 @@ public class InlineSampleOntologyAdapter implements OntologyDataSourceAdapter {
                 .limit(query.limit())
                 .map(row -> project(row, query.fields()))
                 .toList();
-        return new PhysicalResult(projected, total);
+        return new PhysicalResult(projected, total, total > projected.size());
     }
 
     private JsonNode sampleRoot(DataSourceConfig source) {

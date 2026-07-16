@@ -171,7 +171,33 @@ class CloudccOntologyAdapterTest {
                                 "name", OntologyDocument.Operator.EQ, "line-1\nline-2")),
                         List.of(),
                         20)))
-                .hasMessage("QUERY_FILTER_VALUE_NOT_ALLOWED");
+                .hasMessage("QUERY_FILTER_VALUE_UNSAFE");
+
+        assertThatThrownBy(() -> adapter.executeRead(
+                new AdapterContext("org-a", "user-a"),
+                source("cloudcc"),
+                new PhysicalQuery(
+                        "Account",
+                        List.of("name"),
+                        List.of(new PhysicalFilter(
+                                "name", OntologyDocument.Operator.EQ, "line-1\u0085line-2")),
+                        List.of(),
+                        20)))
+                .hasMessage("QUERY_FILTER_VALUE_UNSAFE");
+
+        assertThatThrownBy(() -> adapter.executeRead(
+                new AdapterContext("org-a", "user-a"),
+                source("cloudcc"),
+                new PhysicalQuery(
+                        "Account",
+                        List.of("name"),
+                        List.of(new PhysicalFilter(
+                                "name",
+                                OntologyDocument.Operator.EQ,
+                                "prefix\\' OR name != 'safe")),
+                        List.of(),
+                        20)))
+                .hasMessage("QUERY_FILTER_VALUE_UNSAFE");
     }
 
     @Test
@@ -197,6 +223,21 @@ class CloudccOntologyAdapterTest {
                         List.of(),
                         List.of(new PhysicalOrder("name", Direction.DESC)),
                         50)))
+                .hasMessage("QUERY_ORDER_NOT_SUPPORTED");
+
+        verifyNoInteractions(cloudcc);
+    }
+
+    @Test
+    void validatesUnsupportedOrderingWithoutExternalAccess() {
+        PhysicalQuery query = new PhysicalQuery(
+                "Account",
+                List.of("name"),
+                List.of(),
+                List.of(new PhysicalOrder("name", Direction.DESC)),
+                50);
+
+        assertThatThrownBy(() -> adapter.validateQuery(source("cloudcc"), query))
                 .hasMessage("QUERY_ORDER_NOT_SUPPORTED");
 
         verifyNoInteractions(cloudcc);

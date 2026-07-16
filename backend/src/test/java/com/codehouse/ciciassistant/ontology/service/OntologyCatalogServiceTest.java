@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -59,6 +60,11 @@ class OntologyCatalogServiceTest {
         when(adapter.supports(any(DataSourceConfig.class))).thenReturn(true);
         when(persistence.saveForCurrentOrg(any()))
                 .thenAnswer(invocation -> invocation.getArgument(0));
+        doAnswer(invocation -> {
+            invocation.<Runnable>getArgument(1).run();
+            return null;
+        }).when(persistence).deleteForCurrentOrg(
+                org.mockito.ArgumentMatchers.eq("org-a"), any(Runnable.class));
     }
 
     @AfterEach
@@ -88,6 +94,8 @@ class OntologyCatalogServiceTest {
         assertThat(current.getName()).isEqualTo("客户");
         assertThat(current.getMetadataJson()).contains("001");
         verify(objects).deleteByIdAndWorkspaceIdAndOrgId(82L, 41L, "org-a");
+        verify(persistence).deleteForCurrentOrg(
+                org.mockito.ArgumentMatchers.eq("org-a"), any(Runnable.class));
         ArgumentCaptor<OntologyPhysicalObjectEntity> saved =
                 ArgumentCaptor.forClass(OntologyPhysicalObjectEntity.class);
         verify(persistence, org.mockito.Mockito.times(2)).saveForCurrentOrg(saved.capture());
@@ -128,6 +136,8 @@ class OntologyCatalogServiceTest {
         assertThat(current.getName()).isEqualTo("客户名称");
         assertThat(current.isNullable()).isFalse();
         verify(fields).deleteByIdAndWorkspaceIdAndOrgId(92L, 41L, "org-a");
+        verify(persistence).deleteForCurrentOrg(
+                org.mockito.ArgumentMatchers.eq("org-a"), any(Runnable.class));
         ArgumentCaptor<OntologyPhysicalFieldEntity> saved =
                 ArgumentCaptor.forClass(OntologyPhysicalFieldEntity.class);
         verify(persistence, org.mockito.Mockito.times(2)).saveForCurrentOrg(saved.capture());

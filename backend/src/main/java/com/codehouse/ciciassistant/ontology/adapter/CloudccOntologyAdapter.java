@@ -157,10 +157,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
     }
 
     @Override
-    public PhysicalResult executeRead(
-            AdapterContext context,
-            DataSourceConfig source,
-            PhysicalQuery query) {
+    public void validateQuery(DataSourceConfig source, PhysicalQuery query) {
         requireSupported(source);
         requireBudget(query);
         if (!query.orderBy().isEmpty()) {
@@ -178,6 +175,16 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
             }
             requireIdentifier(filter.field(), "PHYSICAL_FIELD_NOT_ALLOWED");
         });
+        query.filters().forEach(this::compileFilter);
+    }
+
+    @Override
+    public PhysicalResult executeRead(
+            AdapterContext context,
+            DataSourceConfig source,
+            PhysicalQuery query) {
+        validateQuery(source, query);
+        List<String> fields = List.copyOf(new LinkedHashSet<>(query.fields()));
         String expressions = query.filters().stream()
                 .map(this::compileFilter)
                 .reduce((left, right) -> left + " and " + right)
@@ -192,7 +199,9 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
                 query.limit());
         return new PhysicalResult(
                 result.records().stream().map(row -> project(row, fields)).toList(),
-                result.totalCount());
+                result.totalCount(),
+                result.pageCount() > result.pageNum()
+                        || result.totalCount() > result.records().size());
     }
 
     private void parseObjects(
@@ -280,7 +289,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
                     .orElseThrow(() -> new IllegalArgumentException("QUERY_LIST_VALUE_REQUIRED"))
                     + ")";
             case CONTAINS -> field + " like " + literal(
-                    "%" + escapedLikeValue(filter.value()) + "%");
+                    "%" + safeTextValue(filter.value()) + "%");
             case GT -> field + " > " + literal(filter.value());
             case GTE -> field + " >= " + literal(filter.value());
             case LT -> field + " < " + literal(filter.value());
@@ -317,23 +326,25 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
             throw new IllegalArgumentException("QUERY_FILTER_VALUE_NOT_ALLOWED");
         }
         String text = String.valueOf(value);
-        if (text.length() > MAX_LITERAL_LENGTH || containsControlCharacter(text)) {
-            throw new IllegalArgumentException("QUERY_FILTER_VALUE_NOT_ALLOWED");
+        if (text.length() > MAX_LITERAL_LENGTH
+                || text.indexOf('\\') >= 0
+                || containsControlCharacter(text)) {
+            throw new IllegalArgumentException("QUERY_FILTER_VALUE_UNSAFE");
         }
         return "'" + text.replace("'", "''") + "'";
     }
 
-    private String escapedLikeValue(Object value) {
+    private String safeTextValue(Object value) {
         if (value == null || value instanceof Collection<?> || value instanceof Map<?, ?>) {
             throw new IllegalArgumentException("QUERY_FILTER_VALUE_NOT_ALLOWED");
         }
         String text = String.valueOf(value);
-        if (text.length() > MAX_LITERAL_LENGTH || containsControlCharacter(text)) {
-            throw new IllegalArgumentException("QUERY_FILTER_VALUE_NOT_ALLOWED");
+        if (text.length() > MAX_LITERAL_LENGTH
+                || text.indexOf('\\') >= 0
+                || containsControlCharacter(text)) {
+            throw new IllegalArgumentException("QUERY_FILTER_VALUE_UNSAFE");
         }
-        return text.replace("\\", "\\\\")
-                .replace("%", "\\%")
-                .replace("_", "\\_");
+        return text;
     }
 
     private List<?> listValues(Object value) {
@@ -415,7 +426,7 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
     }
 
     private boolean containsControlCharacter(String value) {
-        return value.chars().anyMatch(character -> character < 0x20 || character == 0x7f);
+        return value.codePoints().anyMatch(Character::isISOControl);
     }
 
     private String trimmed(String value) {

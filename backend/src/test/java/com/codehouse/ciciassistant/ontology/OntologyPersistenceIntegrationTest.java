@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -249,6 +250,19 @@ class OntologyPersistenceIntegrationTest {
                 .isInstanceOf(ForbiddenException.class)
                 .hasMessageContaining("organization");
         assertThat(workspaces.findByOrgIdAndKey("org-write-b", "forbidden-write")).isEmpty();
+    }
+
+    @Test
+    void rejectsCrossOrganizationScopedDeleteBeforeInvokingTheDelete() {
+        TenantContext.setOrgId("org-delete-a");
+        AtomicBoolean invoked = new AtomicBoolean();
+
+        assertThatThrownBy(() -> persistence.deleteForCurrentOrg(
+                "org-delete-b", () -> invoked.set(true)))
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("organization");
+
+        assertThat(invoked).isFalse();
     }
 
     @Test

@@ -107,8 +107,10 @@ public class OntologyCatalogService {
         }
         existing.values().stream()
                 .filter(entity -> !discoveredKeys.contains(entity.getObjectKey()))
-                .forEach(entity -> objects.deleteByIdAndWorkspaceIdAndOrgId(
-                        entity.getId(), workspaceId, orgId));
+                .forEach(entity -> persistence.deleteForCurrentOrg(
+                        orgId,
+                        () -> objects.deleteByIdAndWorkspaceIdAndOrgId(
+                                entity.getId(), workspaceId, orgId)));
         return discovered;
     }
 
@@ -171,8 +173,10 @@ public class OntologyCatalogService {
         }
         existing.values().stream()
                 .filter(entity -> !discoveredKeys.contains(entity.getFieldKey()))
-                .forEach(entity -> fields.deleteByIdAndWorkspaceIdAndOrgId(
-                        entity.getId(), workspaceId, orgId));
+                .forEach(entity -> persistence.deleteForCurrentOrg(
+                        orgId,
+                        () -> fields.deleteByIdAndWorkspaceIdAndOrgId(
+                                entity.getId(), workspaceId, orgId)));
         return discovered;
     }
 
