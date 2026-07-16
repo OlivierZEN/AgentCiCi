@@ -383,6 +383,8 @@ V1 运算符限定为 `EQ | NE | IN | CONTAINS | GT | GTE | LT | LTE | BETWEEN |
 
 V1 作为一个产品里程碑，但按可验证切片交付：
 
+详细的 TDD 实施步骤、文件职责、接口和验证命令见 `docs/specs/FEAT-116-general-ontology-modeling-platform-plan.md`，它是本规格的实施计划附件。
+
 1. 通用元模型、V81、租户生命周期与版本快照。
 2. 工作区、草稿、校验、发布和编译 API。
 3. 数据目录、映射和 `INLINE_SAMPLE` 适配器。
