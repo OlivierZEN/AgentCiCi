@@ -1,7 +1,6 @@
 import { createOntologyMutationLane, type OntologyMutationLane } from "./ontologyModel";
 import type {
   OntologyApiDetails,
-  OntologyApiEnvelope,
   OntologyCatalogFieldMutation,
   OntologyCatalogObjectMutation,
   OntologyCatalogView,
@@ -32,6 +31,26 @@ import type {
 const MANAGEMENT_ROOT = "/admin/ontologies";
 const QUERY_ROOT = "/semantic-query";
 const ERROR_CODE_PATTERN = /^[A-Z][A-Z0-9_]{2,127}$/;
+const NETWORK_FAILURE_MESSAGE = "网络请求失败，请稍后重试";
+
+function trimmedString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function objectRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function parseEnvelope(raw: string): Record<string, unknown> | null {
+  if (!raw.trim()) return null;
+  try {
+    return objectRecord(JSON.parse(raw) as unknown);
+  } catch {
+    return null;
+  }
+}
 
 export class OntologyApiError extends Error {
   readonly status: number;
@@ -55,16 +74,19 @@ export class OntologyApiError extends Error {
 export function normalizeOntologyApiError(
   status: number,
   statusText: string,
-  envelope: OntologyApiEnvelope<unknown> | null,
+  envelope: unknown,
 ): OntologyApiError {
-  const explicitCode = envelope?.code?.trim();
-  const messageCode = envelope?.message?.trim();
+  const fields = objectRecord(envelope);
+  const explicitCode = trimmedString(fields?.code);
+  const messageCode = trimmedString(fields?.message);
   const code = explicitCode
     || (messageCode && ERROR_CODE_PATTERN.test(messageCode) ? messageCode : "")
     || `HTTP_${status}`;
-  const fallbackMessage = statusText.trim() ? `HTTP ${status} ${statusText.trim()}` : `HTTP ${status}`;
-  const message = envelope?.message?.trim() || explicitCode || fallbackMessage;
-  return new OntologyApiError(message, status, code, envelope?.details ?? null);
+  const safeStatusText = trimmedString(statusText);
+  const fallbackMessage = safeStatusText ? `HTTP ${status} ${safeStatusText}` : `HTTP ${status}`;
+  const message = messageCode || explicitCode || fallbackMessage;
+  const details = objectRecord(fields?.details) as OntologyApiDetails | null;
+  return new OntologyApiError(message, status, code, details);
 }
 
 export function isOntologyRevisionConflict(error: unknown): error is OntologyApiError {
@@ -252,26 +274,21 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
       });
-    } catch (error) {
-      const message = error instanceof Error && error.message.trim()
-        ? error.message.trim()
-        : "Network request failed";
-      throw new OntologyApiError(message, 0, "HTTP_0", null);
+    } catch {
+      throw new OntologyApiError(NETWORK_FAILURE_MESSAGE, 0, "HTTP_0", null);
     }
-    const raw = await response.text();
-    let envelope: OntologyApiEnvelope<T> | null = null;
-    if (raw.trim()) {
-      try {
-        envelope = JSON.parse(raw) as OntologyApiEnvelope<T>;
-      } catch {
-        envelope = null;
-      }
+    let raw: string;
+    try {
+      raw = await response.text();
+    } catch {
+      throw normalizeOntologyApiError(response.status, response.statusText, null);
     }
+    const envelope = parseEnvelope(raw);
     if (!response.ok || envelope?.success !== true) {
       throw normalizeOntologyApiError(
         response.status,
         response.statusText,
-        envelope as OntologyApiEnvelope<unknown> | null,
+        envelope,
       );
     }
     return envelope.data as T;

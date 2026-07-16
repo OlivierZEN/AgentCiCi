@@ -3,6 +3,7 @@ import {
   createOntologyApi,
   isOntologyRevisionConflict,
   normalizeOntologyApiError,
+  OntologyApiError,
   toDraftSaveRequest,
 } from "./ontologyApi";
 import {
@@ -298,17 +299,97 @@ describe("ontology draft transport", () => {
     expect(normalizeOntologyApiError(502, "Bad Gateway", null).code).toBe("HTTP_502");
   });
 
-  it("normalizes a network failure into the same typed error contract", async () => {
+  it("normalizes an initial fetch failure without exposing the transport error", async () => {
     const fetchStub = vi.fn(async () => {
-      throw new TypeError("Failed to fetch");
+      throw new TypeError("Failed to fetch with private request context");
     });
     const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
 
-    await expect(api.listWorkspaces()).rejects.toMatchObject({
+    const error = await api.listWorkspaces().catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(OntologyApiError);
+    expect(error).toMatchObject({
       status: 0,
       code: "HTTP_0",
+      message: "网络请求失败，请稍后重试",
       details: null,
     });
+    expect((error as Error).message).not.toContain("private request context");
+  });
+
+  it("normalizes a response body read failure without exposing the body error", async () => {
+    const response = {
+      ok: false,
+      status: 502,
+      statusText: "Bad Gateway",
+      text: vi.fn(async () => {
+        throw new DOMException("private stream details", "AbortError");
+      }),
+    } as unknown as Response;
+    const fetchStub = vi.fn(async () => response);
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    const error = await api.listWorkspaces().catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(OntologyApiError);
+    expect(error).toMatchObject({
+      status: 502,
+      code: "HTTP_502",
+      message: "HTTP 502 Bad Gateway",
+      details: null,
+    });
+    expect((error as Error).message).not.toContain("private stream details");
+  });
+
+  it("falls back to HTTP metadata when an error response contains invalid JSON", async () => {
+    const fetchStub = vi.fn(async () => new Response("{not-json", {
+      status: 500,
+      statusText: "Internal Server Error",
+    }));
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    await expect(api.listWorkspaces()).rejects.toMatchObject({
+      status: 500,
+      code: "HTTP_500",
+      message: "HTTP 500 Internal Server Error",
+      details: null,
+    });
+  });
+
+  it("ignores wrong-shape error fields and does not trust response JSON", async () => {
+    const fetchStub = vi.fn(async () => new Response(JSON.stringify({
+      success: false,
+      data: null,
+      message: { private: "do not expose" },
+      code: 123,
+      details: ["not", "an", "object"],
+    }), {
+      status: 422,
+      statusText: "Unprocessable Entity",
+      headers: { "Content-Type": "application/json" },
+    }));
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    await expect(api.listWorkspaces()).rejects.toMatchObject({
+      status: 422,
+      code: "HTTP_422",
+      message: "HTTP 422 Unprocessable Entity",
+      details: null,
+    });
+  });
+
+  it("returns data from a successful envelope without applying error fallbacks", async () => {
+    const fetchStub = vi.fn(async () => new Response(JSON.stringify({
+      success: true,
+      data: [{ id: 7, name: "项目交付" }],
+      message: "OK",
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    await expect(api.listWorkspaces()).resolves.toEqual([{ id: 7, name: "项目交付" }]);
   });
 
   it("applies a proposal with expectedRevision and reloads the redacted draft", async () => {
