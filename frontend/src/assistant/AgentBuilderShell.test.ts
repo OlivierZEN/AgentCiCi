@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  AGENT_BUILDER_EDITOR_LAYOUT,
   AGENT_BUILDER_LIFECYCLE_TABS,
-  AGENT_MODEL_GOVERNANCE_NOTICE,
   applyAgentDetailToList,
   buildAgentSkillDagUrl,
   buildDebugSkillResolutionChain,
@@ -132,9 +132,9 @@ describe("Agent Builder information architecture", () => {
     expect(AGENT_BUILDER_LIFECYCLE_TABS.some((tab) => tab.id === ("definition" as never))).toBe(false);
   });
 
-  it("keeps concrete model choice under platform governance", () => {
-    expect(AGENT_MODEL_GOVERNANCE_NOTICE).toContain("平台统一策略自动选择");
-    expect(AGENT_MODEL_GOVERNANCE_NOTICE).toContain("运营方集中管理");
+  it("keeps the right editor column dedicated to the system prompt", () => {
+    expect(AGENT_BUILDER_EDITOR_LAYOUT.rightColumn).toEqual(["systemPrompt"]);
+    expect(AGENT_BUILDER_EDITOR_LAYOUT.showModelGovernanceNotice).toBe(false);
   });
 });
 

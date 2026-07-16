@@ -144,7 +144,10 @@ export type BaseModelOption = {
 };
 
 export const MODEL_CONFIG_REQUIRED_NOTICE = "请先配置模型";
-export const AGENT_MODEL_GOVERNANCE_NOTICE = "运行模型由平台统一策略自动选择，并由运营方集中管理路由、降级与成本控制。";
+export const AGENT_BUILDER_EDITOR_LAYOUT = Object.freeze({
+  rightColumn: ["systemPrompt"] as const,
+  showModelGovernanceNotice: false,
+});
 
 export function resolveAgentCreationModel(
   draftModel: string,
@@ -4180,9 +4183,6 @@ export default function AgentBuilderShell({
                     placeholder="告诉智能体如何回答、何时调用工具、何时转人工。"
                   />
                 </label>
-                <p className="cici-builder-model-governance-note">
-                  {AGENT_MODEL_GOVERNANCE_NOTICE}
-                </p>
               </section>
             </div>
           </section>
