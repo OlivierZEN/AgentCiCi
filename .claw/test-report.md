@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-16T08:08:54Z
+updated_at: 2026-07-16T08:23:31Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-16T08:08:54Z
+last_run_at: 2026-07-16T08:23:31Z
 last_run_status: passed
 ---
 
@@ -16,7 +16,12 @@ last_run_status: passed
 - `tdd`: 新增“右栏只承载系统提示词且不显示模型治理说明”的布局契约测试；旧实现先因仍包含说明节点与样式按预期失败，移除说明后聚焦测试 22/22 通过。
 - `frontend-full`: `npm test` 为 18 个文件 / 110 项全部通过；`npm run build` 成功转换 1,938 个模块，仅保留既有大 chunk 提示；`git diff --check` 通过。
 - `browser-local`: 应用内 Browser 在 1600×1000 验证左右编辑列均为 745.5px × 682.5px，top 均为 220.6953125、bottom 均为 903.1953125；系统提示词与左侧发布备注输入底边均为 897.1953125。模型治理说明节点为 0，document/body 横向溢出均为 0，console error/warning 为 0。
-- `scope`: 未改变 `draft.model`、模型路由、API、数据库、主题 token、生命周期页签或移动端范围；生产发布与线上验收待后续记录。
+- `merge/release`: PR #11 合并为 `c04e992b38407097db448d52ea5c5e8b6473f7fc`；`scripts/release-acr.sh --dry-run` 与正式 `2.7.9` 发布均通过，annotated tag 已推送。backend index/amd64 digest 为 `sha256:420477ea503cb3f1bb6eb357b426d7e139d947427b5ba5cff46d168e02b9a3c5` / `sha256:74b3f03701058f07cace1504e20deaa5101dc16c88d6dd7ea549d24308e07c3a`；frontend 为 `sha256:7f5dddaad2846d83cfb102a4519860ea11dc571d21a0d79d0a83d227f185ae5a` / `sha256:86ba71f4985b2c880fdf90a81ddcfbc13803eab9585f77361df57cd4aad71b2e`。
+- `backup/deploy`: `/opt/cici/backups/20260716-161644-before-2.7.9-task201-alignment` 中 env/PostgreSQL/KB/Qdrant 分别为 1,646 / 3,009,740 / 511,135 / 1,584,517 bytes，全部非空。仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant 容器 ID 与发布前完全一致并继续运行 `2.6.12`。
+- `production-runtime`: 六服务 healthy，health `UP`，`/system/version` 返回 `2.7.9 / c04e992b3840`，Nginx 配置有效；发布后窗口 backend ERROR/Exception 0、frontend 精确 5xx 0。
+- `browser-production`: 线上 1600×1000 “客户成功” Agent 编辑页显示版本 2.7.9；左右编辑列均为 612.5px × 604px，top/bottom 分别同为 227.1953125 / 831.1953125，系统提示词与发布备注输入底边同为 825.1953125。模型治理说明节点与文案均为 0，document/body 横向溢出均为 0，当前生产 console error/warning 为 0；截图为 `/Users/owenmacbook/.codex/visualizations/2026/07/14/019f5df9-6f52-7dd0-975c-cb6ad90d6d69/agent-builder-production-2.7.9/agent-builder-alignment.png`。
+- `public/rollback`: `x.agentcici.com` HTTP 301 / HTTPS 200；本机仍无法解析 `onechat.agentcici.com`，显式生产 IP vhost 为 HTTPS 200。即时应用回滚点为 `2.7.8 / 4814d2b9534d`。
+- `scope`: 未改变 `draft.model`、模型路由、API、数据库、主题 token、生命周期页签或移动端范围。
 
 ## TASK-212 Skill DAG Phase 1 本地与生产验收（2026-07-16）
 
