@@ -1,0 +1,58 @@
+package com.codehouse.ciciassistant.ontology.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.MappedSuperclass;
+import java.time.Instant;
+
+@MappedSuperclass
+public abstract class AbstractOntologyWorkspaceEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "org_id", nullable = false, length = 64)
+    private String orgId;
+
+    @Column(name = "workspace_id", nullable = false)
+    private Long workspaceId;
+
+    @Column(name = "created_at", nullable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    protected AbstractOntologyWorkspaceEntity() {
+    }
+
+    protected AbstractOntologyWorkspaceEntity(String orgId, Long workspaceId) {
+        this.orgId = orgId;
+        this.workspaceId = workspaceId;
+        this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public String getOrgId() {
+        return orgId;
+    }
+
+    public Long getWorkspaceId() {
+        return workspaceId;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+}
