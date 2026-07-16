@@ -24,7 +24,7 @@
 
 ### Backend domain and persistence
 
-- `backend/src/main/resources/db/migration/V81__general_ontology_platform.sql`：13 张本体表、唯一约束、租户索引和级联外键。
+- `backend/src/main/resources/db/migration/V82__general_ontology_platform.sql`：13 张本体表、唯一约束、租户索引和级联外键。
 - `backend/src/main/java/com/codehouse/ciciassistant/ontology/model/OntologyDocument.java`：领域无关草稿/快照 DTO 及枚举。
 - `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/*Entity.java`：工作区、概念、属性、关系、指标、动作、数据源、物理对象/字段、映射、AI 提案、版本和查询审计实体。
 - `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/*Repository.java`：全部按组织/工作区作用域读取。
@@ -65,8 +65,8 @@
 - `backend/src/test/java/com/codehouse/ciciassistant/ontology/service/OntologyCompilerServiceTest.java`：稳定契约与哈希单测。
 - `backend/src/test/java/com/codehouse/ciciassistant/ontology/service/SemanticQueryServiceTest.java`：预算、映射和适配器路由单测。
 - `backend/src/test/java/com/codehouse/ciciassistant/ontology/adapter/CloudccOntologyAdapterTest.java`：字段发现解析与只读查询编译单测。
-- `docs/specs/FEAT-116-general-ontology-modeling-platform.md`：实现进展和最终生产事实。
-- `.claw/test-report.md`、`.claw/tasks/TASK-210.md`、`.claw/current-status.md`：真实验证与交接快照。
+- `docs/specs/FEAT-118-general-ontology-modeling-platform.md`：实现进展和最终生产事实。
+- `.claw/test-report.md`、`.claw/tasks/TASK-213.md`、`.claw/current-status.md`：真实验证与交接快照。
 
 ---
 
@@ -74,7 +74,7 @@
 
 **Files:**
 
-- Create: `backend/src/main/resources/db/migration/V81__general_ontology_platform.sql`
+- Create: `backend/src/main/resources/db/migration/V82__general_ontology_platform.sql`
 - Create: `backend/src/main/java/com/codehouse/ciciassistant/ontology/model/OntologyDocument.java`
 - Create: `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/OntologyWorkspaceEntity.java`
 - Create: `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/OntologyConceptEntity.java`
@@ -156,9 +156,9 @@ public record OntologyDocument(
 }
 ```
 
-- [ ] **Step 4: Add V81 and all scoped repositories**
+- [ ] **Step 4: Add V82 and all scoped repositories**
 
-Implement the 13 tables from FEAT-116 with `org_id`, workspace foreign keys, `ON DELETE CASCADE` for draft children, unique `(org_id, key)` on workspaces, unique `(workspace_id, key)` on concepts/relations/metrics/actions/data sources, and unique `(workspace_id, version_no)` on versions. Keep published snapshots and proposal payloads as `TEXT` JSON to match existing project conventions.
+Implement the 13 tables from FEAT-118 with `org_id`, workspace foreign keys, `ON DELETE CASCADE` for draft children, unique `(org_id, key)` on workspaces, unique `(workspace_id, key)` on concepts/relations/metrics/actions/data sources, and unique `(workspace_id, version_no)` on versions. Keep published snapshots and proposal payloads as `TEXT` JSON to match existing project conventions.
 
 - [ ] **Step 5: Run migration and persistence tests**
 
@@ -169,7 +169,7 @@ Expected: PASS; Flyway reports schema version `81`.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add backend/src/main/resources/db/migration/V81__general_ontology_platform.sql \
+git add backend/src/main/resources/db/migration/V82__general_ontology_platform.sql \
   backend/src/main/java/com/codehouse/ciciassistant/ontology/model \
   backend/src/main/java/com/codehouse/ciciassistant/ontology/domain \
   backend/src/test/java/com/codehouse/ciciassistant/ontology/OntologyPersistenceIntegrationTest.java
@@ -597,8 +597,8 @@ git commit -m "feat: build visual ontology modeling workbench"
 
 **Files:**
 
-- Modify: `docs/specs/FEAT-116-general-ontology-modeling-platform.md`
-- Modify: `.claw/tasks/TASK-210.md`
+- Modify: `docs/specs/FEAT-118-general-ontology-modeling-platform.md`
+- Modify: `.claw/tasks/TASK-213.md`
 - Modify: `.claw/task-board.md`
 - Modify: `.claw/current-status.md`
 - Modify: `.claw/test-report.md`
@@ -639,8 +639,8 @@ Expected: one consistent next version for Git tag, backend/frontend app version 
 - [ ] **Step 5: Commit implementation and verified state**
 
 ```bash
-git add backend frontend DESIGN.json DESIGN.md docs/specs/FEAT-116-general-ontology-modeling-platform.md \
-  .claw/tasks/TASK-210.md .claw/task-board.md .claw/current-status.md .claw/test-report.md
+git add backend frontend DESIGN.json DESIGN.md docs/specs/FEAT-118-general-ontology-modeling-platform.md \
+  .claw/tasks/TASK-213.md .claw/task-board.md .claw/current-status.md .claw/test-report.md
 git commit -m "feat: deliver general ontology platform v1"
 ```
 
@@ -650,14 +650,13 @@ Run the real `./scripts/release-acr.sh --version <dry-run-version>`, confirm ACR
 
 - [ ] **Step 7: Record production evidence**
 
-Update FEAT-116 and TASK-210 with exact version, commit, image tag, Flyway version, backup path, smoke results and rollback target; set `done` only after production smoke passes. Commit and push the state-only delta to `origin/main`.
+Update FEAT-118 and TASK-213 with exact version, commit, image tag, Flyway version, backup path, smoke results and rollback target; set `done` only after production smoke passes. Commit and push the state-only delta to `origin/main`.
 
 ---
 
 ## Plan Self-Review
 
-- Spec coverage: all FEAT-116 goals, non-goals, security rules, AI boundary, adapters, compiler, UI, two-domain proof, lifecycle, testing and release have an owning task.
+- Spec coverage: all FEAT-118 goals, non-goals, security rules, AI boundary, adapters, compiler, UI, two-domain proof, lifecycle, testing and release have an owning task.
 - Placeholder scan: the plan contains no deferred implementation marker; external CloudCC validation has an explicit stop condition rather than a fabricated pass.
 - Type consistency: `OntologyDocument`, adapter SPI, draft revision, proposal, published snapshot and semantic query names are stable across tasks.
 - Scope check: tasks are separately reviewable, but each produces a runnable increment toward one V1; no unrelated refactor or mobile work is included.
-

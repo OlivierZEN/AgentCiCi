@@ -1,16 +1,16 @@
 ---
 kind: feature-spec
-feature_id: FEAT-116
+feature_id: FEAT-118
 title: 通用本体建模与语义查询平台 V1
 status: approved
 owner_role: project-manager
-task_ids: TASK-210
+task_ids: TASK-213
 related_decisions: FEAT-067, FEAT-075, FEAT-081, FEAT-103, FEAT-111
 updated_at: 2026-07-16T13:57:04Z
 updated_by: MANAGER-001
 ---
 
-# FEAT-116 - 通用本体建模与语义查询平台 V1
+# FEAT-118 - 通用本体建模与语义查询平台 V1
 
 ## 1. 背景与用户决策
 
@@ -289,7 +289,7 @@ V1 运算符限定为 `EQ | NE | IN | CONTAINS | GT | GTE | LT | LTE | BETWEEN |
 
 ## 12. 持久化模型
 
-新增 Flyway V81，至少包含：
+新增 Flyway V82，至少包含：
 
 - `ontology_workspace`
 - `ontology_concept`
@@ -383,9 +383,9 @@ V1 运算符限定为 `EQ | NE | IN | CONTAINS | GT | GTE | LT | LTE | BETWEEN |
 
 V1 作为一个产品里程碑，但按可验证切片交付：
 
-详细的 TDD 实施步骤、文件职责、接口和验证命令见 `docs/specs/FEAT-116-general-ontology-modeling-platform-plan.md`，它是本规格的实施计划附件。
+详细的 TDD 实施步骤、文件职责、接口和验证命令见 `docs/specs/FEAT-118-general-ontology-modeling-platform-plan.md`，它是本规格的实施计划附件。
 
-1. 通用元模型、V81、租户生命周期与版本快照。
+1. 通用元模型、V82、租户生命周期与版本快照。
 2. 工作区、草稿、校验、发布和编译 API。
 3. 数据目录、映射和 `INLINE_SAMPLE` 适配器。
 4. CloudCC 元数据与只读查询适配器。
@@ -433,7 +433,7 @@ V1 作为一个产品里程碑，但按可验证切片交付：
 
 - 生产发布严格遵循 `docs/production-release-runbook.md` 与 `scripts/release-acr.sh`。
 - 发布前运行 `./scripts/release-acr.sh --dry-run`，版本号、镜像 tag、Git tag 和前后端版本保持一致。
-- V81 只新增表和索引，不修改现有业务表；应用回滚时新表保留但不被旧版本读取。
+- V82 只新增表和索引，不修改现有业务表；应用回滚时新表保留但不被旧版本读取。
 - 上线后 smoke 覆盖健康检查、管理端路由、创建/发布示例本体、示例查询、组织隔离和 CloudCC 发现诊断。
 - 若 AI 模型或 CloudCC 暂不可用，手工建模、编译和 `INLINE_SAMPLE` 查询仍必须可用；对应适配器明确显示降级状态。
 

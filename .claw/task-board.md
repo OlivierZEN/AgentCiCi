@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-15T17:22:27Z
+updated_at: 2026-07-16T14:05:11Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-213 - 通用本体建模与语义查询平台 V1
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-118-general-ontology-modeling-platform.md`
+- task_status_path: `.claw/tasks/TASK-213.md`
+- assignment_path: `.claw/assignments/TASK-213.yaml`
+- blocked_by: `none`
+- next_action: Push the validated assignment to `origin/main`, then implement the approved TDD plan through production acceptance.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

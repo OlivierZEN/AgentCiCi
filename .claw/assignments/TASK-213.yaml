@@ -1,0 +1,67 @@
+task_id: TASK-213
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-16T14:05:11Z
+expires_at: none
+spec_path: docs/specs/FEAT-118-general-ontology-modeling-platform.md
+task_status_path: .claw/tasks/TASK-213.md
+branch: codex/TASK-213-general-ontology-v1
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+scope_files:
+  - docs/specs/FEAT-118-general-ontology-modeling-platform.md
+  - docs/specs/FEAT-118-general-ontology-modeling-platform-plan.md
+  - backend/src/main/resources/db/migration/V82__general_ontology_platform.sql
+  - DESIGN.md
+  - DESIGN.json
+  - .claw/tasks/TASK-213.md
+  - .claw/assignments/TASK-213.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+  - .claw/devops.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - deploy/**
+  - backend/src/main/resources/**
+  - frontend/build/**
+  - frontend/pagecomponents/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-067-enterprise-knowledge-platform-readiness.md
+  - docs/specs/FEAT-118-general-ontology-modeling-platform.md
+  - docs/specs/FEAT-118-general-ontology-modeling-platform-plan.md
+task_boundary:
+  - "实现领域无关的本体元模型、可视化业务建模、AI 草稿提案、确定性 Schema/API 编译和受限只读语义查询。"
+  - "首期以 INLINE_SAMPLE 项目交付领域证明通用性，并以 CloudCC CRM 适配器完成真实元数据发现、映射验证和当前用户权限下的只读查询。"
+  - "AI 只能创建和应用草稿提案；人工发布是唯一线上版本变更入口，运行时只读取不可变已发布快照。"
+  - "不得实现任意 SQL、任意脚本、外部写回、OWL/RDF 全集、独立图数据库、跨源联邦执行或移动端范围。"
+  - "不得修改 TASK-210、TASK-203、TASK-204、TASK-212 或 TASK-170 的专属实现与交付文件。"
+  - "生产发布只执行已批准 runbook；不得提交密钥、Token、Cookie、生产数据或可复用凭据。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-16; user explicitly approved the recommended domain-neutral ontology V1 design, waived further confirmation, and requested implementation plus production release."
+notes: "V82 仅新增本体平台表和索引；通用内核不得含 CRM 专属类型或标识符。所有代表性文件在执行前必须通过 dev-login 与 check-assignment。"
