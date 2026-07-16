@@ -23,7 +23,10 @@ import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionSe
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingPreparation;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.SourcePreparation;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.util.List;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
@@ -135,6 +138,9 @@ class OntologyCatalogServiceTest {
 
     @Test
     void rejectsAggregateCatalogResponsesAboveFourMiBBeforeAnyCommit() {
+        AggregateGuardObjectMapper aggregateGuard = new AggregateGuardObjectMapper();
+        service = new OntologyCatalogService(
+                transactions, List.of(adapter), aggregateGuard);
         SourcePreparation objectPreparation = prepared(null, null);
         SourcePreparation fieldPreparation = prepared("projects", 81L);
         when(transactions.prepareSource("org-a", 41L, 7L, 3L, null))
@@ -142,17 +148,74 @@ class OntologyCatalogServiceTest {
         when(transactions.prepareSource("org-a", 41L, 7L, 3L, "projects"))
                 .thenReturn(fieldPreparation);
         String boundedItemMetadata = "x".repeat(65_000);
-        List<PhysicalObject> objects = IntStream.range(0, 65)
+        List<PhysicalObject> objects = IntStream.range(0, 100)
                 .mapToObj(index -> new PhysicalObject(
                         "object-" + index, "对象" + index, "CONNECTOR", boundedItemMetadata))
                 .toList();
-        List<PhysicalField> fields = IntStream.range(0, 65)
+        List<PhysicalField> fields = IntStream.range(0, 100)
                 .mapToObj(index -> new PhysicalField(
                         "projects", "field-" + index, "字段" + index,
                         "TEXT", true, false, boundedItemMetadata))
                 .toList();
         when(adapter.discoverObjects(any(), any())).thenReturn(objects);
         when(adapter.discoverFields(any(), any(), any())).thenReturn(fields);
+
+        assertThatThrownBy(() -> service.discoverObjects(
+                "org-a", "user-a", 41L, 7L, 3L))
+                .isInstanceOf(DataSourceUnavailableException.class)
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
+        assertThat(aggregateGuard.itemWrites()).isPositive().isLessThan(objects.size());
+        aggregateGuard.resetItemWrites();
+        assertThatThrownBy(() -> service.discoverFields(
+                "org-a", "user-a", 41L, 7L, "projects", 3L))
+                .isInstanceOf(DataSourceUnavailableException.class)
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
+        assertThat(aggregateGuard.itemWrites()).isPositive().isLessThan(fields.size());
+
+        verify(transactions, never()).commitObjects(any(), any(), any());
+        verify(transactions, never()).commitFields(any(), any(), any());
+    }
+
+    @Test
+    void acceptsSingleObjectAndFieldMetadataAtExactlySixtyFourKiB() {
+        SourcePreparation objectPreparation = prepared(null, null);
+        SourcePreparation fieldPreparation = prepared("projects", 81L);
+        String exactMetadata = "x".repeat(64 * 1024);
+        List<PhysicalObject> objects = List.of(new PhysicalObject(
+                "projects", "项目", "CONNECTOR", exactMetadata));
+        List<PhysicalField> fields = List.of(new PhysicalField(
+                "projects", "name", "名称", "TEXT", true, false, exactMetadata));
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, null))
+                .thenReturn(objectPreparation);
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, "projects"))
+                .thenReturn(fieldPreparation);
+        when(adapter.discoverObjects(any(), any())).thenReturn(objects);
+        when(adapter.discoverFields(any(), any(), any())).thenReturn(fields);
+        when(transactions.commitObjects(objectPreparation, "user-a", objects)).thenReturn(4L);
+        when(transactions.commitFields(fieldPreparation, "user-a", fields)).thenReturn(4L);
+
+        assertThat(service.discoverObjects(
+                "org-a", "user-a", 41L, 7L, 3L).revision()).isEqualTo(4L);
+        assertThat(service.discoverFields(
+                "org-a", "user-a", 41L, 7L, "projects", 3L).revision()).isEqualTo(4L);
+
+        verify(transactions).commitObjects(objectPreparation, "user-a", objects);
+        verify(transactions).commitFields(fieldPreparation, "user-a", fields);
+    }
+
+    @Test
+    void rejectsSingleObjectAndFieldMetadataAboveSixtyFourKiBBeforeAnyCommit() {
+        SourcePreparation objectPreparation = prepared(null, null);
+        SourcePreparation fieldPreparation = prepared("projects", 81L);
+        String oversizedMetadata = "x".repeat(64 * 1024 + 1);
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, null))
+                .thenReturn(objectPreparation);
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, "projects"))
+                .thenReturn(fieldPreparation);
+        when(adapter.discoverObjects(any(), any())).thenReturn(List.of(new PhysicalObject(
+                "projects", "项目", "CONNECTOR", oversizedMetadata)));
+        when(adapter.discoverFields(any(), any(), any())).thenReturn(List.of(new PhysicalField(
+                "projects", "name", "名称", "TEXT", true, false, oversizedMetadata)));
 
         assertThatThrownBy(() -> service.discoverObjects(
                 "org-a", "user-a", 41L, 7L, 3L))
@@ -220,5 +283,32 @@ class OntologyCatalogServiceTest {
                 "example",
                 "{\"adapterKey\":\"example\"}",
                 null);
+    }
+
+    private static final class AggregateGuardObjectMapper extends ObjectMapper {
+
+        private int itemWrites;
+
+        @Override
+        public byte[] writeValueAsBytes(Object value) throws JsonProcessingException {
+            if (value instanceof List<?>) {
+                throw new AssertionError("whole catalog arrays must not be materialized");
+            }
+            return super.writeValueAsBytes(value);
+        }
+
+        @Override
+        public void writeValue(JsonGenerator generator, Object value) throws IOException {
+            itemWrites++;
+            super.writeValue(generator, value);
+        }
+
+        int itemWrites() {
+            return itemWrites;
+        }
+
+        void resetItemWrites() {
+            itemWrites = 0;
+        }
     }
 }

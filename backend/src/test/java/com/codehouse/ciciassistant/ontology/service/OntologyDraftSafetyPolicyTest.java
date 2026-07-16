@@ -2,6 +2,9 @@ package com.codehouse.ciciassistant.ontology.service;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -27,6 +30,25 @@ class OntologyDraftSafetyPolicyTest {
 
         assertThatCode(() -> policy.validateDocument(document)).doesNotThrowAnyException();
         assertThatCode(() -> policy.validateMappings(document.mappings())).doesNotThrowAnyException();
+    }
+
+    @Test
+    void validatesWorkspaceMetadataWithTheSameStableBoundedContract() throws Exception {
+        assertThatCode(() -> policy.validateWorkspaceMetadata(
+                "project-delivery", "项目交付", "领域中立工作区"))
+                .doesNotThrowAnyException();
+
+        assertInvalid(() -> policy.validateWorkspaceMetadata(null, "项目交付", null));
+        assertInvalid(() -> policy.validateWorkspaceMetadata("project-delivery", null, null));
+        assertInvalid(() -> policy.validateWorkspaceMetadata(
+                "project-delivery", "项目交付", "x".repeat(65_537)));
+
+        ObjectMapper oversizedUtf8Mapper = mock(ObjectMapper.class);
+        when(oversizedUtf8Mapper.writeValueAsString(any()))
+                .thenReturn("界".repeat(OntologyDraftSafetyPolicy.MAX_DOCUMENT_BYTES / 3 + 1));
+        OntologyDraftSafetyPolicy utf8Policy = new OntologyDraftSafetyPolicy(oversizedUtf8Mapper);
+        assertInvalid(() -> utf8Policy.validateWorkspaceMetadata(
+                "project-delivery", "项目交付", "领域中立工作区"));
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.domain.OrgRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.service.OrganizationProvisioningService;
+import com.codehouse.ciciassistant.common.security.SecretKeyMatcher;
 import com.codehouse.ciciassistant.kb.service.VectorDeleteResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreAuditResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
@@ -164,19 +165,6 @@ public class PlatformTenantLifecycleService {
                     "label", "向量库物理点位",
                     "reason", "Dry-run 会通过 VectorStoreClient 只读巡检 org-scoped 孤儿点位；跨系统外部向量库仍需后续接入。"
             )
-    );
-
-    private static final List<String> REDACTED_FIELD_HINTS = List.of(
-            "secret",
-            "password",
-            "token",
-            "credential",
-            "encrypted",
-            "api_key",
-            "apikey",
-            "authorization",
-            "safetymark",
-            "config_json"
     );
 
     private static final Set<String> EXPORT_TABLES = new HashSet<>(MANIFEST_DOMAINS.stream()
@@ -726,7 +714,7 @@ public class PlatformTenantLifecycleService {
         manifest.put("redact", List.of(Map.of(
                 "domain", "export_archive",
                 "label", "导出包敏感字段脱敏",
-                "fields", REDACTED_FIELD_HINTS
+                "fields", SecretKeyMatcher.sensitiveKeyHints()
         )));
         manifest.put("orphanAudit", buildOrphanAudit(org.getId()));
         manifest.put("retain_summary", List.of(
@@ -883,7 +871,7 @@ public class PlatformTenantLifecycleService {
             String key = entry.getKey() == null ? "" : entry.getKey();
             if (shouldRecursivelyRedactOntologyJson(table, key)) {
                 redacted.put(key, redactOntologyJson(entry.getValue()));
-            } else if (shouldRedact(key)) {
+            } else if (SecretKeyMatcher.matches(key)) {
                 redacted.put(key, "[REDACTED]");
             } else {
                 redacted.put(key, entry.getValue());
@@ -922,8 +910,8 @@ public class PlatformTenantLifecycleService {
         }
         ObjectNode redacted = objectMapper.createObjectNode();
         node.fields().forEachRemaining(entry -> {
-            String compactKey = compactFieldName(entry.getKey());
-            if (shouldRedactOntologyJsonField(compactKey)) {
+            String compactKey = SecretKeyMatcher.normalize(entry.getKey());
+            if (SecretKeyMatcher.matches(entry.getKey())) {
                 redacted.put(entry.getKey(), "[REDACTED]");
             } else if ("sampledatajson".equals(compactKey) && entry.getValue().isTextual()) {
                 redacted.put(entry.getKey(), redactOntologyJson(entry.getValue().textValue()));
@@ -932,31 +920,6 @@ public class PlatformTenantLifecycleService {
             }
         });
         return redacted;
-    }
-
-    private boolean shouldRedactOntologyJsonField(String compactKey) {
-        return List.of(
-                        "secret",
-                        "password",
-                        "token",
-                        "credential",
-                        "encrypted",
-                        "apikey",
-                        "accesskey",
-                        "authorization",
-                        "safetymark",
-                        "configjson"
-                ).stream()
-                .anyMatch(compactKey::contains);
-    }
-
-    private String compactFieldName(String key) {
-        return key == null ? "" : key.toLowerCase().replaceAll("[^a-z0-9]", "");
-    }
-
-    private boolean shouldRedact(String key) {
-        String normalized = key.toLowerCase();
-        return REDACTED_FIELD_HINTS.stream().anyMatch(normalized::contains);
     }
 
     private List<Path> listKbFiles(String orgId) {

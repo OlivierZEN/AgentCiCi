@@ -42,6 +42,16 @@ public class OntologyDraftSafetyPolicy {
         this.objectMapper = objectMapper;
     }
 
+    public void validateWorkspaceMetadata(String key, String name, String description) {
+        guarded(() -> {
+            requireText(key, MAX_KEY_LENGTH);
+            requireText(name, MAX_NAME_LENGTH);
+            optionalText(description, MAX_DESCRIPTION_LENGTH);
+            require(serializedBytes(new WorkspaceMetadata(key, name, description))
+                    <= MAX_DOCUMENT_BYTES);
+        });
+    }
+
     public void validateDocument(OntologyDocument document) {
         guarded(() -> {
             require(document != null);
@@ -250,5 +260,8 @@ public class OntologyDraftSafetyPolicy {
     }
 
     private static final class SafetyViolation extends RuntimeException {
+    }
+
+    private record WorkspaceMetadata(String key, String name, String description) {
     }
 }

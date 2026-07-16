@@ -101,6 +101,22 @@ class OntologyDataSourcePolicyTest {
     }
 
     @Test
+    void rejectsEveryCentralizedSecretKeyVariantBeforeAdapterAllowlistChecks() {
+        for (String secretKey : List.of(
+                "privateKey", "private_key", "cookie", "accessKey", "access_key")) {
+            String config = "{\"adapterKey\":\"approved-adapter\",\""
+                    + secretKey + "\":\"hidden\"}";
+
+            assertThatThrownBy(() -> policy.validate(new OntologyDocument.DataSource(
+                    null, "external-source", "外部数据", OntologyDocument.SourceType.CONNECTOR,
+                    config, null)))
+                    .as(secretKey)
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("DATA_SOURCE_CONFIG_SECRET_FORBIDDEN");
+        }
+    }
+
+    @Test
     void delegatesStrictPublicConfigurationSchemaValidationToCloudccAdapter() {
         ObjectMapper mapper = new ObjectMapper();
         OntologyDataSourcePolicy cloudccPolicy = new OntologyDataSourcePolicy(

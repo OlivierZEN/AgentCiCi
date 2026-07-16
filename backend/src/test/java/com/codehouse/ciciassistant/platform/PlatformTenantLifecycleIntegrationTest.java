@@ -207,20 +207,36 @@ class PlatformTenantLifecycleIntegrationTest {
                 .contains("sample-project-alpha")
                 .contains("visible-sample-owner")
                 .doesNotContain("ontology-data-source-secret")
-                .doesNotContain("ontology-sample-access-key-secret");
+                .doesNotContain("ontology-sample-access-key-secret")
+                .doesNotContain("ontology-sample-private-key-secret")
+                .doesNotContain("ontology-sample-private-snake-secret")
+                .doesNotContain("ontology-sample-cookie-secret");
         assertThat(zipEntries.get("tables/ontology_version.jsonl"))
                 .contains("sample-project-alpha")
+                .contains("sample-project-beta")
                 .contains("customer-tier-gold")
+                .contains("visible-object-sample-owner")
                 .doesNotContain("ontology-snapshot-secret")
                 .doesNotContain("ontology-nested-secret")
-                .doesNotContain("ontology-snapshot-sample-password");
+                .doesNotContain("ontology-snapshot-sample-password")
+                .doesNotContain("ontology-snapshot-string-private-key")
+                .doesNotContain("ontology-snapshot-string-private-snake")
+                .doesNotContain("ontology-snapshot-string-cookie")
+                .doesNotContain("ontology-snapshot-object-private-key")
+                .doesNotContain("ontology-snapshot-object-private-snake")
+                .doesNotContain("ontology-snapshot-object-cookie");
         assertThat(zipEntries.get("tables/ontology_physical_object.jsonl"))
                 .contains("project-catalog-v1")
                 .contains("delivery-metadata")
-                .doesNotContain("ontology-object-metadata-credential");
+                .doesNotContain("ontology-object-metadata-credential")
+                .doesNotContain("ontology-object-metadata-private-key")
+                .doesNotContain("ontology-object-metadata-cookie");
         assertThat(zipEntries.get("tables/ontology_physical_field.jsonl"))
                 .contains("Project Name")
+                .contains("crm-read-model")
                 .doesNotContain("ontology-field-metadata-access-key")
+                .doesNotContain("ontology-field-metadata-private-snake")
+                .doesNotContain("ontology-field-metadata-cookie")
                 .doesNotContain("ontology-malformed-metadata-password");
         JsonNode malformedMetadataField = findJsonlRow(
                 zipEntries.get("tables/ontology_physical_field.jsonl"), "field_key", "description");
@@ -844,7 +860,7 @@ class PlatformTenantLifecycleIntegrationTest {
                         """,
                 orgId, workspaceId, "sample", "Sample Source", "INLINE_SAMPLE",
                 "{\"accessToken\":\"ontology-data-source-secret\"}",
-                "{\"projects\":[{\"id\":\"p-1\",\"name\":\"sample-project-alpha\",\"owner\":\"visible-sample-owner\",\"connector\":{\"accessKey\":\"ontology-sample-access-key-secret\"}}]}",
+                "{\"projects\":[{\"id\":\"p-1\",\"name\":\"sample-project-alpha\",\"owner\":\"visible-sample-owner\",\"connector\":{\"accessKey\":\"ontology-sample-access-key-secret\",\"privateKey\":\"ontology-sample-private-key-secret\",\"private_key\":\"ontology-sample-private-snake-secret\",\"cookie\":\"ontology-sample-cookie-secret\"}}]}",
                 "VALID", memberId, Timestamp.from(now), Timestamp.from(now));
         Long dataSourceId = jdbcTemplate.queryForObject(
                 "SELECT id FROM ontology_data_source WHERE org_id = ? AND workspace_id = ? AND key = 'sample'",
@@ -860,7 +876,7 @@ class PlatformTenantLifecycleIntegrationTest {
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 orgId, workspaceId, dataSourceId, "projects", "Projects", "OBJECT",
-                "{\"catalog\":\"project-catalog-v1\",\"label\":\"delivery-metadata\",\"connection\":{\"credential\":\"ontology-object-metadata-credential\"}}",
+                "{\"catalog\":\"project-catalog-v1\",\"label\":\"delivery-metadata\",\"connection\":{\"credential\":\"ontology-object-metadata-credential\",\"privateKey\":\"ontology-object-metadata-private-key\",\"cookie\":\"ontology-object-metadata-cookie\"}}",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         Long objectId = jdbcTemplate.queryForObject(
                 "SELECT id FROM ontology_physical_object WHERE org_id = ? AND data_source_id = ? AND object_key = 'projects'",
@@ -875,7 +891,7 @@ class PlatformTenantLifecycleIntegrationTest {
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                 orgId, workspaceId, objectId, "name", "Name", "STRING", false, false,
-                "{\"businessLabel\":\"Project Name\",\"source\":{\"accessKey\":\"ontology-field-metadata-access-key\"}}",
+                "{\"businessLabel\":\"Project Name\",\"sourceSystem\":\"crm-read-model\",\"source\":{\"accessKey\":\"ontology-field-metadata-access-key\",\"private_key\":\"ontology-field-metadata-private-snake\",\"cookie\":\"ontology-field-metadata-cookie\"}}",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_physical_field(
@@ -913,7 +929,19 @@ class PlatformTenantLifecycleIntegrationTest {
                   "dataSources": [{
                     "key": "sample",
                     "configJson": {"accessToken": "ontology-snapshot-secret"},
-                    "sampleDataJson": "{\\\"projects\\\":[{\\\"id\\\":\\\"p-1\\\",\\\"name\\\":\\\"sample-project-alpha\\\",\\\"tier\\\":\\\"customer-tier-gold\\\",\\\"credentials\\\":{\\\"password\\\":\\\"ontology-snapshot-sample-password\\\"}}]}"
+                    "sampleDataJson": "{\\\"projects\\\":[{\\\"id\\\":\\\"p-1\\\",\\\"name\\\":\\\"sample-project-alpha\\\",\\\"tier\\\":\\\"customer-tier-gold\\\",\\\"credentials\\\":{\\\"password\\\":\\\"ontology-snapshot-sample-password\\\",\\\"privateKey\\\":\\\"ontology-snapshot-string-private-key\\\",\\\"private_key\\\":\\\"ontology-snapshot-string-private-snake\\\",\\\"cookie\\\":\\\"ontology-snapshot-string-cookie\\\"}}]}"
+                  }, {
+                    "key": "object-sample",
+                    "sampleDataJson": {
+                      "projects": [{
+                        "id": "p-2",
+                        "name": "sample-project-beta",
+                        "owner": "visible-object-sample-owner",
+                        "privateKey": "ontology-snapshot-object-private-key",
+                        "private_key": "ontology-snapshot-object-private-snake",
+                        "cookie": "ontology-snapshot-object-cookie"
+                      }]
+                    }
                   }],
                   "secret": "ontology-nested-secret"
                 }

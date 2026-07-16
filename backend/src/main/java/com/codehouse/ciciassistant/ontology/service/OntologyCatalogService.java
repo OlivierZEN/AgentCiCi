@@ -14,8 +14,10 @@ import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionSe
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingPreparation;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.SourcePreparation;
 import com.codehouse.ciciassistant.tenant.TenantContext;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -229,14 +231,33 @@ public class OntologyCatalogService {
         requireAggregateBudget(values);
     }
 
-    private void requireAggregateBudget(Object values) {
-        try {
-            if (objectMapper.writeValueAsBytes(values).length > MAX_CATALOG_RESPONSE_BYTES) {
-                throw new IllegalArgumentException("CATALOG_RESPONSE_LIMIT_EXCEEDED");
+    private void requireAggregateBudget(List<?> values) {
+        BoundedCountingOutputStream output =
+                new BoundedCountingOutputStream(MAX_CATALOG_RESPONSE_BYTES);
+        try (JsonGenerator generator = objectMapper.getFactory().createGenerator(output)) {
+            generator.writeStartArray();
+            for (Object value : values) {
+                objectMapper.writeValue(generator, value);
             }
-        } catch (JsonProcessingException exception) {
+            generator.writeEndArray();
+        } catch (IOException exception) {
+            if (hasCatalogBudgetCause(exception)) {
+                throw new IllegalArgumentException(
+                        "CATALOG_RESPONSE_LIMIT_EXCEEDED", exception);
+            }
             throw new IllegalArgumentException("CATALOG_RESPONSE_INVALID", exception);
         }
+    }
+
+    private boolean hasCatalogBudgetCause(Throwable exception) {
+        Throwable current = exception;
+        while (current != null) {
+            if (current instanceof CatalogBudgetExceededException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private void requireUniqueKeys(List<String> keys) {
@@ -271,5 +292,36 @@ public class OntologyCatalogService {
         public CatalogMutation {
             items = items == null ? List.of() : List.copyOf(items);
         }
+    }
+
+    private static final class BoundedCountingOutputStream extends OutputStream {
+
+        private final long maxBytes;
+        private long bytesWritten;
+
+        private BoundedCountingOutputStream(long maxBytes) {
+            this.maxBytes = maxBytes;
+        }
+
+        @Override
+        public void write(int value) throws IOException {
+            reserve(1);
+        }
+
+        @Override
+        public void write(byte[] values, int offset, int length) throws IOException {
+            Objects.checkFromIndexSize(offset, length, values.length);
+            reserve(length);
+        }
+
+        private void reserve(int length) throws CatalogBudgetExceededException {
+            if (length > maxBytes - bytesWritten) {
+                throw new CatalogBudgetExceededException();
+            }
+            bytesWritten += length;
+        }
+    }
+
+    private static final class CatalogBudgetExceededException extends IOException {
     }
 }

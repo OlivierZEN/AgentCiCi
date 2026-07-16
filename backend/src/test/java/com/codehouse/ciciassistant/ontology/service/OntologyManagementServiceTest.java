@@ -85,4 +85,22 @@ class OntologyManagementServiceTest {
         verify(draftSafety).validateDocument(unsafe);
         verifyNoInteractions(persistence, drafts);
     }
+
+    @Test
+    void rejectsUnsafeWorkspaceMetadataBeforeAnyLookupOrPersistence() {
+        OntologyManagementService.WorkspaceCreateRequest request =
+                new OntologyManagementService.WorkspaceCreateRequest(
+                        "unsafe-workspace", "Unsafe workspace", "x".repeat(65_537));
+        doThrow(new IllegalArgumentException("ONTOLOGY_VALIDATION_FAILED"))
+                .when(draftSafety).validateWorkspaceMetadata(
+                        request.key(), request.name(), request.description());
+
+        assertThatThrownBy(() -> service.createWorkspace("user-a", request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("ONTOLOGY_VALIDATION_FAILED");
+
+        verify(draftSafety).validateWorkspaceMetadata(
+                request.key(), request.name(), request.description());
+        verifyNoInteractions(workspaces, persistence);
+    }
 }

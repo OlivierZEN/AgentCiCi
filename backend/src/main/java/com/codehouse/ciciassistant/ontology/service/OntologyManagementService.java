@@ -114,13 +114,18 @@ public class OntologyManagementService {
     @Transactional
     public WorkspaceView createWorkspace(String userId, WorkspaceCreateRequest request) {
         String orgId = TenantContext.requireOrgId();
-        String key = requireKey(request == null ? null : request.key());
-        String name = requireName(request.name());
+        String requestedKey = request == null ? null : request.key();
+        String requestedName = request == null ? null : request.name();
+        String requestedDescription = request == null ? null : request.description();
+        draftSafety.validateWorkspaceMetadata(
+                requestedKey, requestedName, requestedDescription);
+        String key = requireKey(requestedKey);
+        String name = requireName(requestedName);
         if (workspaces.findByOrgIdAndKey(orgId, key).isPresent()) {
             throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
         }
         OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(
-                new OntologyWorkspaceEntity(orgId, key, name, request.description(), userId));
+                new OntologyWorkspaceEntity(orgId, key, name, requestedDescription, userId));
         return workspaceView(saved);
     }
 

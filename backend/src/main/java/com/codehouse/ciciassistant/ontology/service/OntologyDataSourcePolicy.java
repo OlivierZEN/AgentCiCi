@@ -1,5 +1,6 @@
 package com.codehouse.ciciassistant.ontology.service;
 
+import com.codehouse.ciciassistant.common.security.SecretKeyMatcher;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.DataSourceConfig;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
@@ -8,7 +9,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -23,8 +23,6 @@ public class OntologyDataSourcePolicy {
     public static final int MAX_FIELDS_PER_OBJECT = 128;
     private static final int MAX_CONFIG_BYTES = 16 * 1024;
     private static final int MAX_CONFIG_DEPTH = 4;
-    private static final Pattern SECRET_KEY = Pattern.compile(
-            "(?i).*(secret|password|token|credential|api[_-]?key|authorization|cookie|private[_-]?key).*");
     private static final Pattern URL_VALUE = Pattern.compile("(?i)^\\s*(https?|wss?)://.*");
 
     private final ObjectMapper objectMapper;
@@ -190,7 +188,7 @@ public class OntologyDataSourcePolicy {
                 if (!boundedKey(field.getKey())) {
                     throw new IllegalArgumentException("DATA_SOURCE_CONFIG_INVALID");
                 }
-                if (SECRET_KEY.matcher(field.getKey().toLowerCase(Locale.ROOT)).matches()) {
+                if (SecretKeyMatcher.matches(field.getKey())) {
                     throw new IllegalArgumentException("DATA_SOURCE_CONFIG_SECRET_FORBIDDEN");
                 }
                 validatePublicConfig(field.getValue(), depth + 1);

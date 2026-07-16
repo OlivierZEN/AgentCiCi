@@ -150,6 +150,28 @@ class OntologyPlatformIntegrationTest {
     }
 
     @Test
+    void rejectsOversizedWorkspaceMetadataBeforeCreatingAnyOntologyRows() throws Exception {
+        ObjectNode request = objectMapper.createObjectNode()
+                .put("key", "oversized-workspace")
+                .put("name", "超大工作区")
+                .put("description", "x".repeat(65_537));
+
+        mockMvc.perform(post("/admin/ontologies")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_VALIDATION_FAILED"));
+
+        for (String table : DELETE_ORDER) {
+            assertThat(jdbcTemplate.queryForObject(
+                    "SELECT COUNT(*) FROM " + table + " WHERE org_id = ?",
+                    Long.class,
+                    orgA)).as(table).isZero();
+        }
+    }
+
+    @Test
     void semanticQueryRequiresAnOrganizationMemberButNotAnAdministrator() throws Exception {
         mockMvc.perform(post("/semantic-query/explain")
                         .contentType(MediaType.APPLICATION_JSON)
