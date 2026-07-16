@@ -37,8 +37,10 @@ function trimmedString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function objectRecord(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
+function plainRecord(value: unknown): Record<string, unknown> | null {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null
     ? value as Record<string, unknown>
     : null;
 }
@@ -46,7 +48,7 @@ function objectRecord(value: unknown): Record<string, unknown> | null {
 function parseEnvelope(raw: string): Record<string, unknown> | null {
   if (!raw.trim()) return null;
   try {
-    return objectRecord(JSON.parse(raw) as unknown);
+    return plainRecord(JSON.parse(raw) as unknown);
   } catch {
     return null;
   }
@@ -76,8 +78,9 @@ export function normalizeOntologyApiError(
   statusText: string,
   envelope: unknown,
 ): OntologyApiError {
-  const fields = objectRecord(envelope);
-  const explicitCode = trimmedString(fields?.code);
+  const fields = plainRecord(envelope);
+  const explicitCodeValue = trimmedString(fields?.code);
+  const explicitCode = ERROR_CODE_PATTERN.test(explicitCodeValue) ? explicitCodeValue : "";
   const messageCode = trimmedString(fields?.message);
   const code = explicitCode
     || (messageCode && ERROR_CODE_PATTERN.test(messageCode) ? messageCode : "")
@@ -85,7 +88,7 @@ export function normalizeOntologyApiError(
   const safeStatusText = trimmedString(statusText);
   const fallbackMessage = safeStatusText ? `HTTP ${status} ${safeStatusText}` : `HTTP ${status}`;
   const message = messageCode || explicitCode || fallbackMessage;
-  const details = objectRecord(fields?.details) as OntologyApiDetails | null;
+  const details = plainRecord(fields?.details) as OntologyApiDetails | null;
   return new OntologyApiError(message, status, code, details);
 }
 
@@ -258,6 +261,27 @@ function mutationKey(operation: string, body: unknown): string {
   return `${operation}:${JSON.stringify(body)}`;
 }
 
+function mappingWriteDto(mapping: OntologyMappingInput): OntologyMappingInput {
+  return {
+    targetType: mapping.targetType,
+    targetKey: mapping.targetKey,
+    dataSourceId: mapping.dataSourceId,
+    physicalObjectKey: mapping.physicalObjectKey,
+    physicalFieldKey: mapping.physicalFieldKey,
+    relationTargetFieldKey: mapping.relationTargetFieldKey,
+    transform: mapping.transform,
+    confidence: mapping.confidence,
+  };
+}
+
+function mappingIdentityDto(mapping: OntologyMappingIdentityInput): OntologyMappingIdentityInput {
+  return {
+    targetType: mapping.targetType,
+    targetKey: mapping.targetKey,
+    dataSourceId: mapping.dataSourceId,
+  };
+}
+
 export function createOntologyApi(token: string, options: OntologyApiOptions = {}): OntologyApi {
   const fetchImpl = options.fetch ?? globalThis.fetch.bind(globalThis);
   const mutations = options.mutationLane ?? createOntologyMutationLane();
@@ -409,7 +433,7 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
     getCatalog: (workspaceId) => request<OntologyCatalogView>(`${MANAGEMENT_ROOT}/${workspaceId}/catalog`),
     listMappings: (workspaceId) => request<OntologyMappingView[]>(`${MANAGEMENT_ROOT}/${workspaceId}/mappings`),
     replaceMappings: (workspaceId, expectedRevision, mappings) => {
-      const body = { expectedRevision, mappings };
+      const body = { expectedRevision, mappings: mappings.map(mappingWriteDto) };
       return revisionMutation(
         `mapping:replace:${workspaceId}`,
         body,
@@ -417,7 +441,7 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
       );
     },
     validateMappings: (workspaceId, expectedRevision, mappings) => {
-      const body = { expectedRevision, mappings };
+      const body = { expectedRevision, mappings: mappings.map(mappingIdentityDto) };
       return revisionMutation(
         `mapping:validate:${workspaceId}`,
         body,

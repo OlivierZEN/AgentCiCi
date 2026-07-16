@@ -17,9 +17,11 @@ import {
   relationLine,
   selectOntologyItem,
 } from "./ontologyModel";
+import { formatOntologyError } from "../pages/AdminOntologyPage";
 import type {
   OntologyDocument,
   OntologyDraftView,
+  OntologyMappingView,
   OntologyProposalRecord,
   OntologyRelation,
 } from "./ontologyTypes";
@@ -353,6 +355,24 @@ describe("ontology draft transport", () => {
     expect(normalizeOntologyApiError(502, "Bad Gateway", null).code).toBe("HTTP_502");
   });
 
+  it.each(["<script>", "lowercase", "HAS SPACES"])(
+    "ignores an invalid explicit envelope code: %s",
+    (invalidCode) => {
+      const error = normalizeOntologyApiError(400, "Bad Request", {
+        success: false,
+        data: null,
+        message: "ONTOLOGY_VALIDATION_FAILED",
+        code: invalidCode,
+        details: new Date(),
+      });
+
+      expect(error.code).toBe("ONTOLOGY_VALIDATION_FAILED");
+      expect(error.message).toBe("ONTOLOGY_VALIDATION_FAILED");
+      expect(error.message).not.toContain(invalidCode);
+      expect(error.details).toBeNull();
+    },
+  );
+
   it("normalizes an initial fetch failure without exposing the transport error", async () => {
     const fetchStub = vi.fn(async () => {
       throw new TypeError("Failed to fetch with private request context");
@@ -473,6 +493,99 @@ describe("ontology draft transport", () => {
       Authorization: "Bearer admin-token",
       "Content-Type": "application/json",
     });
+  });
+
+  it("rebuilds replace-mapping writes from the exact allowed DTO fields", async () => {
+    const calls: RequestInit[] = [];
+    const fetchStub = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(init ?? {});
+      return jsonResponse(draftView());
+    });
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+    const mapping = {
+      id: 81,
+      targetType: "PROPERTY",
+      targetKey: "task.status",
+      dataSourceId: 17,
+      physicalObjectKey: "tasks",
+      physicalFieldKey: "status",
+      relationTargetFieldKey: null,
+      transform: "TRIM",
+      confidence: 0.92,
+      source: "AI",
+      validationStatus: "VALID",
+      lastValidatedAt: "2026-07-17T01:00:00Z",
+      unexpected: "must-not-cross-wire",
+    } as OntologyMappingView & { unexpected: string };
+
+    await api.replaceMappings(7, 4, [mapping]);
+
+    expect(JSON.parse(String(calls[0].body))).toEqual({
+      expectedRevision: 4,
+      mappings: [{
+        targetType: "PROPERTY",
+        targetKey: "task.status",
+        dataSourceId: 17,
+        physicalObjectKey: "tasks",
+        physicalFieldKey: "status",
+        relationTargetFieldKey: null,
+        transform: "TRIM",
+        confidence: 0.92,
+      }],
+    });
+  });
+
+  it("rebuilds mapping-validation writes from exact identity fields", async () => {
+    const calls: RequestInit[] = [];
+    const fetchStub = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(init ?? {});
+      return jsonResponse({ revision: 5, results: [] });
+    });
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+    const mapping = {
+      id: 81,
+      targetType: "PROPERTY",
+      targetKey: "task.status",
+      dataSourceId: 17,
+      physicalObjectKey: "tasks",
+      physicalFieldKey: "status",
+      relationTargetFieldKey: null,
+      transform: "TRIM",
+      confidence: 0.92,
+      source: "AI",
+      validationStatus: "STALE",
+      lastValidatedAt: null,
+      unexpected: "must-not-cross-wire",
+    } as OntologyMappingView & { unexpected: string };
+
+    await api.validateMappings(7, 4, [mapping]);
+
+    expect(JSON.parse(String(calls[0].body))).toEqual({
+      expectedRevision: 4,
+      mappings: [{
+        targetType: "PROPERTY",
+        targetKey: "task.status",
+        dataSourceId: 17,
+      }],
+    });
+  });
+});
+
+describe("ontology presentation errors", () => {
+  it("shows the reload instruction only for the exact revision conflict", () => {
+    expect(formatOntologyError(new OntologyApiError(
+      "草稿修订冲突",
+      409,
+      "ONTOLOGY_REVISION_CONFLICT",
+      { expectedRevision: 4, actualRevision: 5 },
+    ))).toBe("草稿已被更新，请重新加载");
+
+    expect(formatOntologyError(new OntologyApiError(
+      "工作区状态不允许当前操作",
+      409,
+      "ONTOLOGY_STATE_CONFLICT",
+      null,
+    ))).toBe("ONTOLOGY_STATE_CONFLICT：工作区状态不允许当前操作");
   });
 });
 

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAdminToken } from "../useAdminToken";
-import { createOntologyApi, OntologyApiError } from "../ontology/ontologyApi";
+import {
+  createOntologyApi,
+  isOntologyRevisionConflict,
+  OntologyApiError,
+} from "../ontology/ontologyApi";
 import type { OntologyDraftView, OntologyWorkspaceView } from "../ontology/ontologyTypes";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
@@ -25,9 +29,9 @@ function formatDateTime(value: string): string {
   }).format(date);
 }
 
-function errorMessage(error: unknown): string {
+export function formatOntologyError(error: unknown): string {
+  if (isOntologyRevisionConflict(error)) return "草稿已被更新，请重新加载";
   if (error instanceof OntologyApiError) {
-    if (error.status === 409) return "草稿修订已变化，请重新载入后继续。";
     return `${error.code}：${error.message}`;
   }
   return "业务本体服务暂时不可用，请稍后重试。";
@@ -57,7 +61,7 @@ export default function AdminOntologyPage() {
       setListStatus("ready");
     } catch (error) {
       if (requestId !== listRequestId.current) return;
-      setListError(errorMessage(error));
+      setListError(formatOntologyError(error));
       setListStatus("error");
     }
   }, [api]);
@@ -76,7 +80,7 @@ export default function AdminOntologyPage() {
       setDraftStatus("ready");
     } catch (error) {
       if (requestId !== draftRequestId.current) return;
-      setDraftError(errorMessage(error));
+      setDraftError(formatOntologyError(error));
       setDraftStatus("error");
     }
   }, [api]);
