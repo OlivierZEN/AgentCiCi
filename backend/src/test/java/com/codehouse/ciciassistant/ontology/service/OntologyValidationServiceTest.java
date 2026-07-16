@@ -334,6 +334,35 @@ class OntologyValidationServiceTest {
                         "MAPPING_RELATION_TARGET_FIELD_REQUIRED");
     }
 
+    @Test
+    void ignoresEndpointQueryabilityForDisabledRelations() {
+        OntologyDocument disabledRelation = document(
+                List.of(
+                        conceptWithState("archive", false, false),
+                        conceptWithState("task", false, false)),
+                List.of(new OntologyDocument.Relation(
+                        "archived-task",
+                        "归档任务",
+                        "",
+                        "archive",
+                        "task",
+                        OntologyDocument.Cardinality.ONE_TO_MANY,
+                        "包含",
+                        "属于",
+                        true,
+                        false)),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of());
+
+        assertThat(validator.validate(disabledRelation, true))
+                .extracting(OntologyValidationService.ValidationIssue::code)
+                .doesNotContain(
+                        "RELATION_SOURCE_NOT_QUERYABLE",
+                        "RELATION_TARGET_NOT_QUERYABLE");
+    }
+
     private static OntologyDocument document(
             List<OntologyDocument.Concept> concepts,
             List<OntologyDocument.Relation> relations,

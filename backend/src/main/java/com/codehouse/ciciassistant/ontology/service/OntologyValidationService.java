@@ -209,7 +209,7 @@ public class OntologyValidationService {
             if (!conceptsByKey.containsKey(relation.sourceConceptKey())) {
                 add(issues, "RELATION_SOURCE_NOT_FOUND", path + ".sourceConceptKey",
                         "Relation source concept does not exist");
-            } else if (relation.queryable()
+            } else if (relation.enabled() && relation.queryable()
                     && !isEnabledAndQueryable(conceptsByKey.get(relation.sourceConceptKey()))) {
                 add(issues, "RELATION_SOURCE_NOT_QUERYABLE", path + ".sourceConceptKey",
                         "Queryable relation sources must be enabled and queryable");
@@ -217,7 +217,7 @@ public class OntologyValidationService {
             if (!conceptsByKey.containsKey(relation.targetConceptKey())) {
                 add(issues, "RELATION_TARGET_NOT_FOUND", path + ".targetConceptKey",
                         "Relation target concept does not exist");
-            } else if (relation.queryable()
+            } else if (relation.enabled() && relation.queryable()
                     && !isEnabledAndQueryable(conceptsByKey.get(relation.targetConceptKey()))) {
                 add(issues, "RELATION_TARGET_NOT_QUERYABLE", path + ".targetConceptKey",
                         "Queryable relation targets must be enabled and queryable");
