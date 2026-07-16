@@ -26,6 +26,7 @@ const adminNavItems: AdminNavItem[] = [
     ],
   },
   { kind: "link", to: "/admin/kb", label: "知识库" },
+  { kind: "link", to: "/admin/ontology", label: "业务本体" },
   { kind: "link", to: "/admin/data-quality", label: "数据清洗标注" },
   { kind: "link", to: "/admin/tools", label: "工具" },
   { kind: "link", to: "/admin/skills", label: "技能" },

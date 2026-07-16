@@ -19,6 +19,7 @@ import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
 import AdminEvaluationPage from "./admin/pages/AdminEvaluationPage";
+import AdminOntologyPage from "./admin/pages/AdminOntologyPage";
 import EmbedMeetingMinutesPage from "./embed/EmbedMeetingMinutesPage";
 import PlatformGuard from "./platform/PlatformGuard";
 import PlatformLogin from "./platform/PlatformLogin";
@@ -62,6 +63,7 @@ export default function App() {
           <Route element={<AdminShell />}>
             <Route index element={<Navigate to="kb" replace />} />
             <Route path="kb" element={<AdminKnowledgePage />} />
+            <Route path="ontology" element={<AdminOntologyPage />} />
             <Route path="data-quality" element={<AdminDataQualityPage />} />
             <Route path="models" element={<Navigate to="billing" replace />} />
             <Route path="tools" element={<AdminToolsPage />} />
