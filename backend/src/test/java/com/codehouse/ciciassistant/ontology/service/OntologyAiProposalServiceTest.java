@@ -30,6 +30,7 @@ import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
@@ -71,11 +72,23 @@ class OntologyAiProposalServiceTest {
     private OntologyTenantPersistence persistence;
 
     private ObjectMapper objectMapper;
+    private Map<Long, OntologyAiProposalEntity> savedProposals;
     private OntologyAiProposalService service;
 
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().findAndRegisterModules();
+        savedProposals = new LinkedHashMap<>();
+        org.mockito.Mockito.lenient()
+                .when(proposals.findForUpdateByIdAndOrgId(any(), eq("org-a")))
+                .thenAnswer(invocation -> Optional.ofNullable(
+                        savedProposals.get(invocation.getArgument(0))));
+        OntologyAiProposalStateService proposalState = new OntologyAiProposalStateService(
+                workspaces,
+                proposals,
+                drafts,
+                persistence,
+                objectMapper);
         service = new OntologyAiProposalService(
                 workspaces,
                 proposals,
@@ -87,6 +100,7 @@ class OntologyAiProposalServiceTest {
                 modelProviders,
                 modelClient,
                 persistence,
+                proposalState,
                 objectMapper);
         TenantContext.setOrgId("org-a");
         TenantContext.setUserId("user-a");
@@ -102,7 +116,8 @@ class OntologyAiProposalServiceTest {
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         when(modelRouter.route("org-a", "ontology-modeling")).thenReturn(Map.of(
                 "provider", "provider-a",
@@ -127,6 +142,7 @@ class OntologyAiProposalServiceTest {
                     if (entity.getId() == null) {
                         ReflectionTestUtils.setField(entity, "id", 501L);
                     }
+                    savedProposals.put(entity.getId(), entity);
                     return entity;
                 });
 
@@ -172,7 +188,8 @@ class OntologyAiProposalServiceTest {
         verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
         verify(modelRouter).route("org-a", "ontology-modeling");
         verify(modelProviders).credentialsForProvider("org-a", "provider-a");
-        verify(workspaces, never()).findForUpdateByIdAndOrgId(any(), any());
+        verify(workspaces, org.mockito.Mockito.atLeast(2))
+                .findForUpdateByIdAndOrgId(41L, "org-a");
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> messages = ArgumentCaptor.forClass(List.class);
@@ -206,7 +223,8 @@ class OntologyAiProposalServiceTest {
     void rejectsArchivedWorkspaceBeforeDraftLoadProposalSaveOrModelCall() {
         OntologyWorkspaceEntity archived = workspace(41L, 3L);
         ReflectionTestUtils.setField(archived, "status", "ARCHIVED");
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(archived));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(archived));
 
         assertThatThrownBy(() -> service.propose(
                 "org-a", "user-a", 41L, domainFirstCommand()))
@@ -319,7 +337,8 @@ class OntologyAiProposalServiceTest {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         when(modelRouter.route("org-a", "ontology-modeling"))
                 .thenThrow(new IllegalStateException("provider leaked-secret"));
@@ -579,7 +598,8 @@ class OntologyAiProposalServiceTest {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
         assertThatThrownBy(() -> service.propose(
@@ -602,7 +622,8 @@ class OntologyAiProposalServiceTest {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         List<OntologyPhysicalObjectEntity> objects = java.util.stream.IntStream.range(0, 6)
                 .mapToObj(index -> physicalObject(
@@ -652,7 +673,8 @@ class OntologyAiProposalServiceTest {
                 base.concepts(), base.relations(), base.metrics(), base.actions(),
                 base.dataSources(), base.mappings());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
         assertThatThrownBy(() -> service.propose(
@@ -707,7 +729,7 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
-    void relationTargetFieldMustBelongToMappedTargetConceptObject() throws Exception {
+    void relationFieldsMustBelongToMappedSourceAndTargetConceptObjects() throws Exception {
         OntologyDocument base = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyDocument current = new OntologyDocument(
@@ -729,12 +751,15 @@ class OntologyAiProposalServiceTest {
         when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
                 93L, 41L, "org-a")).thenReturn(List.of(
                         physicalField(931L, 93L, "task_id", "同名任务编号"),
-                        physicalField(932L, 93L, "audit_id", "不同名审计编号")));
+                        physicalField(932L, 93L, "audit_id", "不同名审计编号"),
+                        physicalField(933L, 93L, "audit_source", "无关来源字段")));
 
         OntologyDocument sameNamedThirdObjectField = generatedRelationDocument(
                 current, "task_id");
         OntologyDocument differentlyNamedThirdObjectField = generatedRelationDocument(
                 current, "audit_id");
+        OntologyDocument wrongSourceObject = generatedRelationDocument(
+                current, "audit-log", "audit_source", "project_id");
         OntologyDocument targetObjectField = generatedRelationDocument(current, "project_id");
         when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
         when(modelClient.chatCompletionWithCredentials(
@@ -750,6 +775,10 @@ class OntologyAiProposalServiceTest {
                                 List.of(), "stop", 10, 20),
                         new ChatCompletionResult(
                                 "assistant",
+                                objectMapper.writeValueAsString(wrongSourceObject),
+                                List.of(), "stop", 10, 20),
+                        new ChatCompletionResult(
+                                "assistant",
                                 objectMapper.writeValueAsString(targetObjectField),
                                 List.of(), "stop", 10, 20));
         OntologyAiProposalService.ProposalCommand command =
@@ -761,17 +790,20 @@ class OntologyAiProposalServiceTest {
                                 new OntologyAiProposalService.SourceSelection(
                                         1L, "tasks", List.of("project_id")),
                                 new OntologyAiProposalService.SourceSelection(
-                                        1L, "audit-log", List.of("task_id", "audit_id"))),
+                                        1L, "audit-log", List.of(
+                                                "task_id", "audit_id", "audit_source"))),
                         "DATA_SOURCE_FIRST");
 
         OntologyAiProposalService.ProposalView sameNamed = service.propose(
                 "org-a", "user-a", 41L, command);
         OntologyAiProposalService.ProposalView differentlyNamed = service.propose(
                 "org-a", "user-a", 41L, command);
+        OntologyAiProposalService.ProposalView wrongSource = service.propose(
+                "org-a", "user-a", 41L, command);
         OntologyAiProposalService.ProposalView validTarget = service.propose(
                 "org-a", "user-a", 41L, command);
 
-        assertThat(List.of(sameNamed, differentlyNamed))
+        assertThat(List.of(sameNamed, differentlyNamed, wrongSource))
                 .allSatisfy(result -> {
                     assertThat(result.status()).isEqualTo("FAILED");
                     assertThat(result.diagnosticMessage())
@@ -790,6 +822,76 @@ class OntologyAiProposalServiceTest {
     }
 
     @Test
+    void mappedManualRelationCannotChangeEndpointsThroughAiProposal() throws Exception {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        stubWorkspaceAndRoute(current, new AtomicLong(1_375L));
+        OntologyDocument generated = withoutAssets(
+                withSwappedContainsTaskEndpoints(current));
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new ChatCompletionResult(
+                        "assistant",
+                        objectMapper.writeValueAsString(generated),
+                        List.of(),
+                        "stop",
+                        10,
+                        20));
+
+        OntologyAiProposalService.ProposalView result = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+
+        assertThat(result.status()).isEqualTo("FAILED");
+        assertThat(result.diagnosticCode()).isEqualTo("AI_PROPOSAL_INVALID");
+        assertThat(result.diagnosticMessage())
+                .isEqualTo("AI_RELATION_ENDPOINT_CHANGE_MAPPED");
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void unmappedRelationMayChangeEndpointsThroughAiProposal() throws Exception {
+        OntologyDocument base = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyDocument current = new OntologyDocument(
+                base.key(),
+                base.name(),
+                base.description(),
+                base.concepts(),
+                base.relations(),
+                base.metrics(),
+                base.actions(),
+                base.dataSources(),
+                base.mappings().stream()
+                        .filter(mapping -> !"RELATION".equals(mapping.targetType()))
+                        .toList());
+        stubWorkspaceAndRoute(current, new AtomicLong(1_390L));
+        OntologyDocument generated = withoutAssets(
+                withSwappedContainsTaskEndpoints(current));
+        when(modelClient.chatCompletionWithCredentials(
+                any(), any(), any(), any(Boolean.class), any(), any(), anyInt(), anyInt()))
+                .thenReturn(new ChatCompletionResult(
+                        "assistant",
+                        objectMapper.writeValueAsString(generated),
+                        List.of(),
+                        "stop",
+                        10,
+                        20));
+        when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
+
+        OntologyAiProposalService.ProposalView result = service.propose(
+                "org-a", "user-a", 41L, domainFirstCommand());
+
+        assertThat(result.status()).isEqualTo("READY");
+        assertThat(result.candidate().relations())
+                .filteredOn(relation -> "contains-task".equals(relation.key()))
+                .singleElement()
+                .satisfies(relation -> {
+                    assertThat(relation.sourceConceptKey()).isEqualTo("task");
+                    assertThat(relation.targetConceptKey()).isEqualTo("project");
+                });
+    }
+
+    @Test
     void atomicallyAppliesReadyProposalOnceAfterWorkspaceAndProposalLocks() throws Exception {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
@@ -803,6 +905,7 @@ class OntologyAiProposalServiceTest {
         when(proposals.findForUpdateByIdAndOrgId(1_401L, "org-a"))
                 .thenReturn(Optional.of(proposal));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
+        stubValidProjectTaskRelationCatalog();
         when(validation.validate(any(), any(Boolean.class))).thenReturn(List.of());
         when(drafts.saveDraft("org-a", "user-a", 41L, 3L, current))
                 .thenAnswer(invocation -> {
@@ -831,6 +934,30 @@ class OntologyAiProposalServiceTest {
         order.verify(drafts).loadDraft("org-a", 41L, workspace);
         order.verify(drafts).saveDraft("org-a", "user-a", 41L, 3L, current);
         order.verify(persistence).saveForCurrentOrg(proposal);
+    }
+
+    @Test
+    void rejectsApplyWhenManualRelationNoLongerMatchesChangedEndpoints() throws Exception {
+        OntologyDocument current = withSwappedContainsTaskEndpoints(withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument()));
+        OntologyDocument candidate = sanitizedAssets(current);
+        OntologyAiProposalEntity proposal = readyProposal(1_409L, candidate, 3L);
+        OntologyWorkspaceEntity workspace = workspace(41L, 3L);
+        when(proposals.findWorkspaceIdByIdAndOrgId(1_409L, "org-a"))
+                .thenReturn(Optional.of(41L));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        when(proposals.findForUpdateByIdAndOrgId(1_409L, "org-a"))
+                .thenReturn(Optional.of(proposal));
+        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
+
+        assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_409L, 3L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        assertThat(proposal.getStatus()).isEqualTo("READY");
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
+        verifyNoInteractions(persistence);
     }
 
     @Test
@@ -915,6 +1042,43 @@ class OntologyAiProposalServiceTest {
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
         assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_406L, 3L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+
+        assertThat(proposal.getStatus()).isEqualTo("READY");
+        verify(drafts, never()).saveDraft(any(), any(), any(), any(), any());
+        verifyNoInteractions(persistence);
+    }
+
+    @Test
+    void rejectsApplyWhenManualRelationSourceOrTargetCatalogBecameStale() throws Exception {
+        OntologyDocument current = withSecretConfig(
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyDocument candidate = sanitizedAssets(current);
+        OntologyAiProposalEntity proposal = readyProposal(1_408L, candidate, 3L);
+        OntologyWorkspaceEntity workspace = workspace(41L, 3L);
+        when(proposals.findWorkspaceIdByIdAndOrgId(1_408L, "org-a"))
+                .thenReturn(Optional.of(41L));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        when(proposals.findForUpdateByIdAndOrgId(1_408L, "org-a"))
+                .thenReturn(Optional.of(proposal));
+        when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
+        OntologyPhysicalObjectEntity projects = physicalObject(301L, "projects", "项目");
+        OntologyPhysicalObjectEntity tasks = physicalObject(302L, "tasks", "任务");
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                1L, 41L, "org-a")).thenReturn(List.of(projects, tasks));
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                301L, 41L, "org-a")).thenReturn(
+                        List.of(physicalField(3_011L, 301L, "task_id", "任务编号")),
+                        List.of());
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                302L, 41L, "org-a")).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_408L, 3L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("AI_PROPOSAL_INVALID");
+        assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_408L, 3L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("AI_PROPOSAL_INVALID");
 
@@ -1212,7 +1376,8 @@ class OntologyAiProposalServiceTest {
 
     private void stubWorkspaceAndRoute(OntologyDocument current, AtomicLong ids) {
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findByIdAndOrgId(41L, "org-a")).thenReturn(Optional.of(workspace));
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         when(modelRouter.route("org-a", "ontology-modeling")).thenReturn(Map.of(
                 "provider", "provider-a",
@@ -1231,6 +1396,7 @@ class OntologyAiProposalServiceTest {
         if (entity.getId() == null) {
             ReflectionTestUtils.setField(entity, "id", ids.incrementAndGet());
         }
+        savedProposals.put(entity.getId(), entity);
         return entity;
     }
 
@@ -1306,6 +1472,47 @@ class OntologyAiProposalServiceTest {
                 document.mappings());
     }
 
+    private OntologyDocument withSwappedContainsTaskEndpoints(OntologyDocument document) {
+        List<OntologyDocument.Relation> relations = document.relations().stream()
+                .map(relation -> "contains-task".equals(relation.key())
+                        ? new OntologyDocument.Relation(
+                                relation.key(),
+                                relation.name(),
+                                relation.description(),
+                                relation.targetConceptKey(),
+                                relation.sourceConceptKey(),
+                                relation.cardinality(),
+                                relation.forwardLabel(),
+                                relation.reverseLabel(),
+                                relation.queryable(),
+                                relation.enabled())
+                        : relation)
+                .toList();
+        return new OntologyDocument(
+                document.key(),
+                document.name(),
+                document.description(),
+                document.concepts(),
+                relations,
+                document.metrics(),
+                document.actions(),
+                document.dataSources(),
+                document.mappings());
+    }
+
+    private void stubValidProjectTaskRelationCatalog() {
+        OntologyPhysicalObjectEntity projects = physicalObject(301L, "projects", "项目");
+        OntologyPhysicalObjectEntity tasks = physicalObject(302L, "tasks", "任务");
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                1L, 41L, "org-a")).thenReturn(List.of(projects, tasks));
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                301L, 41L, "org-a")).thenReturn(List.of(
+                        physicalField(3_011L, 301L, "task_id", "任务编号")));
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                302L, 41L, "org-a")).thenReturn(List.of(
+                        physicalField(3_021L, 302L, "project_id", "项目编号")));
+    }
+
     private OntologyPhysicalObjectEntity physicalObject(Long id, String key, String name) {
         OntologyPhysicalObjectEntity object = new OntologyPhysicalObjectEntity(
                 "org-a", 41L, 1L, key, name, "TABLE", "{}");
@@ -1327,6 +1534,15 @@ class OntologyAiProposalServiceTest {
     private OntologyDocument generatedRelationDocument(
             OntologyDocument current,
             String relationTargetFieldKey) {
+        return generatedRelationDocument(
+                current, "projects", "task_id", relationTargetFieldKey);
+    }
+
+    private OntologyDocument generatedRelationDocument(
+            OntologyDocument current,
+            String sourceObjectKey,
+            String sourceFieldKey,
+            String relationTargetFieldKey) {
         return new OntologyDocument(
                 current.key(),
                 current.name(),
@@ -1344,7 +1560,7 @@ class OntologyAiProposalServiceTest {
                                 "CONCEPT", "task", 1L, "tasks", null, null,
                                 "DIRECT", 0.9, "AI", "PENDING"),
                         new OntologyDocument.Mapping(
-                                "RELATION", "contains-task", 1L, "projects", "task_id",
+                                "RELATION", "contains-task", 1L, sourceObjectKey, sourceFieldKey,
                                 relationTargetFieldKey, "DIRECT", 0.9, "AI", "PENDING")));
     }
 

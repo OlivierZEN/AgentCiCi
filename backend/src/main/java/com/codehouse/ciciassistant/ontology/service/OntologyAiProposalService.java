@@ -78,6 +78,7 @@ public class OntologyAiProposalService {
     private final ModelProviderService modelProviders;
     private final AliyunBailianClient modelClient;
     private final OntologyTenantPersistence persistence;
+    private final OntologyAiProposalStateService proposalState;
     private final ObjectMapper objectMapper;
     private final ObjectMapper strictMapper;
     private final OntologyAiProposalPromptPolicy promptPolicy;
@@ -93,6 +94,7 @@ public class OntologyAiProposalService {
             ModelProviderService modelProviders,
             AliyunBailianClient modelClient,
             OntologyTenantPersistence persistence,
+            OntologyAiProposalStateService proposalState,
             ObjectMapper objectMapper) {
         this.workspaces = workspaces;
         this.proposals = proposals;
@@ -104,6 +106,7 @@ public class OntologyAiProposalService {
         this.modelProviders = modelProviders;
         this.modelClient = modelClient;
         this.persistence = persistence;
+        this.proposalState = proposalState;
         this.objectMapper = objectMapper;
         this.promptPolicy = new OntologyAiProposalPromptPolicy(objectMapper);
         this.strictMapper = objectMapper.copy()
@@ -124,35 +127,40 @@ public class OntologyAiProposalService {
         Objects.requireNonNull(command, "command");
         String mode = normalizeMode(command.mode());
         String instruction = requireInstruction(command.instruction());
-        OntologyWorkspaceEntity workspace = workspaces.findByIdAndOrgId(workspaceId, orgId)
-                .orElseThrow(() -> new ResourceNotFoundException("AI_PROPOSAL_INVALID"));
-        if ("ARCHIVED".equals(workspace.getStatus())) {
-            throw applyInvalid();
-        }
-        OntologyDocument current = drafts.loadDraft(orgId, workspaceId, workspace);
-        AllowedSelection allowedSelection = prepareSelection(
-                orgId, workspaceId, command, mode, current);
-        List<Map<String, Object>> messages = promptPolicy.messages(
-                instruction, mode, current, allowedSelection.metadata());
-        long baseRevision = workspace.getDraftRevision();
-        ProposalDiff pendingDiff = new ProposalDiff(
-                baseRevision, "", List.of(), List.of(), List.of());
-        OntologyAiProposalEntity proposal = persistence.saveForCurrentOrg(
-                new OntologyAiProposalEntity(
+        OntologyAiProposalStateService.BeginResult<PreparedProposal> begin =
+                proposalState.begin(
                         orgId,
+                        userId,
                         workspaceId,
                         mode,
                         instruction,
-                        "{}",
-                        writeJson(pendingDiff),
-                        writeJson(List.of()),
-                        userId));
+                        current -> {
+                            AllowedSelection allowedSelection = prepareSelection(
+                                    orgId, workspaceId, command, mode, current);
+                            List<Map<String, Object>> messages = promptPolicy.messages(
+                                    instruction,
+                                    mode,
+                                    current,
+                                    allowedSelection.metadata());
+                            return new PreparedProposal(allowedSelection, messages);
+                        });
+        OntologyDocument current = begin.current();
+        AllowedSelection allowedSelection = begin.prepared().allowedSelection();
+        List<Map<String, Object>> messages = begin.prepared().messages();
+        long baseRevision = begin.baseRevision();
+        OntologyAiProposalEntity proposal = begin.proposal();
 
         ChatCompletionResult response;
         try {
             response = invokeModel(orgId, messages);
         } catch (Exception exception) {
-            return fail(proposal, baseRevision, "AI_MODEL_UNAVAILABLE", "AI_MODEL_CALL_FAILED");
+            return fail(
+                    orgId,
+                    workspaceId,
+                    proposal.getId(),
+                    baseRevision,
+                    "AI_MODEL_UNAVAILABLE",
+                    "AI_MODEL_CALL_FAILED");
         }
 
         try {
@@ -170,8 +178,18 @@ public class OntologyAiProposalService {
             requirePayloadBudget(payloadJson);
             ProposalDiff diff = diff(
                     baseRevision, sanitizeServerAssets(current), candidate, sha256(payloadJson));
-            proposal.markReady(payloadJson, writeJson(diff), writeJson(issues));
-            persistence.saveForCurrentOrg(proposal);
+            OntologyAiProposalStateService.Transition transition = proposalState.finishReady(
+                    orgId,
+                    workspaceId,
+                    proposal.getId(),
+                    baseRevision,
+                    payloadJson,
+                    writeJson(diff),
+                    writeJson(issues));
+            proposal = transition.proposal();
+            if (!"READY".equals(proposal.getStatus())) {
+                return failedView(transition, baseRevision);
+            }
             return new ProposalView(
                     proposal.getId(),
                     workspaceId,
@@ -187,9 +205,21 @@ public class OntologyAiProposalService {
                     proposal.getUpdatedAt(),
                     proposal.getAppliedAt());
         } catch (ProposalFailure failure) {
-            return fail(proposal, baseRevision, failure.code(), failure.diagnostic());
+            return fail(
+                    orgId,
+                    workspaceId,
+                    proposal.getId(),
+                    baseRevision,
+                    failure.code(),
+                    failure.diagnostic());
         } catch (Exception exception) {
-            return fail(proposal, baseRevision, "AI_PROPOSAL_INVALID", "MODEL_RESPONSE_INVALID");
+            return fail(
+                    orgId,
+                    workspaceId,
+                    proposal.getId(),
+                    baseRevision,
+                    "AI_PROPOSAL_INVALID",
+                    "MODEL_RESPONSE_INVALID");
         }
     }
 
@@ -235,6 +265,7 @@ public class OntologyAiProposalService {
         if (!Objects.equals(diff, recalculatedDiff)) {
             throw applyInvalid();
         }
+        validateRelationCatalog(orgId, workspaceId, candidate);
         OntologyDocument hydratedCandidate = hydrateServerAssets(current, candidate);
         List<OntologyValidationService.ValidationIssue> issues =
                 validation.validate(hydratedCandidate, false);
@@ -355,13 +386,26 @@ public class OntologyAiProposalService {
     }
 
     private ProposalView fail(
-            OntologyAiProposalEntity proposal,
+            String orgId,
+            Long workspaceId,
+            Long proposalId,
             long baseRevision,
             String code,
             String diagnostic) {
-        FailureDiagnostic failure = new FailureDiagnostic(code, diagnostic);
-        proposal.markFailed(writeJson(failure));
-        persistence.saveForCurrentOrg(proposal);
+        OntologyAiProposalStateService.Transition transition = proposalState.fail(
+                orgId,
+                workspaceId,
+                proposalId,
+                baseRevision,
+                code,
+                diagnostic);
+        return failedView(transition, baseRevision);
+    }
+
+    private ProposalView failedView(
+            OntologyAiProposalStateService.Transition transition,
+            long baseRevision) {
+        OntologyAiProposalEntity proposal = transition.proposal();
         return new ProposalView(
                 proposal.getId(),
                 proposal.getWorkspaceId(),
@@ -371,8 +415,8 @@ public class OntologyAiProposalService {
                 null,
                 readDiff(proposal.getDiffJson()),
                 List.of(),
-                code,
-                diagnostic,
+                transition.diagnosticCode(),
+                transition.diagnosticMessage(),
                 proposal.getCreatedAt(),
                 proposal.getUpdatedAt(),
                 proposal.getAppliedAt());
@@ -687,6 +731,7 @@ public class OntologyAiProposalService {
             OntologyDocument current,
             String mode,
             AllowedSelection allowedSelection) {
+        rejectMappedRelationEndpointChanges(generated, current);
         if (DOMAIN_FIRST.equals(mode)
                 && (!safe(generated.dataSources()).isEmpty()
                 || !safe(generated.mappings()).isEmpty())) {
@@ -739,6 +784,31 @@ public class OntologyAiProposalService {
         if (payloadJson == null
                 || payloadJson.getBytes(StandardCharsets.UTF_8).length > MAX_RESPONSE_BYTES) {
             throw invalid("AI_PROPOSAL_PAYLOAD_TOO_LARGE");
+        }
+    }
+
+    private void rejectMappedRelationEndpointChanges(
+            OntologyDocument generated,
+            OntologyDocument current) {
+        Map<String, OntologyDocument.Relation> currentRelations = new LinkedHashMap<>();
+        for (OntologyDocument.Relation relation : safe(current.relations())) {
+            currentRelations.put(relation.key(), relation);
+        }
+        Set<String> mappedRelations = safe(current.mappings()).stream()
+                .filter(mapping -> "RELATION".equalsIgnoreCase(mapping.targetType()))
+                .map(OntologyDocument.Mapping::targetKey)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        for (OntologyDocument.Relation generatedRelation : safe(generated.relations())) {
+            OntologyDocument.Relation currentRelation =
+                    currentRelations.get(generatedRelation.key());
+            if (currentRelation != null
+                    && mappedRelations.contains(generatedRelation.key())
+                    && (!Objects.equals(
+                    currentRelation.sourceConceptKey(), generatedRelation.sourceConceptKey())
+                    || !Objects.equals(
+                    currentRelation.targetConceptKey(), generatedRelation.targetConceptKey()))) {
+                throw invalid("AI_RELATION_ENDPOINT_CHANGE_MAPPED");
+            }
         }
     }
 
@@ -877,6 +947,13 @@ public class OntologyAiProposalService {
                 if (relation == null || isBlank(mapping.relationTargetFieldKey())) {
                     throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
                 }
+                List<OntologyDocument.Mapping> sourceConceptMappings = effectiveMappings.stream()
+                        .filter(candidate -> "CONCEPT".equalsIgnoreCase(candidate.targetType()))
+                        .filter(candidate -> Objects.equals(
+                                candidate.targetKey(), relation.sourceConceptKey()))
+                        .filter(candidate -> Objects.equals(
+                                candidate.dataSourceId(), mapping.dataSourceId()))
+                        .toList();
                 List<OntologyDocument.Mapping> targetConceptMappings = effectiveMappings.stream()
                         .filter(candidate -> "CONCEPT".equalsIgnoreCase(candidate.targetType()))
                         .filter(candidate -> Objects.equals(
@@ -884,7 +961,11 @@ public class OntologyAiProposalService {
                         .filter(candidate -> Objects.equals(
                                 candidate.dataSourceId(), mapping.dataSourceId()))
                         .toList();
-                if (targetConceptMappings.size() != 1) {
+                if (sourceConceptMappings.size() != 1
+                        || targetConceptMappings.size() != 1
+                        || !Objects.equals(
+                        mapping.physicalObjectKey(),
+                        sourceConceptMappings.getFirst().physicalObjectKey())) {
                     throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
                 }
                 String targetObjectKey = targetConceptMappings.getFirst().physicalObjectKey();
@@ -900,6 +981,119 @@ public class OntologyAiProposalService {
                 throw invalid("AI_MAPPING_REFERENCE_NOT_ALLOWED");
             }
         }
+    }
+
+    private void validateRelationCatalog(
+            String orgId,
+            Long workspaceId,
+            OntologyDocument candidate) {
+        Map<String, OntologyDocument.Relation> relations = new LinkedHashMap<>();
+        for (OntologyDocument.Relation relation : safe(candidate.relations())) {
+            if (relations.putIfAbsent(relation.key(), relation) != null) {
+                throw applyInvalid();
+            }
+        }
+        Map<Long, Map<String, OntologyPhysicalObjectEntity>> objectCatalogs =
+                new LinkedHashMap<>();
+        Map<Long, Set<String>> fieldCatalogs = new LinkedHashMap<>();
+        for (OntologyDocument.Mapping mapping : safe(candidate.mappings())) {
+            if (!"RELATION".equalsIgnoreCase(mapping.targetType())) {
+                continue;
+            }
+            OntologyDocument.Relation relation = relations.get(mapping.targetKey());
+            if (relation == null || isBlank(mapping.relationTargetFieldKey())) {
+                throw applyInvalid();
+            }
+            OntologyDocument.Mapping sourceConceptMapping = uniqueConceptMapping(
+                    candidate,
+                    mapping.dataSourceId(),
+                    relation.sourceConceptKey());
+            OntologyDocument.Mapping targetConceptMapping = uniqueConceptMapping(
+                    candidate,
+                    mapping.dataSourceId(),
+                    relation.targetConceptKey());
+            if (!Objects.equals(
+                    mapping.physicalObjectKey(),
+                    sourceConceptMapping.physicalObjectKey())) {
+                throw applyInvalid();
+            }
+
+            Map<String, OntologyPhysicalObjectEntity> objects = objectCatalogs.computeIfAbsent(
+                    mapping.dataSourceId(),
+                    dataSourceId -> loadPhysicalObjects(orgId, workspaceId, dataSourceId));
+            OntologyPhysicalObjectEntity sourceObject = objects.get(mapping.physicalObjectKey());
+            OntologyPhysicalObjectEntity targetObject =
+                    objects.get(targetConceptMapping.physicalObjectKey());
+            if (sourceObject == null
+                    || targetObject == null
+                    || !physicalFieldsContain(
+                    orgId,
+                    workspaceId,
+                    sourceObject,
+                    mapping.physicalFieldKey(),
+                    fieldCatalogs)
+                    || !physicalFieldsContain(
+                    orgId,
+                    workspaceId,
+                    targetObject,
+                    mapping.relationTargetFieldKey(),
+                    fieldCatalogs)) {
+                throw applyInvalid();
+            }
+        }
+    }
+
+    private OntologyDocument.Mapping uniqueConceptMapping(
+            OntologyDocument candidate,
+            Long dataSourceId,
+            String conceptKey) {
+        List<OntologyDocument.Mapping> matches = safe(candidate.mappings()).stream()
+                .filter(mapping -> "CONCEPT".equalsIgnoreCase(mapping.targetType()))
+                .filter(mapping -> Objects.equals(mapping.targetKey(), conceptKey))
+                .filter(mapping -> Objects.equals(mapping.dataSourceId(), dataSourceId))
+                .toList();
+        if (matches.size() != 1 || isBlank(matches.getFirst().physicalObjectKey())) {
+            throw applyInvalid();
+        }
+        return matches.getFirst();
+    }
+
+    private Map<String, OntologyPhysicalObjectEntity> loadPhysicalObjects(
+            String orgId,
+            Long workspaceId,
+            Long dataSourceId) {
+        Map<String, OntologyPhysicalObjectEntity> objects = new LinkedHashMap<>();
+        for (OntologyPhysicalObjectEntity object :
+                physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                        dataSourceId, workspaceId, orgId)) {
+            if (objects.putIfAbsent(object.getObjectKey(), object) != null) {
+                throw applyInvalid();
+            }
+        }
+        return objects;
+    }
+
+    private boolean physicalFieldsContain(
+            String orgId,
+            Long workspaceId,
+            OntologyPhysicalObjectEntity object,
+            String fieldKey,
+            Map<Long, Set<String>> fieldCatalogs) {
+        if (isBlank(fieldKey)) {
+            return false;
+        }
+        Set<String> fields = fieldCatalogs.computeIfAbsent(object.getId(), objectId -> {
+            Set<String> loaded = new LinkedHashSet<>();
+            for (OntologyPhysicalFieldEntity field :
+                    physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                            objectId, workspaceId, orgId)) {
+                if (!loaded.add(field.getFieldKey())) {
+                    throw applyInvalid();
+                }
+            }
+            return Set.copyOf(loaded);
+        });
+        return fields.contains(fieldKey);
     }
 
     private List<OntologyDocument.Mapping> mergeMappings(
@@ -1160,7 +1354,9 @@ public class OntologyAiProposalService {
             Instant appliedAt) {
     }
 
-    private record FailureDiagnostic(String code, String diagnostic) {
+    private record PreparedProposal(
+            AllowedSelection allowedSelection,
+            List<Map<String, Object>> messages) {
     }
 
     private record AllowedSelection(List<SelectedMetadata> metadata) {
