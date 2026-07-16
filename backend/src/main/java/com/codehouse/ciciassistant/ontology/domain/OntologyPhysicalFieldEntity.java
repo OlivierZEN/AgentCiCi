@@ -65,4 +65,18 @@ public class OntologyPhysicalFieldEntity extends AbstractOntologyWorkspaceEntity
     public boolean isMultiple() { return multiple; }
     public String getMetadataJson() { return metadataJson; }
     public Instant getDiscoveredAt() { return discoveredAt; }
+
+    public void refresh(
+            String name,
+            String dataType,
+            boolean nullable,
+            boolean multiple,
+            String metadataJson) {
+        this.name = name;
+        this.dataType = dataType;
+        this.nullable = nullable;
+        this.multiple = multiple;
+        this.metadataJson = metadataJson;
+        this.discoveredAt = Instant.now();
+    }
 }

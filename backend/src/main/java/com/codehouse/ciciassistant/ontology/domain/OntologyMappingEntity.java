@@ -89,4 +89,9 @@ public class OntologyMappingEntity extends AbstractOntologyWorkspaceEntity {
     public String getValidationStatus() { return validationStatus; }
     public Instant getLastValidatedAt() { return lastValidatedAt; }
     public String getCreatedBy() { return createdBy; }
+
+    public void applyValidation(boolean valid) {
+        this.validationStatus = valid ? "VALID" : "INVALID";
+        this.lastValidatedAt = Instant.now();
+    }
 }

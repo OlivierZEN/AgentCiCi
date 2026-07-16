@@ -53,4 +53,11 @@ public class OntologyPhysicalObjectEntity extends AbstractOntologyWorkspaceEntit
     public String getObjectType() { return objectType; }
     public String getMetadataJson() { return metadataJson; }
     public Instant getDiscoveredAt() { return discoveredAt; }
+
+    public void refresh(String name, String objectType, String metadataJson) {
+        this.name = name;
+        this.objectType = objectType;
+        this.metadataJson = metadataJson;
+        this.discoveredAt = Instant.now();
+    }
 }
