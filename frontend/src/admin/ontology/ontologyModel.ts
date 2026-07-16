@@ -5,6 +5,12 @@ import type {
 } from "./ontologyTypes";
 
 export type OntologyPosition = { x: number; y: number };
+export type OntologyRect = OntologyPosition & { width: number; height: number };
+export type OntologyRelationLine = { x1: number; y1: number; x2: number; y2: number };
+export type OntologySelectionKind = "concept" | "relation" | "metric" | "action";
+export type OntologySelection = { kind: OntologySelectionKind; key: string } | null;
+
+const KEYBOARD_MOVE_STEP = 8;
 
 export type OntologyProposalPreview = {
   current: OntologyDocument;
@@ -72,6 +78,85 @@ export function moveConcept(
       ? { ...concept, positionX: position.x, positionY: position.y }
       : concept),
   };
+}
+
+export function moveConceptByKeyboard(
+  document: OntologyDocument,
+  conceptKey: string,
+  key: string,
+): OntologyDocument {
+  const delta = key === "ArrowLeft"
+    ? { x: -KEYBOARD_MOVE_STEP, y: 0 }
+    : key === "ArrowRight"
+      ? { x: KEYBOARD_MOVE_STEP, y: 0 }
+      : key === "ArrowUp"
+        ? { x: 0, y: -KEYBOARD_MOVE_STEP }
+        : key === "ArrowDown"
+          ? { x: 0, y: KEYBOARD_MOVE_STEP }
+          : null;
+  if (!delta) return document;
+  const concept = document.concepts.find((item) => item.key === conceptKey);
+  if (!concept) throw new Error("ONTOLOGY_CONCEPT_NOT_FOUND");
+  return moveConcept(document, conceptKey, {
+    x: concept.positionX + delta.x,
+    y: concept.positionY + delta.y,
+  });
+}
+
+export function relationLine(source: OntologyRect, target: OntologyRect): OntologyRelationLine {
+  const sourceCenter = {
+    x: source.x + source.width / 2,
+    y: source.y + source.height / 2,
+  };
+  const targetCenter = {
+    x: target.x + target.width / 2,
+    y: target.y + target.height / 2,
+  };
+  const horizontal = Math.abs(targetCenter.x - sourceCenter.x) >= Math.abs(targetCenter.y - sourceCenter.y);
+  if (horizontal) {
+    const targetIsRight = targetCenter.x >= sourceCenter.x;
+    return {
+      x1: targetIsRight ? source.x + source.width : source.x,
+      y1: sourceCenter.y,
+      x2: targetIsRight ? target.x : target.x + target.width,
+      y2: targetCenter.y,
+    };
+  }
+  const targetIsBelow = targetCenter.y >= sourceCenter.y;
+  return {
+    x1: sourceCenter.x,
+    y1: targetIsBelow ? source.y + source.height : source.y,
+    x2: targetCenter.x,
+    y2: targetIsBelow ? target.y : target.y + target.height,
+  };
+}
+
+function normalizeStableKey(value: string): string {
+  return value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function createStableOntologyKey(
+  label: string,
+  existingKeys: readonly string[],
+  fallback = "item",
+): string {
+  const base = normalizeStableKey(label) || normalizeStableKey(fallback) || "item";
+  const occupied = new Set(existingKeys);
+  if (!occupied.has(base)) return base;
+  let suffix = 2;
+  while (occupied.has(`${base}-${suffix}`)) suffix += 1;
+  return `${base}-${suffix}`;
+}
+
+export function selectOntologyItem(
+  _current: OntologySelection,
+  next: OntologySelection,
+): OntologySelection {
+  return next ? { ...next } : null;
 }
 
 export function connectConcepts(

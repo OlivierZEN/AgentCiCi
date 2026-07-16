@@ -9,9 +9,13 @@ import {
 import {
   applyProposal,
   connectConcepts,
+  createStableOntologyKey,
   createOntologyMutationLane,
   moveConcept,
+  moveConceptByKeyboard,
   previewProposal,
+  relationLine,
+  selectOntologyItem,
 } from "./ontologyModel";
 import type {
   OntologyDocument,
@@ -200,6 +204,13 @@ function jsonResponse<T>(data: T, status = 200): Response {
 }
 
 describe("ontology immutable model", () => {
+  it("calculates a relation line between node edges", () => {
+    expect(relationLine(
+      { x: 40, y: 40, width: 220, height: 112 },
+      { x: 420, y: 180, width: 220, height: 112 },
+    )).toEqual({ x1: 260, y1: 96, x2: 420, y2: 236 });
+  });
+
   it("moves a concept without mutating the previous draft", () => {
     const previous = projectDeliveryDraft();
 
@@ -209,6 +220,49 @@ describe("ontology immutable model", () => {
     expect(next.concepts.find((item) => item.key === "task")?.positionY).toBe(180);
     expect(previous.concepts.find((item) => item.key === "task")?.positionX).toBe(320);
     expect(next).not.toBe(previous);
+  });
+
+  it("moves a focused concept by eight pixels for each arrow key press", () => {
+    const previous = projectDeliveryDraft();
+
+    const right = moveConceptByKeyboard(previous, "task", "ArrowRight");
+    const down = moveConceptByKeyboard(right, "task", "ArrowDown");
+
+    expect(right.concepts.find((item) => item.key === "task")).toMatchObject({
+      positionX: 328,
+      positionY: 120,
+    });
+    expect(down.concepts.find((item) => item.key === "task")).toMatchObject({
+      positionX: 328,
+      positionY: 128,
+    });
+    expect(previous.concepts.find((item) => item.key === "task")).toMatchObject({
+      positionX: 320,
+      positionY: 120,
+    });
+  });
+
+  it("creates a deterministic unused key from business labels and fallbacks", () => {
+    expect(createStableOntologyKey(
+      "Business Object",
+      ["business-object", "business-object-2"],
+    )).toBe("business-object-3");
+    expect(createStableOntologyKey(
+      "业务对象",
+      ["concept", "concept-2"],
+      "concept",
+    )).toBe("concept-3");
+  });
+
+  it("changes selection without mutating the previous selection", () => {
+    const previous = { kind: "concept" as const, key: "project" };
+
+    const next = selectOntologyItem(previous, { kind: "relation", key: "project-has-task" });
+
+    expect(next).toEqual({ kind: "relation", key: "project-has-task" });
+    expect(next).not.toBe(previous);
+    expect(previous).toEqual({ kind: "concept", key: "project" });
+    expect(selectOntologyItem(next, null)).toBeNull();
   });
 
   it("connects existing concepts without mutating the previous relation list", () => {
