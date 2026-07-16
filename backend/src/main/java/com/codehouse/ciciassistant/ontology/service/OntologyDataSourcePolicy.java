@@ -67,7 +67,13 @@ public class OntologyDataSourcePolicy {
         if (matchingAdapters.size() != 1) {
             throw new IllegalArgumentException("DATA_SOURCE_ADAPTER_NOT_ALLOWED");
         }
-        requireAllowedRootConfig(config, matchingAdapters.getFirst());
+        OntologyDataSourceAdapter adapter = matchingAdapters.getFirst();
+        requireAllowedRootConfig(config, adapter);
+        try {
+            adapter.validatePublicConfig(config);
+        } catch (RuntimeException exception) {
+            throw new IllegalArgumentException("DATA_SOURCE_CONFIG_INVALID");
+        }
     }
 
     public String adapterKey(String configJson) {

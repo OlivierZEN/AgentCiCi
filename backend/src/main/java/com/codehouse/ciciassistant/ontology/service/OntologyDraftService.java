@@ -52,6 +52,7 @@ public class OntologyDraftService {
     private final OntologyMappingRepository mappings;
     private final OntologyTenantPersistence persistence;
     private final OntologyDataSourcePolicy dataSourcePolicy;
+    private final OntologyDraftSafetyPolicy draftSafety;
     private final ObjectMapper objectMapper;
 
     public OntologyDraftService(
@@ -66,6 +67,7 @@ public class OntologyDraftService {
             OntologyMappingRepository mappings,
             OntologyTenantPersistence persistence,
             OntologyDataSourcePolicy dataSourcePolicy,
+            OntologyDraftSafetyPolicy draftSafety,
             ObjectMapper objectMapper) {
         this.workspaces = workspaces;
         this.concepts = concepts;
@@ -78,6 +80,7 @@ public class OntologyDraftService {
         this.mappings = mappings;
         this.persistence = persistence;
         this.dataSourcePolicy = dataSourcePolicy;
+        this.draftSafety = draftSafety;
         this.objectMapper = objectMapper;
     }
 
@@ -89,7 +92,7 @@ public class OntologyDraftService {
             Long expectedRevision,
             OntologyDocument document) {
         requireCurrentOrg(orgId);
-        Objects.requireNonNull(document, "document");
+        draftSafety.validateDocument(document);
         OntologyWorkspaceEntity workspace = requireWorkspace(orgId, workspaceId);
         if (!Objects.equals(workspace.getDraftRevision(), expectedRevision)) {
             throw new ConflictException("ONTOLOGY_REVISION_CONFLICT");
@@ -443,23 +446,16 @@ public class OntologyDraftService {
                         userId));
                 continue;
             }
-            if ("RELATION".equals(targetType)
-                    && changedRelationKeys.contains(mapping.targetKey())) {
-                existing.markPending();
-                persistence.saveForCurrentOrg(existing);
-                continue;
-            }
-            if (changedDataSourceIds.contains(dataSourceId)) {
-                existing.markPending();
-                persistence.saveForCurrentOrg(existing);
-                continue;
-            }
-            if (!existing.definitionMatches(
+            boolean relationEndpointsChanged = "RELATION".equals(targetType)
+                    && changedRelationKeys.contains(mapping.targetKey());
+            boolean sourceDefinitionChanged = changedDataSourceIds.contains(dataSourceId);
+            boolean mappingDefinitionChanged = !existing.definitionMatches(
                     mapping.physicalObjectKey(),
                     mapping.physicalFieldKey(),
                     mapping.relationTargetFieldKey(),
                     mapping.transform(),
-                    confidence)) {
+                    confidence);
+            if (mappingDefinitionChanged) {
                 existing.updateDefinition(
                         mapping.physicalObjectKey(),
                         mapping.physicalFieldKey(),
@@ -467,6 +463,10 @@ public class OntologyDraftService {
                         mapping.transform(),
                         confidence,
                         serverOrigin(mapping.source()));
+            } else if (relationEndpointsChanged || sourceDefinitionChanged) {
+                existing.markPending();
+            }
+            if (mappingDefinitionChanged || relationEndpointsChanged || sourceDefinitionChanged) {
                 persistence.saveForCurrentOrg(existing);
             }
         }

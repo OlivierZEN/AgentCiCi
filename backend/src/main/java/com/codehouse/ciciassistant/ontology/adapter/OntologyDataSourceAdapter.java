@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ontology.adapter;
 
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
+import com.fasterxml.jackson.databind.JsonNode;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,6 +23,19 @@ public interface OntologyDataSourceAdapter {
      */
     default Set<String> publicConfigKeys() {
         return Set.of("adapterKey");
+    }
+
+    /**
+     * Validates the complete public connector configuration after the core has
+     * rejected unknown root fields and secret-like values.
+     */
+    default void validatePublicConfig(JsonNode config) {
+        if (config == null
+                || !config.isObject()
+                || !config.path("adapterKey").isTextual()
+                || config.path("adapterKey").asText().isBlank()) {
+            throw new IllegalArgumentException("DATA_SOURCE_CONFIG_INVALID");
+        }
     }
 
     List<PhysicalObject> discoverObjects(AdapterContext context, DataSourceConfig source);

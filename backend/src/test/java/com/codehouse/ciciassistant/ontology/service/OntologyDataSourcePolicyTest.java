@@ -6,8 +6,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter;
+import com.codehouse.ciciassistant.ontology.adapter.CloudccOntologyAdapter;
+import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,5 +98,51 @@ class OntologyDataSourcePolicyTest {
                 null, "external-source", "外部数据", OntologyDocument.SourceType.CONNECTOR,
                 "{\"adapterKey\":\"approved-adapter\",\"objectPrefix\":\"A\"}", null)))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    void delegatesStrictPublicConfigurationSchemaValidationToCloudccAdapter() {
+        ObjectMapper mapper = new ObjectMapper();
+        OntologyDataSourcePolicy cloudccPolicy = new OntologyDataSourcePolicy(
+                mapper,
+                List.of(new CloudccOntologyAdapter(
+                        mock(CloudccOpenApiService.class), mapper)));
+
+        assertThatCode(() -> cloudccPolicy.validate(connectorSource("""
+                {
+                  "adapterKey":"cloudcc",
+                  "objectPrefixes":{"Account":"001","DeliveryTask__c":"a10"}
+                }
+                """))).doesNotThrowAnyException();
+
+        assertThatThrownBy(() -> cloudccPolicy.validate(connectorSource(
+                "{\"adapterKey\":\"cloudcc\",\"auth\":\"Bearer hidden\"}")))
+                .hasMessage("DATA_SOURCE_CONFIG_FIELD_NOT_ALLOWED");
+        for (String invalid : List.of(
+                "{\"adapterKey\":\"cloudcc\",\"objectPrefixes\":[]}",
+                "{\"adapterKey\":\"cloudcc\",\"objectPrefixes\":{\"Account\":{\"value\":\"001\"}}}",
+                "{\"adapterKey\":\"cloudcc\",\"objectPrefixes\":{\"Account\":42}}",
+                "{\"adapterKey\":\"cloudcc\",\"objectPrefixes\":{\"Bad-Key\":\"001\"}}",
+                "{\"adapterKey\":\"cloudcc\",\"objectPrefixes\":{\"Account\":\""
+                        + "x".repeat(129) + "\"}}")) {
+            assertThatThrownBy(() -> cloudccPolicy.validate(connectorSource(invalid)))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("DATA_SOURCE_CONFIG_INVALID");
+        }
+
+        ObjectNode oversized = mapper.createObjectNode().put("adapterKey", "cloudcc");
+        ObjectNode prefixes = oversized.putObject("objectPrefixes");
+        for (int index = 0; index < 51; index++) {
+            prefixes.put("Object" + index, "p" + index);
+        }
+        assertThatThrownBy(() -> cloudccPolicy.validate(
+                connectorSource(oversized.toString())))
+                .hasMessage("DATA_SOURCE_CONFIG_INVALID");
+    }
+
+    private OntologyDocument.DataSource connectorSource(String configJson) {
+        return new OntologyDocument.DataSource(
+                null, "cloudcc-source", "外围数据", OntologyDocument.SourceType.CONNECTOR,
+                configJson, null);
     }
 }

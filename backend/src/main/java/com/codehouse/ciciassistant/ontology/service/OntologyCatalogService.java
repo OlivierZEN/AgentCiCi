@@ -14,6 +14,8 @@ import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionSe
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingPreparation;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.SourcePreparation;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -26,15 +28,19 @@ public class OntologyCatalogService {
 
     private static final int MAX_CATALOG_ITEMS = 5_000;
     private static final int MAX_METADATA_BYTES = 64 * 1024;
+    private static final long MAX_CATALOG_RESPONSE_BYTES = 4L * 1024 * 1024;
 
     private final OntologyCatalogTransactionService transactions;
     private final List<OntologyDataSourceAdapter> adapters;
+    private final ObjectMapper objectMapper;
 
     public OntologyCatalogService(
             OntologyCatalogTransactionService transactions,
-            List<OntologyDataSourceAdapter> adapters) {
+            List<OntologyDataSourceAdapter> adapters,
+            ObjectMapper objectMapper) {
         this.transactions = transactions;
         this.adapters = List.copyOf(adapters);
+        this.objectMapper = objectMapper;
     }
 
     public CatalogMutation<PhysicalObject> discoverObjects(
@@ -203,6 +209,7 @@ public class OntologyCatalogService {
             requireCatalogText(value.name(), 160, "CATALOG_OBJECT_NAME_REQUIRED");
             requireMetadata(value.metadataJson());
         }
+        requireAggregateBudget(values);
     }
 
     private void validateFields(String objectKey, List<PhysicalField> values) {
@@ -218,6 +225,17 @@ public class OntologyCatalogService {
             requireCatalogText(value.name(), 160, "CATALOG_FIELD_NAME_REQUIRED");
             requireCatalogText(value.dataType(), 64, "CATALOG_FIELD_TYPE_REQUIRED");
             requireMetadata(value.metadataJson());
+        }
+        requireAggregateBudget(values);
+    }
+
+    private void requireAggregateBudget(Object values) {
+        try {
+            if (objectMapper.writeValueAsBytes(values).length > MAX_CATALOG_RESPONSE_BYTES) {
+                throw new IllegalArgumentException("CATALOG_RESPONSE_LIMIT_EXCEEDED");
+            }
+        } catch (JsonProcessingException exception) {
+            throw new IllegalArgumentException("CATALOG_RESPONSE_INVALID", exception);
         }
     }
 

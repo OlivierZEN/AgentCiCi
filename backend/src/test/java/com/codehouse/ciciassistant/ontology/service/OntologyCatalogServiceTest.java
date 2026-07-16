@@ -16,13 +16,16 @@ import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.Da
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.MappingValidation;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalField;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalObject;
+import com.codehouse.ciciassistant.common.error.DataSourceUnavailableException;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingCommit;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingKey;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingPreparation;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.SourcePreparation;
 import com.codehouse.ciciassistant.tenant.TenantContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,7 +42,8 @@ class OntologyCatalogServiceTest {
     void setUp() {
         TenantContext.setOrgId("org-a");
         TenantContext.setUserId("user-a");
-        service = new OntologyCatalogService(transactions, List.of(adapter));
+        service = new OntologyCatalogService(
+                transactions, List.of(adapter), new ObjectMapper());
         when(adapter.supports(any(DataSourceConfig.class))).thenReturn(true);
     }
 
@@ -127,6 +131,40 @@ class OntologyCatalogServiceTest {
                 .hasMessage("DATA_SOURCE_UNAVAILABLE");
 
         verify(transactions, never()).commitObjects(any(), any(), any());
+    }
+
+    @Test
+    void rejectsAggregateCatalogResponsesAboveFourMiBBeforeAnyCommit() {
+        SourcePreparation objectPreparation = prepared(null, null);
+        SourcePreparation fieldPreparation = prepared("projects", 81L);
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, null))
+                .thenReturn(objectPreparation);
+        when(transactions.prepareSource("org-a", 41L, 7L, 3L, "projects"))
+                .thenReturn(fieldPreparation);
+        String boundedItemMetadata = "x".repeat(65_000);
+        List<PhysicalObject> objects = IntStream.range(0, 65)
+                .mapToObj(index -> new PhysicalObject(
+                        "object-" + index, "对象" + index, "CONNECTOR", boundedItemMetadata))
+                .toList();
+        List<PhysicalField> fields = IntStream.range(0, 65)
+                .mapToObj(index -> new PhysicalField(
+                        "projects", "field-" + index, "字段" + index,
+                        "TEXT", true, false, boundedItemMetadata))
+                .toList();
+        when(adapter.discoverObjects(any(), any())).thenReturn(objects);
+        when(adapter.discoverFields(any(), any(), any())).thenReturn(fields);
+
+        assertThatThrownBy(() -> service.discoverObjects(
+                "org-a", "user-a", 41L, 7L, 3L))
+                .isInstanceOf(DataSourceUnavailableException.class)
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
+        assertThatThrownBy(() -> service.discoverFields(
+                "org-a", "user-a", 41L, 7L, "projects", 3L))
+                .isInstanceOf(DataSourceUnavailableException.class)
+                .hasMessage("DATA_SOURCE_UNAVAILABLE");
+
+        verify(transactions, never()).commitObjects(any(), any(), any());
+        verify(transactions, never()).commitFields(any(), any(), any());
     }
 
     @Test

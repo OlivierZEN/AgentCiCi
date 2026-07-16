@@ -10,6 +10,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
+import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.ontology.adapter.CloudccOntologyAdapter;
 import com.codehouse.ciciassistant.ontology.adapter.InlineSampleOntologyAdapter;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter;
@@ -194,7 +196,7 @@ class SemanticQueryServiceTest {
     }
 
     @Test
-    void rejectsDraftOnlyVersionInsteadOfReadingMutableDraftState() {
+    void hidesUnknownOrUnpublishedOntologyVersionsBehindTheSameNotFoundContract() {
         OntologyWorkspaceEntity workspace = workspace(41L, 1);
         when(workspaces.findByOrgIdAndKey("org-a", "project-delivery"))
                 .thenReturn(Optional.of(workspace));
@@ -209,7 +211,19 @@ class SemanticQueryServiceTest {
                 new SemanticQueryService.SemanticQuery(
                         "project-delivery", 2, "task", List.of("name"),
                         List.of(), List.of(), 50)))
-                .hasMessageContaining("ONTOLOGY_VERSION_NOT_PUBLISHED");
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("ONTOLOGY_NOT_FOUND");
+
+        when(workspaces.findByOrgIdAndKey("org-a", "project-delivery"))
+                .thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.explain(
+                "org-a",
+                "user-a",
+                new SemanticQueryService.SemanticQuery(
+                        "project-delivery", 1, "task", List.of("name"),
+                        List.of(), List.of(), 50)))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessage("ONTOLOGY_NOT_FOUND");
 
         verifyNoInteractions(adapter, auditWriter);
     }
@@ -225,7 +239,8 @@ class SemanticQueryServiceTest {
                 .hasMessageContaining("QUERY_FIELD_UNKNOWN");
         assertThatThrownBy(() -> service.explain(
                 "org-a", "user-a", querySelecting("private-note")))
-                .hasMessageContaining("QUERY_FIELD_SENSITIVE");
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessage("SENSITIVE_PROPERTY_FORBIDDEN");
         assertThatThrownBy(() -> service.explain(
                 "org-a", "user-a", querySelecting("owner")))
                 .hasMessageContaining("QUERY_FIELD_UNMAPPED");

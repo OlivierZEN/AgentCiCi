@@ -9,6 +9,7 @@ import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
+import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingKey;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import java.util.List;
@@ -147,6 +148,82 @@ class OntologyDraftPublishIntegrationTest {
                     assertThat(firstVersion.getSnapshotJson()).isEqualTo(firstSnapshot);
                     assertThat(firstVersion.getContentHash()).isEqualTo(firstHash);
                 });
+    }
+
+    @Test
+    void roundTripsRelationEndpointAndJoinMappingChangesAtomically() {
+        String orgId = "org-relation-roundtrip-" + UUID.randomUUID();
+        TenantContext.setOrgId(orgId);
+        TenantContext.setUserId("human-a");
+        OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
+                new OntologyWorkspaceEntity(
+                        orgId, "project-delivery", "项目交付", "原子关系变更", "human-a"));
+        OntologyWorkspaceEntity initial = drafts.saveDraft(
+                orgId,
+                "human-a",
+                workspace.getId(),
+                0L,
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyDocument loaded = drafts.loadDraft(orgId, workspace.getId(), initial);
+        var originalMapping = mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
+                        workspace.getId(), orgId).stream()
+                .filter(mapping -> "RELATION".equals(mapping.getTargetType()))
+                .filter(mapping -> "contains-task".equals(mapping.getTargetKey()))
+                .findFirst()
+                .orElseThrow();
+
+        List<OntologyDocument.Relation> reversedRelations = loaded.relations().stream()
+                .map(relation -> "contains-task".equals(relation.key())
+                        ? new OntologyDocument.Relation(
+                                relation.key(), relation.name(), relation.description(),
+                                "task", "project", OntologyDocument.Cardinality.MANY_TO_ONE,
+                                relation.reverseLabel(), relation.forwardLabel(),
+                                relation.queryable(), relation.enabled())
+                        : relation)
+                .toList();
+        List<OntologyDocument.Mapping> changedMappings = loaded.mappings().stream()
+                .map(mapping -> "RELATION".equals(mapping.targetType())
+                                && "contains-task".equals(mapping.targetKey())
+                        ? new OntologyDocument.Mapping(
+                                mapping.targetType(), mapping.targetKey(), mapping.dataSourceId(),
+                                "tasks", "project_id", "id", mapping.transform(),
+                                mapping.confidence(), mapping.source(), mapping.validationStatus())
+                        : mapping)
+                .toList();
+        OntologyDocument changed = new OntologyDocument(
+                loaded.key(), loaded.name(), loaded.description(), loaded.concepts(),
+                reversedRelations, loaded.metrics(), loaded.actions(),
+                loaded.dataSources(), changedMappings);
+
+        OntologyWorkspaceEntity revised = drafts.saveDraft(
+                orgId, "human-a", workspace.getId(), 1L, changed);
+        OntologyDocument roundTrip = drafts.loadDraft(orgId, workspace.getId(), revised);
+
+        assertThat(revised.getDraftRevision()).isEqualTo(2L);
+        assertThat(roundTrip.relations()).filteredOn(
+                        relation -> "contains-task".equals(relation.key()))
+                .singleElement()
+                .satisfies(relation -> {
+                    assertThat(relation.sourceConceptKey()).isEqualTo("task");
+                    assertThat(relation.targetConceptKey()).isEqualTo("project");
+                });
+        assertThat(roundTrip.mappings())
+                .filteredOn(mapping -> "RELATION".equals(mapping.targetType())
+                        && "contains-task".equals(mapping.targetKey()))
+                .singleElement()
+                .satisfies(mapping -> {
+                    assertThat(mapping.physicalObjectKey()).isEqualTo("tasks");
+                    assertThat(mapping.physicalFieldKey()).isEqualTo("project_id");
+                    assertThat(mapping.relationTargetFieldKey()).isEqualTo("id");
+                    assertThat(mapping.validationStatus()).isEqualTo("PENDING");
+                });
+        var storedMapping = mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
+                        workspace.getId(), orgId).stream()
+                .filter(mapping -> "RELATION".equals(mapping.getTargetType()))
+                .filter(mapping -> "contains-task".equals(mapping.getTargetKey()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(storedMapping.getId()).isEqualTo(originalMapping.getId());
     }
 
     @Test

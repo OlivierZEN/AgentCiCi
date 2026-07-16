@@ -16,6 +16,7 @@ import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.Ph
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalObject;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
+import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingKey;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingPreparation;
@@ -167,6 +168,165 @@ class OntologyPlatformIntegrationTest {
                         .content("{}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("QUERY_CONTRACT_INVALID"));
+    }
+
+    @Test
+    void semanticQueryReturnsStableForbiddenContractForSensitiveProperties() throws Exception {
+        long workspaceId = createEmptyWorkspace("sensitive-contract", "敏感字段合同");
+        OntologyDocument.Property secret = new OntologyDocument.Property(
+                "secret-note", "私密备注", null, OntologyDocument.DataType.TEXT,
+                false, false, true, false, List.of());
+        OntologyDocument.Concept customer = new OntologyDocument.Concept(
+                "customer", "客户", "客户", null, OntologyDocument.ConceptType.ENTITY,
+                "secret-note", 0, 0, true, true, List.of(secret));
+        OntologyDocument snapshot = new OntologyDocument(
+                "sensitive-contract", "敏感字段合同", null,
+                List.of(customer), List.of(), List.of(), List.of(),
+                List.of(new OntologyDocument.DataSource(
+                        999L, "sample", "样例", OntologyDocument.SourceType.INLINE_SAMPLE,
+                        "{}", "{\"customers\":[]}")),
+                List.of(
+                        new OntologyDocument.Mapping(
+                                "CONCEPT", "customer", 999L, "customers", null, null,
+                                "DIRECT", 1, "MANUAL", "VALID"),
+                        new OntologyDocument.Mapping(
+                                "PROPERTY", "customer.secret-note", 999L,
+                                "customers", "secret_note", null,
+                                "DIRECT", 1, "MANUAL", "VALID")));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_version(
+                            org_id, workspace_id, version_no, source_draft_revision,
+                            content_hash, snapshot_json, json_schema, graphql_sdl,
+                            query_contract_json, validation_summary_json, published_by
+                        ) VALUES (?, ?, 1, 0, ?, ?, '{}', 'type Query { noop: String }', '{}', '[]', ?)
+                        """,
+                orgA, workspaceId, "sensitive-contract-hash",
+                objectMapper.writeValueAsString(snapshot), "owner-a");
+        jdbcTemplate.update("""
+                        UPDATE ontology_workspace
+                        SET status = 'PUBLISHED', published_version = 1
+                        WHERE id = ? AND org_id = ?
+                        """,
+                workspaceId, orgA);
+
+        mockMvc.perform(post("/semantic-query/explain")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(memberAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "ontologyKey":"sensitive-contract",
+                                  "version":1,
+                                  "concept":"customer",
+                                  "select":["secret-note"],
+                                  "filters":[],
+                                  "orderBy":[],
+                                  "limit":10
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SENSITIVE_PROPERTY_FORBIDDEN"));
+    }
+
+    @Test
+    void rejectsOversizedDraftBeforeAnyRowsOrRevisionAreChanged() throws Exception {
+        long workspaceId = createEmptyWorkspace("oversized-draft", "超大草稿");
+        ObjectNode document = emptyDocument("oversized-draft", "超大草稿");
+        ArrayNode concepts = (ArrayNode) document.path("concepts");
+        for (int index = 0; index < 101; index++) {
+            concepts.add(conceptNode("concept-" + index, "概念" + index));
+        }
+        ObjectNode request = objectMapper.createObjectNode()
+                .put("expectedRevision", 0)
+                .set("document", document);
+
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_VALIDATION_FAILED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT draft_revision FROM ontology_workspace WHERE id = ?",
+                Long.class,
+                workspaceId)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ontology_concept WHERE workspace_id = ?",
+                Long.class,
+                workspaceId)).isZero();
+    }
+
+    @Test
+    void rejectsNullEnumValuesBeforeAnyRowsOrRevisionAreChanged() throws Exception {
+        long workspaceId = createEmptyWorkspace("null-enum", "空枚举草稿");
+        ObjectNode document = emptyDocument("null-enum", "空枚举草稿");
+        ObjectNode concept = conceptNode("customer", "客户");
+        ObjectNode property = objectMapper.createObjectNode()
+                .put("key", "status")
+                .put("name", "状态")
+                .put("description", "客户状态")
+                .put("dataType", "ENUM")
+                .put("required", true)
+                .put("multiple", false)
+                .put("sensitive", false)
+                .put("queryable", true)
+                .putNull("enumValues");
+        ((ArrayNode) concept.path("properties")).add(property);
+        concept.put("displayPropertyKey", "status");
+        ((ArrayNode) document.path("concepts")).add(concept);
+        ObjectNode request = objectMapper.createObjectNode()
+                .put("expectedRevision", 0)
+                .set("document", document);
+
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_VALIDATION_FAILED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT draft_revision FROM ontology_workspace WHERE id = ?",
+                Long.class,
+                workspaceId)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ontology_property WHERE workspace_id = ?",
+                Long.class,
+                workspaceId)).isZero();
+    }
+
+    @Test
+    void rejectsOversizedMappingReplacementBeforeRevisionChanges() throws Exception {
+        long workspaceId = createEmptyWorkspace("oversized-mappings", "超大映射");
+        ObjectNode request = objectMapper.createObjectNode().put("expectedRevision", 0);
+        ArrayNode mappings = request.putArray("mappings");
+        for (int index = 0; index < 5_001; index++) {
+            mappings.addObject()
+                    .put("targetType", "PROPERTY")
+                    .put("targetKey", "entity.field-" + index)
+                    .put("dataSourceId", 1)
+                    .put("physicalObjectKey", "entities")
+                    .put("physicalFieldKey", "field-" + index)
+                    .putNull("relationTargetFieldKey")
+                    .put("transform", "DIRECT")
+                    .put("confidence", 1);
+        }
+
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/mappings", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_VALIDATION_FAILED"));
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT draft_revision FROM ontology_workspace WHERE id = ?",
+                Long.class,
+                workspaceId)).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ontology_mapping WHERE workspace_id = ?",
+                Long.class,
+                workspaceId)).isZero();
     }
 
     @Test
@@ -442,6 +602,11 @@ class OntologyPlatformIntegrationTest {
                 .andExpect(jsonPath("$.data.version").value(1))
                 .andExpect(jsonPath("$.data.sourceDraftRevision").value(6));
 
+        mockMvc.perform(get("/admin/ontologies/{workspaceId}/draft/diff", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.changed").value(false));
+
         MvcResult version = mockMvc.perform(get(
                         "/admin/ontologies/{workspaceId}/versions/{versionNo}", workspaceId, 1)
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
@@ -496,8 +661,52 @@ class OntologyPlatformIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerBToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(semanticQuery))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("ONTOLOGY_WORKSPACE_NOT_FOUND"));
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_NOT_FOUND"));
+
+        MvcResult draft = mockMvc.perform(get(
+                        "/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
+                .andExpect(status().isOk())
+                .andReturn();
+        ObjectNode reordered = data(draft).path("document").deepCopy();
+        reverse((ArrayNode) reordered.path("concepts"));
+        reverse((ArrayNode) reordered.path("mappings"));
+        ObjectNode reorderRequest = objectMapper.createObjectNode()
+                .put("expectedRevision", revision)
+                .set("document", reordered);
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(reorderRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.draftRevision").value(revision + 1));
+        mockMvc.perform(get("/admin/ontologies/{workspaceId}/draft/diff", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.changed").value(false));
+
+        reordered.put("description", "真实业务定义已变化");
+        ObjectNode changedRequest = objectMapper.createObjectNode()
+                .put("expectedRevision", revision + 1)
+                .set("document", reordered);
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsBytes(changedRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.draftRevision").value(revision + 2));
+        mockMvc.perform(get("/admin/ontologies/{workspaceId}/draft/diff", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.changed").value(true));
+
+        mockMvc.perform(post("/semantic-query/execute")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(memberAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(semanticQuery.replace("\"version\":1", "\"version\":99")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_NOT_FOUND"));
     }
 
     @Test
@@ -538,6 +747,50 @@ class OntologyPlatformIntegrationTest {
                 "org_id", orgId,
                 "member_id", memberId,
                 "roles", List.of(role)), 3600);
+    }
+
+    private long createEmptyWorkspace(String key, String name) throws Exception {
+        MvcResult created = mockMvc.perform(post("/admin/ontologies")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.createObjectNode()
+                                .put("key", key)
+                                .put("name", name)
+                                .put("description", "结构安全测试")
+                                .toString()))
+                .andExpect(status().isOk())
+                .andReturn();
+        return data(created).path("id").asLong();
+    }
+
+    private ObjectNode emptyDocument(String key, String name) {
+        ObjectNode document = objectMapper.createObjectNode()
+                .put("key", key)
+                .put("name", name)
+                .put("description", "结构安全测试");
+        document.putArray("concepts");
+        document.putArray("relations");
+        document.putArray("metrics");
+        document.putArray("actions");
+        document.putArray("dataSources");
+        document.putArray("mappings");
+        return document;
+    }
+
+    private ObjectNode conceptNode(String key, String name) {
+        ObjectNode concept = objectMapper.createObjectNode()
+                .put("key", key)
+                .put("name", name)
+                .put("pluralName", name)
+                .put("description", name)
+                .put("conceptType", "ENTITY")
+                .putNull("displayPropertyKey")
+                .put("positionX", 0)
+                .put("positionY", 0)
+                .put("queryable", false)
+                .put("enabled", true);
+        concept.putArray("properties");
+        return concept;
     }
 
     private CompletableFuture<String> concurrentCatalogCommit(
@@ -601,7 +854,15 @@ class OntologyPlatformIntegrationTest {
     }
 
     private JsonNode data(MvcResult result) throws Exception {
-        return objectMapper.readTree(result.getResponse().getContentAsString()).path("data");
+        return objectMapper.readTree(result.getResponse().getContentAsByteArray()).path("data");
+    }
+
+    private void reverse(ArrayNode values) {
+        List<JsonNode> reversed = new java.util.ArrayList<>();
+        values.forEach(reversed::add);
+        java.util.Collections.reverse(reversed);
+        values.removeAll();
+        reversed.forEach(values::add);
     }
 
     private String bearer(String token) {

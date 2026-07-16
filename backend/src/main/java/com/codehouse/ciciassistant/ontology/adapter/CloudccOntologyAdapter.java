@@ -24,6 +24,11 @@ import org.springframework.stereotype.Component;
 public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
 
     private static final String ADAPTER_KEY = "cloudcc";
+    private static final int MAX_OBJECT_PREFIXES = 50;
+    private static final Pattern CONFIG_OBJECT_KEY = Pattern.compile(
+            "^[A-Za-z][A-Za-z0-9_]{0,127}$");
+    private static final Pattern CONFIG_OBJECT_PREFIX = Pattern.compile(
+            "^[A-Za-z0-9][A-Za-z0-9_]{0,127}$");
     private static final int MAX_QUERY_LIMIT = 200;
     private static final int MAX_QUERY_FIELDS = 100;
     private static final int MAX_LIST_VALUES = 100;
@@ -66,6 +71,30 @@ public class CloudccOntologyAdapter implements OntologyDataSourceAdapter {
     @Override
     public Set<String> publicConfigKeys() {
         return Set.of("adapterKey", "objectPrefixes");
+    }
+
+    @Override
+    public void validatePublicConfig(JsonNode config) {
+        OntologyDataSourceAdapter.super.validatePublicConfig(config);
+        if (!ADAPTER_KEY.equalsIgnoreCase(config.path("adapterKey").asText())) {
+            throw new IllegalArgumentException("DATA_SOURCE_CONFIG_INVALID");
+        }
+        JsonNode prefixes = config.get("objectPrefixes");
+        if (prefixes == null) {
+            return;
+        }
+        if (!prefixes.isObject() || prefixes.size() > MAX_OBJECT_PREFIXES) {
+            throw new IllegalArgumentException("DATA_SOURCE_CONFIG_INVALID");
+        }
+        var fields = prefixes.fields();
+        while (fields.hasNext()) {
+            Map.Entry<String, JsonNode> entry = fields.next();
+            if (!CONFIG_OBJECT_KEY.matcher(entry.getKey()).matches()
+                    || !entry.getValue().isTextual()
+                    || !CONFIG_OBJECT_PREFIX.matcher(entry.getValue().asText()).matches()) {
+                throw new IllegalArgumentException("DATA_SOURCE_CONFIG_INVALID");
+            }
+        }
     }
 
     @Override

@@ -62,6 +62,7 @@ public class OntologyManagementService {
     private final OntologyCatalogService catalog;
     private final OntologyReferencePackageService referencePackages;
     private final OntologyDataSourcePolicy dataSourcePolicy;
+    private final OntologyDraftSafetyPolicy draftSafety;
     private final ObjectMapper objectMapper;
 
     public OntologyManagementService(
@@ -81,6 +82,7 @@ public class OntologyManagementService {
             OntologyCatalogService catalog,
             OntologyReferencePackageService referencePackages,
             OntologyDataSourcePolicy dataSourcePolicy,
+            OntologyDraftSafetyPolicy draftSafety,
             ObjectMapper objectMapper) {
         this.workspaces = workspaces;
         this.dataSources = dataSources;
@@ -98,6 +100,7 @@ public class OntologyManagementService {
         this.catalog = catalog;
         this.referencePackages = referencePackages;
         this.dataSourcePolicy = dataSourcePolicy;
+        this.draftSafety = draftSafety;
         this.objectMapper = objectMapper;
     }
 
@@ -188,6 +191,7 @@ public class OntologyManagementService {
         OntologyDocument current = drafts.loadDraft(
                 workspace.getOrgId(), workspaceId, workspace);
         OntologyDocument document = toDocument(request.document(), current, "MANUAL");
+        draftSafety.validateDocument(document);
         OntologyWorkspaceEntity saved = drafts.saveDraft(
                 workspace.getOrgId(),
                 userId,
@@ -213,7 +217,9 @@ public class OntologyManagementService {
                         workspaceId, workspace.getOrgId(), workspace.getPublishedVersion())
                         .orElse(null);
         boolean changed = published == null
-                || !Objects.equals(writeJson(current), published.getSnapshotJson());
+                || !Objects.equals(
+                        compiler.compile(current, published.getVersionNo()).contentHash(),
+                        published.getContentHash());
         return new DraftDiffView(
                 workspace.getDraftRevision(),
                 workspace.getPublishedVersion(),
@@ -285,6 +291,7 @@ public class OntologyManagementService {
         String orgId = TenantContext.requireOrgId();
         OntologyReferencePackageService.ReferencePackage value =
                 referencePackages.load(packageId);
+        draftSafety.validateDocument(value.document());
         if (workspaces.findByOrgIdAndKey(orgId, value.document().key()).isPresent()) {
             throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
         }
@@ -455,12 +462,16 @@ public class OntologyManagementService {
         if (request == null || request.expectedRevision() == null) {
             throw new IllegalArgumentException("ONTOLOGY_REVISION_REQUIRED");
         }
+        if (request.mappings() == null) {
+            throw new IllegalArgumentException("ONTOLOGY_VALIDATION_FAILED");
+        }
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument current = drafts.loadDraft(
                 workspace.getOrgId(), workspaceId, workspace);
-        List<OntologyDocument.Mapping> replacements = safe(request.mappings()).stream()
+        List<OntologyDocument.Mapping> replacements = request.mappings().stream()
                 .map(input -> toMapping(input, "MANUAL"))
                 .toList();
+        draftSafety.validateMappings(replacements);
         OntologyDocument updated = new OntologyDocument(
                 current.key(), current.name(), current.description(), current.concepts(),
                 current.relations(), current.metrics(), current.actions(),
@@ -564,6 +575,7 @@ public class OntologyManagementService {
             OntologyWorkspaceEntity workspace,
             Long expectedRevision,
             OntologyDocument document) {
+        draftSafety.validateDocument(document);
         OntologyWorkspaceEntity saved = drafts.saveDraft(
                 workspace.getOrgId(),
                 userId,
@@ -734,9 +746,17 @@ public class OntologyManagementService {
             DraftDocumentInput input,
             OntologyDocument current,
             String origin) {
+        if (input.concepts() == null
+                || input.relations() == null
+                || input.metrics() == null
+                || input.actions() == null
+                || input.dataSources() == null
+                || input.mappings() == null) {
+            throw new IllegalArgumentException("ONTOLOGY_VALIDATION_FAILED");
+        }
         Map<Long, OntologyDocument.DataSource> serverSources = new LinkedHashMap<>();
         safe(current.dataSources()).forEach(source -> serverSources.put(source.id(), source));
-        List<OntologyDocument.DataSource> hydratedSources = safe(input.dataSources()).stream()
+        List<OntologyDocument.DataSource> hydratedSources = input.dataSources().stream()
                 .map(inputSource -> {
                     if (inputSource == null || inputSource.id() == null) {
                         throw new IllegalArgumentException(
@@ -753,12 +773,12 @@ public class OntologyManagementService {
                 input.key(),
                 input.name(),
                 input.description(),
-                safe(input.concepts()),
-                safe(input.relations()),
-                safe(input.metrics()),
-                safe(input.actions()),
+                input.concepts(),
+                input.relations(),
+                input.metrics(),
+                input.actions(),
                 hydratedSources,
-                safe(input.mappings()).stream().map(value -> toMapping(value, origin)).toList());
+                input.mappings().stream().map(value -> toMapping(value, origin)).toList());
     }
 
     private OntologyDocument.DataSource toDataSource(DataSourceInput input) {
@@ -772,7 +792,7 @@ public class OntologyManagementService {
 
     private OntologyDocument.Mapping toMapping(MappingInput input, String origin) {
         if (input == null) {
-            throw new IllegalArgumentException("MAPPING_INVALID");
+            throw new IllegalArgumentException("ONTOLOGY_VALIDATION_FAILED");
         }
         return new OntologyDocument.Mapping(
                 input.targetType(),

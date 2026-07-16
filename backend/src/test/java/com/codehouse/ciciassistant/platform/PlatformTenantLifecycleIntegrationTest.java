@@ -156,11 +156,11 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(domainRows(dryRun.path("manifest"), "members")).isEqualTo(1);
         assertThat(tableRows(dryRun.path("manifest"), "chat", "chat_message")).isEqualTo(1);
         assertThat(tableRows(dryRun.path("manifest"), "memory", "user_memory")).isEqualTo(1);
-        assertThat(domainRows(dryRun.path("manifest"), "ontology")).isEqualTo(ONTOLOGY_TABLES.size());
+        assertThat(domainRows(dryRun.path("manifest"), "ontology")).isEqualTo(ONTOLOGY_TABLES.size() + 1L);
         for (String table : ONTOLOGY_TABLES) {
             assertThat(tableRows(dryRun.path("manifest"), "ontology", table))
                     .as("dry-run row count for %s", table)
-                    .isEqualTo(1);
+                    .isEqualTo("ontology_physical_field".equals(table) ? 2 : 1);
         }
 
         String responseText = dryRunResult.getResponse().getContentAsString();
@@ -205,11 +205,27 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(zipEntries.get("tables/ontology_data_source.jsonl"))
                 .contains("[REDACTED]")
                 .contains("sample-project-alpha")
-                .doesNotContain("ontology-data-source-secret");
+                .contains("visible-sample-owner")
+                .doesNotContain("ontology-data-source-secret")
+                .doesNotContain("ontology-sample-access-key-secret");
         assertThat(zipEntries.get("tables/ontology_version.jsonl"))
                 .contains("sample-project-alpha")
+                .contains("customer-tier-gold")
                 .doesNotContain("ontology-snapshot-secret")
-                .doesNotContain("ontology-nested-secret");
+                .doesNotContain("ontology-nested-secret")
+                .doesNotContain("ontology-snapshot-sample-password");
+        assertThat(zipEntries.get("tables/ontology_physical_object.jsonl"))
+                .contains("project-catalog-v1")
+                .contains("delivery-metadata")
+                .doesNotContain("ontology-object-metadata-credential");
+        assertThat(zipEntries.get("tables/ontology_physical_field.jsonl"))
+                .contains("Project Name")
+                .doesNotContain("ontology-field-metadata-access-key")
+                .doesNotContain("ontology-malformed-metadata-password");
+        JsonNode malformedMetadataField = findJsonlRow(
+                zipEntries.get("tables/ontology_physical_field.jsonl"), "field_key", "description");
+        assertThat(malformedMetadataField).isNotNull();
+        assertThat(malformedMetadataField.path("metadata_json").asText()).isEqualTo("[REDACTED]");
         assertThat(zipEntries).containsKey("files/lifecycle-source.txt");
 
         mockMvc.perform(post("/platform/tenants/{orgId}/pending-purge", createdOrg.orgId())
@@ -828,7 +844,7 @@ class PlatformTenantLifecycleIntegrationTest {
                         """,
                 orgId, workspaceId, "sample", "Sample Source", "INLINE_SAMPLE",
                 "{\"accessToken\":\"ontology-data-source-secret\"}",
-                "{\"projects\":[{\"id\":\"p-1\",\"name\":\"sample-project-alpha\"}]}",
+                "{\"projects\":[{\"id\":\"p-1\",\"name\":\"sample-project-alpha\",\"owner\":\"visible-sample-owner\",\"connector\":{\"accessKey\":\"ontology-sample-access-key-secret\"}}]}",
                 "VALID", memberId, Timestamp.from(now), Timestamp.from(now));
         Long dataSourceId = jdbcTemplate.queryForObject(
                 "SELECT id FROM ontology_data_source WHERE org_id = ? AND workspace_id = ? AND key = 'sample'",
@@ -843,7 +859,8 @@ class PlatformTenantLifecycleIntegrationTest {
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, dataSourceId, "projects", "Projects", "OBJECT", "{}",
+                orgId, workspaceId, dataSourceId, "projects", "Projects", "OBJECT",
+                "{\"catalog\":\"project-catalog-v1\",\"label\":\"delivery-metadata\",\"connection\":{\"credential\":\"ontology-object-metadata-credential\"}}",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         Long objectId = jdbcTemplate.queryForObject(
                 "SELECT id FROM ontology_physical_object WHERE org_id = ? AND data_source_id = ? AND object_key = 'projects'",
@@ -857,7 +874,18 @@ class PlatformTenantLifecycleIntegrationTest {
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, objectId, "name", "Name", "STRING", false, false, "{}",
+                orgId, workspaceId, objectId, "name", "Name", "STRING", false, false,
+                "{\"businessLabel\":\"Project Name\",\"source\":{\"accessKey\":\"ontology-field-metadata-access-key\"}}",
+                Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_physical_field(
+                            org_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
+                            multiple, metadata_json, discovered_at, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, objectId, "description", "Description", "STRING", true, false,
+                "not-json ontology-malformed-metadata-password",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_mapping(
@@ -885,7 +913,7 @@ class PlatformTenantLifecycleIntegrationTest {
                   "dataSources": [{
                     "key": "sample",
                     "configJson": {"accessToken": "ontology-snapshot-secret"},
-                    "sampleDataJson": {"projects": [{"id": "p-1", "name": "sample-project-alpha"}]}
+                    "sampleDataJson": "{\\\"projects\\\":[{\\\"id\\\":\\\"p-1\\\",\\\"name\\\":\\\"sample-project-alpha\\\",\\\"tier\\\":\\\"customer-tier-gold\\\",\\\"credentials\\\":{\\\"password\\\":\\\"ontology-snapshot-sample-password\\\"}}]}"
                   }],
                   "secret": "ontology-nested-secret"
                 }
@@ -947,6 +975,16 @@ class PlatformTenantLifecycleIntegrationTest {
             }
         }
         return entries;
+    }
+
+    private JsonNode findJsonlRow(String jsonl, String key, String expectedValue) throws Exception {
+        for (String line : jsonl.lines().toList()) {
+            JsonNode row = objectMapper.readTree(line);
+            if (expectedValue.equals(row.path(key).asText())) {
+                return row;
+            }
+        }
+        return null;
     }
 
     private JsonNode findByOrgId(JsonNode rows, String orgId) {

@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ontology.service;
 
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
+import com.codehouse.ciciassistant.common.error.ResourceNotFoundException;
 import com.codehouse.ciciassistant.common.error.DataSourceUnavailableException;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter;
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.AdapterContext;
@@ -131,11 +132,10 @@ public class SemanticQueryService {
 
     private QueryScope locateScope(String orgId, SemanticQuery query) {
         OntologyWorkspaceEntity workspace = workspaces.findByOrgIdAndKey(orgId, query.ontologyKey())
-                .orElseThrow(() -> new IllegalArgumentException("ONTOLOGY_WORKSPACE_NOT_FOUND"));
+                .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         OntologyVersionEntity version = versions.findByWorkspaceIdAndOrgIdAndVersionNo(
                         workspace.getId(), orgId, query.version())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "ONTOLOGY_VERSION_NOT_PUBLISHED"));
+                .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         return new QueryScope(workspace, version);
     }
 
@@ -458,7 +458,7 @@ public class SemanticQueryService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("QUERY_FIELD_UNKNOWN"));
         if (property.sensitive()) {
-            throw new IllegalArgumentException("QUERY_FIELD_SENSITIVE");
+            throw new ForbiddenException("SENSITIVE_PROPERTY_FORBIDDEN");
         }
         if (!property.queryable()) {
             throw new IllegalArgumentException("QUERY_FIELD_NOT_QUERYABLE");

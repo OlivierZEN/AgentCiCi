@@ -881,10 +881,10 @@ public class PlatformTenantLifecycleService {
         Map<String, Object> redacted = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : row.entrySet()) {
             String key = entry.getKey() == null ? "" : entry.getKey();
-            if (shouldRedact(key)) {
+            if (shouldRecursivelyRedactOntologyJson(table, key)) {
+                redacted.put(key, redactOntologyJson(entry.getValue()));
+            } else if (shouldRedact(key)) {
                 redacted.put(key, "[REDACTED]");
-            } else if ("ontology_version".equals(table) && "snapshot_json".equalsIgnoreCase(key)) {
-                redacted.put(key, redactOntologySnapshot(entry.getValue()));
             } else {
                 redacted.put(key, entry.getValue());
             }
@@ -892,42 +892,49 @@ public class PlatformTenantLifecycleService {
         return redacted;
     }
 
-    private String redactOntologySnapshot(Object rawSnapshot) {
-        if (rawSnapshot == null) {
+    private boolean shouldRecursivelyRedactOntologyJson(String table, String key) {
+        return ("ontology_data_source".equals(table) && "sample_data_json".equalsIgnoreCase(key))
+                || ("ontology_version".equals(table) && "snapshot_json".equalsIgnoreCase(key))
+                || (Set.of("ontology_physical_object", "ontology_physical_field").contains(table)
+                && "metadata_json".equalsIgnoreCase(key));
+    }
+
+    private String redactOntologyJson(Object rawJson) {
+        if (rawJson == null) {
             return null;
         }
         try {
-            JsonNode snapshot = objectMapper.readTree(rawSnapshot.toString());
-            return objectMapper.writeValueAsString(redactOntologySnapshotNode(snapshot));
+            JsonNode json = objectMapper.readTree(rawJson.toString());
+            return objectMapper.writeValueAsString(redactOntologyJsonNode(json));
         } catch (Exception ex) {
             return "[REDACTED]";
         }
     }
 
-    private JsonNode redactOntologySnapshotNode(JsonNode node) {
+    private JsonNode redactOntologyJsonNode(JsonNode node) {
         if (node == null || node.isNull() || node.isValueNode()) {
             return node == null ? objectMapper.nullNode() : node.deepCopy();
         }
         if (node.isArray()) {
             ArrayNode redacted = objectMapper.createArrayNode();
-            node.forEach(value -> redacted.add(redactOntologySnapshotNode(value)));
+            node.forEach(value -> redacted.add(redactOntologyJsonNode(value)));
             return redacted;
         }
         ObjectNode redacted = objectMapper.createObjectNode();
         node.fields().forEachRemaining(entry -> {
             String compactKey = compactFieldName(entry.getKey());
-            if ("sampledatajson".equals(compactKey)) {
-                redacted.set(entry.getKey(), entry.getValue().deepCopy());
-            } else if (shouldRedactSnapshotField(compactKey)) {
+            if (shouldRedactOntologyJsonField(compactKey)) {
                 redacted.put(entry.getKey(), "[REDACTED]");
+            } else if ("sampledatajson".equals(compactKey) && entry.getValue().isTextual()) {
+                redacted.put(entry.getKey(), redactOntologyJson(entry.getValue().textValue()));
             } else {
-                redacted.set(entry.getKey(), redactOntologySnapshotNode(entry.getValue()));
+                redacted.set(entry.getKey(), redactOntologyJsonNode(entry.getValue()));
             }
         });
         return redacted;
     }
 
-    private boolean shouldRedactSnapshotField(String compactKey) {
+    private boolean shouldRedactOntologyJsonField(String compactKey) {
         return List.of(
                         "secret",
                         "password",
@@ -935,6 +942,7 @@ public class PlatformTenantLifecycleService {
                         "credential",
                         "encrypted",
                         "apikey",
+                        "accesskey",
                         "authorization",
                         "safetymark",
                         "configjson"

@@ -3,13 +3,12 @@ package com.codehouse.ciciassistant.common.api;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.Map;
 
-@JsonInclude(JsonInclude.Include.NON_NULL)
 public record ApiResponse<T>(
         boolean success,
         T data,
         String message,
-        String code,
-        Map<String, Object> details
+        @JsonInclude(JsonInclude.Include.NON_NULL) String code,
+        @JsonInclude(JsonInclude.Include.NON_NULL) Map<String, Object> details
 ) {
 
     public ApiResponse(boolean success, T data, String message) {
