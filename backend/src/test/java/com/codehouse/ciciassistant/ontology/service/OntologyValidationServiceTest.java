@@ -232,6 +232,108 @@ class OntologyValidationServiceTest {
                 .contains("METRIC_PROPERTY_NOT_QUERYABLE", "METRIC_CONCEPT_NOT_QUERYABLE");
     }
 
+    @Test
+    void rejectsReservedGeneratedAndIntrospectionGraphqlNames() {
+        List<OntologyDocument.Concept> concepts = List.of(
+                queryableConcept("string"),
+                queryableConcept("int"),
+                queryableConcept("float"),
+                queryableConcept("boolean"),
+                queryableConcept("i-d"),
+                queryableConcept("query"),
+                queryableConcept("mutation"),
+                queryableConcept("subscription"),
+                queryableConcept("semantic-operator"),
+                queryableConcept("sort-direction"),
+                queryableConcept("project"),
+                queryableConcept("project-filter"),
+                queryableConcept("project-order"),
+                queryableConcept("__introspection"));
+
+        assertThat(validator.validate(
+                        document(concepts, List.of(), List.of(), List.of(), List.of(), List.of()),
+                        false))
+                .filteredOn(issue -> "GRAPHQL_NAME_COLLISION".equals(issue.code()))
+                .hasSizeGreaterThanOrEqualTo(13)
+                .allMatch(issue -> issue.severity() == OntologyValidationService.Severity.ERROR);
+    }
+
+    @Test
+    void rejectsBlankAndDuplicateEnumValuesAfterTrimming() {
+        OntologyDocument.Property status = new OntologyDocument.Property(
+                "status",
+                "状态",
+                "",
+                OntologyDocument.DataType.ENUM,
+                true,
+                false,
+                false,
+                true,
+                List.of("ACTIVE", " ", "ACTIVE", " DONE ", "DONE"));
+        OntologyDocument invalid = document(
+                List.of(concept("project", "status", true, status)),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of());
+
+        assertThat(validator.validate(invalid, false))
+                .extracting(OntologyValidationService.ValidationIssue::code)
+                .contains("ENUM_VALUE_BLANK", "DUPLICATE_ENUM_VALUE");
+    }
+
+    @Test
+    void rejectsQueryableRelationEndpointsAndIncompleteRelationMappings() {
+        OntologyDocument invalid = document(
+                List.of(
+                        conceptWithState("project", true, true),
+                        conceptWithState("task", false, false),
+                        conceptWithState("archive", false, false)),
+                List.of(
+                        relation("contains-task", "project", "task"),
+                        relation("archive-project", "archive", "project")),
+                List.of(),
+                List.of(),
+                List.of(new OntologyDocument.DataSource(
+                        7L,
+                        "delivery-source",
+                        "交付数据",
+                        OntologyDocument.SourceType.CONNECTOR,
+                        "{}")),
+                List.of(
+                        new OntologyDocument.Mapping(
+                                "RELATION",
+                                "contains-task",
+                                7L,
+                                "projects",
+                                null,
+                                "project_id",
+                                "DIRECT",
+                                1.0,
+                                "MANUAL",
+                                "VALID"),
+                        new OntologyDocument.Mapping(
+                                "RELATION",
+                                "archive-project",
+                                7L,
+                                "archives",
+                                "project_id",
+                                null,
+                                "DIRECT",
+                                1.0,
+                                "MANUAL",
+                                "VALID")));
+
+        assertThat(validator.validate(invalid, false))
+                .extracting(OntologyValidationService.ValidationIssue::code)
+                .contains(
+                        "RELATION_TARGET_NOT_QUERYABLE",
+                        "RELATION_SOURCE_NOT_QUERYABLE",
+                        "MAPPING_PHYSICAL_FIELD_REQUIRED",
+                        "MAPPING_RELATION_TARGET_FIELD_REQUIRED");
+    }
+
     private static OntologyDocument document(
             List<OntologyDocument.Concept> concepts,
             List<OntologyDocument.Relation> relations,
@@ -268,6 +370,49 @@ class OntologyValidationServiceTest {
                 queryable,
                 true,
                 List.of(properties));
+    }
+
+    private static OntologyDocument.Concept queryableConcept(String key) {
+        return concept(
+                key,
+                "value",
+                true,
+                property("value", OntologyDocument.DataType.TEXT, false, true));
+    }
+
+    private static OntologyDocument.Concept conceptWithState(
+            String key,
+            boolean queryable,
+            boolean enabled) {
+        return new OntologyDocument.Concept(
+                key,
+                key,
+                key,
+                "",
+                OntologyDocument.ConceptType.ENTITY,
+                "name",
+                0,
+                0,
+                queryable,
+                enabled,
+                List.of(property("name", OntologyDocument.DataType.TEXT, false, true)));
+    }
+
+    private static OntologyDocument.Relation relation(
+            String key,
+            String sourceConceptKey,
+            String targetConceptKey) {
+        return new OntologyDocument.Relation(
+                key,
+                key,
+                "",
+                sourceConceptKey,
+                targetConceptKey,
+                OntologyDocument.Cardinality.MANY_TO_ONE,
+                key,
+                key,
+                true,
+                true);
     }
 
     private static OntologyDocument.Property property(

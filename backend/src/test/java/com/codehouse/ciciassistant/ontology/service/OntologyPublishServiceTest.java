@@ -143,9 +143,11 @@ class OntologyPublishServiceTest {
     @Test
     void rejectsBlankOrImpersonatedPublisherBeforeReadingWorkspace() {
         assertThatThrownBy(() -> service.publish("org-a", " ", 41L, 1L))
-                .isInstanceOf(ForbiddenException.class);
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("ONTOLOGY_PUBLISH_REQUIRES_HUMAN");
         assertThatThrownBy(() -> service.publish("org-a", "another-user", 41L, 1L))
-                .isInstanceOf(ForbiddenException.class);
+                .isInstanceOf(ForbiddenException.class)
+                .hasMessageContaining("ONTOLOGY_PUBLISH_REQUIRES_HUMAN");
 
         verifyNoInteractions(workspaces, drafts, validation, compiler, persistence);
     }

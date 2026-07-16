@@ -93,7 +93,7 @@ public class OntologyPublishService {
         if (userId == null
                 || userId.isBlank()
                 || TenantContext.getUserId().filter(userId::equals).isEmpty()) {
-            throw new ForbiddenException("Ontology publish requires the current authenticated user");
+            throw new ForbiddenException("ONTOLOGY_PUBLISH_REQUIRES_HUMAN");
         }
     }
 

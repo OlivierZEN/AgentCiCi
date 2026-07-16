@@ -23,13 +23,24 @@ class OntologyCompilerServiceTest {
                 compiler.compile(projectDeliveryDocument(), 1);
 
         assertThat(first.contentHash()).isEqualTo(second.contentHash());
-        assertThat(first.graphqlSdl()).contains("type Project", "type Query");
+        assertThat(first.graphqlSdl()).isEqualTo(expectedGraphqlSdl());
         assertThat(first.graphqlSdl()).doesNotContain("type Mutation", "publish");
         assertThat(first.jsonSchema())
                 .contains("https://json-schema.org/draft/2020-12/schema");
+        JsonNode jsonSchema = objectMapper.readTree(first.jsonSchema());
+        JsonNode relationSchema = jsonSchema
+                .path("$defs")
+                .path("Project")
+                .path("properties")
+                .path("contains-task");
+        assertThat(relationSchema.path("type").asText()).isEqualTo("array");
+        assertThat(relationSchema.path("items").path("$ref").asText())
+                .isEqualTo("#/$defs/Task");
         JsonNode queryContract = objectMapper.readTree(first.queryContractJson());
         assertThat(queryContract.path("version").asInt()).isEqualTo(1);
         assertThat(queryContract.path("concepts").isArray()).isTrue();
+        assertThat(queryContract.path("relations").path(0).path("key").asText())
+                .isEqualTo("contains-task");
     }
 
     @Test
@@ -51,6 +62,107 @@ class OntologyCompilerServiceTest {
     void includesVersionInContentHash() {
         assertThat(compiler.compile(projectDeliveryDocument(), 1).contentHash())
                 .isNotEqualTo(compiler.compile(projectDeliveryDocument(), 2).contentHash());
+    }
+
+    @Test
+    void omitsRelationsUnlessRelationAndBothEndpointsAreEnabledAndQueryable() throws Exception {
+        OntologyDocument.Concept project = concept(
+                "project",
+                "项目",
+                "name",
+                OntologyDocument.ConceptType.ENTITY,
+                List.of(property("name", OntologyDocument.DataType.TEXT, true, List.of())));
+        OntologyDocument.Concept task = concept(
+                "task",
+                "任务",
+                "name",
+                OntologyDocument.ConceptType.ENTITY,
+                List.of(property("name", OntologyDocument.DataType.TEXT, true, List.of())));
+        OntologyDocument.Concept archived = new OntologyDocument.Concept(
+                "archived",
+                "归档",
+                "归档",
+                "",
+                OntologyDocument.ConceptType.ENTITY,
+                "name",
+                0,
+                0,
+                true,
+                false,
+                List.of(property("name", OntologyDocument.DataType.TEXT, true, List.of())));
+        OntologyDocument document = new OntologyDocument(
+                "relation-visibility",
+                "关系可见性",
+                "",
+                List.of(project, task, archived),
+                List.of(
+                        relation("hidden-task", "project", "task", false, true),
+                        relation("disabled-task", "project", "task", true, false),
+                        relation("archived-task", "project", "archived", true, true)),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of());
+
+        OntologyCompilerService.CompiledContracts contracts = compiler.compile(document, 1);
+
+        assertThat(contracts.graphqlSdl())
+                .doesNotContain("hiddenTask", "disabledTask", "archivedTask");
+        JsonNode schema = objectMapper.readTree(contracts.jsonSchema());
+        JsonNode schemaProperties = schema.path("$defs").path("Project").path("properties");
+        assertThat(schemaProperties.has("hidden-task")).isFalse();
+        assertThat(schemaProperties.has("disabled-task")).isFalse();
+        assertThat(schemaProperties.has("archived-task")).isFalse();
+        assertThat(objectMapper.readTree(contracts.queryContractJson()).path("relations"))
+                .isEmpty();
+    }
+
+    @Test
+    void compilesSingleCardinalityRelationAsDirectReference() throws Exception {
+        OntologyDocument.Concept project = concept(
+                "project",
+                "项目",
+                "name",
+                OntologyDocument.ConceptType.ENTITY,
+                List.of(property("name", OntologyDocument.DataType.TEXT, true, List.of())));
+        OntologyDocument.Concept task = concept(
+                "task",
+                "任务",
+                "name",
+                OntologyDocument.ConceptType.ENTITY,
+                List.of(property("name", OntologyDocument.DataType.TEXT, true, List.of())));
+        OntologyDocument.Relation ownerTask = new OntologyDocument.Relation(
+                "owner-task",
+                "负责任务",
+                "",
+                "project",
+                "task",
+                OntologyDocument.Cardinality.MANY_TO_ONE,
+                "负责",
+                "所属",
+                true,
+                true);
+        OntologyDocument document = new OntologyDocument(
+                "single-relation",
+                "单值关系",
+                "",
+                List.of(project, task),
+                List.of(ownerTask),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of());
+
+        OntologyCompilerService.CompiledContracts contracts = compiler.compile(document, 1);
+
+        JsonNode relationSchema = objectMapper.readTree(contracts.jsonSchema())
+                .path("$defs")
+                .path("Project")
+                .path("properties")
+                .path("owner-task");
+        assertThat(relationSchema.path("$ref").asText()).isEqualTo("#/$defs/Task");
+        assertThat(relationSchema.has("type")).isFalse();
+        assertThat(contracts.graphqlSdl()).contains("  ownerTask: Task\n");
     }
 
     static OntologyDocument projectDeliveryDocument() {
@@ -200,6 +312,25 @@ class OntologyCompilerServiceTest {
                 enumValues);
     }
 
+    private static OntologyDocument.Relation relation(
+            String key,
+            String sourceConceptKey,
+            String targetConceptKey,
+            boolean queryable,
+            boolean enabled) {
+        return new OntologyDocument.Relation(
+                key,
+                key,
+                "",
+                sourceConceptKey,
+                targetConceptKey,
+                OntologyDocument.Cardinality.ONE_TO_MANY,
+                key,
+                key,
+                queryable,
+                enabled);
+    }
+
     private static OntologyDocument.Mapping mapping(
             String targetType,
             String targetKey,
@@ -212,10 +343,72 @@ class OntologyCompilerServiceTest {
                 sourceId,
                 objectKey,
                 fieldKey,
-                null,
+                "RELATION".equals(targetType) ? "project_id" : null,
                 "DIRECT",
                 1.0,
                 "MANUAL",
                 "VALID");
+    }
+
+    private static String expectedGraphqlSdl() {
+        return """
+                enum SemanticOperator {
+                  EQ
+                  NE
+                  IN
+                  CONTAINS
+                  GT
+                  GTE
+                  LT
+                  LTE
+                  BETWEEN
+                  IS_NULL
+                }
+
+                enum SortDirection {
+                  ASC
+                  DESC
+                }
+
+                type Project {
+                  budget: Float
+                  name: String!
+                  containsTask: [Task!]!
+                }
+
+                input ProjectFilter {
+                  field: String!
+                  operator: SemanticOperator!
+                  value: String
+                }
+
+                input ProjectOrder {
+                  field: String!
+                  direction: SortDirection!
+                }
+
+                type Task {
+                  status: String!
+                }
+
+                input TaskFilter {
+                  field: String!
+                  operator: SemanticOperator!
+                  value: String
+                }
+
+                input TaskOrder {
+                  field: String!
+                  direction: SortDirection!
+                }
+
+                type Query {
+                  project(id: ID!): Project
+                  projectList(filter: ProjectFilter, orderBy: ProjectOrder, limit: Int = 50): [Project!]!
+                  task(id: ID!): Task
+                  taskList(filter: TaskFilter, orderBy: TaskOrder, limit: Int = 50): [Task!]!
+                  totalBudget: Float
+                }
+                """;
     }
 }

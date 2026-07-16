@@ -36,6 +36,17 @@ public class OntologyValidationService {
     private static final Set<OntologyDocument.DataType> TIME_TYPES = Set.of(
             OntologyDocument.DataType.DATE,
             OntologyDocument.DataType.DATETIME);
+    private static final Set<String> RESERVED_GRAPHQL_TYPES = Set.of(
+            "String",
+            "Int",
+            "Float",
+            "Boolean",
+            "ID",
+            "Query",
+            "Mutation",
+            "Subscription",
+            "SemanticOperator",
+            "SortDirection");
 
     public List<ValidationIssue> validate(OntologyDocument document, boolean forPublish) {
         List<ValidationIssue> issues = new ArrayList<>();
@@ -153,11 +164,32 @@ public class OntologyValidationService {
                     add(issues, "SENSITIVE_PROPERTY_QUERYABLE", propertyPath + ".queryable",
                             "Sensitive properties cannot be queryable");
                 }
-                if (property.dataType() == OntologyDocument.DataType.ENUM
-                        && safe(property.enumValues()).isEmpty()) {
-                    add(issues, "ENUM_VALUES_REQUIRED", propertyPath + ".enumValues",
-                            "Enum properties require at least one value");
+                if (property.dataType() == OntologyDocument.DataType.ENUM) {
+                    validateEnumValues(property.enumValues(), propertyPath + ".enumValues", issues);
                 }
+            }
+        }
+    }
+
+    private void validateEnumValues(
+            List<String> enumValues,
+            String path,
+            List<ValidationIssue> issues) {
+        List<String> values = safe(enumValues);
+        if (values.isEmpty()) {
+            add(issues, "ENUM_VALUES_REQUIRED", path,
+                    "Enum properties require at least one value");
+            return;
+        }
+        Set<String> seen = new HashSet<>();
+        for (int index = 0; index < values.size(); index++) {
+            String value = values.get(index);
+            if (!hasText(value)) {
+                add(issues, "ENUM_VALUE_BLANK", path + "[" + index + "]",
+                        "Enum values cannot be blank");
+            } else if (!seen.add(value.trim())) {
+                add(issues, "DUPLICATE_ENUM_VALUE", path + "[" + index + "]",
+                        "Enum values must be unique after trimming");
             }
         }
     }
@@ -177,10 +209,18 @@ public class OntologyValidationService {
             if (!conceptsByKey.containsKey(relation.sourceConceptKey())) {
                 add(issues, "RELATION_SOURCE_NOT_FOUND", path + ".sourceConceptKey",
                         "Relation source concept does not exist");
+            } else if (relation.queryable()
+                    && !isEnabledAndQueryable(conceptsByKey.get(relation.sourceConceptKey()))) {
+                add(issues, "RELATION_SOURCE_NOT_QUERYABLE", path + ".sourceConceptKey",
+                        "Queryable relation sources must be enabled and queryable");
             }
             if (!conceptsByKey.containsKey(relation.targetConceptKey())) {
                 add(issues, "RELATION_TARGET_NOT_FOUND", path + ".targetConceptKey",
                         "Relation target concept does not exist");
+            } else if (relation.queryable()
+                    && !isEnabledAndQueryable(conceptsByKey.get(relation.targetConceptKey()))) {
+                add(issues, "RELATION_TARGET_NOT_QUERYABLE", path + ".targetConceptKey",
+                        "Queryable relation targets must be enabled and queryable");
             }
         }
     }
@@ -335,10 +375,19 @@ public class OntologyValidationService {
             List<OntologyDocument.Metric> metrics,
             List<ValidationIssue> issues) {
         Map<String, String> typeOwners = new HashMap<>();
-        typeOwners.put("Query", "$root");
+        for (String reservedType : RESERVED_GRAPHQL_TYPES) {
+            typeOwners.put(reservedType, "$reserved");
+        }
+        Map<String, OntologyDocument.Concept> conceptsByKey = firstByKey(
+                concepts, OntologyDocument.Concept::key);
         Map<String, List<OntologyDocument.Relation>> outgoingRelations = new HashMap<>();
-        for (OntologyDocument.Relation relation : relations) {
-            if (relation != null && relation.enabled() && relation.queryable()) {
+        for (int relationIndex = 0; relationIndex < relations.size(); relationIndex++) {
+            OntologyDocument.Relation relation = relations.get(relationIndex);
+            if (relation != null) {
+                rejectGraphqlReservedPrefix(
+                        relation.key(), "$.relations[" + relationIndex + "].key", issues);
+            }
+            if (isCompilerQueryableRelation(relation, conceptsByKey)) {
                 outgoingRelations.computeIfAbsent(
                         relation.sourceConceptKey(), ignored -> new ArrayList<>()).add(relation);
             }
@@ -351,11 +400,23 @@ public class OntologyValidationService {
                 continue;
             }
             String conceptPath = "$.concepts[" + conceptIndex + "]";
+            rejectGraphqlReservedPrefix(concept.key(), conceptPath + ".key", issues);
             String typeName = graphqlTypeName(concept.key());
-            String previousOwner = typeOwners.putIfAbsent(typeName, concept.key());
-            if (previousOwner != null && !Objects.equals(previousOwner, concept.key())) {
-                add(issues, "GRAPHQL_NAME_COLLISION", conceptPath + ".key",
-                        "Concept keys compile to the same GraphQL type: " + typeName);
+            registerGraphqlType(
+                    typeOwners, typeName, concept.key(), conceptPath + ".key", issues);
+            if (isEnabledAndQueryable(concept)) {
+                registerGraphqlType(
+                        typeOwners,
+                        typeName + "Filter",
+                        concept.key() + "#filter",
+                        conceptPath + ".key",
+                        issues);
+                registerGraphqlType(
+                        typeOwners,
+                        typeName + "Order",
+                        concept.key() + "#order",
+                        conceptPath + ".key",
+                        issues);
             }
 
             Set<String> objectFields = new HashSet<>();
@@ -363,6 +424,12 @@ public class OntologyValidationService {
                     propertyIndex < safe(concept.properties()).size();
                     propertyIndex++) {
                 OntologyDocument.Property property = safe(concept.properties()).get(propertyIndex);
+                if (property != null) {
+                    rejectGraphqlReservedPrefix(
+                            property.key(),
+                            conceptPath + ".properties[" + propertyIndex + "].key",
+                            issues);
+                }
                 if (property != null && property.queryable() && !property.sensitive()) {
                     addGraphqlName(
                             objectFields,
@@ -394,6 +461,8 @@ public class OntologyValidationService {
         for (int metricIndex = 0; metricIndex < metrics.size(); metricIndex++) {
             OntologyDocument.Metric metric = metrics.get(metricIndex);
             if (metric != null) {
+                rejectGraphqlReservedPrefix(
+                        metric.key(), "$.metrics[" + metricIndex + "].key", issues);
                 addGraphqlName(
                         queryFields,
                         graphqlFieldName(metric.key()),
@@ -404,6 +473,29 @@ public class OntologyValidationService {
         if (queryFields.isEmpty()) {
             add(issues, "GRAPHQL_QUERY_EMPTY", "$",
                     "Compiled GraphQL Query requires at least one field");
+        }
+    }
+
+    private void registerGraphqlType(
+            Map<String, String> typeOwners,
+            String typeName,
+            String owner,
+            String path,
+            List<ValidationIssue> issues) {
+        String previousOwner = typeOwners.putIfAbsent(typeName, owner);
+        if (previousOwner != null && !Objects.equals(previousOwner, owner)) {
+            add(issues, "GRAPHQL_NAME_COLLISION", path,
+                    "Ontology keys compile to a reserved or duplicate GraphQL type: " + typeName);
+        }
+    }
+
+    private void rejectGraphqlReservedPrefix(
+            String rawName,
+            String path,
+            List<ValidationIssue> issues) {
+        if (rawName != null && rawName.startsWith("__")) {
+            add(issues, "GRAPHQL_NAME_COLLISION", path,
+                    "GraphQL names beginning with __ are reserved for introspection");
         }
     }
 
@@ -488,9 +580,16 @@ public class OntologyValidationService {
                 add(issues, "MAPPING_PHYSICAL_OBJECT_REQUIRED", path + ".physicalObjectKey",
                         "Mapping physical object is required");
             }
-            if ("PROPERTY".equals(targetType) && !hasText(mapping.physicalFieldKey())) {
+            if (("PROPERTY".equals(targetType) || "RELATION".equals(targetType))
+                    && !hasText(mapping.physicalFieldKey())) {
                 add(issues, "MAPPING_PHYSICAL_FIELD_REQUIRED", path + ".physicalFieldKey",
-                        "Property mappings require a physical field");
+                        "Property and relation mappings require a physical field");
+            }
+            if ("RELATION".equals(targetType)
+                    && !hasText(mapping.relationTargetFieldKey())) {
+                add(issues, "MAPPING_RELATION_TARGET_FIELD_REQUIRED",
+                        path + ".relationTargetFieldKey",
+                        "Relation mappings require a target-side physical field");
             }
             if (hasText(mapping.transform())
                     && !ALLOWED_TRANSFORMS.contains(normalized(mapping.transform()))) {
@@ -587,6 +686,20 @@ public class OntologyValidationService {
         return safe(concept.properties()).stream()
                 .filter(java.util.Objects::nonNull)
                 .anyMatch(property -> propertyKey.equals(property.key()));
+    }
+
+    private boolean isCompilerQueryableRelation(
+            OntologyDocument.Relation relation,
+            Map<String, OntologyDocument.Concept> conceptsByKey) {
+        return relation != null
+                && relation.enabled()
+                && relation.queryable()
+                && isEnabledAndQueryable(conceptsByKey.get(relation.sourceConceptKey()))
+                && isEnabledAndQueryable(conceptsByKey.get(relation.targetConceptKey()));
+    }
+
+    private boolean isEnabledAndQueryable(OntologyDocument.Concept concept) {
+        return concept != null && concept.enabled() && concept.queryable();
     }
 
     private void validateKey(String key, String path, List<ValidationIssue> issues) {
