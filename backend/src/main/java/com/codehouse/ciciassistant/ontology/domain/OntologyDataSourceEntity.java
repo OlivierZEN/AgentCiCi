@@ -63,4 +63,10 @@ public class OntologyDataSourceEntity extends AbstractOntologyWorkspaceEntity {
     public String getStatus() { return status; }
     public Instant getLastValidatedAt() { return lastValidatedAt; }
     public String getCreatedBy() { return createdBy; }
+
+    public void updateDraft(String name, String sourceType, String configJson) {
+        this.name = name;
+        this.sourceType = sourceType;
+        this.configJson = configJson;
+    }
 }

@@ -29,4 +29,14 @@ public class OntologyTenantPersistence {
         }
         return entityManager.merge(entity);
     }
+
+    @Transactional
+    public void flushForCurrentOrg(String orgId) {
+        String currentOrgId = TenantContext.requireOrgId();
+        if (!currentOrgId.equals(orgId)) {
+            throw new ForbiddenException(
+                    "Ontology organization does not match the current organization");
+        }
+        entityManager.flush();
+    }
 }

@@ -117,4 +117,25 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
     public Instant getUpdatedAt() {
         return updatedAt;
     }
+
+    public void applyDraftMetadata(
+            String key,
+            String name,
+            String description,
+            String updatedBy) {
+        this.key = key;
+        this.name = name;
+        this.description = description;
+        this.status = "DRAFT";
+        this.draftRevision = this.draftRevision == null ? 1L : this.draftRevision + 1L;
+        this.updatedBy = updatedBy;
+        this.updatedAt = Instant.now();
+    }
+
+    public void markPublished(Integer version, String updatedBy) {
+        this.status = "PUBLISHED";
+        this.publishedVersion = version;
+        this.updatedBy = updatedBy;
+        this.updatedAt = Instant.now();
+    }
 }
