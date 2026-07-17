@@ -58,25 +58,71 @@ export class OntologyApiError extends Error {
   readonly status: number;
   readonly code: string;
   readonly details: OntologyApiDetails | null;
+  readonly outcomeUnknown: boolean;
 
   constructor(
     message: string,
     status: number,
     code: string,
     details: OntologyApiDetails | null,
+    outcomeUnknown = false,
   ) {
     super(message);
     this.name = "OntologyApiError";
     this.status = status;
     this.code = code;
     this.details = details;
+    this.outcomeUnknown = outcomeUnknown;
   }
+}
+
+/** The apply POST may have committed, but no authoritative response was received. */
+export class OntologyProposalApplyOutcomeUnknownError extends Error {
+  constructor() {
+    super("提案应用结果未知");
+    this.name = "OntologyProposalApplyOutcomeUnknownError";
+  }
+}
+
+/** The publish POST may have committed, but no authoritative response was received. */
+export class OntologyPublishOutcomeUnknownError extends Error {
+  constructor() {
+    super("发布结果未知");
+    this.name = "OntologyPublishOutcomeUnknownError";
+  }
+}
+
+/** The apply mutation committed, but its mandatory redacted-draft reload failed. */
+export class OntologyProposalAppliedReloadError extends Error {
+  constructor() {
+    super("提案已应用，重新加载失败");
+    this.name = "OntologyProposalAppliedReloadError";
+  }
+}
+
+export function isOntologyProposalAppliedReloadError(
+  error: unknown,
+): error is OntologyProposalAppliedReloadError {
+  return error instanceof OntologyProposalAppliedReloadError;
+}
+
+export function isOntologyProposalApplyOutcomeUnknownError(
+  error: unknown,
+): error is OntologyProposalApplyOutcomeUnknownError {
+  return error instanceof OntologyProposalApplyOutcomeUnknownError;
+}
+
+export function isOntologyPublishOutcomeUnknownError(
+  error: unknown,
+): error is OntologyPublishOutcomeUnknownError {
+  return error instanceof OntologyPublishOutcomeUnknownError;
 }
 
 export function normalizeOntologyApiError(
   status: number,
   statusText: string,
   envelope: unknown,
+  outcomeUnknown = false,
 ): OntologyApiError {
   const fields = plainRecord(envelope);
   const explicitCodeValue = trimmedString(fields?.code);
@@ -89,13 +135,21 @@ export function normalizeOntologyApiError(
   const fallbackMessage = safeStatusText ? `HTTP ${status} ${safeStatusText}` : `HTTP ${status}`;
   const message = messageCode || explicitCode || fallbackMessage;
   const details = plainRecord(fields?.details) as OntologyApiDetails | null;
-  return new OntologyApiError(message, status, code, details);
+  return new OntologyApiError(message, status, code, details, outcomeUnknown);
 }
 
 export function isOntologyRevisionConflict(error: unknown): error is OntologyApiError {
   return error instanceof OntologyApiError
     && error.status === 409
     && error.code === "ONTOLOGY_REVISION_CONFLICT";
+}
+
+function isUncertainMutationStatus(status: number): boolean {
+  return status === 0 || status >= 500 || (status >= 200 && status < 300);
+}
+
+function isOntologyApiOutcomeUnknown(error: unknown): error is OntologyApiError {
+  return error instanceof OntologyApiError && error.outcomeUnknown;
 }
 
 function draftDataSources(document: OntologyDocument) {
@@ -299,20 +353,27 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
         body: body === undefined ? undefined : JSON.stringify(body),
       });
     } catch {
-      throw new OntologyApiError(NETWORK_FAILURE_MESSAGE, 0, "HTTP_0", null);
+      throw new OntologyApiError(NETWORK_FAILURE_MESSAGE, 0, "HTTP_0", null, true);
     }
     let raw: string;
     try {
       raw = await response.text();
     } catch {
-      throw normalizeOntologyApiError(response.status, response.statusText, null);
+      throw normalizeOntologyApiError(
+        response.status,
+        response.statusText,
+        null,
+        isUncertainMutationStatus(response.status),
+      );
     }
     const envelope = parseEnvelope(raw);
     if (!response.ok || envelope?.success !== true) {
+      const outcomeUnknown = envelope?.success !== false && isUncertainMutationStatus(response.status);
       throw normalizeOntologyApiError(
         response.status,
         response.statusText,
         envelope,
+        outcomeUnknown,
       );
     }
     return envelope.data as T;
@@ -368,12 +429,23 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
         `proposal:apply:${workspaceId}:${proposalId}`,
         body,
         async () => {
-          await request<OntologyProposalRecord>(
-            `${MANAGEMENT_ROOT}/${workspaceId}/proposals/${proposalId}/apply`,
-            "POST",
-            body,
-          );
-          return request<OntologyDraftView>(`${MANAGEMENT_ROOT}/${workspaceId}/draft`);
+          try {
+            await request<OntologyProposalRecord>(
+              `${MANAGEMENT_ROOT}/${workspaceId}/proposals/${proposalId}/apply`,
+              "POST",
+              body,
+            );
+          } catch (error) {
+            if (isOntologyApiOutcomeUnknown(error)) {
+              throw new OntologyProposalApplyOutcomeUnknownError();
+            }
+            throw error;
+          }
+          try {
+            return await request<OntologyDraftView>(`${MANAGEMENT_ROOT}/${workspaceId}/draft`);
+          } catch {
+            throw new OntologyProposalAppliedReloadError();
+          }
         },
       );
     },
@@ -461,7 +533,16 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
       return revisionMutation(
         `workspace:publish:${workspaceId}`,
         body,
-        () => request<OntologyVersionSummary>(`${MANAGEMENT_ROOT}/${workspaceId}/publish`, "POST", body),
+        async () => {
+          try {
+            return await request<OntologyVersionSummary>(`${MANAGEMENT_ROOT}/${workspaceId}/publish`, "POST", body);
+          } catch (error) {
+            if (isOntologyApiOutcomeUnknown(error)) {
+              throw new OntologyPublishOutcomeUnknownError();
+            }
+            throw error;
+          }
+        },
       );
     },
     listVersions: (workspaceId) => request<OntologyVersionSummary[]>(`${MANAGEMENT_ROOT}/${workspaceId}/versions`),

@@ -1,13 +1,87 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAdminToken } from "../useAdminToken";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+} from "react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Bot,
+  Boxes,
+  Check,
+  Clipboard,
+  Code2,
+  History,
+  Link2,
+  PackageOpen,
+  Plus,
+  RefreshCw,
+  Save,
+  ShieldCheck,
+  Sparkles,
+  X,
+} from "lucide-react";
+import { useAdminNavigationGuard, useAdminToken } from "../useAdminToken";
 import {
   createOntologyApi,
+  isOntologyProposalApplyOutcomeUnknownError,
+  isOntologyProposalAppliedReloadError,
+  isOntologyPublishOutcomeUnknownError,
   isOntologyRevisionConflict,
   OntologyApiError,
 } from "../ontology/ontologyApi";
-import type { OntologyDraftView, OntologyWorkspaceView } from "../ontology/ontologyTypes";
+import OntologyCanvas from "../ontology/OntologyCanvas";
+import OntologyInspector from "../ontology/OntologyInspector";
+import OntologyMappingPanel from "../ontology/OntologyMappingPanel";
+import OntologyProposalPanel from "../ontology/OntologyProposalPanel";
+import {
+  createStableOntologyKey,
+  findOntologyVersionForDraftRevision,
+  hasUnvalidatedOntologyMappings,
+  isOntologyOperationContextCurrent,
+  selectOntologyItem,
+  shouldConfirmOntologyDraftDiscard,
+  type OntologySelection,
+} from "../ontology/ontologyModel";
+import type {
+  OntologyCatalogView,
+  OntologyCompilePreview,
+  OntologyDataSourceMutationInput,
+  OntologyDocument,
+  OntologyDraftView,
+  OntologyMappingInput,
+  OntologyMappingView,
+  OntologyProposalRecord,
+  OntologyProposalRequest,
+  OntologyReferencePackageSummary,
+  OntologySourceType,
+  OntologyValidationIssue,
+  OntologyVersionDetail,
+  OntologyVersionSummary,
+  OntologyWorkspaceView,
+} from "../ontology/ontologyTypes";
 
 type LoadStatus = "idle" | "loading" | "ready" | "error";
+type PageMode = "list" | "wizard" | "workspace";
+type WizardMode = "domain" | "source";
+type WorkspaceTab = "model" | "mapping" | "proposal" | "validation" | "versions" | "technical";
+type TechnicalTab = "schema" | "graphql" | "query";
+
+const WORKSPACE_TABS: Array<{ id: WorkspaceTab; label: string }> = [
+  { id: "model", label: "业务建模" },
+  { id: "mapping", label: "数据映射" },
+  { id: "proposal", label: "AI 提案" },
+  { id: "validation", label: "校验与发布" },
+  { id: "versions", label: "版本历史" },
+  { id: "technical", label: "技术预览" },
+];
+
+const ONTOLOGY_NAVIGATION_GUARD_MESSAGE = "当前本体草稿尚未安全落库。离开将丢失本地改动；如处于冲突状态，请先取消并复制本地草稿。确认离开吗？";
 
 function workspaceStatusLabel(status: OntologyWorkspaceView["status"]): string {
   if (status === "PUBLISHED") return "已发布";
@@ -30,25 +104,205 @@ function formatDateTime(value: string): string {
 }
 
 export function formatOntologyError(error: unknown): string {
-  if (isOntologyRevisionConflict(error)) return "草稿已被更新，请重新加载";
-  if (error instanceof OntologyApiError) {
-    return `${error.code}：${error.message}`;
+  if (isOntologyProposalApplyOutcomeUnknownError(error)) {
+    return "提案应用结果未知；请重新加载草稿核对，勿重复应用。";
   }
+  if (isOntologyProposalAppliedReloadError(error)) {
+    return "提案已应用，重新加载失败；请重新加载草稿，勿重复应用。";
+  }
+  if (isOntologyPublishOutcomeUnknownError(error)) {
+    return "发布结果未知；请重新加载并检查版本历史，勿重复发布。";
+  }
+  if (isOntologyRevisionConflict(error)) return "草稿已被更新，请重新加载";
+  if (error instanceof OntologyApiError) return `${error.code}：${error.message}`;
   return "业务本体服务暂时不可用，请稍后重试。";
+}
+
+function issueSeverityLabel(severity: OntologyValidationIssue["severity"]): string {
+  if (severity === "ERROR") return "错误";
+  if (severity === "WARNING") return "提醒";
+  return "信息";
+}
+
+function buildDomainInstruction(name: string, purpose: string, objects: string, questions: string): string {
+  return [
+    `业务领域：${name.trim()}`,
+    `用途：${purpose.trim()}`,
+    `核心业务对象：${objects.trim()}`,
+    `常见业务问题：${questions.trim()}`,
+  ].join("\n");
+}
+
+function applyRevision(draft: OntologyDraftView, revision: number): OntologyDraftView {
+  return {
+    ...draft,
+    draftRevision: revision,
+    workspace: { ...draft.workspace, draftRevision: revision },
+  };
 }
 
 export default function AdminOntologyPage() {
   const token = useAdminToken();
   const api = useMemo(() => createOntologyApi(token), [token]);
   const listRequestId = useRef(0);
+  const packageRequestId = useRef(0);
   const draftRequestId = useRef(0);
+  const activeWorkspaceIdRef = useRef<number | null>(null);
+  const busyRef = useRef<string | null>(null);
+  const busyOperationIdRef = useRef(0);
+  const contextEpochRef = useRef(0);
+  const previousTokenRef = useRef(token);
+  const draftRef = useRef<OntologyDraftView | null>(null);
+  const revisionLockedRef = useRef(false);
+  const pendingSaveRef = useRef<OntologyDocument | null>(null);
+  const saveLoopRef = useRef<Promise<void> | null>(null);
+  const publishTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const publishDialogRef = useRef<HTMLElement | null>(null);
+
+  const [pageMode, setPageMode] = useState<PageMode>("list");
   const [workspaces, setWorkspaces] = useState<OntologyWorkspaceView[]>([]);
   const [listStatus, setListStatus] = useState<LoadStatus>("idle");
   const [listError, setListError] = useState("");
+  const [packages, setPackages] = useState<OntologyReferencePackageSummary[]>([]);
+  const [packageStatus, setPackageStatus] = useState<LoadStatus>("idle");
+  const [packageError, setPackageError] = useState("");
+
   const [selectedWorkspace, setSelectedWorkspace] = useState<OntologyWorkspaceView | null>(null);
   const [draft, setDraft] = useState<OntologyDraftView | null>(null);
   const [draftStatus, setDraftStatus] = useState<LoadStatus>("idle");
   const [draftError, setDraftError] = useState("");
+  const [selection, setSelection] = useState<OntologySelection>(null);
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>("model");
+  const [dirty, setDirty] = useState(false);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
+  const [operationError, setOperationError] = useState("");
+  const [operationNotice, setOperationNotice] = useState("");
+  const [revisionLocked, setRevisionLocked] = useState(false);
+
+  const [catalog, setCatalog] = useState<OntologyCatalogView | null>(null);
+  const [mappings, setMappings] = useState<OntologyMappingView[]>([]);
+  const [mappingLoading, setMappingLoading] = useState(false);
+  const [mappingError, setMappingError] = useState("");
+
+  const [proposals, setProposals] = useState<OntologyProposalRecord[]>([]);
+  const [activeProposal, setActiveProposal] = useState<OntologyProposalRecord | null>(null);
+  const [proposalLoading, setProposalLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const [validationIssues, setValidationIssues] = useState<OntologyValidationIssue[]>([]);
+  const [validationChecked, setValidationChecked] = useState(false);
+  const [versions, setVersions] = useState<OntologyVersionSummary[]>([]);
+  const [versionDetail, setVersionDetail] = useState<OntologyVersionDetail | null>(null);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [compilePreview, setCompilePreview] = useState<OntologyCompilePreview | null>(null);
+  const [technicalLoading, setTechnicalLoading] = useState(false);
+  const [technicalTab, setTechnicalTab] = useState<TechnicalTab>("schema");
+  const [copiedLabel, setCopiedLabel] = useState("");
+  const [publishConfirmOpen, setPublishConfirmOpen] = useState(false);
+
+  const [wizardMode, setWizardMode] = useState<WizardMode>("domain");
+  const [domainName, setDomainName] = useState("");
+  const [domainPurpose, setDomainPurpose] = useState("");
+  const [domainObjects, setDomainObjects] = useState("");
+  const [domainQuestions, setDomainQuestions] = useState("");
+  const [wizardSourceName, setWizardSourceName] = useState("");
+  const [wizardSourceType, setWizardSourceType] = useState<OntologySourceType>("INLINE_SAMPLE");
+  const [wizardAdapterKey, setWizardAdapterKey] = useState("");
+  const [wizardSampleData, setWizardSampleData] = useState('{"projects":[{"name":"语义平台建设","status":"进行中"}]}');
+
+  useAdminNavigationGuard(
+    previousTokenRef.current === token && shouldConfirmOntologyDraftDiscard(dirty, revisionLocked),
+    ONTOLOGY_NAVIGATION_GUARD_MESSAGE,
+  );
+
+  const lockEditingForReload = useCallback(() => {
+    revisionLockedRef.current = true;
+    pendingSaveRef.current = null;
+    setRevisionLocked(true);
+  }, []);
+
+  const runBusy = useCallback(async (
+    label: string,
+    operation: () => Promise<void>,
+    onFailure?: (message: string) => void,
+  ) => {
+    if (busyRef.current) return;
+    const context = {
+      epoch: contextEpochRef.current,
+      operationId: ++busyOperationIdRef.current,
+    };
+    const isCurrent = () => isOntologyOperationContextCurrent(
+      context,
+      contextEpochRef.current,
+      busyOperationIdRef.current,
+    );
+    busyRef.current = label;
+    setBusyAction(label);
+    setOperationError("");
+    setOperationNotice("");
+    try {
+      await operation();
+    } catch (error) {
+      if (!isCurrent()) return;
+      const message = formatOntologyError(error);
+      if (
+        isOntologyRevisionConflict(error)
+        || isOntologyProposalApplyOutcomeUnknownError(error)
+        || isOntologyProposalAppliedReloadError(error)
+        || isOntologyPublishOutcomeUnknownError(error)
+      ) {
+        lockEditingForReload();
+      }
+      if (onFailure) onFailure(message);
+      else setOperationError(message);
+    } finally {
+      if (isCurrent()) {
+        busyRef.current = null;
+        setBusyAction(null);
+      }
+    }
+  }, [lockEditingForReload]);
+
+  const closePublishConfirm = useCallback(() => {
+    setPublishConfirmOpen(false);
+    window.setTimeout(() => publishTriggerRef.current?.focus(), 0);
+  }, []);
+
+  const openPublishConfirm = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    publishTriggerRef.current = event.currentTarget;
+    setPublishConfirmOpen(true);
+  };
+
+  useEffect(() => {
+    if (!publishConfirmOpen) return undefined;
+    const dialog = publishDialogRef.current;
+    const focusableSelector = "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])";
+    const initial = dialog?.querySelector<HTMLElement>("[data-dialog-initial-focus]")
+      ?? dialog?.querySelector<HTMLElement>(focusableSelector);
+    initial?.focus();
+
+    const handleDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !busyRef.current) {
+        event.preventDefault();
+        closePublishConfirm();
+        return;
+      }
+      if (event.key !== "Tab" || !dialog) return;
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleDialogKeyDown);
+    return () => document.removeEventListener("keydown", handleDialogKeyDown);
+  }, [closePublishConfirm, publishConfirmOpen]);
 
   const loadWorkspaces = useCallback(async () => {
     const requestId = ++listRequestId.current;
@@ -66,183 +320,1317 @@ export default function AdminOntologyPage() {
     }
   }, [api]);
 
+  const loadReferencePackages = useCallback(async () => {
+    const requestId = ++packageRequestId.current;
+    setPackageStatus("loading");
+    setPackageError("");
+    try {
+      const next = await api.listReferencePackages();
+      if (requestId !== packageRequestId.current) return;
+      setPackages(next);
+      setPackageStatus("ready");
+    } catch (error) {
+      if (requestId !== packageRequestId.current) return;
+      setPackageError(formatOntologyError(error));
+      setPackageStatus("error");
+    }
+  }, [api]);
+
+  const resetWorkspacePanels = useCallback(() => {
+    setCatalog(null);
+    setMappings([]);
+    setMappingError("");
+    setProposals([]);
+    setActiveProposal(null);
+    setAiError("");
+    setValidationIssues([]);
+    setValidationChecked(false);
+    setVersions([]);
+    setVersionDetail(null);
+    setCompilePreview(null);
+    setPublishConfirmOpen(false);
+    setOperationError("");
+    setOperationNotice("");
+    setDirty(false);
+    setRevisionLocked(false);
+    revisionLockedRef.current = false;
+    pendingSaveRef.current = null;
+  }, []);
+
+  const acceptDraft = useCallback((next: OntologyDraftView) => {
+    draftRef.current = next;
+    setDraft(next);
+    setSelectedWorkspace(next.workspace);
+    setWorkspaces((current) => current.map((item) => item.id === next.workspace.id ? next.workspace : item));
+    setDirty(false);
+    setRevisionLocked(false);
+    revisionLockedRef.current = false;
+  }, []);
+
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  useEffect(() => {
+    if (previousTokenRef.current === token) return;
+    previousTokenRef.current = token;
+    contextEpochRef.current += 1;
+    busyOperationIdRef.current += 1;
+    listRequestId.current += 1;
+    packageRequestId.current += 1;
+    draftRequestId.current += 1;
+    activeWorkspaceIdRef.current = null;
+    busyRef.current = null;
+    pendingSaveRef.current = null;
+    saveLoopRef.current = null;
+    setBusyAction(null);
+    setPageMode("list");
+    setWorkspaces([]);
+    setListStatus("idle");
+    setListError("");
+    setPackages([]);
+    setPackageStatus("idle");
+    setPackageError("");
+    setSelectedWorkspace(null);
+    draftRef.current = null;
+    setDraft(null);
+    setSelection(null);
+    setDraftStatus("idle");
+    setDraftError("");
+    resetWorkspacePanels();
+  }, [resetWorkspacePanels, token]);
+
+  useEffect(() => {
+    if (!shouldConfirmOntologyDraftDiscard(dirty, revisionLocked)) return undefined;
+    const protectLocalDraft = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", protectLocalDraft);
+    return () => window.removeEventListener("beforeunload", protectLocalDraft);
+  }, [dirty, revisionLocked]);
+
+  useEffect(() => {
+    void loadWorkspaces();
+    void loadReferencePackages();
+  }, [loadReferencePackages, loadWorkspaces]);
+
   const openWorkspace = useCallback(async (workspace: OntologyWorkspaceView) => {
     const requestId = ++draftRequestId.current;
+    activeWorkspaceIdRef.current = workspace.id;
+    setPageMode("workspace");
     setSelectedWorkspace(workspace);
     setDraft(null);
     setDraftStatus("loading");
     setDraftError("");
+    setActiveTab("model");
+    resetWorkspacePanels();
     try {
       const next = await api.getDraft(workspace.id);
-      if (requestId !== draftRequestId.current) return;
-      setDraft(next);
-      setSelectedWorkspace(next.workspace);
+      if (requestId !== draftRequestId.current || activeWorkspaceIdRef.current !== workspace.id) return;
+      acceptDraft(next);
+      setSelection(next.document.concepts[0] ? { kind: "concept", key: next.document.concepts[0].key } : null);
       setDraftStatus("ready");
     } catch (error) {
       if (requestId !== draftRequestId.current) return;
       setDraftError(formatOntologyError(error));
       setDraftStatus("error");
     }
-  }, [api]);
-
-  useEffect(() => {
-    void loadWorkspaces();
-  }, [loadWorkspaces]);
+  }, [acceptDraft, api, resetWorkspacePanels]);
 
   const closeWorkspace = () => {
+    if (shouldConfirmOntologyDraftDiscard(dirty, revisionLocked) && !window.confirm(
+      "当前草稿包含未保存或冲突中的本地修改。离开将丢弃这些修改；可先复制本地草稿。仍要继续吗？",
+    )) return;
     draftRequestId.current += 1;
+    activeWorkspaceIdRef.current = null;
     setSelectedWorkspace(null);
+    draftRef.current = null;
     setDraft(null);
+    setSelection(null);
     setDraftStatus("idle");
-    setDraftError("");
+    setPageMode("list");
+    resetWorkspacePanels();
+    void loadWorkspaces();
   };
 
-  if (selectedWorkspace) {
+  const reloadCurrentDraft = async () => {
+    if (!selectedWorkspace) return;
+    if (shouldConfirmOntologyDraftDiscard(dirty, revisionLocked) && !window.confirm(
+      "重新加载会丢弃本地未保存修改。建议先复制本地草稿。仍要重新加载吗？",
+    )) return;
+    await openWorkspace(selectedWorkspace);
+  };
+
+  const loadMappings = useCallback(async () => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (!workspaceId) return;
+    setMappingLoading(true);
+    setMappingError("");
+    try {
+      const [nextCatalog, nextMappings] = await Promise.all([
+        api.getCatalog(workspaceId),
+        api.listMappings(workspaceId),
+      ]);
+      if (activeWorkspaceIdRef.current !== workspaceId) return;
+      setCatalog(nextCatalog);
+      setMappings(nextMappings);
+    } catch (error) {
+      if (activeWorkspaceIdRef.current !== workspaceId) return;
+      setMappingError(formatOntologyError(error));
+    } finally {
+      if (activeWorkspaceIdRef.current === workspaceId) setMappingLoading(false);
+    }
+  }, [api]);
+
+  const loadProposals = useCallback(async () => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (!workspaceId) return;
+    setProposalLoading(true);
+    try {
+      const next = await api.listProposals(workspaceId);
+      if (activeWorkspaceIdRef.current !== workspaceId) return;
+      setProposals(next);
+      setActiveProposal((current) => next.find((proposal) => proposal.id === current?.id) ?? next[0] ?? null);
+    } catch (error) {
+      if (activeWorkspaceIdRef.current === workspaceId) setAiError(formatOntologyError(error));
+    } finally {
+      if (activeWorkspaceIdRef.current === workspaceId) setProposalLoading(false);
+    }
+  }, [api]);
+
+  const loadVersions = useCallback(async () => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (!workspaceId) return;
+    setVersionsLoading(true);
+    try {
+      const next = await api.listVersions(workspaceId);
+      if (activeWorkspaceIdRef.current !== workspaceId) return;
+      setVersions(next);
+      if (next[0]) {
+        const detail = await api.getVersion(workspaceId, next[0].version);
+        if (activeWorkspaceIdRef.current === workspaceId) setVersionDetail(detail);
+      } else {
+        setVersionDetail(null);
+      }
+    } catch (error) {
+      if (activeWorkspaceIdRef.current === workspaceId) setOperationError(formatOntologyError(error));
+    } finally {
+      if (activeWorkspaceIdRef.current === workspaceId) setVersionsLoading(false);
+    }
+  }, [api]);
+
+  const loadCompilePreview = useCallback(async () => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    if (!workspaceId) return;
+    setTechnicalLoading(true);
+    try {
+      const next = await api.compilePreview(workspaceId);
+      if (activeWorkspaceIdRef.current === workspaceId) setCompilePreview(next);
+    } catch (error) {
+      if (activeWorkspaceIdRef.current === workspaceId) setOperationError(formatOntologyError(error));
+    } finally {
+      if (activeWorkspaceIdRef.current === workspaceId) setTechnicalLoading(false);
+    }
+  }, [api]);
+
+  const switchWorkspaceTab = (tab: WorkspaceTab) => {
+    setActiveTab(tab);
+    setOperationError("");
+    setOperationNotice("");
+    if (tab === "mapping") void loadMappings();
+    if (tab === "proposal") {
+      void loadProposals();
+      if (!catalog) void loadMappings();
+    }
+    if (tab === "versions") void loadVersions();
+    if (tab === "technical" && !compilePreview) void loadCompilePreview();
+  };
+
+  const handleWorkspaceTabKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+    index: number,
+  ) => {
+    let nextIndex = index;
+    if (event.key === "ArrowRight") nextIndex = (index + 1) % WORKSPACE_TABS.length;
+    else if (event.key === "ArrowLeft") nextIndex = (index - 1 + WORKSPACE_TABS.length) % WORKSPACE_TABS.length;
+    else if (event.key === "Home") nextIndex = 0;
+    else if (event.key === "End") nextIndex = WORKSPACE_TABS.length - 1;
+    else return;
+    event.preventDefault();
+    const nextTab = WORKSPACE_TABS[nextIndex];
+    const tabs = event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>("[role='tab']");
+    tabs?.[nextIndex]?.focus();
+    switchWorkspaceTab(nextTab.id);
+  };
+
+  const changeDocument = (next: OntologyDocument) => {
+    const current = draftRef.current;
+    if (!current || revisionLockedRef.current || busyRef.current) return;
+    const nextDraft = { ...current, document: next };
+    draftRef.current = nextDraft;
+    setDraft(nextDraft);
+    setDirty(true);
+    setValidationChecked(false);
+    setOperationNotice("");
+  };
+
+  const saveDocument = async (next: OntologyDocument) => {
+    if (revisionLockedRef.current) return;
+    pendingSaveRef.current = next;
+    if (saveLoopRef.current) return saveLoopRef.current;
+    if (busyRef.current) return;
+
+    const epoch = contextEpochRef.current;
+    busyRef.current = "保存草稿";
+    setBusyAction("保存草稿");
+    setOperationError("");
+    setOperationNotice("");
+
+    const operation = (async () => {
+      try {
+        while (pendingSaveRef.current && !revisionLockedRef.current) {
+          const candidate = pendingSaveRef.current;
+          pendingSaveRef.current = null;
+          const current = draftRef.current;
+          const workspaceId = activeWorkspaceIdRef.current;
+          if (!current || !workspaceId || contextEpochRef.current !== epoch) return;
+          const saved = await api.saveDraft(workspaceId, current.draftRevision, candidate);
+          if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+          acceptDraft(saved);
+          setOperationNotice("草稿已保存");
+        }
+      } catch (error) {
+        if (contextEpochRef.current !== epoch) return;
+        if (isOntologyRevisionConflict(error)) lockEditingForReload();
+        setOperationError(formatOntologyError(error));
+      } finally {
+        if (contextEpochRef.current === epoch && busyRef.current === "保存草稿") {
+          busyRef.current = null;
+          setBusyAction(null);
+        }
+      }
+    })();
+    const tracked = operation.finally(() => {
+      if (saveLoopRef.current === tracked) saveLoopRef.current = null;
+    });
+    saveLoopRef.current = tracked;
+    return tracked;
+  };
+
+  const addConcept = () => {
+    if (!draft) return;
+    const concepts = draft.document.concepts;
+    const key = createStableOntologyKey("concept", concepts.map((concept) => concept.key));
+    const index = concepts.length;
+    const next: OntologyDocument = {
+      ...draft.document,
+      concepts: [...concepts, {
+        key,
+        name: `新业务对象 ${index + 1}`,
+        pluralName: null,
+        description: null,
+        conceptType: "ENTITY",
+        displayPropertyKey: "name",
+        positionX: 48 + (index % 3) * 240,
+        positionY: 56 + Math.floor(index / 3) * 152,
+        queryable: true,
+        enabled: true,
+        properties: [{
+          key: "name",
+          name: "名称",
+          description: null,
+          dataType: "TEXT",
+          required: true,
+          multiple: false,
+          sensitive: false,
+          queryable: true,
+          enumValues: [],
+        }],
+      }],
+    };
+    changeDocument(next);
+    setSelection(selectOntologyItem(selection, { kind: "concept", key }));
+  };
+
+  const addRelation = () => {
+    if (!draft) return;
+    if (draft.document.concepts.length < 2) {
+      setOperationError("至少需要两个业务对象才能添加关系。");
+      return;
+    }
+    const key = createStableOntologyKey("relation", draft.document.relations.map((relation) => relation.key));
+    const [source, target] = draft.document.concepts;
+    const next: OntologyDocument = {
+      ...draft.document,
+      relations: [...draft.document.relations, {
+        key,
+        name: "新业务关系",
+        description: null,
+        sourceConceptKey: source.key,
+        targetConceptKey: target.key,
+        cardinality: "ONE_TO_MANY",
+        forwardLabel: "关联",
+        reverseLabel: "属于",
+        queryable: true,
+        enabled: true,
+      }],
+    };
+    changeDocument(next);
+    setSelection(selectOntologyItem(selection, { kind: "relation", key }));
+  };
+
+  const addMetric = () => {
+    if (!draft?.document.concepts[0]) {
+      setOperationError("先添加业务对象，再定义业务指标。");
+      return;
+    }
+    const key = createStableOntologyKey("metric", draft.document.metrics.map((metric) => metric.key));
+    const next: OntologyDocument = {
+      ...draft.document,
+      metrics: [...draft.document.metrics, {
+        key,
+        name: "新业务指标",
+        conceptKey: draft.document.concepts[0].key,
+        aggregation: "COUNT",
+        measurePropertyKey: null,
+        groupByPropertyKeys: [],
+        timePropertyKey: null,
+        filters: [],
+      }],
+    };
+    changeDocument(next);
+    setSelection(selectOntologyItem(selection, { kind: "metric", key }));
+  };
+
+  const addAction = () => {
+    if (!draft?.document.concepts[0]) {
+      setOperationError("先添加业务对象，再定义可执行动作。");
+      return;
+    }
+    const key = createStableOntologyKey("action", draft.document.actions.map((action) => action.key));
+    const next: OntologyDocument = {
+      ...draft.document,
+      actions: [...draft.document.actions, {
+        key,
+        name: "新业务动作",
+        conceptKey: draft.document.concepts[0].key,
+        description: "V1 仅生成动作契约，不执行外部写入。",
+        parameters: [],
+      }],
+    };
+    changeDocument(next);
+    setSelection(selectOntologyItem(selection, { kind: "action", key }));
+  };
+
+  const deleteSelection = (target: NonNullable<OntologySelection>) => {
+    if (!draft) return;
+    const document = draft.document;
+    let next = document;
+    if (target.kind === "concept") {
+      next = {
+        ...document,
+        concepts: document.concepts.filter((concept) => concept.key !== target.key),
+        relations: document.relations.filter((relation) => relation.sourceConceptKey !== target.key && relation.targetConceptKey !== target.key),
+        metrics: document.metrics.filter((metric) => metric.conceptKey !== target.key),
+        actions: document.actions.filter((action) => action.conceptKey !== target.key),
+        mappings: document.mappings.filter((mapping) => mapping.targetKey !== target.key && !mapping.targetKey.startsWith(`${target.key}.`)),
+      };
+    }
+    if (target.kind === "relation") next = {
+      ...document,
+      relations: document.relations.filter((relation) => relation.key !== target.key),
+      mappings: document.mappings.filter((mapping) => mapping.targetKey !== target.key),
+    };
+    if (target.kind === "metric") next = {
+      ...document,
+      metrics: document.metrics.filter((metric) => metric.key !== target.key),
+      mappings: document.mappings.filter((mapping) => mapping.targetKey !== target.key),
+    };
+    if (target.kind === "action") next = {
+      ...document,
+      actions: document.actions.filter((action) => action.key !== target.key),
+      mappings: document.mappings.filter((mapping) => mapping.targetKey !== target.key),
+    };
+    changeDocument(next);
+    setSelection(null);
+  };
+
+  const runValidation = async () => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!workspaceId || revisionLockedRef.current || dirty) return;
+    await runBusy("校验草稿", async () => {
+      const [issues, latestMappings] = await Promise.all([
+        api.validateDraft(workspaceId),
+        api.listMappings(workspaceId),
+      ]);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      setValidationIssues(issues);
+      setMappings(latestMappings);
+      setValidationChecked(true);
+      setActiveTab("validation");
+      const errorCount = issues.filter((issue) => issue.severity === "ERROR").length;
+      setOperationNotice(errorCount === 0 ? "校验完成，可以进入人工发布确认。" : `校验发现 ${errorCount} 个错误。`);
+    });
+  };
+
+  const createSource = async (input: OntologyDataSourceMutationInput) => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!current || !workspaceId || revisionLockedRef.current) return;
+    await runBusy("创建数据来源", async () => {
+      const next = await api.createDataSource(workspaceId, current.draftRevision, input);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      acceptDraft(next);
+      setValidationChecked(false);
+      await loadMappings();
+    }, setMappingError);
+  };
+
+  const discoverObjects = async (sourceId: number) => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!current || !workspaceId || revisionLockedRef.current) return;
+    await runBusy("发现数据对象", async () => {
+      await api.discoverObjects(workspaceId, sourceId, current.draftRevision);
+      const [nextDraft, nextCatalog, nextMappings] = await Promise.all([
+        api.getDraft(workspaceId),
+        api.getCatalog(workspaceId),
+        api.listMappings(workspaceId),
+      ]);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      acceptDraft(nextDraft);
+      setCatalog(nextCatalog);
+      setMappings(nextMappings);
+      setValidationChecked(false);
+    }, setMappingError);
+  };
+
+  const discoverFields = async (sourceId: number, objectKey: string) => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!current || !workspaceId || revisionLockedRef.current) return;
+    await runBusy("发现数据字段", async () => {
+      await api.discoverFields(workspaceId, sourceId, objectKey, current.draftRevision);
+      const [nextDraft, nextCatalog, nextMappings] = await Promise.all([
+        api.getDraft(workspaceId),
+        api.getCatalog(workspaceId),
+        api.listMappings(workspaceId),
+      ]);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      acceptDraft(nextDraft);
+      setCatalog(nextCatalog);
+      setMappings(nextMappings);
+      setValidationChecked(false);
+    }, setMappingError);
+  };
+
+  const saveMappings = async (nextMappings: OntologyMappingInput[]) => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!current || !workspaceId || revisionLockedRef.current) return;
+    await runBusy("保存映射", async () => {
+      const next = await api.replaceMappings(workspaceId, current.draftRevision, nextMappings);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      acceptDraft(next);
+      const latestMappings = await api.listMappings(workspaceId);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      setMappings(latestMappings);
+      setValidationChecked(false);
+    }, setMappingError);
+  };
+
+  const validateMappings = async (nextMappings: OntologyMappingInput[]) => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!current || !workspaceId || revisionLockedRef.current) return;
+    await runBusy("验证映射", async () => {
+      const result = await api.validateMappings(workspaceId, current.draftRevision, nextMappings.map((mapping) => ({
+        targetType: mapping.targetType,
+        targetKey: mapping.targetKey,
+        dataSourceId: mapping.dataSourceId,
+      })));
+      const [nextDraft, latestMappings] = await Promise.all([
+        api.getDraft(workspaceId),
+        api.listMappings(workspaceId),
+      ]);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      acceptDraft(nextDraft);
+      setMappings(latestMappings);
+      setValidationChecked(false);
+      const invalidCount = result.results.filter((item) => !item.valid).length;
+      setOperationNotice(invalidCount === 0 ? "映射已全部验证。" : `${invalidCount} 条映射需要调整。`);
+    }, setMappingError);
+  };
+
+  const generateProposal = async (request: OntologyProposalRequest) => {
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!workspaceId || revisionLockedRef.current) return;
+    if (dirty) {
+      setAiError("请先保存当前业务定义，再生成基于最新草稿的 AI 提案。");
+      return;
+    }
+    setAiError("");
+    await runBusy("生成 AI 提案", async () => {
+      const proposal = await api.createProposal(workspaceId, request);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      setProposals((current) => [proposal, ...current.filter((item) => item.id !== proposal.id)]);
+      setActiveProposal(proposal);
+      if (proposal.status === "FAILED") {
+        setAiError(`${proposal.diagnosticCode || "AI_PROPOSAL_INVALID"}：${proposal.diagnosticMessage || "提案未通过校验"}`);
+      }
+    }, setAiError);
+  };
+
+  const applyAiProposal = async (proposalId: number) => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    const proposal = proposals.find((item) => item.id === proposalId);
+    if (!current || !workspaceId || !proposal || revisionLockedRef.current) return;
+    if (dirty) {
+      setAiError("请先保存当前业务定义，再应用 AI 提案。");
+      return;
+    }
+    if (!proposal.diff || proposal.diff.baseRevision !== current.draftRevision) {
+      setAiError("这条提案基于较早的草稿修订，请刷新提案后重新生成，不能直接应用。");
+      return;
+    }
+    await runBusy("应用 AI 提案", async () => {
+      let next: OntologyDraftView;
+      let reconciledProposal: OntologyProposalRecord | null = null;
+      try {
+        next = await api.applyProposal(workspaceId, proposalId, current.draftRevision);
+      } catch (error) {
+        if (!isOntologyProposalApplyOutcomeUnknownError(error) && !isOntologyProposalAppliedReloadError(error)) {
+          throw error;
+        }
+        try {
+          const [proposalState, reloadedDraft] = await Promise.all([
+            api.getProposal(workspaceId, proposalId),
+            api.getDraft(workspaceId),
+          ]);
+          if (proposalState.status !== "APPLIED") throw error;
+          reconciledProposal = proposalState;
+          next = reloadedDraft;
+        } catch {
+          throw error;
+        }
+      }
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      acceptDraft(next);
+      setValidationChecked(false);
+      setAiError("");
+      if (reconciledProposal) {
+        setProposals((items) => [reconciledProposal, ...items.filter((item) => item.id !== proposalId)]);
+        setActiveProposal(reconciledProposal);
+        setOperationNotice("提案应用状态已核对，最新草稿已重新加载；线上版本未改变。");
+      } else {
+        setOperationNotice("提案已应用到草稿，线上版本未改变。");
+        await loadProposals();
+      }
+    }, setAiError);
+  };
+
+  const publishDraft = async () => {
+    const current = draftRef.current;
+    const workspaceId = activeWorkspaceIdRef.current;
+    const epoch = contextEpochRef.current;
+    if (!current || !workspaceId || revisionLockedRef.current) return;
+    await runBusy("发布本体", async () => {
+      const baselineVersions = await api.listVersions(workspaceId);
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      const baselineVersionNumbers = new Set(baselineVersions.map((version) => version.version));
+      const alreadyPublished = findOntologyVersionForDraftRevision(
+        baselineVersions,
+        current.draftRevision,
+      );
+      if (alreadyPublished) {
+        setVersions(baselineVersions);
+        closePublishConfirm();
+        try {
+          const next = await api.getDraft(workspaceId);
+          if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+          acceptDraft(next);
+          setOperationNotice(`当前草稿修订已发布为版本 ${alreadyPublished.version}，未重复创建版本。`);
+        } catch {
+          lockEditingForReload();
+          setOperationError(`版本 ${alreadyPublished.version} 已存在，但重新加载失败；请重新加载工作区。`);
+        }
+        return;
+      }
+      let latestVersions = baselineVersions;
+      let published: OntologyVersionSummary;
+      let reconciledFromHistory = false;
+      try {
+        published = await api.publish(workspaceId, current.draftRevision);
+      } catch (error) {
+        if (!isOntologyPublishOutcomeUnknownError(error)) throw error;
+        try {
+          latestVersions = await api.listVersions(workspaceId);
+          const reconciled = findOntologyVersionForDraftRevision(
+            latestVersions,
+            current.draftRevision,
+            baselineVersionNumbers,
+          );
+          if (!reconciled) throw error;
+          published = reconciled;
+          reconciledFromHistory = true;
+        } catch {
+          throw error;
+        }
+      }
+      if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+      setVersions(reconciledFromHistory
+        ? latestVersions
+        : [published, ...baselineVersions.filter((item) => item.version !== published.version)]);
+      closePublishConfirm();
+      try {
+        const next = await api.getDraft(workspaceId);
+        if (contextEpochRef.current !== epoch || activeWorkspaceIdRef.current !== workspaceId) return;
+        acceptDraft(next);
+        setOperationNotice(reconciledFromHistory
+          ? `版本 ${published.version} 已通过版本历史核对并重新加载。`
+          : `版本 ${published.version} 已由当前用户人工发布。`);
+      } catch {
+        lockEditingForReload();
+        setOperationError(`版本 ${published.version} 已发布，但重新加载失败；请重新加载工作区。`);
+      }
+    }, (message) => {
+      closePublishConfirm();
+      setOperationError(message);
+    });
+  };
+
+  const installPackage = async (packageId: string) => {
+    const epoch = contextEpochRef.current;
+    await runBusy("安装参考包", async () => {
+      const workspace = await api.installReferencePackage(packageId);
+      if (contextEpochRef.current !== epoch) return;
+      setWorkspaces((current) => [workspace, ...current.filter((item) => item.id !== workspace.id)]);
+      await openWorkspace(workspace);
+    });
+  };
+
+  const submitWizard = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!domainName.trim() || !domainPurpose.trim() || !domainObjects.trim() || !domainQuestions.trim()) return;
+    const key = createStableOntologyKey(domainName, workspaces.map((workspace) => workspace.key), "business-domain");
+    const epoch = contextEpochRef.current;
+    await runBusy("创建业务本体", async () => {
+      const workspace = await api.createWorkspace({ key, name: domainName.trim(), description: domainPurpose.trim() });
+      if (contextEpochRef.current !== epoch) return;
+      let nextDraft = await api.getDraft(workspace.id);
+      if (contextEpochRef.current !== epoch) return;
+      let sourceSelection: OntologyProposalRequest["selectedSources"] = [];
+      let wizardAiError = "";
+
+      if (wizardMode === "source" && wizardSourceName.trim()) {
+        const sourceInput: OntologyDataSourceMutationInput = {
+          id: null,
+          key: createStableOntologyKey(wizardSourceName, [], "data-source"),
+          name: wizardSourceName.trim(),
+          type: wizardSourceType,
+          configJson: wizardSourceType === "CONNECTOR" && wizardAdapterKey.trim()
+            ? JSON.stringify({ adapterKey: wizardAdapterKey.trim() })
+            : null,
+          sampleDataJson: wizardSourceType === "INLINE_SAMPLE" ? wizardSampleData : null,
+        };
+        nextDraft = await api.createDataSource(workspace.id, nextDraft.draftRevision, sourceInput);
+        const source = nextDraft.sources.at(-1);
+        if (source) {
+          const objects = await api.discoverObjects(workspace.id, source.id, nextDraft.draftRevision);
+          nextDraft = applyRevision(nextDraft, objects.revision);
+          const firstObject = objects.items[0];
+          if (firstObject) {
+            const fields = await api.discoverFields(workspace.id, source.id, firstObject.key, nextDraft.draftRevision);
+            nextDraft = applyRevision(nextDraft, fields.revision);
+            sourceSelection = [{ dataSourceId: source.id, objectKey: firstObject.key, fieldKeys: fields.items.map((field) => field.key) }];
+          }
+        }
+      }
+
+      let proposal: OntologyProposalRecord | null = null;
+      try {
+        proposal = await api.createProposal(workspace.id, {
+          instruction: buildDomainInstruction(domainName, domainPurpose, domainObjects, domainQuestions),
+          mode: wizardMode === "source" ? "DATA_SOURCE_FIRST" : "DOMAIN_FIRST",
+          selectedSources: sourceSelection,
+        });
+      } catch (error) {
+        wizardAiError = formatOntologyError(error);
+      }
+
+      const currentDraft = await api.getDraft(workspace.id);
+      if (contextEpochRef.current !== epoch) return;
+      activeWorkspaceIdRef.current = workspace.id;
+      acceptDraft(currentDraft);
+      setDraftStatus("ready");
+      setPageMode("workspace");
+      setActiveTab(proposal ? "proposal" : "model");
+      setSelection(currentDraft.document.concepts[0] ? { kind: "concept", key: currentDraft.document.concepts[0].key } : null);
+      setAiError(wizardAiError);
+      if (proposal) {
+        setProposals([proposal]);
+        setActiveProposal(proposal);
+      }
+      setWorkspaces((current) => [currentDraft.workspace, ...current.filter((item) => item.id !== workspace.id)]);
+      setOperationNotice(proposal ? "AI 已生成一条待审阅提案，草稿尚未改变。" : "工作区已创建，可继续手工建模。");
+    });
+  };
+
+  const showWizard = () => {
+    setPageMode("wizard");
+    setOperationError("");
+    setOperationNotice("");
+  };
+
+  const hasUnvalidatedMappings = hasUnvalidatedOntologyMappings(draft?.document.mappings ?? [], mappings);
+  const validationHasErrors = validationIssues.some((issue) => issue.severity === "ERROR");
+  const canPublish = Boolean(
+    draft
+    && !dirty
+    && validationChecked
+    && !validationHasErrors
+    && !hasUnvalidatedMappings
+    && draft.document.concepts.length > 0
+    && draft.status !== "ARCHIVED"
+    && !revisionLocked
+    && !busyAction,
+  );
+  const nextVersion = (draft?.publishedVersion ?? 0) + 1;
+  const publishConfirmation = `发布版本 ${nextVersion}；当前线上版本不会被 AI 自动替换`;
+
+  const copyTechnical = async (text: string, label: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedLabel(label);
+      window.setTimeout(() => setCopiedLabel(""), 1800);
+    } catch {
+      setOperationError("复制失败，请手工选择内容复制。");
+    }
+  };
+
+  const copyLocalDraft = async () => {
+    const current = draftRef.current;
+    if (!current) return;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify({
+        workspaceKey: current.workspace.key,
+        draftRevision: current.draftRevision,
+        copiedAt: new Date().toISOString(),
+        document: current.document,
+      }, null, 2));
+      setCopiedLabel("local-draft");
+      setOperationNotice("本地草稿已复制，可在重新加载后用于人工比对。");
+      window.setTimeout(() => setCopiedLabel(""), 1800);
+    } catch {
+      setOperationError("本地草稿复制失败，请暂勿离开并联系管理员。");
+    }
+  };
+
+  if (pageMode === "wizard") {
     return (
-      <div className="admin-page" aria-busy={draftStatus === "loading"}>
-        <header className="chat-header">
-          <h1>{selectedWorkspace.name}</h1>
-          <p className="subtle">
-            业务本体工作区 · 草稿修订 {draft?.draftRevision ?? selectedWorkspace.draftRevision}
-            {selectedWorkspace.publishedVersion == null ? " · 尚未发布" : ` · 线上版本 ${selectedWorkspace.publishedVersion}`}
-          </p>
+      <div className="admin-page ontology-page ontology-page--wizard" aria-busy={Boolean(busyAction)}>
+        <header className="ontology-page-header">
+          <div>
+            <button type="button" className="ontology-back-action" disabled={Boolean(busyAction)} onClick={() => setPageMode("list")}>
+              <ArrowLeft size={15} aria-hidden /> 返回业务本体
+            </button>
+            <h1>创建业务本体</h1>
+            <p>先描述业务领域，AI 只生成待审阅提案；模型不可用时仍可继续手工建模。</p>
+          </div>
         </header>
 
-        <div className="row">
-          <button type="button" className="cici-btn cici-btn--ghost" onClick={closeWorkspace}>
-            返回本体列表
-          </button>
-          <button
-            type="button"
-            className="cici-btn cici-btn--ghost"
-            disabled={draftStatus === "loading"}
-            onClick={() => void openWorkspace(selectedWorkspace)}
-          >
-            重新载入
-          </button>
-        </div>
+        {operationError && <div className="ontology-inline-alert" role="alert">{operationError}</div>}
 
-        {draftStatus === "loading" && <p className="subtle" role="status">正在载入业务对象与数据来源...</p>}
-        {draftStatus === "error" && (
-          <div role="alert">
-            <p>{draftError}</p>
-            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void openWorkspace(selectedWorkspace)}>
-              重试
+        <div className="ontology-wizard">
+          <div className="ontology-tabs" role="tablist" aria-label="创建方式">
+            <button type="button" role="tab" aria-selected={wizardMode === "domain"} className={wizardMode === "domain" ? "is-active" : ""} onClick={() => setWizardMode("domain")}>先描述业务领域</button>
+            <button type="button" role="tab" aria-selected={wizardMode === "source"} className={wizardMode === "source" ? "is-active" : ""} onClick={() => setWizardMode("source")}>从数据源发现</button>
+          </div>
+          <form onSubmit={submitWizard}>
+            <div className="ontology-wizard__intro">
+              <span>第 1 步</span>
+              <h2>{wizardMode === "domain" ? "告诉我们业务人员如何理解这个领域" : "先连接数据，再补充业务含义"}</h2>
+              <p>{wizardMode === "domain" ? "这些回答会成为 AI 提案的业务约束，不会直接发布。" : "数据源发现是次级入口，最终仍会生成同样的业务本体草稿。"}</p>
+            </div>
+            <div className="ontology-wizard__form-grid">
+              <label>
+                <span>领域名称</span>
+                <input value={domainName} disabled={Boolean(busyAction)} placeholder="例如：项目交付" onChange={(event) => setDomainName(event.target.value)} />
+              </label>
+              <label>
+                <span>这个领域用来做什么？</span>
+                <input value={domainPurpose} disabled={Boolean(busyAction)} placeholder="例如：统一项目、任务和负责人语义" onChange={(event) => setDomainPurpose(event.target.value)} />
+              </label>
+              <label className="ontology-wizard__full">
+                <span>核心业务对象</span>
+                <textarea rows={3} value={domainObjects} disabled={Boolean(busyAction)} placeholder="例如：项目、交付任务、负责人、里程碑" onChange={(event) => setDomainObjects(event.target.value)} />
+              </label>
+              <label className="ontology-wizard__full">
+                <span>业务人员经常会问什么？</span>
+                <textarea rows={3} value={domainQuestions} disabled={Boolean(busyAction)} placeholder="例如：哪些任务延期？每个项目当前由谁负责？" onChange={(event) => setDomainQuestions(event.target.value)} />
+              </label>
+            </div>
+
+            {wizardMode === "source" && (
+              <div className="ontology-wizard__source-step">
+                <div className="ontology-subsection-heading">
+                  <Link2 size={16} aria-hidden />
+                  <div><strong>数据来源</strong><span>连接配置只通过专用数据源请求保存</span></div>
+                </div>
+                <div className="ontology-wizard__form-grid">
+                  <label>
+                    <span>来源名称</span>
+                    <input value={wizardSourceName} disabled={Boolean(busyAction)} placeholder="例如：项目交付示例数据" onChange={(event) => setWizardSourceName(event.target.value)} />
+                  </label>
+                  <label>
+                    <span>来源方式</span>
+                    <select value={wizardSourceType} disabled={Boolean(busyAction)} onChange={(event) => setWizardSourceType(event.target.value as OntologySourceType)}>
+                      <option value="INLINE_SAMPLE">内置示例数据</option>
+                      <option value="CONNECTOR">组织连接器</option>
+                    </select>
+                  </label>
+                  {wizardSourceType === "CONNECTOR" ? (
+                    <label className="ontology-wizard__full">
+                      <span>连接器标识</span>
+                      <input value={wizardAdapterKey} disabled={Boolean(busyAction)} placeholder="已配置的连接器标识" onChange={(event) => setWizardAdapterKey(event.target.value)} />
+                    </label>
+                  ) : (
+                    <label className="ontology-wizard__full">
+                      <span>示例记录（JSON）</span>
+                      <textarea rows={5} value={wizardSampleData} disabled={Boolean(busyAction)} spellCheck={false} onChange={(event) => setWizardSampleData(event.target.value)} />
+                    </label>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="ontology-wizard__actions">
+              <span>AI 不可用也会保留新工作区，业务对象可手工添加。</span>
+              <button
+                type="submit"
+                className="cici-btn cici-btn--primary"
+                disabled={Boolean(busyAction) || !domainName.trim() || !domainPurpose.trim() || !domainObjects.trim() || !domainQuestions.trim() || (wizardMode === "source" && !wizardSourceName.trim())}
+              >
+                <Sparkles size={15} aria-hidden /> {busyAction || "创建并生成提案"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageMode === "workspace" && selectedWorkspace) {
+    const busy = Boolean(busyAction);
+    const editingLocked = busy || revisionLocked;
+    const proposalGenerateDisabledReason = revisionLocked
+      ? "草稿修订已变化，请先重新加载。"
+      : dirty
+        ? "请先保存当前业务定义，再生成基于最新草稿的提案。"
+        : "";
+    const proposalApplyDisabledReason = revisionLocked
+      ? "草稿修订已变化，请先重新加载。"
+      : dirty
+        ? "请先保存当前业务定义，再应用提案。"
+        : activeProposal?.diff && draft && activeProposal.diff.baseRevision !== draft.draftRevision
+          ? `提案基于修订 ${activeProposal.diff.baseRevision}，当前草稿为修订 ${draft.draftRevision}；请重新生成提案。`
+          : "";
+    const technicalContent = technicalTab === "schema"
+      ? compilePreview?.jsonSchema ?? ""
+      : technicalTab === "graphql"
+        ? compilePreview?.graphqlSdl ?? ""
+        : compilePreview?.queryContractJson ?? "";
+    const technicalLabel = technicalTab === "schema" ? "JSON Schema" : technicalTab === "graphql" ? "GraphQL SDL" : "semantic-query 示例";
+
+    return (
+      <div className="admin-page ontology-page ontology-page--workspace" aria-busy={busy || draftStatus === "loading"}>
+        <header className="ontology-workspace-header">
+          <div className="ontology-workspace-header__title">
+            <button type="button" className="ontology-back-action" disabled={busy} onClick={closeWorkspace}>
+              <ArrowLeft size={15} aria-hidden /> 本体列表
+            </button>
+            <div>
+              <h1>{selectedWorkspace.name}</h1>
+              <p>
+                草稿修订 {draft?.draftRevision ?? selectedWorkspace.draftRevision}
+                {selectedWorkspace.publishedVersion == null ? " · 尚未发布" : ` · 线上版本 ${selectedWorkspace.publishedVersion}`}
+                {dirty ? " · 有未保存修改" : " · 已保存"}
+              </p>
+            </div>
+          </div>
+          <div className="ontology-workspace-header__actions" aria-label="草稿操作">
+            <button type="button" className="ontology-text-action" disabled={busy || draftStatus !== "ready"} onClick={() => void reloadCurrentDraft()}>
+              <RefreshCw size={14} aria-hidden /> 重新加载
+            </button>
+            <button type="button" className="cici-btn cici-btn--ghost" disabled={editingLocked || !draft || !dirty} onClick={() => draft && void saveDocument(draft.document)}>
+              <Save size={15} aria-hidden /> 保存草稿
+            </button>
+            <button type="button" className="cici-btn cici-btn--ghost" disabled={editingLocked || !draft || dirty} onClick={() => void runValidation()}>
+              <ShieldCheck size={15} aria-hidden /> 运行校验
+            </button>
+            <button type="button" className="cici-btn cici-btn--primary" disabled={!canPublish} onClick={openPublishConfirm}>
+              发布版本 {nextVersion}
             </button>
           </div>
+        </header>
+
+        <div className="ontology-workspace-status" aria-live="polite">
+          {busyAction && <span className="is-busy">{busyAction}...</span>}
+          {revisionLocked && (
+            <span className="is-error" role="alert">
+              <AlertTriangle size={14} aria-hidden />
+              编辑已锁定，请先复制本地草稿，再重新加载核对。
+              <button type="button" className="ontology-text-action" onClick={() => void copyLocalDraft()}>
+                <Clipboard size={13} aria-hidden /> {copiedLabel === "local-draft" ? "已复制" : "复制本地草稿"}
+              </button>
+            </span>
+          )}
+          {operationNotice && <span className="is-success"><Check size={14} aria-hidden /> {operationNotice}</span>}
+          {operationError && <span className="is-error" role="alert"><AlertTriangle size={14} aria-hidden /> {operationError}</span>}
+        </div>
+
+        <div className="ontology-tabs ontology-workspace-tabs" role="tablist" aria-label="本体工作区">
+          {WORKSPACE_TABS.map((tab, index) => (
+            <button
+              key={tab.id}
+              type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
+              tabIndex={activeTab === tab.id ? 0 : -1}
+              className={activeTab === tab.id ? "is-active" : ""}
+              onClick={() => switchWorkspaceTab(tab.id)}
+              onKeyDown={(event) => handleWorkspaceTabKeyDown(event, index)}
+            >
+              {tab.label}
+              {tab.id === "validation" && validationChecked && validationHasErrors && <span aria-label="存在校验错误">!</span>}
+            </button>
+          ))}
+        </div>
+
+        {draftStatus === "loading" && (
+          <div className="ontology-workspace-loading" role="status">
+            <span />
+            <span />
+            <span />
+          </div>
         )}
-        {draftStatus === "ready" && draft && (
-          <section className="list-box" aria-labelledby="ontology-workspace-summary">
-            <h2 id="ontology-workspace-summary">业务对象概览</h2>
-            <p className="subtle">
-              {draft.document.concepts.length} 个业务对象，{draft.document.relations.length} 条关系，
-              {draft.document.metrics.length} 个业务指标，{draft.sources.length} 个数据来源。
-            </p>
-            {draft.document.concepts.length === 0 ? (
-              <p className="subtle">草稿中还没有业务对象，可以在建模工作台中从领域描述开始补充。</p>
-            ) : (
-              <div className="cici-doc-table-wrap">
-                <table className="cici-doc-table" aria-label="业务对象概览">
-                  <thead>
-                    <tr>
-                      <th>业务对象</th>
-                      <th>类型</th>
-                      <th>业务属性</th>
-                      <th>查询状态</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {draft.document.concepts.map((concept) => (
-                      <tr key={concept.key}>
-                        <td>{concept.name}</td>
-                        <td>{concept.conceptType === "EVENT" ? "业务事件" : "业务实体"}</td>
-                        <td>{concept.properties.length}</td>
-                        <td>{concept.enabled && concept.queryable ? "可查询" : "未开放"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        {draftStatus === "error" && (
+          <div className="ontology-workspace-error" role="alert">
+            <AlertTriangle size={22} aria-hidden />
+            <strong>工作区载入失败</strong>
+            <p>{draftError}</p>
+            <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void reloadCurrentDraft()}>重试</button>
+          </div>
+        )}
+
+        {draftStatus === "ready" && draft && activeTab === "model" && (
+          <div className="ontology-modeling-workbench">
+            <aside className="ontology-catalog" aria-label="业务定义目录">
+              <div className="ontology-panel-heading">
+                <div><span>业务目录</span><strong>{draft.document.concepts.length + draft.document.relations.length + draft.document.metrics.length + draft.document.actions.length} 项定义</strong></div>
+              </div>
+              <div className="ontology-catalog__actions">
+                <button type="button" className="cici-btn cici-btn--primary" disabled={editingLocked} onClick={addConcept}><Plus size={15} aria-hidden /> 添加业务对象</button>
+                <button type="button" className="cici-btn cici-btn--ghost" disabled={editingLocked || draft.document.concepts.length < 2} onClick={addRelation}><Link2 size={15} aria-hidden /> 添加关系</button>
+              </div>
+              <section className="ontology-catalog__group">
+                <div><h2>业务对象</h2><button type="button" className="ontology-icon-action" aria-label="添加业务对象" disabled={editingLocked} onClick={addConcept}><Plus size={14} aria-hidden /></button></div>
+                {draft.document.concepts.length === 0 && <p>还没有业务对象</p>}
+                {draft.document.concepts.map((concept) => (
+                  <button key={concept.key} type="button" className={selection?.kind === "concept" && selection.key === concept.key ? "is-selected" : ""} onClick={() => setSelection(selectOntologyItem(selection, { kind: "concept", key: concept.key }))}>
+                    <span>{concept.name}</span><small>{concept.properties.length} 个属性</small>
+                  </button>
+                ))}
+              </section>
+              <section className="ontology-catalog__group">
+                <div><h2>关系</h2><button type="button" className="ontology-icon-action" aria-label="添加关系" disabled={editingLocked || draft.document.concepts.length < 2} onClick={addRelation}><Plus size={14} aria-hidden /></button></div>
+                {draft.document.relations.map((relation) => (
+                  <button key={relation.key} type="button" className={selection?.kind === "relation" && selection.key === relation.key ? "is-selected" : ""} onClick={() => setSelection(selectOntologyItem(selection, { kind: "relation", key: relation.key }))}>
+                    <span>{relation.name}</span><small>{relation.forwardLabel || "未设置读法"}</small>
+                  </button>
+                ))}
+              </section>
+              <section className="ontology-catalog__group">
+                <div><h2>业务指标</h2><button type="button" className="ontology-icon-action" aria-label="添加业务指标" disabled={editingLocked} onClick={addMetric}><Plus size={14} aria-hidden /></button></div>
+                {draft.document.metrics.map((metric) => (
+                  <button key={metric.key} type="button" className={selection?.kind === "metric" && selection.key === metric.key ? "is-selected" : ""} onClick={() => setSelection(selectOntologyItem(selection, { kind: "metric", key: metric.key }))}>
+                    <span>{metric.name}</span><small>{metric.aggregation}</small>
+                  </button>
+                ))}
+              </section>
+              <section className="ontology-catalog__group">
+                <div><h2>可执行动作</h2><button type="button" className="ontology-icon-action" aria-label="添加可执行动作" disabled={editingLocked} onClick={addAction}><Plus size={14} aria-hidden /></button></div>
+                {draft.document.actions.map((action) => (
+                  <button key={action.key} type="button" className={selection?.kind === "action" && selection.key === action.key ? "is-selected" : ""} onClick={() => setSelection(selectOntologyItem(selection, { kind: "action", key: action.key }))}>
+                    <span>{action.name}</span><small>只生成契约</small>
+                  </button>
+                ))}
+              </section>
+            </aside>
+            <OntologyCanvas
+              document={draft.document}
+              selection={selection}
+              busy={editingLocked}
+              onSelect={(next) => setSelection(selectOntologyItem(selection, next))}
+              onChange={changeDocument}
+              onCommit={saveDocument}
+            />
+            <OntologyInspector
+              document={draft.document}
+              selection={selection}
+              busy={editingLocked}
+              onChange={changeDocument}
+              onSave={saveDocument}
+              onDelete={deleteSelection}
+            />
+          </div>
+        )}
+
+        {draftStatus === "ready" && draft && activeTab === "mapping" && (
+          <OntologyMappingPanel
+            document={draft.document}
+            sources={draft.sources}
+            catalog={catalog}
+            mappings={mappings}
+            loading={mappingLoading}
+            busy={editingLocked}
+            error={mappingError}
+            onReload={loadMappings}
+            onCreateSource={createSource}
+            onDiscoverObjects={discoverObjects}
+            onDiscoverFields={discoverFields}
+            onSaveMappings={saveMappings}
+            onValidateMappings={validateMappings}
+          />
+        )}
+
+        {draftStatus === "ready" && draft && activeTab === "proposal" && (
+          <OntologyProposalPanel
+            sources={draft.sources}
+            catalog={catalog}
+            proposals={proposals}
+            activeProposal={activeProposal}
+            loading={proposalLoading}
+            busy={busy}
+            locked={revisionLocked}
+            error={aiError}
+            generateDisabledReason={proposalGenerateDisabledReason}
+            applyDisabledReason={proposalApplyDisabledReason}
+            onReload={loadProposals}
+            onSelect={setActiveProposal}
+            onGenerate={generateProposal}
+            onApply={applyAiProposal}
+            onContinueManually={() => { setAiError(""); setActiveTab("model"); }}
+          />
+        )}
+
+        {draftStatus === "ready" && draft && activeTab === "validation" && (
+          <section className="ontology-validation" aria-label="校验与发布">
+            <header className="ontology-section-header">
+              <div>
+                <span>发布前检查</span>
+                <h2>校验草稿和数据映射</h2>
+                <p>存在错误或未验证映射时，人工发布入口保持禁用。</p>
+              </div>
+              <button type="button" className="cici-btn cici-btn--primary" disabled={editingLocked || dirty} onClick={() => void runValidation()}>
+                <ShieldCheck size={15} aria-hidden /> {validationChecked ? "重新校验" : "运行校验"}
+              </button>
+            </header>
+            {!validationChecked && (
+              <div className="ontology-validation__empty" role="status">
+                <ShieldCheck size={22} aria-hidden />
+                <strong>尚未运行本次修订校验</strong>
+                <span>先保存草稿，再检查对象、关系、指标与映射。</span>
+              </div>
+            )}
+            {validationChecked && validationIssues.length === 0 && (
+              <div className="ontology-validation__success" role="status"><Check size={18} aria-hidden /><strong>没有发现校验问题</strong><span>发布仍需要人工确认。</span></div>
+            )}
+            {validationChecked && validationIssues.length > 0 && (
+              <div className="ontology-issue-list">
+                <div className="ontology-issue-list__head"><span>级别</span><span>定位路径</span><span>问题说明</span></div>
+                {validationIssues.map((issue, index) => (
+                  <div className={`ontology-issue-row is-${issue.severity.toLowerCase()}`} key={`${issue.code}-${issue.path}-${index}`}>
+                    <span>{issueSeverityLabel(issue.severity)}</span>
+                    <code>{issue.path}</code>
+                    <p><strong>{issue.code}</strong>{issue.message}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <footer className="ontology-validation__publish">
+              <div>
+                <strong>{publishConfirmation}</strong>
+                <span>{hasUnvalidatedMappings ? "仍有映射未验证。" : validationHasErrors ? "请先修复错误。" : dirty ? "请先保存草稿。" : validationChecked ? "所有发布门已检查。" : "需要先运行校验。"}</span>
+              </div>
+              <button type="button" className="cici-btn cici-btn--primary" disabled={!canPublish} onClick={openPublishConfirm}>进入人工确认</button>
+            </footer>
+          </section>
+        )}
+
+        {draftStatus === "ready" && activeTab === "versions" && (
+          <section className="ontology-versions" aria-label="版本历史">
+            <header className="ontology-section-header">
+              <div><span>不可变版本</span><h2>版本历史</h2><p>查看版本号、内容哈希、发布人和发布时间。</p></div>
+              <button type="button" className="ontology-text-action" disabled={versionsLoading} onClick={() => void loadVersions()}><RefreshCw size={14} aria-hidden /> 刷新</button>
+            </header>
+            {versionsLoading && <div className="ontology-panel-loading" role="status"><span /><span /><span /></div>}
+            {!versionsLoading && versions.length === 0 && <div className="ontology-versions__empty" role="status"><History size={22} aria-hidden /><strong>还没有已发布版本</strong><span>完成校验并人工发布后，这里会保留不可变历史。</span></div>}
+            {!versionsLoading && versions.length > 0 && (
+              <div className="ontology-versions__layout">
+                <nav aria-label="本体版本">
+                  {versions.map((version) => (
+                    <button
+                      type="button"
+                      key={version.version}
+                      className={versionDetail?.summary.version === version.version ? "is-selected" : ""}
+                      onClick={() => void (async () => {
+                        if (!selectedWorkspace) return;
+                        setVersionsLoading(true);
+                        try { setVersionDetail(await api.getVersion(selectedWorkspace.id, version.version)); }
+                        catch (error) { setOperationError(formatOntologyError(error)); }
+                        finally { setVersionsLoading(false); }
+                      })()}
+                    >
+                      <strong>版本 {version.version}</strong>
+                      <span>{formatDateTime(version.publishedAt)}</span>
+                    </button>
+                  ))}
+                </nav>
+                {versionDetail && (
+                  <div className="ontology-version-detail">
+                    <div><span>版本号</span><strong>{versionDetail.summary.version}</strong></div>
+                    <div><span>内容哈希</span><code>{versionDetail.summary.contentHash}</code></div>
+                    <div><span>发布人</span><strong>{versionDetail.summary.publishedBy}</strong></div>
+                    <div><span>发布时间</span><strong>{formatDateTime(versionDetail.summary.publishedAt)}</strong></div>
+                    <div><span>来源草稿修订</span><strong>{versionDetail.summary.sourceDraftRevision}</strong></div>
+                  </div>
+                )}
               </div>
             )}
           </section>
+        )}
+
+        {draftStatus === "ready" && activeTab === "technical" && (
+          <section className="ontology-technical" aria-label="技术预览">
+            <header className="ontology-section-header">
+              <div><span>只读契约</span><h2>技术预览</h2><p>业务建模不要求阅读这些内容，技术团队可在这里复制确定性契约。</p></div>
+              <button type="button" className="ontology-text-action" disabled={technicalLoading} onClick={() => void loadCompilePreview()}><RefreshCw size={14} aria-hidden /> 重新生成</button>
+            </header>
+            <div className="ontology-tabs ontology-technical__tabs" role="tablist" aria-label="契约类型">
+              <button type="button" role="tab" aria-selected={technicalTab === "schema"} className={technicalTab === "schema" ? "is-active" : ""} onClick={() => setTechnicalTab("schema")}>JSON Schema</button>
+              <button type="button" role="tab" aria-selected={technicalTab === "graphql"} className={technicalTab === "graphql" ? "is-active" : ""} onClick={() => setTechnicalTab("graphql")}>GraphQL SDL</button>
+              <button type="button" role="tab" aria-selected={technicalTab === "query"} className={technicalTab === "query" ? "is-active" : ""} onClick={() => setTechnicalTab("query")}>semantic-query 示例</button>
+            </div>
+            {technicalLoading && <div className="ontology-panel-loading" role="status"><span /><span /><span /></div>}
+            {!technicalLoading && !compilePreview && <div className="ontology-technical__empty" role="status"><Code2 size={22} aria-hidden /><strong>暂未生成技术预览</strong><span>选择“重新生成”，不会修改草稿或发布版本。</span></div>}
+            {!technicalLoading && compilePreview && (
+              <div className="ontology-code-preview">
+                <div><span>{technicalLabel} · 版本候选 {compilePreview.version} · {compilePreview.contentHash.slice(0, 12)}</span><button type="button" className="ontology-text-action" onClick={() => void copyTechnical(technicalContent, technicalLabel)}><Clipboard size={14} aria-hidden /> {copiedLabel === technicalLabel ? "已复制" : "复制"}</button></div>
+                <pre tabIndex={0} aria-label={`${technicalLabel}只读内容`}><code>{technicalContent}</code></pre>
+              </div>
+            )}
+          </section>
+        )}
+
+        {publishConfirmOpen && (
+          <div className="ontology-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !busy) closePublishConfirm(); }}>
+            <section ref={publishDialogRef} className="ontology-modal" role="dialog" aria-modal="true" aria-labelledby="ontology-publish-dialog-title" aria-describedby="ontology-publish-dialog-description">
+              <header>
+                <div><span>人工发布确认</span><h2 id="ontology-publish-dialog-title">确认不可变版本</h2></div>
+                <button type="button" className="ontology-icon-action" aria-label="关闭发布确认" disabled={busy} onClick={closePublishConfirm}><X size={16} aria-hidden /></button>
+              </header>
+              <div className="ontology-modal__body">
+                <AlertTriangle size={22} aria-hidden />
+                <strong>{publishConfirmation}</strong>
+                <p id="ontology-publish-dialog-description">AI 无权执行此操作。确认后，当前草稿将生成新的不可变线上快照。</p>
+              </div>
+              <footer>
+                <button type="button" className="cici-btn cici-btn--ghost" disabled={busy} onClick={closePublishConfirm}>取消</button>
+                <button type="button" className="cici-btn cici-btn--primary" data-dialog-initial-focus disabled={busy || revisionLocked} onClick={() => void publishDraft()}>{busy ? "正在发布" : "确认人工发布"}</button>
+              </footer>
+            </section>
+          </div>
         )}
       </div>
     );
   }
 
   return (
-    <div className="admin-page" aria-busy={listStatus === "loading"}>
-      <header className="chat-header">
-        <h1>业务本体</h1>
-        <p className="subtle">用统一业务语言组织对象、关系、指标与数据来源。</p>
+    <div className="admin-page ontology-page ontology-page--list" aria-busy={listStatus === "loading" || Boolean(busyAction)}>
+      <header className="ontology-page-header ontology-page-header--list">
+        <div>
+          <span>企业业务语义</span>
+          <h1>业务本体</h1>
+          <p>用统一业务语言组织对象、关系、指标与数据来源，再由人工发布不可变版本。</p>
+        </div>
+        <div>
+          <button type="button" className="ontology-text-action" disabled={listStatus === "loading" || Boolean(busyAction)} onClick={() => void loadWorkspaces()}><RefreshCw size={14} aria-hidden /> 刷新</button>
+          <button type="button" className="cici-btn cici-btn--primary" disabled={Boolean(busyAction)} onClick={showWizard}><Plus size={15} aria-hidden /> 创建业务本体</button>
+        </div>
       </header>
 
-      <div className="row">
-        <button
-          type="button"
-          className="cici-btn cici-btn--ghost"
-          disabled={listStatus === "loading"}
-          onClick={() => void loadWorkspaces()}
-        >
-          刷新列表
-        </button>
-      </div>
+      {operationError && <div className="ontology-inline-alert" role="alert">{operationError}</div>}
+      {busyAction && <div className="ontology-inline-status" role="status">{busyAction}...</div>}
 
-      {listStatus === "loading" && <p className="subtle" role="status">正在加载业务本体...</p>}
-      {listStatus === "error" && (
-        <div role="alert">
-          <p>{listError}</p>
-          <button type="button" className="cici-btn cici-btn--ghost" onClick={() => void loadWorkspaces()}>
-            重试
-          </button>
-        </div>
-      )}
-      {listStatus === "ready" && workspaces.length === 0 && (
-        <div className="list-box" role="status">
-          <h2>还没有业务本体</h2>
-          <p className="subtle">从业务领域描述或已接入的数据来源开始，AI 会生成可审阅的建模草稿。</p>
-        </div>
-      )}
-      {listStatus === "ready" && workspaces.length > 0 && (
-        <div className="cici-doc-table-wrap">
-          <table className="cici-doc-table" aria-label="业务本体列表">
-            <thead>
-              <tr>
-                <th>名称</th>
-                <th>状态</th>
-                <th>草稿修订</th>
-                <th>线上版本</th>
-                <th>最近更新</th>
-                <th className="cici-doc-table__th--actions">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workspaces.map((workspace) => (
-                <tr key={workspace.id}>
-                  <td>
-                    <strong>{workspace.name}</strong>
-                    {workspace.description && <div className="subtle">{workspace.description}</div>}
-                  </td>
-                  <td>{workspaceStatusLabel(workspace.status)}</td>
-                  <td>{workspace.draftRevision}</td>
-                  <td>{workspace.publishedVersion ?? "-"}</td>
-                  <td className="cici-doc-table__time">{formatDateTime(workspace.updatedAt)}</td>
-                  <td className="cici-doc-table__actions">
-                    <button
-                      type="button"
-                      className="cici-btn cici-btn--ghost"
-                      onClick={() => void openWorkspace(workspace)}
-                      aria-label={`进入${workspace.name}工作台`}
-                    >
-                      进入工作台
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <section className="ontology-list-section" aria-labelledby="ontology-list-heading">
+        <div className="ontology-list-section__head"><div><h2 id="ontology-list-heading">本体工作区</h2><span>{workspaces.length} 个业务领域</span></div></div>
+        {listStatus === "loading" && <div className="ontology-list-skeleton" role="status" aria-label="正在加载业务本体"><span /><span /><span /></div>}
+        {listStatus === "error" && (
+          <div className="ontology-list-error" role="alert"><AlertTriangle size={20} aria-hidden /><div><strong>业务本体加载失败</strong><p>{listError}</p><button type="button" className="ontology-text-action" onClick={() => void loadWorkspaces()}>重试</button></div></div>
+        )}
+        {listStatus === "ready" && workspaces.length === 0 && (
+          <div className="ontology-list-empty" role="status"><Boxes size={24} aria-hidden /><div><strong>还没有业务本体</strong><p>从业务领域描述开始，AI 会生成可审阅提案；也可以完全手工建模。</p><button type="button" className="cici-btn cici-btn--primary" onClick={showWizard}>创建第一个业务本体</button></div></div>
+        )}
+        {listStatus === "ready" && workspaces.length > 0 && (
+          <div className="ontology-list-table-wrap">
+            <table className="ontology-list-table">
+              <thead><tr><th>业务领域</th><th>状态</th><th>草稿修订</th><th>线上版本</th><th>最近更新</th><th aria-label="操作" /></tr></thead>
+              <tbody>
+                {workspaces.map((workspace) => (
+                  <tr key={workspace.id}>
+                    <td><strong>{workspace.name}</strong><span>{workspace.description || "暂无说明"}</span></td>
+                    <td><span className={`ontology-workspace-state is-${workspace.status.toLowerCase()}`}>{workspaceStatusLabel(workspace.status)}</span></td>
+                    <td>{workspace.draftRevision}</td>
+                    <td>{workspace.publishedVersion ?? "尚未发布"}</td>
+                    <td>{formatDateTime(workspace.updatedAt)}</td>
+                    <td><button type="button" className="ontology-text-action" disabled={Boolean(busyAction)} onClick={() => void openWorkspace(workspace)}>进入工作台</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section className="ontology-package-section" aria-labelledby="ontology-package-heading">
+        <div className="ontology-list-section__head"><div><h2 id="ontology-package-heading">参考业务包</h2><span>安装后仍是可编辑草稿</span></div></div>
+        {packageStatus === "loading" && <div className="ontology-package-skeleton" role="status"><span /><span /></div>}
+        {packageStatus === "error" && <div className="ontology-list-error" role="alert"><AlertTriangle size={18} aria-hidden /><div><strong>参考包加载失败</strong><p>{packageError}</p><button type="button" className="ontology-text-action" onClick={() => void loadReferencePackages()}>重试</button></div></div>}
+        {packageStatus === "ready" && packages.length === 0 && <p className="ontology-inline-empty">当前没有可安装的参考业务包。</p>}
+        {packageStatus === "ready" && packages.map((item) => (
+          <div className="ontology-package-row" key={item.id}>
+            <PackageOpen size={18} aria-hidden />
+            <div><strong>{item.title}</strong><p>{item.description}</p><span>{item.conceptCount} 个业务对象 · {item.dataSourceCount} 个数据来源</span></div>
+            <button type="button" className="cici-btn cici-btn--ghost" disabled={Boolean(busyAction)} onClick={() => void installPackage(item.id)}>安装参考包</button>
+          </div>
+        ))}
+      </section>
+
+      <aside className="ontology-list-assurance" aria-label="发布与 AI 权限说明">
+        <Bot size={17} aria-hidden />
+        <span><strong>AI 只参与草稿提案</strong>，校验、发布和线上版本替换始终由有权限的业务人员确认。</span>
+      </aside>
     </div>
   );
 }

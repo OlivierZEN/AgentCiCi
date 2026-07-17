@@ -434,7 +434,7 @@ export interface OntologyQueryResult {
     mappings: Array<{
       logicalField: string;
       physicalObject: string;
-      physicalField: string;
+      physicalField: string | null;
       usage: string;
     }>;
     totalCount: number;

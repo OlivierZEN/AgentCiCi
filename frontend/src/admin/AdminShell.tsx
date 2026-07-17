@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
 import type { AdminOutletContext } from "./useAdminToken";
+import {
+  confirmAdminNavigation,
+  shouldGuardAdminNavigationClick,
+  type AdminNavigationGuard,
+} from "./adminNavigationGuard";
 import { applyProductTheme } from "../theme/theme";
 
 type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
@@ -55,8 +60,26 @@ export default function AdminShell() {
   const [me, setMe] = useState<MePayload>({});
   const [organizationName, setOrganizationName] = useState(auth?.orgName || auth?.orgId || "");
   const [collapsedNavGroups, setCollapsedNavGroups] = useState<string[]>([]);
+  const [navigationGuard, setNavigationGuard] = useState<AdminNavigationGuard | null>(null);
+  const navigationGuardIdRef = useRef(0);
+  const guardScope = `${auth?.orgId ?? ""}:${token}`;
+  const previousGuardScopeRef = useRef(guardScope);
 
-  const ctx = useMemo<AdminOutletContext>(() => ({ token }), [token]);
+  const registerNavigationGuard = useCallback((message: string) => {
+    const id = ++navigationGuardIdRef.current;
+    setNavigationGuard({ id, message });
+    return () => {
+      setNavigationGuard((current) => current?.id === id ? null : current);
+    };
+  }, []);
+
+  const ctx = useMemo<AdminOutletContext>(() => ({ token, registerNavigationGuard }), [registerNavigationGuard, token]);
+
+  useEffect(() => {
+    if (previousGuardScopeRef.current === guardScope) return;
+    previousGuardScopeRef.current = guardScope;
+    setNavigationGuard(null);
+  }, [guardScope]);
 
   useAuthStorageSync<AuthPayload>(LS_ADMIN_TOKEN, (payload) => {
     setAuth(payload);
@@ -136,9 +159,17 @@ export default function AdminShell() {
   }, [auth]);
 
   const logout = () => {
+    if (!confirmAdminNavigation(navigationGuard, (message) => window.confirm(message))) return;
     clearAuthPayload(LS_ADMIN_TOKEN);
     setAuth(null);
     nav("/admin/login", { replace: true });
+  };
+
+  const guardNavigation = (targetPathname: string, event: ReactMouseEvent<HTMLAnchorElement>) => {
+    if (!shouldGuardAdminNavigationClick(event, location.pathname, targetPathname)) return;
+    if (confirmAdminNavigation(navigationGuard, (message) => window.confirm(message))) return;
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   const toggleNavGroup = (label: string) => {
@@ -200,7 +231,12 @@ export default function AdminShell() {
                   </button>
                   <div id={groupChildrenId} className="admin-nav-group__children" hidden={groupCollapsed}>
                     {item.children.map((child) => (
-                      <NavLink key={child.to} to={child.to} className={({ isActive }) => `admin-nav-link--child${isActive ? " active" : ""}`}>
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={({ isActive }) => `admin-nav-link--child${isActive ? " active" : ""}`}
+                        onClick={(event) => guardNavigation(child.to, event)}
+                      >
                         <span>{child.label}</span>
                       </NavLink>
                     ))}
@@ -209,7 +245,12 @@ export default function AdminShell() {
               );
             }
             return (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "active" : "")}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? "active" : "")}
+                onClick={(event) => guardNavigation(item.to, event)}
+              >
                 <span>{item.label}</span>
               </NavLink>
             );

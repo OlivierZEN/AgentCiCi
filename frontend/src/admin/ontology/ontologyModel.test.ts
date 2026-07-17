@@ -2,8 +2,11 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createOntologyApi,
   isOntologyRevisionConflict,
+  OntologyProposalApplyOutcomeUnknownError,
+  isOntologyProposalAppliedReloadError,
   normalizeOntologyApiError,
   OntologyApiError,
+  OntologyPublishOutcomeUnknownError,
   toDraftSaveRequest,
 } from "./ontologyApi";
 import {
@@ -11,10 +14,15 @@ import {
   connectConcepts,
   createStableOntologyKey,
   createOntologyMutationLane,
+  findOntologyVersionForDraftRevision,
+  hasUnvalidatedOntologyMappings,
+  isOntologyOperationContextCurrent,
   moveConcept,
   moveConceptByKeyboard,
   previewProposal,
   relationLine,
+  removeConceptProperty,
+  shouldConfirmOntologyDraftDiscard,
   selectOntologyItem,
 } from "./ontologyModel";
 import { formatOntologyError } from "../pages/AdminOntologyPage";
@@ -304,6 +312,106 @@ describe("ontology immutable model", () => {
     const failed = { ...proposal(), status: "FAILED" as const };
     expect(() => applyProposal(projectDeliveryDraft(), failed)).toThrow("AI_PROPOSAL_INVALID");
   });
+
+  it("removes every metric, filter and mapping reference with a concept property", () => {
+    const previous = projectDeliveryDraft();
+    const task = previous.concepts.find((concept) => concept.key === "task");
+    if (!task) throw new Error("task fixture is required");
+    task.displayPropertyKey = "status";
+    task.properties.push({
+      key: "status",
+      name: "任务状态",
+      description: null,
+      dataType: "ENUM",
+      required: false,
+      multiple: false,
+      sensitive: false,
+      queryable: true,
+      enumValues: ["待开始", "进行中", "已完成"],
+    });
+    previous.metrics.push({
+      key: "task-count",
+      name: "任务数量",
+      conceptKey: "task",
+      aggregation: "COUNT",
+      measurePropertyKey: "status",
+      groupByPropertyKeys: ["status", "name"],
+      timePropertyKey: "status",
+      filters: [
+        { property: "status", operator: "EQ", value: "进行中" },
+        { property: "name", operator: "CONTAINS", value: "交付" },
+      ],
+    });
+    previous.mappings.push({
+      targetType: "PROPERTY",
+      targetKey: "task.status",
+      dataSourceId: 17,
+      physicalObjectKey: "tasks",
+      physicalFieldKey: "status",
+      relationTargetFieldKey: null,
+      transform: null,
+      confidence: 1,
+    });
+
+    const next = removeConceptProperty(previous, "task", "status");
+
+    expect(next.concepts.find((concept) => concept.key === "task")).toMatchObject({
+      displayPropertyKey: null,
+      properties: [{ key: "name" }],
+    });
+    expect(next.metrics[0]).toMatchObject({
+      measurePropertyKey: null,
+      groupByPropertyKeys: ["name"],
+      timePropertyKey: null,
+      filters: [{ property: "name" }],
+    });
+    expect(next.mappings.some((mapping) => mapping.targetKey === "task.status")).toBe(false);
+    expect(previous.concepts.find((concept) => concept.key === "task")?.properties).toHaveLength(2);
+  });
+
+  it("uses authoritative mapping views after draft saves strip validation metadata", () => {
+    const draftMapping = projectDeliveryDraft().mappings[0];
+    const mappingWithoutServerFields = {
+      ...draftMapping,
+      source: undefined,
+      validationStatus: undefined,
+    };
+    const validView: OntologyMappingView = {
+      ...draftMapping,
+      id: 301,
+      source: "MANUAL",
+      validationStatus: "VALID",
+      lastValidatedAt: "2026-07-17T01:00:00Z",
+    };
+
+    expect(hasUnvalidatedOntologyMappings([mappingWithoutServerFields], [validView])).toBe(false);
+    expect(hasUnvalidatedOntologyMappings([mappingWithoutServerFields], [])).toBe(true);
+    expect(hasUnvalidatedOntologyMappings([mappingWithoutServerFields], [{
+      ...validView,
+      validationStatus: "STALE",
+    }])).toBe(true);
+  });
+
+  it("rejects stale operation completions and protects local drafts before discard", () => {
+    expect(isOntologyOperationContextCurrent({ epoch: 3, operationId: 8 }, 3, 8)).toBe(true);
+    expect(isOntologyOperationContextCurrent({ epoch: 3, operationId: 8 }, 4, 8)).toBe(false);
+    expect(isOntologyOperationContextCurrent({ epoch: 3, operationId: 8 }, 3, 9)).toBe(false);
+    expect(shouldConfirmOntologyDraftDiscard(false, false)).toBe(false);
+    expect(shouldConfirmOntologyDraftDiscard(true, false)).toBe(true);
+    expect(shouldConfirmOntologyDraftDiscard(false, true)).toBe(true);
+  });
+
+  it("finds only the newest version created for a draft revision after a baseline", () => {
+    const versions = [
+      { version: 3, sourceDraftRevision: 4, contentHash: "v3", publishedBy: "u", publishedAt: "2026-07-17T03:00:00Z" },
+      { version: 2, sourceDraftRevision: 5, contentHash: "v2", publishedBy: "u", publishedAt: "2026-07-17T02:00:00Z" },
+      { version: 1, sourceDraftRevision: 4, contentHash: "v1", publishedBy: "u", publishedAt: "2026-07-17T01:00:00Z" },
+    ];
+
+    expect(findOntologyVersionForDraftRevision(versions, 4)?.version).toBe(3);
+    expect(findOntologyVersionForDraftRevision(versions, 4, new Set([1, 2]))?.version).toBe(3);
+    expect(findOntologyVersionForDraftRevision(versions, 4, new Set([1, 3]))).toBeUndefined();
+  });
 });
 
 describe("ontology draft transport", () => {
@@ -495,6 +603,75 @@ describe("ontology draft transport", () => {
     });
   });
 
+  it("distinguishes an applied proposal when the mandatory draft reload fails", async () => {
+    const fetchStub = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).endsWith("/apply")) {
+        return jsonResponse({ ...proposal(), status: "APPLIED" });
+      }
+      return new Response(JSON.stringify({
+        success: false,
+        data: null,
+        message: "draft reload unavailable",
+        code: "HTTP_503",
+      }), { status: 503, statusText: "Service Unavailable" });
+    });
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    const error = await api.applyProposal(7, 31, 4).catch((cause: unknown) => cause);
+
+    expect(isOntologyProposalAppliedReloadError(error)).toBe(true);
+    expect(fetchStub).toHaveBeenCalledTimes(2);
+  });
+
+  it("locks proposal apply when the POST outcome is unknown", async () => {
+    const fetchStub = vi.fn(async () => {
+      throw new TypeError("private transport details");
+    });
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    const error = await api.applyProposal(7, 31, 4).catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(OntologyProposalApplyOutcomeUnknownError);
+    expect((error as Error).message).not.toContain("private transport details");
+    expect(fetchStub).toHaveBeenCalledTimes(1);
+  });
+
+  it("locks publish when the POST response cannot confirm its outcome", async () => {
+    const response = {
+      ok: true,
+      status: 200,
+      statusText: "OK",
+      text: vi.fn(async () => {
+        throw new DOMException("private stream details", "AbortError");
+      }),
+    } as unknown as Response;
+    const api = createOntologyApi("admin-token", {
+      fetch: vi.fn(async () => response) as typeof fetch,
+    });
+
+    const error = await api.publish(7, 4).catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(OntologyPublishOutcomeUnknownError);
+    expect((error as Error).message).not.toContain("private stream details");
+  });
+
+  it("preserves a confirmed publish conflict instead of treating it as ambiguous", async () => {
+    const api = createOntologyApi("admin-token", {
+      fetch: vi.fn(async () => new Response(JSON.stringify({
+        success: false,
+        message: "ONTOLOGY_REVISION_CONFLICT",
+        code: "ONTOLOGY_REVISION_CONFLICT",
+        details: { expectedRevision: 4, actualRevision: 5 },
+      }), { status: 409, headers: { "Content-Type": "application/json" } })) as typeof fetch,
+    });
+
+    const error = await api.publish(7, 4).catch((cause: unknown) => cause);
+
+    expect(error).toBeInstanceOf(OntologyApiError);
+    expect(error).not.toBeInstanceOf(OntologyPublishOutcomeUnknownError);
+    expect(error).toMatchObject({ status: 409, code: "ONTOLOGY_REVISION_CONFLICT" });
+  });
+
   it("rebuilds replace-mapping writes from the exact allowed DTO fields", async () => {
     const calls: RequestInit[] = [];
     const fetchStub = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -586,6 +763,15 @@ describe("ontology presentation errors", () => {
       "ONTOLOGY_STATE_CONFLICT",
       null,
     ))).toBe("ONTOLOGY_STATE_CONFLICT：工作区状态不允许当前操作");
+  });
+
+  it("explains mutation outcomes that must be reconciled before retry", () => {
+    expect(formatOntologyError(new OntologyProposalApplyOutcomeUnknownError())).toBe(
+      "提案应用结果未知；请重新加载草稿核对，勿重复应用。",
+    );
+    expect(formatOntologyError(new OntologyPublishOutcomeUnknownError())).toBe(
+      "发布结果未知；请重新加载并检查版本历史，勿重复发布。",
+    );
   });
 });
 

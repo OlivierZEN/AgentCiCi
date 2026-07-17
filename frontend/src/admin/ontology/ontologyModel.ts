@@ -1,7 +1,10 @@
 import type {
   OntologyDocument,
+  OntologyMapping,
+  OntologyMappingView,
   OntologyProposalRecord,
   OntologyRelation,
+  OntologyVersionSummary,
 } from "./ontologyTypes";
 
 export type OntologyPosition = { x: number; y: number };
@@ -9,8 +12,32 @@ export type OntologyRect = OntologyPosition & { width: number; height: number };
 export type OntologyRelationLine = { x1: number; y1: number; x2: number; y2: number };
 export type OntologySelectionKind = "concept" | "relation" | "metric" | "action";
 export type OntologySelection = { kind: OntologySelectionKind; key: string } | null;
+export type OntologyOperationContext = { epoch: number; operationId: number };
 
 const KEYBOARD_MOVE_STEP = 8;
+
+export function isOntologyOperationContextCurrent(
+  context: OntologyOperationContext,
+  currentEpoch: number,
+  currentOperationId: number,
+): boolean {
+  return context.epoch === currentEpoch && context.operationId === currentOperationId;
+}
+
+export function shouldConfirmOntologyDraftDiscard(dirty: boolean, revisionLocked: boolean): boolean {
+  return dirty || revisionLocked;
+}
+
+export function findOntologyVersionForDraftRevision(
+  versions: readonly OntologyVersionSummary[],
+  sourceDraftRevision: number,
+  excludedVersions: ReadonlySet<number> = new Set<number>(),
+): OntologyVersionSummary | undefined {
+  return versions.reduce<OntologyVersionSummary | undefined>((latest, version) => {
+    if (version.sourceDraftRevision !== sourceDraftRevision || excludedVersions.has(version.version)) return latest;
+    return !latest || version.version > latest.version ? version : latest;
+  }, undefined);
+}
 
 export type OntologyProposalPreview = {
   current: OntologyDocument;
@@ -157,6 +184,59 @@ export function selectOntologyItem(
   next: OntologySelection,
 ): OntologySelection {
   return next ? { ...next } : null;
+}
+
+export function removeConceptProperty(
+  document: OntologyDocument,
+  conceptKey: string,
+  propertyKey: string,
+): OntologyDocument {
+  const concept = document.concepts.find((item) => item.key === conceptKey);
+  if (!concept) throw new Error("ONTOLOGY_CONCEPT_NOT_FOUND");
+  if (!concept.properties.some((property) => property.key === propertyKey)) {
+    throw new Error("ONTOLOGY_PROPERTY_NOT_FOUND");
+  }
+
+  const mappingTargetKey = `${conceptKey}.${propertyKey}`;
+  return {
+    ...document,
+    concepts: document.concepts.map((item) => item.key === conceptKey
+      ? {
+        ...item,
+        displayPropertyKey: item.displayPropertyKey === propertyKey ? null : item.displayPropertyKey,
+        properties: item.properties.filter((property) => property.key !== propertyKey),
+      }
+      : item),
+    metrics: document.metrics.map((metric) => metric.conceptKey === conceptKey
+      ? {
+        ...metric,
+        measurePropertyKey: metric.measurePropertyKey === propertyKey ? null : metric.measurePropertyKey,
+        groupByPropertyKeys: metric.groupByPropertyKeys.filter((key) => key !== propertyKey),
+        timePropertyKey: metric.timePropertyKey === propertyKey ? null : metric.timePropertyKey,
+        filters: metric.filters.filter((filter) => filter.property !== propertyKey),
+      }
+      : metric),
+    mappings: document.mappings.filter((mapping) => mapping.targetKey !== mappingTargetKey),
+  };
+}
+
+function ontologyMappingIdentity(mapping: Pick<OntologyMapping, "targetType" | "targetKey" | "dataSourceId">): string {
+  return `${mapping.targetType}\u0000${mapping.targetKey}\u0000${mapping.dataSourceId}`;
+}
+
+export function hasUnvalidatedOntologyMappings(
+  draftMappings: readonly OntologyMapping[],
+  mappingViews: readonly OntologyMappingView[],
+): boolean {
+  if (mappingViews.some((mapping) => mapping.validationStatus !== "VALID")) return true;
+  if (draftMappings.length === 0) return false;
+
+  const validatedIdentities = new Set(
+    mappingViews
+      .filter((mapping) => mapping.validationStatus === "VALID")
+      .map(ontologyMappingIdentity),
+  );
+  return draftMappings.some((mapping) => !validatedIdentities.has(ontologyMappingIdentity(mapping)));
 }
 
 export function connectConcepts(
