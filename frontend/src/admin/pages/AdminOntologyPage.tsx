@@ -36,7 +36,10 @@ import {
   isOntologyProposalAppliedReloadError,
   isOntologyPublishOutcomeUnknownError,
   isOntologyRevisionConflict,
+  isOntologyWorkspaceCreateReconciliationError,
+  isOntologyWorkspaceCreateUnconfirmedError,
   OntologyApiError,
+  OntologyWorkspaceCreateUnconfirmedError,
 } from "../ontology/ontologyApi";
 import OntologyCanvas from "../ontology/OntologyCanvas";
 import OntologyInspector from "../ontology/OntologyInspector";
@@ -48,6 +51,7 @@ import {
   createStableOntologyKey,
   findOntologySourceByIdentity,
   findOntologyVersionForDraftRevision,
+  findOntologyWorkspaceByCreateIdentity,
   hasUnvalidatedOntologyMappings,
   isOntologyAsyncScopeCurrent,
   isOntologyCompilePreviewBindingCurrent,
@@ -141,6 +145,9 @@ export function formatOntologyError(error: unknown): string {
   if (isOntologyPublishOutcomeUnknownError(error)) {
     return "发布结果未知；请重新加载并检查版本历史，勿重复发布。";
   }
+  if (isOntologyWorkspaceCreateUnconfirmedError(error)) {
+    return "创建结果尚未确认，请先返回列表并刷新核对，勿重复创建。";
+  }
   if (isOntologyRevisionConflict(error)) return "草稿已被更新，请重新加载";
   if (error instanceof OntologyApiError) {
     const message = error.message.trim();
@@ -169,7 +176,7 @@ function applyRevision(draft: OntologyDraftView, revision: number): OntologyDraf
 }
 
 export default function AdminOntologyPage() {
-  const { token, orgId } = useAdminAuthScope();
+  const { token, orgId, userId } = useAdminAuthScope();
   const authScopeKey = useMemo(() => createOntologyAuthScopeKey(orgId, token), [orgId, token]);
   const api = useMemo(() => createOntologyApi(token), [token]);
   const listRequestId = useRef(0);
@@ -212,6 +219,7 @@ export default function AdminOntologyPage() {
   const [operationError, setOperationError] = useState("");
   const [operationNotice, setOperationNotice] = useState("");
   const [revisionLocked, setRevisionLocked] = useState(false);
+  const [workspaceCreateLocked, setWorkspaceCreateLocked] = useState(false);
 
   const [catalog, setCatalog] = useState<OntologyCatalogView | null>(null);
   const [mappings, setMappings] = useState<OntologyMappingView[]>([]);
@@ -369,6 +377,8 @@ export default function AdminOntologyPage() {
       if (epoch !== contextEpochRef.current || requestId !== listRequestId.current) return;
       setWorkspaces(next);
       setListStatus("ready");
+      setWorkspaceCreateLocked(false);
+      setOperationError("");
     } catch (error) {
       if (epoch !== contextEpochRef.current || requestId !== listRequestId.current) return;
       setListError(formatOntologyError(error));
@@ -482,6 +492,35 @@ export default function AdminOntologyPage() {
     invalidateCompilePreview();
   }, [invalidateCompilePreview]);
 
+  const createWorkspaceRecoverably = useCallback(async (
+    input: { key: string; name: string; description: string | null },
+    isCurrent: () => boolean,
+  ): Promise<{ workspace: OntologyWorkspaceView; reconciled: boolean } | null> => {
+    try {
+      const workspace = await api.createWorkspace(input);
+      return isCurrent() ? { workspace, reconciled: false } : null;
+    } catch (error) {
+      if (!isCurrent()) return null;
+      if (!isOntologyWorkspaceCreateReconciliationError(error)) throw error;
+      try {
+        const authoritative = await api.listWorkspaces();
+        if (!isCurrent()) return null;
+        listRequestId.current += 1;
+        setWorkspaces(authoritative);
+        setListStatus("ready");
+        const matched = findOntologyWorkspaceByCreateIdentity(authoritative, {
+          ...input,
+          createdBy: userId,
+        });
+        if (matched) return { workspace: matched, reconciled: true };
+      } catch {
+        if (!isCurrent()) return null;
+      }
+      setWorkspaceCreateLocked(true);
+      throw new OntologyWorkspaceCreateUnconfirmedError();
+    }
+  }, [api, userId]);
+
   const createDataSourceRecoverably = useCallback(async (
     workspaceId: number,
     expectedRevision: number,
@@ -525,6 +564,7 @@ export default function AdminOntologyPage() {
     previousAuthScopeRef.current = authScopeKey;
     invalidateOntologyAsyncContext();
     setBusyAction(null);
+    setWorkspaceCreateLocked(false);
     setPageMode("list");
     setWorkspaces([]);
     setListStatus("idle");
@@ -1440,6 +1480,10 @@ export default function AdminOntologyPage() {
 
   const submitWizard = async (event: FormEvent) => {
     event.preventDefault();
+    if (workspaceCreateLocked) {
+      setOperationError("创建结果尚未确认，请先返回列表并刷新核对，勿重复创建。");
+      return;
+    }
     const name = domainName.trim();
     const purpose = domainPurpose.trim();
     const objectsDescription = domainObjects.trim();
@@ -1462,8 +1506,12 @@ export default function AdminOntologyPage() {
     const epoch = contextEpochRef.current;
     let createdWorkspace: OntologyWorkspaceView | null = null;
     await runBusy("创建业务本体", async () => {
-      const workspace = await api.createWorkspace({ key, name, description: purpose });
-      if (contextEpochRef.current !== epoch) return;
+      const createResult = await createWorkspaceRecoverably(
+        { key, name, description: purpose },
+        () => contextEpochRef.current === epoch,
+      );
+      if (!createResult || contextEpochRef.current !== epoch) return;
+      const { workspace } = createResult;
       createdWorkspace = workspace;
       listRequestId.current += 1;
       draftRequestId.current += 1;
@@ -1498,7 +1546,9 @@ export default function AdminOntologyPage() {
         ? { kind: "concept", key: nextDraft.document.concepts[0].key }
         : null);
       resetWizardForm();
-      setOperationNotice("工作区已创建，后续初始化可在当前工作区继续。");
+      setOperationNotice(createResult.reconciled
+        ? "已核对到当前管理员此前创建的同一工作区，后续初始化可在当前工作区继续。"
+        : "工作区已创建，后续初始化可在当前工作区继续。");
 
       let sourceSelection: OntologyProposalRequest["selectedSources"] = [];
       let wizardAiError = "";
@@ -1584,6 +1634,10 @@ export default function AdminOntologyPage() {
   };
 
   const showWizard = () => {
+    if (workspaceCreateLocked) {
+      setOperationError("创建结果尚未确认，请先刷新列表核对后再创建。");
+      return;
+    }
     setPageMode("wizard");
     setOperationError("");
     setOperationNotice("");
@@ -1776,7 +1830,7 @@ export default function AdminOntologyPage() {
               <button
                 type="submit"
                 className="cici-btn cici-btn--primary"
-                disabled={Boolean(busyAction) || !domainName.trim() || !domainPurpose.trim() || !domainObjects.trim() || !domainQuestions.trim() || (wizardMode === "source" && !wizardSourceName.trim())}
+                disabled={workspaceCreateLocked || Boolean(busyAction) || !domainName.trim() || !domainPurpose.trim() || !domainObjects.trim() || !domainQuestions.trim() || (wizardMode === "source" && !wizardSourceName.trim())}
               >
                 <Sparkles size={15} aria-hidden /> {busyAction || "创建并生成提案"}
               </button>
@@ -2176,7 +2230,7 @@ export default function AdminOntologyPage() {
         </div>
         <div>
           <button type="button" className="ontology-text-action" disabled={listStatus === "loading" || Boolean(busyAction)} onClick={() => void loadWorkspaces()}><RefreshCw size={14} aria-hidden /> 刷新</button>
-          <button type="button" className="cici-btn cici-btn--primary" disabled={Boolean(busyAction)} onClick={showWizard}><Plus size={15} aria-hidden /> 创建业务本体</button>
+          <button type="button" className="cici-btn cici-btn--primary" disabled={workspaceCreateLocked || Boolean(busyAction)} onClick={showWizard}><Plus size={15} aria-hidden /> 创建业务本体</button>
         </div>
       </header>
 
@@ -2190,7 +2244,7 @@ export default function AdminOntologyPage() {
           <div className="ontology-list-error" role="alert"><AlertTriangle size={20} aria-hidden /><div><strong>业务本体加载失败</strong><p>{listError}</p><button type="button" className="ontology-text-action" onClick={() => void loadWorkspaces()}>重试</button></div></div>
         )}
         {listStatus === "ready" && workspaces.length === 0 && (
-          <div className="ontology-list-empty" role="status"><Boxes size={24} aria-hidden /><div><strong>还没有业务本体</strong><p>从业务领域描述开始，AI 会生成可审阅提案；也可以完全手工建模。</p><button type="button" className="cici-btn cici-btn--primary" onClick={showWizard}>创建第一个业务本体</button></div></div>
+          <div className="ontology-list-empty" role="status"><Boxes size={24} aria-hidden /><div><strong>还没有业务本体</strong><p>从业务领域描述开始，AI 会生成可审阅提案；也可以完全手工建模。</p><button type="button" className="cici-btn cici-btn--primary" disabled={workspaceCreateLocked} onClick={showWizard}>创建第一个业务本体</button></div></div>
         )}
         {listStatus === "ready" && workspaces.length > 0 && (
           <div className="ontology-list-table-wrap">

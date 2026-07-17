@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createOntologyApi,
+  isOntologyWorkspaceCreateReconciliationError,
   isOntologyRevisionConflict,
   OntologyProposalApplyOutcomeUnknownError,
   isOntologyProposalAppliedReloadError,
@@ -16,6 +17,7 @@ import {
   createOntologyMutationLane,
   createOntologyAuthScopeKey,
   createOntologyCompilePreviewBinding,
+  findOntologyWorkspaceByCreateIdentity,
   findOntologySourceByIdentity,
   findOntologyVersionForDraftRevision,
   hasUnvalidatedOntologyMappings,
@@ -42,6 +44,7 @@ import type {
   OntologyMappingView,
   OntologyProposalRecord,
   OntologyRelation,
+  OntologyWorkspaceView,
 } from "./ontologyTypes";
 
 function projectDeliveryDraft(): OntologyDocument {
@@ -189,6 +192,7 @@ function draftView(document = projectDeliveryDraft()): OntologyDraftView {
       key: document.key,
       name: document.name,
       description: document.description,
+      createdBy: "owner-a",
       status: "DRAFT",
       draftRevision: 4,
       publishedVersion: null,
@@ -498,6 +502,34 @@ describe("ontology immutable model", () => {
       [expected, newerUnrelated],
       { key: expected.key, name: expected.name, type: expected.type },
     )).toEqual(expected);
+  });
+
+  it("reconciles workspace creation only for the same creator and exact request", () => {
+    const expected: OntologyWorkspaceView = {
+      ...draftView().workspace,
+      key: "project-delivery",
+      name: "项目交付",
+      description: "统一项目、任务和负责人语义",
+      createdBy: "owner-a",
+    };
+    const sameKeyWrongCreator = { ...expected, id: 8, createdBy: "owner-b" };
+    const sameKeyWrongName = { ...expected, id: 9, name: "其他领域" };
+    const sameKeyWrongDescription = { ...expected, id: 10, description: "其他用途" };
+    const identity = {
+      key: expected.key,
+      name: expected.name,
+      description: expected.description,
+      createdBy: expected.createdBy,
+    };
+
+    expect(findOntologyWorkspaceByCreateIdentity(
+      [sameKeyWrongCreator, sameKeyWrongName, sameKeyWrongDescription, expected],
+      identity,
+    )).toEqual(expected);
+    expect(findOntologyWorkspaceByCreateIdentity(
+      [sameKeyWrongCreator, sameKeyWrongName, sameKeyWrongDescription],
+      identity,
+    )).toBeUndefined();
   });
 
   it("calculates roving tab focus without activating invalid keys", () => {
@@ -865,6 +897,28 @@ describe("ontology draft transport", () => {
 });
 
 describe("ontology presentation errors", () => {
+  it("reconciles workspace creation only for uncertain outcomes or the exact key conflict", () => {
+    expect(isOntologyWorkspaceCreateReconciliationError(new OntologyApiError(
+      "网络请求失败，请稍后重试",
+      0,
+      "HTTP_0",
+      null,
+      true,
+    ))).toBe(true);
+    expect(isOntologyWorkspaceCreateReconciliationError(new OntologyApiError(
+      "ONTOLOGY_KEY_CONFLICT",
+      409,
+      "ONTOLOGY_KEY_CONFLICT",
+      null,
+    ))).toBe(true);
+    expect(isOntologyWorkspaceCreateReconciliationError(new OntologyApiError(
+      "ONTOLOGY_REVISION_CONFLICT",
+      409,
+      "ONTOLOGY_REVISION_CONFLICT",
+      null,
+    ))).toBe(false);
+  });
+
   it("shows the reload instruction only for the exact revision conflict", () => {
     expect(formatOntologyError(new OntologyApiError(
       "草稿修订冲突",

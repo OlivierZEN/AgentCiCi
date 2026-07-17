@@ -96,8 +96,9 @@ export default function AdminShell() {
   const ctx = useMemo<AdminOutletContext>(() => ({
     token,
     orgId: auth?.orgId ?? "",
+    userId: auth?.userId ?? "",
     registerNavigationGuard,
-  }), [auth?.orgId, registerNavigationGuard, token]);
+  }), [auth?.orgId, auth?.userId, registerNavigationGuard, token]);
 
   useEffect(() => {
     if (previousGuardScopeRef.current === guardScope) return;

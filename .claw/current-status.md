@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-17T05:19:14Z
+updated_at: 2026-07-17T06:07:52Z
 updated_by: MANAGER-001
 phase: general-ontology-platform-v1-implementation
 active_task: "TASK-213"
-next_action: "Create and verify the TASK-213 signed no-blocker-review commit, then merge and run the production release runbook; do not claim release before online acceptance."
+next_action: "Complete the incremental independent review for workspace-create reconciliation, then create and verify the signed TASK-213 commit before merge and production runbook execution."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-213 is in progress on `codex/TASK-213-general-ontology-v1`: the domain-neutral backend, V82 persistence, project-delivery/CloudCC reference paths, read-only semantic query and business-first visual workbench are implemented locally. The formal release-blocker findings around stale identity responses, unmount async continuation, org-only reload, dirty mapping overwrite, compile revision/version binding, raw proposal keys, all-theme warning contrast and tab IDREF have TDD fixes. Frontend 171/171, production build, backend ontology integration 13/13, management service 2/2, package and real-browser timing/ARIA checks pass. Independent final review reports Critical 0 / Important 0; one non-blocking Minor requests future mounted-router deferred-promise coverage for the already-passing browser timing scenarios. Production remains `2.7.9 / c04e992b3840`, so TASK-213 must not be described as merged or online yet.
+- TASK-213 is in progress on `codex/TASK-213-general-ontology-v1`: the domain-neutral backend, V82 persistence, project-delivery/CloudCC reference paths, read-only semantic query and business-first visual workbench are implemented locally. A later formal audit reopened one Important around uncertain/concurrent workspace creation after the previous review; the backend now translates only the V82 workspace-key unique violation to stable 409, and the frontend only resumes an authoritative `key + name + description + createdBy` match for the same administrator, otherwise locking retry until list refresh. Frontend 174/174 and production build pass; an isolated PostgreSQL run passes `OntologyPlatformIntegrationTest` 14/14 plus `OntologyManagementServiceTest` 4/4 and the database was deleted. The earlier ten blockers remain closed, but this incremental fix still requires independent review clearance before a new no-blocker claim. Production remains `2.7.9 / c04e992b3840`, so TASK-213 must not be described as merged or online yet.
 
 - TASK-201 右栏说明移除与双栏对齐增量修复已在生产 `2.7.9 / c04e992b3840` 完成。PR #11、不可变 Git/镜像 tag、发布前四项备份、仅重建 backend/frontend、六服务健康及 1600×1000 真实 Agent Builder 页面均通过；右栏模型治理说明与分隔线不存在，左右编辑列同为 612.5px × 604px，顶底边一致，系统提示词与发布备注输入底边一致，页面横向溢出、生产 console warning/error、backend ERROR/Exception 与 Nginx 精确 5xx 均为 0。即时应用回滚点为 `2.7.8 / 4814d2b9534d`。
 - TASK-212 已在生产 `2.7.8 / 4814d2b9534d` 完成。PR #10、不可变 Git/镜像 tag、发布前四项备份、只重建 backend/frontend、V81 非事务并发索引、六服务健康、双向 401/403/200 权限矩阵及 `1600 x 1000` Agent Builder/平台页面均通过；两个索引 valid/ready，页面无外层横向溢出，console warning/error、稳定窗口 backend ERROR 与 Nginx 精确 5xx 均为 0。完整 Maven 诊断仍只有既有 341 项中的 3 failure / 7 error，未误报全量套件通过。即时应用回滚点为 `2.7.7 / e47979167af8`，V81 索引可安全保留。

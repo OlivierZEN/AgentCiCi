@@ -121,4 +121,18 @@ describe("ontology workbench release contracts", () => {
     expect(applyBlock).toContain("if (mappingDirty)");
     expect(pageSource).toMatch(/const acceptDraft[\s\S]*?setMappingLoaded\(false\)[\s\S]*?\}, \[invalidateCompilePreview\]\);/);
   });
+
+  it("authoritatively reconciles workspace creation and locks unresolved retries", () => {
+    const createBlock = pageSource.slice(
+      pageSource.indexOf("const createWorkspaceRecoverably"),
+      pageSource.indexOf("const createDataSourceRecoverably"),
+    );
+    expect(createBlock).toContain("isOntologyWorkspaceCreateReconciliationError");
+    expect(createBlock).toContain("api.listWorkspaces()");
+    expect(createBlock).toContain("findOntologyWorkspaceByCreateIdentity");
+    expect(createBlock).toContain("setWorkspaceCreateLocked(true)");
+    expect(createBlock).toContain("createdBy: userId");
+    expect(pageSource).toContain("workspaceCreateLocked || Boolean(busyAction)");
+    expect(pageSource).toContain("创建结果尚未确认，请先返回列表并刷新核对，勿重复创建。");
+  });
 });

@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ontology;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.doAnswer;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -16,6 +17,7 @@ import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.Ph
 import com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalObject;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
+import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService;
 import com.codehouse.ciciassistant.ontology.service.OntologyCatalogTransactionService.MappingKey;
@@ -29,17 +31,21 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -87,6 +93,9 @@ class OntologyPlatformIntegrationTest {
 
     @Autowired
     private OntologyMappingRepository mappingRepository;
+
+    @SpyBean
+    private OntologyWorkspaceRepository workspaceRepository;
 
     private String runPrefix;
     private String orgA;
@@ -139,6 +148,7 @@ class OntologyPlatformIntegrationTest {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.key").value("project-delivery"))
+                .andExpect(jsonPath("$.data.createdBy").value("owner-a"))
                 .andExpect(jsonPath("$.data.draftRevision").value(0))
                 .andReturn();
         long workspaceId = data(created).path("id").asLong();
@@ -169,6 +179,68 @@ class OntologyPlatformIntegrationTest {
                     Long.class,
                     orgA)).as(table).isZero();
         }
+    }
+
+    @Test
+    void concurrentWorkspaceCreatesReturnOneStableKeyConflictAndPersistOneRow() throws Exception {
+        OntologyManagementService.WorkspaceCreateRequest request =
+                new OntologyManagementService.WorkspaceCreateRequest(
+                        "concurrent-create", "并发创建", "并发唯一键合同");
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        CountDownLatch bothPrechecksComplete = new CountDownLatch(2);
+        AtomicInteger guardedPrechecks = new AtomicInteger();
+        doAnswer(invocation -> {
+            String requestedOrg = invocation.getArgument(0);
+            String requestedKey = invocation.getArgument(1);
+            if (orgA.equals(requestedOrg) && request.key().equals(requestedKey)) {
+                if (guardedPrechecks.getAndIncrement() >= 2) {
+                    throw new IllegalStateException("unexpected extra guarded workspace precheck");
+                }
+                bothPrechecksComplete.countDown();
+                if (!bothPrechecksComplete.await(5, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("workspace create precheck barrier timed out");
+                }
+                return Optional.empty();
+            }
+            throw new IllegalStateException("unexpected workspace lookup in guarded create test");
+        }).when(workspaceRepository).findByOrgIdAndKey(orgA, request.key());
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            CompletableFuture<MvcResult> first = concurrentWorkspaceCreate(
+                    executor, ready, start, request);
+            CompletableFuture<MvcResult> second = concurrentWorkspaceCreate(
+                    executor, ready, start, request);
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            MvcResult firstResult = first.get(30, TimeUnit.SECONDS);
+            MvcResult secondResult = second.get(30, TimeUnit.SECONDS);
+            assertThat(List.of(
+                    firstResult.getResponse().getStatus(),
+                    secondResult.getResponse().getStatus()))
+                    .containsExactlyInAnyOrder(200, 409);
+            MvcResult conflictResult = firstResult.getResponse().getStatus() == 409
+                    ? firstResult
+                    : secondResult;
+            JsonNode conflict = objectMapper.readTree(
+                    conflictResult.getResponse().getContentAsByteArray());
+            assertThat(conflict.path("success").asBoolean()).isFalse();
+            assertThat(conflict.path("data").isNull()).isTrue();
+            assertThat(conflict.path("message").asText())
+                    .isEqualTo("ONTOLOGY_KEY_CONFLICT");
+            assertThat(conflict.path("code").asText())
+                    .isEqualTo("ONTOLOGY_KEY_CONFLICT");
+        } finally {
+            executor.shutdownNow();
+        }
+
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM ontology_workspace WHERE org_id = ? AND key = ?",
+                Long.class,
+                orgA,
+                request.key())).isEqualTo(1L);
+
     }
 
     @Test
@@ -914,6 +986,29 @@ class OntologyPlatformIntegrationTest {
                 throw new IllegalStateException(exception);
             } finally {
                 TenantContext.clear();
+            }
+        }, executor);
+    }
+
+    private CompletableFuture<MvcResult> concurrentWorkspaceCreate(
+            ExecutorService executor,
+            CountDownLatch ready,
+            CountDownLatch start,
+            OntologyManagementService.WorkspaceCreateRequest request) {
+        return CompletableFuture.supplyAsync(() -> {
+            ready.countDown();
+            try {
+                start.await();
+                return mockMvc.perform(post("/admin/ontologies")
+                                .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsBytes(request)))
+                        .andReturn();
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(exception);
+            } catch (Exception exception) {
+                throw new IllegalStateException(exception);
             }
         }, executor);
     }

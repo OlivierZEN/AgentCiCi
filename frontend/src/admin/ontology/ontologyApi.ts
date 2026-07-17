@@ -76,6 +76,14 @@ export class OntologyApiError extends Error {
   }
 }
 
+/** Workspace creation could not be confirmed against the current organization's authoritative list. */
+export class OntologyWorkspaceCreateUnconfirmedError extends Error {
+  constructor() {
+    super("创建结果尚未确认");
+    this.name = "OntologyWorkspaceCreateUnconfirmedError";
+  }
+}
+
 /** The apply POST may have committed, but no authoritative response was received. */
 export class OntologyProposalApplyOutcomeUnknownError extends Error {
   constructor() {
@@ -104,6 +112,12 @@ export function isOntologyProposalAppliedReloadError(
   error: unknown,
 ): error is OntologyProposalAppliedReloadError {
   return error instanceof OntologyProposalAppliedReloadError;
+}
+
+export function isOntologyWorkspaceCreateUnconfirmedError(
+  error: unknown,
+): error is OntologyWorkspaceCreateUnconfirmedError {
+  return error instanceof OntologyWorkspaceCreateUnconfirmedError;
 }
 
 export function isOntologyProposalApplyOutcomeUnknownError(
@@ -142,6 +156,14 @@ export function isOntologyRevisionConflict(error: unknown): error is OntologyApi
   return error instanceof OntologyApiError
     && error.status === 409
     && error.code === "ONTOLOGY_REVISION_CONFLICT";
+}
+
+export function isOntologyWorkspaceCreateReconciliationError(
+  error: unknown,
+): error is OntologyApiError {
+  return error instanceof OntologyApiError
+    && (error.outcomeUnknown
+      || (error.status === 409 && error.code === "ONTOLOGY_KEY_CONFLICT"));
 }
 
 function isUncertainMutationStatus(status: number): boolean {

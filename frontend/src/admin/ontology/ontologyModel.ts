@@ -8,6 +8,7 @@ import type {
   OntologyRelation,
   OntologySourceView,
   OntologyVersionSummary,
+  OntologyWorkspaceView,
 } from "./ontologyTypes";
 
 export type OntologyPosition = { x: number; y: number };
@@ -72,6 +73,18 @@ export function findOntologySourceByIdentity(
     source.key === identity.key
     && source.name === identity.name
     && source.type === identity.type
+  ));
+}
+
+export function findOntologyWorkspaceByCreateIdentity(
+  workspaces: readonly OntologyWorkspaceView[],
+  identity: Pick<OntologyWorkspaceView, "key" | "name" | "description" | "createdBy">,
+): OntologyWorkspaceView | undefined {
+  return workspaces.find((workspace) => (
+    workspace.key === identity.key
+    && workspace.name === identity.name
+    && workspace.description === identity.description
+    && workspace.createdBy === identity.createdBy
   ));
 }
 

@@ -40,6 +40,7 @@ export interface OntologyWorkspaceView {
   key: string;
   name: string;
   description: string | null;
+  createdBy: string;
   status: OntologyWorkspaceStatus;
   draftRevision: number;
   publishedVersion: number | null;

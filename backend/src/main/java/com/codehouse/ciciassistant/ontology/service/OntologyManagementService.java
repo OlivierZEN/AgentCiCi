@@ -37,6 +37,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import org.hibernate.exception.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +47,8 @@ public class OntologyManagementService {
 
     private static final Pattern KEY_PATTERN = Pattern.compile(
             "^[a-z][a-z0-9]*(?:[-_][a-z0-9]+)*$");
+    private static final String WORKSPACE_KEY_UNIQUE_CONSTRAINT =
+            "uq_ontology_workspace_org_key";
 
     private final OntologyWorkspaceRepository workspaces;
     private final OntologyDataSourceRepository dataSources;
@@ -124,7 +128,7 @@ public class OntologyManagementService {
         if (workspaces.findByOrgIdAndKey(orgId, key).isPresent()) {
             throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
         }
-        OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(
+        OntologyWorkspaceEntity saved = persistNewWorkspaceOrKeyConflict(
                 new OntologyWorkspaceEntity(orgId, key, name, requestedDescription, userId));
         return workspaceView(saved);
     }
@@ -300,7 +304,7 @@ public class OntologyManagementService {
         if (workspaces.findByOrgIdAndKey(orgId, value.document().key()).isPresent()) {
             throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
         }
-        OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
+        OntologyWorkspaceEntity workspace = persistNewWorkspaceOrKeyConflict(
                 new OntologyWorkspaceEntity(
                         orgId,
                         value.document().key(),
@@ -663,11 +667,39 @@ public class OntologyManagementService {
                 workspace.getKey(),
                 workspace.getName(),
                 workspace.getDescription(),
+                workspace.getCreatedBy(),
                 workspace.getStatus(),
                 workspace.getDraftRevision(),
                 workspace.getPublishedVersion(),
                 workspace.getCreatedAt(),
                 workspace.getUpdatedAt());
+    }
+
+    private OntologyWorkspaceEntity persistNewWorkspaceOrKeyConflict(
+            OntologyWorkspaceEntity workspace) {
+        try {
+            OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(workspace);
+            persistence.flushForCurrentOrg(workspace.getOrgId());
+            return saved;
+        } catch (DataIntegrityViolationException exception) {
+            if (isWorkspaceKeyUniqueViolation(exception)) {
+                throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
+            }
+            throw exception;
+        }
+    }
+
+    private boolean isWorkspaceKeyUniqueViolation(Throwable failure) {
+        Throwable cause = failure;
+        while (cause != null) {
+            if (cause instanceof ConstraintViolationException constraintViolation
+                    && WORKSPACE_KEY_UNIQUE_CONSTRAINT.equals(
+                            constraintViolation.getConstraintName())) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 
     private ProposalRecordView proposalRecordView(OntologyAiProposalEntity entity) {
@@ -993,6 +1025,7 @@ public class OntologyManagementService {
             String key,
             String name,
             String description,
+            String createdBy,
             String status,
             Long draftRevision,
             Integer publishedVersion,
