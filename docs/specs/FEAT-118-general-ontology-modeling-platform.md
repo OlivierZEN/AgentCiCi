@@ -2,11 +2,11 @@
 kind: feature-spec
 feature_id: FEAT-118
 title: 通用本体建模与语义查询平台 V1
-status: approved
+status: implemented
 owner_role: project-manager
 task_ids: TASK-213
 related_decisions: FEAT-067, FEAT-075, FEAT-081, FEAT-103, FEAT-111
-updated_at: 2026-07-17T07:01:55Z
+updated_at: 2026-07-17T08:21:42Z
 updated_by: MANAGER-001
 ---
 
@@ -469,3 +469,31 @@ V1 作为一个产品里程碑，但按可验证切片交付：
 - 无发布歧义：AI 永远只写提案/草稿，人工发布是唯一线上变更入口。
 - 无执行歧义：V1 仅支持已发布版本上的受限只读语义查询，动作只有契约。
 - 范围已拆片：七个实施切片可以独立测试，但共同构成一个可上线的 V1。
+
+## 21. V1 生产交付事实
+
+### 21.1 版本与运行态
+
+- PR #13 合并提交 `f922b86f1884ec5f7b7e1d97d3d0558202d0180f` 已发布为不可变生产版本 `2.7.10`。
+- 生产从 V81 顺序应用 V82/V83，均 `success=true`；V82 新增 13 张 ontology 表，V83 只增加工作区 provenance 列与 CHECK 约束，V82 checksum 保持不变。
+- 发布前备份为 `/opt/cici/backups/20260717-154253-before-2.7.10-task213-ontology`；部署只强制重建 backend/frontend，四个状态服务容器 ID 完全保持不变。
+- 480 秒内 17 次采样始终为六服务 healthy、重启 0、OOM 0、health `UP`、版本 `2.7.10 / f922b86f1884 / 2.7.10`，backend `ERROR|Exception` 为 0。应用即时回滚点为 `2.7.9 / c04e992b3840`，V82/V83 可保留。
+
+### 21.2 通用领域闭环
+
+- 生产 `project-delivery` 由同一参考包/元模型/API/画布完成对象和字段发现、15/15 映射验证、候选编译、人工发布及重复发布幂等校验；线上不可变版本为 v1，来源草稿修订为 6。
+- `semantic-query` explain 生成 `projects` 与 `contains-task` 查询计划；execute 返回 1 个项目和 2 个关联任务，并携带本体版本 1、总数 1 的证据。另一组织执行同一查询返回 404；审计只保存 `REDACTED`，不保存过滤明文。
+- 生产 1600×1000 浏览器验证列表、3 节点/2 关系画布、映射、JSON Schema、GraphQL SDL、查询契约和不可变版本历史；全部工作区/技术页签 IDREF 有效，console error/warning 与 document/body 横向溢出均为 0。
+- 生成态 `frontend/vite.config.js` 已与 TypeScript 事实源同步；全新检出后直接 `npm run dev` 会代理 `/admin/ontologies/**` 和 `/semantic-query/**`，不会误返回 SPA HTML。
+
+### 21.3 CloudCC 首期落地边界
+
+- `customer-operations` 参考包已在两个演示组织以 `REFERENCE_PACKAGE + packageId + 原始包 bytes SHA-256` 安装为可编辑草稿，证明 CRM 领域仍通过普通领域包进入通用内核。
+- 两个当前可用密码登录用户均不能取得有效的 CloudCC 当前用户会话，对象发现因此明确返回 `502 DATA_SOURCE_UNAVAILABLE`。两次失败均未修改 CloudCC、未损坏草稿、未执行映射校验或发布；Nginx 除这两次受控诊断外没有其他 5xx。
+- CloudCC 适配器的发现、字段解析、映射验证、当前用户只读查询与失败封装已由聚焦/集成测试覆盖。恢复有效的用户绑定后，应直接续跑生产真实目录、映射和查询验收；禁止降级为组织级超级令牌或绕过当前用户权限。
+
+### 21.4 质量边界
+
+- 全新 PostgreSQL 相关后端回归 127/127、前端 26 个文件 / 177 项、前端生产构建和后端 package 通过；独立安全与规格终审均为 Approved，Critical 0 / Important 0。
+- 后续保留两项非阻塞 Minor：补充 RouterProvider + deferred Promise 挂载级异步测试；扩大修改、目录和发布 API 的参数化跨租户 404 覆盖。
+- V1 已按本规格上线并关闭 TASK-213。OWL/RDF 全集、复杂推理、跨源联邦、动作写回、移动端和其他 V2 能力不在本次完成范围内。

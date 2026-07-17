@@ -1,16 +1,16 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-17T07:31:02Z
+updated_at: 2026-07-17T08:21:42Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-17T07:31:02Z
+last_run_at: 2026-07-17T08:20:47Z
 last_run_status: passed
 ---
 
 # Test Report
 
-## TASK-213 通用本体 V1 发布阻塞修复本地验收（2026-07-17）
+## TASK-213 通用本体 V1 本地与生产验收（2026-07-17）
 
 - `identity/assignment`: MANAGER-001 SSH 持钥、签名指纹、GitHub 身份、TASK-213 分支及本次 provenance 增量涉及的 18 个源码、V83、测试、规格和状态路径经 `dev-login.py` 与 `check-assignment.py` 校验均返回 `allowed`，验证项包括 developer record、持钥证明和 assignment scope，0 finding。
 - `tdd`: 既有发布阻塞修复的 RED/GREEN 证据保持有效。终局 provenance 加固先让前端同一管理员、完全同元数据但 `MANUAL` 的工作区错误命中，并让后端因缺少指纹/来源字段编译失败；最小实现后聚焦测试转绿。数据库随后新增 MANUAL 携带包字段、REFERENCE_PACKAGE 空包 ID、63 位短指纹和 64 位大写指纹反例；旧 CHECK 如预期仅在空包 ID 用例失败，V83 增加非空包 ID 条件后四组反例全部转绿。指纹测试独立读取实际 classpath JSON 原始 bytes 计算 SHA-256，确认摘要、加载结果、安装落库和管理 API 使用同一 64 位小写值。V82 未修改。
@@ -25,7 +25,15 @@ last_run_status: passed
 - `static`: `git diff --check`、`jq empty DESIGN.json` 通过；暖色主题 warning `#7a4b00` 达到普通文本 4.5:1 门槛，Galaxy 使用主题 warning `#e6b75f`，在 canvas/surface/muted/strong/warning-soft 五类暗色背景上的对比度依次为 9.84 / 8.98 / 8.14 / 6.78 / 6.40:1。
 - `state-validator`: `validate-state.py .claw` 仍因 130 条既有历史规格/任务基线 finding 退出 1；输出中 `TASK-213.md`、`FEAT-118` 与 V83 命中为 0，本轮未越界修复历史状态。
 - `independent-review`: 最终安全与规格两路只读复审对 `d589ad1` 均返回 Approved，Critical 0 / Important 0。规格侧仅保留 mounted RouterProvider + deferred Promise 测试债，安全侧仅建议将修改/目录/发布扩展为参数化跨租户 404 测试；两项均为 Minor，不阻塞合并与发布。
-- `release-boundary`: 本节只记录本地发布前门禁；TASK-213 尚未合并或上线，后续仍需 PR 合并、干净 main 生产 dry-run、备份、不可变发布和线上 API/浏览器验收。
+- `merge/release`: PR #13 已合并为 `f922b86f1884ec5f7b7e1d97d3d0558202d0180f`；`./scripts/release-acr.sh --dry-run --version 2.7.10 --production` 与正式发布均成功，annotated tag `2.7.10` 已推送。backend index/amd64 digest 为 `sha256:096f480677944eb8e0f263e562155c771f4e72d0bee6731a82a3b162937c3644` / `sha256:cdaeb804cd645afe6fa2498b9f06f14c24b6a4b33d4f8d9a8f538e66e79056d5`；frontend 为 `sha256:0f96d20bdf1727fc8cf6da57c0b49af7f9a8c213a91709fe8183bef7ef66ed3b` / `sha256:4cfae678067c31d9794fe8e1bf5b8739d6b95dfb3fba5aaec8dd921aa3a7a2df`。
+- `backup/deploy`: `/opt/cici/backups/20260717-154253-before-2.7.10-task213-ontology` 的 env/PostgreSQL/KB/Qdrant 分别为 1,646 / 3,010,000 / 511,135 / 1,584,517 bytes；Nginx、Compose、状态与 SHA-256 清单也非空且校验通过。仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ、Qdrant ID 逐项与发布前完全一致并继续运行 `2.6.12`。
+- `production-migration/runtime`: 生产 V82/V83 均 `success=true`，checksum 分别为 `-1084439350` / `-147714050`；ontology 表数 13，provenance 列、CHECK 与 `uq_ontology_workspace_org_key` 均正确。六服务 healthy，health `UP`，版本为 `2.7.10 / f922b86f1884 / 2.7.10`，Nginx 配置有效。
+- `production-project-delivery`: 真实生产完成对象/字段发现、15/15 映射验证、候选编译、人工发布和重复发布幂等校验；不可变 v1 绑定草稿修订 6，发布详情不回显数据源配置/示例数据。explain 生成 `projects + contains-task` 计划；execute 返回 1 个“语义平台一期”项目与 2 条任务，证据版本/总数为 1/1。另一组织返回 404 `ONTOLOGY_NOT_FOUND`；查询审计包含 `REDACTED` 且不包含过滤值明文。
+- `production-cloudcc-boundary`: `customer-operations` 在 `demo-org` 与真实 CRM 演示组织均以有效 package ID/64 位小写指纹安装为草稿；两名密码登录用户当前都不能取得有效 CloudCC 当前用户会话，对象发现各返回一次 `502 DATA_SOURCE_UNAVAILABLE`。草稿保持修订 1、未校验、未发布，失败未修改 CloudCC 或影响 INLINE_SAMPLE/手工建模能力。
+- `browser-production`: Playwright CLI 在生产 1600×1000 验证列表、3 节点/2 关系画布、15 条已验证映射、候选 v2 技术预览、线上 v1/来源修订 6 版本历史和全部工作区/技术 tab IDREF；document/body 横向溢出与 console error/warning 均为 0。截图位于 `output/playwright/ontology-prod-2.7.10/ontology-{list,workbench-canvas,workbench-mapping,workbench-technical-json-schema,workbench-technical-graphql,workbench-versions}.png`。
+- `stable-window`: 2026-07-17T08:11:52Z 至 08:19:52Z 共 480 秒、17 次 30 秒采样；六容器始终 healthy、restart 0、OOM=false，全部容器 ID不变，health/version 固定，backend 生命周期 `ERROR|Exception` 为 0。Nginx 最终恰好为上述两次预期 CRM discover 502，其他 5xx 为 0；08:20:47Z 最终语义查询仍为 HTTP 200、rows 1、关联任务 2、证据版本/总数 1/1。
+- `dev-proxy-followup`: 合并后复核发现被跟踪的生成态 `frontend/vite.config.js` 未随 TypeScript 事实源提交；生产镜像构建时 `tsc -b` 已生成正确配置，线上不受影响。assignment 先在签名提交 `ef50ecc` 中扩展并推送授权，再机械同步生成文件；`npm run build` 转换 1,948 个模块成功，直接 `npm run dev` 请求 `/admin/ontologies` 命中代理并因本机 8080 未启动返回预期 proxy 500，而不是 SPA 200。
+- `public/rollback`: `x.agentcici.com` HTTP 301 / HTTPS 200，匿名本体/语义查询返回 401；本机仍无法解析 `onechat.agentcici.com`，显式生产 IP vhost HTTPS 200。应用即时回滚点为 `2.7.9 / c04e992b3840`，V82/V83 可安全保留。
 
 ## TASK-201 智能体构建页右栏说明移除与双栏对齐增量验收（2026-07-16）
 

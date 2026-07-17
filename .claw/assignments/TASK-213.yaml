@@ -1,13 +1,13 @@
 task_id: TASK-213
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-16T14:05:11Z
 expires_at: none
 spec_path: docs/specs/FEAT-118-general-ontology-modeling-platform.md
 task_status_path: .claw/tasks/TASK-213.md
 branch: codex/TASK-213-general-ontology-v1
-pr_url: n/a
+pr_url: https://github.com/OlivierZEN/CICI/pull/13
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/**

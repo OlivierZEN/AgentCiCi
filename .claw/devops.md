@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-15T17:22:27Z
+updated_at: 2026-07-17T08:21:42Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,17 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.10 TASK-213 通用本体建模与语义查询平台 V1 on 2026-07-17:
+  - Git/发布：PR #13 合并提交 `f922b86f1884ec5f7b7e1d97d3d0558202d0180f`；`scripts/release-acr.sh --dry-run --version 2.7.10 --production` 与正式发布均成功，annotated tag `2.7.10` 已推送。发布后的 assignment/状态与生成配置同步提交不改变生产镜像，生产版本接口仍正确指向发布合并提交。
+  - 镜像：backend index `sha256:096f480677944eb8e0f263e562155c771f4e72d0bee6731a82a3b162937c3644`、amd64 `sha256:cdaeb804cd645afe6fa2498b9f06f14c24b6a4b33d4f8d9a8f538e66e79056d5`；frontend index `sha256:0f96d20bdf1727fc8cf6da57c0b49af7f9a8c213a91709fe8183bef7ef66ed3b`、amd64 `sha256:4cfae678067c31d9794fe8e1bf5b8739d6b95dfb3fba5aaec8dd921aa3a7a2df`。
+  - 备份：`/opt/cici/backups/20260717-154253-before-2.7.10-task213-ontology`；env 1,646 bytes、PostgreSQL 3,010,000 bytes、KB 511,135 bytes、Qdrant 1,584,517 bytes，Nginx/Compose/状态/校验清单也非空；`pg_restore -l`、tar 列表与 SHA-256 校验通过。
+  - 部署：只强制重建 backend/frontend。database `ce48f99872d8255e12c8b8255d5868d838f25a8390a5a454e93f0adc93a90b82`、Redis `3c387959346306ffb6309fdfe2d76cad519f365d6166cbdba521f9726d7ec1d4`、RabbitMQ `246a0aa352dfc8c9e4f348efa83197353d6fc5d6301018d68a7065618260c934`、Qdrant `96bf6c3cad9ca6f3e2d12ed2d3ae592f3476f05b32951296e8df5ba9a7290369` 与发布前完全一致并继续使用 `2.6.12`。
+  - 运行/迁移：backend `e02c834c1de6b4ee3987af86f9e02d5ce46c1968c4601171e5565ed661ae0e7f`、frontend `22ad5424c27e2ddac071ff4e57774a283b7f5a38b9de073fb0172dae3f906511`；六服务 healthy，health `UP`，版本 `2.7.10 / f922b86f1884 / 2.7.10`。V82/V83 均 `success=true`，13 张 ontology 表、provenance 列/CHECK/唯一约束正确，Nginx 配置有效。
+  - API：`project-delivery` 完成对象/字段发现、15/15 映射验证、候选编译、人工发布与幂等发布；不可变 v1 绑定草稿修订 6。只读语义查询返回 1 个项目、2 个关联任务和版本证据；跨组织返回 404，审计脱敏通过。组织/平台 token 双向隔离以及匿名 401 通过。
+  - CloudCC 边界：`customer-operations` 在两个演示组织均以正确 package provenance 安装为草稿，但当前密码登录用户无法取得有效 CloudCC 当前用户会话，两次对象发现按设计返回 `502 DATA_SOURCE_UNAVAILABLE`；没有写回 CloudCC、损坏或发布草稿。
+  - 桌面/稳定性：生产 1600×1000 列表、画布、映射、技术契约和版本历史通过，console warning/error 与外层横向溢出均为 0。480 秒/17 次采样中所有容器 ID、健康、restart 0、OOM=false、版本保持不变，backend `ERROR|Exception` 为 0；Nginx 只有上述两次预期 CRM 诊断 502，其他 5xx 为 0，最终语义查询继续通过。
+  - 公网/回滚：`x.agentcici.com` HTTP 301 / HTTPS 200；显式生产 IP 的 `onechat` HTTPS 200，本机 DNS 风险不变。即时应用回滚点为健康 `2.7.9 / c04e992b3840`；V82/V83 可安全保留。
 
 - 2.7.8 TASK-212 Skill DAG 只读治理闭环 Phase 1 on 2026-07-16:
   - Git/发布：PR #10 合并提交 `4814d2b9534d8ba70d560b1a8a9b9a3dbe390717`；`scripts/release-acr.sh --dry-run --version 2.7.8` 与正式发布均成功，annotated tag `2.7.8` 已推送。

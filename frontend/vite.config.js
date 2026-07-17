@@ -25,6 +25,8 @@ export default defineConfig(function (_a) {
                 "/customer-workbench": { target: backendTarget, changeOrigin: true },
                 "/admin/users": { target: backendTarget, changeOrigin: true },
                 "/admin/agents": { target: backendTarget, changeOrigin: true },
+                "^/admin/ontologies(/|$)": { target: backendTarget, changeOrigin: true },
+                "^/semantic-query(/|$)": { target: backendTarget, changeOrigin: true },
                 "^/admin/billing/(overview|subscription|usage-events|ledger|quota)(/|$)": { target: backendTarget, changeOrigin: true },
                 "^/admin/organization/(profile|export-jobs)(/|$)": { target: backendTarget, changeOrigin: true },
                 "/admin/wecom": { target: backendTarget, changeOrigin: true },

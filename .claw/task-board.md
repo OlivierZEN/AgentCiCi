@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-17T07:31:02Z
+updated_at: 2026-07-17T08:21:42Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,17 +14,6 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
-
-### TASK-213 - 通用本体建模与语义查询平台 V1
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-118-general-ontology-modeling-platform.md`
-- task_status_path: `.claw/tasks/TASK-213.md`
-- assignment_path: `.claw/assignments/TASK-213.yaml`
-- blocked_by: `none`
-- next_action: Push the reviewed branch, merge its PR, then execute the 2.7.10 production runbook and acceptance gates.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 
@@ -876,6 +865,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-213 - 通用本体建模与语义查询平台 V1
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-118-general-ontology-modeling-platform.md`
+- task_status_path: `.claw/tasks/TASK-213.md`
+- assignment_path: `.claw/assignments/TASK-213.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.10 / f922b86f1884`; monitor health and restore a valid per-user CloudCC session before completing live CRM metadata discovery. Any ontology V2 expansion requires a separate task.
 
 ### TASK-212 - Skill DAG 只读治理闭环 Phase 1
 
