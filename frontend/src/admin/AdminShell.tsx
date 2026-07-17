@@ -1,10 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
-import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
 import type { AdminOutletContext } from "./useAdminToken";
+import {
+  confirmAdminNavigation,
+  type AdminNavigationGuard,
+} from "./adminNavigationGuard";
+import {
+  createAdminAuthScopeKey,
+  isAdminAsyncRequestCurrent,
+} from "./adminAuthScope";
 import { applyProductTheme } from "../theme/theme";
 
 type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
@@ -26,6 +34,7 @@ const adminNavItems: AdminNavItem[] = [
     ],
   },
   { kind: "link", to: "/admin/kb", label: "知识库" },
+  { kind: "link", to: "/admin/ontology", label: "业务本体" },
   { kind: "link", to: "/admin/data-quality", label: "数据清洗标注" },
   { kind: "link", to: "/admin/tools", label: "工具" },
   { kind: "link", to: "/admin/skills", label: "技能" },
@@ -47,32 +56,88 @@ function readAuth(): AuthPayload | null {
 }
 
 export default function AdminShell() {
-  const nav = useNavigate();
   const location = useLocation();
   const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
   const token = auth?.token ?? "";
   const [me, setMe] = useState<MePayload>({});
   const [organizationName, setOrganizationName] = useState(auth?.orgName || auth?.orgId || "");
   const [collapsedNavGroups, setCollapsedNavGroups] = useState<string[]>([]);
+  const [navigationGuard, setNavigationGuard] = useState<AdminNavigationGuard | null>(null);
+  const navigationGuardIdRef = useRef(0);
+  const profileRequestIdRef = useRef(0);
+  const organizationRequestIdRef = useRef(0);
+  const guardScope = createAdminAuthScopeKey(auth?.orgId ?? "", token);
+  const authScopeRef = useRef(guardScope);
+  const previousGuardScopeRef = useRef(guardScope);
 
-  const ctx = useMemo<AdminOutletContext>(() => ({ token }), [token]);
+  const invalidateAdminAuthRequests = useCallback((nextScope: string) => {
+    authScopeRef.current = nextScope;
+    profileRequestIdRef.current += 1;
+    organizationRequestIdRef.current += 1;
+  }, []);
+
+  if (authScopeRef.current !== guardScope) {
+    invalidateAdminAuthRequests(guardScope);
+  }
+
+  useLayoutEffect(() => {
+    if (authScopeRef.current !== guardScope) invalidateAdminAuthRequests(guardScope);
+    return () => invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
+  }, [guardScope, invalidateAdminAuthRequests]);
+
+  const registerNavigationGuard = useCallback((message: string) => {
+    const id = ++navigationGuardIdRef.current;
+    setNavigationGuard({ id, message });
+    return () => {
+      setNavigationGuard((current) => current?.id === id ? null : current);
+    };
+  }, []);
+
+  const ctx = useMemo<AdminOutletContext>(() => ({
+    token,
+    orgId: auth?.orgId ?? "",
+    userId: auth?.userId ?? "",
+    registerNavigationGuard,
+  }), [auth?.orgId, auth?.userId, registerNavigationGuard, token]);
+
+  useEffect(() => {
+    if (previousGuardScopeRef.current === guardScope) return;
+    previousGuardScopeRef.current = guardScope;
+    setNavigationGuard(null);
+  }, [guardScope]);
 
   useAuthStorageSync<AuthPayload>(LS_ADMIN_TOKEN, (payload) => {
+    const nextScope = createAdminAuthScopeKey(payload?.orgId ?? "", payload?.token ?? "");
+    if (authScopeRef.current !== nextScope) invalidateAdminAuthRequests(nextScope);
     setAuth(payload);
+    setMe({});
     setOrganizationName(payload?.orgName || payload?.orgId || "");
-    if (!payload?.token) {
-      nav("/admin/login", { replace: true });
-    }
   });
 
   useEffect(() => {
     if (!token) return;
+    const requestScope = guardScope;
+    const requestId = ++profileRequestIdRef.current;
+    const isCurrent = () => isAdminAsyncRequestCurrent(
+      requestScope,
+      requestId,
+      authScopeRef.current,
+      profileRequestIdRef.current,
+    );
     void (async () => {
       try {
         const res = await authFetch(LS_ADMIN_TOKEN, "/auth/me", {}, {
-          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+          onUnauthorized: () => {
+            if (!isCurrent()) return;
+            invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
+            clearAuthPayload(LS_ADMIN_TOKEN);
+            setAuth(null);
+            setMe({});
+          },
         });
+        if (!isCurrent()) return;
         const json = await res.json();
+        if (!isCurrent()) return;
         if (res.ok && json.success) {
           const profile = (json.data ?? {}) as MePayload;
           setMe(profile);
@@ -82,19 +147,36 @@ export default function AdminShell() {
         // ignore header profile fetch errors
       }
     })();
-  }, [token]);
+  }, [guardScope, invalidateAdminAuthRequests, token]);
 
   useEffect(() => {
     if (!token || !auth) return;
+    const authSnapshot = auth;
+    const requestScope = guardScope;
+    const requestId = ++organizationRequestIdRef.current;
+    const isCurrent = () => isAdminAsyncRequestCurrent(
+      requestScope,
+      requestId,
+      authScopeRef.current,
+      organizationRequestIdRef.current,
+    );
     void (async () => {
       try {
         const res = await authFetch(LS_ADMIN_TOKEN, "/admin/organization/profile", {}, {
-          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+          onUnauthorized: () => {
+            if (!isCurrent()) return;
+            invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
+            clearAuthPayload(LS_ADMIN_TOKEN);
+            setAuth(null);
+            setMe({});
+          },
         });
+        if (!isCurrent()) return;
         const json = await res.json();
+        if (!isCurrent()) return;
         if (res.ok && json.success && json.data?.name) {
           setOrganizationName(json.data.name);
-          const next = { ...auth, orgName: json.data.name };
+          const next = { ...authSnapshot, orgName: json.data.name };
           writeAuthPayload(LS_ADMIN_TOKEN, next);
           setAuth(next);
         }
@@ -102,7 +184,7 @@ export default function AdminShell() {
         // keep token payload organization fallback
       }
     })();
-  }, [token]);
+  }, [auth?.orgId, guardScope, invalidateAdminAuthRequests, token]);
 
   useEffect(() => {
     const onCurrentUserUpdated = (evt: Event) => {
@@ -135,9 +217,11 @@ export default function AdminShell() {
   }, [auth]);
 
   const logout = () => {
+    if (!confirmAdminNavigation(navigationGuard, (message) => window.confirm(message))) return;
+    invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
     clearAuthPayload(LS_ADMIN_TOKEN);
     setAuth(null);
-    nav("/admin/login", { replace: true });
+    setMe({});
   };
 
   const toggleNavGroup = (label: string) => {
@@ -199,7 +283,11 @@ export default function AdminShell() {
                   </button>
                   <div id={groupChildrenId} className="admin-nav-group__children" hidden={groupCollapsed}>
                     {item.children.map((child) => (
-                      <NavLink key={child.to} to={child.to} className={({ isActive }) => `admin-nav-link--child${isActive ? " active" : ""}`}>
+                      <NavLink
+                        key={child.to}
+                        to={child.to}
+                        className={({ isActive }) => `admin-nav-link--child${isActive ? " active" : ""}`}
+                      >
                         <span>{child.label}</span>
                       </NavLink>
                     ))}
@@ -208,7 +296,11 @@ export default function AdminShell() {
               );
             }
             return (
-              <NavLink key={item.to} to={item.to} className={({ isActive }) => (isActive ? "active" : "")}>
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => (isActive ? "active" : "")}
+              >
                 <span>{item.label}</span>
               </NavLink>
             );

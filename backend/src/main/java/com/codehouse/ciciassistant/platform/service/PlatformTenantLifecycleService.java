@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.auth.domain.OrgRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.service.OrganizationProvisioningService;
+import com.codehouse.ciciassistant.common.security.SecretKeyMatcher;
 import com.codehouse.ciciassistant.kb.service.VectorDeleteResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreAuditResult;
 import com.codehouse.ciciassistant.kb.service.VectorStoreClient;
@@ -15,7 +16,10 @@ import com.codehouse.ciciassistant.platform.domain.OrganizationPurgeJobRepositor
 import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyEntity;
 import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -123,6 +127,21 @@ public class PlatformTenantLifecycleService {
                     "agent_run_trace",
                     "audit_log"
             )),
+            new DomainGroup("ontology", "本体建模、映射目录、版本与语义查询审计", List.of(
+                    "ontology_query_audit",
+                    "ontology_version",
+                    "ontology_ai_proposal",
+                    "ontology_mapping",
+                    "ontology_physical_field",
+                    "ontology_physical_object",
+                    "ontology_data_source",
+                    "ontology_property",
+                    "ontology_relation",
+                    "ontology_metric",
+                    "ontology_action",
+                    "ontology_concept",
+                    "ontology_workspace"
+            )),
             new DomainGroup("platform_governance", "平台治理扩展数据", List.of(
                     "platform_audit_log",
                     "platform_skill_template",
@@ -148,19 +167,6 @@ public class PlatformTenantLifecycleService {
             )
     );
 
-    private static final List<String> REDACTED_FIELD_HINTS = List.of(
-            "secret",
-            "password",
-            "token",
-            "credential",
-            "encrypted",
-            "api_key",
-            "apikey",
-            "authorization",
-            "safetymark",
-            "config_json"
-    );
-
     private static final Set<String> EXPORT_TABLES = new HashSet<>(MANIFEST_DOMAINS.stream()
             .map(DomainGroup::tables)
             .flatMap(Collection::stream)
@@ -168,6 +174,19 @@ public class PlatformTenantLifecycleService {
             .toList());
 
     private static final List<String> PURGE_DELETE_TABLES = List.of(
+            "ontology_query_audit",
+            "ontology_version",
+            "ontology_ai_proposal",
+            "ontology_mapping",
+            "ontology_physical_field",
+            "ontology_physical_object",
+            "ontology_data_source",
+            "ontology_property",
+            "ontology_relation",
+            "ontology_metric",
+            "ontology_action",
+            "ontology_concept",
+            "ontology_workspace",
             "agent_workflow_skill_ref",
             "agent_runtime_schedule_trigger",
             "agent_workflow_execution_log",
@@ -695,7 +714,7 @@ public class PlatformTenantLifecycleService {
         manifest.put("redact", List.of(Map.of(
                 "domain", "export_archive",
                 "label", "导出包敏感字段脱敏",
-                "fields", REDACTED_FIELD_HINTS
+                "fields", SecretKeyMatcher.sensitiveKeyHints()
         )));
         manifest.put("orphanAudit", buildOrphanAudit(org.getId()));
         manifest.put("retain_summary", List.of(
@@ -840,24 +859,67 @@ public class PlatformTenantLifecycleService {
         zip.putNextEntry(new ZipEntry("tables/" + table + ".jsonl"));
         List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + table + " WHERE org_id = ?", orgId);
         for (Map<String, Object> row : rows) {
-            zip.write(objectMapper.writeValueAsString(redactRow(row)).getBytes(StandardCharsets.UTF_8));
+            zip.write(objectMapper.writeValueAsString(redactRow(table, row)).getBytes(StandardCharsets.UTF_8));
             zip.write('\n');
         }
         zip.closeEntry();
     }
 
-    private Map<String, Object> redactRow(Map<String, Object> row) {
+    private Map<String, Object> redactRow(String table, Map<String, Object> row) {
         Map<String, Object> redacted = new LinkedHashMap<>();
         for (Map.Entry<String, Object> entry : row.entrySet()) {
             String key = entry.getKey() == null ? "" : entry.getKey();
-            redacted.put(key, shouldRedact(key) ? "[REDACTED]" : entry.getValue());
+            if (shouldRecursivelyRedactOntologyJson(table, key)) {
+                redacted.put(key, redactOntologyJson(entry.getValue()));
+            } else if (SecretKeyMatcher.matches(key)) {
+                redacted.put(key, "[REDACTED]");
+            } else {
+                redacted.put(key, entry.getValue());
+            }
         }
         return redacted;
     }
 
-    private boolean shouldRedact(String key) {
-        String normalized = key.toLowerCase();
-        return REDACTED_FIELD_HINTS.stream().anyMatch(normalized::contains);
+    private boolean shouldRecursivelyRedactOntologyJson(String table, String key) {
+        return ("ontology_data_source".equals(table) && "sample_data_json".equalsIgnoreCase(key))
+                || ("ontology_version".equals(table) && "snapshot_json".equalsIgnoreCase(key))
+                || (Set.of("ontology_physical_object", "ontology_physical_field").contains(table)
+                && "metadata_json".equalsIgnoreCase(key));
+    }
+
+    private String redactOntologyJson(Object rawJson) {
+        if (rawJson == null) {
+            return null;
+        }
+        try {
+            JsonNode json = objectMapper.readTree(rawJson.toString());
+            return objectMapper.writeValueAsString(redactOntologyJsonNode(json));
+        } catch (Exception ex) {
+            return "[REDACTED]";
+        }
+    }
+
+    private JsonNode redactOntologyJsonNode(JsonNode node) {
+        if (node == null || node.isNull() || node.isValueNode()) {
+            return node == null ? objectMapper.nullNode() : node.deepCopy();
+        }
+        if (node.isArray()) {
+            ArrayNode redacted = objectMapper.createArrayNode();
+            node.forEach(value -> redacted.add(redactOntologyJsonNode(value)));
+            return redacted;
+        }
+        ObjectNode redacted = objectMapper.createObjectNode();
+        node.fields().forEachRemaining(entry -> {
+            String compactKey = SecretKeyMatcher.normalize(entry.getKey());
+            if (SecretKeyMatcher.matches(entry.getKey())) {
+                redacted.put(entry.getKey(), "[REDACTED]");
+            } else if ("sampledatajson".equals(compactKey) && entry.getValue().isTextual()) {
+                redacted.put(entry.getKey(), redactOntologyJson(entry.getValue().textValue()));
+            } else {
+                redacted.set(entry.getKey(), redactOntologyJsonNode(entry.getValue()));
+            }
+        });
+        return redacted;
     }
 
     private List<Path> listKbFiles(String orgId) {

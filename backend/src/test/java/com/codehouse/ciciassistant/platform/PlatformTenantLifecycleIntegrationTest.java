@@ -44,6 +44,22 @@ import org.springframework.test.web.servlet.MvcResult;
 })
 class PlatformTenantLifecycleIntegrationTest {
 
+    private static final List<String> ONTOLOGY_TABLES = List.of(
+            "ontology_query_audit",
+            "ontology_version",
+            "ontology_ai_proposal",
+            "ontology_mapping",
+            "ontology_physical_field",
+            "ontology_physical_object",
+            "ontology_data_source",
+            "ontology_property",
+            "ontology_relation",
+            "ontology_metric",
+            "ontology_action",
+            "ontology_concept",
+            "ontology_workspace"
+    );
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -64,6 +80,7 @@ class PlatformTenantLifecycleIntegrationTest {
         String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402401", "生命周期测试组织");
         seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
+        seedOntologyRows(createdOrg.orgId(), createdOrg.memberId());
 
         MvcResult listResult = mockMvc.perform(get("/platform/tenants")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
@@ -139,6 +156,12 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(domainRows(dryRun.path("manifest"), "members")).isEqualTo(1);
         assertThat(tableRows(dryRun.path("manifest"), "chat", "chat_message")).isEqualTo(1);
         assertThat(tableRows(dryRun.path("manifest"), "memory", "user_memory")).isEqualTo(1);
+        assertThat(domainRows(dryRun.path("manifest"), "ontology")).isEqualTo(ONTOLOGY_TABLES.size() + 1L);
+        for (String table : ONTOLOGY_TABLES) {
+            assertThat(tableRows(dryRun.path("manifest"), "ontology", table))
+                    .as("dry-run row count for %s", table)
+                    .isEqualTo("ontology_physical_field".equals(table) ? 2 : 1);
+        }
 
         String responseText = dryRunResult.getResponse().getContentAsString();
         assertThat(responseText).doesNotContain("客户绝密消息");
@@ -176,6 +199,49 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(zipEntries).containsKey("tables/integration_app.jsonl");
         assertThat(zipEntries.get("tables/integration_app.jsonl")).contains("[REDACTED]");
         assertThat(zipEntries.get("tables/integration_app.jsonl")).doesNotContain("tenant-secret-token");
+        for (String table : ONTOLOGY_TABLES) {
+            assertThat(zipEntries).containsKey("tables/" + table + ".jsonl");
+        }
+        assertThat(zipEntries.get("tables/ontology_data_source.jsonl"))
+                .contains("[REDACTED]")
+                .contains("sample-project-alpha")
+                .contains("visible-sample-owner")
+                .doesNotContain("ontology-data-source-secret")
+                .doesNotContain("ontology-sample-access-key-secret")
+                .doesNotContain("ontology-sample-private-key-secret")
+                .doesNotContain("ontology-sample-private-snake-secret")
+                .doesNotContain("ontology-sample-cookie-secret");
+        assertThat(zipEntries.get("tables/ontology_version.jsonl"))
+                .contains("sample-project-alpha")
+                .contains("sample-project-beta")
+                .contains("customer-tier-gold")
+                .contains("visible-object-sample-owner")
+                .doesNotContain("ontology-snapshot-secret")
+                .doesNotContain("ontology-nested-secret")
+                .doesNotContain("ontology-snapshot-sample-password")
+                .doesNotContain("ontology-snapshot-string-private-key")
+                .doesNotContain("ontology-snapshot-string-private-snake")
+                .doesNotContain("ontology-snapshot-string-cookie")
+                .doesNotContain("ontology-snapshot-object-private-key")
+                .doesNotContain("ontology-snapshot-object-private-snake")
+                .doesNotContain("ontology-snapshot-object-cookie");
+        assertThat(zipEntries.get("tables/ontology_physical_object.jsonl"))
+                .contains("project-catalog-v1")
+                .contains("delivery-metadata")
+                .doesNotContain("ontology-object-metadata-credential")
+                .doesNotContain("ontology-object-metadata-private-key")
+                .doesNotContain("ontology-object-metadata-cookie");
+        assertThat(zipEntries.get("tables/ontology_physical_field.jsonl"))
+                .contains("Project Name")
+                .contains("crm-read-model")
+                .doesNotContain("ontology-field-metadata-access-key")
+                .doesNotContain("ontology-field-metadata-private-snake")
+                .doesNotContain("ontology-field-metadata-cookie")
+                .doesNotContain("ontology-malformed-metadata-password");
+        JsonNode malformedMetadataField = findJsonlRow(
+                zipEntries.get("tables/ontology_physical_field.jsonl"), "field_key", "description");
+        assertThat(malformedMetadataField).isNotNull();
+        assertThat(malformedMetadataField.path("metadata_json").asText()).isEqualTo("[REDACTED]");
         assertThat(zipEntries).containsKey("files/lifecycle-source.txt");
 
         mockMvc.perform(post("/platform/tenants/{orgId}/pending-purge", createdOrg.orgId())
@@ -251,6 +317,11 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(countRows("wecom_kf_account", createdOrg.orgId())).isZero();
         assertThat(countRows("integration_app", createdOrg.orgId())).isZero();
         assertThat(countRows("agent_run_trace", createdOrg.orgId())).isZero();
+        for (String table : ONTOLOGY_TABLES) {
+            assertThat(countRows(table, createdOrg.orgId()))
+                    .as("purged row count for %s", table)
+                    .isZero();
+        }
         assertThat(countRows("organization_member", createdOrg.orgId())).isZero();
         assertThat(countRows("user_account", null)).isGreaterThan(0);
         assertThat(jdbcTemplate.queryForObject("SELECT status FROM org WHERE id = ?", String.class, createdOrg.orgId()))
@@ -280,6 +351,7 @@ class PlatformTenantLifecycleIntegrationTest {
     void shouldProvisionTenantAndReuseExistingOwnerAccountFromPlatform() throws Exception {
         String platformToken = platformToken();
         String reusableMobile = uniqueMobile("13902402405");
+        String reusableEmail = "tenant-a-" + UUID.randomUUID() + "@example.com";
 
         MvcResult firstProvisionResult = mockMvc.perform(post("/platform/tenants")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
@@ -289,11 +361,11 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "tenantName": "平台开通组织 A",
                                   "ownerMobile": "%s",
                                   "ownerDisplayName": "张三",
-                                  "ownerEmail": "tenant-a@example.com",
+                                  "ownerEmail": "%s",
                                   "initialPassword": "tenantPass1",
                                   "provisionNote": "platform provisioning test"
                                 }
-                                """.formatted(reusableMobile)))
+                                """.formatted(reusableMobile, reusableEmail)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.orgId").isNotEmpty())
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"))
@@ -584,8 +656,24 @@ class PlatformTenantLifecycleIntegrationTest {
 
     private String uniqueMobile(String seedMobile) {
         String prefix = seedMobile == null || seedMobile.length() < 3 ? "139" : seedMobile.substring(0, 3);
-        String suffix = String.format("%08d", Math.floorMod(System.nanoTime(), 100_000_000L));
-        return prefix + suffix;
+        for (int attempt = 0; attempt < 10; attempt++) {
+            String suffix = String.format("%08d",
+                    Math.floorMod(UUID.randomUUID().getLeastSignificantBits(), 100_000_000L));
+            String candidate = prefix + suffix;
+            Long existing = jdbcTemplate.queryForObject("""
+                            SELECT COUNT(*)
+                            FROM account_login_identifier
+                            WHERE identifier_type = 'MOBILE'
+                              AND normalized_value = ?
+                              AND status = 'ACTIVE'
+                            """,
+                    Long.class,
+                    candidate);
+            if (existing != null && existing == 0L) {
+                return candidate;
+            }
+        }
+        throw new IllegalStateException("Unable to allocate a unique mobile fixture");
     }
 
     private void seedSensitiveRows(String orgId, String memberId) {
@@ -696,6 +784,195 @@ class PlatformTenantLifecycleIntegrationTest {
                 Timestamp.from(now), Timestamp.from(now), 1, 0, 0, 0, "[]", "[]", "[]", "{}", Timestamp.from(now));
     }
 
+    private void seedOntologyRows(String orgId, String memberId) {
+        Instant now = Instant.now();
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_workspace(
+                            org_id, key, name, description, status, draft_revision, created_by, updated_by,
+                            created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, "lifecycle-ontology", "Lifecycle Ontology", "Lifecycle governance fixture", "PUBLISHED", 1L,
+                memberId, memberId, Timestamp.from(now), Timestamp.from(now));
+        Long workspaceId = jdbcTemplate.queryForObject(
+                "SELECT id FROM ontology_workspace WHERE org_id = ? AND key = 'lifecycle-ontology'",
+                Long.class,
+                orgId);
+
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_concept(
+                            org_id, workspace_id, key, name, concept_type, queryable, enabled, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "project", "Project", "ENTITY", true, true,
+                Timestamp.from(now), Timestamp.from(now));
+        Long conceptId = jdbcTemplate.queryForObject(
+                "SELECT id FROM ontology_concept WHERE org_id = ? AND workspace_id = ? AND key = 'project'",
+                Long.class,
+                orgId,
+                workspaceId);
+
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_property(
+                            org_id, workspace_id, concept_id, key, name, data_type, required, multiple,
+                            sensitive, queryable, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, conceptId, "name", "Name", "STRING", true, false, false, true,
+                Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_relation(
+                            org_id, workspace_id, key, name, source_concept_id, target_concept_id, cardinality,
+                            queryable, enabled, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "parent-project", "Parent Project", conceptId, conceptId, "MANY_TO_ONE",
+                true, true, Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_metric(
+                            org_id, workspace_id, key, name, concept_id, aggregation, measure_property_key,
+                            created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "project-count", "Project Count", conceptId, "COUNT", "name",
+                Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_action(
+                            org_id, workspace_id, key, name, concept_id, description, parameters_json,
+                            created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "review-project", "Review Project", conceptId, "Read-only modeled action", "[]",
+                Timestamp.from(now), Timestamp.from(now));
+
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_data_source(
+                            org_id, workspace_id, key, name, source_type, config_json, sample_data_json,
+                            status, created_by, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "sample", "Sample Source", "INLINE_SAMPLE",
+                "{\"accessToken\":\"ontology-data-source-secret\"}",
+                "{\"projects\":[{\"id\":\"p-1\",\"name\":\"sample-project-alpha\",\"owner\":\"visible-sample-owner\",\"connector\":{\"accessKey\":\"ontology-sample-access-key-secret\",\"privateKey\":\"ontology-sample-private-key-secret\",\"private_key\":\"ontology-sample-private-snake-secret\",\"cookie\":\"ontology-sample-cookie-secret\"}}]}",
+                "VALID", memberId, Timestamp.from(now), Timestamp.from(now));
+        Long dataSourceId = jdbcTemplate.queryForObject(
+                "SELECT id FROM ontology_data_source WHERE org_id = ? AND workspace_id = ? AND key = 'sample'",
+                Long.class,
+                orgId,
+                workspaceId);
+
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_physical_object(
+                            org_id, workspace_id, data_source_id, object_key, name, object_type, metadata_json,
+                            discovered_at, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, dataSourceId, "projects", "Projects", "OBJECT",
+                "{\"catalog\":\"project-catalog-v1\",\"label\":\"delivery-metadata\",\"connection\":{\"credential\":\"ontology-object-metadata-credential\",\"privateKey\":\"ontology-object-metadata-private-key\",\"cookie\":\"ontology-object-metadata-cookie\"}}",
+                Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
+        Long objectId = jdbcTemplate.queryForObject(
+                "SELECT id FROM ontology_physical_object WHERE org_id = ? AND data_source_id = ? AND object_key = 'projects'",
+                Long.class,
+                orgId,
+                dataSourceId);
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_physical_field(
+                            org_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
+                            multiple, metadata_json, discovered_at, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, objectId, "name", "Name", "STRING", false, false,
+                "{\"businessLabel\":\"Project Name\",\"sourceSystem\":\"crm-read-model\",\"source\":{\"accessKey\":\"ontology-field-metadata-access-key\",\"private_key\":\"ontology-field-metadata-private-snake\",\"cookie\":\"ontology-field-metadata-cookie\"}}",
+                Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_physical_field(
+                            org_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
+                            multiple, metadata_json, discovered_at, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, objectId, "description", "Description", "STRING", true, false,
+                "not-json ontology-malformed-metadata-password",
+                Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_mapping(
+                            org_id, workspace_id, target_type, target_key, data_source_id, physical_object_key,
+                            physical_field_key, confidence, source, validation_status, last_validated_at,
+                            created_by, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "PROPERTY", "project.name", dataSourceId, "projects", "name", 1.0,
+                "MANUAL", "VALID", Timestamp.from(now), memberId, Timestamp.from(now), Timestamp.from(now));
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_ai_proposal(
+                            org_id, workspace_id, proposal_type, status, instruction, payload_json, diff_json,
+                            validation_json, created_by, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, "REFINE", "PENDING", "Refine project vocabulary", "{}", "[]", "{}",
+                memberId, Timestamp.from(now), Timestamp.from(now));
+
+        String snapshot = """
+                {
+                  "workspace": {"key": "lifecycle-ontology"},
+                  "dataSources": [{
+                    "key": "sample",
+                    "configJson": {"accessToken": "ontology-snapshot-secret"},
+                    "sampleDataJson": "{\\\"projects\\\":[{\\\"id\\\":\\\"p-1\\\",\\\"name\\\":\\\"sample-project-alpha\\\",\\\"tier\\\":\\\"customer-tier-gold\\\",\\\"credentials\\\":{\\\"password\\\":\\\"ontology-snapshot-sample-password\\\",\\\"privateKey\\\":\\\"ontology-snapshot-string-private-key\\\",\\\"private_key\\\":\\\"ontology-snapshot-string-private-snake\\\",\\\"cookie\\\":\\\"ontology-snapshot-string-cookie\\\"}}]}"
+                  }, {
+                    "key": "object-sample",
+                    "sampleDataJson": {
+                      "projects": [{
+                        "id": "p-2",
+                        "name": "sample-project-beta",
+                        "owner": "visible-object-sample-owner",
+                        "privateKey": "ontology-snapshot-object-private-key",
+                        "private_key": "ontology-snapshot-object-private-snake",
+                        "cookie": "ontology-snapshot-object-cookie"
+                      }]
+                    }
+                  }],
+                  "secret": "ontology-nested-secret"
+                }
+                """;
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_version(
+                            org_id, workspace_id, version_no, source_draft_revision, content_hash, snapshot_json,
+                            json_schema, graphql_sdl, query_contract_json, validation_summary_json,
+                            published_by, published_at, created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, 1, 1L, "lifecycle-hash", snapshot, "{}", "type Query { project: String }",
+                "{}", "{}", memberId, Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
+        Long versionId = jdbcTemplate.queryForObject(
+                "SELECT id FROM ontology_version WHERE org_id = ? AND workspace_id = ? AND version_no = 1",
+                Long.class,
+                orgId,
+                workspaceId);
+        jdbcTemplate.update("""
+                        INSERT INTO ontology_query_audit(
+                            org_id, workspace_id, version_id, data_source_id, user_id, concept_key, query_json,
+                            result_count, duration_ms, status, evidence_json, sensitive_values_redacted,
+                            created_at, updated_at
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                orgId, workspaceId, versionId, dataSourceId, memberId, "project", "{}", 1, 3L, "SUCCESS", "{}", true,
+                Timestamp.from(now), Timestamp.from(now));
+    }
+
     private long countRows(String table, String orgId) {
         if (orgId == null) {
             return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Long.class);
@@ -726,6 +1003,16 @@ class PlatformTenantLifecycleIntegrationTest {
             }
         }
         return entries;
+    }
+
+    private JsonNode findJsonlRow(String jsonl, String key, String expectedValue) throws Exception {
+        for (String line : jsonl.lines().toList()) {
+            JsonNode row = objectMapper.readTree(line);
+            if (expectedValue.equals(row.path(key).asText())) {
+                return row;
+            }
+        }
+        return null;
     }
 
     private JsonNode findByOrgId(JsonNode rows, String orgId) {

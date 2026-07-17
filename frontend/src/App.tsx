@@ -1,4 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Navigate,
+  Route,
+  RouterProvider,
+} from "react-router-dom";
 import AssistantApp from "./assistant/AssistantApp";
 import AgentCiciWebsite from "./suite/AgentCiciWebsite";
 import AdminGuard from "./admin/AdminGuard";
@@ -19,6 +25,7 @@ import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
 import AdminEvaluationPage from "./admin/pages/AdminEvaluationPage";
+import AdminOntologyPage from "./admin/pages/AdminOntologyPage";
 import EmbedMeetingMinutesPage from "./embed/EmbedMeetingMinutesPage";
 import PlatformGuard from "./platform/PlatformGuard";
 import PlatformLogin from "./platform/PlatformLogin";
@@ -35,10 +42,8 @@ import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 import PlatformEvaluationPage from "./platform/pages/PlatformEvaluationPage";
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
+const router = createBrowserRouter(createRoutesFromElements(
+  <>
         <Route path="/" element={<AgentCiciWebsite />} />
         <Route path="/solutions" element={<AgentCiciWebsite />} />
         <Route path="/skill-hub" element={<AgentCiciWebsite />} />
@@ -62,6 +67,7 @@ export default function App() {
           <Route element={<AdminShell />}>
             <Route index element={<Navigate to="kb" replace />} />
             <Route path="kb" element={<AdminKnowledgePage />} />
+            <Route path="ontology" element={<AdminOntologyPage />} />
             <Route path="data-quality" element={<AdminDataQualityPage />} />
             <Route path="models" element={<Navigate to="billing" replace />} />
             <Route path="tools" element={<AdminToolsPage />} />
@@ -98,7 +104,9 @@ export default function App() {
             <Route path="audit" element={<PlatformAuditPage />} />
           </Route>
         </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+  </>,
+));
+
+export default function App() {
+  return <RouterProvider router={router} />;
 }

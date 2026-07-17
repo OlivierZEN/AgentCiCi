@@ -16,6 +16,7 @@
 - 所有持久化数据按 `org_id` 隔离，CloudCC 查询继续使用当前用户会话与记录权限。
 - 查询默认 `limit=50`、硬上限 `200`、关系最多一跳；禁止任意 SQL、脚本、URL 和无界扫描。
 - 前端只验收桌面端，继承 `鎏金账房` 暖象牙、墨色、紧凑、香槟金结构线设计事实。
+- V82 不得回改；V83 只扩展 `ontology_workspace` provenance，生产仍为 13 张 ontology 表。
 - 生产发布遵循 `docs/production-release-runbook.md`，真实发布前必须运行 `./scripts/release-acr.sh --dry-run`。
 
 ---
@@ -25,6 +26,7 @@
 ### Backend domain and persistence
 
 - `backend/src/main/resources/db/migration/V82__general_ontology_platform.sql`：13 张本体表、唯一约束、租户索引和级联外键。
+- `backend/src/main/resources/db/migration/V83__ontology_workspace_provenance.sql`：工作区创建来源、参考包 ID、原始包内容 SHA-256 与组合 CHECK 约束。
 - `backend/src/main/java/com/codehouse/ciciassistant/ontology/model/OntologyDocument.java`：领域无关草稿/快照 DTO 及枚举。
 - `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/*Entity.java`：工作区、概念、属性、关系、指标、动作、数据源、物理对象/字段、映射、AI 提案、版本和查询审计实体。
 - `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/*Repository.java`：全部按组织/工作区作用域读取。
@@ -499,7 +501,7 @@ Expected: FAIL because the model helpers do not exist.
 
 - [ ] **Step 3: Implement immutable model helpers and typed API client**
 
-Normalize API failures into `{code,message,details}`; send `expectedRevision` in save/apply/publish bodies; never silently overwrite on HTTP 409. Keep model helpers side-effect free so canvas and inspector share one draft source.
+Normalize API failures into `{code,message,details}`; send `expectedRevision` in save/apply/compile-preview/publish bodies; compile preview returns `sourceDraftRevision` and the candidate version, which the client accepts only when both the draft revision and the bound published-version successor match. Never silently accept or overwrite on HTTP 409. Keep model helpers side-effect free so canvas and inspector share one draft source; a compile-only mapping read must not mark the catalog-backed mapping workspace complete, and dirty mapping rows block internal reloads and AI proposal mutations.
 
 - [ ] **Step 4: Add route and menu**
 
@@ -593,7 +595,74 @@ git add frontend/src/admin/ontology frontend/src/admin/pages/AdminOntologyPage.t
 git commit -m "feat: build visual ontology modeling workbench"
 ```
 
-### Task 8: 全量验证、生产发布与状态收口
+### Task 8: 参考包创建来源与内容指纹安全加固
+
+**Files:**
+
+- Create: `backend/src/main/resources/db/migration/V83__ontology_workspace_provenance.sql`
+- Modify: `backend/src/main/java/com/codehouse/ciciassistant/ontology/domain/OntologyWorkspaceEntity.java`
+- Modify: `backend/src/main/java/com/codehouse/ciciassistant/ontology/service/OntologyReferencePackageService.java`
+- Modify: `backend/src/main/java/com/codehouse/ciciassistant/ontology/service/OntologyManagementService.java`
+- Test: `backend/src/test/java/com/codehouse/ciciassistant/ontology/OntologyPersistenceIntegrationTest.java`
+- Test: `backend/src/test/java/com/codehouse/ciciassistant/ontology/OntologyPlatformIntegrationTest.java`
+- Test: `backend/src/test/java/com/codehouse/ciciassistant/ontology/service/OntologyReferencePackageServiceTest.java`
+- Test: `backend/src/test/java/com/codehouse/ciciassistant/ontology/service/OntologyManagementServiceTest.java`
+- Modify: `frontend/src/admin/ontology/ontologyTypes.ts`
+- Modify: `frontend/src/admin/ontology/ontologyModel.ts`
+- Test: `frontend/src/admin/ontology/ontologyModel.test.ts`
+
+**Interfaces:**
+
+- Produces: `creationSource: MANUAL | REFERENCE_PACKAGE`、nullable `referencePackageId/referencePackageFingerprint`、参考包摘要 `fingerprint`。
+- Consumes: V82 的 `uq_ontology_workspace_org_key`、当前组织权威列表和已有结果未知安装锁。
+
+- [ ] **Step 1: 先写并运行 provenance RED 测试**
+
+前端反例必须使用同一管理员且 key/name/description 完全相同、但 `creationSource=MANUAL` 的工作区，并断言 `findOntologyWorkspaceByReferencePackageIdentity(...)` 返回 `undefined`。后端先断言参考包摘要和加载结果包含同一个 64 位小写 SHA-256，普通创建实体为 `MANUAL/NULL/NULL`，参考包安装实体为 `REFERENCE_PACKAGE/id/fingerprint`，管理 API 与数据库读回一致。
+
+Run:
+
+```bash
+cd frontend && npm test -- ontologyModel.test.ts ontologyWorkbenchContract.test.ts
+cd ../backend && mvn -q -Dtest=OntologyReferencePackageServiceTest,OntologyManagementServiceTest test
+```
+
+Expected: FAIL because provenance/fingerprint fields and matching rules do not exist.
+
+- [ ] **Step 2: 新增 V83 和最小后端实现**
+
+V83 给 `ontology_workspace` 增加 `creation_source VARCHAR(32) NOT NULL DEFAULT 'MANUAL'`、`reference_package_id VARCHAR(128)`、`reference_package_fingerprint CHAR(64)`；CHECK 约束只允许 `MANUAL/NULL/NULL` 或 `REFERENCE_PACKAGE/non-blank/64位小写hex`。数据库反例必须分别覆盖 MANUAL 携带包字段、REFERENCE_PACKAGE 空包 ID、短指纹和大写指纹。保留旧构造函数并让它显式委托 MANUAL；参考包构造使用 REFERENCE_PACKAGE。读取 classpath 资源时只读取一次原始 bytes，用 `MessageDigest.getInstance("SHA-256")` 和 `HexFormat.of()` 生成指纹，再从同一 bytes 严格反序列化。
+
+- [ ] **Step 3: 收紧前端恢复并运行聚焦 GREEN**
+
+`OntologyWorkspaceView` 增加三个 provenance 字段，`OntologyReferencePackageSummary` 增加 `fingerprint`。恢复 helper 除现有元数据和 `createdBy` 外，必须精确匹配 `REFERENCE_PACKAGE + package id + fingerprint`；匹配失败继续走既有安装锁，不新增重试分支。
+
+Run:
+
+```bash
+cd frontend && npm test -- ontologyModel.test.ts ontologyWorkbenchContract.test.ts
+cd ../backend && mvn -q -Dtest=OntologyReferencePackageServiceTest,OntologyManagementServiceTest test
+```
+
+Expected: PASS.
+
+- [ ] **Step 4: 在全新 PostgreSQL 从零验证 V82 + V83**
+
+新建专用数据库，不修复或复用共享测试库；运行 `OntologyPersistenceIntegrationTest,OntologyPlatformIntegrationTest,OntologyManagementServiceTest,OntologyReferencePackageServiceTest`，确认 Flyway 从空库到 V83、仍有 13 张 ontology 表、CHECK 约束拒绝伪造 provenance。测试后强制删除该数据库并回读确认不存在。
+
+- [ ] **Step 5: 运行全量前端、生产构建与后端打包**
+
+Run:
+
+```bash
+cd frontend && npm test && npm run build
+cd ../backend && mvn -q -DskipTests package
+cd .. && git diff --check
+```
+
+Expected: all commands exit `0`.
+
+### Task 9: 全量验证、生产发布与状态收口
 
 **Files:**
 

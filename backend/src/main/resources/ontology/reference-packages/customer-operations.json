@@ -1,0 +1,224 @@
+{
+  "id": "customer-operations",
+  "title": "客户经营",
+  "description": "面向客户经营场景的候选概念与连接器映射，安装后必须先真实发现并验证。",
+  "document": {
+    "key": "customer-operations",
+    "name": "客户经营",
+    "description": "作为外围普通数据安装的客户经营领域参考本体",
+    "concepts": [
+      {
+        "key": "customer",
+        "name": "客户",
+        "pluralName": "客户",
+        "description": "与组织建立业务关系的企业或机构",
+        "conceptType": "ENTITY",
+        "displayPropertyKey": "name",
+        "positionX": 100,
+        "positionY": 120,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"客户编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"name","name":"客户名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"status","name":"经营状态","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["PROSPECT","ACTIVE","INACTIVE"]},
+          {"key":"industry","name":"所属行业","description":null,"dataType":"TEXT","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"owner_id","name":"负责人编号","description":null,"dataType":"REFERENCE","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key": "contact",
+        "name": "联系人",
+        "pluralName": "联系人",
+        "description": "客户组织内参与业务往来的人员",
+        "conceptType": "ENTITY",
+        "displayPropertyKey": "name",
+        "positionX": 380,
+        "positionY": 40,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"联系人编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"name","name":"联系人姓名","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"email","name":"电子邮箱","description":"个人联系信息，仅用于受控映射","dataType":"TEXT","required":false,"multiple":false,"sensitive":true,"queryable":false,"enumValues":[]},
+          {"key":"phone","name":"联系电话","description":"个人联系信息，仅用于受控映射","dataType":"TEXT","required":false,"multiple":false,"sensitive":true,"queryable":false,"enumValues":[]},
+          {"key":"role","name":"业务角色","description":null,"dataType":"TEXT","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"customer_id","name":"所属客户编号","description":null,"dataType":"REFERENCE","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key": "opportunity",
+        "name": "商机",
+        "pluralName": "商机",
+        "description": "围绕客户推进的潜在成交机会",
+        "conceptType": "EVENT",
+        "displayPropertyKey": "name",
+        "positionX": 380,
+        "positionY": 210,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"商机编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"name","name":"商机名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"stage","name":"销售阶段","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["QUALIFYING","PROPOSAL","NEGOTIATION","WON","LOST"]},
+          {"key":"amount","name":"预计金额","description":null,"dataType":"DECIMAL","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"expected_close_date","name":"预计成交日期","description":null,"dataType":"DATE","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"customer_id","name":"所属客户编号","description":null,"dataType":"REFERENCE","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key": "product",
+        "name": "产品",
+        "pluralName": "产品",
+        "description": "可向客户提供的产品或服务",
+        "conceptType": "ENTITY",
+        "displayPropertyKey": "name",
+        "positionX": 690,
+        "positionY": 210,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"产品编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"name","name":"产品名称","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"product_code","name":"产品编码","description":null,"dataType":"TEXT","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"category","name":"产品分类","description":null,"dataType":"TEXT","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"active","name":"是否有效","description":null,"dataType":"BOOLEAN","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key": "interaction",
+        "name": "互动",
+        "pluralName": "互动",
+        "description": "与客户或联系人发生的业务沟通事件",
+        "conceptType": "EVENT",
+        "displayPropertyKey": "subject",
+        "positionX": 380,
+        "positionY": 390,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"互动编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"subject","name":"互动主题","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"channel","name":"互动渠道","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["CALL","EMAIL","MEETING","MESSAGE","OTHER"]},
+          {"key":"occurred_at","name":"发生时间","description":null,"dataType":"DATETIME","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"summary","name":"互动摘要","description":null,"dataType":"LONG_TEXT","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"customer_id","name":"相关客户编号","description":null,"dataType":"REFERENCE","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"contact_id","name":"相关联系人编号","description":null,"dataType":"REFERENCE","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      },
+      {
+        "key": "business_action",
+        "name": "经营动作",
+        "pluralName": "经营动作",
+        "description": "围绕客户经营计划和跟踪的业务行动记录",
+        "conceptType": "EVENT",
+        "displayPropertyKey": "title",
+        "positionX": 690,
+        "positionY": 390,
+        "queryable": true,
+        "enabled": true,
+        "properties": [
+          {"key":"id","name":"动作编号","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"title","name":"动作标题","description":null,"dataType":"TEXT","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"action_type","name":"动作类型","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["FOLLOW_UP","PROPOSAL","RENEWAL","SERVICE"]},
+          {"key":"status","name":"动作状态","description":null,"dataType":"ENUM","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":["PLANNED","IN_PROGRESS","DONE","CANCELLED"]},
+          {"key":"due_at","name":"计划完成时间","description":null,"dataType":"DATETIME","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"customer_id","name":"相关客户编号","description":null,"dataType":"REFERENCE","required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"opportunity_id","name":"相关商机编号","description":null,"dataType":"REFERENCE","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]},
+          {"key":"assignee_id","name":"执行人编号","description":null,"dataType":"REFERENCE","required":false,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]}
+        ]
+      }
+    ],
+    "relations": [
+      {"key":"customer-has-contact","name":"客户拥有联系人","description":null,"sourceConceptKey":"customer","targetConceptKey":"contact","cardinality":"ONE_TO_MANY","forwardLabel":"拥有联系人","reverseLabel":"属于客户","queryable":true,"enabled":true},
+      {"key":"customer-has-opportunity","name":"客户拥有商机","description":null,"sourceConceptKey":"customer","targetConceptKey":"opportunity","cardinality":"ONE_TO_MANY","forwardLabel":"拥有商机","reverseLabel":"属于客户","queryable":true,"enabled":true},
+      {"key":"customer-has-interaction","name":"客户发生互动","description":null,"sourceConceptKey":"customer","targetConceptKey":"interaction","cardinality":"ONE_TO_MANY","forwardLabel":"发生互动","reverseLabel":"关联客户","queryable":true,"enabled":true},
+      {"key":"customer-has-business-action","name":"客户安排经营动作","description":null,"sourceConceptKey":"customer","targetConceptKey":"business_action","cardinality":"ONE_TO_MANY","forwardLabel":"安排动作","reverseLabel":"服务客户","queryable":true,"enabled":true},
+      {"key":"contact-participates-interaction","name":"联系人参与互动","description":null,"sourceConceptKey":"contact","targetConceptKey":"interaction","cardinality":"ONE_TO_MANY","forwardLabel":"参与互动","reverseLabel":"涉及联系人","queryable":true,"enabled":true},
+      {"key":"opportunity-offers-product","name":"商机涉及产品","description":null,"sourceConceptKey":"opportunity","targetConceptKey":"product","cardinality":"MANY_TO_ONE","forwardLabel":"涉及产品","reverseLabel":"关联商机","queryable":true,"enabled":true},
+      {"key":"opportunity-tracks-business-action","name":"商机跟踪经营动作","description":null,"sourceConceptKey":"opportunity","targetConceptKey":"business_action","cardinality":"ONE_TO_MANY","forwardLabel":"跟踪动作","reverseLabel":"推进商机","queryable":true,"enabled":true}
+    ],
+    "metrics": [],
+    "actions": [
+      {
+        "key": "plan-follow-up",
+        "name": "规划客户跟进",
+        "conceptKey": "business_action",
+        "description": "V1 只编译动作契约，不执行外部系统写回。",
+        "parameters": [
+          {"key":"title","name":"跟进主题","dataType":"TEXT","required":true},
+          {"key":"due-at","name":"计划时间","dataType":"DATETIME","required":true},
+          {"key":"assignee-id","name":"执行人编号","dataType":"REFERENCE","required":false}
+        ]
+      }
+    ],
+    "dataSources": [
+      {
+        "id": -1,
+        "key": "business-connector",
+        "name": "业务系统连接器",
+        "type": "CONNECTOR",
+        "configJson": "{\"adapterKey\":\"cloudcc\"}",
+        "sampleDataJson": null
+      }
+    ],
+    "mappings": [
+      {"targetType":"CONCEPT","targetKey":"customer","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"customer.id","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"customer.name","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"customer.status","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"status","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"customer.industry","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"industry","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"customer.owner_id","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"ownerId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+
+      {"targetType":"CONCEPT","targetKey":"contact","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"contact.id","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"contact.name","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"contact.email","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"email","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"contact.phone","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"phone","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"contact.role","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"role","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"contact.customer_id","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"accountId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+
+      {"targetType":"CONCEPT","targetKey":"opportunity","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.id","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.name","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.stage","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"stage","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.amount","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"amount","relationTargetFieldKey":null,"transform":"NUMBER","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.expected_close_date","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"expectedCloseDate","relationTargetFieldKey":null,"transform":"DATE","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"opportunity.customer_id","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"accountId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.8,"source":"REFERENCE","validationStatus":"PENDING"},
+
+      {"targetType":"CONCEPT","targetKey":"product","dataSourceId":-1,"physicalObjectKey":"Product","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"product.id","dataSourceId":-1,"physicalObjectKey":"Product","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"product.name","dataSourceId":-1,"physicalObjectKey":"Product","physicalFieldKey":"name","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"product.product_code","dataSourceId":-1,"physicalObjectKey":"Product","physicalFieldKey":"productCode","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"product.category","dataSourceId":-1,"physicalObjectKey":"Product","physicalFieldKey":"category","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"product.active","dataSourceId":-1,"physicalObjectKey":"Product","physicalFieldKey":"active","relationTargetFieldKey":null,"transform":"BOOLEAN_MAP","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+
+      {"targetType":"CONCEPT","targetKey":"interaction","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.id","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.subject","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"subject","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.channel","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"channel","relationTargetFieldKey":null,"transform":"ENUM_MAP","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.occurred_at","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"occurredAt","relationTargetFieldKey":null,"transform":"DATETIME","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.summary","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"summary","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.customer_id","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"accountId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"interaction.contact_id","dataSourceId":-1,"physicalObjectKey":"Interaction","physicalFieldKey":"contactId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+
+      {"targetType":"CONCEPT","targetKey":"business_action","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":null,"relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.id","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"id","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.title","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"subject","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.action_type","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"type","relationTargetFieldKey":null,"transform":"ENUM_MAP","confidence":0.6,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.status","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"status","relationTargetFieldKey":null,"transform":"ENUM_MAP","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.due_at","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"dueDate","relationTargetFieldKey":null,"transform":"DATETIME","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.customer_id","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"accountId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.opportunity_id","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"opportunityId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.6,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"PROPERTY","targetKey":"business_action.assignee_id","dataSourceId":-1,"physicalObjectKey":"Task","physicalFieldKey":"ownerId","relationTargetFieldKey":null,"transform":"DIRECT","confidence":0.65,"source":"REFERENCE","validationStatus":"PENDING"},
+
+      {"targetType":"RELATION","targetKey":"customer-has-contact","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"id","relationTargetFieldKey":"accountId","transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"customer-has-opportunity","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"id","relationTargetFieldKey":"accountId","transform":"DIRECT","confidence":0.72,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"customer-has-interaction","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"id","relationTargetFieldKey":"accountId","transform":"DIRECT","confidence":0.6,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"customer-has-business-action","dataSourceId":-1,"physicalObjectKey":"Account","physicalFieldKey":"id","relationTargetFieldKey":"accountId","transform":"DIRECT","confidence":0.6,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"contact-participates-interaction","dataSourceId":-1,"physicalObjectKey":"Contact","physicalFieldKey":"id","relationTargetFieldKey":"contactId","transform":"DIRECT","confidence":0.6,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"opportunity-offers-product","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"productId","relationTargetFieldKey":"id","transform":"DIRECT","confidence":0.55,"source":"REFERENCE","validationStatus":"PENDING"},
+      {"targetType":"RELATION","targetKey":"opportunity-tracks-business-action","dataSourceId":-1,"physicalObjectKey":"Opportunity","physicalFieldKey":"id","relationTargetFieldKey":"opportunityId","transform":"DIRECT","confidence":0.6,"source":"REFERENCE","validationStatus":"PENDING"}
+    ]
+  }
+}

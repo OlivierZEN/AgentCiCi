@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-17T06:38:56Z
+updated_at: 2026-07-17T07:31:02Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-213.md`
 - assignment_path: `.claw/assignments/TASK-213.yaml`
 - blocked_by: `none`
-- next_action: Push the validated V83 provenance-migration authorization to `origin/main`, then complete TDD, final review and production acceptance.
+- next_action: Push the reviewed branch, merge its PR, then execute the 2.7.10 production runbook and acceptance gates.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

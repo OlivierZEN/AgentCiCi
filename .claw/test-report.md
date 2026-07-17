@@ -1,14 +1,31 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-16T08:23:31Z
+updated_at: 2026-07-17T07:31:02Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-16T08:23:31Z
+last_run_at: 2026-07-17T07:31:02Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-213 通用本体 V1 发布阻塞修复本地验收（2026-07-17）
+
+- `identity/assignment`: MANAGER-001 SSH 持钥、签名指纹、GitHub 身份、TASK-213 分支及本次 provenance 增量涉及的 18 个源码、V83、测试、规格和状态路径经 `dev-login.py` 与 `check-assignment.py` 校验均返回 `allowed`，验证项包括 developer record、持钥证明和 assignment scope，0 finding。
+- `tdd`: 既有发布阻塞修复的 RED/GREEN 证据保持有效。终局 provenance 加固先让前端同一管理员、完全同元数据但 `MANUAL` 的工作区错误命中，并让后端因缺少指纹/来源字段编译失败；最小实现后聚焦测试转绿。数据库随后新增 MANUAL 携带包字段、REFERENCE_PACKAGE 空包 ID、63 位短指纹和 64 位大写指纹反例；旧 CHECK 如预期仅在空包 ID 用例失败，V83 增加非空包 ID 条件后四组反例全部转绿。指纹测试独立读取实际 classpath JSON 原始 bytes 计算 SHA-256，确认摘要、加载结果、安装落库和管理 API 使用同一 64 位小写值。V82 未修改。
+- `frontend-full`: `npm test` 为 26 个文件 / 177 项全部通过；`npm run build` 成功转换 1,948 个模块，仅保留既有大 chunk 提示。
+- `backend-focused/fresh-db`: 最终全新专用 PostgreSQL 从空库成功应用 79 个迁移至 V83；`flyway_schema_history` 中 V82/V83 均 `success=true`，ontology 表仍为 13 张。`OntologyPersistenceIntegrationTest` 16/16、`OntologyPlatformIntegrationTest` 14/14、`OntologyManagementServiceTest` 6/6、`OntologyReferencePackageServiceTest` 3/3，合计 39/39，0 failure / 0 error / 0 skipped。`mvn -q -DskipTests package` 通过。调试库、旧候选库和最终库均强制删除，`pg_database` 回读 `task213_provenance%` 为 0；未 repair 或复用共享测试库。
+- `backend-expanded-final`: 签名提交 `d589ad1` 后另建 `task213_verify_d589ad1`，从零应用到 V83 并运行 10 个相关类：本体持久化 16、校验 9、编译 5、AI 提案 36、语义查询 22、CloudCC 适配 10、本体平台 14、租户生命周期 6、管理服务 6、参考包 3，合计 127/127，0 failure / 0 error / 0 skipped。测试后删库并回读该库计数为 0；同一 HEAD 再次通过前端 177/177、1,948 模块生产构建和后端 package。
+- `browser-auth-timing`: 真实浏览器延迟组织资料响应 5 秒，在响应返回前退出；等待旧响应结束后仍位于 `/admin/login`，`cici_admin_token` 为 `null`，旧组织信息未重新出现。
+- `browser-unmount-timing`: 真实浏览器延迟创建工作区响应，在 POST 已发出后确认侧栏离开；旧响应结束后仍位于 `/admin/data-quality`，工作区未重新挂载，记录到的 `/admin/ontologies/{id}/**` 后续请求为 0。
+- `browser-compile-a11y`: 真实浏览器进入草稿修订 7 的技术预览，实际 POST body 为 `{"expectedRevision":7}`，响应 `sourceDraftRevision=7` 后展示只读契约；6 个工作区 tab 与 3 个技术 tab 的 `aria-controls` 均命中真实面板，非活动面板保留 `hidden` IDREF。1600×1000 截图完成，当前验证会话 console error/warning 为 0。
+- `browser-mapping-galaxy`: 在 Galaxy 主题复现“技术预览 → 数据映射 → 删除映射形成脏状态 → AI 提案”：技术预览只读取 mappings（1 次 / catalog 0 次）；首次进入映射页继续读取完整 catalog（累计 mappings 2 次 / catalog 1 次）；删除后切 AI 页请求计数不再增加，页面继续显示“有未保存修改”，生成和应用提案均禁用并给出先保存映射提示。差异只显示 `业务对象“项目”`，不显示 `concept:project`。Galaxy 实际计算 warning 为 `rgb(230, 183, 95)`，1600×1000 的 document/body 横向溢出均为 0，console error/warning 为 0。
+- `browser-final-d589ad1`: 全新 1600×1000 会话验证列表、领域向导、三节点两关系画布与检查器；删除映射后跨页签保留脏状态，校验/发布/AI 生成/应用均禁用；侧栏离开取消后仍留在 `/admin/ontology` 且脏状态保留，确认后才离开；技术预览 POST 为 `{"expectedRevision":4}` 且响应 `sourceDraftRevision=4` 被接受，全部 tab `aria-controls` 都命中真实面板；校验绿灯后才启用人工发布，发布弹窗默认焦点为“取消”，版本 1 不可变详情可读。验收会话 console error/warning、document/body 横向溢出均为 0。截图为 `output/playwright/ontology-v1/ontology-final-{list,wizard,workbench,technical,publish-confirm,versions}.png`。
+- `static`: `git diff --check`、`jq empty DESIGN.json` 通过；暖色主题 warning `#7a4b00` 达到普通文本 4.5:1 门槛，Galaxy 使用主题 warning `#e6b75f`，在 canvas/surface/muted/strong/warning-soft 五类暗色背景上的对比度依次为 9.84 / 8.98 / 8.14 / 6.78 / 6.40:1。
+- `state-validator`: `validate-state.py .claw` 仍因 130 条既有历史规格/任务基线 finding 退出 1；输出中 `TASK-213.md`、`FEAT-118` 与 V83 命中为 0，本轮未越界修复历史状态。
+- `independent-review`: 最终安全与规格两路只读复审对 `d589ad1` 均返回 Approved，Critical 0 / Important 0。规格侧仅保留 mounted RouterProvider + deferred Promise 测试债，安全侧仅建议将修改/目录/发布扩展为参数化跨租户 404 测试；两项均为 Minor，不阻塞合并与发布。
+- `release-boundary`: 本节只记录本地发布前门禁；TASK-213 尚未合并或上线，后续仍需 PR 合并、干净 main 生产 dry-run、备份、不可变发布和线上 API/浏览器验收。
 
 ## TASK-201 智能体构建页右栏说明移除与双栏对齐增量验收（2026-07-16）
 

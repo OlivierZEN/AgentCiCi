@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.ai.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -177,6 +178,85 @@ public class AliyunBailianClient {
             log.error("Aliyun chat completion failed: {}", e.getMessage());
             return new ChatCompletionResult("assistant", "Model call failed: " + e.getMessage(), null, "stop", 0, 0);
         }
+    }
+
+    /**
+     * Bounded non-streaming completion for callers that require a hard output budget.
+     * The legacy overload intentionally keeps its existing RestClient behavior.
+     */
+    public ChatCompletionResult chatCompletionWithCredentials(String modelName,
+                                                              List<Map<String, Object>> messages,
+                                                              List<Map<String, Object>> tools,
+                                                              boolean stripThinkingFromAssistantContent,
+                                                              String apiBaseUrl,
+                                                              String apiKey,
+                                                              int maxOutputTokens,
+                                                              int maxResponseBytes) {
+        if (maxOutputTokens <= 0 || maxResponseBytes <= 0) {
+            throw new IllegalArgumentException("Completion budgets must be positive");
+        }
+        String normalizedBaseUrl = normalizeBaseUrl(apiBaseUrl);
+        if ((apiKey == null || apiKey.isBlank()) && normalizedBaseUrl.equals(baseUrl)) {
+            return new ChatCompletionResult(
+                    "assistant", "Aliyun API key is not configured.", null, "stop", 0, 0);
+        }
+        String targetModel = modelName == null || modelName.isBlank() ? defaultModel : modelName;
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("model", targetModel);
+        payload.put("messages", messages);
+        payload.put("max_tokens", maxOutputTokens);
+        if (tools != null && !tools.isEmpty()) {
+            payload.put("tools", tools);
+        }
+        if (!stripThinkingFromAssistantContent) {
+            payload.put("enable_thinking", true);
+        }
+
+        try {
+            String jsonBody = objectMapper.writeValueAsString(payload);
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create(normalizedBaseUrl + "/chat/completions"))
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+                    .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+                    .timeout(NON_STREAM_TIMEOUT)
+                    .POST(HttpRequest.BodyPublishers.ofString(jsonBody, StandardCharsets.UTF_8));
+            if (apiKey != null && !apiKey.isBlank()) {
+                requestBuilder.header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey);
+            }
+            HttpResponse<InputStream> httpResponse = httpClient.send(
+                    requestBuilder.build(), HttpResponse.BodyHandlers.ofInputStream());
+            try (InputStream responseBody = httpResponse.body()) {
+                if (httpResponse.statusCode() < 200 || httpResponse.statusCode() >= 300) {
+                    return new ChatCompletionResult(
+                            "assistant", "Model call failed: HTTP " + httpResponse.statusCode() + ".",
+                            null, "stop", 0, 0);
+                }
+                long contentLength = httpResponse.headers()
+                        .firstValueAsLong(HttpHeaders.CONTENT_LENGTH)
+                        .orElse(-1L);
+                if (contentLength > maxResponseBytes) {
+                    return responseTooLarge();
+                }
+                byte[] responseBytes = responseBody.readNBytes(maxResponseBytes + 1);
+                if (responseBytes.length > maxResponseBytes) {
+                    return responseTooLarge();
+                }
+                @SuppressWarnings("unchecked")
+                Map<String, Object> response = objectMapper.readValue(responseBytes, Map.class);
+                return parseCompletionResponse(response, stripThinkingFromAssistantContent);
+            }
+        } catch (Exception exception) {
+            log.error("Bounded Aliyun chat completion failed: {}", exception.getClass().getSimpleName());
+            return new ChatCompletionResult(
+                    "assistant", "Model call failed: bounded completion request failed.",
+                    null, "stop", 0, 0);
+        }
+    }
+
+    private ChatCompletionResult responseTooLarge() {
+        return new ChatCompletionResult(
+                "assistant", "Model call failed: response exceeds byte limit.",
+                null, "length", 0, 0);
     }
 
     private String normalizeBaseUrl(String value) {

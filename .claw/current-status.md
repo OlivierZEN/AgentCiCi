@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-17T06:38:56Z
+updated_at: 2026-07-17T07:31:02Z
 updated_by: MANAGER-001
 phase: general-ontology-platform-v1-implementation
 active_task: "TASK-213"
-next_action: "Validate and push the TASK-213 V83 provenance-migration authorization, then finish final security review and production acceptance."
+next_action: "Push the reviewed TASK-213 branch, merge its PR, then execute the 2.7.10 production runbook and acceptance gates."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-213 is in progress: the user approved a domain-neutral, business-first visual ontology platform with AI-generated reviewable drafts, deterministic Schema/API compilation, human-only publishing and read-only semantic queries. V82 remains unchanged; final security review authorized a new forward-only V83 that records reference-package provenance and fingerprint so an identical manually created workspace cannot be mistaken for a completed package install.
+- TASK-213 is in progress on `codex/TASK-213-general-ontology-v1`: the domain-neutral backend, V82 persistence, project-delivery/CloudCC reference paths, read-only semantic query and business-first visual workbench are implemented locally. The forward-only V83 records `MANUAL` or `REFERENCE_PACKAGE` plus non-empty package ID and the SHA-256 of the exact classpath package bytes; reference-package recovery now requires exact source, package ID, fingerprint, business identity and creator. V82 remains unchanged and the schema still has 13 ontology tables. A fresh PostgreSQL run from zero passes 127/127 expanded backend regressions and deletes its database; frontend 177/177, production build, backend package and 1600×1000 list/wizard/canvas/mapping/AI/validation/publish/version/technical-preview Browser gates pass with clean console, zero overflow and exact `expectedRevision`. Independent security and spec reviews both approve with Critical 0 / Important 0; only mounted-router deferred-promise and wider parameterized cross-tenant coverage remain Minor. Merge, release runbook and production acceptance remain outstanding; production is still `2.7.9 / c04e992b3840`, so TASK-213 is not yet online.
 
 - TASK-201 右栏说明移除与双栏对齐增量修复已在生产 `2.7.9 / c04e992b3840` 完成。PR #11、不可变 Git/镜像 tag、发布前四项备份、仅重建 backend/frontend、六服务健康及 1600×1000 真实 Agent Builder 页面均通过；右栏模型治理说明与分隔线不存在，左右编辑列同为 612.5px × 604px，顶底边一致，系统提示词与发布备注输入底边一致，页面横向溢出、生产 console warning/error、backend ERROR/Exception 与 Nginx 精确 5xx 均为 0。即时应用回滚点为 `2.7.8 / 4814d2b9534d`。
 - TASK-212 已在生产 `2.7.8 / 4814d2b9534d` 完成。PR #10、不可变 Git/镜像 tag、发布前四项备份、只重建 backend/frontend、V81 非事务并发索引、六服务健康、双向 401/403/200 权限矩阵及 `1600 x 1000` Agent Builder/平台页面均通过；两个索引 valid/ready，页面无外层横向溢出，console warning/error、稳定窗口 backend ERROR 与 Nginx 精确 5xx 均为 0。完整 Maven 诊断仍只有既有 341 项中的 3 failure / 7 error，未误报全量套件通过。即时应用回滚点为 `2.7.7 / e47979167af8`，V81 索引可安全保留。
