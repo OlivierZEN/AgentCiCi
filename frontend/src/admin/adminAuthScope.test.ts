@@ -1,0 +1,30 @@
+// @ts-expect-error Vitest executes this test in Node; production sources do not depend on Node types.
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import {
+  createAdminAuthScopeKey,
+  isAdminAsyncRequestCurrent,
+} from "./adminAuthScope";
+
+describe("admin auth async scope", () => {
+  it("invalidates a response when either organization, token or request changes", () => {
+    const scope = createAdminAuthScopeKey("org-a", "token-a");
+
+    expect(scope).not.toBe(createAdminAuthScopeKey("org-b", "token-a"));
+    expect(scope).not.toBe(createAdminAuthScopeKey("org-a", "token-b"));
+    expect(isAdminAsyncRequestCurrent(scope, 3, scope, 3)).toBe(true);
+    expect(isAdminAsyncRequestCurrent(scope, 3, createAdminAuthScopeKey("org-b", "token-a"), 3)).toBe(false);
+    expect(isAdminAsyncRequestCurrent(scope, 3, scope, 4)).toBe(false);
+  });
+
+  it("guards both admin profile loaders and reloads ontology lists for an org-only switch", () => {
+    const shellSource = readFileSync(new URL("./AdminShell.tsx", import.meta.url), "utf8");
+    const ontologySource = readFileSync(new URL("./pages/AdminOntologyPage.tsx", import.meta.url), "utf8");
+
+    expect(shellSource).toContain("profileRequestIdRef");
+    expect(shellSource).toContain("organizationRequestIdRef");
+    expect(shellSource).toContain("isAdminAsyncRequestCurrent");
+    expect(shellSource).toContain("invalidateAdminAuthRequests");
+    expect(ontologySource).toMatch(/useEffect\(\(\) => \{\s*void loadWorkspaces\(\);\s*void loadReferencePackages\(\);\s*\}, \[authScopeKey,/);
+  });
+});

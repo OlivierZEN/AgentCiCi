@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-07-17T00:29:55Z",
+  "generatedAt": "2026-07-17T04:40:00Z",
   "title": "Design System: AgentCiCi Product Surfaces",
   "extensions": {
     "colorMeta": {
@@ -317,7 +317,10 @@
         "Desktop ontology modeling uses one framed three-column workbench: business catalog, scrollable semantic canvas, and business inspector. Do not introduce nested panel cards or mobile-specific layouts.",
         "The canvas renders deterministic SVG relation lines behind semantic nodes, keeps node positions inside the usable stage, and supports both pointer drag and keyboard arrow movement in 8px steps.",
         "Canvas editing is revision-aware: aggregate rapid keyboard movement before saving, use the latest draft revision, and lock further editing after an exact revision conflict until the user reloads.",
-        "Dirty or revision-locked ontology drafts register an admin-shell navigation guard for same-tab sidebar links and logout, retain beforeunload protection, and offer a redacted local-draft copy before destructive reload."
+        "Dirty, mapping-dirty, or revision-locked ontology drafts use the official data-router blocker for sidebar and browser Back/Forward navigation, retain beforeunload protection for document exits, and offer a redacted local-draft plus mapping copy before destructive reload.",
+        "Ontology tabs use complete tablist/tab/tabpanel relationships with roving keyboard focus; publish confirmation initially focuses Cancel, and ontology metadata text never drops below 11px.",
+        "Filled ontology primary actions use an AA-safe dark champagne tone with warm ivory text at no less than 4.5:1 contrast while preserving the authenticated product palette.",
+        "Compact ontology warning and stale-state text maintains at least 4.5:1 contrast on every active theme canvas/surface and its warning-soft background, including Galaxy dark surfaces; never expose backend stable-element keys in AI proposal differences."
       ],
       "semanticNode": [
         "Semantic nodes show the business-facing concept name, concept type, up to three property names, and compact queryability metadata; implementation ids and physical schema details stay hidden.",

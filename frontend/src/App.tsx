@@ -1,4 +1,10 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import {
+  createBrowserRouter,
+  createRoutesFromElements,
+  Navigate,
+  Route,
+  RouterProvider,
+} from "react-router-dom";
 import AssistantApp from "./assistant/AssistantApp";
 import AgentCiciWebsite from "./suite/AgentCiciWebsite";
 import AdminGuard from "./admin/AdminGuard";
@@ -36,10 +42,8 @@ import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
 import PlatformEvaluationPage from "./platform/pages/PlatformEvaluationPage";
 
-export default function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
+const router = createBrowserRouter(createRoutesFromElements(
+  <>
         <Route path="/" element={<AgentCiciWebsite />} />
         <Route path="/solutions" element={<AgentCiciWebsite />} />
         <Route path="/skill-hub" element={<AgentCiciWebsite />} />
@@ -100,7 +104,9 @@ export default function App() {
             <Route path="audit" element={<PlatformAuditPage />} />
           </Route>
         </Route>
-      </Routes>
-    </BrowserRouter>
-  );
+  </>,
+));
+
+export default function App() {
+  return <RouterProvider router={router} />;
 }

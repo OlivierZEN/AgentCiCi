@@ -351,6 +351,7 @@ export interface OntologyMappingValidationBatch {
 
 export interface OntologyCompilePreview {
   version: number;
+  sourceDraftRevision: number;
   contentHash: string;
   jsonSchema: string;
   graphqlSdl: string;

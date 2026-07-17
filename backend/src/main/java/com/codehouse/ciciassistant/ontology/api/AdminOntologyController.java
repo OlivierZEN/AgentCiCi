@@ -198,8 +198,10 @@ public class AdminOntologyController {
     }
 
     @PostMapping("/{workspaceId}/compile-preview")
-    public ApiResponse<CompilePreviewView> compilePreview(@PathVariable Long workspaceId) {
-        return ApiResponse.ok(management.compilePreview(workspaceId));
+    public ApiResponse<CompilePreviewView> compilePreview(
+            @PathVariable Long workspaceId,
+            @RequestBody RevisionRequest request) {
+        return ApiResponse.ok(management.compilePreview(workspaceId, request));
     }
 
     @PostMapping("/{workspaceId}/publish")

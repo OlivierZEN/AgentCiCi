@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   confirmAdminNavigation,
-  shouldGuardAdminNavigationClick,
+  shouldBlockAdminRouteNavigation,
   type AdminNavigationGuard,
 } from "./adminNavigationGuard";
 
@@ -29,12 +29,10 @@ describe("admin navigation guard", () => {
     expect(confirmAdminNavigation(guard, () => true)).toBe(true);
   });
 
-  it("guards same-tab primary clicks but leaves modified links alone", () => {
-    const primaryClick = { button: 0, metaKey: false, ctrlKey: false, shiftKey: false, altKey: false };
-
-    expect(shouldGuardAdminNavigationClick(primaryClick, "/admin/ontology", "/admin/kb")).toBe(true);
-    expect(shouldGuardAdminNavigationClick(primaryClick, "/admin/ontology", "/admin/ontology")).toBe(false);
-    expect(shouldGuardAdminNavigationClick({ ...primaryClick, metaKey: true }, "/admin/ontology", "/admin/kb")).toBe(false);
-    expect(shouldGuardAdminNavigationClick({ ...primaryClick, button: 1 }, "/admin/ontology", "/admin/kb")).toBe(false);
+  it("blocks route and browser-history navigation without trapping auth redirects", () => {
+    expect(shouldBlockAdminRouteNavigation(true, "/admin/ontology", "/admin/kb")).toBe(true);
+    expect(shouldBlockAdminRouteNavigation(true, "/admin/ontology", "/admin/ontology")).toBe(false);
+    expect(shouldBlockAdminRouteNavigation(true, "/admin/ontology", "/admin/login")).toBe(true);
+    expect(shouldBlockAdminRouteNavigation(false, "/admin/ontology", "/admin/kb")).toBe(false);
   });
 });

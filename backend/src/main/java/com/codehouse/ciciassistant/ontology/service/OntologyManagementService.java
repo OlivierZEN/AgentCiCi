@@ -522,8 +522,15 @@ public class OntologyManagementService {
         return new MappingValidationBatchView(committed.revision(), List.copyOf(results));
     }
 
-    public CompilePreviewView compilePreview(Long workspaceId) {
-        OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
+    @Transactional
+    public CompilePreviewView compilePreview(
+            Long workspaceId,
+            RevisionRequest request) {
+        String orgId = TenantContext.requireOrgId();
+        OntologyWorkspaceEntity workspace = workspaces
+                .findForUpdateByIdAndOrgId(workspaceId, orgId)
+                .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
+        requireRevision(workspace, request == null ? null : request.expectedRevision());
         OntologyDocument document = drafts.loadDraft(
                 workspace.getOrgId(), workspaceId, workspace);
         int nextVersion = workspace.getPublishedVersion() == null
@@ -532,6 +539,7 @@ public class OntologyManagementService {
                 document, nextVersion);
         return new CompilePreviewView(
                 nextVersion,
+                workspace.getDraftRevision(),
                 compiled.contentHash(),
                 compiled.jsonSchema(),
                 compiled.graphqlSdl(),
@@ -1115,6 +1123,7 @@ public class OntologyManagementService {
 
     public record CompilePreviewView(
             int version,
+            Long sourceDraftRevision,
             String contentHash,
             String jsonSchema,
             String graphqlSdl,

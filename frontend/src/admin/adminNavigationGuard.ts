@@ -3,14 +3,6 @@ export type AdminNavigationGuard = {
   message: string;
 };
 
-export type AdminNavigationClick = {
-  button: number;
-  metaKey: boolean;
-  ctrlKey: boolean;
-  shiftKey: boolean;
-  altKey: boolean;
-};
-
 export function confirmAdminNavigation(
   guard: AdminNavigationGuard | null,
   confirm: (message: string) => boolean,
@@ -18,15 +10,11 @@ export function confirmAdminNavigation(
   return guard === null || confirm(guard.message);
 }
 
-export function shouldGuardAdminNavigationClick(
-  click: AdminNavigationClick,
+export function shouldBlockAdminRouteNavigation(
+  active: boolean,
   currentPathname: string,
   targetPathname: string,
 ): boolean {
-  return currentPathname !== targetPathname
-    && click.button === 0
-    && !click.metaKey
-    && !click.ctrlKey
-    && !click.shiftKey
-    && !click.altKey;
+  return active
+    && currentPathname !== targetPathname;
 }

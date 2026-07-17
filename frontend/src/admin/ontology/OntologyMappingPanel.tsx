@@ -1,20 +1,22 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { Database, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react";
-import { createStableOntologyKey } from "./ontologyModel";
+import {
+  createStableOntologyKey,
+  toOntologyMappingInputs,
+  type OntologyEditableMapping,
+} from "./ontologyModel";
+import {
+  ontologySourceStatusLabel,
+  SUPPORTED_ONTOLOGY_CONNECTORS,
+} from "./ontologyPresentation";
 import type {
   OntologyCatalogView,
   OntologyDataSourceMutationInput,
   OntologyDocument,
   OntologyMappingInput,
-  OntologyMappingView,
   OntologySourceType,
   OntologySourceView,
 } from "./ontologyTypes";
-
-type EditableMapping = OntologyMappingInput & {
-  clientKey: string;
-  validationStatus: string;
-};
 
 type BusinessTerm = {
   targetType: string;
@@ -27,10 +29,12 @@ export interface OntologyMappingPanelProps {
   document: OntologyDocument;
   sources: OntologySourceView[];
   catalog: OntologyCatalogView | null;
-  mappings: OntologyMappingView[];
+  mappingRows: OntologyEditableMapping[];
+  mappingDirty: boolean;
   loading: boolean;
   busy: boolean;
   error: string;
+  onMappingRowsChange: (rows: OntologyEditableMapping[], dirty: boolean) => void;
   onReload: () => void | Promise<void>;
   onCreateSource: (input: OntologyDataSourceMutationInput) => void | Promise<void>;
   onDiscoverObjects: (sourceId: number) => void | Promise<void>;
@@ -51,42 +55,16 @@ function mappingStatusTone(status: string): "valid" | "stale" | "pending" {
   return "pending";
 }
 
-function toEditable(mapping: OntologyMappingView, index: number): EditableMapping {
-  return {
-    clientKey: `mapping-${mapping.id ?? index}`,
-    targetType: mapping.targetType,
-    targetKey: mapping.targetKey,
-    dataSourceId: mapping.dataSourceId,
-    physicalObjectKey: mapping.physicalObjectKey,
-    physicalFieldKey: mapping.physicalFieldKey,
-    relationTargetFieldKey: mapping.relationTargetFieldKey,
-    transform: mapping.transform,
-    confidence: mapping.confidence,
-    validationStatus: mapping.validationStatus || "PENDING",
-  };
-}
-
-function toInput(mapping: EditableMapping): OntologyMappingInput {
-  return {
-    targetType: mapping.targetType,
-    targetKey: mapping.targetKey,
-    dataSourceId: mapping.dataSourceId,
-    physicalObjectKey: mapping.physicalObjectKey,
-    physicalFieldKey: mapping.physicalFieldKey,
-    relationTargetFieldKey: mapping.relationTargetFieldKey,
-    transform: mapping.transform,
-    confidence: mapping.confidence,
-  };
-}
-
 export default function OntologyMappingPanel({
   document,
   sources,
   catalog,
-  mappings,
+  mappingRows,
+  mappingDirty,
   loading,
   busy,
   error,
+  onMappingRowsChange,
   onReload,
   onCreateSource,
   onDiscoverObjects,
@@ -96,15 +74,8 @@ export default function OntologyMappingPanel({
 }: OntologyMappingPanelProps) {
   const [sourceName, setSourceName] = useState("");
   const [sourceType, setSourceType] = useState<OntologySourceType>("INLINE_SAMPLE");
-  const [adapterKey, setAdapterKey] = useState("");
+  const [adapterKey, setAdapterKey] = useState<string>(SUPPORTED_ONTOLOGY_CONNECTORS[0].value);
   const [sampleData, setSampleData] = useState('{"items":[{"name":"示例记录"}]}');
-  const [rows, setRows] = useState<EditableMapping[]>([]);
-  const [rowsDirty, setRowsDirty] = useState(false);
-
-  useEffect(() => {
-    setRows(mappings.map(toEditable));
-    setRowsDirty(false);
-  }, [mappings]);
 
   const terms = useMemo<BusinessTerm[]>(() => [
     ...document.concepts.map((concept) => ({
@@ -139,11 +110,10 @@ export default function OntologyMappingPanel({
     })),
   ], [document]);
 
-  const updateRow = (clientKey: string, patch: Partial<EditableMapping>) => {
-    setRowsDirty(true);
-    setRows((current) => current.map((row) => row.clientKey === clientKey
+  const updateRow = (clientKey: string, patch: Partial<OntologyEditableMapping>) => {
+    onMappingRowsChange(mappingRows.map((row) => row.clientKey === clientKey
       ? { ...row, ...patch, validationStatus: "STALE" }
-      : row));
+      : row), true);
   };
 
   const addMapping = () => {
@@ -151,10 +121,9 @@ export default function OntologyMappingPanel({
     const source = sources[0];
     const object = catalog?.objects.find((item) => item.dataSourceId === source?.id) ?? catalog?.objects[0];
     if (!term || !source || !object) return;
-    setRowsDirty(true);
     const field = object.fields[0];
-    setRows((current) => [...current, {
-      clientKey: `new-${Date.now()}-${current.length}`,
+    onMappingRowsChange([...mappingRows, {
+      clientKey: `new-${Date.now()}-${mappingRows.length}`,
       targetType: term.targetType,
       targetKey: term.targetKey,
       dataSourceId: source.id,
@@ -164,11 +133,12 @@ export default function OntologyMappingPanel({
       transform: null,
       confidence: 1,
       validationStatus: "PENDING",
-    }]);
+    }], true);
   };
 
   const submitSource = (event: FormEvent) => {
     event.preventDefault();
+    if (mappingDirty) return;
     const name = sourceName.trim();
     if (!name) return;
     const key = createStableOntologyKey(name, sources.map((source) => source.key), "data-source");
@@ -177,8 +147,8 @@ export default function OntologyMappingPanel({
       key,
       name,
       type: sourceType,
-      configJson: sourceType === "CONNECTOR" && adapterKey.trim()
-        ? JSON.stringify({ adapterKey: adapterKey.trim() })
+      configJson: sourceType === "CONNECTOR"
+        ? JSON.stringify({ adapterKey })
         : null,
       sampleDataJson: sourceType === "INLINE_SAMPLE" ? sampleData : null,
     });
@@ -229,8 +199,12 @@ export default function OntologyMappingPanel({
           </label>
           {sourceType === "CONNECTOR" ? (
             <label>
-              <span>连接器标识</span>
-              <input value={adapterKey} disabled={busy} placeholder="选择已配置的连接器标识" onChange={(event) => setAdapterKey(event.target.value)} />
+              <span>已配置连接器</span>
+              <select value={adapterKey} disabled={busy} onChange={(event) => setAdapterKey(event.target.value)}>
+                {SUPPORTED_ONTOLOGY_CONNECTORS.map((connector) => (
+                  <option key={connector.value} value={connector.value}>{connector.label}</option>
+                ))}
+              </select>
             </label>
           ) : (
             <label>
@@ -238,7 +212,12 @@ export default function OntologyMappingPanel({
               <textarea rows={5} value={sampleData} disabled={busy} spellCheck={false} onChange={(event) => setSampleData(event.target.value)} />
             </label>
           )}
-          <button type="submit" className="cici-btn cici-btn--ghost" disabled={busy || !sourceName.trim()}>
+          <button
+            type="submit"
+            className="cici-btn cici-btn--ghost"
+            disabled={busy || mappingDirty || !sourceName.trim()}
+            title={mappingDirty ? "请先保存数据映射" : undefined}
+          >
             <Plus size={15} aria-hidden /> 创建数据来源
           </button>
         </form>
@@ -256,16 +235,16 @@ export default function OntologyMappingPanel({
                 <div className="ontology-source-row__head">
                   <div>
                     <strong>{source.name}</strong>
-                    <span>{source.type === "INLINE_SAMPLE" ? "内置示例" : "组织连接器"} · {source.status}</span>
+                    <span>{source.type === "INLINE_SAMPLE" ? "内置示例" : "组织连接器"} · {ontologySourceStatusLabel(source.status)}</span>
                   </div>
-                  <button type="button" className="ontology-text-action" disabled={busy} onClick={() => void onDiscoverObjects(source.id)}>
+                  <button type="button" className="ontology-text-action" disabled={busy || mappingDirty} title={mappingDirty ? "请先保存数据映射" : undefined} onClick={() => void onDiscoverObjects(source.id)}>
                     发现数据对象
                   </button>
                 </div>
                 {objects.map((object) => (
                   <div className="ontology-catalog-row" key={object.id}>
                     <span><strong>{object.name}</strong><small>{object.fields.length} 个字段</small></span>
-                    <button type="button" className="ontology-text-action" disabled={busy} onClick={() => void onDiscoverFields(source.id, object.key)}>
+                    <button type="button" className="ontology-text-action" disabled={busy || mappingDirty} title={mappingDirty ? "请先保存数据映射" : undefined} onClick={() => void onDiscoverFields(source.id, object.key)}>
                       发现字段
                     </button>
                   </div>
@@ -285,22 +264,22 @@ export default function OntologyMappingPanel({
           <button type="button" className="ontology-text-action" disabled={busy || !terms.length || !sources.length || !catalog?.objects.length} onClick={addMapping}>
             <Plus size={14} aria-hidden /> 添加映射
           </button>
-          <button type="button" className="cici-btn cici-btn--ghost" disabled={busy || !rowsDirty} onClick={() => void onSaveMappings(rows.map(toInput))}>
+          <button type="button" className="cici-btn cici-btn--ghost" disabled={busy || !mappingDirty} onClick={() => void onSaveMappings(toOntologyMappingInputs(mappingRows))}>
             保存映射
           </button>
           <button
             type="button"
             className="cici-btn cici-btn--primary"
-            disabled={busy || rows.length === 0 || rowsDirty}
-            title={rowsDirty ? "请先保存映射，再批量验证" : undefined}
-            onClick={() => void onValidateMappings(rows.map(toInput))}
+            disabled={busy || mappingRows.length === 0 || mappingDirty}
+            title={mappingDirty ? "请先保存映射，再批量验证" : undefined}
+            onClick={() => void onValidateMappings(toOntologyMappingInputs(mappingRows))}
           >
             <ShieldCheck size={15} aria-hidden /> 批量验证
           </button>
         </div>
       </div>
 
-      {rows.length === 0 ? (
+      {mappingRows.length === 0 ? (
         <div className="ontology-mapping__empty" role="status">
           <strong>还没有字段映射</strong>
           <span>发现数据对象和字段后，选择“添加映射”。</span>
@@ -319,7 +298,7 @@ export default function OntologyMappingPanel({
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => {
+              {mappingRows.map((row) => {
                 const availableObjects = catalog?.objects.filter((object) => object.dataSourceId === row.dataSourceId) ?? [];
                 const selectedObject = availableObjects.find((object) => object.key === row.physicalObjectKey);
                 const selectedTerm = terms.find((term) => term.targetType === row.targetType && term.targetKey === row.targetKey);
@@ -384,8 +363,7 @@ export default function OntologyMappingPanel({
                         aria-label="删除映射"
                         disabled={busy}
                         onClick={() => {
-                          setRowsDirty(true);
-                          setRows((current) => current.filter((item) => item.clientKey !== row.clientKey));
+                          onMappingRowsChange(mappingRows.filter((item) => item.clientKey !== row.clientKey), true);
                         }}
                       >
                         <Trash2 size={14} aria-hidden />

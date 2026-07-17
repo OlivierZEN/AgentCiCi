@@ -476,6 +476,81 @@ class OntologyPlatformIntegrationTest {
     }
 
     @Test
+    void compilePreviewRequiresTheExactDraftRevisionAndReturnsItsBinding() throws Exception {
+        MvcResult created = mockMvc.perform(post("/admin/ontologies")
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"key":"compile-binding","name":"编译绑定","description":"测试"}
+                                """))
+                .andExpect(status().isOk())
+                .andReturn();
+        long workspaceId = data(created).path("id").asLong();
+
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "expectedRevision": 0,
+                                  "document": {
+                                    "key":"compile-binding","name":"编译绑定","description":"测试",
+                                    "concepts":[{
+                                      "key":"project","name":"项目","pluralName":"项目",
+                                      "description":"项目","conceptType":"ENTITY","displayPropertyKey":"name",
+                                      "positionX":40,"positionY":40,"queryable":true,"enabled":true,
+                                      "properties":[{
+                                        "key":"name","name":"项目名称","description":"名称","dataType":"TEXT",
+                                        "required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]
+                                      }]
+                                    }],"relations":[],"metrics":[],"actions":[],
+                                    "dataSources":[],"mappings":[]
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.draftRevision").value(1));
+
+        mockMvc.perform(post("/admin/ontologies/{workspaceId}/compile-preview", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expectedRevision\":1}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.sourceDraftRevision").value(1));
+
+        mockMvc.perform(put("/admin/ontologies/{workspaceId}/draft", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "expectedRevision": 1,
+                                  "document": {
+                                    "key":"compile-binding","name":"编译绑定 v2","description":"测试",
+                                    "concepts":[{
+                                      "key":"project","name":"项目","pluralName":"项目",
+                                      "description":"项目","conceptType":"ENTITY","displayPropertyKey":"name",
+                                      "positionX":40,"positionY":40,"queryable":true,"enabled":true,
+                                      "properties":[{
+                                        "key":"name","name":"项目名称","description":"名称","dataType":"TEXT",
+                                        "required":true,"multiple":false,"sensitive":false,"queryable":true,"enumValues":[]
+                                      }]
+                                    }],"relations":[],"metrics":[],"actions":[],
+                                    "dataSources":[],"mappings":[]
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.draftRevision").value(2));
+
+        mockMvc.perform(post("/admin/ontologies/{workspaceId}/compile-preview", workspaceId)
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expectedRevision\":1}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ONTOLOGY_REVISION_CONFLICT"));
+    }
+
+    @Test
     void serializesCatalogCommitsAndWritesFreshServerValidationTimestamp() throws Exception {
         TenantContext.setOrgId(orgA);
         TenantContext.setUserId("owner-a");
@@ -609,9 +684,12 @@ class OntologyPlatformIntegrationTest {
         revision = data(validated).path("revision").asLong();
 
         mockMvc.perform(post("/admin/ontologies/{workspaceId}/compile-preview", workspaceId)
-                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
+                        .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"expectedRevision\":" + revision + "}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.version").value(1))
+                .andExpect(jsonPath("$.data.sourceDraftRevision").value(revision))
                 .andExpect(jsonPath("$.data.contentHash").isNotEmpty())
                 .andExpect(jsonPath("$.data.graphqlSdl").value(
                         org.hamcrest.Matchers.containsString("type Project")));

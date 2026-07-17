@@ -14,16 +14,26 @@ import {
   connectConcepts,
   createStableOntologyKey,
   createOntologyMutationLane,
+  createOntologyAuthScopeKey,
+  createOntologyCompilePreviewBinding,
+  findOntologySourceByIdentity,
   findOntologyVersionForDraftRevision,
   hasUnvalidatedOntologyMappings,
+  isOntologyAsyncScopeCurrent,
+  isOntologyCompilePreviewBindingCurrent,
+  isOntologyCompilePreviewResponseBound,
   isOntologyOperationContextCurrent,
   moveConcept,
   moveConceptByKeyboard,
+  nextOntologyTabIndex,
+  ontologyMappingSignature,
   previewProposal,
   relationLine,
   removeConceptProperty,
   shouldConfirmOntologyDraftDiscard,
   selectOntologyItem,
+  toEditableOntologyMappings,
+  toOntologyMappingInputs,
 } from "./ontologyModel";
 import { formatOntologyError } from "../pages/AdminOntologyPage";
 import type {
@@ -399,6 +409,7 @@ describe("ontology immutable model", () => {
     expect(shouldConfirmOntologyDraftDiscard(false, false)).toBe(false);
     expect(shouldConfirmOntologyDraftDiscard(true, false)).toBe(true);
     expect(shouldConfirmOntologyDraftDiscard(false, true)).toBe(true);
+    expect(shouldConfirmOntologyDraftDiscard(false, false, true)).toBe(true);
   });
 
   it("finds only the newest version created for a draft revision after a baseline", () => {
@@ -411,6 +422,90 @@ describe("ontology immutable model", () => {
     expect(findOntologyVersionForDraftRevision(versions, 4)?.version).toBe(3);
     expect(findOntologyVersionForDraftRevision(versions, 4, new Set([1, 2]))?.version).toBe(3);
     expect(findOntologyVersionForDraftRevision(versions, 4, new Set([1, 3]))).toBeUndefined();
+  });
+
+  it("keeps editable mappings controlled and strips UI-only fields from writes", () => {
+    const source = projectDeliveryDraft().mappings[0];
+    const views: OntologyMappingView[] = [{
+      ...source,
+      id: 301,
+      source: "MANUAL",
+      validationStatus: "VALID",
+      lastValidatedAt: "2026-07-17T01:00:00Z",
+    }];
+
+    const editable = toEditableOntologyMappings(views);
+    expect(editable[0]).toMatchObject({ clientKey: "mapping-301", validationStatus: "VALID" });
+    expect(toOntologyMappingInputs([{ ...editable[0], validationStatus: "STALE" }])).toEqual([{
+      targetType: source.targetType,
+      targetKey: source.targetKey,
+      dataSourceId: source.dataSourceId,
+      physicalObjectKey: source.physicalObjectKey,
+      physicalFieldKey: source.physicalFieldKey,
+      relationTargetFieldKey: source.relationTargetFieldKey,
+      transform: source.transform,
+      confidence: source.confidence,
+    }]);
+  });
+
+  it("binds technical previews to the saved revision and authoritative mapping state", () => {
+    const mapping = projectDeliveryDraft().mappings[0];
+    const views: OntologyMappingView[] = [{
+      ...mapping,
+      id: 301,
+      source: "MANUAL",
+      validationStatus: "VALID",
+      lastValidatedAt: "2026-07-17T01:00:00Z",
+    }];
+    const binding = createOntologyCompilePreviewBinding(7, views, 2);
+
+    expect(binding.mappingSignature).toBe(ontologyMappingSignature(views));
+    expect(isOntologyCompilePreviewBindingCurrent(binding, 7, views, false, false, 2)).toBe(true);
+    expect(isOntologyCompilePreviewBindingCurrent(binding, 8, views, false, false, 2)).toBe(false);
+    expect(isOntologyCompilePreviewBindingCurrent(binding, 7, [{ ...views[0], validationStatus: "STALE" }], false, false, 2)).toBe(false);
+    expect(isOntologyCompilePreviewBindingCurrent(binding, 7, views, true, false, 2)).toBe(false);
+    expect(isOntologyCompilePreviewBindingCurrent(binding, 7, views, false, true, 2)).toBe(false);
+    expect(isOntologyCompilePreviewBindingCurrent(binding, 7, views, false, false, 3)).toBe(false);
+    expect(isOntologyCompilePreviewResponseBound(binding, 7, 3)).toBe(true);
+    expect(isOntologyCompilePreviewResponseBound(binding, 8, 3)).toBe(false);
+    expect(isOntologyCompilePreviewResponseBound(binding, 7, 4)).toBe(false);
+
+    const unpublishedBinding = createOntologyCompilePreviewBinding(7, views, null);
+    expect(isOntologyCompilePreviewResponseBound(unpublishedBinding, 7, 1)).toBe(true);
+    expect(isOntologyCompilePreviewResponseBound(unpublishedBinding, 7, 2)).toBe(false);
+  });
+
+  it("uses org and token as one async scope and rejects stale workspace completions", () => {
+    expect(createOntologyAuthScopeKey("org-a", "token-a")).not.toBe(createOntologyAuthScopeKey("org-b", "token-a"));
+    expect(createOntologyAuthScopeKey("org-a", "token-a")).not.toBe(createOntologyAuthScopeKey("org-a", "token-b"));
+    expect(isOntologyAsyncScopeCurrent({ epoch: 4, workspaceId: 9 }, 4, 9)).toBe(true);
+    expect(isOntologyAsyncScopeCurrent({ epoch: 4, workspaceId: 9 }, 5, 9)).toBe(false);
+    expect(isOntologyAsyncScopeCurrent({ epoch: 4, workspaceId: 9 }, 4, 10)).toBe(false);
+    expect(isOntologyAsyncScopeCurrent({ epoch: 4, workspaceId: 9, generation: 6 }, 4, 9, 6)).toBe(true);
+    expect(isOntologyAsyncScopeCurrent({ epoch: 4, workspaceId: 9, generation: 6 }, 4, 9, 7)).toBe(false);
+  });
+
+  it("reconciles a created data source by stable identity instead of list order", () => {
+    const expected = draftView().sources[0];
+    const newerUnrelated = {
+      ...expected,
+      id: 18,
+      key: "unrelated-source",
+      name: "其他数据来源",
+    };
+
+    expect(findOntologySourceByIdentity(
+      [expected, newerUnrelated],
+      { key: expected.key, name: expected.name, type: expected.type },
+    )).toEqual(expected);
+  });
+
+  it("calculates roving tab focus without activating invalid keys", () => {
+    expect(nextOntologyTabIndex(1, 3, "ArrowRight")).toBe(2);
+    expect(nextOntologyTabIndex(0, 3, "ArrowLeft")).toBe(2);
+    expect(nextOntologyTabIndex(1, 3, "Home")).toBe(0);
+    expect(nextOntologyTabIndex(1, 3, "End")).toBe(2);
+    expect(nextOntologyTabIndex(1, 3, "Enter")).toBeNull();
   });
 });
 
@@ -672,6 +767,27 @@ describe("ontology draft transport", () => {
     expect(error).toMatchObject({ status: 409, code: "ONTOLOGY_REVISION_CONFLICT" });
   });
 
+  it("binds compile preview requests to an expected draft revision", async () => {
+    const calls: RequestInit[] = [];
+    const fetchStub = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(init ?? {});
+      return jsonResponse({
+        version: 1,
+        sourceDraftRevision: 4,
+        contentHash: "compiled-hash",
+        jsonSchema: "{}",
+        graphqlSdl: "type Query",
+        queryContractJson: "{}",
+      });
+    });
+    const api = createOntologyApi("admin-token", { fetch: fetchStub as typeof fetch });
+
+    const preview = await api.compilePreview(7, 4);
+
+    expect(JSON.parse(String(calls[0].body))).toEqual({ expectedRevision: 4 });
+    expect(preview.sourceDraftRevision).toBe(4);
+  });
+
   it("rebuilds replace-mapping writes from the exact allowed DTO fields", async () => {
     const calls: RequestInit[] = [];
     const fetchStub = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -762,7 +878,14 @@ describe("ontology presentation errors", () => {
       409,
       "ONTOLOGY_STATE_CONFLICT",
       null,
-    ))).toBe("ONTOLOGY_STATE_CONFLICT：工作区状态不允许当前操作");
+    ))).toBe("工作区状态不允许当前操作");
+
+    expect(formatOntologyError(new OntologyApiError(
+      "provider unavailable at /internal/path",
+      503,
+      "HTTP_503",
+      null,
+    ))).toBe("业务本体服务暂时不可用，请稍后重试。");
   });
 
   it("explains mutation outcomes that must be reconciled before retry", () => {

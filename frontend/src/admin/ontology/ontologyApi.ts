@@ -303,7 +303,7 @@ export interface OntologyApi {
     expectedRevision: number,
     mappings: OntologyMappingIdentityInput[],
   ): Promise<OntologyMappingValidationBatch>;
-  compilePreview(workspaceId: number): Promise<OntologyCompilePreview>;
+  compilePreview(workspaceId: number, expectedRevision: number): Promise<OntologyCompilePreview>;
   publish(workspaceId: number, expectedRevision: number): Promise<OntologyVersionSummary>;
   listVersions(workspaceId: number): Promise<OntologyVersionSummary[]>;
   getVersion(workspaceId: number, version: number): Promise<OntologyVersionDetail>;
@@ -524,9 +524,10 @@ export function createOntologyApi(token: string, options: OntologyApiOptions = {
         ),
       );
     },
-    compilePreview: (workspaceId) => request<OntologyCompilePreview>(
+    compilePreview: (workspaceId, expectedRevision) => request<OntologyCompilePreview>(
       `${MANAGEMENT_ROOT}/${workspaceId}/compile-preview`,
       "POST",
+      { expectedRevision },
     ),
     publish: (workspaceId, expectedRevision) => {
       const body = { expectedRevision };

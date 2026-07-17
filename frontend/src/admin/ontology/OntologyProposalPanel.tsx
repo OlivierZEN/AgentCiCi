@@ -2,12 +2,31 @@ import { useMemo, useState, type FormEvent } from "react";
 import { Bot, Check, RefreshCw, Sparkles } from "lucide-react";
 import type {
   OntologyCatalogView,
+  OntologyDocument,
   OntologyProposalRecord,
   OntologyProposalRequest,
   OntologySourceView,
 } from "./ontologyTypes";
+import {
+  presentOntologyAiDiagnostic,
+  presentOntologyDiffItem,
+  presentOntologyValidationIssue,
+} from "./ontologyPresentation";
+
+const EMPTY_ONTOLOGY_DOCUMENT: OntologyDocument = {
+  key: "",
+  name: "",
+  description: null,
+  concepts: [],
+  relations: [],
+  metrics: [],
+  actions: [],
+  dataSources: [],
+  mappings: [],
+};
 
 export interface OntologyProposalPanelProps {
+  currentDocument: OntologyDocument;
   sources: OntologySourceView[];
   catalog: OntologyCatalogView | null;
   proposals: OntologyProposalRecord[];
@@ -45,13 +64,14 @@ function DiffColumn({
     <div className={`ontology-proposal-diff is-${tone}`}>
       <div><strong>{title}</strong><span>{items.length}</span></div>
       {items.length === 0 ? <p>无</p> : (
-        <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
+        <ul>{items.map((item, index) => <li key={`${tone}-${index}`}>{item}</li>)}</ul>
       )}
     </div>
   );
 }
 
 export default function OntologyProposalPanel({
+  currentDocument,
   sources,
   catalog,
   proposals,
@@ -202,8 +222,8 @@ export default function OntologyProposalPanel({
             <div className="ontology-ai-diagnostic" role="alert">
               <Bot size={18} aria-hidden />
               <div>
-                <strong>{activeProposal.diagnosticCode || "AI_PROPOSAL_INVALID"}</strong>
-                <p>{activeProposal.diagnosticMessage || "提案未通过结构或引用校验，请调整意图后重试。"}</p>
+                <strong>提案需要调整</strong>
+                <p>{presentOntologyAiDiagnostic(activeProposal.diagnosticCode, activeProposal.diagnosticMessage)}</p>
                 <button type="button" className="ontology-text-action" onClick={onContinueManually}>继续手工编辑</button>
               </div>
             </div>
@@ -218,16 +238,25 @@ export default function OntologyProposalPanel({
                 <span className={`ontology-proposal-status is-${activeProposal.status.toLowerCase()}`}>{proposalStatusLabel(activeProposal.status)}</span>
               </div>
               <div className="ontology-proposal__diff-grid">
-                <DiffColumn title="新增" tone="added" items={activeProposal.diff.added} />
-                <DiffColumn title="修改" tone="changed" items={activeProposal.diff.changed} />
-                <DiffColumn title="移除" tone="removed" items={activeProposal.diff.removed} />
+                <DiffColumn title="新增" tone="added" items={activeProposal.diff.added.map((item) => presentOntologyDiffItem(item, currentDocument, activeProposal.candidate ?? EMPTY_ONTOLOGY_DOCUMENT))} />
+                <DiffColumn title="修改" tone="changed" items={activeProposal.diff.changed.map((item) => presentOntologyDiffItem(item, currentDocument, activeProposal.candidate ?? EMPTY_ONTOLOGY_DOCUMENT))} />
+                <DiffColumn title="移除" tone="removed" items={activeProposal.diff.removed.map((item) => presentOntologyDiffItem(item, currentDocument, activeProposal.candidate ?? EMPTY_ONTOLOGY_DOCUMENT))} />
               </div>
               {activeProposal.validation.length > 0 && (
                 <div className="ontology-proposal__validation">
                   <strong>提案校验</strong>
-                  {activeProposal.validation.map((issue, index) => (
-                    <p key={`${issue.path}-${index}`}><span>{issue.severity}</span>{issue.path} · {issue.message}</p>
-                  ))}
+                  {activeProposal.validation.map((issue, index) => {
+                    const presented = presentOntologyValidationIssue(
+                      issue,
+                      activeProposal.candidate ?? EMPTY_ONTOLOGY_DOCUMENT,
+                    );
+                    return (
+                      <p key={`${issue.path}-${index}`}>
+                        <span>{presented.severityLabel}</span>
+                        {presented.location} · {presented.message}
+                      </p>
+                    );
+                  })}
                 </div>
               )}
               <div className="ontology-proposal__actions">

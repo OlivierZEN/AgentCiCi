@@ -499,7 +499,7 @@ Expected: FAIL because the model helpers do not exist.
 
 - [ ] **Step 3: Implement immutable model helpers and typed API client**
 
-Normalize API failures into `{code,message,details}`; send `expectedRevision` in save/apply/publish bodies; never silently overwrite on HTTP 409. Keep model helpers side-effect free so canvas and inspector share one draft source.
+Normalize API failures into `{code,message,details}`; send `expectedRevision` in save/apply/compile-preview/publish bodies; compile preview returns `sourceDraftRevision` and the candidate version, which the client accepts only when both the draft revision and the bound published-version successor match. Never silently accept or overwrite on HTTP 409. Keep model helpers side-effect free so canvas and inspector share one draft source; a compile-only mapping read must not mark the catalog-backed mapping workspace complete, and dirty mapping rows block internal reloads and AI proposal mutations.
 
 - [ ] **Step 4: Add route and menu**
 

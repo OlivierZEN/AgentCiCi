@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-16T14:05:11Z
+updated_at: 2026-07-17T05:19:14Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-213.md`
 - assignment_path: `.claw/assignments/TASK-213.yaml`
 - blocked_by: `none`
-- next_action: Push the validated assignment to `origin/main`, then implement the approved TDD plan through production acceptance.
+- next_action: Create and verify the signed no-blocker-review commit, then merge and execute the production release runbook; local implementation/tests are green but production is not yet released.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

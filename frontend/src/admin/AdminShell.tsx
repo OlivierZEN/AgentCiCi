@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_ADMIN_TOKEN } from "../constants";
@@ -7,9 +7,12 @@ import AppVersionBadge from "../shared/AppVersionBadge";
 import type { AdminOutletContext } from "./useAdminToken";
 import {
   confirmAdminNavigation,
-  shouldGuardAdminNavigationClick,
   type AdminNavigationGuard,
 } from "./adminNavigationGuard";
+import {
+  createAdminAuthScopeKey,
+  isAdminAsyncRequestCurrent,
+} from "./adminAuthScope";
 import { applyProductTheme } from "../theme/theme";
 
 type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
@@ -53,7 +56,6 @@ function readAuth(): AuthPayload | null {
 }
 
 export default function AdminShell() {
-  const nav = useNavigate();
   const location = useLocation();
   const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
   const token = auth?.token ?? "";
@@ -62,8 +64,26 @@ export default function AdminShell() {
   const [collapsedNavGroups, setCollapsedNavGroups] = useState<string[]>([]);
   const [navigationGuard, setNavigationGuard] = useState<AdminNavigationGuard | null>(null);
   const navigationGuardIdRef = useRef(0);
-  const guardScope = `${auth?.orgId ?? ""}:${token}`;
+  const profileRequestIdRef = useRef(0);
+  const organizationRequestIdRef = useRef(0);
+  const guardScope = createAdminAuthScopeKey(auth?.orgId ?? "", token);
+  const authScopeRef = useRef(guardScope);
   const previousGuardScopeRef = useRef(guardScope);
+
+  const invalidateAdminAuthRequests = useCallback((nextScope: string) => {
+    authScopeRef.current = nextScope;
+    profileRequestIdRef.current += 1;
+    organizationRequestIdRef.current += 1;
+  }, []);
+
+  if (authScopeRef.current !== guardScope) {
+    invalidateAdminAuthRequests(guardScope);
+  }
+
+  useLayoutEffect(() => {
+    if (authScopeRef.current !== guardScope) invalidateAdminAuthRequests(guardScope);
+    return () => invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
+  }, [guardScope, invalidateAdminAuthRequests]);
 
   const registerNavigationGuard = useCallback((message: string) => {
     const id = ++navigationGuardIdRef.current;
@@ -73,7 +93,11 @@ export default function AdminShell() {
     };
   }, []);
 
-  const ctx = useMemo<AdminOutletContext>(() => ({ token, registerNavigationGuard }), [registerNavigationGuard, token]);
+  const ctx = useMemo<AdminOutletContext>(() => ({
+    token,
+    orgId: auth?.orgId ?? "",
+    registerNavigationGuard,
+  }), [auth?.orgId, registerNavigationGuard, token]);
 
   useEffect(() => {
     if (previousGuardScopeRef.current === guardScope) return;
@@ -82,21 +106,37 @@ export default function AdminShell() {
   }, [guardScope]);
 
   useAuthStorageSync<AuthPayload>(LS_ADMIN_TOKEN, (payload) => {
+    const nextScope = createAdminAuthScopeKey(payload?.orgId ?? "", payload?.token ?? "");
+    if (authScopeRef.current !== nextScope) invalidateAdminAuthRequests(nextScope);
     setAuth(payload);
+    setMe({});
     setOrganizationName(payload?.orgName || payload?.orgId || "");
-    if (!payload?.token) {
-      nav("/admin/login", { replace: true });
-    }
   });
 
   useEffect(() => {
     if (!token) return;
+    const requestScope = guardScope;
+    const requestId = ++profileRequestIdRef.current;
+    const isCurrent = () => isAdminAsyncRequestCurrent(
+      requestScope,
+      requestId,
+      authScopeRef.current,
+      profileRequestIdRef.current,
+    );
     void (async () => {
       try {
         const res = await authFetch(LS_ADMIN_TOKEN, "/auth/me", {}, {
-          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+          onUnauthorized: () => {
+            if (!isCurrent()) return;
+            invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
+            clearAuthPayload(LS_ADMIN_TOKEN);
+            setAuth(null);
+            setMe({});
+          },
         });
+        if (!isCurrent()) return;
         const json = await res.json();
+        if (!isCurrent()) return;
         if (res.ok && json.success) {
           const profile = (json.data ?? {}) as MePayload;
           setMe(profile);
@@ -106,19 +146,36 @@ export default function AdminShell() {
         // ignore header profile fetch errors
       }
     })();
-  }, [token]);
+  }, [guardScope, invalidateAdminAuthRequests, token]);
 
   useEffect(() => {
     if (!token || !auth) return;
+    const authSnapshot = auth;
+    const requestScope = guardScope;
+    const requestId = ++organizationRequestIdRef.current;
+    const isCurrent = () => isAdminAsyncRequestCurrent(
+      requestScope,
+      requestId,
+      authScopeRef.current,
+      organizationRequestIdRef.current,
+    );
     void (async () => {
       try {
         const res = await authFetch(LS_ADMIN_TOKEN, "/admin/organization/profile", {}, {
-          onUnauthorized: () => clearAuthPayload(LS_ADMIN_TOKEN),
+          onUnauthorized: () => {
+            if (!isCurrent()) return;
+            invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
+            clearAuthPayload(LS_ADMIN_TOKEN);
+            setAuth(null);
+            setMe({});
+          },
         });
+        if (!isCurrent()) return;
         const json = await res.json();
+        if (!isCurrent()) return;
         if (res.ok && json.success && json.data?.name) {
           setOrganizationName(json.data.name);
-          const next = { ...auth, orgName: json.data.name };
+          const next = { ...authSnapshot, orgName: json.data.name };
           writeAuthPayload(LS_ADMIN_TOKEN, next);
           setAuth(next);
         }
@@ -126,7 +183,7 @@ export default function AdminShell() {
         // keep token payload organization fallback
       }
     })();
-  }, [token]);
+  }, [auth?.orgId, guardScope, invalidateAdminAuthRequests, token]);
 
   useEffect(() => {
     const onCurrentUserUpdated = (evt: Event) => {
@@ -160,16 +217,10 @@ export default function AdminShell() {
 
   const logout = () => {
     if (!confirmAdminNavigation(navigationGuard, (message) => window.confirm(message))) return;
+    invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
     clearAuthPayload(LS_ADMIN_TOKEN);
     setAuth(null);
-    nav("/admin/login", { replace: true });
-  };
-
-  const guardNavigation = (targetPathname: string, event: ReactMouseEvent<HTMLAnchorElement>) => {
-    if (!shouldGuardAdminNavigationClick(event, location.pathname, targetPathname)) return;
-    if (confirmAdminNavigation(navigationGuard, (message) => window.confirm(message))) return;
-    event.preventDefault();
-    event.stopPropagation();
+    setMe({});
   };
 
   const toggleNavGroup = (label: string) => {
@@ -235,7 +286,6 @@ export default function AdminShell() {
                         key={child.to}
                         to={child.to}
                         className={({ isActive }) => `admin-nav-link--child${isActive ? " active" : ""}`}
-                        onClick={(event) => guardNavigation(child.to, event)}
                       >
                         <span>{child.label}</span>
                       </NavLink>
@@ -249,7 +299,6 @@ export default function AdminShell() {
                 key={item.to}
                 to={item.to}
                 className={({ isActive }) => (isActive ? "active" : "")}
-                onClick={(event) => guardNavigation(item.to, event)}
               >
                 <span>{item.label}</span>
               </NavLink>
