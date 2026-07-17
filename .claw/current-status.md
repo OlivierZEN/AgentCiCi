@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-16T14:05:11Z
+updated_at: 2026-07-17T06:38:56Z
 updated_by: MANAGER-001
 phase: general-ontology-platform-v1-implementation
 active_task: "TASK-213"
-next_action: "Validate and push TASK-213 assignment, then implement FEAT-118 through production acceptance while TASK-210 closes independently."
+next_action: "Validate and push the TASK-213 V83 provenance-migration authorization, then finish final security review and production acceptance."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-213 is in progress: the user approved a domain-neutral, business-first visual ontology platform with AI-generated reviewable drafts, deterministic Schema/API compilation, human-only publishing and read-only semantic queries. CloudCC CRM is the first real adapter/domain package, while `INLINE_SAMPLE` project delivery proves the core is not CRM-specific.
+- TASK-213 is in progress: the user approved a domain-neutral, business-first visual ontology platform with AI-generated reviewable drafts, deterministic Schema/API compilation, human-only publishing and read-only semantic queries. V82 remains unchanged; final security review authorized a new forward-only V83 that records reference-package provenance and fingerprint so an identical manually created workspace cannot be mistaken for a completed package install.
 
 - TASK-201 右栏说明移除与双栏对齐增量修复已在生产 `2.7.9 / c04e992b3840` 完成。PR #11、不可变 Git/镜像 tag、发布前四项备份、仅重建 backend/frontend、六服务健康及 1600×1000 真实 Agent Builder 页面均通过；右栏模型治理说明与分隔线不存在，左右编辑列同为 612.5px × 604px，顶底边一致，系统提示词与发布备注输入底边一致，页面横向溢出、生产 console warning/error、backend ERROR/Exception 与 Nginx 精确 5xx 均为 0。即时应用回滚点为 `2.7.8 / 4814d2b9534d`。
 - TASK-212 已在生产 `2.7.8 / 4814d2b9534d` 完成。PR #10、不可变 Git/镜像 tag、发布前四项备份、只重建 backend/frontend、V81 非事务并发索引、六服务健康、双向 401/403/200 权限矩阵及 `1600 x 1000` Agent Builder/平台页面均通过；两个索引 valid/ready，页面无外层横向溢出，console warning/error、稳定窗口 backend ERROR 与 Nginx 精确 5xx 均为 0。完整 Maven 诊断仍只有既有 341 项中的 3 failure / 7 error，未误报全量套件通过。即时应用回滚点为 `2.7.7 / e47979167af8`，V81 索引可安全保留。

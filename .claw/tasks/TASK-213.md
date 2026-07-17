@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-213
 status: in_progress
-updated_at: 2026-07-16T14:05:11Z
+updated_at: 2026-07-17T06:38:56Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -21,12 +21,12 @@ spec_path: docs/specs/FEAT-118-general-ontology-modeling-platform.md
 ## Current State
 
 - 用户已批准 FEAT-118 的推荐设计、AI/人工权限边界与只读 V1 范围，并明确要求无需再次确认，直接实现和发布生产。
-- 规格与 TDD 实施计划已完成自检；V82 迁移号、TASK-213 和 FEAT-118 已避开并行任务占用。
-- MANAGER-001 SSH challenge-response 身份验证已通过，assignment 待代表路径授权验证并推送 `origin/main`。
+- 通用本体 V1 已进入发布前终局安全审查；V82 保持不变。
+- 安全审查要求区分“参考包安装”与“同一管理员手工创建的完全同元数据工作区”；已批准新增正向 V83，仅保存参考包来源和内容指纹。
 
 ## Next Action
 
-- 验证 assignment 代表路径，提交并推送分配到 `origin/main`，再按实施计划执行 Task 1。
+- 验证 V83 精确路径授权，提交并推送本次分配到 `origin/main`，再继续 TDD 实现和终局复审。
 
 ## Changed Files
 
@@ -36,6 +36,7 @@ spec_path: docs/specs/FEAT-118-general-ontology-modeling-platform.md
 - `.claw/tasks/TASK-213.md`
 - `.claw/task-board.md`
 - `.claw/current-status.md`
+- `backend/src/main/resources/db/migration/V83__ontology_workspace_provenance.sql`
 
 ## Handoff
 
