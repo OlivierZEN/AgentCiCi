@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-213
 status: in_progress
-updated_at: 2026-07-17T07:01:55Z
+updated_at: 2026-07-17T07:31:02Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -25,13 +25,14 @@ spec_path: docs/specs/FEAT-118-general-ontology-modeling-platform.md
 - 发布阻塞审查指出的身份旧响应、页面卸载异步回写、组织切换重载、未保存映射覆盖、技术预览修订竞态、提案实现键泄漏、警告对比度和 tab IDREF 问题均已按 TDD 修复。
 - 后续正式审计新发现一项工作区创建 Important：POST 结果未知或并发唯一键竞争时可能盲目重试、误接管或返回 500。当前已按 TDD 修复：前端只接受当前组织内 `key + name + description + createdBy` 与同一管理员原请求完全一致的权威列表记录，无法确认时锁定并要求刷新；后端只把 V82 目标唯一约束翻译为稳定 409，其他完整性异常不误标。
 - 参考包直装路径已完成正向 V83 provenance 加固：普通工作区落 `MANUAL/NULL/NULL`，参考包工作区落 `REFERENCE_PACKAGE/包 ID/原始 classpath bytes SHA-256`；管理 API 返回这三项，前端恢复必须再精确匹配业务身份与当前管理员。同一管理员手工创建的完全同元数据工作区、错误包 ID 或错误指纹均不会被接管。V82 checksum 保持不变，V83 不新增表。
-- 本轮前端 26 个文件 / 177 项测试与生产构建通过；最终全新隔离 PostgreSQL 从零应用 V82、V83 后，本体持久化 16 项、平台 14 项、管理服务 6 项、参考包服务 3 项，共 39/39 通过，数据库仍为 13 张 ontology 表，伪造来源、空包 ID、短指纹和大写指纹均被 CHECK 拒绝。后端生产打包通过，全部临时数据库已删除并回读为 0。此前真实浏览器退出/卸载时序、`expectedRevision` 请求绑定、完整 ARIA 面板关系和 1600×1000 桌面视图证据继续有效。
-- 原 10 项问题仍保持关闭，V83 TDD 与全量本地回归已完成；最终独立复审尚未完成，因此当前不得沿用“Critical 0 / Important 0”的最终结论。此前 mounted router 延迟测试债仍为 Minor。
+- 全新隔离 PostgreSQL 从零应用 79 个迁移到 V83；扩大后的本体与平台相关后端回归 127/127、前端 26 个文件 / 177 项、前端生产构建和后端打包全部通过。数据库仍为 13 张 ontology 表，V82 checksum 不变，V83 伪造来源、空包 ID、短指纹和大写指纹均被 CHECK 拒绝；临时库删除后回读为 0。
+- 全新 1600×1000 真实浏览器复验了列表、向导、画布、映射脏状态跨页签保留、AI 禁止带脏映射生成/应用、离开取消/确认、技术预览 `expectedRevision=4`、全部 tab IDREF、发布门与默认焦点“取消”、版本历史；验收会话 console error/warning 和 document/body 横向溢出均为 0。
+- 安全与规格终局独立复审均为 Approved，Critical 0 / Important 0。仅保留 mounted RouterProvider + deferred Promise 自动化以及更广参数化跨租户 404 覆盖两项 Minor，均不阻塞发布。
 - 生产发布仍必须在签名提交、合并和 runbook 全部门禁通过后执行。
 
 ## Next Action
 
-- 完成 V83 provenance 修复的最终独立安全复审；通过后合并，并严格按 `docs/production-release-runbook.md` 执行 dry-run、备份、不可变发布和线上 API/浏览器验收。
+- 推送已复审分支、创建并合并 PR；同步干净 main 后，严格按 `docs/production-release-runbook.md` 执行 2.7.10 dry-run、备份、不可变发布和线上 API/浏览器验收。
 
 ## Changed Files
 
