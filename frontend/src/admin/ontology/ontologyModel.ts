@@ -6,6 +6,7 @@ import type {
   OntologyMappingView,
   OntologyProposalRecord,
   OntologyRelation,
+  OntologyReferencePackageSummary,
   OntologySourceView,
   OntologyVersionSummary,
   OntologyWorkspaceView,
@@ -86,6 +87,17 @@ export function findOntologyWorkspaceByCreateIdentity(
     && workspace.description === identity.description
     && workspace.createdBy === identity.createdBy
   ));
+}
+
+export function findOntologyWorkspaceByReferencePackageIdentity(
+  workspaces: readonly OntologyWorkspaceView[],
+  referencePackage: OntologyReferencePackageSummary,
+  createdBy: string,
+): OntologyWorkspaceView | undefined {
+  return findOntologyWorkspaceByCreateIdentity(workspaces, {
+    ...referencePackage.workspaceIdentity,
+    createdBy,
+  });
 }
 
 export function toEditableOntologyMappings(

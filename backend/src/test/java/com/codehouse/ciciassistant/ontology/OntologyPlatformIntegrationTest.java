@@ -429,6 +429,12 @@ class OntologyPlatformIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.id == 'project-delivery')]").exists())
+                .andExpect(jsonPath("$.data[?(@.id == 'project-delivery')].workspaceIdentity.key")
+                        .value("project-delivery"))
+                .andExpect(jsonPath("$.data[?(@.id == 'project-delivery')].workspaceIdentity.name")
+                        .value("项目交付"))
+                .andExpect(jsonPath("$.data[?(@.id == 'project-delivery')].workspaceIdentity.description")
+                        .value("领域中立的项目交付参考本体"))
                 .andExpect(jsonPath("$.data[?(@.id == 'customer-operations')]").exists());
 
         MvcResult installed = mockMvc.perform(post(

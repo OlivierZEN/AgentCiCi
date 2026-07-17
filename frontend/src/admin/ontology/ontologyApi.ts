@@ -84,6 +84,14 @@ export class OntologyWorkspaceCreateUnconfirmedError extends Error {
   }
 }
 
+/** Reference package installation could not be confirmed against the authoritative workspace list. */
+export class OntologyReferencePackageInstallUnconfirmedError extends Error {
+  constructor() {
+    super("参考包安装结果尚未确认");
+    this.name = "OntologyReferencePackageInstallUnconfirmedError";
+  }
+}
+
 /** The apply POST may have committed, but no authoritative response was received. */
 export class OntologyProposalApplyOutcomeUnknownError extends Error {
   constructor() {
@@ -118,6 +126,12 @@ export function isOntologyWorkspaceCreateUnconfirmedError(
   error: unknown,
 ): error is OntologyWorkspaceCreateUnconfirmedError {
   return error instanceof OntologyWorkspaceCreateUnconfirmedError;
+}
+
+export function isOntologyReferencePackageInstallUnconfirmedError(
+  error: unknown,
+): error is OntologyReferencePackageInstallUnconfirmedError {
+  return error instanceof OntologyReferencePackageInstallUnconfirmedError;
 }
 
 export function isOntologyProposalApplyOutcomeUnknownError(
@@ -164,6 +178,12 @@ export function isOntologyWorkspaceCreateReconciliationError(
   return error instanceof OntologyApiError
     && (error.outcomeUnknown
       || (error.status === 409 && error.code === "ONTOLOGY_KEY_CONFLICT"));
+}
+
+export function isOntologyReferencePackageInstallReconciliationError(
+  error: unknown,
+): error is OntologyApiError {
+  return isOntologyWorkspaceCreateReconciliationError(error);
 }
 
 function isUncertainMutationStatus(status: number): boolean {

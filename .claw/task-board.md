@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-17T06:07:52Z
+updated_at: 2026-07-17T06:25:43Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-213.md`
 - assignment_path: `.claw/assignments/TASK-213.yaml`
 - blocked_by: `none`
-- next_action: Complete incremental independent review of the workspace-create race/reconciliation fix, then create and verify the signed commit before merge and production runbook execution; production is not yet released.
+- next_action: Complete final independent review of the workspace-create and reference-package install reconciliation fixes, then merge and execute the production runbook; production is not yet released.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

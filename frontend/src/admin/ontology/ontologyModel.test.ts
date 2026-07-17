@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createOntologyApi,
+  isOntologyReferencePackageInstallReconciliationError,
   isOntologyWorkspaceCreateReconciliationError,
   isOntologyRevisionConflict,
   OntologyProposalApplyOutcomeUnknownError,
@@ -17,6 +18,7 @@ import {
   createOntologyMutationLane,
   createOntologyAuthScopeKey,
   createOntologyCompilePreviewBinding,
+  findOntologyWorkspaceByReferencePackageIdentity,
   findOntologyWorkspaceByCreateIdentity,
   findOntologySourceByIdentity,
   findOntologyVersionForDraftRevision,
@@ -43,6 +45,7 @@ import type {
   OntologyDraftView,
   OntologyMappingView,
   OntologyProposalRecord,
+  OntologyReferencePackageSummary,
   OntologyRelation,
   OntologyWorkspaceView,
 } from "./ontologyTypes";
@@ -532,6 +535,39 @@ describe("ontology immutable model", () => {
     )).toBeUndefined();
   });
 
+  it("reconciles a reference package only from its deterministic workspace identity", () => {
+    const summary: OntologyReferencePackageSummary = {
+      id: "project-delivery",
+      title: "交付演示包（显示标题不可用于对账）",
+      description: "参考业务包说明",
+      conceptCount: 3,
+      dataSourceCount: 1,
+      workspaceIdentity: {
+        key: "project-delivery",
+        name: "项目交付",
+        description: "以项目、任务和负责人组织通用交付语义。",
+      },
+    };
+    const expected: OntologyWorkspaceView = {
+      ...draftView().workspace,
+      ...summary.workspaceIdentity,
+      createdBy: "owner-a",
+    };
+    const otherAdministrator = { ...expected, id: 8, createdBy: "owner-b" };
+    const manualSameKey = { ...expected, id: 9, name: summary.title };
+
+    expect(findOntologyWorkspaceByReferencePackageIdentity(
+      [otherAdministrator, manualSameKey, expected],
+      summary,
+      "owner-a",
+    )).toEqual(expected);
+    expect(findOntologyWorkspaceByReferencePackageIdentity(
+      [otherAdministrator, manualSameKey],
+      summary,
+      "owner-a",
+    )).toBeUndefined();
+  });
+
   it("calculates roving tab focus without activating invalid keys", () => {
     expect(nextOntologyTabIndex(1, 3, "ArrowRight")).toBe(2);
     expect(nextOntologyTabIndex(0, 3, "ArrowLeft")).toBe(2);
@@ -897,6 +933,28 @@ describe("ontology draft transport", () => {
 });
 
 describe("ontology presentation errors", () => {
+  it("reconciles reference package installation only for uncertain outcomes or key conflict", () => {
+    expect(isOntologyReferencePackageInstallReconciliationError(new OntologyApiError(
+      "网络请求失败，请稍后重试",
+      0,
+      "HTTP_0",
+      null,
+      true,
+    ))).toBe(true);
+    expect(isOntologyReferencePackageInstallReconciliationError(new OntologyApiError(
+      "ONTOLOGY_KEY_CONFLICT",
+      409,
+      "ONTOLOGY_KEY_CONFLICT",
+      null,
+    ))).toBe(true);
+    expect(isOntologyReferencePackageInstallReconciliationError(new OntologyApiError(
+      "ONTOLOGY_VALIDATION_FAILED",
+      400,
+      "ONTOLOGY_VALIDATION_FAILED",
+      null,
+    ))).toBe(false);
+  });
+
   it("reconciles workspace creation only for uncertain outcomes or the exact key conflict", () => {
     expect(isOntologyWorkspaceCreateReconciliationError(new OntologyApiError(
       "网络请求失败，请稍后重试",

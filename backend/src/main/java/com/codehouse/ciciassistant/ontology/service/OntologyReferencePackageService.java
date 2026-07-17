@@ -36,6 +36,10 @@ public class OntologyReferencePackageService {
                         value.id(),
                         value.title(),
                         value.description(),
+                        new WorkspaceIdentity(
+                                value.document().key(),
+                                value.document().name(),
+                                value.document().description()),
                         value.document().concepts().size(),
                         value.document().dataSources().size()))
                 .sorted(java.util.Comparator.comparing(ReferencePackageSummary::id))
@@ -123,7 +127,14 @@ public class OntologyReferencePackageService {
             String id,
             String title,
             String description,
+            WorkspaceIdentity workspaceIdentity,
             int conceptCount,
             int dataSourceCount) {
+    }
+
+    public record WorkspaceIdentity(
+            String key,
+            String name,
+            String description) {
     }
 }

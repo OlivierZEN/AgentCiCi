@@ -380,6 +380,7 @@ export interface OntologyReferencePackageSummary {
   id: string;
   title: string;
   description: string;
+  workspaceIdentity: Pick<OntologyWorkspaceView, "key" | "name" | "description">;
   conceptCount: number;
   dataSourceCount: number;
 }

@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-17T06:07:52Z
+updated_at: 2026-07-17T06:25:43Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-17T06:07:52Z
+last_run_at: 2026-07-17T06:25:43Z
 last_run_status: passed
 ---
 
@@ -12,16 +12,16 @@ last_run_status: passed
 
 ## TASK-213 通用本体 V1 发布阻塞修复本地验收（2026-07-17）
 
-- `identity/assignment`: MANAGER-001 SSH signing fingerprint、GitHub 身份、TASK-213 分支及当前 31 个源码/测试/规格/设计/状态路径经技能包 `check-assignment.py` 返回 `allowed`，0 finding。
-- `tdd`: 先新增身份异步 scope、页面卸载/组织切换、映射脏状态、技术预览修订/候选版本绑定、数据源稳定身份、提案业务化展示、八主题 warning AA 对比度和完整 tab IDREF 回归；旧实现按预期红灯，再完成最小修复转绿。独立复审复现“技术预览误标映射工作台完整 → AI 页内部刷新覆盖脏行”、AI 应用后全量映射覆盖和同修订并发发布候选版本漂移后，再以 contract/纯函数红灯锁定并修复。后端编译预览测试先因缺失 `sourceDraftRevision` 红灯，加入 `expectedRevision` 行锁校验与响应绑定后转绿。后续正式审计再发现工作区创建竞态：前端精确请求/创建者核对、API 错误分类、页面锁定合同与后端目标约束翻译测试先分别稳定红灯；随后最小实现转绿。并发集成测试用双预查 barrier 强制两个事务都看到空结果，避免旧先查后写逻辑假绿；非目标约束保留原异常的单测同时通过。
-- `frontend-full`: `npm test` 为 26 个文件 / 174 项全部通过；`npm run build` 成功转换 1,948 个模块，仅保留既有大 chunk 提示。
-- `backend-focused`: 新建隔离 PostgreSQL 数据库上 `OntologyPlatformIntegrationTest` 14/14、`OntologyManagementServiceTest` 4/4 通过，0 failure / 0 error；并发两个真实 MockMvc 创建请求由 repository 双预查 barrier 强制进入 V82 唯一约束竞争，最终一个 200、一个稳定 409 / `ONTOLOGY_KEY_CONFLICT` 且只落一行。工作区响应包含当前创建者，目标约束与非目标完整性异常翻译均有单测；`mvn -q -DskipTests package` 通过，隔离数据库随后已强制删除并回读确认不存在。
+- `identity/assignment`: MANAGER-001 SSH signing fingerprint、GitHub 身份、TASK-213 分支及本次参考包增量涉及的 14 个源码/测试/规格/状态路径经技能包 `dev-login.py` 的 assignment 检查返回 `allowed`，0 finding。
+- `tdd`: 先新增身份异步 scope、页面卸载/组织切换、映射脏状态、技术预览修订/候选版本绑定、数据源稳定身份、提案业务化展示、八主题 warning AA 对比度和完整 tab IDREF 回归；旧实现按预期红灯，再完成最小修复转绿。独立复审复现“技术预览误标映射工作台完整 → AI 页内部刷新覆盖脏行”、AI 应用后全量映射覆盖和同修订并发发布候选版本漂移后，再以 contract/纯函数红灯锁定并修复。后端编译预览测试先因缺失 `sourceDraftRevision` 红灯，加入 `expectedRevision` 行锁校验与响应绑定后转绿。后续正式审计再发现工作区创建竞态：前端精确请求/创建者核对、API 错误分类、页面锁定合同与后端目标约束翻译测试先分别稳定红灯；随后最小实现转绿。并发集成测试用双预查 barrier 强制两个事务都看到空结果，避免旧先查后写逻辑假绿；非目标约束保留原异常的单测同时通过。参考包直装路径随后先以服务摘要身份、当前创建者精确核对、错误分类和安装锁定合同稳定红灯，再加入实际包文档 `workspaceIdentity` 与权威列表恢复实现转绿；展示标题、其他创建者和手工同 key 工作区的反例测试通过。
+- `frontend-full`: `npm test` 为 26 个文件 / 177 项全部通过；`npm run build` 成功转换 1,948 个模块，仅保留既有大 chunk 提示。
+- `backend-focused`: 新建隔离 PostgreSQL 数据库上 `OntologyPlatformIntegrationTest` 14/14、`OntologyManagementServiceTest` 4/4、`OntologyReferencePackageServiceTest` 3/3 通过，合计 21 项，0 failure / 0 error；并发两个真实 MockMvc 创建请求由 repository 双预查 barrier 强制进入 V82 唯一约束竞争，最终一个 200、一个稳定 409 / `ONTOLOGY_KEY_CONFLICT` 且只落一行。工作区响应包含当前创建者，目标约束与非目标完整性异常翻译均有单测；参考包摘要接口与服务测试确认 `workspaceIdentity` 来自实际项目交付包文档。`mvn -q -DskipTests package` 通过，隔离数据库随后已强制删除并回读确认不存在。
 - `browser-auth-timing`: 真实浏览器延迟组织资料响应 5 秒，在响应返回前退出；等待旧响应结束后仍位于 `/admin/login`，`cici_admin_token` 为 `null`，旧组织信息未重新出现。
 - `browser-unmount-timing`: 真实浏览器延迟创建工作区响应，在 POST 已发出后确认侧栏离开；旧响应结束后仍位于 `/admin/data-quality`，工作区未重新挂载，记录到的 `/admin/ontologies/{id}/**` 后续请求为 0。
 - `browser-compile-a11y`: 真实浏览器进入草稿修订 7 的技术预览，实际 POST body 为 `{"expectedRevision":7}`，响应 `sourceDraftRevision=7` 后展示只读契约；6 个工作区 tab 与 3 个技术 tab 的 `aria-controls` 均命中真实面板，非活动面板保留 `hidden` IDREF。1600×1000 截图完成，当前验证会话 console error/warning 为 0。
 - `browser-mapping-galaxy`: 在 Galaxy 主题复现“技术预览 → 数据映射 → 删除映射形成脏状态 → AI 提案”：技术预览只读取 mappings（1 次 / catalog 0 次）；首次进入映射页继续读取完整 catalog（累计 mappings 2 次 / catalog 1 次）；删除后切 AI 页请求计数不再增加，页面继续显示“有未保存修改”，生成和应用提案均禁用并给出先保存映射提示。差异只显示 `业务对象“项目”`，不显示 `concept:project`。Galaxy 实际计算 warning 为 `rgb(230, 183, 95)`，1600×1000 的 document/body 横向溢出均为 0，console error/warning 为 0。
 - `static`: `git diff --check`、`jq empty DESIGN.json` 通过；暖色主题 warning `#7a4b00` 达到普通文本 4.5:1 门槛，Galaxy 使用主题 warning `#e6b75f`，在 canvas/surface/muted/strong/warning-soft 五类暗色背景上的对比度依次为 9.84 / 8.98 / 8.14 / 6.78 / 6.40:1。
-- `independent-review`: 前一轮只读复审关闭原 10 项并留下 mounted router + deferred Promise 的 Minor 测试债；后续正式审计新发现一项工作区创建 Important，已完成上述修复和本地验证，但增量独立复审尚未完成，因此当前不记录新的“Critical 0 / Important 0”最终结论。
+- `independent-review`: 前一轮只读复审关闭原 10 项并留下 mounted router + deferred Promise 的 Minor 测试债；后续正式审计新发现工作区创建及其参考包直装同类 Important，已完成上述修复和本地验证，但最终独立复审尚未完成，因此当前不记录新的“Critical 0 / Important 0”最终结论。
 - `release-boundary`: 本节只记录本地发布前门禁；TASK-213 尚未合并或上线，后续仍需独立复审、签名提交、生产 dry-run、备份、不可变发布和线上 API/浏览器验收。
 
 ## TASK-201 智能体构建页右栏说明移除与双栏对齐增量验收（2026-07-16）

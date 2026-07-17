@@ -32,6 +32,8 @@ import { useAdminAuthScope, useAdminNavigationGuard } from "../useAdminToken";
 import { shouldBlockAdminRouteNavigation } from "../adminNavigationGuard";
 import {
   createOntologyApi,
+  isOntologyReferencePackageInstallReconciliationError,
+  isOntologyReferencePackageInstallUnconfirmedError,
   isOntologyProposalApplyOutcomeUnknownError,
   isOntologyProposalAppliedReloadError,
   isOntologyPublishOutcomeUnknownError,
@@ -39,6 +41,7 @@ import {
   isOntologyWorkspaceCreateReconciliationError,
   isOntologyWorkspaceCreateUnconfirmedError,
   OntologyApiError,
+  OntologyReferencePackageInstallUnconfirmedError,
   OntologyWorkspaceCreateUnconfirmedError,
 } from "../ontology/ontologyApi";
 import OntologyCanvas from "../ontology/OntologyCanvas";
@@ -51,6 +54,7 @@ import {
   createStableOntologyKey,
   findOntologySourceByIdentity,
   findOntologyVersionForDraftRevision,
+  findOntologyWorkspaceByReferencePackageIdentity,
   findOntologyWorkspaceByCreateIdentity,
   hasUnvalidatedOntologyMappings,
   isOntologyAsyncScopeCurrent,
@@ -145,6 +149,9 @@ export function formatOntologyError(error: unknown): string {
   if (isOntologyPublishOutcomeUnknownError(error)) {
     return "发布结果未知；请重新加载并检查版本历史，勿重复发布。";
   }
+  if (isOntologyReferencePackageInstallUnconfirmedError(error)) {
+    return "参考包安装结果尚未确认，请先刷新业务本体列表核对，勿重复安装。";
+  }
   if (isOntologyWorkspaceCreateUnconfirmedError(error)) {
     return "创建结果尚未确认，请先返回列表并刷新核对，勿重复创建。";
   }
@@ -220,6 +227,7 @@ export default function AdminOntologyPage() {
   const [operationNotice, setOperationNotice] = useState("");
   const [revisionLocked, setRevisionLocked] = useState(false);
   const [workspaceCreateLocked, setWorkspaceCreateLocked] = useState(false);
+  const [referencePackageInstallLocked, setReferencePackageInstallLocked] = useState(false);
 
   const [catalog, setCatalog] = useState<OntologyCatalogView | null>(null);
   const [mappings, setMappings] = useState<OntologyMappingView[]>([]);
@@ -378,6 +386,7 @@ export default function AdminOntologyPage() {
       setWorkspaces(next);
       setListStatus("ready");
       setWorkspaceCreateLocked(false);
+      setReferencePackageInstallLocked(false);
       setOperationError("");
     } catch (error) {
       if (epoch !== contextEpochRef.current || requestId !== listRequestId.current) return;
@@ -492,6 +501,36 @@ export default function AdminOntologyPage() {
     invalidateCompilePreview();
   }, [invalidateCompilePreview]);
 
+  const installReferencePackageRecoverably = useCallback(async (
+    referencePackage: OntologyReferencePackageSummary,
+    isCurrent: () => boolean,
+  ): Promise<{ workspace: OntologyWorkspaceView; reconciled: boolean } | null> => {
+    try {
+      const workspace = await api.installReferencePackage(referencePackage.id);
+      return isCurrent() ? { workspace, reconciled: false } : null;
+    } catch (error) {
+      if (!isCurrent()) return null;
+      if (!isOntologyReferencePackageInstallReconciliationError(error)) throw error;
+      try {
+        const authoritative = await api.listWorkspaces();
+        if (!isCurrent()) return null;
+        listRequestId.current += 1;
+        setWorkspaces(authoritative);
+        setListStatus("ready");
+        const matched = findOntologyWorkspaceByReferencePackageIdentity(
+          authoritative,
+          referencePackage,
+          userId,
+        );
+        if (matched) return { workspace: matched, reconciled: true };
+      } catch {
+        if (!isCurrent()) return null;
+      }
+      setReferencePackageInstallLocked(true);
+      throw new OntologyReferencePackageInstallUnconfirmedError();
+    }
+  }, [api, userId]);
+
   const createWorkspaceRecoverably = useCallback(async (
     input: { key: string; name: string; description: string | null },
     isCurrent: () => boolean,
@@ -565,6 +604,7 @@ export default function AdminOntologyPage() {
     invalidateOntologyAsyncContext();
     setBusyAction(null);
     setWorkspaceCreateLocked(false);
+    setReferencePackageInstallLocked(false);
     setPageMode("list");
     setWorkspaces([]);
     setListStatus("idle");
@@ -1467,14 +1507,26 @@ export default function AdminOntologyPage() {
     });
   };
 
-  const installPackage = async (packageId: string) => {
+  const installPackage = async (referencePackage: OntologyReferencePackageSummary) => {
+    if (referencePackageInstallLocked) {
+      setOperationError("参考包安装结果尚未确认，请先刷新业务本体列表核对，勿重复安装。");
+      return;
+    }
     const epoch = contextEpochRef.current;
     await runBusy("安装参考包", async () => {
-      const workspace = await api.installReferencePackage(packageId);
-      if (contextEpochRef.current !== epoch) return;
+      const installResult = await installReferencePackageRecoverably(
+        referencePackage,
+        () => contextEpochRef.current === epoch,
+      );
+      if (!installResult || contextEpochRef.current !== epoch) return;
+      const { workspace } = installResult;
       listRequestId.current += 1;
       setWorkspaces((current) => [workspace, ...current.filter((item) => item.id !== workspace.id)]);
       await openWorkspace(workspace);
+      if (contextEpochRef.current !== epoch) return;
+      setOperationNotice(installResult.reconciled
+        ? "已核对到当前管理员此前安装的同一参考包工作区。"
+        : "参考包已安装为可编辑草稿。");
     });
   };
 
@@ -2276,7 +2328,7 @@ export default function AdminOntologyPage() {
           <div className="ontology-package-row" key={item.id}>
             <PackageOpen size={18} aria-hidden />
             <div><strong>{item.title}</strong><p>{item.description}</p><span>{item.conceptCount} 个业务对象 · {item.dataSourceCount} 个数据来源</span></div>
-            <button type="button" className="cici-btn cici-btn--ghost" disabled={Boolean(busyAction)} onClick={() => void installPackage(item.id)}>安装参考包</button>
+            <button type="button" className="cici-btn cici-btn--ghost" disabled={referencePackageInstallLocked || Boolean(busyAction)} onClick={() => void installPackage(item)}>安装参考包</button>
           </div>
         ))}
       </section>

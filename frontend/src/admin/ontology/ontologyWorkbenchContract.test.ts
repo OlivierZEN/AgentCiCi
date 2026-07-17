@@ -135,4 +135,18 @@ describe("ontology workbench release contracts", () => {
     expect(pageSource).toContain("workspaceCreateLocked || Boolean(busyAction)");
     expect(pageSource).toContain("创建结果尚未确认，请先返回列表并刷新核对，勿重复创建。");
   });
+
+  it("reconciles reference package installs by package identity and locks unresolved retries", () => {
+    const installBlock = pageSource.slice(
+      pageSource.indexOf("const installReferencePackageRecoverably"),
+      pageSource.indexOf("const createWorkspaceRecoverably"),
+    );
+    expect(installBlock).toContain("isOntologyReferencePackageInstallReconciliationError");
+    expect(installBlock).toContain("api.listWorkspaces()");
+    expect(installBlock).toContain("findOntologyWorkspaceByReferencePackageIdentity");
+    expect(installBlock).toContain("setReferencePackageInstallLocked(true)");
+    expect(installBlock).toContain("userId");
+    expect(pageSource).toContain("referencePackageInstallLocked || Boolean(busyAction)");
+    expect(pageSource).toContain("参考包安装结果尚未确认，请先刷新业务本体列表核对，勿重复安装。");
+  });
 });

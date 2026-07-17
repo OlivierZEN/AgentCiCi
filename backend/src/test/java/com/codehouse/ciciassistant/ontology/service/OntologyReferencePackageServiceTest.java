@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -20,9 +21,19 @@ class OntologyReferencePackageServiceTest {
 
     @Test
     void listsAndStrictlyLoadsOrdinaryClasspathPackages() {
-        assertThat(service.list())
+        List<OntologyReferencePackageService.ReferencePackageSummary> summaries =
+                service.list();
+        assertThat(summaries)
                 .extracting(OntologyReferencePackageService.ReferencePackageSummary::id)
                 .containsExactly("customer-operations", "project-delivery");
+        assertThat(summaries)
+                .filteredOn(summary -> summary.id().equals("project-delivery"))
+                .singleElement()
+                .extracting(OntologyReferencePackageService.ReferencePackageSummary::workspaceIdentity)
+                .isEqualTo(new OntologyReferencePackageService.WorkspaceIdentity(
+                        "project-delivery",
+                        "项目交付",
+                        "领域中立的项目交付参考本体"));
 
         OntologyReferencePackageService.ReferencePackage project =
                 service.load("project-delivery");
