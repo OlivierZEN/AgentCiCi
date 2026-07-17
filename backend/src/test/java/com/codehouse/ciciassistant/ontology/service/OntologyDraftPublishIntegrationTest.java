@@ -18,6 +18,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -255,6 +256,116 @@ class OntologyDraftPublishIntegrationTest {
         }
     }
 
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void reusesPublishedVersionForRepeatedRevisionAndAdvancesForNewRevision() {
+        String orgId = "org-publish-repeat-" + UUID.randomUUID();
+        TenantContext.setOrgId(orgId);
+        TenantContext.setUserId("human-a");
+        Long workspaceId = new TransactionTemplate(transactionManager).execute(status ->
+                persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
+                        orgId, "project-delivery", "交付", "重复发布", "human-a")).getId());
+        OntologyWorkspaceEntity savedDraft = drafts.saveDraft(
+                orgId,
+                "human-a",
+                workspaceId,
+                0L,
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        long publishRevision = discoverAndValidateMappings(
+                orgId, "human-a", workspaceId, savedDraft);
+
+        OntologyVersionEntity first = publisher.publish(
+                orgId, "human-a", workspaceId, publishRevision);
+        TenantContext.setUserId("human-b");
+        OntologyVersionEntity repeated = publisher.publish(
+                orgId, "human-b", workspaceId, publishRevision);
+
+        assertThat(repeated.getId()).isEqualTo(first.getId());
+        assertThat(repeated.getVersionNo()).isEqualTo(1);
+        assertThat(repeated.getSourceDraftRevision()).isEqualTo(publishRevision);
+        assertThat(repeated.getContentHash()).isEqualTo(first.getContentHash());
+        assertThat(repeated.getPublishedBy()).isEqualTo("human-a");
+        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(workspaceId, orgId))
+                .extracting(OntologyVersionEntity::getVersionNo)
+                .containsExactly(1);
+        assertThat(workspaces.findByIdAndOrgId(workspaceId, orgId))
+                .get()
+                .satisfies(stored -> {
+                    assertThat(stored.getPublishedVersion()).isEqualTo(1);
+                    assertThat(stored.getUpdatedBy()).isEqualTo("human-a");
+                });
+
+        OntologyWorkspaceEntity revisedDraft = drafts.saveDraft(
+                orgId,
+                "human-b",
+                workspaceId,
+                publishRevision,
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        OntologyVersionEntity next = publisher.publish(
+                orgId, "human-b", workspaceId, revisedDraft.getDraftRevision());
+
+        assertThat(next.getVersionNo()).isEqualTo(2);
+        assertThat(next.getSourceDraftRevision()).isEqualTo(publishRevision + 1);
+        assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(workspaceId, orgId))
+                .extracting(OntologyVersionEntity::getVersionNo)
+                .containsExactly(2, 1);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void serializesConcurrentPublishesSoSameRevisionCreatesOneVersion() throws Exception {
+        String orgId = "org-publish-concurrent-" + UUID.randomUUID();
+        TenantContext.setOrgId(orgId);
+        TenantContext.setUserId("human-a");
+        Long workspaceId = new TransactionTemplate(transactionManager).execute(status ->
+                persistence.saveForCurrentOrg(new OntologyWorkspaceEntity(
+                        orgId, "project-delivery", "交付", "并发发布", "human-a")).getId());
+        OntologyWorkspaceEntity savedDraft = drafts.saveDraft(
+                orgId,
+                "human-a",
+                workspaceId,
+                0L,
+                OntologyCompilerServiceTest.projectDeliveryDocument());
+        long publishRevision = discoverAndValidateMappings(
+                orgId, "human-a", workspaceId, savedDraft);
+        TenantContext.clear();
+
+        CountDownLatch ready = new CountDownLatch(2);
+        CountDownLatch start = new CountDownLatch(1);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            CompletableFuture<OntologyVersionEntity> first = concurrentPublish(
+                    executor, ready, start, orgId, workspaceId, publishRevision, "human-a");
+            CompletableFuture<OntologyVersionEntity> second = concurrentPublish(
+                    executor, ready, start, orgId, workspaceId, publishRevision, "human-b");
+            assertThat(ready.await(10, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+
+            OntologyVersionEntity firstResult = first.get(30, TimeUnit.SECONDS);
+            OntologyVersionEntity secondResult = second.get(30, TimeUnit.SECONDS);
+            assertThat(secondResult.getId()).isEqualTo(firstResult.getId());
+            assertThat(List.of(firstResult, secondResult))
+                    .extracting(OntologyVersionEntity::getVersionNo)
+                    .containsOnly(1);
+
+            TenantContext.setOrgId(orgId);
+            TenantContext.setUserId("human-a");
+            assertThat(versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(workspaceId, orgId))
+                    .singleElement()
+                    .satisfies(version -> {
+                        assertThat(version.getVersionNo()).isEqualTo(1);
+                        assertThat(version.getSourceDraftRevision()).isEqualTo(publishRevision);
+                        assertThat(version.getContentHash()).isEqualTo(firstResult.getContentHash());
+                    });
+            assertThat(workspaces.findByIdAndOrgId(workspaceId, orgId))
+                    .get()
+                    .extracting(OntologyWorkspaceEntity::getPublishedVersion)
+                    .isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
     private CompletableFuture<String> concurrentSave(
             ExecutorService executor,
             CountDownLatch ready,
@@ -277,6 +388,33 @@ class OntologyDraftPublishIntegrationTest {
                 return "SAVED";
             } catch (com.codehouse.ciciassistant.common.error.ConflictException exception) {
                 return "CONFLICT";
+            } catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException(exception);
+            } finally {
+                TenantContext.clear();
+            }
+        }, executor);
+    }
+
+    private CompletableFuture<OntologyVersionEntity> concurrentPublish(
+            ExecutorService executor,
+            CountDownLatch ready,
+            CountDownLatch start,
+            String orgId,
+            Long workspaceId,
+            long expectedRevision,
+            String userId) {
+        return CompletableFuture.supplyAsync(() -> {
+            TenantContext.setOrgId(orgId);
+            TenantContext.setUserId(userId);
+            ready.countDown();
+            try {
+                if (!start.await(10, TimeUnit.SECONDS)) {
+                    throw new IllegalStateException("Concurrent publish start timed out");
+                }
+                return publisher.publish(
+                        orgId, userId, workspaceId, expectedRevision);
             } catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
                 throw new IllegalStateException(exception);

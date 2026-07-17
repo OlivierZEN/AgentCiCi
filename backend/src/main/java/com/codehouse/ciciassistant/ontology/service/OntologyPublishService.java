@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
+import com.codehouse.ciciassistant.ontology.domain.OntologyVersionRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
@@ -26,6 +27,7 @@ public class OntologyPublishService {
     private final OntologyValidationService validation;
     private final OntologyCompilerService compiler;
     private final OntologyTenantPersistence persistence;
+    private final OntologyVersionRepository versions;
     private final OntologyMappingRepository mappings;
     private final OntologyMappingIntegrityService mappingIntegrity;
     private final ObjectMapper objectMapper;
@@ -36,6 +38,7 @@ public class OntologyPublishService {
             OntologyValidationService validation,
             OntologyCompilerService compiler,
             OntologyTenantPersistence persistence,
+            OntologyVersionRepository versions,
             OntologyMappingRepository mappings,
             OntologyMappingIntegrityService mappingIntegrity,
             ObjectMapper objectMapper) {
@@ -44,6 +47,7 @@ public class OntologyPublishService {
         this.validation = validation;
         this.compiler = compiler;
         this.persistence = persistence;
+        this.versions = versions;
         this.mappings = mappings;
         this.mappingIntegrity = mappingIntegrity;
         this.objectMapper = objectMapper;
@@ -64,6 +68,15 @@ public class OntologyPublishService {
         }
         if ("ARCHIVED".equals(workspace.getStatus())) {
             throw new ConflictException("ONTOLOGY_WORKSPACE_ARCHIVED");
+        }
+        OntologyVersionEntity existingVersion = versions
+                .findByWorkspaceIdAndOrgIdAndSourceDraftRevision(
+                        workspaceId,
+                        orgId,
+                        workspace.getDraftRevision())
+                .orElse(null);
+        if (existingVersion != null) {
+            return existingVersion;
         }
 
         OntologyDocument document = drafts.loadDraft(orgId, workspaceId, workspace);

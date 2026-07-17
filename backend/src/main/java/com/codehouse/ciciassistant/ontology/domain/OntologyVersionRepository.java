@@ -19,4 +19,9 @@ public interface OntologyVersionRepository extends Repository<OntologyVersionEnt
             Long workspaceId,
             String orgId,
             Integer versionNo);
+
+    Optional<OntologyVersionEntity> findByWorkspaceIdAndOrgIdAndSourceDraftRevision(
+            Long workspaceId,
+            String orgId,
+            Long sourceDraftRevision);
 }

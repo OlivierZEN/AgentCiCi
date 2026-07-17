@@ -15,16 +15,17 @@ import com.codehouse.ciciassistant.ontology.domain.OntologyTenantPersistence;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyMappingRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyVersionEntity;
+import com.codehouse.ciciassistant.ontology.domain.OntologyVersionRepository;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceEntity;
 import com.codehouse.ciciassistant.ontology.domain.OntologyWorkspaceRepository;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.lang.reflect.Modifier;
+import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.math.BigDecimal;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,8 @@ class OntologyPublishServiceTest {
     @Mock
     private OntologyTenantPersistence persistence;
     @Mock
+    private OntologyVersionRepository versions;
+    @Mock
     private OntologyMappingRepository mappings;
     @Mock
     private OntologyMappingIntegrityService mappingIntegrity;
@@ -62,6 +65,7 @@ class OntologyPublishServiceTest {
                 validation,
                 compiler,
                 persistence,
+                versions,
                 mappings,
                 mappingIntegrity,
                 new ObjectMapper());
@@ -125,6 +129,36 @@ class OntologyPublishServiceTest {
         InOrder writes = inOrder(persistence);
         writes.verify(persistence).saveForCurrentOrg(version);
         writes.verify(persistence).saveForCurrentOrg(workspace);
+    }
+
+    @Test
+    void returnsExistingVersionForSameDraftRevisionWithoutRepeatingSideEffects() {
+        OntologyWorkspaceEntity workspace = workspace(41L, 2L, 1);
+        OntologyVersionEntity existing = new OntologyVersionEntity(
+                "org-a",
+                41L,
+                1,
+                2L,
+                "hash-v1",
+                "{\"snapshot\":true}",
+                "{\"schema\":true}",
+                "type Query { project: Project }",
+                "{\"query\":true}",
+                "[]",
+                "human-original");
+        ReflectionTestUtils.setField(existing, "id", 501L);
+        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+                .thenReturn(Optional.of(workspace));
+        when(versions.findByWorkspaceIdAndOrgIdAndSourceDraftRevision(
+                41L, "org-a", 2L))
+                .thenReturn(Optional.of(existing));
+
+        OntologyVersionEntity result = service.publish(
+                "org-a", "human-a", 41L, 2L);
+
+        assertThat(result).isSameAs(existing);
+        assertThat(workspace.getPublishedVersion()).isEqualTo(1);
+        verifyNoInteractions(drafts, validation, compiler, persistence, mappings, mappingIntegrity);
     }
 
     @Test
