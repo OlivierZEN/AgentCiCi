@@ -7,10 +7,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "ontology_workspace")
 public class OntologyWorkspaceEntity implements OntologyTenantEntity {
+
+    public static final String CREATION_SOURCE_MANUAL = "MANUAL";
+    public static final String CREATION_SOURCE_REFERENCE_PACKAGE = "REFERENCE_PACKAGE";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +32,16 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "creation_source", nullable = false, length = 32)
+    private String creationSource;
+
+    @Column(name = "reference_package_id", length = 128)
+    private String referencePackageId;
+
+    @JdbcTypeCode(SqlTypes.CHAR)
+    @Column(name = "reference_package_fingerprint", length = 64, columnDefinition = "CHAR(64)")
+    private String referencePackageFingerprint;
 
     @Column(name = "status", nullable = false, length = 32)
     private String status;
@@ -58,10 +73,33 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
             String name,
             String description,
             String createdBy) {
+        this(
+                orgId,
+                key,
+                name,
+                description,
+                createdBy,
+                CREATION_SOURCE_MANUAL,
+                null,
+                null);
+    }
+
+    public OntologyWorkspaceEntity(
+            String orgId,
+            String key,
+            String name,
+            String description,
+            String createdBy,
+            String creationSource,
+            String referencePackageId,
+            String referencePackageFingerprint) {
         this.orgId = orgId;
         this.key = key;
         this.name = name;
         this.description = description;
+        this.creationSource = creationSource;
+        this.referencePackageId = referencePackageId;
+        this.referencePackageFingerprint = referencePackageFingerprint;
         this.status = "DRAFT";
         this.draftRevision = 0L;
         this.createdBy = createdBy;
@@ -88,6 +126,18 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getCreationSource() {
+        return creationSource;
+    }
+
+    public String getReferencePackageId() {
+        return referencePackageId;
+    }
+
+    public String getReferencePackageFingerprint() {
+        return referencePackageFingerprint;
     }
 
     public String getStatus() {

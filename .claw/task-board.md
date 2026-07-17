@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-17T06:44:52Z
+updated_at: 2026-07-17T07:01:55Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-213.md`
 - assignment_path: `.claw/assignments/TASK-213.yaml`
 - blocked_by: `none`
-- next_action: Implement the authorized V83 reference-package provenance and fingerprint by TDD, then finish independent review, merge and production acceptance.
+- next_action: Complete final independent review of the V83 provenance fix, then merge and execute the production runbook and acceptance gates.
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

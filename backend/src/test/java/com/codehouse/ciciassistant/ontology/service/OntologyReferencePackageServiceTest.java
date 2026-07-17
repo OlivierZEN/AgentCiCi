@@ -6,12 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.codehouse.ciciassistant.ontology.model.OntologyDocument;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.util.HexFormat;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 
 class OntologyReferencePackageServiceTest {
 
@@ -20,23 +24,38 @@ class OntologyReferencePackageServiceTest {
             new OntologyReferencePackageService(objectMapper);
 
     @Test
-    void listsAndStrictlyLoadsOrdinaryClasspathPackages() {
+    void listsAndStrictlyLoadsOrdinaryClasspathPackages() throws Exception {
         List<OntologyReferencePackageService.ReferencePackageSummary> summaries =
                 service.list();
         assertThat(summaries)
                 .extracting(OntologyReferencePackageService.ReferencePackageSummary::id)
                 .containsExactly("customer-operations", "project-delivery");
-        assertThat(summaries)
-                .filteredOn(summary -> summary.id().equals("project-delivery"))
-                .singleElement()
+        OntologyReferencePackageService.ReferencePackageSummary projectSummary = summaries.stream()
+                .filter(summary -> summary.id().equals("project-delivery"))
+                .findFirst()
+                .orElseThrow();
+        assertThat(projectSummary)
                 .extracting(OntologyReferencePackageService.ReferencePackageSummary::workspaceIdentity)
                 .isEqualTo(new OntologyReferencePackageService.WorkspaceIdentity(
                         "project-delivery",
                         "项目交付",
                         "领域中立的项目交付参考本体"));
 
+        byte[] packageBytes;
+        try (InputStream stream = new ClassPathResource(
+                "ontology/reference-packages/project-delivery.json").getInputStream()) {
+            packageBytes = stream.readAllBytes();
+        }
+        String expectedFingerprint = HexFormat.of().formatHex(
+                MessageDigest.getInstance("SHA-256").digest(packageBytes));
+        assertThat(projectSummary.fingerprint())
+                .matches("[0-9a-f]{64}")
+                .isEqualTo(expectedFingerprint);
+
         OntologyReferencePackageService.ReferencePackage project =
                 service.load("project-delivery");
+
+        assertThat(project.fingerprint()).isEqualTo(expectedFingerprint);
 
         assertThat(project.document().concepts())
                 .extracting(OntologyDocument.Concept::key)

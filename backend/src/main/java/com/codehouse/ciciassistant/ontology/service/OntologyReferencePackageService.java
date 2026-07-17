@@ -6,6 +6,9 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -40,6 +43,7 @@ public class OntologyReferencePackageService {
                                 value.document().key(),
                                 value.document().name(),
                                 value.document().description()),
+                        value.fingerprint(),
                         value.document().concepts().size(),
                         value.document().dataSources().size()))
                 .sorted(java.util.Comparator.comparing(ReferencePackageSummary::id))
@@ -65,7 +69,15 @@ public class OntologyReferencePackageService {
             for (Resource resource : resources) {
                 ReferencePackage value;
                 try (InputStream stream = resource.getInputStream()) {
-                    value = strictMapper.readValue(stream, ReferencePackage.class);
+                    byte[] bytes = stream.readAllBytes();
+                    ReferencePackageDefinition definition = strictMapper.readValue(
+                            bytes, ReferencePackageDefinition.class);
+                    value = new ReferencePackage(
+                            definition.id(),
+                            definition.title(),
+                            definition.description(),
+                            definition.document(),
+                            sha256(bytes));
                 }
                 validate(value, resource.getFilename());
                 if (packages.putIfAbsent(value.id(), value) != null) {
@@ -82,6 +94,8 @@ public class OntologyReferencePackageService {
         if (value == null
                 || !hasText(value.id())
                 || !hasText(value.title())
+                || value.fingerprint() == null
+                || !value.fingerprint().matches("[0-9a-f]{64}")
                 || value.document() == null
                 || !Objects.equals(value.id(), value.document().key())
                 || filename == null
@@ -116,11 +130,28 @@ public class OntologyReferencePackageService {
         return values == null ? List.of() : values;
     }
 
-    public record ReferencePackage(
+    private String sha256(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(
+                    MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("ONTOLOGY_REFERENCE_PACKAGE_FINGERPRINT_UNAVAILABLE", exception);
+        }
+    }
+
+    private record ReferencePackageDefinition(
             String id,
             String title,
             String description,
             OntologyDocument document) {
+    }
+
+    public record ReferencePackage(
+            String id,
+            String title,
+            String description,
+            OntologyDocument document,
+            String fingerprint) {
     }
 
     public record ReferencePackageSummary(
@@ -128,6 +159,7 @@ public class OntologyReferencePackageService {
             String title,
             String description,
             WorkspaceIdentity workspaceIdentity,
+            String fingerprint,
             int conceptCount,
             int dataSourceCount) {
     }

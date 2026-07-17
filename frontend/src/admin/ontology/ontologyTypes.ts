@@ -41,6 +41,9 @@ export interface OntologyWorkspaceView {
   name: string;
   description: string | null;
   createdBy: string;
+  creationSource: "MANUAL" | "REFERENCE_PACKAGE";
+  referencePackageId: string | null;
+  referencePackageFingerprint: string | null;
   status: OntologyWorkspaceStatus;
   draftRevision: number;
   publishedVersion: number | null;
@@ -380,6 +383,7 @@ export interface OntologyReferencePackageSummary {
   id: string;
   title: string;
   description: string;
+  fingerprint: string;
   workspaceIdentity: Pick<OntologyWorkspaceView, "key" | "name" | "description">;
   conceptCount: number;
   dataSourceCount: number;

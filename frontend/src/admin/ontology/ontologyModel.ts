@@ -94,10 +94,15 @@ export function findOntologyWorkspaceByReferencePackageIdentity(
   referencePackage: OntologyReferencePackageSummary,
   createdBy: string,
 ): OntologyWorkspaceView | undefined {
-  return findOntologyWorkspaceByCreateIdentity(workspaces, {
-    ...referencePackage.workspaceIdentity,
-    createdBy,
-  });
+  return workspaces.find((workspace) => (
+    workspace.creationSource === "REFERENCE_PACKAGE"
+    && workspace.referencePackageId === referencePackage.id
+    && workspace.referencePackageFingerprint === referencePackage.fingerprint
+    && workspace.key === referencePackage.workspaceIdentity.key
+    && workspace.name === referencePackage.workspaceIdentity.name
+    && workspace.description === referencePackage.workspaceIdentity.description
+    && workspace.createdBy === createdBy
+  ));
 }
 
 export function toEditableOntologyMappings(

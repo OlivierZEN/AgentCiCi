@@ -76,6 +76,128 @@ class OntologyPersistenceIntegrationTest {
     }
 
     @Test
+    void persistsManualAndReferencePackageWorkspaceProvenance() {
+        TenantContext.setOrgId("org-provenance");
+        OntologyWorkspaceEntity manual = persistence.saveForCurrentOrg(
+                new OntologyWorkspaceEntity(
+                        "org-provenance",
+                        "manual-delivery",
+                        "手工交付",
+                        "手工创建",
+                        "user-a"));
+        String fingerprint = "a".repeat(64);
+        OntologyWorkspaceEntity reference = persistence.saveForCurrentOrg(
+                new OntologyWorkspaceEntity(
+                        "org-provenance",
+                        "project-delivery",
+                        "项目交付",
+                        "参考包创建",
+                        "user-a",
+                        "REFERENCE_PACKAGE",
+                        "project-delivery",
+                        fingerprint));
+        persistence.flushForCurrentOrg("org-provenance");
+
+        assertThat(manual.getCreationSource()).isEqualTo("MANUAL");
+        assertThat(manual.getReferencePackageId()).isNull();
+        assertThat(manual.getReferencePackageFingerprint()).isNull();
+        assertThat(reference.getCreationSource()).isEqualTo("REFERENCE_PACKAGE");
+        assertThat(reference.getReferencePackageId()).isEqualTo("project-delivery");
+        assertThat(reference.getReferencePackageFingerprint()).isEqualTo(fingerprint);
+        assertThat(jdbcTemplate.queryForMap("""
+                        SELECT creation_source, reference_package_id,
+                               reference_package_fingerprint
+                        FROM ontology_workspace
+                        WHERE id = ?
+                        """, reference.getId()))
+                .containsEntry("creation_source", "REFERENCE_PACKAGE")
+                .containsEntry("reference_package_id", "project-delivery")
+                .containsEntry("reference_package_fingerprint", fingerprint);
+    }
+
+    @Test
+    void provenanceMigrationKeepsThirteenTablesAndRejectsManualPackageReferences() {
+        assertThat(jdbcTemplate.queryForObject("""
+                        SELECT COUNT(*)
+                        FROM information_schema.tables
+                        WHERE table_schema = current_schema()
+                          AND table_name LIKE 'ontology_%'
+                        """, Integer.class))
+                .isEqualTo(13);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ontology_workspace
+                            (org_id, key, name, creation_source,
+                             reference_package_id, reference_package_fingerprint,
+                             created_by, updated_by)
+                        VALUES (?, ?, ?, 'MANUAL', ?, NULL, ?, ?)
+                        """,
+                        "org-invalid-provenance",
+                        "manual-with-package",
+                        "非法来源",
+                        "project-delivery",
+                        "user-a",
+                        "user-a"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void provenanceMigrationRejectsReferencePackageWithEmptyPackageId() {
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ontology_workspace
+                            (org_id, key, name, creation_source,
+                             reference_package_id, reference_package_fingerprint,
+                             created_by, updated_by)
+                        VALUES (?, ?, ?, 'REFERENCE_PACKAGE', '', ?, ?, ?)
+                        """,
+                        "org-invalid-provenance",
+                        "reference-with-empty-id",
+                        "非法参考包 ID",
+                        "a".repeat(64),
+                        "user-a",
+                        "user-a"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void provenanceMigrationRejectsReferencePackageWithShortFingerprint() {
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ontology_workspace
+                            (org_id, key, name, creation_source,
+                             reference_package_id, reference_package_fingerprint,
+                             created_by, updated_by)
+                        VALUES (?, ?, ?, 'REFERENCE_PACKAGE', ?, ?, ?, ?)
+                        """,
+                        "org-invalid-provenance",
+                        "reference-with-short-fingerprint",
+                        "非法参考包指纹",
+                        "project-delivery",
+                        "a".repeat(63),
+                        "user-a",
+                        "user-a"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void provenanceMigrationRejectsReferencePackageWithUppercaseFingerprint() {
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                        INSERT INTO ontology_workspace
+                            (org_id, key, name, creation_source,
+                             reference_package_id, reference_package_fingerprint,
+                             created_by, updated_by)
+                        VALUES (?, ?, ?, 'REFERENCE_PACKAGE', ?, ?, ?, ?)
+                        """,
+                        "org-invalid-provenance",
+                        "reference-with-uppercase-fingerprint",
+                        "非法参考包指纹",
+                        "project-delivery",
+                        "A".repeat(64),
+                        "user-a",
+                        "user-a"))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
     void ordersVersionsWithinWorkspaceAndScopesToOrganization() {
         TenantContext.setOrgId("org-version-a");
         OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(

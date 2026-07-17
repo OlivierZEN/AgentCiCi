@@ -310,7 +310,10 @@ public class OntologyManagementService {
                         value.document().key(),
                         value.document().name(),
                         value.document().description(),
-                        userId));
+                        userId,
+                        OntologyWorkspaceEntity.CREATION_SOURCE_REFERENCE_PACKAGE,
+                        value.id(),
+                        value.fingerprint()));
         OntologyWorkspaceEntity installed = drafts.saveDraft(
                 orgId, userId, workspace.getId(), 0L, value.document());
         return workspaceView(installed);
@@ -668,6 +671,9 @@ public class OntologyManagementService {
                 workspace.getName(),
                 workspace.getDescription(),
                 workspace.getCreatedBy(),
+                workspace.getCreationSource(),
+                workspace.getReferencePackageId(),
+                workspace.getReferencePackageFingerprint(),
                 workspace.getStatus(),
                 workspace.getDraftRevision(),
                 workspace.getPublishedVersion(),
@@ -1026,6 +1032,9 @@ public class OntologyManagementService {
             String name,
             String description,
             String createdBy,
+            String creationSource,
+            String referencePackageId,
+            String referencePackageFingerprint,
             String status,
             Long draftRevision,
             Integer publishedVersion,

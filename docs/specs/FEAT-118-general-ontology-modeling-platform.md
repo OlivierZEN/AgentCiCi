@@ -6,7 +6,7 @@ status: approved
 owner_role: project-manager
 task_ids: TASK-213
 related_decisions: FEAT-067, FEAT-075, FEAT-081, FEAT-103, FEAT-111
-updated_at: 2026-07-17T06:25:43Z
+updated_at: 2026-07-17T07:01:55Z
 updated_by: MANAGER-001
 ---
 
@@ -250,7 +250,7 @@ V1 支持：
 - 业务文档草稿和数据映射草稿都由工作台统一持有；切换“模型 / 数据映射 / AI 建议”等页签不得丢失未保存内容。映射存在未保存修改时，内部目录刷新、数据源发现、AI 提案生成/应用、校验、发布、离开工作台和关闭浏览器都必须被阻止；只有用户明确确认的“重新载入映射”可以丢弃本地行。技术预览只读到权威映射不能把“目录 + 映射工作台”标记为完整加载，映射保存请求只提交服务端允许的白名单字段。
 - 管理端使用 React Router 数据路由的正式导航阻断能力，统一覆盖侧栏、退出登录、浏览器后退与前进；页面刷新和关闭窗口使用 `beforeunload` 兜底，不直接篡改浏览器历史栈。
 - 前端鉴权作用域由 `orgId + token` 共同标识；任一部分变化时立即清空工作区、向导、映射、AI 提案、版本详情和技术预览等敏感状态。管理壳的用户/组织资料请求和本体工作台异步回写都必须核验鉴权作用域与请求序号；页面卸载时立即使鉴权代次、工作区、数据代次和后续异步步骤失效，过期响应不得回写身份、恢复旧会话或继续发起下一跳变更。
-- 新建领域向导在工作区创建成功后立即进入并回读服务端草稿；数据源创建成功后立即以服务端草稿为检查点，再继续元数据发现和 AI 提案。工作区创建响应不确定或返回 `ONTOLOGY_KEY_CONFLICT` 时，前端必须读取当前组织的权威工作区列表，且仅在 `key + name + description + createdBy` 与当前管理员及原请求全部精确相同时恢复；同 key 但请求内容或创建者不同不得接管。无法确认时锁定创建入口并提示先返回列表刷新核对，禁止盲目重试。参考包摘要必须从实际包文档返回确定性的 `workspaceIdentity(key, name, description)`；参考包安装遇到相同两类错误时也必须读取当前组织权威列表，且只允许恢复该身份与当前管理员 `createdBy` 全部精确匹配的工作区，参考包展示标题不能参与身份判断。无法确认时锁定安装入口直到工作区列表成功刷新，其他错误保持原样。数据源创建仍按稳定数据源标识核对。
+- 新建领域向导在工作区创建成功后立即进入并回读服务端草稿；数据源创建成功后立即以服务端草稿为检查点，再继续元数据发现和 AI 提案。工作区创建响应不确定或返回 `ONTOLOGY_KEY_CONFLICT` 时，前端必须读取当前组织的权威工作区列表，且仅在 `key + name + description + createdBy` 与当前管理员及原请求全部精确相同时恢复；同 key 但请求内容或创建者不同不得接管。无法确认时锁定创建入口并提示先返回列表刷新核对，禁止盲目重试。参考包摘要必须从实际 classpath 包原始字节返回确定性的 `workspaceIdentity(key, name, description)` 与小写 SHA-256 `fingerprint`；参考包安装遇到相同两类错误时也必须读取当前组织权威列表，且只允许恢复元数据身份、当前管理员 `createdBy`、`creationSource=REFERENCE_PACKAGE`、`referencePackageId` 与 `referencePackageFingerprint` 全部精确匹配的工作区。展示标题不能参与身份判断；即使同一管理员手工创建了完全相同的 key/name/description，也不得接管。无法确认时锁定安装入口直到工作区列表成功刷新，其他错误保持原样。数据源创建仍按稳定数据源标识核对。
 - 技术预览必须绑定生成时的草稿修订、线上版本和权威映射签名；请求携带 `expectedRevision`，服务端在工作区行锁内校验并在响应中返回 `sourceDraftRevision`，不一致返回 `ONTOLOGY_REVISION_CONFLICT`。前端还必须校验候选版本号等于绑定线上版本的下一版本，避免同修订被他人发布后接受错误候选。业务文档、数据映射、AI 应用、数据源或版本发生变化后旧预览立即失效，任一草稿未保存时禁止生成或复制技术契约。
 - 面向业务人员的默认界面只展示连接器名称、中文状态、中文统计、业务名称化的 AI 差异与可操作的问题说明，不暴露适配器键、稳定元素键、内部错误码、对象路径或供应商英文诊断；技术信息只允许出现在受控技术预览中。
 - 页签使用标准 `tablist / tab / tabpanel` 语义并支持方向键、Home、End 与焦点跟随，所有页签引用的面板节点始终存在；确认弹窗默认聚焦“取消”。正文和控件字号不低于 11px，关键文本、警告状态与按钮在全部八套主题（含 Galaxy 暗色画布/面板）上的对比度达到 WCAG AA（普通文本至少 4.5:1）。
@@ -299,7 +299,7 @@ V1 运算符限定为 `EQ | NE | IN | CONTAINS | GT | GTE | LT | LTE | BETWEEN |
 
 ## 12. 持久化模型
 
-新增 Flyway V82，至少包含：
+Flyway V82 新增以下 13 张表：
 
 - `ontology_workspace`
 - `ontology_concept`
@@ -317,11 +317,20 @@ V1 运算符限定为 `EQ | NE | IN | CONTAINS | GT | GTE | LT | LTE | BETWEEN |
 
 所有业务表包含 `org_id`；工作区子资源通过工作区归属二次校验组织。组织导出、删除和保留策略必须纳入新表，防止租户销户后残留。
 
+V82 一经审查不得回改。正向 V83 只扩展 `ontology_workspace`，不增加第 14 张表：
+
+- `creation_source VARCHAR(32) NOT NULL DEFAULT 'MANUAL'`
+- `reference_package_id VARCHAR(128)`
+- `reference_package_fingerprint CHAR(64)`
+- CHECK 约束强制 `MANUAL` 对应两个引用字段都为 NULL；`REFERENCE_PACKAGE` 对应包 ID 非空，且 SHA-256 必须是 64 位小写十六进制字符串。
+
+普通工作区创建必须持久化 `MANUAL / NULL / NULL`；参考包安装必须持久化 `REFERENCE_PACKAGE / 实际包 ID / 实际包原始字节 SHA-256`。这三项是不可由工作区名称或说明推断的创建 provenance。
+
 ## 13. 后端 API
 
 管理 API 使用 `/admin/ontologies`：
 
-- 工作区：列表、创建、读取、更新、归档；仅组织管理员可见的工作区 DTO 返回 `createdBy`，用于结果未知时绑定当前管理员身份，不作为普通查询接口字段。
+- 工作区：列表、创建、读取、更新、归档；仅组织管理员可见的工作区 DTO 返回 `createdBy`、`creationSource`、`referencePackageId`、`referencePackageFingerprint`，用于结果未知时核对创建身份与来源，不作为普通查询接口字段。
 - 草稿：读取/批量保存、乐观锁、校验、差异。
 - AI：创建提案、读取提案、应用提案。
 - 数据目录：创建数据源、发现对象、发现字段、保存示例数据。
@@ -358,7 +367,7 @@ V1 运算符限定为 `EQ | NE | IN | CONTAINS | GT | GTE | LT | LTE | BETWEEN |
 
 工作区创建与参考包安装以 V82 的 `uq_ontology_workspace_org_key` 为最终一致性约束。服务端在保存后显式 flush，并且只把该约束的并发唯一键异常翻译为 HTTP 409 / `ONTOLOGY_KEY_CONFLICT`；其他完整性错误保持原异常语义，禁止统一伪装成 key 冲突。
 
-参考包列表响应必须暴露由实际包文档生成的只读 `workspaceIdentity`，使安装结果未知时可与当前组织权威工作区进行确定性核对；该身份不是请求幂等键，也不授权接管由其他管理员或手工流程创建的同 key 工作区。
+参考包列表响应必须暴露由实际包文档生成的只读 `workspaceIdentity`，以及由实际 classpath JSON 原始字节生成的稳定 SHA-256 `fingerprint`。安装结果未知时必须把二者与当前组织权威工作区的管理员、创建来源、包 ID 和包指纹全部核对；这些字段不是请求幂等键，也不授权接管由其他管理员或手工流程创建的同 key 工作区。
 
 ## 15. 安全与治理
 
@@ -449,7 +458,7 @@ V1 作为一个产品里程碑，但按可验证切片交付：
 
 - 生产发布严格遵循 `docs/production-release-runbook.md` 与 `scripts/release-acr.sh`。
 - 发布前运行 `./scripts/release-acr.sh --dry-run`，版本号、镜像 tag、Git tag 和前后端版本保持一致。
-- V82 只新增表和索引，不修改现有业务表；应用回滚时新表保留但不被旧版本读取。
+- 生产数据库从当前 V81 依次应用 V82 与 V83：V82 新增 13 张表，V83 只为 `ontology_workspace` 增加 provenance 列和 CHECK 约束。应用回滚时这些表和列保留但不被旧版本读取。
 - 上线后 smoke 覆盖健康检查、管理端路由、创建/发布示例本体、示例查询、组织隔离和 CloudCC 发现诊断。
 - 若 AI 模型或 CloudCC 暂不可用，手工建模、编译和 `INLINE_SAMPLE` 查询仍必须可用；对应适配器明确显示降级状态。
 

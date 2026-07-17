@@ -196,6 +196,9 @@ function draftView(document = projectDeliveryDraft()): OntologyDraftView {
       name: document.name,
       description: document.description,
       createdBy: "owner-a",
+      creationSource: "MANUAL",
+      referencePackageId: null,
+      referencePackageFingerprint: null,
       status: "DRAFT",
       draftRevision: 4,
       publishedVersion: null,
@@ -540,6 +543,7 @@ describe("ontology immutable model", () => {
       id: "project-delivery",
       title: "交付演示包（显示标题不可用于对账）",
       description: "参考业务包说明",
+      fingerprint: "a".repeat(64),
       conceptCount: 3,
       dataSourceCount: 1,
       workspaceIdentity: {
@@ -552,17 +556,31 @@ describe("ontology immutable model", () => {
       ...draftView().workspace,
       ...summary.workspaceIdentity,
       createdBy: "owner-a",
+      creationSource: "REFERENCE_PACKAGE",
+      referencePackageId: summary.id,
+      referencePackageFingerprint: summary.fingerprint,
     };
     const otherAdministrator = { ...expected, id: 8, createdBy: "owner-b" };
-    const manualSameKey = { ...expected, id: 9, name: summary.title };
+    const manualSameIdentity = {
+      ...expected,
+      id: 9,
+      creationSource: "MANUAL" as const,
+      referencePackageId: null,
+      referencePackageFingerprint: null,
+    };
+    const wrongFingerprint = {
+      ...expected,
+      id: 10,
+      referencePackageFingerprint: "b".repeat(64),
+    };
 
     expect(findOntologyWorkspaceByReferencePackageIdentity(
-      [otherAdministrator, manualSameKey, expected],
+      [otherAdministrator, manualSameIdentity, wrongFingerprint, expected],
       summary,
       "owner-a",
     )).toEqual(expected);
     expect(findOntologyWorkspaceByReferencePackageIdentity(
-      [otherAdministrator, manualSameKey],
+      [otherAdministrator, manualSameIdentity, wrongFingerprint],
       summary,
       "owner-a",
     )).toBeUndefined();

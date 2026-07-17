@@ -149,9 +149,21 @@ class OntologyPlatformIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.key").value("project-delivery"))
                 .andExpect(jsonPath("$.data.createdBy").value("owner-a"))
+                .andExpect(jsonPath("$.data.creationSource").value("MANUAL"))
+                .andExpect(jsonPath("$.data.referencePackageId").doesNotExist())
+                .andExpect(jsonPath("$.data.referencePackageFingerprint").doesNotExist())
                 .andExpect(jsonPath("$.data.draftRevision").value(0))
                 .andReturn();
         long workspaceId = data(created).path("id").asLong();
+        assertThat(jdbcTemplate.queryForMap("""
+                        SELECT creation_source, reference_package_id,
+                               reference_package_fingerprint
+                        FROM ontology_workspace
+                        WHERE id = ?
+                        """, workspaceId))
+                .containsEntry("creation_source", "MANUAL")
+                .containsEntry("reference_package_id", null)
+                .containsEntry("reference_package_fingerprint", null);
 
         mockMvc.perform(get("/admin/ontologies/{workspaceId}", workspaceId)
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerBToken)))
@@ -425,7 +437,7 @@ class OntologyPlatformIntegrationTest {
 
     @Test
     void installsReferencePackageWithoutEchoingConfigOrSampleRecords() throws Exception {
-        mockMvc.perform(get("/admin/ontologies/reference-packages")
+        MvcResult packageList = mockMvc.perform(get("/admin/ontologies/reference-packages")
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[?(@.id == 'project-delivery')]").exists())
@@ -435,7 +447,18 @@ class OntologyPlatformIntegrationTest {
                         .value("项目交付"))
                 .andExpect(jsonPath("$.data[?(@.id == 'project-delivery')].workspaceIdentity.description")
                         .value("领域中立的项目交付参考本体"))
-                .andExpect(jsonPath("$.data[?(@.id == 'customer-operations')]").exists());
+                .andExpect(jsonPath("$.data[?(@.id == 'customer-operations')]").exists())
+                .andReturn();
+        JsonNode projectPackage = null;
+        for (JsonNode item : data(packageList)) {
+            if ("project-delivery".equals(item.path("id").asText())) {
+                projectPackage = item;
+                break;
+            }
+        }
+        assertThat(projectPackage).isNotNull();
+        String fingerprint = projectPackage.path("fingerprint").asText();
+        assertThat(fingerprint).matches("[0-9a-f]{64}");
 
         MvcResult installed = mockMvc.perform(post(
                         "/admin/ontologies/reference-packages/{packageId}/install",
@@ -443,9 +466,21 @@ class OntologyPlatformIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, bearer(ownerAToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.key").value("project-delivery"))
+                .andExpect(jsonPath("$.data.creationSource").value("REFERENCE_PACKAGE"))
+                .andExpect(jsonPath("$.data.referencePackageId").value("project-delivery"))
+                .andExpect(jsonPath("$.data.referencePackageFingerprint").value(fingerprint))
                 .andExpect(jsonPath("$.data.draftRevision").value(1))
                 .andReturn();
         long workspaceId = data(installed).path("id").asLong();
+        assertThat(jdbcTemplate.queryForMap("""
+                        SELECT creation_source, reference_package_id,
+                               reference_package_fingerprint
+                        FROM ontology_workspace
+                        WHERE id = ?
+                        """, workspaceId))
+                .containsEntry("creation_source", "REFERENCE_PACKAGE")
+                .containsEntry("reference_package_id", "project-delivery")
+                .containsEntry("reference_package_fingerprint", fingerprint);
 
         MvcResult draft = mockMvc.perform(get(
                         "/admin/ontologies/{workspaceId}/draft", workspaceId)

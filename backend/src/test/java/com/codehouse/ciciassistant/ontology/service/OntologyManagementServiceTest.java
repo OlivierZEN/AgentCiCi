@@ -1,7 +1,10 @@
 package com.codehouse.ciciassistant.ontology.service;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -22,6 +25,7 @@ import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import org.hibernate.exception.ConstraintViolationException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,7 +84,7 @@ class OntologyManagementServiceTest {
                 List.of());
         when(referencePackages.load("unsafe-package"))
                 .thenReturn(new OntologyReferencePackageService.ReferencePackage(
-                        "unsafe-package", "Unsafe package", null, unsafe));
+                        "unsafe-package", "Unsafe package", null, unsafe, "0".repeat(64)));
         doThrow(new IllegalArgumentException("ONTOLOGY_VALIDATION_FAILED"))
                 .when(draftSafety).validateDocument(unsafe);
 
@@ -90,6 +94,68 @@ class OntologyManagementServiceTest {
 
         verify(draftSafety).validateDocument(unsafe);
         verifyNoInteractions(persistence, drafts);
+    }
+
+    @Test
+    void createsOrdinaryWorkspaceWithExplicitManualProvenance() {
+        OntologyManagementService.WorkspaceCreateRequest request =
+                new OntologyManagementService.WorkspaceCreateRequest(
+                        "project-delivery", "项目交付", "统一交付语义");
+        AtomicReference<OntologyWorkspaceEntity> persisted = new AtomicReference<>();
+        when(persistence.saveForCurrentOrg(any(OntologyWorkspaceEntity.class)))
+                .thenAnswer(invocation -> {
+                    OntologyWorkspaceEntity workspace = invocation.getArgument(0);
+                    persisted.set(workspace);
+                    return workspace;
+                });
+
+        OntologyManagementService.WorkspaceView created =
+                service.createWorkspace("user-a", request);
+
+        assertThat(persisted.get().getCreationSource()).isEqualTo("MANUAL");
+        assertThat(persisted.get().getReferencePackageId()).isNull();
+        assertThat(persisted.get().getReferencePackageFingerprint()).isNull();
+        assertThat(created.creationSource()).isEqualTo("MANUAL");
+        assertThat(created.referencePackageId()).isNull();
+        assertThat(created.referencePackageFingerprint()).isNull();
+    }
+
+    @Test
+    void installsReferencePackageWithExplicitPackageProvenance() {
+        OntologyDocument document = new OntologyDocument(
+                "project-delivery",
+                "项目交付",
+                "统一交付语义",
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of());
+        String fingerprint = "a".repeat(64);
+        when(referencePackages.load("project-delivery"))
+                .thenReturn(new OntologyReferencePackageService.ReferencePackage(
+                        "project-delivery", "项目交付参考包", "参考包", document, fingerprint));
+        AtomicReference<OntologyWorkspaceEntity> persisted = new AtomicReference<>();
+        when(persistence.saveForCurrentOrg(any(OntologyWorkspaceEntity.class)))
+                .thenAnswer(invocation -> {
+                    OntologyWorkspaceEntity workspace = invocation.getArgument(0);
+                    persisted.set(workspace);
+                    return workspace;
+                });
+        when(drafts.saveDraft(
+                eq("org-a"), eq("user-a"), isNull(), eq(0L), eq(document)))
+                .thenAnswer(invocation -> persisted.get());
+
+        OntologyManagementService.WorkspaceView installed =
+                service.installReferencePackage("user-a", "project-delivery");
+
+        assertThat(persisted.get().getCreationSource()).isEqualTo("REFERENCE_PACKAGE");
+        assertThat(persisted.get().getReferencePackageId()).isEqualTo("project-delivery");
+        assertThat(persisted.get().getReferencePackageFingerprint()).isEqualTo(fingerprint);
+        assertThat(installed.creationSource()).isEqualTo("REFERENCE_PACKAGE");
+        assertThat(installed.referencePackageId()).isEqualTo("project-delivery");
+        assertThat(installed.referencePackageFingerprint()).isEqualTo(fingerprint);
     }
 
     @Test

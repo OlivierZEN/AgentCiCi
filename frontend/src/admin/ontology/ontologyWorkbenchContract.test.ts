@@ -16,6 +16,7 @@ function contrast(first: string, second: string): number {
 describe("ontology workbench release contracts", () => {
   const appSource = readFileSync(new URL("../../App.tsx", import.meta.url), "utf8");
   const pageSource = readFileSync(new URL("../pages/AdminOntologyPage.tsx", import.meta.url), "utf8");
+  const modelSource = readFileSync(new URL("./ontologyModel.ts", import.meta.url), "utf8");
   const cssSource = readFileSync(new URL("../../styles/admin-ontology.css", import.meta.url), "utf8");
   const themeCssSource = readFileSync(new URL("../../theme/theme.css", import.meta.url), "utf8");
 
@@ -148,5 +149,13 @@ describe("ontology workbench release contracts", () => {
     expect(installBlock).toContain("userId");
     expect(pageSource).toContain("referencePackageInstallLocked || Boolean(busyAction)");
     expect(pageSource).toContain("参考包安装结果尚未确认，请先刷新业务本体列表核对，勿重复安装。");
+
+    const identityBlock = modelSource.slice(
+      modelSource.indexOf("export function findOntologyWorkspaceByReferencePackageIdentity"),
+      modelSource.indexOf("export function toEditableOntologyMappings"),
+    );
+    expect(identityBlock).toContain('workspace.creationSource === "REFERENCE_PACKAGE"');
+    expect(identityBlock).toContain("workspace.referencePackageId === referencePackage.id");
+    expect(identityBlock).toContain("workspace.referencePackageFingerprint === referencePackage.fingerprint");
   });
 });
