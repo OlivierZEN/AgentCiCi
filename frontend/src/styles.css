@@ -18110,3 +18110,265 @@ td.skills-data-table__actions > * {
 .platform-skill-dependency .skill-dag__viewport {
   height: 320px;
 }
+
+/* FEAT-124: a task-based platform IA keeps navigation and records separate. */
+.platform-nav__group {
+  margin: 10px 0 2px;
+  border-top: 1px solid rgba(200, 160, 86, 0.32);
+}
+
+.platform-nav__group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 8px 0 3px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: var(--platform-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-align: left;
+  cursor: pointer;
+}
+
+.platform-nav__group-toggle:hover,
+.platform-nav__group-toggle:focus-visible {
+  color: var(--platform-accent-strong);
+}
+
+.platform-nav__subnav {
+  display: grid;
+  gap: 0;
+  margin: 0 0 4px 8px;
+  padding-left: 11px;
+  border-left: 1px solid rgba(200, 160, 86, 0.45);
+}
+
+.platform-nav__subnav a,
+.platform-nav__subnav a:hover,
+.platform-nav__subnav a:focus,
+.platform-nav__subnav a:focus-visible,
+.platform-nav__subnav a:active,
+.platform-nav__subnav a.active {
+  padding: 7px 0 !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.platform-nav__subnav a.active {
+  text-underline-offset: 5px !important;
+}
+
+.platform-nav__preference {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 12px 0 8px;
+  padding: 9px 0;
+  border-top: 1px solid rgba(200, 160, 86, 0.32);
+  color: var(--platform-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.platform-nav__preference:hover,
+.platform-nav__preference.active {
+  color: var(--platform-accent-strong);
+}
+
+.platform-page__back,
+.platform-table-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  color: var(--platform-accent-strong);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.platform-page__back {
+  margin: 0 0 7px;
+  padding: 0;
+}
+
+.platform-table-link {
+  padding: 3px 0;
+  white-space: nowrap;
+}
+
+.platform-console__panel--detail {
+  max-width: 1080px;
+}
+
+.platform-skill-dependency__selector label {
+  display: grid;
+  max-width: 360px;
+  gap: 7px;
+  color: var(--platform-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.platform-home__workbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(250px, 0.75fr);
+  gap: 18px;
+  padding-top: 4px;
+}
+
+.platform-home__queue,
+.platform-home__health {
+  border-top: 1px solid var(--platform-line-strong);
+  border-bottom: 1px solid var(--platform-line);
+  background: rgba(255, 253, 248, 0.72);
+}
+
+.platform-home__section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 16px 13px;
+}
+
+.platform-home__section-head .platform-section-label,
+.platform-home__health .platform-section-label {
+  margin: 0 0 5px;
+}
+
+.platform-home__section-head h2,
+.platform-home__health h2 {
+  margin: 0;
+}
+
+.platform-home__section-head > span {
+  padding-top: 3px;
+  color: var(--platform-muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.platform-home__action {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 0;
+  border-top: 1px solid rgba(223, 207, 172, 0.82);
+  background: transparent;
+  color: var(--platform-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.platform-home__action:hover,
+.platform-home__action:focus-visible {
+  background: var(--platform-panel-2);
+}
+
+.platform-home__action > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.platform-home__action strong {
+  font-size: 14px;
+}
+
+.platform-home__action small,
+.platform-home__health dd {
+  color: var(--platform-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.platform-home__action-mark {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--platform-line-bright);
+  border-radius: 50%;
+  color: var(--platform-accent-strong);
+}
+
+.platform-home__health {
+  padding: 18px 16px;
+}
+
+.platform-home__health dl {
+  display: grid;
+  gap: 13px;
+  margin: 20px 0;
+}
+
+.platform-home__health dl div {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(223, 207, 172, 0.72);
+}
+
+.platform-home__health dt {
+  margin-bottom: 4px;
+  color: var(--platform-ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.platform-home__health dd {
+  margin: 0;
+}
+
+.platform-home__drawer {
+  position: fixed;
+  z-index: 20;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  display: flex;
+  width: min(390px, calc(100vw - 28px));
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px;
+  border: 1px solid var(--platform-line-strong);
+  background: var(--platform-surface);
+  box-shadow: -16px 0 38px rgba(65, 47, 18, 0.14);
+}
+
+.platform-home__drawer h2 {
+  margin: 7px 32px 10px 0;
+  color: var(--platform-heading);
+  font-size: 21px;
+}
+
+.platform-home__drawer p:not(.platform-section-label) {
+  margin: 0;
+  color: var(--platform-muted);
+  line-height: 1.65;
+}
+
+.platform-home__drawer-close {
+  position: absolute;
+  top: 17px;
+  right: 17px;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--platform-muted);
+  cursor: pointer;
+}
+
+.platform-appearance-page__panel {
+  max-width: 860px;
+}
