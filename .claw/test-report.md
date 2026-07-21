@@ -18,7 +18,7 @@ last_run_status: passed
 - 编排与发布门禁：`docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config`、`git diff --check`、`./scripts/release-acr.sh --dry-run --production` 均通过；`2.7.12` 已被并发 tag 占用，脚本按规则生成 `2.8.1`。
 - 镜像与标签：生产 `2.8.1 / 9bc8510cbede` 已推送。backend index `sha256:2a4526e84b7cff51e2b374c49012e5d8bc9cc4d4aef4e767a25e022aa65e6b0b`；frontend index `sha256:22b8c092ab27d4a51ccb65267758dcba0dd99a8448af1dc94e295cbc0b0f2c82`。
 - 生产备份与部署：备份 `/opt/cici/backups/20260721-190903-before-2.8.1-task214-onekeytoken` 的环境文件、PostgreSQL、知识库和 Qdrant 归档均非空；只重建 backend/frontend。数据库、Redis、RabbitMQ、Qdrant 容器 ID 保持不变。
-- 生产验收：`/actuator/health` 返回 `UP`，`/system/version` 返回 `2.8.1 / 9bc8510cbede`，Nginx 配置检查通过，公网 HTTP 根页面与 `/platform/models` 返回 200，`POST /api/platform/models/providers/onekeytoken/check` 在未认证状态返回 401，证明新受保护路由已上线。生产 HTTPS 443 目前没有由现行 Compose/Nginx 配置监听，外部 HTTPS 探测重置；此为现有部署配置缺口，未将其作为 TASK-214 功能验收通过项。
+- 生产验收：`/actuator/health` 返回 `UP`，`/system/version` 返回 `2.8.1 / 9bc8510cbede`，Nginx 配置检查通过。首次仅使用基础 Compose 重建时未加载生产机既有 TLS 覆盖，443 映射短暂缺失；已用 `docker-compose.acr.ssl.yml` 与现有证书重新创建前端并恢复。frontend healthy，`x.agentcici.com` 与显式生产 IP 的 `onechat.agentcici.com` HTTPS 均返回 200；`POST /api/platform/models/providers/onekeytoken/check` 在未认证状态返回 401，证明新受保护路由已上线。
 
 ## TASK-217 - 智能体定时任务真实创建与链路事实纠偏（已发布）
 
