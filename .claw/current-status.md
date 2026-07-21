@@ -4,8 +4,8 @@ version: 4
 updated_at: 2026-07-17T08:21:42Z
 updated_by: MANAGER-001
 phase: general-ontology-platform-v1-live
-active_task: "TASK-210"
-next_action: "Monitor production 2.7.10 and restore a valid per-user CloudCC session before completing live customer-operations metadata discovery; any V2 ontology scope requires a separate task."
+active_task: "TASK-214"
+next_action: "Fix OneKeyToken live credential validation: static catalog must not report invalid or unsaved Keys as valid."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-214 is ready: platform OneKeyToken “检测” currently reads only its static catalog, so no Key or endpoint is contacted and arbitrary Key values report success. FEAT-119 transcribes the provider contract and assigns a real non-streaming Chat Completions validation using the unsaved form draft, unique request ID and redacted errors.
 
 - TASK-213 is complete in production `2.7.10 / f922b86f1884` through PR #13. The domain-neutral V82/V83 ontology platform, business visual workbench, AI draft-only boundary, immutable versions, deterministic Schema/GraphQL/query compilation, INLINE_SAMPLE project-delivery proof and CloudCC adapter/reference package are live. Fresh-database backend regressions passed 127/127, frontend passed 177/177 and production build, and independent security/spec reviews approved with Critical 0 / Important 0. Production `project-delivery` is published as immutable v1 from draft revision 6 with 15/15 validated mappings; explain/execute, evidence, audit redaction, idempotent publish and cross-tenant 404 passed. The 1600×1000 production Browser passed list/canvas/mapping/technical/version views with console warning/error 0 and overflow 0. V82/V83 are successful, 13 ontology tables are live, and the 480-second/17-sample window kept six services healthy with zero restart/OOM/backend error and zero unexpected 5xx. `customer-operations` installs with verified package provenance but both available demo users currently lack a usable per-user CloudCC session, so discovery returns the designed `502 DATA_SOURCE_UNAVAILABLE` without damaging or publishing the draft.
 

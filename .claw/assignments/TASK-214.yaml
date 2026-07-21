@@ -1,0 +1,64 @@
+task_id: TASK-214
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-21T00:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-119-onekeytoken-live-validation.md
+task_status_path: .claw/tasks/TASK-214.md
+branch: codex/TASK-214-onekeytoken-live-validation
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/**
+  - backend/src/test/java/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/model/api/PlatformModelProviderController.java
+  - backend/src/main/java/com/codehouse/ciciassistant/model/service/ModelProviderService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/model/PlatformModelProviderIntegrationTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/model/ModelProviderServiceIntegrationTest.java
+  - frontend/src/platform/pages/PlatformModelsPage.tsx
+  - frontend/src/platform/pages/PlatformModelsPage.test.tsx
+  - docs/specs/FEAT-119-onekeytoken-live-validation.md
+  - .claw/tasks/TASK-214.md
+  - .claw/assignments/TASK-214.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - .claw/devops.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/**
+  - frontend/build/**
+  - frontend/pagecomponents/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - https://onekeytoken.com/docs.html
+task_boundary:
+  - "仅修复运营端 OneKeyToken 凭据检测与对应反馈，不改变模型运行时、计费、路由或客户归因。"
+  - "检测必须真实调用 Chat Completions，支持使用未保存表单草稿，且不得持久化或泄露 API Key。"
+  - "保留现有桌面产品视觉语汇，不增加移动端实现。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-21; user reported that every OneKeyToken Key reports success and explicitly requested a documentation-aligned repair."
+notes: "静态模型目录仅用于模型选择；不得将其当作鉴权验证。所有失败信息必须脱敏，绝不提交可复用凭据。"
