@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T05:54:33Z
+updated_at: 2026-07-21T05:16:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-14T05:54:33Z
+last_run_at: 2026-07-21T05:16:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-203 新客户推进隔离数据回归（2026-07-21）
+
+- `root-cause`: CloudCC 原 16 个 TASK-203 客户仍存在且全部归 SalesA；后续经营分析演示为同一批客户补充合同或 `7-签约关单` 商机，实时投影因此把 16 个全部归为老客户，页面默认“重点推进”实际为 0。
+- `cloudcc-write`: 通过 OpenAPI 幂等追加 `TASK-203-NEW-PIPELINE-R1`：8 Account、7 Contact、8 Lead、7 个开放 Opportunity、16 Task、16 Event；目标客户此前为 0，不修改元数据，不创建合同或赢单商机。
+- `idempotency/readback`: 连续执行两次 `--new-pipeline-only` 后仍为 8 个 Account；8 个所有人均为 SalesA，7 个商机全部开放，赢单商机 0、合同 0；`py_compile` 与 `git diff --check` 通过。
+- `production-api`: SalesA 刷新后 `visibleAccounts=124`、新客 60、默认重点推进 6、风险 53；隔离批次 8 个全部进入新客，6 个进入重点推进、2 个进入风险。
+- `production-browser`: `x.agentcici.com` 的“智能体平台演示环境 → AI应用 → 客户互动工作台”真实路径显示 CloudCC CRM 已连接，默认新客户推进列表展示 6 个隔离批次客户；首条客户详情包含 1 个开放商机、1 个未完成任务、8 条互动与逾期跟进信号，控制台 error/warn 为 0。
 
 ## TASK-202 用户级产品主题偏好本地验收（2026-07-14）
 

@@ -23,13 +23,14 @@ from pathlib import Path
 from typing import Any
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(os.environ.get("CLOUDCC_PROJECT_ROOT", Path(__file__).resolve().parents[1])).resolve()
 CLOUDCC = Path("/Users/owenmacbook/.agents/skills/cc-customization-expert-msapi/tools/bin/cloudcc")
 DEFAULT_SSH_KEY = Path("/Volumes/AISpace/datafiles/ecs-key/cc-cici-ecs.pem")
 DEFAULT_REMOTE = "root@47.97.119.160"
 AGENT_ORG_ID = "org2sva14i4udjmi2t4s"
 CLOUDCC_ORG_ID = "org0720f814430017229"
 BATCH = "TASK-203-DEMO-V2"
+NEW_PIPELINE_BATCH = "TASK-203-NEW-PIPELINE-R1"
 CRM_OWNER_ID = "00520264AE58B11bw6gE"
 CRM_OWNER_NAME = "SalesA"
 AGENT_USER_ID = "7ccaa686-8977-41e8-abc7-6f18f45b2b08"
@@ -500,6 +501,58 @@ ACCOUNTS: list[DemoAccount] = [
 ]
 
 
+NEW_PIPELINE_ACCOUNTS: list[dict[str, Any]] = [
+    {
+        "key": "n01", "name": "无锡澄远机器人有限公司", "industry": "智能制造",
+        "contact": "顾明远", "role": "智能制造总监", "phone": "13810002001",
+        "stage": "6-商讨/审核", "amount": 920000, "next": "确认采购委员会评审时间",
+        "summary": "机器人产线数字化项目已完成方案与预算沟通，等待采购委员会终审。",
+    },
+    {
+        "key": "n02", "name": "东莞凌越精密电子有限公司", "industry": "电子制造",
+        "contact": "梁思琪", "role": "采购经理", "phone": "13810002002",
+        "stage": "5-招标/报价", "amount": 760000, "next": "提交分阶段报价与交付承诺",
+        "summary": "客户进入三家供应商比选，重点关注分阶段报价、交付周期与审计能力。",
+    },
+    {
+        "key": "n03", "name": "长沙擎岳数字能源有限公司", "industry": "新能源",
+        "contact": "彭立新", "role": "数字化副总经理", "phone": "13810002003",
+        "stage": "4-确定关键决策人", "amount": 680000, "next": "安排决策层价值验证会",
+        "summary": "数字化负责人已认可方案，需向决策层证明跨区域能源项目的复制价值。",
+    },
+    {
+        "key": "n04", "name": "济南睿驰工业软件有限公司", "industry": "工业软件",
+        "contact": "韩若彤", "role": "产品副总裁", "phone": "13810002004",
+        "stage": "4-确定关键决策人", "amount": 550000, "next": "确认联合解决方案商业条款",
+        "summary": "双方正在讨论联合解决方案，技术路线明确，商业分成与首批客户范围待定。",
+    },
+    {
+        "key": "n05", "name": "佛山恒拓智能装备有限公司", "industry": "装备制造",
+        "contact": "周启航", "role": "信息中心主任", "phone": "13810002005",
+        "stage": "3-提出方案", "amount": 430000, "next": "",
+        "summary": "方案已提交，但商机下一步尚未填写，需要尽快确认现场验证安排。",
+    },
+    {
+        "key": "n06", "name": "温州蓝港供应链有限公司", "industry": "供应链物流",
+        "contact": "林嘉怡", "role": "运营总监", "phone": "13810002006",
+        "stage": "", "amount": 360000, "next": "建立供应链协同正式商机",
+        "summary": "需求访谈已完成并确定首批仓配试点，但 CRM 尚未建立正式商机。",
+    },
+    {
+        "key": "n07", "name": "常州启盛新材料有限公司", "industry": "新材料",
+        "contact": "待补采购负责人", "role": "待确认", "phone": "13810002007",
+        "stage": "5-招标/报价", "amount": 810000, "next": "补齐采购与财务决策联系人",
+        "summary": "项目已进入报价阶段，但 CRM 中尚未沉淀采购与财务关键联系人。",
+    },
+    {
+        "key": "n08", "name": "郑州云帆医疗科技有限公司", "industry": "医疗科技",
+        "contact": "苏婉清", "role": "信息安全负责人", "phone": "13810002008",
+        "stage": "4-确定关键决策人", "amount": 620000, "next": "重排合规评审与产品演示",
+        "summary": "合规评审材料已准备，原定演示跟进逾期，需要重排关键人会议。",
+    },
+]
+
+
 def run(cmd: list[str], *, input_text: str | None = None, timeout: int = 60) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         cmd,
@@ -594,6 +647,159 @@ def resolve_agent_record_ids() -> dict[str, dict[str, str]]:
         "contacts": require_existing("Contact", "id,name", contact_names),
         "opportunities": require_existing("Opportunity", "id,name", opportunity_names),
         "tasks": require_existing("Task", "id,name", task_names),
+    }
+
+
+def seed_new_customer_pipeline(today: date) -> dict[str, dict[str, str]]:
+    """Create a dedicated new-customer dataset that no existing-customer demo may reuse."""
+    account_records = [
+        {
+            "name": item["name"],
+            "ownerid": CRM_OWNER_ID,
+            "hangye": item["industry"],
+            "fenji": "重点客户",
+            "dianhua": "010-" + str(item["phone"])[-8:],
+            "beizhu": f"{NEW_PIPELINE_BATCH} | 新客户推进专属样本 | {item['summary']}",
+        }
+        for item in NEW_PIPELINE_ACCOUNTS
+    ]
+    account_ids = upsert_records("Account", "id,name,ownerid,beizhu", account_records)
+
+    contact_records = [
+        {
+            "name": item["contact"],
+            "ownerid": CRM_OWNER_ID,
+            "khmc": account_ids[str(item["name"])],
+            "contactrole": item["role"],
+            "zhiwu": item["role"],
+            "shouji": item["phone"],
+            "email": f"new-pipeline.{item['key']}@example.com",
+            "beizhu": f"{NEW_PIPELINE_BATCH} | {item['name']} | {item['role']}",
+        }
+        for item in NEW_PIPELINE_ACCOUNTS
+        if item["key"] != "n07"
+    ]
+    contact_ids = upsert_records("Contact", "id,name,ownerid,khmc,beizhu", contact_records)
+
+    lead_records = [
+        {
+            "name": f"{item['contact']} - {item['name']}",
+            "ownerid": CRM_OWNER_ID,
+            "company": item["name"],
+            "phone": item["phone"],
+            "email": f"new-pipeline.{item['key']}@example.com",
+            "qzkhly": "市场活动",
+            "qzkhzt": "已联系",
+            "beizhu": f"{NEW_PIPELINE_BATCH} | 新客户推进线索 | {item['summary']}",
+        }
+        for item in NEW_PIPELINE_ACCOUNTS
+    ]
+    lead_ids = upsert_records("cloudcclead", "id,name,ownerid,company,beizhu", lead_records)
+
+    opportunity_records = [
+        {
+            "name": f"{item['name']} - 新客户项目",
+            "ownerid": CRM_OWNER_ID,
+            "khmc": account_ids[str(item["name"])],
+            "jieduan": item["stage"],
+            "jine": str(item["amount"]),
+            "jsrq": (today + timedelta(days=60 + int(str(item["key"])[1:]) * 5)).isoformat(),
+            "xyb": item["next"],
+            "description": f"{NEW_PIPELINE_BATCH} | {item['summary']}",
+            "ywjhsm": item["next"] or "待确认客户反馈并补充下一步行动",
+        }
+        for item in NEW_PIPELINE_ACCOUNTS
+        if item["key"] != "n06"
+    ]
+    opportunity_ids = upsert_records("Opportunity", "id,name,ownerid,khmc,description", opportunity_records)
+
+    task_records: list[dict[str, Any]] = []
+    for item in NEW_PIPELINE_ACCOUNTS:
+        common: dict[str, Any] = {
+            "ownerid": CRM_OWNER_ID,
+            "relateid": account_ids[str(item["name"])],
+            "relateobj": "Account",
+            "tasktype": "跟进",
+        }
+        contact_id = contact_ids.get(str(item["contact"]))
+        if contact_id:
+            common.update({"whoid": contact_id, "whoobj": "Contact"})
+        due = today - timedelta(days=3) if item["key"] == "n08" else today + timedelta(days=2 + int(str(item["key"])[1:]))
+        subject = str(item["next"] or "确认方案反馈并补充商机下一步")
+        task_records.extend([
+            {
+                **common,
+                "name": f"{item['name']} - {subject}",
+                "subject": f"{item['name']} - {subject}",
+                "status": "未开始",
+                "priority": "高" if item["key"] in {"n01", "n02", "n07", "n08"} else "普通",
+                "expiredate": due.isoformat(),
+                "remark": f"{NEW_PIPELINE_BATCH} | 新客户待办 | {item['summary']}",
+            },
+            {
+                **common,
+                "name": f"{item['name']} - 已完成首次需求访谈",
+                "subject": f"{item['name']} - 已完成首次需求访谈",
+                "status": "已完成",
+                "priority": "普通",
+                "expiredate": (today - timedelta(days=7)).isoformat(),
+                "remark": f"{NEW_PIPELINE_BATCH} | 已完成任务 | {item['summary']}",
+            },
+        ])
+    task_ids = upsert_records("Task", "id,name,subject,ownerid,relateid,remark", task_records)
+
+    event_records: list[dict[str, Any]] = []
+    for item in NEW_PIPELINE_ACCOUNTS:
+        messages = [
+            f"已完成首次需求访谈。{item['summary']}",
+            f"客户确认下一步关注：{item['next'] or '需要补充明确行动计划'}。",
+        ]
+        for index, message in enumerate(messages, start=1):
+            occurred = datetime.now().replace(microsecond=0) - timedelta(days=3 + index * 4 + int(str(item["key"])[1:]))
+            subject = f"{item['name']} - 新客户互动 {index}"
+            event: dict[str, Any] = {
+                "name": subject,
+                "subject": subject,
+                "ownerid": CRM_OWNER_ID,
+                "relateid": account_ids[str(item["name"])],
+                "relateobj": "Account",
+                "begintime": occurred.strftime("%Y-%m-%d %H:%M:%S"),
+                "endtime": (occurred + timedelta(minutes=45)).strftime("%Y-%m-%d %H:%M:%S"),
+                "status": "已完成",
+                "type": "会议" if index == 1 else "电话",
+                "remark": f"{NEW_PIPELINE_BATCH} | {message}",
+            }
+            contact_id = contact_ids.get(str(item["contact"]))
+            if contact_id:
+                event.update({"whoid": contact_id, "whoobj": "Contact"})
+            event_records.append(event)
+    event_ids = upsert_records("Event", "id,name,subject,ownerid,relateid,remark", event_records)
+
+    ids_by_object = {
+        "Account": account_ids,
+        "Contact": contact_ids,
+        "cloudcclead": lead_ids,
+        "Opportunity": opportunity_ids,
+        "Task": task_ids,
+        "Event": event_ids,
+    }
+    for object_api, record_ids in ids_by_object.items():
+        wanted = set(record_ids.values())
+        observed = {
+            str(row["id"]): str(row.get("ownerid", ""))
+            for row in page_query(object_api, "id,ownerid", 500)
+            if str(row.get("id", "")) in wanted
+        }
+        wrong = [record_id for record_id in wanted if observed.get(record_id) != CRM_OWNER_ID]
+        if wrong:
+            raise RuntimeError(f"CloudCC {object_api} owner verification failed for {len(wrong)} {NEW_PIPELINE_BATCH} records")
+    return {
+        "new_pipeline_accounts": account_ids,
+        "new_pipeline_contacts": contact_ids,
+        "new_pipeline_leads": lead_ids,
+        "new_pipeline_opportunities": opportunity_ids,
+        "new_pipeline_tasks": task_ids,
+        "new_pipeline_events": event_ids,
     }
 
 
@@ -819,7 +1025,7 @@ def crm_records() -> dict[str, dict[str, str]]:
         if wrong:
             raise RuntimeError(f"CloudCC {object_api} owner verification failed for {len(wrong)} records")
 
-    return {
+    result = {
         "accounts": account_ids,
         "contacts": contact_ids,
         "leads": lead_ids,
@@ -829,6 +1035,8 @@ def crm_records() -> dict[str, dict[str, str]]:
         "contracts": contract_ids,
         "cases": case_ids,
     }
+    result.update(seed_new_customer_pipeline(today))
+    return result
 
 
 def sql_quote(value: Any) -> str:
@@ -1104,6 +1312,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dry-run", action="store_true", help="Validate identity and print planned counts without writes.")
     parser.add_argument("--crm-only", action="store_true", help="Only create/reuse CloudCC CRM records.")
     parser.add_argument("--agent-only", action="store_true", help="Only refresh AgentCiCi aggregate tables after ensuring CRM ids.")
+    parser.add_argument(
+        "--new-pipeline-only",
+        action="store_true",
+        help="Only create/reuse the dedicated CloudCC new-customer pipeline recovery batch.",
+    )
     parser.add_argument("--ssh-key", default=str(DEFAULT_SSH_KEY), help="SSH key for the AgentCiCi ECS host.")
     parser.add_argument("--remote", default=DEFAULT_REMOTE, help="AgentCiCi ECS SSH remote.")
     return parser.parse_args()
@@ -1123,6 +1336,12 @@ def planned_counts() -> dict[str, int]:
         "memories": (len(ACCOUNTS) - len(SILENT_KEYS)) * 2,
         "dynamic_signals": (len(ACCOUNTS) - len(SILENT_KEYS)) * 2,
         "evidence_actions": 12,
+        "new_pipeline_accounts": len(NEW_PIPELINE_ACCOUNTS),
+        "new_pipeline_contacts": len(NEW_PIPELINE_ACCOUNTS) - 1,
+        "new_pipeline_leads": len(NEW_PIPELINE_ACCOUNTS),
+        "new_pipeline_opportunities": len(NEW_PIPELINE_ACCOUNTS) - 1,
+        "new_pipeline_tasks": len(NEW_PIPELINE_ACCOUNTS) * 2,
+        "new_pipeline_events": len(NEW_PIPELINE_ACCOUNTS) * 2,
     }
 
 
@@ -1135,8 +1354,8 @@ def verify_owner_identity() -> None:
 
 def main() -> int:
     args = parse_args()
-    if args.crm_only and args.agent_only:
-        raise SystemExit("--crm-only and --agent-only cannot be used together")
+    if sum((args.crm_only, args.agent_only, args.new_pipeline_only)) > 1:
+        raise SystemExit("--crm-only, --agent-only and --new-pipeline-only cannot be used together")
     if not CLOUDCC.exists():
         raise SystemExit(f"CloudCC CLI not found: {CLOUDCC}")
     print(f"Target AgentCiCi org: {AGENT_ORG_ID}")
@@ -1149,12 +1368,17 @@ def main() -> int:
         print("Dry-run complete: no CRM or AgentCiCi writes were performed.")
         return 0
 
-    ids = resolve_agent_record_ids() if args.agent_only else crm_records()
+    if args.agent_only:
+        ids = resolve_agent_record_ids()
+    elif args.new_pipeline_only:
+        ids = seed_new_customer_pipeline(date.today())
+    else:
+        ids = crm_records()
     print(
         "CloudCC records ready: "
         + ", ".join(f"{key}={len(value)}" for key, value in ids.items())
     )
-    if args.crm_only:
+    if args.crm_only or args.new_pipeline_only:
         return 0
 
     sql = build_agent_sql(ids)
