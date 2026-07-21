@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-221 - 组织管理端全页面主题一致性治理
+
+- status: `ready`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-126-admin-theme-completeness-audit.md`
+- task_status_path: `.claw/tasks/TASK-221.md`
+- assignment_path: `.claw/assignments/TASK-221.yaml`
+- blocked_by: `none`
+- next_action: 在专用分支通过任务级门禁后，逐页收敛 Admin 的当前主题继承。
+
 ### TASK-220 - 用户会话工作台浮层与操作面主题收敛
 
 - status: `review`

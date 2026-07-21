@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T00:20:00+08:00
+updated_at: 2026-07-22T00:30:00+08:00
 updated_by: MANAGER-001
 phase: production-runtime-execution-trace-correction-complete
-active_task: "TASK-220"
-next_action: "使用已登录蓝色主题账号完成 TASK-220 用户工作台浮层和会话历史的桌面视觉验收。"
+active_task: "TASK-221"
+next_action: "逐页收敛组织管理端主体、弹窗、抽屉、菜单和折叠区对当前用户主题的继承。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-221 is ready: user requires a complete `/admin/*` audit so every primary surface, secondary page, popup, drawer and collapsed area follows the current user theme. FEAT-126 inventories all Admin routes and records the token-only remediation strategy. Initial static review verified partial shell coverage but later resource-page overrides and AdminToolsPage category inline colors can still bypass the selected theme.
 
 - TASK-220 is in review: the quick-command dialog, composer popovers/actions, session selection and session menu now use only current `--theme-*` values, so the selected blue theme supplies its own surface, border, accent and overlay instead of gilded fallback colors. Assignment check, 9 targeted theme tests and production build pass. Local browser has no authenticated user session and correctly stops at login, so authenticated desktop visual evidence remains pending rather than fabricated.
 
