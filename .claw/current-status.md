@@ -1,9 +1,9 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-17T08:21:42Z
+updated_at: 2026-07-21T10:15:00Z
 updated_by: MANAGER-001
-phase: general-ontology-platform-v1-live
+phase: trace-detail-expansion-live
 active_task: "TASK-214"
 next_action: "Fix OneKeyToken live credential validation: static catalog must not report invalid or unsaved Keys as valid."
 read_next:
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-215 is complete locally and queued for this release: Trace nodes retain the 220-character compact summary while administrators can expand and copy up to 12,000 characters of redacted saved detail; focused backend tests, 17 frontend test files / 88 tests, production build and desktop interaction checks passed.
+- TASK-215 is complete in production `2.7.11 / 281f35b2cb2f`: Trace nodes retain the 220-character compact summary while administrators can expand and copy up to 12,000 characters of redacted saved detail. Focused backend tests, 27 frontend test files / 179 tests, production build, Compose configuration, ACR image inspection, release backup, six-container health, version and public smoke passed. The authenticated Trace interaction was previously verified locally; production browser reached the independent admin login boundary without console errors, but no administrator credential is available in this session.
 - TASK-216 is complete as a design-only exploration: four same-structure desktop conversation-workbench skins and their specification are preserved as visual references, without changing production theme facts.
 
 - TASK-214 is ready: platform OneKeyToken “检测” currently reads only its static catalog, so no Key or endpoint is contacted and arbitrary Key values report success. FEAT-119 transcribes the provider contract and assigns a real non-streaming Chat Completions validation using the unsaved form draft, unique request ID and redacted errors.
@@ -47,7 +47,7 @@ read_next:
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
-- Production currently runs `2.7.10 / f922b86f1884`; backend/frontend and four state services are healthy, state-service container IDs were preserved and remain on `2.6.12`, Flyway V82/V83 succeeded, and CloudCC pagecomponent V15/customPage V9 remain active. Immediate application rollback is healthy `2.7.9 / c04e992b3840`; V82/V83 are forward-compatible and may remain during application rollback. Release `2.7.6 / 2055947aae07` remains immutable failed-acceptance evidence and is not a rollback target.
+- Production currently runs `2.7.11 / 281f35b2cb2f`; backend/frontend and four state services are healthy, and the state services remain on `2.6.12`. The release backup is `/opt/cici/backups/20260721-181143-before-2.7.11-main-integration`; immediate application rollback is `2.7.10 / f922b86f1884`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
 - 已知风险：本机仍无法解析 `onechat.agentcici.com`，但显式使用生产 IP 的 smoke 返回 200；当前两个演示组织的密码登录用户均不能取得有效 CloudCC 当前用户会话，`customer-operations` 元数据发现按设计返回 `DATA_SOURCE_UNAVAILABLE`，需恢复用户绑定后再完成真实 CRM 目录/查询验收；另有跨用户不可见会话因 `ResponseStatusException` 被通用异常处理捕获而返回无数据的 500 而非 404/403，隔离成立但状态与日志语义需独立任务修复。

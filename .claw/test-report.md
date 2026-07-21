@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-17T08:21:42Z
+updated_at: 2026-07-21T10:15:00Z
 updated_by: MANAGER-001
-status: active
-last_run_at: 2026-07-17T08:20:47Z
+status: passed
+last_run_at: 2026-07-21T10:15:00Z
 last_run_status: passed
 ---
 
@@ -15,6 +15,9 @@ last_run_status: passed
 - `backend`: `mvn -q -Dtest=AgentRunTraceServiceTest test` 通过；新 Trace 将 220 字节点摘要与最多 12,000 字的脱敏管理员详情分离，测试确认密码和手机号不进入可复制文本。
 - `frontend`: `npm test` 17 个测试文件、88 项通过；`npm run build` 通过，仅保留既有大 chunk 提示。
 - `browser`: 本地 `1280 × 720` 管理员 Trace 页面以受控响应验证默认摘要、原位展开/收起、详情滚动区、复制成功反馈和 keyboard 可访问名称；最终 console error/warning 为 0，未见横向溢出。截图：`.playwright-cli/page-2026-07-21T09-35-01-950Z.png`。
+- `release`: `./scripts/release-acr.sh --dry-run` 与 `2.7.11` ACR 镜像构建/inspect 成功；annotated tag `2.7.11` 指向 `281f35b2cb2f` 并已推送。backend index/amd64 为 `sha256:65bf3b101a9ee915fddf656ea5ebe53bc29bf3d27b01504b2321f77f6fce4290` / `sha256:dc156302579d7b35730aadc883bf7fdd7491d87d5cf1d079fd3ad1fc78eeb33f`；frontend 为 `sha256:27c38b70972f9ba1436285ac6eead35fbf3b936facfdf703ca09bba3aa29d902` / `sha256:8e4ce653bb3c251e73be79a6446f79b0d35aa8a36db2d52a65b0a94c1bb7616f`。
+- `production`: `/opt/cici/backups/20260721-181143-before-2.7.11-main-integration` 的 env/PostgreSQL/KB/Qdrant 分别为 1,648 / 3,264,738 / 511,201 / 1,584,517 bytes，均非空；backend/frontend 更新至 `2.7.11`，四个状态服务保持 `2.6.12`。六服务 healthy，health `UP`，版本 `2.7.11 / 281f35b2cb2f`，Nginx 有效，x HTTP 301/HTTPS 200，生产-IP-resolved onechat HTTPS 200。
+- `production-browser`: 管理路由正确重定向到独立管理员登录页，console error/warning 为 0；当前会话没有管理员凭据，未把受保护 Trace 交互冒充为已在线重复验收。
 
 ## TASK-213 通用本体 V1 本地与生产验收（2026-07-17）
 

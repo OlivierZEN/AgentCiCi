@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-17T08:21:42Z
+updated_at: 2026-07-21T10:15:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.11 TASK-215 链路追踪全文查看与复制及本地记录整合 on 2026-07-21:
+  - Git/发布：main 合并提交 `281f35b2cb2f81a90ec7a41f72d28ce71eb6a52a`；dry-run 与正式 ACR 构建完成，annotated tag `2.7.11` 已推送。
+  - 镜像：backend index `sha256:65bf3b101a9ee915fddf656ea5ebe53bc29bf3d27b01504b2321f77f6fce4290`、amd64 `sha256:dc156302579d7b35730aadc883bf7fdd7491d87d5cf1d079fd3ad1fc78eeb33f`；frontend index `sha256:27c38b70972f9ba1436285ac6eead35fbf3b936facfdf703ca09bba3aa29d902`、amd64 `sha256:8e4ce653bb3c251e73be79a6446f79b0d35aa8a36db2d52a65b0a94c1bb7616f`。
+  - 备份：`/opt/cici/backups/20260721-181143-before-2.7.11-main-integration` 包含非空 `acr.env.before-release`、`postgres.dump`、`kb-files.tgz` 和 `qdrant.tgz`。
+  - 部署：仅 pull/force-recreate backend/frontend；database、Redis、RabbitMQ 和 Qdrant 保持健康且继续运行 `2.6.12`。
+  - 运行/公网：六服务 healthy，health `UP`，版本 `2.7.11 / 281f35b2cb2f`，Nginx 有效；x HTTP 301/HTTPS 200，生产-IP-resolved onechat HTTPS 200。生产浏览器确认管理员入口的登录边界且无 console error/warning；没有管理员凭据，Trace 展开/复制的线上交互不作虚假复验。
 
 - 2.7.10 TASK-213 通用本体建模与语义查询平台 V1 on 2026-07-17:
   - Git/发布：PR #13 合并提交 `f922b86f1884ec5f7b7e1d97d3d0558202d0180f`；`scripts/release-acr.sh --dry-run --version 2.7.10 --production` 与正式发布均成功，annotated tag `2.7.10` 已推送。发布后的 assignment/状态与生成配置同步提交不改变生产镜像，生产版本接口仍正确指向发布合并提交。

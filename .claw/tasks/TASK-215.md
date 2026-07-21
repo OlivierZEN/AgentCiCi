@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-215
 status: done
-updated_at: 2026-07-21T09:36:00Z
+updated_at: 2026-07-21T10:15:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -26,7 +26,7 @@ spec_path: docs/specs/FEAT-120-trace-full-detail-expansion.md
 
 ## Next Action
 
-- 无；实现与验证完成，等待集成发布安排。
+- 无；已发布生产 `2.7.11 / 281f35b2cb2f`，后续仅监控管理员详情访问与脱敏边界。
 
 ## Changed Files
 
@@ -42,6 +42,7 @@ spec_path: docs/specs/FEAT-120-trace-full-detail-expansion.md
 - `mvn -q -Dtest=AgentRunTraceServiceTest test` -> passed.
 - `npm test` -> 17 files / 88 tests passed; `npm run build` -> passed (existing large-chunk advisory only).
 - 本地 `1280 × 720` 管理员浏览器用受控 Trace 响应验证摘要、展开、收起、复制成功反馈、无横向溢出和 console error/warning=0；截图 `.playwright-cli/page-2026-07-21T09-35-01-950Z.png`。
+- 生产发布已完成：ACR backend/frontend 镜像通过 inspect，发布前四类备份非空，六服务 healthy，`/actuator/health=UP`，`/system/version=2.7.11 / 281f35b2cb2f`，Nginx 有效，x HTTPS 与生产-IP-resolved onechat HTTPS 均为 200。生产浏览器到达独立管理员登录页且 console 无 error/warning；本会话没有管理员凭据，因此未重复受保护 Trace 展开/复制。
 
 ## Handoff
 
