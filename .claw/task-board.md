@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-218 - 厂商模型目录能力边界
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-123-provider-catalog-capability.md`
+- task_status_path: `.claw/tasks/TASK-218.md`
+- assignment_path: `.claw/assignments/TASK-218.yaml`
+- blocked_by: `none`
+- next_action: 移除 OneKeyToken 本地预设目录，未开放远程枚举时展示空目录。
+
 ### TASK-217 - 智能体定时任务真实创建与链路事实纠偏
 
 - status: `done`

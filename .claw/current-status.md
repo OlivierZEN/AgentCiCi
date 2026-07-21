@@ -4,8 +4,8 @@ version: 4
 updated_at: 2026-07-21T11:15:00Z
 updated_by: MANAGER-001
 phase: production-runtime-execution-trace-correction-complete
-active_task: "TASK-214"
-next_action: "运营人员使用真实业务 Key 完成一次受权限保护的 OneKeyToken 检测验收；检测草稿不会被保存。"
+active_task: "TASK-218"
+next_action: "移除未开放远程枚举厂商的本地预设目录，并验证 OneKeyToken 空目录反馈。"
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,8 @@ read_next:
 ## Snapshot
 
 - TASK-217 is complete in production `2.7.12 / b20261d8b89b`: current-user/current-Agent schedule creation reuses the personal workflow scheduler, requires a valid cadence before writes, makes authorized Tavily work observable, and renders static workflow parsing only as “工作流定义检查”. Blocking and streaming sessions deterministically request a cadence instead of returning a fake configuration JSON. Focused backend regression, ACR inspect, Git tag, four-part backup, six healthy services, `x`/production-IP onechat HTTPS smoke and clean post-release logs passed. The full local suite remains blocked by the pre-existing shared-test-db Flyway V81 checksum mismatch and was not repaired; no authorized user session was available to create a production test task.
+
+- TASK-218 正在处理厂商模型目录能力边界：OneKeyToken 未开放远程模型枚举，运营端不得显示或回填本应用的预设模型；仅保留运营人员已经显式保存的选择。
 
 - TASK-215 is complete in production `2.7.11 / 281f35b2cb2f`: Trace nodes retain the 220-character compact summary while administrators can expand and copy up to 12,000 characters of redacted saved detail. Focused backend tests, 27 frontend test files / 179 tests, production build, Compose configuration, ACR image inspection, release backup, six-container health, version and public smoke passed. The authenticated Trace interaction was previously verified locally; production browser reached the independent admin login boundary without console errors, but no administrator credential is available in this session.
 - TASK-216 is complete as a design-only exploration: four same-structure desktop conversation-workbench skins and their specification are preserved as visual references, without changing production theme facts.
