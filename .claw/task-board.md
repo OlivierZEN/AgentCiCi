@@ -26,6 +26,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: 移除 OneKeyToken 本地预设目录，未开放远程枚举时展示空目录。
 
+### TASK-219 - 运营管理端信息架构与独立主题重构
+
+- status: `ready`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-124-platform-operations-information-architecture.md`
+- task_status_path: `.claw/tasks/TASK-219.md`
+- assignment_path: `.claw/assignments/TASK-219.yaml`
+- blocked_by: `TASK-218 (PlatformModelsPage.tsx 子路由拆分)`
+- next_action: Start the non-overlapping Shell, overview, routing and isolated platform-theme work on `codex/TASK-219-platform-operations-ia`; merge TASK-218 before editing the model page.
+
 ### TASK-217 - 智能体定时任务真实创建与链路事实纠偏
 
 - status: `done`
