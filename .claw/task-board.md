@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-14T13:38:00Z
+updated_at: 2026-07-21T00:00:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,39 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-215 - 链路追踪全文查看与复制
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-120-trace-full-detail-expansion.md`
+- task_status_path: `.claw/tasks/TASK-215.md`
+- assignment_path: `.claw/assignments/TASK-215.yaml`
+- blocked_by: `none`
+- next_action: Done locally; await integration/release scheduling.
+
+### TASK-209 - 运营平台登录页原图像素锁定复刻
+
+- status: `done`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-115-platform-login-cosmic-visual-refresh.md`
+- task_status_path: `.claw/tasks/TASK-209.md`
+- assignment_path: `.claw/assignments/TASK-209.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.2 / ddcda0ef6111`; retain `2.7.1` as the image rollback target.
+
+### TASK-208 - 四套主题风格智能体对话工作台设计探索
+
+- status: `done`
+- priority: `medium`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-114-four-theme-conversation-workbench-design.md`
+- task_status_path: `.claw/tasks/TASK-208.md`
+- assignment_path: `.claw/assignments/TASK-208.yaml`
+- blocked_by: `none`
+- next_action: Done; choose one direction before creating any implementation task, with production theme facts unchanged.
 
 ### TASK-207 - 前台主题一致性与视觉对齐全量治理
 

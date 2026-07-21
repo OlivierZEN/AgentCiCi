@@ -1,0 +1,50 @@
+task_id: TASK-208
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: completed
+assigned_at: 2026-07-14T14:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-114-four-theme-conversation-workbench-design.md
+task_status_path: .claw/tasks/TASK-208.md
+branch: codex/TASK-207-frontend-theme-alignment-audit
+pr_url: n/a
+scope_mode: exact_files
+allowed_write_roots:
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+scope_files:
+  - docs/specs/FEAT-114-four-theme-conversation-workbench-design.md
+  - docs/specs/mockups/theme-exploration-*.png
+  - .claw/tasks/TASK-208.md
+  - .claw/assignments/TASK-208.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+protected_paths:
+  - .claw/developers/**
+  - .claw/devops.md
+  - .claw/goals.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+  - DESIGN.md
+  - DESIGN.json
+  - PRODUCT.md
+  - frontend/src/**
+  - backend/src/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - docs/specs/FEAT-108-user-selectable-product-themes.md
+task_boundary:
+  - "只完成四种对话工作台主题风格的设计抽取、命名、效果图和设计规格，不改动正式主题事实源。"
+  - "四张效果图保持同一桌面端页面结构和同一业务内容，只改变视觉语言、材质、色彩、字体和动效表达。"
+  - "不新增移动端适配、不修改业务 API、不修改前端实现、不替换现有八个正式主题。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-14; user confirmed the four-theme exploration direction."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Design-only exploration. Generated mockups are visual references and do not become production assets until separately approved."
+completed_at: 2026-07-14T15:12:00Z

@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-14T12:35:00Z
+updated_at: 2026-07-14T15:52:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,30 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.2 TASK-209 运营平台登录页原图像素锁定复刻 on 2026-07-14:
+  - Git commit/tag `ddcda0ef6111` / `2.7.2`; `/platform/login` default state uses the user-supplied, losslessly copied 1672×941 image as the full-page background. The semantic email/phone, password and submit controls are coordinate-aligned transparent overlays until input/focus/notice state; platform authentication behavior is unchanged.
+  - Images: backend index `sha256:f4ec61fc0532be5593a4cc6c3646906d026770ee56e55b5aebdea936c1d29979`, linux/amd64 `sha256:3403aad868f7f06d08c6b6ac685fafd8b4f39ef3a0f5ab36dcfe35deac8e562f`; frontend index `sha256:2ae803bf615cbb84bf7ddf451716b0f94df452c2d94e6936e01eacf59a18e918`, linux/amd64 `sha256:21ef8d647026f1ffb361c82cfb3230770da8b8cf1098fa314e4cef5cd9538eda`.
+  - Backup: `/opt/cici/backups/20260715-001809-before-2.7.2-task209-reference-login` contains non-empty `acr.env.before-release`, `postgres.dump`, `kb-files.tgz` and `qdrant.tgz`.
+  - Release hygiene: unrelated TASK-207/TASK-208 and `diagrams/` worktree changes remained untouched, so `ALLOW_DIRTY_RELEASE=true` was explicit. The `2.7.2` release tag points at `ddcda0ef6111`, which contains only the TASK-209 reference-image implementation, tests, design facts, task record and QA.
+  - Runtime: backend/frontend were recreated on `2.7.2`; database, Redis, RabbitMQ and Qdrant remained healthy on `2.6.12`; backend `/actuator/health=UP`, `/system/version=2.7.2 / ddcda0ef6111`, and frontend `nginx -t` passed.
+  - Public/browser: x HTTP 301 and `/platform/login` HTTPS 200; onechat production-IP-resolved HTTP 301/HTTPS 200. Online `1672 × 941` browser loaded the hashed reference asset at `background-size: 100% 100%`, had fully transparent default overlays, zero overflow and zero console errors/warnings. Empty submit was disabled; local-only fake credentials enabled it without submission. Evidence: `output/playwright/task209-reference-production-comparison-2.7.2.png`.
+
+- 2.7.1 TASK-209 运营平台登录页宇宙智能视觉刷新 on 2026-07-14:
+  - Git commit/tag `5a5e9489035c` / `2.7.1`; `/platform/login` uses the approved cosmic-black Agent Operations surface, while the platform password login endpoint, request body, role validation, token storage and redirect remain unchanged.
+  - Images: backend index `sha256:6d4a4ad2654093c0cc88b96b6bd1b0666d5486abfd535316c005743d05a4025c`, linux/amd64 `sha256:518be7c698542dca965e63e1cbd835548eb06fe7e99f880a9a78eb08130ebe81`; frontend index `sha256:08d1d5f74fcdfb1b7143322f0da1dc19d67d6864e1f6d11cd3741f65c221d25e`, linux/amd64 `sha256:d97f4a8a17dbabbd8afa4a3944dc24edd39be0bc4632b0c2d907cd715f2bd044`.
+  - Backup: `/opt/cici/backups/20260714-234548-before-2.7.1-task209-platform-login` contains `acr.env.before-release`, `postgres.dump`, `kb-files.tgz` and `qdrant.tgz`.
+  - Release hygiene: the worktree retained unrelated TASK-207/TASK-208 and `diagrams/` changes, so `ALLOW_DIRTY_RELEASE=true` was explicit; release commit `5a5e9489035c` contains only TASK-209 implementation, design facts and tests.
+  - Runtime: backend/frontend were recreated on `2.7.1`; database, Redis, RabbitMQ and Qdrant remained healthy on `2.6.12`; backend `/actuator/health=UP`, `/system/version=2.7.1 / 5a5e9489035c`, and frontend `nginx -t` passed.
+  - Public/browser: `x.agentcici.com` HTTP 301 and HTTPS 200; `onechat.agentcici.com` HTTPS 200 with production-IP resolve. Online `1440 × 840` browser DOM verified the 45/55 split, 460px form, no outer overflow, disabled/filled button states and zero console error/warning. Screenshot capture hit a CDP timeout; local screenshot evidence remains at `output/playwright/task209-platform-login-default-1440x840.png`.
+  - Known noise: existing stale-session polling continued to produce `Session not found` 404s in `ChatOrchestratorService.sessionMessages`; no startup, Flyway, data-source, Redis, RabbitMQ or Qdrant error was observed.
+
+- 2.6.12 TASK-207 前台主题一致性与视觉对齐 on 2026-07-14:
+  - Git commit/tag `fdec3b94a8b6` / `2.6.12`; authenticated frontend surfaces now use theme-owned tokens, the organization rail entry derives from the organization name's first character, and customer-workbench/data/portrait/settings surfaces align with the selected theme.
+  - Images: backend index `sha256:9d82b9f2768529c3ac93cc0b5296c368c882836012073ed4eec86778c1bd2a1f`, amd64 `sha256:8e64cfe78b5e6634207e9a808108590f13aa29ab48f7065a0e71d1089b6ea0bd`; frontend index `sha256:eeafbefd65fbe6d1635b693b62751f9740d2cc64a9e22a00a8731bef1bacd4f4`, amd64 `sha256:eb4c75e3ae2a81b1bf3349b8a3cc3bc8c0e96f4b840aa2764af396830bb85ac5`.
+  - Backup: `/opt/cici/backups/20260714-231136-before-2.6.12-task207-theme-alignment`; env, PostgreSQL, KB and Qdrant artifacts are non-empty.
+  - Runtime: backend/frontend and four state services are healthy on `2.6.12`. Health `UP`, version `2.6.12 / fdec3b94a8b6`, Flyway remains at V80, Nginx valid, and post-release backend/frontend error scans are empty.
+  - Public/browser: `x.agentcici.com` HTTPS returns 200; `onechat.agentcici.com` still has the known local DNS resolution gap, so production-IP `--resolve` smoke confirmed HTTP 301 and HTTPS 200. Authenticated production browser at `1600x1000` showed version `2.6.12`, customer workbench content, zero outer overflow, no fixed `CB` text, and zero console errors/warnings.
 
 - 2.6.11 TASK-206 CloudCC 当前会话嵌入 SSO 修复 on 2026-07-14:
   - Git commit/tag `c540988655cb` / `2.6.11`; pagecomponent uses `$CCDK.CCToken.getToken()` and backend validates the CRM session through `/api/user/getUserInfo` while retaining strict three-way identity matching.

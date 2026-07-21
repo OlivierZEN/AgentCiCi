@@ -24,6 +24,7 @@ scope_files:
   - .claw/task-board.md
   - .claw/current-status.md
   - .claw/test-report.md
+  - .claw/devops.md
 protected_paths:
   - .claw/assignments/**
   - .claw/developers/**
@@ -55,4 +56,3 @@ preflight_required: true
 local_login_required: true
 identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
 notes: "PM-created frontend visual-governance task. Public identity material only; no private keys, passwords, bearer tokens, production cookies, customer raw data, or reusable secrets."
-

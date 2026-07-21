@@ -1,14 +1,34 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-14T13:38:00Z
+updated_at: 2026-07-14T16:25:00Z
 updated_by: MANAGER-001
-status: active
-last_run_at: 2026-07-14T13:38:00Z
+status: passed
+last_run_at: 2026-07-14T16:25:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-215 链路追踪全文查看与复制（2026-07-21）
+
+- `backend`: `mvn -q -Dtest=AgentRunTraceServiceTest test` 通过；新 Trace 将 220 字节点摘要与最多 12,000 字的脱敏管理员详情分离，测试确认密码和手机号不进入可复制文本。
+- `frontend`: `npm test` 17 个测试文件、88 项通过；`npm run build` 通过，仅保留既有大 chunk 提示。
+- `browser`: 本地 `1280 × 720` 管理员 Trace 页面以受控响应验证默认摘要、原位展开/收起、详情滚动区、复制成功反馈和 keyboard 可访问名称；最终 console error/warning 为 0，未见横向溢出。截图：`.playwright-cli/page-2026-07-21T09-35-01-950Z.png`。
+
+## TASK-209 运营平台登录页原图像素锁定复刻（2026-07-14）
+
+- `identity/assignment`: MANAGER-001 的 TASK-209 SSH 身份门禁和代表文件授权检查均为 `allowed`；未跟踪 `diagrams/` 与 TASK-207/TASK-208 文件未读取、未修改、未纳入发布提交。
+- `tdd-focused`: `PlatformLogin.test.tsx` 先失败于缺少 `platform-login--reference` 与透明交互层，再转绿；聚焦测试 1 项通过。
+- `frontend-full`: Vitest 16 个文件、86 项通过；TypeScript/Vite production build 通过，仅保留既有大 chunk 提示。
+- `contract`: 登录继续使用 `POST /auth/platform/password/login`、`identifier.trim()/password`、平台角色校验、`LS_PLATFORM_TOKEN` 存储和 `/platform` 跳转。
+- `pixel-lock-local`: 受控原图 SHA-256 `1b119105b2079248e91492e1ef44c32cd0cfba3b1d7f3917e452c50d270b37e9`。本地 `1672 × 941` 根节点精确覆盖视口，背景为该资产且 `100% 100% / 50% 50%`；默认输入和按钮的背景/文字为透明、边框为 `0px`，故无可见重绘层。原图与截图拼接：`output/playwright/task209-reference-comparison.png`。
+- `browser-interaction`: 本地与线上均验证两个输入和按钮各唯一，空表单按钮禁用；填入本地假凭据后按钮可用、账号/掩码密码/焦点层可读、外层横向溢出为 0，未提交假凭据。控制台 error/warning 均为 0。
+- `static`: `DESIGN.json` JSON parse、`git diff --check` 均通过。
+- `release`: dry-run 与正式 ACR 发布均使用同一 `2.7.2`；Git tag 已推送。因工作区保留无关改动，显式使用 `ALLOW_DIRTY_RELEASE=true`；tag 所指发布提交为 `ddcda0ef6111`。备份：`/opt/cici/backups/20260715-001809-before-2.7.2-task209-reference-login`。
+- `production`: backend/frontend 均为 `2.7.2` healthy，状态服务保持 `2.6.12` healthy；`/actuator/health=UP`，`/system/version=2.7.2 / ddcda0ef6111`，Nginx 配置通过；x HTTP 301/HTTPS 200，onechat 生产-IP-resolved HTTP 301/HTTPS 200。
+- `production-browser`: `https://x.agentcici.com/platform/login` 在 `1672 × 941` 加载哈希原图资产，默认覆盖层透明、无溢出，表单禁用/填充可用和 console error/warning=0 均通过。证据：`output/playwright/task209-reference-production-2.7.2-1672x941.jpg`、`output/playwright/task209-reference-production-comparison-2.7.2.png`。
+- `known-noise`: 发布后未观察到启动、Flyway、数据源、Redis、RabbitMQ 或 Qdrant 错误；历史失效会话轮询产生的 `Session not found` 404 仍与本次前端登录页无关。
 
 ## TASK-207 前台主题一致性与视觉对齐（2026-07-14）
 
@@ -21,6 +41,10 @@ last_run_status: passed
 - `browser-layout`: 数据看板四列闭合，同一行卡片同顶同高；AI 应用菜单五行均为 44px 且左锚点一致；互动弹窗左右栏同顶同高；`document/body scrollWidth == clientWidth == 1600`。
 - `browser-org`: 当前组织 `CloudCC 智能体应用DEMO` 的左下角入口显示 `C`，不再显示固定 `CB`。
 - `browser-console`: error/warning 为 0。截图证据见 `output/playwright/task207-*.png`，设计结论见 `design-qa.md`。
+- `release`: `2.6.12 / fdec3b94a8b6`；backend index `sha256:9d82b9f2768529c3ac93cc0b5296c368c882836012073ed4eec86778c1bd2a1f`、amd64 `sha256:8e64cfe78b5e6634207e9a808108590f13aa29ab48f7065a0e71d1089b6ea0bd`；frontend index `sha256:eeafbefd65fbe6d1635b693b62751f9740d2cc64a9e22a00a8731bef1bacd4f4`、amd64 `sha256:eb4c75e3ae2a81b1bf3349b8a3cc3bc8c0e96f4b840aa2764af396830bb85ac5`。
+- `production`: 备份 `/opt/cici/backups/20260714-231136-before-2.6.12-task207-theme-alignment` 四类文件非空；六服务 healthy，健康 `UP`，`/system/version=2.6.12 / fdec3b94a8b6`，Nginx 配置有效，Flyway V80 无新迁移。
+- `production-smoke`: 本机 DNS 仍无法解析 `onechat.agentcici.com`，按既有风险用生产 IP `--resolve` 验证 HTTP 301 与 HTTPS 200；`https://x.agentcici.com/` 返回 200。生产登录、`/auth/me`、`/agents`、`/skills`、`/me/agents/run-logs`、`/admin/agents/run-logs?limit=10` 均为 200；组织 token 访问 `/api/platform/skills` 返回预期 403。
+- `production-browser`: 生产 `1600 × 1000` 打开 `https://x.agentcici.com/app?aiApp=customer-workbench`，页面显示版本 `2.6.12`，客户互动工作台可见，`document/body scrollWidth == clientWidth == 1600`，页面文本不包含固定 `CB`，console error/warning 为 0。截图：`output/playwright/task207-prod-2.6.12-workbench.png`。
 
 ## TASK-206 CloudCC 嵌入身份同步自动恢复（2026-07-14）
 
@@ -187,12 +211,19 @@ last_run_status: passed
 
 ## Latest Run Summary
 
-- 状态：`passed`（TASK-188 已在生产 `2.4.7` 完成应用标题与复制链接静态化）
-- 范围：TASK-188 工作台应用级标题、复制链接控件静态 pointer 状态与双入口验收。
-- 命令：身份/assignment 门禁、Vitest、Vite build、diff 检查、发布 dry-run、ACR 清单、备份、部署、健康检查和生产 1920x960 浏览器 computed-style/交互/截图。
+- 状态：`passed`（TASK-209 已发布生产 `2.7.2` 并完成线上原图像素锁定登录页验收）
+- 范围：用户提供 1672×941 原图作为默认背景的高保真复刻，以及平台账号认证行为保持不变。
+- 命令：Vitest 全量、Vite build、ACR dry-run/正式发布、远程备份/健康检查、公网 smoke、1672x941 本地/线上浏览器默认态、交互态与控制台复核。
 - 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
 
 ## Latest Verified Results
+
+- TASK-209 运营平台登录页原图像素锁定复刻 (2026-07-14T16:22:00Z):
+  - `frontend`: Vitest 16 个文件、86 项 -> **success**；Vite production build -> **success**，仅保留既有大 chunk 提示。
+  - `browser`: `1672 × 941` 下默认背景尺寸 `100% 100%`，默认交互层全部透明、无可见重绘像素；空表单按钮禁用，填入假数据后按钮可用，未触发提交。
+  - `browser-console`: 本地和生产 error/warning `0`；截图 `output/playwright/task209-reference-production-2.7.2-1672x941.jpg`。
+  - `static`: `DESIGN.json` JSON parse、`git diff --check` -> **success**。
+  - `release`: `2.7.2 / ddcda0ef6111` 正式发布成功；backend index `sha256:f4ec61fc0532be5593a4cc6c3646906d026770ee56e55b5aebdea936c1d29979`、amd64 `sha256:3403aad868f7f06d08c6b6ac685fafd8b4f39ef3a0f5ab36dcfe35deac8e562f`；frontend index `sha256:2ae803bf615cbb84bf7ddf451716b0f94df452c2d94e6936e01eacf59a18e918`、amd64 `sha256:21ef8d647026f1ffb361c82cfb3230770da8b8cf1098fa314e4cef5cd9538eda`。
 
 - TASK-188 客户互动工作台标题与静态链接控件生产验收 (2026-07-11T14:09:47+08:00):
   - `frontend`: Vitest 12 个文件、57 项 -> **success**；Vite production build 和 `git diff --check` -> **success**。本地 Vite 页面启动正常，因本机未运行 8080 后端而无法本地登录；改由真实生产组织完成完整交互验收。

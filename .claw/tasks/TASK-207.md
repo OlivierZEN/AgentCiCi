@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-207
 status: done
-updated_at: 2026-07-14T13:38:00Z
+updated_at: 2026-07-14T15:18:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -26,10 +26,11 @@ spec_path: docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
 - 数据图和身份色使用主题序列色，数据看板四列重新闭合，原生复选框和单选框使用主题强调色。
 - 真实桌面浏览器已完成 `gilded`、`sakura`、`galaxy` 逐页验收和八主题设置矩阵；控制台无 error/warning，外层无横向溢出。
 - 前端 15 个测试文件、85 项测试和生产构建通过。
+- 已发布到生产 `2.6.12 / fdec3b94a8b6`；六个容器 healthy，公网、登录 API、核心接口和生产桌面浏览器 smoke 通过。
 
 ## Next Action
 
-- 等待合并；生产发布不在本任务范围。
+- 无；生产发布完成，后续仅需在集成时避开当前工作区中的 TASK-209 未提交改动。
 
 ## Changed Files
 
@@ -53,5 +54,7 @@ spec_path: docs/specs/FEAT-113-frontend-theme-consistency-and-alignment.md
 ## Handoff
 
 - 目标分支：`codex/TASK-207-frontend-theme-alignment-audit`。
-- 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
+- 生产版本：`2.6.12 / fdec3b94a8b6`；备份目录 `/opt/cici/backups/20260714-231136-before-2.6.12-task207-theme-alignment`。
+- 保留当前工作区中 TASK-209 与未跟踪 `diagrams/` 改动，本任务不读取、不修改、不提交。
 - 浏览器证据位于 `output/playwright/task207-*.png`；验收后已恢复 `gilded`。
+- 生产浏览器证据：`output/playwright/task207-prod-2.6.12-workbench.png`。
