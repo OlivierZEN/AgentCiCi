@@ -53,7 +53,7 @@ public class UserWorkflowService {
             "get_pending_approvals");
 
     private static final Pattern INTERVAL_PATTERN = Pattern.compile("每\\s*(\\d{1,3})\\s*分钟");
-    private static final Pattern CLOCK_PATTERN = Pattern.compile("(上午|下午|中午|晚上)?\\s*(\\d{1,2})(?:[:点时]\\s*(\\d{1,2}))?\\s*(?:分)?");
+    private static final Pattern CLOCK_PATTERN = Pattern.compile("(?:上午|下午|中午|晚上)?\\s*\\d{1,2}(?::\\s*\\d{1,2}|[点时](?:\\s*\\d{1,2}\\s*分?)?)");
     private static final Pattern NUMBERING_PREFIX = Pattern.compile("^[0-9]+[.)、]\\s*");
 
     private final AgentDefinitionService agentDefinitionService;
@@ -241,6 +241,51 @@ public class UserWorkflowService {
         spec.markCompiled(versionNo);
         auditService.log(orgId, userId, "user.workflow.compile", "agent=" + agent.agentId() + ",version=" + versionNo);
         return new CompileResult(version, manifest, preview, summary, warnings, dependencies, routines);
+    }
+
+    /**
+     * Creates one additional personal scheduled routine without changing the owner, Agent or notification profile.
+     * The caller supplies only human-readable schedule text and task content; this service owns the tenant scope.
+     */
+    @Transactional
+    public AssistantScheduleResult createScheduledRoutine(String orgId,
+                                                           String userId,
+                                                           String requestedAgentId,
+                                                           String title,
+                                                           String cadence,
+                                                           String task) {
+        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
+        String normalizedCadence = safeText(cadence).trim();
+        String normalizedTask = safeText(task).trim();
+        if (!looksLikeExecutableSchedule(normalizedCadence)) {
+            throw new IllegalArgumentException("请提供明确周期，例如“每天 09:00”或“每周一 09:00”。");
+        }
+        if (normalizedTask.isBlank()) {
+            throw new IllegalArgumentException("定时任务内容不能为空。");
+        }
+        UserWorkflowSpecEntity spec = getOrCreateSpec(orgId, userId, agent.agentId());
+        String routineLine = normalizedCadence + " " + normalizedTask;
+        String source = safeText(spec.getSourceText()).trim();
+        if (!source.lines().map(String::trim).anyMatch(routineLine::equals)) {
+            source = source.isBlank() ? routineLine : source + "\n" + routineLine;
+        }
+        CompileResult compiled = compile(orgId, userId, agent.agentId(), new CompileCommand(source));
+        UserWorkflowVersionEntity published = publish(orgId, userId, agent.agentId(), compiled.version().getVersionNo());
+        CompiledRoutine routine = parseManifestRoutines(published).stream()
+                .filter(item -> routineLine.equals(item.rawLine()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("已发布版本未生成定时 routine"));
+        UserWorkflowTriggerEntity trigger = userWorkflowTriggerRepository
+                .findByOrgIdAndUserIdAndAgentIdAndRoutineKey(orgId, userId, agent.agentId(), routine.routineKey())
+                .orElseThrow(() -> new IllegalStateException("已发布版本未生成定时 trigger"));
+        auditService.log(orgId, userId, "user.workflow.schedule.create",
+                "agent=" + agent.agentId() + ",trigger=" + trigger.getId());
+        return new AssistantScheduleResult(
+                trigger.getId(),
+                routine.routineKey(),
+                title == null || title.isBlank() ? routine.name() : limitText(title.trim(), 80),
+                trigger.getNextFireAt(),
+                published.getVersionNo());
     }
 
     public List<UserWorkflowVersionEntity> listVersions(String orgId, String userId, String requestedAgentId) {
@@ -551,6 +596,8 @@ public class UserWorkflowService {
                 tools.add("get_pending_approvals");
             } else if (toolId.startsWith("email_")) {
                 tools.add(toolId);
+            } else if ("tavily_search".equals(toolId) || "tavily_extract".equals(toolId)) {
+                tools.add(toolId);
             }
         }
         return tools;
@@ -566,6 +613,9 @@ public class UserWorkflowService {
             if (!keywords.isEmpty()) {
                 args.put("keyword", keywords.get(0));
             }
+        } else if ("tavily_search".equals(toolName)) {
+            args.put("query", routine.rawLine());
+            args.put("max_results", 5);
         }
         return toJson(args);
     }
@@ -1006,6 +1056,14 @@ public class UserWorkflowService {
         }
     }
 
+    private boolean looksLikeExecutableSchedule(String cadence) {
+        String value = safeText(cadence).trim().toLowerCase(Locale.ROOT);
+        return value.contains("每天") || value.contains("每周") || value.contains("每月")
+                || value.contains("工作日") || value.contains("cron")
+                || INTERVAL_PATTERN.matcher(value).find()
+                || CLOCK_PATTERN.matcher(value).find();
+    }
+
     private String truncate(String text, int maxLength) {
         String normalized = safeText(text);
         return normalized.length() <= maxLength ? normalized : normalized.substring(0, maxLength) + "...";
@@ -1049,6 +1107,13 @@ public class UserWorkflowService {
             List<String> dependencies,
             List<CompiledRoutine> routines
     ) {
+    }
+
+    public record AssistantScheduleResult(Long triggerId,
+                                          String routineKey,
+                                          String title,
+                                          Instant nextFireAt,
+                                          Integer versionNo) {
     }
 
     public record AgentContext(AgentDefinitionEntity definition, List<String> allowedToolIds) {

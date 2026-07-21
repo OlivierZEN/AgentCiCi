@@ -94,6 +94,16 @@ class ChatOrchestratorServiceModelIdentityTest {
     }
 
     @Test
+    void shouldRequireCadenceBeforePlanningScheduleCreation() {
+        assertThat(ChatOrchestratorService.scheduleCadenceClarification("我要创建一个定时任务：寻找美国 K12 教育机构"))
+                .hasValueSatisfying(value -> assertThat(value).contains("请补充执行周期"));
+        assertThat(ChatOrchestratorService.scheduleCadenceClarification("创建定时任务：每天 09:00 搜索美国 K12 教育机构"))
+                .isEmpty();
+        assertThat(ChatOrchestratorService.scheduleCadenceClarification("搜索美国 K12 教育机构"))
+                .isEmpty();
+    }
+
+    @Test
     void shouldTreatWecomKfConversationAsKnowledgeOnlyCustomerService() {
         String promptBlock = ChatOrchestratorService.buildToolUseBoundaryPromptBlock("wecom-kf:abc123");
 

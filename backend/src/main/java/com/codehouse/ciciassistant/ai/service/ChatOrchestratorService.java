@@ -35,6 +35,7 @@ import com.codehouse.ciciassistant.skill.service.BuiltinSkillRuntimeConfigServic
 import com.codehouse.ciciassistant.skill.service.SkillResolverService.ResolvedSkillContext;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
+import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
@@ -430,17 +431,18 @@ public class ChatOrchestratorService {
                 messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
                 messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
+        Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
-        String answer = forcedCrmProductSalesAnswer.orElseGet(() -> runToolLoop(
+        String answer = forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
                 modelName, messages, tools, orgId, userId, sessionId,
-                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId));
+                showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)));
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
         executionResult.contextSnapshot().put("runId", runId);
         Instant wfEndedAt = Instant.now();
         int wfMs = elapsedMs(wfStartedAt, wfEndedAt);
-        stageTraces.add(stageTrace("WORKFLOW", "技能运行治理",
+        stageTraces.add(stageTrace("WORKFLOW", "工作流定义检查",
                 AgentWorkflowExecutionLogService.STATUS_SUCCESS.equals(
                         AgentWorkflowExecutionLogService.normalizeWorkflowStatus(executionResult.executionStatus()))
                         ? "SUCCESS" : "FAILED",
@@ -646,8 +648,10 @@ public class ChatOrchestratorService {
                         messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
                         messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
+                Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
-                boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && resolveToolCalls(
+                boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
+                        && resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,
                         showThinking, skillContext, emitter, maxToolRounds, modelCredentials, modelCallTraces,
                         toolCallTraces, runId);
@@ -670,6 +674,9 @@ public class ChatOrchestratorService {
                 String finalText;
                 if (forcedCrmProductSalesAnswer.isPresent()) {
                     finalText = forcedCrmProductSalesAnswer.get();
+                    safeSendDeltaInChunks(emitter, finalText);
+                } else if (scheduleCadenceClarification.isPresent()) {
+                    finalText = scheduleCadenceClarification.get();
                     safeSendDeltaInChunks(emitter, finalText);
                 } else {
                     StringBuilder acc = new StringBuilder();
@@ -749,7 +756,7 @@ public class ChatOrchestratorService {
                 executionResult.contextSnapshot().put("runId", runId);
                 Instant wfEndedAt = Instant.now();
                 int wfMs = elapsedMs(wfStartedAt, wfEndedAt);
-                stageTraces.add(stageTrace("WORKFLOW", "技能运行治理",
+                stageTraces.add(stageTrace("WORKFLOW", "工作流定义检查",
                         AgentWorkflowExecutionLogService.STATUS_SUCCESS.equals(
                                 AgentWorkflowExecutionLogService.normalizeWorkflowStatus(executionResult.executionStatus()))
                                 ? "SUCCESS" : "FAILED",
@@ -1048,13 +1055,8 @@ public class ChatOrchestratorService {
             String toolResult = "";
             boolean toolSuccess = true;
             try {
-                toolResult = toolOrchestratorService.executeTool(
-                        orgId,
-                        userId,
-                        tc.name(),
-                        tc.arguments(),
-                        skillContext.allowedToolNames(),
-                        skillContext.agentDirectToolNames());
+                toolResult = executeToolForCurrentAgent(
+                        orgId, userId, tc.name(), tc.arguments(), skillContext);
             } catch (RuntimeException ex) {
                 toolSuccess = false;
                 toolResult = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
@@ -1178,13 +1180,8 @@ public class ChatOrchestratorService {
         String toolResult = "";
         boolean toolSuccess = true;
         try {
-            toolResult = toolOrchestratorService.executeTool(
-                    orgId,
-                    userId,
-                    toolName,
-                    arguments,
-                    skillContext.allowedToolNames(),
-                    skillContext.agentDirectToolNames());
+            toolResult = executeToolForCurrentAgent(
+                    orgId, userId, toolName, arguments, skillContext);
         } catch (RuntimeException ex) {
             toolSuccess = false;
             toolResult = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
@@ -1211,6 +1208,46 @@ public class ChatOrchestratorService {
                 "content", toolResult
         ));
         return toolResult;
+    }
+
+    private String executeToolForCurrentAgent(
+            String orgId,
+            String userId,
+            String toolName,
+            String arguments,
+            ResolvedSkillContext skillContext) {
+        if (AssistantScheduleToolService.TOOL_NAME.equals(ToolNameNormalizer.canonicalize(toolName))) {
+            return toolOrchestratorService.executeTool(
+                    orgId,
+                    userId,
+                    toolName,
+                    arguments,
+                    skillContext.allowedToolNames(),
+                    skillContext.agentDirectToolNames(),
+                    skillContext.agentId());
+        }
+        return toolOrchestratorService.executeTool(
+                orgId,
+                userId,
+                toolName,
+                arguments,
+                skillContext.allowedToolNames(),
+                skillContext.agentDirectToolNames());
+    }
+
+    static Optional<String> scheduleCadenceClarification(String question) {
+        String text = question == null ? "" : question.trim().toLowerCase(Locale.ROOT);
+        boolean createSchedule = (text.contains("定时任务") || text.contains("定时") || text.contains("scheduled task"))
+                && (text.contains("创建") || text.contains("新建") || text.contains("添加") || text.contains("create"));
+        if (!createSchedule) {
+            return Optional.empty();
+        }
+        boolean hasCadence = text.contains("每天") || text.contains("每日") || text.contains("每周")
+                || text.contains("每月") || text.contains("工作日") || text.contains("cron")
+                || Pattern.compile("每\\s*\\d{1,3}\\s*分钟").matcher(text).find()
+                || Pattern.compile("\\d{1,2}\\s*(?::\\s*\\d{1,2}|[点时])").matcher(text).find();
+        return hasCadence ? Optional.empty()
+                : Optional.of("请补充执行周期，例如“每天 09:00”或“每周一 09:00”；确认周期后我会创建真实定时任务。");
     }
 
     private Optional<String> appendForcedCrmProductSalesToolResult(
@@ -1574,6 +1611,11 @@ public class ChatOrchestratorService {
         LinkedHashSet<String> activated = new LinkedHashSet<>();
         if (skillContext.activeSkillCode() != null && !skillContext.activeSkillCode().isBlank()) {
             activated.add(skillContext.activeSkillCode());
+        }
+        for (SkillResolverService.ResolvedSkill skill : skillContext.skills()) {
+            if ("always-on".equalsIgnoreCase(skill.activationMode())) {
+                activated.add(skill.skillCode());
+            }
         }
         LinkedHashSet<String> calledTools = new LinkedHashSet<>();
         for (AgentRunTraceService.ToolCallTraceInput tool : toolCallTraces == null ? List.<AgentRunTraceService.ToolCallTraceInput>of() : toolCallTraces) {
