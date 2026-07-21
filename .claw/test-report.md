@@ -10,6 +10,12 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-215 链路追踪全文查看与复制（2026-07-21）
+
+- `backend`: `mvn -q -Dtest=AgentRunTraceServiceTest test` 通过；新 Trace 将 220 字节点摘要与最多 12,000 字的脱敏管理员详情分离，测试确认密码和手机号不进入可复制文本。
+- `frontend`: `npm test` 17 个测试文件、88 项通过；`npm run build` 通过，仅保留既有大 chunk 提示。
+- `browser`: 本地 `1280 × 720` 管理员 Trace 页面以受控响应验证默认摘要、原位展开/收起、详情滚动区、复制成功反馈和 keyboard 可访问名称；最终 console error/warning 为 0，未见横向溢出。截图：`.playwright-cli/page-2026-07-21T09-35-01-950Z.png`。
+
 ## TASK-213 通用本体 V1 本地与生产验收（2026-07-17）
 
 - `identity/assignment`: MANAGER-001 SSH 持钥、签名指纹、GitHub 身份、TASK-213 分支及本次 provenance 增量涉及的 18 个源码、V83、测试、规格和状态路径经 `dev-login.py` 与 `check-assignment.py` 校验均返回 `allowed`，验证项包括 developer record、持钥证明和 assignment scope，0 finding。

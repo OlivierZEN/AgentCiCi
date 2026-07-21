@@ -75,6 +75,12 @@ type AgentTraceDetailPayload = {
   errorReason?: string;
 };
 
+type TraceTextDetail = {
+  text: string;
+  truncated: boolean;
+  historicalFallback: boolean;
+};
+
 type Props = {
   token: string;
 };
@@ -222,6 +228,38 @@ function traceStepTokenSummary(node: AgentTraceNodePayload) {
   return `输入 ${inputTokens} tokens · 输出 ${outputTokens} tokens`;
 }
 
+function recordValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+export function traceNodeTextDetail(node: AgentTraceNodePayload, trace?: AgentTraceDetailPayload | null): TraceTextDetail | null {
+  const type = (node.type ?? "").toUpperCase();
+  const detail = recordValue(trace?.detail);
+  const payload = type === "USER_MESSAGE"
+    ? recordValue(detail.request)
+    : type === "MODEL" || type === "MODEL_CALL"
+      ? recordValue(detail.response)
+      : {};
+  const detailKey = type === "USER_MESSAGE" ? "questionDetail" : "answerDetail";
+  const legacyKey = type === "USER_MESSAGE" ? "question" : "answer";
+  const stored = recordValue(payload[detailKey]);
+  const text = typeof stored.text === "string" ? stored.text.trim() : "";
+  if (text) {
+    return {
+      text,
+      truncated: stored.truncated === true,
+      historicalFallback: false,
+    };
+  }
+  const legacyText = typeof payload[legacyKey] === "string" ? payload[legacyKey].trim() : "";
+  if (!legacyText) return null;
+  return {
+    text: legacyText,
+    truncated: true,
+    historicalFallback: true,
+  };
+}
+
 export default function AdminAgentRunMonitor({ token }: Props) {
   const [runtimeSnapshots, setRuntimeSnapshots] = useState<AgentRuntimeSnapshotPayload[]>([]);
   const [runLogs, setRunLogs] = useState<AgentRunLogPayload[]>([]);
@@ -238,6 +276,8 @@ export default function AdminAgentRunMonitor({ token }: Props) {
   const [regressionCaseName, setRegressionCaseName] = useState("");
   const [feedbackBusy, setFeedbackBusy] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState("");
+  const [expandedTraceNodeIds, setExpandedTraceNodeIds] = useState<Set<string>>(new Set());
+  const [traceDetailNotice, setTraceDetailNotice] = useState("");
 
   const loadRuntimeSnapshots = async () => {
     try {
@@ -457,6 +497,25 @@ export default function AdminAgentRunMonitor({ token }: Props) {
   const statusClass = (severity: string) =>
     severity === "busy" ? "is-running" : severity === "warn" ? "is-waiting" : severity === "ok" ? "is-ok" : "is-idle";
 
+  const toggleTraceNodeDetail = (nodeId: string) => {
+    setExpandedTraceNodeIds((current) => {
+      const next = new Set(current);
+      if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
+      return next;
+    });
+    setTraceDetailNotice("");
+  };
+
+  const copyTraceNodeDetail = async (text: string) => {
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(text);
+      setTraceDetailNotice("已复制脱敏后的详情内容。");
+    } catch {
+      setTraceDetailNotice("复制失败，请选择内容后手动复制。");
+    }
+  };
+
   return (
     <main className="cici-monitor cici-monitor--admin">
       <header className="cici-monitor__topbar">
@@ -657,8 +716,12 @@ export default function AdminAgentRunMonitor({ token }: Props) {
               </section>
               <section className={`cici-monitor-trace-steps${selectedTrace?.nodes?.length ? "" : " cici-monitor-trace-steps--empty"}`}>
                 {selectedTrace?.nodes?.length ? (
-                  selectedTrace.nodes.map((node, index) => (
-                    <article className="cici-monitor-trace-step" key={node.id ?? `${node.type}-${index}`}>
+                  selectedTrace.nodes.map((node, index) => {
+                    const nodeId = node.id ?? `${node.type}-${index}`;
+                    const detail = traceNodeTextDetail(node, selectedTrace);
+                    const expanded = expandedTraceNodeIds.has(nodeId);
+                    return (
+                    <article className="cici-monitor-trace-step" key={nodeId}>
                       <span className="cici-monitor-trace-step__dot" aria-hidden />
                       <div>
                         <h3>
@@ -666,6 +729,28 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                           <time className="cici-monitor-trace-step__started-at">{formatMonitorDateTime(node.startedAt)}</time>
                         </h3>
                         <p>{node.summary || "节点已记录。"}</p>
+                        {detail ? (
+                          <div className="cici-monitor-trace-step__detail-actions">
+                            <button
+                              type="button"
+                              className="cici-monitor-trace-step__detail-command"
+                              aria-expanded={expanded}
+                              aria-controls={`trace-detail-${nodeId}`}
+                              onClick={() => toggleTraceNodeDetail(nodeId)}
+                            >
+                              {expanded ? "收起全文" : "展开全文"}
+                            </button>
+                            {expanded ? (
+                              <section id={`trace-detail-${nodeId}`} className="cici-monitor-trace-step__detail" aria-label={`${node.title || "链路节点"}完整内容`}>
+                                <pre>{detail.text}</pre>
+                                <div>
+                                  <span>{detail.historicalFallback ? "历史记录仅保留旧版详情，可能已截断。" : detail.truncated ? "内容超过保存上限，已显示保留部分。" : "已脱敏的完整详情。"}</span>
+                                  <button type="button" className="cici-monitor-trace-step__detail-command" onClick={() => void copyTraceNodeDetail(detail.text)}>复制内容</button>
+                                </div>
+                              </section>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                       <div className="cici-monitor-trace-step__meta">
                         <time>{formatTraceStepElapsed(node.elapsedMs)}</time>
@@ -674,7 +759,8 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                         ) : null}
                       </div>
                     </article>
-                  ))
+                  );
+                  })
                 ) : (
                   <article className="cici-monitor-trace-step">
                     <span className="cici-monitor-trace-step__dot" aria-hidden />
@@ -691,6 +777,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                   </article>
                 )}
               </section>
+              {traceDetailNotice ? <p className="cici-monitor-trace-detail-notice" role="status">{traceDetailNotice}</p> : null}
               <section className="cici-monitor-detail-groups">
                 <article>
                   <h3>大模型交互</h3>

@@ -2,7 +2,7 @@
 kind: feature-spec
 feature_id: FEAT-120
 title: 链路追踪全文查看与复制
-status: approved
+status: completed
 owner_role: project-manager
 task_ids: TASK-215
 related_decisions: none
@@ -72,7 +72,9 @@ updated_by: MANAGER-001
 
 ## 实现进展
 
-- 已完成需求与交互设计，等待授权验证后实现。
+- 新 Trace 在 `detail.request.questionDetail` 与 `detail.response.answerDetail` 中保存最多 12,000 字的脱敏可查看文本，原有短摘要和列表接口保持不变。
+- 组织管理员在用户输入和模型节点可原位展开、收起、复制详情；旧记录回退到既有详情字段并提示其可能已经截断。
+- 后端单测、前端 17 个测试文件/88 项、生产构建和本地桌面端浏览器交互验收均已通过。
 
 ## 交接说明
 

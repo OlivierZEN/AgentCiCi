@@ -1,0 +1,318 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2000" height="1400" viewBox="0 0 2000 1400">
+  <defs>
+    <marker id="arrowInk" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L11,6 L1,11 Z" fill="#3B3832"/>
+    </marker>
+    <marker id="arrowGold" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M1,1 L11,6 L1,11 Z" fill="#B89455"/>
+    </marker>
+  </defs>
+
+  <!-- Canvas -->
+  <rect x="0" y="0" width="2000" height="1400" fill="#F6F0E4"/>
+  <circle cx="1830" cy="82" r="150" fill="#EFE1C4" opacity="0.65"/>
+  <circle cx="1915" cy="152" r="58" fill="#D8BD86" opacity="0.35"/>
+  <path d="M80 118 H1920" stroke="#D8C49A" stroke-width="2"/>
+
+  <!-- Title -->
+  <text x="90" y="64" font-family="Noto Sans SC, sans-serif" font-size="34" font-weight="700" fill="#23211D">AgentCiCi 企业智能体平台架构</text>
+  <text x="92" y="98" font-family="Noto Sans SC, sans-serif" font-size="16" fill="#6B6255">基于当前平台能力 · 多入口接入 · 统一运行时 · Agent / Skill / Tool 融合 · 多组织治理</text>
+  <rect x="1630" y="42" width="270" height="42" rx="21" fill="#2E2B26"/>
+  <text x="1765" y="69" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="15" font-weight="600" fill="#FFF9ED">CURRENT PLATFORM · 2026</text>
+
+  <!-- Touchpoints -->
+  <text x="92" y="164" font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#94723C">01 · 用户与渠道触点</text>
+
+  <g>
+    <rect x="90" y="186" width="330" height="88" rx="28" fill="#FFFDF7" stroke="#CAB07A" stroke-width="2"/>
+    <circle cx="132" cy="230" r="22" fill="#2E2B26"/>
+    <path d="M122 231 Q132 218 142 231 M125 238 H139" fill="none" stroke="#F0D79E" stroke-width="2.4" stroke-linecap="round"/>
+    <text x="168" y="220" font-family="Noto Sans SC, sans-serif" font-size="18" font-weight="700" fill="#2A2823">助手工作台</text>
+    <text x="168" y="246" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#746A5C">会话、AI Apps、客户工作台</text>
+  </g>
+
+  <g>
+    <rect x="445" y="186" width="300" height="88" rx="28" fill="#FFFDF7" stroke="#CAB07A" stroke-width="2"/>
+    <circle cx="487" cy="230" r="22" fill="#B89455"/>
+    <path d="M477 221 H497 M477 230 H492 M477 239 H488" stroke="#FFFDF7" stroke-width="2.4" stroke-linecap="round"/>
+    <text x="523" y="220" font-family="Noto Sans SC, sans-serif" font-size="18" font-weight="700" fill="#2A2823">Agent Builder</text>
+    <text x="523" y="246" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#746A5C">Spec、编译、调试、发布</text>
+  </g>
+
+  <g>
+    <rect x="770" y="186" width="300" height="88" rx="28" fill="#FFFDF7" stroke="#CAB07A" stroke-width="2"/>
+    <circle cx="812" cy="230" r="22" fill="#2E2B26"/>
+    <circle cx="812" cy="224" r="6" fill="none" stroke="#F0D79E" stroke-width="2"/>
+    <path d="M801 240 Q812 232 823 240" fill="none" stroke="#F0D79E" stroke-width="2"/>
+    <text x="848" y="220" font-family="Noto Sans SC, sans-serif" font-size="18" font-weight="700" fill="#2A2823">组织管理端</text>
+    <text x="848" y="246" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#746A5C">知识、模型、工具、用户</text>
+  </g>
+
+  <g>
+    <rect x="1095" y="186" width="300" height="88" rx="28" fill="#FFFDF7" stroke="#CAB07A" stroke-width="2"/>
+    <circle cx="1137" cy="230" r="22" fill="#B89455"/>
+    <path d="M1127 220 H1147 V240 H1127 Z M1132 225 H1142 M1132 231 H1142 M1132 237 H1138" fill="none" stroke="#FFFDF7" stroke-width="2"/>
+    <text x="1173" y="220" font-family="Noto Sans SC, sans-serif" font-size="18" font-weight="700" fill="#2A2823">平台治理端</text>
+    <text x="1173" y="246" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#746A5C">租户、策略、模板、审计</text>
+  </g>
+
+  <g>
+    <rect x="1420" y="186" width="490" height="88" rx="28" fill="#2E2B26" stroke="#2E2B26" stroke-width="2"/>
+    <circle cx="1462" cy="230" r="22" fill="#D9BE88"/>
+    <path d="M1451 230 H1473 M1462 219 V241 M1454 222 Q1462 230 1470 222 M1454 238 Q1462 230 1470 238" fill="none" stroke="#2E2B26" stroke-width="2" stroke-linecap="round"/>
+    <text x="1498" y="220" font-family="Noto Sans SC, sans-serif" font-size="18" font-weight="700" fill="#FFF9ED">OpenAPI 与企业渠道</text>
+    <text x="1498" y="246" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#D8CCB7">CRM 内嵌、飞书、企微、外部应用</text>
+  </g>
+
+  <!-- Entry arrows -->
+  <path d="M255 274 V312" stroke="#8E877B" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M595 274 V312" stroke="#8E877B" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M920 274 V312" stroke="#8E877B" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M1245 274 V312" stroke="#8E877B" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M1665 274 V312" stroke="#8E877B" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+
+  <!-- Access plane -->
+  <rect x="90" y="316" width="1820" height="82" rx="20" fill="#E8D7B4" stroke="#B89455" stroke-width="2"/>
+  <text x="125" y="348" font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#6D532B">接入与身份上下文</text>
+  <g font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="600" fill="#2E2B26">
+    <rect x="310" y="336" width="235" height="42" rx="21" fill="#FFF9ED"/>
+    <text x="428" y="362" text-anchor="middle">REST · SSE · WebSocket</text>
+    <rect x="570" y="336" width="225" height="42" rx="21" fill="#FFF9ED"/>
+    <text x="683" y="362" text-anchor="middle">JWT · API Key · SSO</text>
+    <rect x="820" y="336" width="250" height="42" rx="21" fill="#FFF9ED"/>
+    <text x="945" y="362" text-anchor="middle">Tenant Context · org_id</text>
+    <rect x="1095" y="336" width="245" height="42" rx="21" fill="#FFF9ED"/>
+    <text x="1218" y="362" text-anchor="middle">RBAC · Agent ACL</text>
+    <rect x="1365" y="336" width="240" height="42" rx="21" fill="#FFF9ED"/>
+    <text x="1485" y="362" text-anchor="middle">限流 · 幂等 · 并发控制</text>
+    <rect x="1630" y="336" width="220" height="42" rx="21" fill="#FFF9ED"/>
+    <text x="1740" y="362" text-anchor="middle">加密 · 脱敏 · 审计</text>
+  </g>
+
+  <!-- Runtime plane -->
+  <text x="92" y="438" font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#94723C">02 · 统一 Agent 运行时</text>
+  <rect x="90" y="456" width="1390" height="440" rx="34" fill="#FFFDF7" stroke="#3B3832" stroke-width="2.5"/>
+  <path d="M122 510 Q122 486 146 486 H1424 Q1448 486 1448 510" fill="none" stroke="#D8C49A" stroke-width="2"/>
+
+  <!-- Runtime satellites -->
+  <g>
+    <rect x="145" y="520" width="310" height="112" rx="24" fill="#F3E8D4" stroke="#C9AD75" stroke-width="2"/>
+    <circle cx="185" cy="557" r="19" fill="#2E2B26"/>
+    <path d="M177 552 H193 M177 559 H190 M177 566 H187" stroke="#F0D79E" stroke-width="2" stroke-linecap="round"/>
+    <text x="218" y="552" font-family="Noto Sans SC, sans-serif" font-size="17" font-weight="700" fill="#292721">会话与上下文</text>
+    <text x="218" y="577" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#6F6658">历史消息 · 会话状态 · 用户记忆</text>
+    <text x="170" y="610" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#8A7550">ChatSession · RuntimeContext · Memory</text>
+  </g>
+
+  <g>
+    <rect x="525" y="492" width="330" height="118" rx="24" fill="#F3E8D4" stroke="#C9AD75" stroke-width="2"/>
+    <circle cx="566" cy="531" r="19" fill="#B89455"/>
+    <path d="M556 531 H576 M566 521 V541" stroke="#FFFDF7" stroke-width="2.4" stroke-linecap="round"/>
+    <text x="600" y="527" font-family="Noto Sans SC, sans-serif" font-size="17" font-weight="700" fill="#292721">Skill / Capability Resolver</text>
+    <text x="550" y="559" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#6F6658">版本 pin · 激活模式 · 工具并集 · KB 边界</text>
+    <text x="550" y="584" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#8A7550">Agent + Skill + Tool 权限语义</text>
+  </g>
+
+  <g>
+    <rect x="925" y="520" width="310" height="112" rx="24" fill="#F3E8D4" stroke="#C9AD75" stroke-width="2"/>
+    <circle cx="965" cy="557" r="19" fill="#2E2B26"/>
+    <path d="M956 562 L965 550 L974 562 M959 562 H971" fill="none" stroke="#F0D79E" stroke-width="2" stroke-linecap="round"/>
+    <text x="998" y="552" font-family="Noto Sans SC, sans-serif" font-size="17" font-weight="700" fill="#292721">模型路由</text>
+    <text x="998" y="577" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#6F6658">组织配置 · 场景选择 · 模型凭证</text>
+    <text x="950" y="610" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#8A7550">Model Router · Provider Adapter</text>
+  </g>
+
+  <!-- Orchestrator heart -->
+  <ellipse cx="690" cy="685" rx="205" ry="74" fill="#2E2B26" stroke="#B89455" stroke-width="5"/>
+  <circle cx="690" cy="685" r="47" fill="none" stroke="#655D50" stroke-width="2"/>
+  <path d="M655 685 H725 M690 650 V720" stroke="#B89455" stroke-width="2" opacity="0.7"/>
+  <text x="690" y="676" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="22" font-weight="700" fill="#FFF9ED">Chat Orchestrator</text>
+  <text x="690" y="706" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#E5D6BA">计划 → 调用 → 结果回灌 → 最终回答</text>
+
+  <!-- Runtime lower nodes -->
+  <g>
+    <rect x="145" y="708" width="310" height="124" rx="24" fill="#FFF8EA" stroke="#B89455" stroke-width="2"/>
+    <circle cx="184" cy="748" r="19" fill="#B89455"/>
+    <path d="M175 749 Q184 737 193 749 M175 757 Q184 745 193 757" fill="none" stroke="#FFFDF7" stroke-width="2"/>
+    <text x="218" y="742" font-family="Noto Sans SC, sans-serif" font-size="17" font-weight="700" fill="#292721">RAG 检索路由</text>
+    <text x="218" y="767" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#6F6658">触发判断 · ACL · 向量召回 · 引用</text>
+    <text x="170" y="802" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#8A7550">Knowledge Retrieval · Qdrant</text>
+  </g>
+
+  <g>
+    <rect x="925" y="708" width="310" height="124" rx="24" fill="#FFF8EA" stroke="#B89455" stroke-width="2"/>
+    <circle cx="964" cy="748" r="19" fill="#B89455"/>
+    <path d="M954 754 L964 739 L974 754 M958 749 H970" fill="none" stroke="#FFFDF7" stroke-width="2"/>
+    <text x="998" y="742" font-family="Noto Sans SC, sans-serif" font-size="17" font-weight="700" fill="#292721">Tool / MCP 编排</text>
+    <text x="998" y="767" font-family="Noto Sans SC, sans-serif" font-size="13" fill="#6F6658">Function Calling · 风险边界 · 回写</text>
+    <text x="950" y="802" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#8A7550">Native Tool · Skill API · MCP</text>
+  </g>
+
+  <g>
+    <rect x="1258" y="520" width="170" height="312" rx="26" fill="#E9DDC7" stroke="#99825A" stroke-width="2"/>
+    <text x="1343" y="554" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="15" font-weight="700" fill="#2E2B26">Workflow Runtime</text>
+    <path d="M1343 578 V615 M1343 665 V702" stroke="#8F7549" stroke-width="2" stroke-dasharray="6 5"/>
+    <polygon points="1343,615 1380,640 1343,665 1306,640" fill="#FFF9ED" stroke="#B89455" stroke-width="2"/>
+    <text x="1343" y="645" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#4B463E">节点执行</text>
+    <rect x="1282" y="718" width="122" height="42" rx="18" fill="#2E2B26"/>
+    <text x="1343" y="744" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#FFF9ED">调度 · 重试</text>
+    <rect x="1282" y="772" width="122" height="42" rx="18" fill="#FFF9ED" stroke="#B89455"/>
+    <text x="1343" y="798" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#3A352E">版本 · 日志</text>
+  </g>
+
+  <!-- Runtime arrows -->
+  <path d="M455 576 H506" fill="none" stroke="#81786A" stroke-width="2.2" marker-end="url(#arrowInk)"/>
+  <path d="M855 551 H906" fill="none" stroke="#81786A" stroke-width="2.2" marker-end="url(#arrowInk)"/>
+  <path d="M690 610 V602 M690 610 V602" fill="none" stroke="#81786A" stroke-width="2.2"/>
+  <path d="M690 610 V611" fill="none" stroke="#81786A" stroke-width="2.2" marker-end="url(#arrowInk)"/>
+  <path d="M485 685 H455 V770" fill="none" stroke="#81786A" stroke-width="2.2" marker-end="url(#arrowInk)"/>
+  <path d="M895 685 H925 V770" fill="none" stroke="#81786A" stroke-width="2.2" marker-end="url(#arrowInk)"/>
+  <path d="M1235 770 H1248" fill="none" stroke="#81786A" stroke-width="2.2" marker-end="url(#arrowInk)"/>
+  <path d="M925 576 H880 V650" fill="none" stroke="#B89455" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrowGold)"/>
+
+  <!-- Governance rail -->
+  <text x="1518" y="438" font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#94723C">03 · 治理控制面</text>
+  <rect x="1510" y="456" width="400" height="440" rx="34" fill="#2E2B26" stroke="#2E2B26" stroke-width="2.5"/>
+  <circle cx="1710" cy="516" r="28" fill="#B89455"/>
+  <path d="M1697 516 L1706 525 L1724 506" fill="none" stroke="#FFF9ED" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1710" y="564" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="20" font-weight="700" fill="#FFF9ED">Policy &amp; Governance</text>
+  <text x="1710" y="589" text-anchor="middle" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#D9CCB5">贯穿每一次解析、检索、调用与回写</text>
+
+  <g font-family="Noto Sans SC, sans-serif">
+    <rect x="1552" y="620" width="316" height="54" rx="20" fill="#48443D"/>
+    <text x="1580" y="643" font-size="14" font-weight="700" fill="#F0D79E">PolicyBundle</text>
+    <text x="1580" y="662" font-size="12" fill="#D8CCB7">工具禁用 · Prompt · Handoff</text>
+
+    <rect x="1552" y="686" width="316" height="54" rx="20" fill="#48443D"/>
+    <text x="1580" y="709" font-size="14" font-weight="700" fill="#F0D79E">权限与安全规则</text>
+    <text x="1580" y="728" font-size="12" fill="#D8CCB7">租户隔离 · Agent ACL · 高风险确认</text>
+
+    <rect x="1552" y="752" width="316" height="54" rx="20" fill="#48443D"/>
+    <text x="1580" y="775" font-size="14" font-weight="700" fill="#F0D79E">可观测与审计</text>
+    <text x="1580" y="794" font-size="12" fill="#D8CCB7">Run Trace · Tool Log · Audit Log</text>
+
+    <rect x="1552" y="818" width="316" height="54" rx="20" fill="#48443D"/>
+    <text x="1580" y="841" font-size="14" font-weight="700" fill="#F0D79E">计量与生命周期</text>
+    <text x="1580" y="860" font-size="12" fill="#D8CCB7">Credits · 套餐 · 留存 · 导出 · 清除</text>
+  </g>
+  <path d="M1510 676 H1480" fill="none" stroke="#B89455" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrowGold)"/>
+
+  <!-- Capability plane -->
+  <text x="92" y="946" font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#94723C">04 · 能力资产与业务应用</text>
+  <rect x="90" y="964" width="1820" height="212" rx="34" fill="#EDE2CE" stroke="#BFA779" stroke-width="2"/>
+
+  <g font-family="Noto Sans SC, sans-serif">
+    <path d="M135 1014 Q135 994 155 994 H421 Q441 994 441 1014 V1136 H135 Z" fill="#FFFDF7" stroke="#B89455" stroke-width="2"/>
+    <circle cx="178" cy="1037" r="21" fill="#2E2B26"/>
+    <path d="M168 1037 H188 M178 1027 V1047" stroke="#F0D79E" stroke-width="2"/>
+    <text x="213" y="1032" font-size="17" font-weight="700" fill="#2E2B26">Agent 资产</text>
+    <text x="160" y="1072" font-size="13" fill="#6F6658">Definition · Spec · Manifest</text>
+    <text x="160" y="1097" font-size="13" fill="#6F6658">编译 · 版本 · 发布 · 评测</text>
+    <rect x="160" y="1111" width="150" height="28" rx="14" fill="#F0E0BE"/>
+    <text x="235" y="1130" text-anchor="middle" font-size="11" fill="#6B522D">TEXT-FIRST BUILDER</text>
+
+    <path d="M466 1014 Q466 994 486 994 H752 Q772 994 772 1014 V1136 H466 Z" fill="#FFFDF7" stroke="#B89455" stroke-width="2"/>
+    <circle cx="509" cy="1037" r="21" fill="#B89455"/>
+    <path d="M499 1031 H519 M499 1038 H516 M499 1045 H512" stroke="#FFFDF7" stroke-width="2" stroke-linecap="round"/>
+    <text x="544" y="1032" font-size="17" font-weight="700" fill="#2E2B26">Skill 资产</text>
+    <text x="491" y="1072" font-size="13" fill="#6F6658">Registry · Package · Version</text>
+    <text x="491" y="1097" font-size="13" fill="#6F6658">Binding · Authoring · 模板</text>
+    <rect x="491" y="1111" width="144" height="28" rx="14" fill="#F0E0BE"/>
+    <text x="563" y="1130" text-anchor="middle" font-size="11" fill="#6B522D">REUSABLE CAPABILITY</text>
+
+    <path d="M797 1014 Q797 994 817 994 H1083 Q1103 994 1103 1014 V1136 H797 Z" fill="#FFFDF7" stroke="#B89455" stroke-width="2"/>
+    <circle cx="840" cy="1037" r="21" fill="#2E2B26"/>
+    <path d="M830 1028 L850 1046 M850 1028 L830 1046" stroke="#F0D79E" stroke-width="2.3" stroke-linecap="round"/>
+    <text x="875" y="1032" font-size="17" font-weight="700" fill="#2E2B26">Tool / MCP</text>
+    <text x="822" y="1072" font-size="13" fill="#6F6658">内置工具 · Skill API Tool</text>
+    <text x="822" y="1097" font-size="13" fill="#6F6658">MCP Server · 外部业务适配器</text>
+    <rect x="822" y="1111" width="152" height="28" rx="14" fill="#F0E0BE"/>
+    <text x="898" y="1130" text-anchor="middle" font-size="11" fill="#6B522D">FUNCTION CALLING</text>
+
+    <path d="M1128 1014 Q1128 994 1148 994 H1414 Q1434 994 1434 1014 V1136 H1128 Z" fill="#FFFDF7" stroke="#B89455" stroke-width="2"/>
+    <circle cx="1171" cy="1037" r="21" fill="#B89455"/>
+    <path d="M1161 1042 Q1171 1027 1181 1042 M1162 1048 H1180" fill="none" stroke="#FFFDF7" stroke-width="2"/>
+    <text x="1206" y="1032" font-size="17" font-weight="700" fill="#2E2B26">知识与记忆</text>
+    <text x="1153" y="1072" font-size="13" fill="#6F6658">KB · 文档 · Chunk · Embedding</text>
+    <text x="1153" y="1097" font-size="13" fill="#6F6658">用户记忆 · 客户记忆 · 检索引用</text>
+    <rect x="1153" y="1111" width="142" height="28" rx="14" fill="#F0E0BE"/>
+    <text x="1224" y="1130" text-anchor="middle" font-size="11" fill="#6B522D">RAG &amp; MEMORY</text>
+
+    <path d="M1459 1014 Q1459 994 1479 994 H1815 Q1835 994 1835 1014 V1136 H1459 Z" fill="#FFFDF7" stroke="#2E2B26" stroke-width="2"/>
+    <circle cx="1502" cy="1037" r="21" fill="#2E2B26"/>
+    <circle cx="1497" cy="1035" r="4" fill="#F0D79E"/>
+    <circle cx="1508" cy="1029" r="4" fill="#F0D79E"/>
+    <circle cx="1510" cy="1041" r="4" fill="#F0D79E"/>
+    <text x="1537" y="1032" font-size="17" font-weight="700" fill="#2E2B26">企业 AI 应用</text>
+    <text x="1484" y="1072" font-size="13" fill="#6F6658">客户运营 · 数据洞察 · 会议纪要</text>
+    <text x="1484" y="1097" font-size="13" fill="#6F6658">个人 Workflow · 邮件 · 智能客服</text>
+    <rect x="1484" y="1111" width="150" height="28" rx="14" fill="#2E2B26"/>
+    <text x="1559" y="1130" text-anchor="middle" font-size="11" fill="#FFF9ED">BUSINESS OUTCOME</text>
+  </g>
+
+  <!-- Runtime to capability -->
+  <path d="M690 759 V936 H288 V964" fill="none" stroke="#3B3832" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M690 936 H619 V964" fill="none" stroke="#3B3832" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M925 832 V916 H950 V964" fill="none" stroke="#3B3832" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M300 832 V916 H1281 V964" fill="none" stroke="#3B3832" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M1343 832 V916 H1647 V964" fill="none" stroke="#3B3832" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <path d="M1710 896 V944" fill="none" stroke="#B89455" stroke-width="2.2" stroke-dasharray="7 6" marker-end="url(#arrowGold)"/>
+
+  <!-- Data and ecosystem foundation -->
+  <text x="92" y="1228" font-family="Noto Sans SC, sans-serif" font-size="14" font-weight="700" letter-spacing="2" fill="#94723C">05 · 数据、消息与外部生态</text>
+
+  <g font-family="Noto Sans SC, sans-serif">
+    <ellipse cx="205" cy="1291" rx="112" ry="25" fill="#2E2B26"/>
+    <rect x="93" y="1291" width="224" height="62" fill="#2E2B26"/>
+    <ellipse cx="205" cy="1353" rx="112" ry="25" fill="#24221E"/>
+    <ellipse cx="205" cy="1291" rx="112" ry="25" fill="#49443C" stroke="#B89455" stroke-width="2"/>
+    <text x="205" y="1297" text-anchor="middle" font-size="15" font-weight="700" fill="#FFF9ED">PostgreSQL</text>
+    <text x="205" y="1330" text-anchor="middle" font-size="12" fill="#D8CCB7">租户 · Agent · 会话 · 审计 · 计量</text>
+
+    <ellipse cx="454" cy="1291" rx="92" ry="25" fill="#8D6D38"/>
+    <rect x="362" y="1291" width="184" height="62" fill="#B89455"/>
+    <ellipse cx="454" cy="1353" rx="92" ry="25" fill="#9A7840"/>
+    <ellipse cx="454" cy="1291" rx="92" ry="25" fill="#D2B477" stroke="#8E6F3D" stroke-width="2"/>
+    <text x="454" y="1297" text-anchor="middle" font-size="15" font-weight="700" fill="#2E2B26">Redis</text>
+    <text x="454" y="1330" text-anchor="middle" font-size="12" fill="#2E2B26">短状态 · 验证码 · 配对缓存</text>
+
+    <path d="M585 1280 H795 Q815 1280 815 1300 V1355 H585 Z" fill="#FFFDF7" stroke="#B89455" stroke-width="2"/>
+    <path d="M610 1303 H788 M610 1323 H762 M610 1343 H735" stroke="#C3A66F" stroke-width="4" stroke-linecap="round"/>
+    <text x="700" y="1271" text-anchor="middle" font-size="15" font-weight="700" fill="#2E2B26">RabbitMQ</text>
+    <text x="700" y="1378" text-anchor="middle" font-size="12" fill="#6F6658">异步索引 · 削峰 · 重试</text>
+
+    <ellipse cx="948" cy="1291" rx="102" ry="25" fill="#2E2B26"/>
+    <rect x="846" y="1291" width="204" height="62" fill="#4B463E"/>
+    <ellipse cx="948" cy="1353" rx="102" ry="25" fill="#38342E"/>
+    <ellipse cx="948" cy="1291" rx="102" ry="25" fill="#625B50" stroke="#B89455" stroke-width="2"/>
+    <text x="948" y="1297" text-anchor="middle" font-size="15" font-weight="700" fill="#FFF9ED">Qdrant</text>
+    <text x="948" y="1330" text-anchor="middle" font-size="12" fill="#D8CCB7">组织过滤 · 向量检索</text>
+
+    <rect x="1090" y="1268" width="350" height="100" rx="28" fill="#FFFDF7" stroke="#B89455" stroke-width="2"/>
+    <circle cx="1135" cy="1318" r="24" fill="#B89455"/>
+    <path d="M1123 1322 Q1135 1302 1147 1322 M1127 1327 H1143" fill="none" stroke="#FFFDF7" stroke-width="2"/>
+    <text x="1174" y="1307" font-size="16" font-weight="700" fill="#2E2B26">大模型与语音服务</text>
+    <text x="1174" y="1333" font-size="12" fill="#6F6658">百炼 / OpenAI-compatible / ASR</text>
+
+    <rect x="1475" y="1268" width="435" height="100" rx="28" fill="#2E2B26" stroke="#2E2B26" stroke-width="2"/>
+    <circle cx="1520" cy="1318" r="24" fill="#D3B675"/>
+    <path d="M1509 1318 H1531 M1520 1307 V1329" stroke="#2E2B26" stroke-width="2"/>
+    <text x="1559" y="1307" font-size="16" font-weight="700" fill="#FFF9ED">企业系统与外部连接器</text>
+    <text x="1559" y="1333" font-size="12" fill="#D8CCB7">CloudCC · 飞书 · 企微 · 邮件 · Tavily · MCP</text>
+  </g>
+
+  <!-- Foundation arrows -->
+  <path d="M288 1176 V1248 H205 V1266" fill="none" stroke="#81786A" stroke-width="2" marker-end="url(#arrowInk)"/>
+  <path d="M619 1176 V1238 H454 V1266" fill="none" stroke="#81786A" stroke-width="2" marker-end="url(#arrowInk)"/>
+  <path d="M1281 1176 V1218 H700 V1280" fill="none" stroke="#81786A" stroke-width="2" stroke-dasharray="7 6" marker-end="url(#arrowInk)"/>
+  <path d="M1281 1176 V1230 H948 V1266" fill="none" stroke="#81786A" stroke-width="2" marker-end="url(#arrowInk)"/>
+  <path d="M950 1176 V1208 H1265 V1268" fill="none" stroke="#B89455" stroke-width="2" marker-end="url(#arrowGold)"/>
+  <path d="M1647 1176 V1260" fill="none" stroke="#B89455" stroke-width="2" marker-end="url(#arrowGold)"/>
+
+  <!-- Legend -->
+  <rect x="90" y="1376" width="1820" height="2" fill="#D8C49A"/>
+  <path d="M1260 941 H1320" stroke="#3B3832" stroke-width="2.5" marker-end="url(#arrowInk)"/>
+  <text x="1332" y="946" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#6F6658">同步 / 实时调用</text>
+  <path d="M1470 941 H1530" stroke="#B89455" stroke-width="2.5" stroke-dasharray="7 6" marker-end="url(#arrowGold)"/>
+  <text x="1542" y="946" font-family="Noto Sans SC, sans-serif" font-size="12" fill="#6F6658">异步事件 / 治理注入</text>
+</svg>

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-215
-status: ready
-updated_at: 2026-07-21T00:00:00Z
+status: done
+updated_at: 2026-07-21T09:36:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -20,12 +20,28 @@ spec_path: docs/specs/FEAT-120-trace-full-detail-expansion.md
 
 ## Current State
 
-- 已发现当前节点摘要在写入 Trace 时被 `clip(..., 220)` 截断；现有详情页没有全文显示控件。
-- 用户已确认采用“展开全文 / 复制内容”的紧凑、按需披露方案。
+- 新 Trace 仍保留 220 字节点摘要，但在管理员详情中保存最多 12,000 字的脱敏可查看文本；密码和手机号在写入前已脱敏。
+- 管理端节点现支持原位展开、收起和复制；旧 Trace 明确提示其既有详情可能已经截断。
+- 后端单测、前端 17 个测试文件/88 项、Vite production build、桌面端模拟管理员浏览器展开/复制与控制台检查均通过。
 
 ## Next Action
 
-- 完成 assignment 代表路径校验后开始实现，先为完整详情与历史兼容行为补测试。
+- 无；实现与验证完成，等待集成发布安排。
+
+## Changed Files
+
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceServiceTest.java`
+- `frontend/src/admin/pages/AdminAgentRunMonitor.tsx`
+- `frontend/src/admin/pages/AdminAgentRunMonitor.test.tsx`
+- `frontend/src/styles.css`
+- `docs/specs/FEAT-120-trace-full-detail-expansion.md`
+
+## Verification
+
+- `mvn -q -Dtest=AgentRunTraceServiceTest test` -> passed.
+- `npm test` -> 17 files / 88 tests passed; `npm run build` -> passed (existing large-chunk advisory only).
+- 本地 `1280 × 720` 管理员浏览器用受控 Trace 响应验证摘要、展开、收起、复制成功反馈、无横向溢出和 console error/warning=0；截图 `.playwright-cli/page-2026-07-21T09-35-01-950Z.png`。
 
 ## Handoff
 

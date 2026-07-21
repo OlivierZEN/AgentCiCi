@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-216 - 四套主题风格智能体对话工作台设计探索
+
+- status: `done`
+- priority: `medium`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-121-four-theme-conversation-workbench-design.md`
+- task_status_path: `.claw/tasks/TASK-216.md`
+- assignment_path: `.claw/assignments/TASK-216.yaml`
+- blocked_by: `none`
+- next_action: Done; choose one direction before creating any implementation task, with production theme facts unchanged.
+
 ### TASK-214 - OneKeyToken 实时凭据检测修复
 
 - status: `ready`
