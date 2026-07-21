@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-21T10:15:00Z
+updated_at: 2026-07-21T10:35:00Z
 updated_by: MANAGER-001
-phase: trace-detail-expansion-live
-active_task: "TASK-214"
-next_action: "Fix OneKeyToken live credential validation: static catalog must not report invalid or unsaved Keys as valid."
+phase: runtime-execution-trace-correction
+active_task: "TASK-217"
+next_action: "Implement real personal workflow schedule creation and correct Trace execution semantics."
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-217 is in progress for production Trace `df5e12f4`: implement real current-user/current-Agent schedule creation using the existing personal workflow scheduler, require a valid cadence before writes, make scheduled Tavily work observable, and stop rendering workflow code parsing as a successful tool/RAG execution.
 
 - TASK-215 is complete in production `2.7.11 / 281f35b2cb2f`: Trace nodes retain the 220-character compact summary while administrators can expand and copy up to 12,000 characters of redacted saved detail. Focused backend tests, 27 frontend test files / 179 tests, production build, Compose configuration, ACR image inspection, release backup, six-container health, version and public smoke passed. The authenticated Trace interaction was previously verified locally; production browser reached the independent admin login boundary without console errors, but no administrator credential is available in this session.
 - TASK-216 is complete as a design-only exploration: four same-structure desktop conversation-workbench skins and their specification are preserved as visual references, without changing production theme facts.

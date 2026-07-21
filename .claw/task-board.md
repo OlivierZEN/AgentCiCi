@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-217 - 智能体定时任务真实创建与链路事实纠偏
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-122-runtime-execution-trace-correction.md`
+- task_status_path: `.claw/tasks/TASK-217.md`
+- assignment_path: `.claw/assignments/TASK-217.yaml`
+- blocked_by: `none`
+- next_action: 实现真实个人 workflow 调度创建、实际执行追踪和管理端事实文案。
+
 ### TASK-215 - 链路追踪全文查看与复制
 
 - status: `done`
