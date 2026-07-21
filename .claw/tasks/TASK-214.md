@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-214
-status: ready
-updated_at: 2026-07-21T00:00:00Z
+status: review
+updated_at: 2026-07-21T09:35:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -19,9 +19,18 @@ spec_path: docs/specs/FEAT-119-onekeytoken-live-validation.md
 
 ## Current State
 
-- 已复现并确认根因：`onekeytoken` 使用 `static-catalog`，`checkProvider` 没有发出远程请求。
-- 文档契约、服务端和前端交互设计已记录于 FEAT-119；待完成授权预检后开始实现。
+- 已修复：OneKeyToken 检测使用当前表单草稿向 `{baseUrl}/chat/completions` 发起非流式请求，携带 Bearer 鉴权和唯一 `x-request-id`；静态目录仅保留给“全部模型”。
+- 错误 Key 的 401/403 会返回脱敏的可操作错误，草稿 Key 和地址不保存、不写入审计或响应。
+- 全新临时 PostgreSQL 下的后端集成测试通过，覆盖真实请求契约、错误 Key、草稿不持久化和无 Key 回显；前端草稿请求单测和生产构建通过。
 
 ## Next Action
 
-- 在授权分支实现真实检测、自动化测试和桌面端回归。
+- 在 `codex/TASK-214-onekeytoken-live-validation` 审阅并合并；不含生产发布。
+
+## Changed Files
+
+- `backend/src/main/java/com/codehouse/ciciassistant/model/api/PlatformModelProviderController.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/model/service/ModelProviderService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/model/PlatformModelProviderIntegrationTest.java`
+- `frontend/src/platform/pages/PlatformModelsPage.tsx`
+- `frontend/src/platform/pages/PlatformModelsPage.test.tsx`

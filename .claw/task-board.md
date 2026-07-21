@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-214 - OneKeyToken 实时凭据检测修复
 
-- status: `ready`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-119-onekeytoken-live-validation.md`
 - task_status_path: `.claw/tasks/TASK-214.md`
 - assignment_path: `.claw/assignments/TASK-214.yaml`
 - blocked_by: `none`
-- next_action: 完成真实 Chat Completions 凭据检测、草稿验证与回归。
+- next_action: 审阅并合并 `codex/TASK-214-onekeytoken-live-validation`；生产发布未请求。
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

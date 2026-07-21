@@ -8,8 +8,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpServer;
+import java.net.InetSocketAddress;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -28,6 +34,94 @@ class PlatformModelProviderIntegrationTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Autowired
+    private ModelProviderService modelProviderService;
+
+    @Test
+    void onekeyTokenCheckUsesUnsavedDraftCredentialsForLiveChatCompletionsValidation() throws Exception {
+        AtomicReference<String> authorization = new AtomicReference<>();
+        AtomicReference<String> requestId = new AtomicReference<>();
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/chat/completions", exchange -> respondToOneKeyTokenValidation(
+                exchange, authorization, requestId, requestBody));
+        server.start();
+        try {
+            String platformToken = platformToken();
+            String draftKey = "draft-live-key";
+            String storedKey = "stored-key-must-not-be-used";
+            String draftBaseUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/v1";
+            modelProviderService.updatePlatformProvider(
+                    ModelProviderService.PROVIDER_ONEKEYTOKEN,
+                    true,
+                    "https://stored.example.invalid/v1",
+                    storedKey);
+
+            mockMvc.perform(post("/platform/models/providers/{providerCode}/check", "onekeytoken")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "enabled": true,
+                                      "apiBaseUrl": "%s",
+                                      "apiKey": "%s"
+                                    }
+                                    """.formatted(draftBaseUrl, draftKey)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.data.checkMode").value("live_chat_completions"))
+                    .andExpect(jsonPath("$.data.validatedModel").value("qwen3.5-flash"))
+                    .andExpect(jsonPath("$.data.catalogSource").value("static"));
+
+            assertThat(authorization.get()).isEqualTo("Bearer " + draftKey);
+            assertThat(requestId.get()).startsWith("req_agentcici_onekeytoken_check_");
+            JsonNode payload = objectMapper.readTree(requestBody.get());
+            assertThat(payload.path("model").asText()).isEqualTo("onekeytoken/auto");
+            assertThat(payload.path("stream").asBoolean()).isFalse();
+            assertThat(payload.path("messages")).hasSize(1);
+            assertThat(modelProviderService.credentialsForProvider("any-org", ModelProviderService.PROVIDER_ONEKEYTOKEN)
+                    .get("apiKey")).isEqualTo(storedKey);
+
+            MvcResult rejected = mockMvc.perform(post("/platform/models/providers/{providerCode}/check", "onekeytoken")
+                            .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {
+                                      "enabled": true,
+                                      "apiBaseUrl": "%s",
+                                      "apiKey": "wrong-draft-key"
+                                    }
+                                    """.formatted(draftBaseUrl)))
+                    .andExpect(status().isBadRequest())
+                    .andReturn();
+            String rejectedBody = rejected.getResponse().getContentAsString();
+            assertThat(rejectedBody).contains("HTTP 401");
+            assertThat(rejectedBody).doesNotContain("wrong-draft-key", storedKey);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private void respondToOneKeyTokenValidation(HttpExchange exchange,
+                                                AtomicReference<String> authorization,
+                                                AtomicReference<String> requestId,
+                                                AtomicReference<String> requestBody) throws java.io.IOException {
+        authorization.set(exchange.getRequestHeaders().getFirst(HttpHeaders.AUTHORIZATION));
+        requestId.set(exchange.getRequestHeaders().getFirst("x-request-id"));
+        requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+        boolean accepted = "Bearer draft-live-key".equals(authorization.get());
+        byte[] response = (accepted
+                ? """
+                        {"id":"chatcmpl-test","object":"chat.completion","model":"qwen3.5-flash","choices":[{"index":0,"message":{"role":"assistant","content":"OK"},"finish_reason":"stop"}],"routing":{"model_used":"qwen3.5-flash"}}
+                        """
+                : """
+                        {"error":{"code":"unauthorized","message":"Invalid API key"}}
+                        """).getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE);
+        exchange.sendResponseHeaders(accepted ? 200 : 401, response.length);
+        exchange.getResponseBody().write(response);
+        exchange.close();
+    }
 
     @Test
     void platformCanGovernModelProvidersWhileOrganizationProviderWritesAreForbidden() throws Exception {

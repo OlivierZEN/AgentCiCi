@@ -115,6 +115,14 @@ function selectedModelKey(providerCode: string, modelName: string) {
   return `${providerCode}::${modelName}`;
 }
 
+export function buildProviderCheckRequest(enabled: boolean, apiBaseUrl: string, apiKey: string) {
+  return {
+    enabled,
+    apiBaseUrl: apiBaseUrl.trim(),
+    apiKey: apiKey.trim(),
+  };
+}
+
 export default function PlatformModelsPage() {
   const token = readToken();
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -271,11 +279,15 @@ export default function PlatformModelsPage() {
     try {
       const res = await fetch(`${PLATFORM_API_BASE}/models/providers/${encodeURIComponent(selected.providerCode)}/check`, {
         method: "POST",
-        headers: authHeaders,
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify(buildProviderCheckRequest(providerEnabled, apiBaseUrl, apiKey)),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "检测失败");
-      setNotice(`检测成功，可用模型 ${Number(json.data?.modelCount ?? 0)} 个。`);
+      const validatedModel = typeof json.data?.validatedModel === "string" && json.data.validatedModel.trim()
+        ? `，已验证路由模型 ${json.data.validatedModel.trim()}`
+        : "";
+      setNotice(`检测成功${validatedModel}，可用模型 ${Number(json.data?.modelCount ?? 0)} 个。`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "检测失败");
     } finally {

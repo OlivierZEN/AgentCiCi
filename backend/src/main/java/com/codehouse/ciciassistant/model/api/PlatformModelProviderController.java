@@ -62,8 +62,13 @@ public class PlatformModelProviderController {
 
     @PostMapping("/providers/{providerCode}/check")
     @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
-    public ApiResponse<Map<String, Object>> checkProvider(@PathVariable String providerCode) {
-        return ApiResponse.ok(modelProviderService.checkPlatformProvider(providerCode));
+    public ApiResponse<Map<String, Object>> checkProvider(@PathVariable String providerCode,
+                                                           @RequestBody(required = false) CheckProviderRequest request) {
+        return ApiResponse.ok(modelProviderService.checkPlatformProvider(
+                providerCode,
+                request == null ? null : request.enabled(),
+                request == null ? null : request.apiBaseUrl(),
+                request == null ? null : request.apiKey()));
     }
 
     @GetMapping("/providers/{providerCode}/models")
@@ -139,6 +144,9 @@ public class PlatformModelProviderController {
     }
 
     public record UpdateProviderRequest(Boolean enabled, String apiBaseUrl, String apiKey) {
+    }
+
+    public record CheckProviderRequest(Boolean enabled, String apiBaseUrl, String apiKey) {
     }
 
     public record UpdateSelectedModelsRequest(List<String> selectedModels) {

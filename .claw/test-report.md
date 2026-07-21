@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-17T08:21:42Z
+updated_at: 2026-07-21T09:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-17T08:20:47Z
+last_run_at: 2026-07-21T09:34:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-214 OneKeyToken 实时凭据检测本地验收（2026-07-21）
+
+- `identity/assignment`: MANAGER-001 的 SSH 持钥、签名指纹、GitHub 身份、TASK-214 分支与后端、前端、测试、规格和状态代表文件均经 `dev-login.py`、`check-assignment.py` 验证为 `allowed`，0 finding。
+- `backend-focused/fresh-db`: 独立临时 PostgreSQL 16 从空库成功应用 79 个迁移至 V83；`PlatformModelProviderIntegrationTest#onekeyTokenCheckUsesUnsavedDraftCredentialsForLiveChatCompletionsValidation` 通过。用例验证草稿 Key 而非已保存 Key 用于 `POST /v1/chat/completions`、Bearer 鉴权、唯一 `x-request-id`、`onekeytoken/auto`、`stream=false`、401 拒绝与 Key 不回显；测试容器已删除。
+- `backend-compile`: `mvn -q -DskipTests compile` 通过。默认共享测试库因既有 Flyway V81 checksum 不一致无法启动，未 repair 或修改共享库，改用上述隔离库作为真实测试证据。
+- `frontend`: `npm test -- PlatformModelsPage.test.tsx` 1/1 通过，覆盖检测请求使用修剪后的未保存表单草稿；`npm run build` 成功转换 1,948 个模块。仅保留既有 Vite 大 chunk 提示。
+- `browser`: 本地 Vite 与 Playwright CLI 在桌面浏览器打开 `/platform/models`，未认证状态正确重定向到平台登录页并完成可访问性快照；模型配置的认证态由 MockMvc 集成测试覆盖。无移动端范围。
+- `static`: `git diff --check` 通过；无 Key、Authorization 值、完整上游响应或可复用凭据进入规格、测试断言、审计或状态文件。
 
 ## TASK-213 通用本体 V1 本地与生产验收（2026-07-17）
 

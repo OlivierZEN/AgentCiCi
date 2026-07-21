@@ -19,6 +19,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
@@ -384,6 +385,9 @@ public class ModelProviderService {
     @Transactional(readOnly = true)
     public Map<String, Object> checkProvider(String orgId, String providerCode) {
         ProviderDef def = requireDef(providerCode);
+        if (PROVIDER_ONEKEYTOKEN.equals(providerCode)) {
+            return checkOneKeyTokenProvider(requireProviderEntity(orgId, providerCode), null, null, null);
+        }
         List<String> models = fetchRemoteModels(orgId, providerCode);
         return Map.of(
                 "providerCode", providerCode,
@@ -393,6 +397,22 @@ public class ModelProviderService {
                 "catalogSource", catalogSource(def),
                 "remoteFetchSupported", supportsRemoteModelFetch(def)
         );
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> checkPlatformProvider(String providerCode,
+                                                      Boolean enabledOverride,
+                                                      String apiBaseUrlOverride,
+                                                      String apiKeyOverride) {
+        ensureBuiltinRows(platformScopeId());
+        if (!PROVIDER_ONEKEYTOKEN.equals(providerCode)) {
+            return checkProvider(platformScopeId(), providerCode);
+        }
+        return checkOneKeyTokenProvider(
+                requireProviderEntity(platformScopeId(), providerCode),
+                enabledOverride,
+                apiBaseUrlOverride,
+                apiKeyOverride);
     }
 
     @Transactional(readOnly = true)
@@ -445,6 +465,69 @@ public class ModelProviderService {
             case FETCH_STATIC_CATALOG -> staticModelDetails(def.defaultModels());
             default -> throw new IllegalArgumentException("Unsupported provider fetch type: " + def.fetchKind());
         };
+    }
+
+    private Map<String, Object> checkOneKeyTokenProvider(ModelProviderConfigEntity entity,
+                                                          Boolean enabledOverride,
+                                                          String apiBaseUrlOverride,
+                                                          String apiKeyOverride) {
+        boolean enabled = enabledOverride == null ? entity.isEnabled() : enabledOverride;
+        String apiBaseUrl = valueOrConfigured(apiBaseUrlOverride, entity.getApiBaseUrl());
+        String apiKey = valueOrConfigured(apiKeyOverride, entity.getApiKey());
+        if (!enabled) {
+            throw new IllegalArgumentException("当前厂商已停用，请先启用后再检测。");
+        }
+        if (apiKey.isBlank()) {
+            throw new IllegalArgumentException("OneKeyToken API Key 不能为空。");
+        }
+        if (apiBaseUrl.isBlank()) {
+            throw new IllegalArgumentException("OneKeyToken API 地址不能为空。");
+        }
+
+        String requestId = "req_agentcici_onekeytoken_check_" + UUID.randomUUID().toString().replace("-", "");
+        String requestBody;
+        try {
+            requestBody = objectMapper.writeValueAsString(Map.of(
+                    "model", "onekeytoken/auto",
+                    "messages", List.of(Map.of("role", "user", "content", "Reply with OK only.")),
+                    "max_tokens", 8,
+                    "temperature", 0,
+                    "stream", false));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("无法构造 OneKeyToken 检测请求。");
+        }
+
+        String responseBody = sendOneKeyTokenValidation(HttpRequest.newBuilder(URI.create(appendPath(apiBaseUrl, "/chat/completions")))
+                .timeout(Duration.ofSeconds(30))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                .header(HttpHeaders.CONTENT_TYPE, "application/json")
+                .header("x-request-id", requestId)
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                .build());
+        try {
+            JsonNode response = objectMapper.readTree(responseBody);
+            if (!response.path("choices").isArray() || response.path("choices").isEmpty()) {
+                throw new IllegalArgumentException("OneKeyToken 检测失败：网关未返回有效的 Chat Completions 响应。");
+            }
+            String routedModel = response.path("routing").path("model_used").asText("").trim();
+            if (routedModel.isBlank()) {
+                routedModel = response.path("model").asText("onekeytoken/auto").trim();
+            }
+            ProviderDef def = requireDef(PROVIDER_ONEKEYTOKEN);
+            return Map.of(
+                    "providerCode", PROVIDER_ONEKEYTOKEN,
+                    "ok", true,
+                    "checkMode", "live_chat_completions",
+                    "validatedModel", routedModel,
+                    "modelCount", def.defaultModels().size(),
+                    "sampleModels", def.defaultModels().stream().limit(8).toList(),
+                    "catalogSource", catalogSource(def),
+                    "remoteFetchSupported", false);
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("OneKeyToken 检测失败：网关响应无法识别。");
+        }
     }
 
     private List<ModelDetail> staticModelDetails(List<String> models) {
@@ -647,6 +730,25 @@ public class ModelProviderService {
             throw ex;
         } catch (Exception e) {
             throw new IllegalArgumentException(errorPrefix + "：" + e.getMessage());
+        }
+    }
+
+    private String sendOneKeyTokenValidation(HttpRequest request) {
+        try {
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                if (response.statusCode() == 401 || response.statusCode() == 403) {
+                    throw new IllegalArgumentException("OneKeyToken 检测失败，HTTP " + response.statusCode()
+                            + "：API Key 无效、已失效或没有模型调用权限。");
+                }
+                throw new IllegalArgumentException("OneKeyToken 检测失败，HTTP " + response.statusCode()
+                        + "：请检查 API 地址、Key 权限与账户余额后重试。");
+            }
+            return response.body();
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("OneKeyToken 检测失败：无法连接网关，请检查 API 地址后重试。");
         }
     }
 
@@ -930,6 +1032,10 @@ public class ModelProviderService {
 
     private String nullableToBlank(String v) {
         return v == null ? "" : v;
+    }
+
+    private String valueOrConfigured(String override, String configured) {
+        return override == null || override.isBlank() ? nullableToBlank(configured).trim() : override.trim();
     }
 
     private String maskApiKey(String apiKey) {
