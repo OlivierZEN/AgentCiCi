@@ -39,7 +39,7 @@ public class ModelProviderService {
     private static final String FETCH_OPENAI_STYLE = "openai-compatible";
     private static final String FETCH_OLLAMA = "ollama";
     private static final String FETCH_ANTHROPIC = "anthropic";
-    private static final String FETCH_STATIC_CATALOG = "static-catalog";
+    private static final String FETCH_REMOTE_UNAVAILABLE = "remote-unavailable";
     private static final List<SceneRouteDef> SCENE_ROUTES = List.of(
             new SceneRouteDef("chat", "智能体对话", "员工工作台、渠道消息和 OpenAPI chat 默认模型。"),
             new SceneRouteDef("skill-authoring", "技能创作", "Skill 生成、技能包标准化和编排草稿模型。"),
@@ -124,9 +124,9 @@ public class ModelProviderService {
                     "OneKeyToken",
                     "https://my.onekeytoken.com/v1",
                     "https://my.onekeytoken.com",
-                    FETCH_STATIC_CATALOG,
+                    FETCH_REMOTE_UNAVAILABLE,
                     true,
-                    List.of("onekeytoken/auto", "deepseek-chat", "qwen3.5-flash")
+                    List.of()
             ))
     );
 
@@ -462,7 +462,7 @@ public class ModelProviderService {
             case FETCH_OPENAI_STYLE -> fetchOpenAiCompatibleModels(entity.getApiBaseUrl(), entity.getApiKey(), def.apiKeyRequired());
             case FETCH_OLLAMA -> fetchOllamaModels(entity.getApiBaseUrl());
             case FETCH_ANTHROPIC -> fetchAnthropicModels(entity.getApiBaseUrl(), entity.getApiKey());
-            case FETCH_STATIC_CATALOG -> staticModelDetails(def.defaultModels());
+            case FETCH_REMOTE_UNAVAILABLE -> List.of();
             default -> throw new IllegalArgumentException("Unsupported provider fetch type: " + def.fetchKind());
         };
     }
@@ -513,15 +513,14 @@ public class ModelProviderService {
             if (routedModel.isBlank()) {
                 routedModel = response.path("model").asText("onekeytoken/auto").trim();
             }
-            ProviderDef def = requireDef(PROVIDER_ONEKEYTOKEN);
             return Map.of(
                     "providerCode", PROVIDER_ONEKEYTOKEN,
                     "ok", true,
                     "checkMode", "live_chat_completions",
                     "validatedModel", routedModel,
-                    "modelCount", def.defaultModels().size(),
-                    "sampleModels", def.defaultModels().stream().limit(8).toList(),
-                    "catalogSource", catalogSource(def),
+                    "modelCount", 0,
+                    "sampleModels", List.of(),
+                    "catalogSource", "unavailable",
                     "remoteFetchSupported", false);
         } catch (IllegalArgumentException e) {
             throw e;
@@ -530,21 +529,12 @@ public class ModelProviderService {
         }
     }
 
-    private List<ModelDetail> staticModelDetails(List<String> models) {
-        return models.stream()
-                .filter(name -> name != null && !name.isBlank())
-                .map(String::trim)
-                .distinct()
-                .map(name -> new ModelDetail(name, inferCapabilitiesByName(name)))
-                .toList();
-    }
-
     private String catalogSource(ProviderDef def) {
-        return supportsRemoteModelFetch(def) ? "remote" : "static";
+        return supportsRemoteModelFetch(def) ? "remote" : "unavailable";
     }
 
     private boolean supportsRemoteModelFetch(ProviderDef def) {
-        return !FETCH_STATIC_CATALOG.equals(def.fetchKind());
+        return !FETCH_REMOTE_UNAVAILABLE.equals(def.fetchKind());
     }
 
     private List<ModelDetail> fetchOpenAiCompatibleModels(String baseUrl, String apiKey, boolean apiKeyRequired) {

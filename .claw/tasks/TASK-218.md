@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-218
-status: in_progress
-updated_at: 2026-07-21T12:00:00Z
+status: review
+updated_at: 2026-07-21T12:15:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -19,8 +19,8 @@ spec_path: docs/specs/FEAT-123-provider-catalog-capability.md
 
 ## Current State
 
-- 已确认根因：OneKeyToken 使用 `static-catalog` 与三个 `defaultModels`，前后端将其当作“预设模型”显示。
+- 已移除 OneKeyToken 的本地默认模型及静态目录回退。厂商未开放远程枚举时，接口返回空目录和 `catalogSource: unavailable`；已显式保存的模型选择不做删除。
 
 ## Next Action
 
-- 完成服务端目录能力语义、前端空态和定向回归测试。
+- 等待审阅或新的合并、发布授权；本次未部署生产。

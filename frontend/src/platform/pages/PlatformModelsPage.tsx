@@ -51,6 +51,8 @@ type ModelRoute = {
   available: boolean;
 };
 
+type CatalogSource = "remote" | "unavailable";
+
 type CapabilityKey = "text" | "tool" | "search" | "reasoning" | "vision";
 type ModelConfigTab = "providers" | "routes";
 
@@ -123,6 +125,13 @@ export function buildProviderCheckRequest(enabled: boolean, apiBaseUrl: string, 
   };
 }
 
+export function catalogEmptyMessage(catalogSource: CatalogSource, modelCount: number): string {
+  if (catalogSource === "unavailable" && modelCount === 0) {
+    return "当前厂商未开放远程模型枚举，暂无可选模型。";
+  }
+  return "没有匹配的模型";
+}
+
 export default function PlatformModelsPage() {
   const token = readToken();
   const [providers, setProviders] = useState<ProviderConfig[]>([]);
@@ -140,7 +149,7 @@ export default function PlatformModelsPage() {
   const [allModelsOpen, setAllModelsOpen] = useState(false);
   const [allModelsLoading, setAllModelsLoading] = useState(false);
   const [allModelsSearch, setAllModelsSearch] = useState("");
-  const [allModelsCatalogSource, setAllModelsCatalogSource] = useState<"remote" | "static">("remote");
+  const [allModelsCatalogSource, setAllModelsCatalogSource] = useState<CatalogSource>("remote");
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -313,7 +322,7 @@ export default function PlatformModelsPage() {
       const data = (json.data ?? {}) as FetchModelsPayload;
       const models = dedupeModels(data.models ?? []).sort((a, b) => a.localeCompare(b));
       const rawDetails = data.modelDetails ?? [];
-      const staticCatalog = data.remoteFetchSupported === false || data.catalogSource === "static";
+      const remoteUnavailable = data.remoteFetchSupported === false || data.catalogSource === "unavailable";
       const detailsMap = new Map<string, CapabilityKey[]>();
       rawDetails.forEach((item) => {
         const caps = (item.capabilities ?? [])
@@ -322,7 +331,7 @@ export default function PlatformModelsPage() {
         detailsMap.set(item.modelName, caps.length > 0 ? [...new Set(caps)] : inferCapabilities(item.modelName));
       });
       setProviderModels(models);
-      setAllModelsCatalogSource(staticCatalog ? "static" : "remote");
+      setAllModelsCatalogSource(remoteUnavailable ? "unavailable" : "remote");
       setCapabilityMap((prev) => {
         const next = { ...prev };
         models.forEach((name) => {
@@ -330,8 +339,8 @@ export default function PlatformModelsPage() {
         });
         return next;
       });
-      if (staticCatalog) {
-        setNotice(`已加载 ${models.length} 个预设模型；当前厂商未开放远程模型枚举。`);
+      if (remoteUnavailable) {
+        setNotice("当前厂商未开放远程模型枚举，暂无可选模型。");
       } else {
         setNotice(`已拉取 ${models.length} 个模型。`);
       }
@@ -689,7 +698,7 @@ export default function PlatformModelsPage() {
         <div className="all-models-overlay" onClick={() => setAllModelsOpen(false)}>
           <div className="all-models-modal" onClick={(event) => event.stopPropagation()}>
             <div className="all-models-modal__head">
-              <h3>{allModelsCatalogSource === "static" ? "预设模型" : "全部模型"} · {selected.providerName}</h3>
+              <h3>全部模型 · {selected.providerName}</h3>
               <button type="button" className="all-models-close" onClick={() => setAllModelsOpen(false)}>
                 x
               </button>
@@ -709,7 +718,7 @@ export default function PlatformModelsPage() {
               {allModelsLoading ? (
                 <div className="all-models-empty">正在拉取模型列表...</div>
               ) : filteredModels.length === 0 ? (
-                <div className="all-models-empty">没有匹配的模型</div>
+                <div className="all-models-empty">{catalogEmptyMessage(allModelsCatalogSource, providerModels.length)}</div>
               ) : (
                 <div className="all-models-list">
                   {filteredModels.map((name) => {

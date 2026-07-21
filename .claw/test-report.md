@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-21T11:15:00Z
+updated_at: 2026-07-21T12:15:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-21T11:15:00Z
+last_run_at: 2026-07-21T12:15:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-218 - 厂商模型目录能力边界
+
+- 授权：`MANAGER-001` 的 SSH 持钥、TASK-218 分支和后端、前端、测试、规格、状态文件范围均通过 `dev-login.py` 与 `check-assignment.py`。
+- 后端：`mvn -q -DskipTests compile` 通过；全新临时 PostgreSQL 16 从空库成功应用 79 个迁移至 V83，`PlatformModelProviderIntegrationTest` 通过。覆盖 OneKeyToken 检测不回填样例模型、`models/fetch` 返回 `count=0`、空 `models/modelDetails`、`catalogSource=unavailable` 与 `remoteFetchSupported=false`。
+- 前端：`npm test -- --run PlatformModelsPage.test.tsx` 2/2 通过，覆盖未开放远程枚举时的明确空态；`npm run build` 成功转换 1,948 个模块，仅保留既有大 chunk 提示。
+- 静态检查：`git diff --check` 通过。未执行生产发布或远程凭据调用。
 
 ## TASK-214 - OneKeyToken 实时凭据检测修复（生产发布）
 

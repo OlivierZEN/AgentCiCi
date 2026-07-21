@@ -71,7 +71,9 @@ class PlatformModelProviderIntegrationTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.data.checkMode").value("live_chat_completions"))
                     .andExpect(jsonPath("$.data.validatedModel").value("qwen3.5-flash"))
-                    .andExpect(jsonPath("$.data.catalogSource").value("static"));
+                    .andExpect(jsonPath("$.data.catalogSource").value("unavailable"))
+                    .andExpect(jsonPath("$.data.modelCount").value(0))
+                    .andExpect(jsonPath("$.data.sampleModels").isEmpty());
 
             assertThat(authorization.get()).isEqualTo("Bearer " + draftKey);
             assertThat(requestId.get()).startsWith("req_agentcici_onekeytoken_check_");
@@ -137,11 +139,11 @@ class PlatformModelProviderIntegrationTest {
         mockMvc.perform(post("/platform/models/providers/{providerCode}/models/fetch", "onekeytoken")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.catalogSource").value("static"))
+                .andExpect(jsonPath("$.data.catalogSource").value("unavailable"))
                 .andExpect(jsonPath("$.data.remoteFetchSupported").value(false))
-                .andExpect(jsonPath("$.data.models[?(@ == 'onekeytoken/auto')]").exists())
-                .andExpect(jsonPath("$.data.models[?(@ == 'deepseek-chat')]").exists())
-                .andExpect(jsonPath("$.data.models[?(@ == 'qwen3.5-flash')]").exists());
+                .andExpect(jsonPath("$.data.count").value(0))
+                .andExpect(jsonPath("$.data.models").isEmpty())
+                .andExpect(jsonPath("$.data.modelDetails").isEmpty());
 
         mockMvc.perform(put("/platform/models/providers/{providerCode}", "deepseek")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
