@@ -13198,6 +13198,78 @@ td.skills-data-table__actions > * {
   line-height: 1.45;
 }
 
+.cici-monitor-trace-step__detail-actions {
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.cici-monitor-trace-step__detail-command {
+  appearance: none;
+  border: 0;
+  border-bottom: 1px solid currentColor;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #8e681f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  padding: 0;
+  transform: none;
+}
+
+.cici-monitor-trace-step__detail-command:hover,
+.cici-monitor-trace-step__detail-command:focus-visible {
+  color: #5f4314;
+}
+
+.cici-monitor-trace-step__detail-command:focus-visible {
+  outline: 1px solid #b99652;
+  outline-offset: 3px;
+}
+
+.cici-monitor-trace-step__detail {
+  width: 100%;
+  border-top: 1px solid #ded2bb;
+  margin-top: 4px;
+  padding-top: 7px;
+}
+
+.cici-monitor-trace-step__detail pre {
+  max-height: 240px;
+  margin: 0;
+  overflow: auto;
+  color: #433827;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.cici-monitor-trace-step__detail > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.cici-monitor-trace-step__detail > div span,
+.cici-monitor-trace-detail-notice {
+  color: #7c6d59;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.cici-monitor-trace-detail-notice {
+  margin: 0 14px 10px;
+}
+
 .cici-monitor-trace-step__meta {
   display: grid;
   gap: 2px;
