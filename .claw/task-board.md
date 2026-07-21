@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-17T08:21:42Z
+updated_at: 2026-07-21T11:15:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -50,14 +50,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-214 - OneKeyToken 实时凭据检测修复
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-119-onekeytoken-live-validation.md`
 - task_status_path: `.claw/tasks/TASK-214.md`
 - assignment_path: `.claw/assignments/TASK-214.yaml`
 - blocked_by: `none`
-- next_action: 审阅并合并 `codex/TASK-214-onekeytoken-live-validation`；生产发布未请求。
+- next_action: 已在生产 `2.8.1 / 9bc8510cbede` 完成；运营人员可使用受保护账号对真实业务 Key 验收，检测草稿不会持久化。
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 

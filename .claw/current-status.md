@@ -1,7 +1,7 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-21T10:35:00Z
+updated_at: 2026-07-21T11:15:00Z
 updated_by: MANAGER-001
 phase: runtime-execution-trace-correction
 active_task: "TASK-217"
@@ -27,7 +27,7 @@ read_next:
 - TASK-215 is complete in production `2.7.11 / 281f35b2cb2f`: Trace nodes retain the 220-character compact summary while administrators can expand and copy up to 12,000 characters of redacted saved detail. Focused backend tests, 27 frontend test files / 179 tests, production build, Compose configuration, ACR image inspection, release backup, six-container health, version and public smoke passed. The authenticated Trace interaction was previously verified locally; production browser reached the independent admin login boundary without console errors, but no administrator credential is available in this session.
 - TASK-216 is complete as a design-only exploration: four same-structure desktop conversation-workbench skins and their specification are preserved as visual references, without changing production theme facts.
 
-- TASK-214 is being merged for production: platform OneKeyToken “检测” uses the unsaved address/Key draft for a real non-streaming Chat Completions call with a unique request ID; static models remain directory-only, 401/403 errors are actionable and redacted, and no draft is persisted by detection. Fresh PostgreSQL backend integration, targeted frontend test and production build passed.
+- TASK-214 已在生产 `2.8.1 / 9bc8510cbede` 完成：平台 OneKeyToken“检测”使用未保存的地址/Key 草稿发起真实的非流式 Chat Completions 调用，并携带唯一请求 ID；静态模型仅保留为目录，401/403 返回可操作的脱敏错误，检测不持久化草稿。全新 PostgreSQL 后端集成、前端定向测试、生产构建、ACR 镜像检查、备份和六容器运行健康均通过。受保护的生产端点会按设计拒绝匿名请求（401），运营人员现可用真实业务 Key 验收。
 
 - TASK-213 is complete in production `2.7.10 / f922b86f1884` through PR #13. The domain-neutral V82/V83 ontology platform, business visual workbench, AI draft-only boundary, immutable versions, deterministic Schema/GraphQL/query compilation, INLINE_SAMPLE project-delivery proof and CloudCC adapter/reference package are live. Fresh-database backend regressions passed 127/127, frontend passed 177/177 and production build, and independent security/spec reviews approved with Critical 0 / Important 0. Production `project-delivery` is published as immutable v1 from draft revision 6 with 15/15 validated mappings; explain/execute, evidence, audit redaction, idempotent publish and cross-tenant 404 passed. The 1600×1000 production Browser passed list/canvas/mapping/technical/version views with console warning/error 0 and overflow 0. V82/V83 are successful, 13 ontology tables are live, and the 480-second/17-sample window kept six services healthy with zero restart/OOM/backend error and zero unexpected 5xx. `customer-operations` installs with verified package provenance but both available demo users currently lack a usable per-user CloudCC session, so discovery returns the designed `502 DATA_SOURCE_UNAVAILABLE` without damaging or publishing the draft.
 
@@ -49,7 +49,7 @@ read_next:
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
-- Production currently runs `2.7.11 / 281f35b2cb2f`; backend/frontend and four state services are healthy, and the state services remain on `2.6.12`. The release backup is `/opt/cici/backups/20260721-181143-before-2.7.11-main-integration`; immediate application rollback is `2.7.10 / f922b86f1884`.
+- Production currently runs `2.8.1 / 9bc8510cbede`; backend/frontend and four state services are healthy, and the state services remain on `2.6.12`. The release backup is `/opt/cici/backups/20260721-190903-before-2.8.1-task214-onekeytoken`; immediate application rollback is `2.7.12 / b20261d`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
 - 已知风险：本机仍无法解析 `onechat.agentcici.com`，但显式使用生产 IP 的 smoke 返回 200；当前两个演示组织的密码登录用户均不能取得有效 CloudCC 当前用户会话，`customer-operations` 元数据发现按设计返回 `DATA_SOURCE_UNAVAILABLE`，需恢复用户绑定后再完成真实 CRM 目录/查询验收；另有跨用户不可见会话因 `ResponseStatusException` 被通用异常处理捕获而返回无数据的 500 而非 404/403，隔离成立但状态与日志语义需独立任务修复。

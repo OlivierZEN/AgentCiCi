@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-214
-status: review
-updated_at: 2026-07-21T09:35:00Z
+status: done
+updated_at: 2026-07-21T11:15:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -25,7 +25,7 @@ spec_path: docs/specs/FEAT-119-onekeytoken-live-validation.md
 
 ## Next Action
 
-- 在 `codex/TASK-214-onekeytoken-live-validation` 审阅并合并；不含生产发布。
+- 已合并并发布生产 `2.8.1 / 9bc8510cbede`。后续仅在运营端以受权限保护的账号录入业务 Key 后，按真实供应商账户完成一次验收；检测草稿不会被保存。
 
 ## Changed Files
 
