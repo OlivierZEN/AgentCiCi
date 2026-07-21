@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T00:00:00+08:00
+updated_at: 2026-07-22T00:20:00+08:00
 updated_by: MANAGER-001
 phase: production-runtime-execution-trace-correction-complete
 active_task: "TASK-220"
-next_action: "统一用户会话工作台的弹窗、轻量菜单、输入区操作与会话历史主题，并完成桌面验证。"
+next_action: "使用已登录蓝色主题账号完成 TASK-220 用户工作台浮层和会话历史的桌面视觉验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-220 is in progress: user feedback identifies visible theme drift in the authenticated user workbench's quick-command dialog, composer actions/popovers and active conversation row. The user clarified that the current selection is blue, while the affected surfaces incorrectly render the gilded fallback. FEAT-125 records the token-only correction, exact functional preservation boundary and desktop acceptance; its source files do not overlap the existing uncommitted platform-task changes.
+- TASK-220 is in review: the quick-command dialog, composer popovers/actions, session selection and session menu now use only current `--theme-*` values, so the selected blue theme supplies its own surface, border, accent and overlay instead of gilded fallback colors. Assignment check, 9 targeted theme tests and production build pass. Local browser has no authenticated user session and correctly stops at login, so authenticated desktop visual evidence remains pending rather than fabricated.
 
 - TASK-219 is ready: the user selected the Product Design “运营中枢” direction and explicitly required genuine task-to-page separation, not cosmetic menu grouping. FEAT-124 defines the complete `/platform/*` route map, list/drawer/editor/version boundaries, function-preservation contract, visual acceptance and the platform-only eight-theme preference. The existing platform account already persists an independent server `themeCode`; implementation makes the setting visible and isolates the local fallback key from user/Admin surfaces. The model sub-route work is blocked only by active TASK-218’s exclusive `PlatformModelsPage.tsx` change.
 

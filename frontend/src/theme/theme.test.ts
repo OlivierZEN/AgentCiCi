@@ -64,6 +64,20 @@ describe("product theme catalog", () => {
     expect(themeCss).not.toContain(":root[data-theme] .cici-workbench__agent-chip.is-active,\n:root[data-theme] .cici-composer-tool:hover");
   });
 
+  it("routes workbench popovers and session controls through the current theme tokens", () => {
+    for (const selector of [
+      ":root[data-theme] .cici-composer-quick__menu,",
+      ":root[data-theme] .cici-quick-command-dialog,",
+      ":root[data-theme] .cici-workbench__session-row.is-active",
+      ":root[data-theme] .cici-quick-command-dialog-backdrop",
+    ]) {
+      expect(assistantCss).toContain(selector);
+    }
+    expect(assistantCss).toContain("background: var(--theme-overlay);");
+    expect(assistantCss).toContain("background: var(--theme-accent);");
+    expect(assistantCss).toContain("border-color: var(--theme-line-strong);");
+  });
+
   it("keeps agent avatars geometrically stable across hover and selected states", () => {
     expect(assistantCss).not.toContain("transition: transform 140ms ease, box-shadow 140ms ease");
     expect(assistantCss).toContain(".cici-workbench__agent-chip.is-active .cici-workbench__agent-avatar {\n  transform: none;\n  box-shadow: none;");

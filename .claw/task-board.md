@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-220 - 用户会话工作台浮层与操作面主题收敛
 
-- status: `in_progress`
+- status: `review`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-125-user-workbench-surface-polish.md`
 - task_status_path: `.claw/tasks/TASK-220.md`
 - assignment_path: `.claw/assignments/TASK-220.yaml`
 - blocked_by: `none`
-- next_action: 验证蓝色主题下的浮层、菜单与会话历史均继承当前主题 token，并完成桌面检查。
+- next_action: 使用已登录蓝色主题账号完成弹窗、菜单与会话历史的桌面视觉验收。
 
 ### TASK-218 - 厂商模型目录能力边界
 

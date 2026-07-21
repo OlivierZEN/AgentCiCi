@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-21T11:15:00Z
+updated_at: 2026-07-22T00:20:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-21T11:15:00Z
+last_run_at: 2026-07-22T00:15:00+08:00
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-220 - 用户会话工作台浮层与操作面主题收敛（本地验收）
+
+- `identity/assignment`: `dev-login.py` 的 SSH challenge-response 以及 TASK-220 的 `check-assignment.py` 均返回 `allowed`，0 finding。
+- `frontend-focused`: `npm run test -- --run src/theme/theme.test.ts` 通过，1 个测试文件 / 9 项测试；新增契约确认快捷指令菜单、弹窗、当前会话项和遮罩只走当前主题 token。
+- `frontend-build`: `npm run build` 通过，转换 1,949 个模块；仅保留既有 Vite 大 chunk 警告。
+- `static`: `git diff --check` 通过；快捷指令与技能菜单、快捷指令弹窗、输入区操作、会话选中行和会话操作菜单均由 `--theme-*` token 覆盖，蓝色主题不再读取鎏金账房固定颜色。
+- `browser`: 本地 Vite 在桌面 Browser 无 console error/warning，但无认证用户会话，应用正确停在登录页。未伪造认证态截图；已登录蓝色主题的弹窗/菜单/历史视觉验收待补。
 
 ## TASK-214 - OneKeyToken 实时凭据检测修复（生产发布）
 
