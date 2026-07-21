@@ -1,0 +1,77 @@
+task_id: TASK-217
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-21T00:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-122-runtime-execution-trace-correction.md
+task_status_path: .claw/tasks/TASK-217.md
+branch: codex/TASK-217-runtime-execution-trace
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/userworkflow/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/userworkflow/**
+  - frontend/src/admin/**
+  - frontend/src/styles.css
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentWorkflowRuntimeService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/userworkflow/service/UserWorkflowService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/userworkflow/service/AssistantScheduleToolService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillPromptAssembler.java
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/service/BuiltinToolCatalog.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/service/AgentWorkflowRuntimeServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/userworkflow/service/UserWorkflowServiceTest.java
+  - frontend/src/admin/pages/AdminAgentRunMonitor.tsx
+  - frontend/src/admin/pages/AdminAgentRunMonitor.test.tsx
+  - frontend/src/styles.css
+  - docs/specs/FEAT-122-runtime-execution-trace-correction.md
+  - .claw/tasks/TASK-217.md
+  - .claw/assignments/TASK-217.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/RequireOrgAdmin.java
+task_boundary:
+  - "只在当前用户、当前组织和当前智能体边界内创建个人 workflow 定时任务。"
+  - "调度与 Trace 必须以真实工具、检索和持久化结果为准，不得伪报执行。"
+  - "不扩展到 CRM、邮件发送或跨用户写入；不新增移动端实现。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-21; user explicitly requested repair after production trace df5e12f4 was proven to generate JSON without creating or executing the requested schedule."
+notes: "不得记录、显示或提交 API Key、token、用户私密网页正文或跨租户 schedule 数据。"

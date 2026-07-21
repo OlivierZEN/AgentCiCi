@@ -15,6 +15,39 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-217 - 智能体定时任务真实创建与链路事实纠偏
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-122-runtime-execution-trace-correction.md`
+- task_status_path: `.claw/tasks/TASK-217.md`
+- assignment_path: `.claw/assignments/TASK-217.yaml`
+- blocked_by: `none`
+- next_action: 实现真实个人 workflow 调度创建、实际执行追踪和管理端事实文案。
+
+### TASK-215 - 链路追踪全文查看与复制
+
+- status: `done`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-120-trace-full-detail-expansion.md`
+- task_status_path: `.claw/tasks/TASK-215.md`
+- assignment_path: `.claw/assignments/TASK-215.yaml`
+- blocked_by: `none`
+- next_action: Done in production `2.7.11 / 281f35b2cb2f`; retain `2.7.10` as the application rollback target.
+
+### TASK-216 - 四套主题风格智能体对话工作台设计探索
+
+- status: `done`
+- priority: `medium`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-121-four-theme-conversation-workbench-design.md`
+- task_status_path: `.claw/tasks/TASK-216.md`
+- assignment_path: `.claw/assignments/TASK-216.yaml`
+- blocked_by: `none`
+- next_action: Done; choose one direction before creating any implementation task, with production theme facts unchanged.
+
 ### TASK-214 - OneKeyToken 实时凭据检测修复
 
 - status: `review`

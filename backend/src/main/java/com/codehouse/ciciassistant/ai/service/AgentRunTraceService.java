@@ -39,6 +39,7 @@ public class AgentRunTraceService {
     private static final TypeReference<Map<String, Object>> MAP_OBJECT_REF = new TypeReference<>() {};
     private static final Pattern WAITING_PATTERN = Pattern.compile("(请补充|请确认|等待确认|需要.*确认|需要.*补充)");
     private static final Pattern FAILED_PATTERN = Pattern.compile("(失败|异常|错误|无法|超时|error|failed|exception)", Pattern.CASE_INSENSITIVE);
+    private static final int ADMIN_DETAIL_TEXT_MAX_LENGTH = 12_000;
 
     private final AgentRunTraceRepository traceRepository;
     private final ChatSessionRepository chatSessionRepository;
@@ -77,10 +78,14 @@ public class AgentRunTraceService {
         Map<String, Object> detail = new LinkedHashMap<>();
         detail.put("request", Map.of(
                 "question", clip(input.question(), 800),
+                "questionDetail", redactedDetailText(input.question()),
                 "requestedKnowledgeBaseIds", input.requestedKnowledgeBaseIds() == null ? List.of() : input.requestedKnowledgeBaseIds(),
                 "effectiveKnowledgeBaseIds", input.effectiveKnowledgeBaseIds() == null ? List.of() : input.effectiveKnowledgeBaseIds()
         ));
-        detail.put("response", Map.of("answer", clip(input.answer(), 1200)));
+        detail.put("response", Map.of(
+                "answer", clip(input.answer(), 1200),
+                "answerDetail", redactedDetailText(input.answer())
+        ));
         detail.put("model", Map.of("modelName", emptyToBlank(input.modelName())));
         detail.put("rag", ragDetail(input.ragResult()));
         detail.put("tools", tools.stream().map(ToolTrace::toPayload).toList());
@@ -1016,6 +1021,17 @@ public class AgentRunTraceService {
         return raw
                 .replaceAll("(?i)(authorization|accessToken|refreshToken|api[_-]?key|token|password|secret)(\"?\\s*[:=]\\s*\"?)[^\",}\\s]+", "$1$2[redacted]")
                 .replaceAll("(1[3-9]\\d)\\d{4}(\\d{4})", "$1****$2");
+    }
+
+    private static Map<String, Object> redactedDetailText(String raw) {
+        String text = redact(raw).trim();
+        boolean truncated = text.length() > ADMIN_DETAIL_TEXT_MAX_LENGTH;
+        String retained = truncated ? text.substring(0, ADMIN_DETAIL_TEXT_MAX_LENGTH) : text;
+        return Map.of(
+                "text", retained,
+                "truncated", truncated,
+                "retainedChars", retained.length()
+        );
     }
 
     private static String clip(String value, int max) {
