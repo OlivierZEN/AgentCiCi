@@ -12,6 +12,7 @@ const themeCss = readFileSync(new URL("./theme.css", import.meta.url), "utf8");
 const assistantCss = readFileSync(new URL("../assistant/cici-ui.css", import.meta.url), "utf8");
 const dataInsightSource = readFileSync(new URL("../assistant/data-insight/DataInsightAppPanel.tsx", import.meta.url), "utf8");
 const assistantSource = readFileSync(new URL("../assistant/AssistantApp.tsx", import.meta.url), "utf8");
+const adminToolsSource = readFileSync(new URL("../admin/pages/AdminToolsPage.tsx", import.meta.url), "utf8");
 
 describe("product theme catalog", () => {
   it("exposes the approved eight stable themes", () => {
@@ -76,6 +77,30 @@ describe("product theme catalog", () => {
     expect(assistantCss).toContain("background: var(--theme-overlay);");
     expect(assistantCss).toContain("background: var(--theme-accent);");
     expect(assistantCss).toContain("border-color: var(--theme-line-strong);");
+  });
+
+  it("keeps admin subpages, dialogs, and foldout panels on the selected theme", () => {
+    for (const selector of [
+      ":root[data-theme] .admin-main .ontology-modal-backdrop,",
+      ":root[data-theme] .admin-main .admin-organization-modal,",
+      ":root[data-theme] .admin-main .skills-row-menu__panel {",
+      ":root[data-theme] .admin-main .embed-apps-list,",
+      ":root[data-theme] .admin-main .admin-ops-panel,",
+      ":root[data-theme] .admin-main .admin-tools-card__icon,",
+    ]) {
+      expect(themeCss).toContain(selector);
+    }
+    expect(themeCss).toContain("background: var(--theme-overlay);");
+    expect(themeCss).toContain("--ledger-gold: var(--theme-accent);");
+    expect(themeCss).toContain("background: var(--theme-surface-strong);");
+  });
+
+  it("does not inject fixed category colors into admin tool cards", () => {
+    expect(adminToolsSource).not.toContain("iconBg:");
+    expect(adminToolsSource).not.toContain("tagBg:");
+    expect(adminToolsSource).not.toContain("style={{ background: style.");
+    expect(adminToolsSource).toContain('className="admin-tools-card__icon"');
+    expect(adminToolsSource).toContain('className="admin-tools-card__tag"');
   });
 
   it("keeps agent avatars geometrically stable across hover and selected states", () => {

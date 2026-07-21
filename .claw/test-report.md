@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T00:20:00+08:00
+updated_at: 2026-07-22T00:24:45+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T00:15:00+08:00
+last_run_at: 2026-07-22T00:24:45+08:00
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-221 - 组织管理端全页面主题一致性治理（本地验收）
+
+- `identity/assignment`: `check-assignment.py` 从仓库根目录返回 `allowed`，确认 Admin 工具页、共享主题层和主题契约测试都在 TASK-221 授权范围内。
+- `static-audit`: 覆盖 `/admin/*` 路由清单与共享浮层选择器。主题层将共享模态与遮罩、组织/用户弹窗、技能二级页/发布框/行菜单、业务本体工作台、运维与观测、嵌入应用和计费面板映射到当前 `--theme-*`；工具卡片不再存在内联类别渐变或固定色。
+- `frontend-focused`: `npm run test -- --run src/theme/theme.test.ts` 通过，1 个测试文件 / 11 项测试；新增契约锁定 Admin 弹窗、折叠行菜单、二级页和工具卡的主题继承。
+- `frontend-build`: `npm run build` 通过，转换 1,949 个模块；仅保留既有 Vite 大 chunk 警告。
+- `static`: `git diff --check` 通过。
+- `browser`: 当前本地 Browser 无可用管理员认证态，无法进入 `/admin/*` 查看当前蓝色主题，未伪造截图或视觉结果。已登录管理员应按 FEAT-126 路由清单复核页面主体、弹窗、轻量菜单和折叠详情。
 
 ## TASK-220 - 用户会话工作台浮层与操作面主题收敛（本地验收）
 

@@ -53,60 +53,32 @@ const TRANSPORT_OPTIONS = [
 
 type CategoryStyle = {
   label: string;
-  iconBg: string;
-  iconColor: string;
-  tagBg: string;
-  tagColor: string;
   glyph: string;
 };
 
 const CATEGORY_STYLES: Record<string, CategoryStyle> = {
   knowledge: {
     label: "知识",
-    iconBg: "linear-gradient(135deg,#dbeafe 0%,#c7d2fe 100%)",
-    iconColor: "#3b82f6",
-    tagBg: "#eff6ff",
-    tagColor: "#1d4ed8",
     glyph: "📚",
   },
   crm: {
     label: "CRM",
-    iconBg: "linear-gradient(135deg,#fed7aa 0%,#fdba74 100%)",
-    iconColor: "#c2410c",
-    tagBg: "#fff7ed",
-    tagColor: "#c2410c",
     glyph: "🤝",
   },
   approval: {
     label: "审批",
-    iconBg: "linear-gradient(135deg,#ddd6fe 0%,#c4b5fd 100%)",
-    iconColor: "#6d28d9",
-    tagBg: "#f5f3ff",
-    tagColor: "#6d28d9",
     glyph: "✓",
   },
   email: {
     label: "邮件",
-    iconBg: "linear-gradient(135deg,#bbf7d0 0%,#86efac 100%)",
-    iconColor: "#047857",
-    tagBg: "#ecfdf5",
-    tagColor: "#047857",
     glyph: "✉",
   },
   web: {
     label: "网络",
-    iconBg: "linear-gradient(135deg,#bae6fd 0%,#7dd3fc 100%)",
-    iconColor: "#0369a1",
-    tagBg: "#f0f9ff",
-    tagColor: "#0369a1",
     glyph: "🌐",
   },
   custom: {
     label: "自定义",
-    iconBg: "linear-gradient(135deg,#e5e7eb 0%,#d1d5db 100%)",
-    iconColor: "#4b5563",
-    tagBg: "#f3f4f6",
-    tagColor: "#4b5563",
     glyph: "🔧",
   },
 };
@@ -650,10 +622,7 @@ export default function AdminToolsPage() {
     return (
       <div key={tool.toolName} className="admin-tools-card" title={tool.description || tool.toolName}>
         <div className="admin-tools-card__head">
-          <div
-            className="admin-tools-card__icon"
-            style={{ background: style.iconBg, color: style.iconColor }}
-          >
+          <div className="admin-tools-card__icon">
             <span aria-hidden>{style.glyph}</span>
           </div>
           <div className="admin-tools-card__title-wrap">
@@ -663,10 +632,7 @@ export default function AdminToolsPage() {
         </div>
         <p className="admin-tools-card__desc">{tool.description || "暂无描述"}</p>
         <div className="admin-tools-card__footer">
-          <span
-            className="admin-tools-card__tag"
-            style={{ background: style.tagBg, color: style.tagColor }}
-          >
+          <span className="admin-tools-card__tag">
             {style.label}
           </span>
           {risk && (

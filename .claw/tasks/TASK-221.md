@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-221
-status: ready
-updated_at: 2026-07-22T00:30:00+08:00
+status: review
+updated_at: 2026-07-22T00:24:45+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -19,9 +19,10 @@ spec_path: docs/specs/FEAT-126-admin-theme-completeness-audit.md
 
 ## Current State
 
-- 已确认 Admin 外壳 token 化不完整，后续资源页样式和工具页内联类别色仍可能覆盖当前主题。
-- FEAT-126 已记录完整页面清单、实施原则和验收标准。
+- 已完成路由与共享组件静态审计，并在 `theme.css` 添加只作用于 `.admin-main` 的主题覆盖：共享模态、组织/用户弹窗、技能二级页与行菜单、业务本体、运维/观测、嵌入应用与计费视图均读取 `--theme-*`。
+- `AdminToolsPage` 已移除类别卡片的内联渐变和固定色，只保留类别文字与图标。
+- `check-assignment.py`、主题契约 11 项测试、生产构建与 `git diff --check` 均通过。
 
 ## Next Action
 
-- 切换到专用分支，完成任务级门禁后实施共享 Admin theme 覆盖和必要页面内联样式修复。
+- 使用已登录的管理员蓝色主题账号，逐页复核路由清单中的主体、弹窗、行菜单和可展开详情；当前会话没有可用管理员登录态，因此该项保留为人工视觉验收。

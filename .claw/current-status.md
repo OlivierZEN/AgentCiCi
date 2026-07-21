@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T00:30:00+08:00
+updated_at: 2026-07-22T00:24:45+08:00
 updated_by: MANAGER-001
 phase: production-runtime-execution-trace-correction-complete
 active_task: "TASK-221"
-next_action: "逐页收敛组织管理端主体、弹窗、抽屉、菜单和折叠区对当前用户主题的继承。"
+next_action: "使用已登录蓝色主题管理员逐页完成 TASK-221 的桌面视觉复核。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-221 is ready: user requires a complete `/admin/*` audit so every primary surface, secondary page, popup, drawer and collapsed area follows the current user theme. FEAT-126 inventories all Admin routes and records the token-only remediation strategy. Initial static review verified partial shell coverage but later resource-page overrides and AdminToolsPage category inline colors can still bypass the selected theme.
+- TASK-221 is in review: the complete `/admin/*` static audit now routes shared modals, organization/user dialogs, skills subpages and row menus, ontology workbench, operations/monitor, embedded apps and billing through current `--theme-*` values. AdminToolsPage no longer injects category gradients or fixed colors. Assignment check, 11 focused theme tests, production build and diff check pass. This session has no authenticated administrator, so logged-in blue-theme desktop evidence remains an explicit manual visual-acceptance item.
 
 - TASK-220 is in review: the quick-command dialog, composer popovers/actions, session selection and session menu now use only current `--theme-*` values, so the selected blue theme supplies its own surface, border, accent and overlay instead of gilded fallback colors. Assignment check, 9 targeted theme tests and production build pass. Local browser has no authenticated user session and correctly stops at login, so authenticated desktop visual evidence remains pending rather than fabricated.
 

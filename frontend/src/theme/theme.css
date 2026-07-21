@@ -1824,3 +1824,292 @@
   min-block-size: 0;
   block-size: 100%;
 }
+
+/* Admin theme completeness: dialogs, subpages, foldouts, and dense operations views. */
+:root[data-theme] .admin-main > .admin-page {
+  --ledger-ink: var(--theme-text);
+  --ledger-muted: var(--theme-text-muted);
+  --ledger-bronze: var(--theme-text-secondary);
+  --ledger-line: var(--theme-line);
+  --ledger-line-strong: var(--theme-line-strong);
+  --ledger-canvas: var(--theme-canvas);
+  --ledger-surface: var(--theme-surface);
+  --ledger-shelf: var(--theme-surface-muted);
+  --ledger-tint: var(--theme-surface-strong);
+  --ledger-gold: var(--theme-accent);
+  --ledger-gold-strong: var(--theme-accent-strong);
+}
+
+:root[data-theme] .admin-main .all-models-overlay,
+:root[data-theme] .admin-main .model-edit-overlay,
+:root[data-theme] .admin-main .cici-modal-overlay,
+:root[data-theme] .admin-main .ontology-modal-backdrop,
+:root[data-theme] .admin-main .user-invite-modal-backdrop,
+:root[data-theme] .admin-main .admin-organization-modal-backdrop {
+  background: var(--theme-overlay);
+}
+
+:root[data-theme] .admin-main .all-models-modal,
+:root[data-theme] .admin-main .model-edit-modal,
+:root[data-theme] .admin-main .cici-modal,
+:root[data-theme] .admin-main .ontology-modal,
+:root[data-theme] .admin-main .user-invite-modal,
+:root[data-theme] .admin-main .admin-organization-modal,
+:root[data-theme] .admin-main .skills-publish-modal,
+:root[data-theme] .admin-main .skills-library-modal,
+:root[data-theme] .admin-main .skills-row-menu__panel {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+  box-shadow: none;
+}
+
+:root[data-theme] .admin-main .all-models-modal__head,
+:root[data-theme] .admin-main .all-models-modal__toolbar,
+:root[data-theme] .admin-main .model-edit-modal__head,
+:root[data-theme] .admin-main .cici-modal__title,
+:root[data-theme] .admin-main .cici-modal__actions,
+:root[data-theme] .admin-main .ontology-modal__head,
+:root[data-theme] .admin-main .ontology-modal__body,
+:root[data-theme] .admin-main .user-invite-modal__head,
+:root[data-theme] .admin-main .user-invite-modal__foot,
+:root[data-theme] .admin-main .admin-organization-modal__head,
+:root[data-theme] .admin-main .admin-organization-modal__foot,
+:root[data-theme] .admin-main .skills-modal-head,
+:root[data-theme] .admin-main .skills-publish-modal__actions {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .cici-modal input,
+:root[data-theme] .admin-main .cici-modal textarea,
+:root[data-theme] .admin-main .cici-modal select,
+:root[data-theme] .admin-main .model-edit-field__input,
+:root[data-theme] .admin-main .ontology-modal input,
+:root[data-theme] .admin-main .ontology-modal textarea,
+:root[data-theme] .admin-main .user-invite-field input,
+:root[data-theme] .admin-main .user-invite-field select,
+:root[data-theme] .admin-main .admin-organization-modal input,
+:root[data-theme] .admin-main .admin-organization-modal select,
+:root[data-theme] .admin-main .skills-publish-modal textarea {
+  color: var(--theme-text);
+  caret-color: var(--theme-accent);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .cici-modal input:focus,
+:root[data-theme] .admin-main .cici-modal textarea:focus,
+:root[data-theme] .admin-main .cici-modal select:focus,
+:root[data-theme] .admin-main .model-edit-field__input:focus,
+:root[data-theme] .admin-main .ontology-modal input:focus,
+:root[data-theme] .admin-main .ontology-modal textarea:focus,
+:root[data-theme] .admin-main .user-invite-field input:focus,
+:root[data-theme] .admin-main .user-invite-field select:focus,
+:root[data-theme] .admin-main .admin-organization-modal input:focus,
+:root[data-theme] .admin-main .admin-organization-modal select:focus,
+:root[data-theme] .admin-main .skills-publish-modal textarea:focus {
+  border-color: var(--theme-focus);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-focus) 24%, transparent);
+}
+
+:root[data-theme] .admin-main .admin-tools-card__icon,
+:root[data-theme] .admin-main .skills-lib-card__icon {
+  color: var(--theme-accent-strong) !important;
+  background: var(--theme-accent-soft) !important;
+  box-shadow: inset 0 0 0 1px var(--theme-line-strong);
+}
+
+:root[data-theme] .admin-main .admin-tools-card__tag,
+:root[data-theme] .admin-main .skills-lib-card__tag,
+:root[data-theme] .admin-main .skills-pill,
+:root[data-theme] .admin-main .skills-compose__status-chips span {
+  color: var(--theme-text-secondary) !important;
+  background: var(--theme-surface-muted) !important;
+  border-color: var(--theme-line) !important;
+}
+
+:root[data-theme] .admin-main .skills-catalog__kicker,
+:root[data-theme] .admin-main .skills-compose__crumb,
+:root[data-theme] .admin-main .skills-help-tip__icon,
+:root[data-theme] .admin-main .skills-row-menu__item:hover,
+:root[data-theme] .admin-main .skills-row-menu__item:focus-visible {
+  color: var(--theme-accent-strong);
+}
+
+:root[data-theme] .admin-main .skills-catalog__secondary,
+:root[data-theme] .admin-main a.skills-catalog__primary,
+:root[data-theme] .admin-main .skills-action-btn,
+:root[data-theme] .admin-main .skills-row-menu__trigger,
+:root[data-theme] .admin-main .skills-row-menu__item,
+:root[data-theme] .admin-main .skills-version-panel,
+:root[data-theme] .admin-main .skills-panel,
+:root[data-theme] .admin-main .skills-template-card,
+:root[data-theme] .admin-main .skills-item-card,
+:root[data-theme] .admin-main .skills-authoring-preview,
+:root[data-theme] .admin-main .skills-preview-box,
+:root[data-theme] .admin-main .skills-authoring-readonly-body,
+:root[data-theme] .admin-main .skills-authoring-input-wrap {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+  box-shadow: none;
+}
+
+:root[data-theme] .admin-main .skills-data-table th,
+:root[data-theme] .admin-main .skills-data-table td,
+:root[data-theme] .admin-main .skills-version-panel__head,
+:root[data-theme] .admin-main .skills-panel__head,
+:root[data-theme] .admin-main .skills-authoring-readonly-head,
+:root[data-theme] .admin-main .skills-template-strip,
+:root[data-theme] .admin-main .skills-authoring-strip {
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface-muted);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .skills-panel input:not([type="checkbox"]),
+:root[data-theme] .admin-main .skills-panel textarea,
+:root[data-theme] .admin-main .skills-panel select,
+:root[data-theme] .admin-main .skills-authoring-main-input,
+:root[data-theme] .admin-main .skills-authoring-toolbar__model-select {
+  color: var(--theme-text);
+  caret-color: var(--theme-accent);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .ontology-page,
+:root[data-theme] .admin-main .ontology-workspace,
+:root[data-theme] .admin-main .ontology-catalog,
+:root[data-theme] .admin-main .ontology-inspector,
+:root[data-theme] .admin-main .ontology-canvas,
+:root[data-theme] .admin-main .ontology-list-section,
+:root[data-theme] .admin-main .ontology-package-section,
+:root[data-theme] .admin-main .ontology-list-assurance,
+:root[data-theme] .admin-main .ontology-list-table-wrap,
+:root[data-theme] .admin-main .ontology-version-detail,
+:root[data-theme] .admin-main .ontology-code-preview {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+  box-shadow: none;
+}
+
+:root[data-theme] .admin-main .ontology-tabs,
+:root[data-theme] .admin-main .ontology-catalog__group,
+:root[data-theme] .admin-main .ontology-list-table th,
+:root[data-theme] .admin-main .ontology-list-table td,
+:root[data-theme] .admin-main .ontology-issue-list__head,
+:root[data-theme] .admin-main .ontology-package-row,
+:root[data-theme] .admin-main .ontology-code-preview > div {
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface-muted);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .ontology-text-action,
+:root[data-theme] .admin-main .ontology-icon-action,
+:root[data-theme] .admin-main .ontology-tab[aria-selected="true"] {
+  color: var(--theme-accent-strong);
+}
+
+:root[data-theme] .admin-main .admin-ops-panel,
+:root[data-theme] .admin-main .cici-monitor__topbar,
+:root[data-theme] .admin-main .cici-monitor-panel,
+:root[data-theme] .admin-main .embed-apps-list,
+:root[data-theme] .admin-main .embed-apps-detail,
+:root[data-theme] .admin-main .admin-billing-summary {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+  box-shadow: none;
+}
+
+:root[data-theme] .admin-main .admin-ops-panel__head,
+:root[data-theme] .admin-main .admin-ops-audit-toolbar,
+:root[data-theme] .admin-main .admin-ops-metrics div,
+:root[data-theme] .admin-main .cici-monitor-regression-form,
+:root[data-theme] .admin-main .embed-apps-list__head,
+:root[data-theme] .admin-main .embed-apps-detail__head,
+:root[data-theme] .admin-main .embed-apps-table th,
+:root[data-theme] .admin-main .embed-apps-log-table th,
+:root[data-theme] .admin-main .embed-apps-facts,
+:root[data-theme] .admin-main .embed-apps-facts div,
+:root[data-theme] .admin-main .embed-apps-scopes,
+:root[data-theme] .admin-main .embed-apps-endpoints,
+:root[data-theme] .admin-main .admin-billing-summary__primary {
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface-muted);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .admin-ops-audit-json,
+:root[data-theme] .admin-main .embed-apps-docs pre {
+  color: var(--theme-text);
+  background: var(--theme-surface-strong);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .admin-ops-tab,
+:root[data-theme] .admin-main .cici-monitor-tab,
+:root[data-theme] .admin-main .embed-apps-tabs button,
+:root[data-theme] .admin-main .embed-apps-tabs button:hover,
+:root[data-theme] .admin-main .embed-apps-tabs button:focus-visible,
+:root[data-theme] .admin-main .embed-apps-tabs button.is-active {
+  color: var(--theme-text-secondary);
+}
+
+:root[data-theme] .admin-main .admin-ops-tab.is-active,
+:root[data-theme] .admin-main .admin-ops-tab:hover,
+:root[data-theme] .admin-main .cici-monitor-tab.is-active,
+:root[data-theme] .admin-main .cici-monitor-tab:hover,
+:root[data-theme] .admin-main .embed-apps-tabs button.is-active,
+:root[data-theme] .admin-main .embed-apps-tabs button:hover,
+:root[data-theme] .admin-main .embed-apps-tabs button:focus-visible,
+:root[data-theme] .admin-main .embed-apps-header__kicker,
+:root[data-theme] .admin-main .embed-apps-table tr.is-selected .embed-apps-table__name {
+  color: var(--theme-accent-strong);
+}
+
+:root[data-theme] .admin-main .admin-ops-tab.is-active::after,
+:root[data-theme] .admin-main .cici-monitor-tab.is-active::after,
+:root[data-theme] .admin-main .embed-apps-tabs button.is-active::after {
+  background: var(--theme-line-strong);
+}
+
+:root[data-theme] .admin-main .admin-ops-audit-filter,
+:root[data-theme] .admin-main .cici-monitor-regression-form input,
+:root[data-theme] .admin-main .cici-monitor-regression-form select,
+:root[data-theme] .admin-main .embed-apps-form input,
+:root[data-theme] .admin-main .embed-apps-form textarea,
+:root[data-theme] .admin-main .embed-apps-form select,
+:root[data-theme] .admin-main .embed-apps-preview iframe {
+  color: var(--theme-text);
+  caret-color: var(--theme-accent);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .embed-apps-secondary,
+:root[data-theme] .admin-main .admin-organization-modal__secondary,
+:root[data-theme] .admin-main .user-invite-modal__secondary {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .admin-main .embed-apps-primary,
+:root[data-theme] .admin-main .admin-organization-modal__primary,
+:root[data-theme] .admin-main .user-invite-modal__primary {
+  color: #ffffff;
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+
+:root[data-theme="galaxy"] .admin-main .embed-apps-primary,
+:root[data-theme="galaxy"] .admin-main .admin-organization-modal__primary,
+:root[data-theme="galaxy"] .admin-main .user-invite-modal__primary {
+  color: #101521;
+}
