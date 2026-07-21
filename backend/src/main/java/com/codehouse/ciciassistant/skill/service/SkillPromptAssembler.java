@@ -52,6 +52,9 @@ public class SkillPromptAssembler {
         if (context.outputContract() != null && !context.outputContract().isBlank()) {
             lines.add("Preferred output contract: " + context.outputContract());
         }
+        lines.add("Execution truth rule: a structured output is never evidence that an external or scheduled action happened. "
+                + "For an explicit request to create a scheduled task, call workflow_schedule_create only after the user supplies a clear cadence; "
+                + "if cadence is missing, ask one concise clarification question instead of returning a configuration JSON or claiming success.");
         appendBuiltinRuntimeConfig(lines, runtimeConfig);
         appendBuiltinReferenceDocs(lines, builtinDocs);
         return String.join("\n", lines);

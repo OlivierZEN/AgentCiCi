@@ -1,6 +1,7 @@
 package com.codehouse.ciciassistant.ai.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
+import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
@@ -69,5 +71,33 @@ class ToolOrchestratorServiceTest {
         );
         assertThat(result).isEqualTo("{\"status\":\"SUCCESS\"}");
         verify(crmAnalysis).dispatch("org-1", "user-1", "{\"topN\":3}");
+    }
+
+    @Test
+    void exposesScheduleCreationForCurrentAgentAndBypassesGenericToolPolicy() {
+        McpServerService mcp = mock(McpServerService.class);
+        PlatformGovernanceService governance = mock(PlatformGovernanceService.class);
+        SkillApiToolService skillApi = mock(SkillApiToolService.class);
+        AssistantScheduleToolService schedules = mock(AssistantScheduleToolService.class);
+        when(mcp.getAllToolsForOrg("org-1")).thenReturn(List.of());
+        when(skillApi.getRuntimeToolDefinitions(List.of())).thenReturn(List.of());
+        when(schedules.toolDefinition()).thenReturn(Map.of("type", "function", "function", Map.of(
+                "name", AssistantScheduleToolService.TOOL_NAME)));
+        when(schedules.dispatch(anyString(), anyString(), anyString(), anyString()))
+                .thenReturn("{\"status\":\"CREATED\"}");
+
+        ToolOrchestratorService orchestrator = new ToolOrchestratorService(
+                mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
+                mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
+                governance, skillApi, new ObjectMapper().findAndRegisterModules());
+        orchestrator.setAssistantScheduleToolService(schedules);
+
+        assertThat(orchestrator.getToolDefinitions("org-1", List.of("tavily_search"), List.of()))
+                .anySatisfy(item -> assertThat(((Map<?, ?>) item.get("function")).get("name"))
+                        .isEqualTo(AssistantScheduleToolService.TOOL_NAME));
+        assertThat(orchestrator.executeTool("org-1", "user-1", AssistantScheduleToolService.TOOL_NAME,
+                "{\"cadence\":\"每天 09:00\",\"task\":\"搜索美国 K12\"}", List.of(), List.of(), "agent-1"))
+                .isEqualTo("{\"status\":\"CREATED\"}");
+        verify(schedules).dispatch("org-1", "user-1", "agent-1", "{\"cadence\":\"每天 09:00\",\"task\":\"搜索美国 K12\"}");
     }
 }

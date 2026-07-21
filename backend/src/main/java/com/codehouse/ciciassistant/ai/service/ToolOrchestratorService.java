@@ -10,6 +10,7 @@ import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
+import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -44,6 +46,7 @@ public class ToolOrchestratorService {
     private final PlatformGovernanceService platformGovernanceService;
     private final SkillApiToolService skillApiToolService;
     private final ObjectMapper objectMapper;
+    private AssistantScheduleToolService assistantScheduleToolService;
 
     public ToolOrchestratorService(McpServerService mcpServerService,
                                    CloudccOpenApiService cloudccOpenApiService,
@@ -63,6 +66,11 @@ public class ToolOrchestratorService {
         this.platformGovernanceService = platformGovernanceService;
         this.skillApiToolService = skillApiToolService;
         this.objectMapper = objectMapper;
+    }
+
+    @Autowired(required = false)
+    void setAssistantScheduleToolService(AssistantScheduleToolService assistantScheduleToolService) {
+        this.assistantScheduleToolService = assistantScheduleToolService;
     }
 
     /**
@@ -108,6 +116,9 @@ public class ToolOrchestratorService {
         // Memory built-in tools (always available, no skill restriction)
         result.add(buildMemoryRememberTool());
         result.add(buildMemoryForgetTool());
+        if (assistantScheduleToolService != null) {
+            result.add(assistantScheduleToolService.toolDefinition());
+        }
 
         // Email built-in tools (POP3 + SMTP)
         for (String toolName : EmailToolService.ALL_TOOL_NAMES) {
@@ -200,11 +211,11 @@ public class ToolOrchestratorService {
      * Execute a tool call. Routes to native tools first, then falls back to MCP servers.
      */
     public String executeTool(String orgId, String userId, String toolName, String argumentsJson) {
-        return executeTool(orgId, userId, toolName, argumentsJson, null, null);
+        return executeTool(orgId, userId, toolName, argumentsJson, null, null, null);
     }
 
     public String executeTool(String orgId, String userId, String toolName, String argumentsJson, List<String> allowedToolNames) {
-        return executeTool(orgId, userId, toolName, argumentsJson, allowedToolNames, null);
+        return executeTool(orgId, userId, toolName, argumentsJson, allowedToolNames, null, null);
     }
 
     /**
@@ -212,6 +223,11 @@ public class ToolOrchestratorService {
      */
     public String executeTool(String orgId, String userId, String toolName, String argumentsJson,
                               List<String> allowedToolNames, List<String> agentDirectToolNames) {
+        return executeTool(orgId, userId, toolName, argumentsJson, allowedToolNames, agentDirectToolNames, null);
+    }
+
+    public String executeTool(String orgId, String userId, String toolName, String argumentsJson,
+                              List<String> allowedToolNames, List<String> agentDirectToolNames, String currentAgentId) {
         List<String> normalizedAllowedToolNames = normalizeAllowedToolNames(allowedToolNames);
         String canonicalToolName = ToolNameNormalizer.canonicalize(toolName);
         String invocationType = resolveInvocationType(canonicalToolName, normalizeAllowedToolNames(agentDirectToolNames));
@@ -220,7 +236,8 @@ public class ToolOrchestratorService {
                 && !isAllowed(normalizedAllowedToolNames, canonicalToolName, true)) {
             return "Tool is not allowed for the current skill policy: " + toolName;
         }
-        if (!platformGovernanceService.isRuntimeToolEnabled(orgId, canonicalToolName)) {
+        if (!AssistantScheduleToolService.TOOL_NAME.equals(canonicalToolName)
+                && !platformGovernanceService.isRuntimeToolEnabled(orgId, canonicalToolName)) {
             return "Tool is disabled by platform runtime control: " + canonicalToolName;
         }
 
@@ -229,6 +246,12 @@ public class ToolOrchestratorService {
                 return "Skill API tool is not active for the current skill context: " + canonicalToolName;
             }
             return skillApiToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
+        }
+
+        if (AssistantScheduleToolService.TOOL_NAME.equals(canonicalToolName)) {
+            return assistantScheduleToolService == null
+                    ? "创建定时任务失败：服务未就绪。"
+                    : assistantScheduleToolService.dispatch(orgId, userId, currentAgentId, argumentsJson);
         }
 
         // Native built-in tools
@@ -426,7 +449,8 @@ public class ToolOrchestratorService {
 
     private boolean isAllowed(List<String> allowedToolNames, String toolName, boolean mcpTool) {
         // memory tools are always available regardless of skill policy
-        if (TOOL_MEMORY_REMEMBER.equals(toolName) || TOOL_MEMORY_FORGET.equals(toolName)) {
+        if (TOOL_MEMORY_REMEMBER.equals(toolName) || TOOL_MEMORY_FORGET.equals(toolName)
+                || AssistantScheduleToolService.TOOL_NAME.equals(toolName)) {
             return true;
         }
         if (allowedToolNames == null || allowedToolNames.isEmpty()) {

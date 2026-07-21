@@ -469,24 +469,24 @@ public class AgentWorkflowRuntimeService {
         contextSnapshot.put("publishedVersionId", publishedVersion.getId());
         contextSnapshot.put("publishedVersionNo", publishedVersion.getVersionNo());
         contextSnapshot.put("parsedNodes", parsedNodes);
-        contextSnapshot.put("knowledgeUsed", parsedNodes.contains("knowledge-search"));
-        contextSnapshot.put("toolInvoked", parsedNodes.contains("tool-invoke-best") && !effectiveToolNames.isEmpty());
-        contextSnapshot.put("responsePlanned", parsedNodes.contains("response-generate"));
+        contextSnapshot.put("knowledgeCapabilityDeclared", parsedNodes.contains("knowledge-search"));
+        contextSnapshot.put("toolCapabilityDeclared", parsedNodes.contains("tool-invoke-best") && !effectiveToolNames.isEmpty());
+        contextSnapshot.put("responseGenerationDeclared", parsedNodes.contains("response-generate"));
         contextSnapshot.put("errorNode", "");
         contextSnapshot.put("errorType", "");
         contextSnapshot.put("replayHint", "Replay by walking nodeMetrics in order and inspecting ioSummary.");
-        executionTrace.add("workflow-node:invoke-runAgent:v" + publishedVersion.getVersionNo());
-        executionTrace.add("workflow-node:end:published-executed");
+        executionTrace.add("workflow-node:inspect-runAgent:v" + publishedVersion.getVersionNo());
+        executionTrace.add("workflow-node:end:published-inspected");
         nodeMetrics.add(nodeMetric("invoke-runAgent", 1L, "ok",
-                "invoke runAgent with runtime context", "runAgent invocation completed",
-                payload("entry", "runAgent"), payload("invoked", "true")));
-        nodeMetrics.add(nodeMetric("end", 1L, "ok", "execution completed", "published-executed",
-                payload("status", "published-executed"), payload("result", "success")));
+                "inspect runAgent definition", "workflow definition parsed; no runtime action invoked here",
+                payload("entry", "runAgent"), payload("inspected", "true")));
+        nodeMetrics.add(nodeMetric("end", 1L, "ok", "definition inspection completed", "published-inspected",
+                payload("status", "published-inspected"), payload("result", "inspection")));
         contextSnapshot.put("nodeMetrics", nodeMetrics);
-        return new ExecutionResult("published-executed",
+        return new ExecutionResult("published-inspected",
                 "Published workflow v" + publishedVersion.getVersionNo()
-                        + " executed on route " + route
-                        + " with " + effectiveToolNames.size() + " tools.",
+                        + " definition inspected on route " + route
+                        + "; actual tool and knowledge execution is recorded by the chat runtime.",
                 executionTrace,
                 contextSnapshot);
     }

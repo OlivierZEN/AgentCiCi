@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-21T10:15:00Z
+updated_at: 2026-07-21T10:58:00Z
 updated_by: MANAGER-001
 status: passed
-last_run_at: 2026-07-21T10:15:00Z
+last_run_at: 2026-07-21T10:58:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-217 - 智能体定时任务真实创建与链路事实纠偏（进行中）
+
+- `backend`: `mvn -q -DskipTests compile` 通过。
+- `backend`: `mvn -q -Dtest=ToolOrchestratorServiceTest,ChatOrchestratorServiceModelIdentityTest,AgentRunTraceServiceTest,AgentWorkflowRuntimeSkillGovernanceTest test` 通过，覆盖当前 Agent 上下文的定时任务工具暴露/分发、缺少周期时不触发模型或工具、原 CRM 调用链兼容、Trace 节点和 Skill 治理。
+- `backend-full-diagnostic`: `mvn -q test` 未通过；共享本地测试库的 Flyway V81 checksum 与仓库不一致（数据库 `2112500543`，本地 `379982424`），导致 Spring 集成上下文无法启动。未执行 repair，聚焦回归不受影响。
+- `static`: `git diff --check` 通过。
+- 尚未进行生产发布或生产数据写入。
 
 ## TASK-215 链路追踪全文查看与复制（2026-07-21）
 

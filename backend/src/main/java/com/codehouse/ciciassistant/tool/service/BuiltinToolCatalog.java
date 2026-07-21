@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.cloudcc.CloudccOpenApiService;
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisToolService;
 import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
+import com.codehouse.ciciassistant.userworkflow.service.AssistantScheduleToolService;
 import java.util.List;
 
 /**
@@ -34,6 +35,8 @@ public final class BuiltinToolCatalog {
                     "以当前用户身份发送新邮件，二次确认开关由账号配置决定。", "高风险", "email"),
             new ToolCatalogItem(EmailToolService.TOOL_REPLY, "邮件回复",
                     "对指定 messageId 回复一封邮件。", "高风险", "email"),
+            new ToolCatalogItem(AssistantScheduleToolService.TOOL_NAME, "创建个人定时任务",
+                    "为当前用户和当前智能体创建可执行的个人工作流定时任务，必须提供明确周期。", "中风险", "workflow"),
             new ToolCatalogItem(TavilyToolService.TOOL_SEARCH, "Tavily 网页搜索",
                     "调用 Tavily API 做面向 LLM 的网页搜索，返回命中 URL、摘要与相关度。", "低风险", "web"),
             new ToolCatalogItem(TavilyToolService.TOOL_EXTRACT, "Tavily 正文抽取",

@@ -21,12 +21,16 @@ spec_path: docs/specs/FEAT-122-runtime-execution-trace-correction.md
 ## Current State
 
 - 生产记录 `df5e12f4` 已确认未创建 trigger，未调用工具；当前只返回定时获客参数 JSON。
-- 已确认个人 workflow 已有真实 trigger 与 scheduler，但聊天运行时没有创建入口；当前 workflow runtime 仅解析代码并伪报执行事实。
+- 已实现当前用户/当前 Agent 的 `workflow_schedule_create` 内置工具：它追加个人 workflow routine、发布版本并物化真实 trigger；周期无效或缺失时拒绝写入。
+- 已让个人 workflow 在已授权时实际执行 Tavily 搜索；Trace 的工作流阶段改为“工作流定义检查”，并把 always-on Skill 计入已应用技能。
+- 已在阻塞与流式会话入口加入定时任务周期追问保护：未提供周期不调用模型或写工具；提供明确周期时才向模型暴露创建工具。
 
 ## Next Action
 
-- 完成授权文档推送后实现工具、调度执行、Trace 事实纠偏和管理端文案。
+- 完成桌面端验证与生产发布验收。
 
 ## Verification
 
-- 待实施。
+- `mvn -q -DskipTests compile` -> passed.
+- `mvn -q -Dtest=ToolOrchestratorServiceTest,ChatOrchestratorServiceModelIdentityTest,AgentRunTraceServiceTest,AgentWorkflowRuntimeSkillGovernanceTest test` -> passed.
+- `mvn -q test` -> blocked by existing shared test database Flyway V81 checksum mismatch; no repair was applied.

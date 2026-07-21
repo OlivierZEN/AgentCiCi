@@ -502,7 +502,7 @@ public class AgentRunTraceService {
             nodes.add(stageNode(workflowStage, runtimeExecutionDetail(execution, input.workflowElapsedMs())));
         } else if (execution != null) {
             String status = AgentWorkflowExecutionLogService.normalizeWorkflowStatus(execution.executionStatus());
-            nodes.add(node("WORKFLOW", "技能运行治理", AgentWorkflowExecutionLogService.STATUS_SUCCESS.equals(status) ? "SUCCESS" : "FAILED",
+            nodes.add(node("WORKFLOW", "工作流定义检查", AgentWorkflowExecutionLogService.STATUS_SUCCESS.equals(status) ? "SUCCESS" : "FAILED",
                     startedAt, endedAt, (long) input.workflowElapsedMs(),
                     clip(execution.executionOutput(), 260),
                     runtimeExecutionDetail(execution, input.workflowElapsedMs())));
