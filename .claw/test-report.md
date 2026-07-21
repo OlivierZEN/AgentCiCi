@@ -20,13 +20,15 @@ last_run_status: passed
 - 生产备份与部署：备份 `/opt/cici/backups/20260721-190903-before-2.8.1-task214-onekeytoken` 的环境文件、PostgreSQL、知识库和 Qdrant 归档均非空；只重建 backend/frontend。数据库、Redis、RabbitMQ、Qdrant 容器 ID 保持不变。
 - 生产验收：`/actuator/health` 返回 `UP`，`/system/version` 返回 `2.8.1 / 9bc8510cbede`，Nginx 配置检查通过，公网 HTTP 根页面与 `/platform/models` 返回 200，`POST /api/platform/models/providers/onekeytoken/check` 在未认证状态返回 401，证明新受保护路由已上线。生产 HTTPS 443 目前没有由现行 Compose/Nginx 配置监听，外部 HTTPS 探测重置；此为现有部署配置缺口，未将其作为 TASK-214 功能验收通过项。
 
-## TASK-217 - 智能体定时任务真实创建与链路事实纠偏（进行中）
+## TASK-217 - 智能体定时任务真实创建与链路事实纠偏（已发布）
 
 - `backend`: `mvn -q -DskipTests compile` 通过。
 - `backend`: `mvn -q -Dtest=ToolOrchestratorServiceTest,ChatOrchestratorServiceModelIdentityTest,AgentRunTraceServiceTest,AgentWorkflowRuntimeSkillGovernanceTest test` 通过，覆盖当前 Agent 上下文的定时任务工具暴露/分发、缺少周期时不触发模型或工具、原 CRM 调用链兼容、Trace 节点和 Skill 治理。
 - `backend-full-diagnostic`: `mvn -q test` 未通过；共享本地测试库的 Flyway V81 checksum 与仓库不一致（数据库 `2112500543`，本地 `379982424`），导致 Spring 集成上下文无法启动。未执行 repair，聚焦回归不受影响。
 - `static`: `git diff --check` 通过。
-- 尚未进行生产发布或生产数据写入。
+- `release`: `./scripts/release-acr.sh --dry-run` 通过；`2.7.12 / b20261d8b89b` 的 ACR backend/frontend 镜像可 inspect，Git annotated tag 已推送。backend index/amd64 为 `sha256:b2d1e4a053a6edadd6cdcefd481615a89258cd1821e02f3745f74031dd175b23` / `sha256:9b819a1b9949dd98d3db700bd36bacdeeef655be200f42288edb662ae089496b`，frontend 为 `sha256:a3a6ff9734bb3f7da648a2003159289d26b704f6927fd48b06f665b7e205b616` / `sha256:52a0228d143371ac9e6da0570e047d387ac227656af12bdcfbe8cbf644b5ea8b`。
+- `production`: 备份 `/opt/cici/backups/20260721-190058-before-2.7.12-task217-runtime-trace` 的 env/PostgreSQL/KB/Qdrant 分别为 1,648 / 3,263,430 / 511,201 / 1,584,517 bytes，均非空。仅重建 backend/frontend，四个状态服务容器 ID 不变；六服务健康，health `UP`，版本 `2.7.12 / b20261d8b89b`，Nginx 有效，`x` HTTPS 200、显式生产-IP onechat HTTPS 200，发布窗口 backend/frontend error 和 Nginx 5xx 均为 0。
+- `business-path`: 当前无组织用户授权登录态，未代用户创建测试任务；首次真实用户创建应核验非空 trigger 和 nextFireAt，并在下一次调度后核验 Tavily execution。
 
 ## TASK-214 OneKeyToken 实时凭据检测本地验收（2026-07-21）
 
