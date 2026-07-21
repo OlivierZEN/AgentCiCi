@@ -21,6 +21,7 @@ export type ProductThemeDefinition = {
 
 export const DEFAULT_PRODUCT_THEME: ProductThemeCode = "gilded";
 export const PRODUCT_THEME_STORAGE_KEY = "cici-product-theme";
+export const PLATFORM_THEME_STORAGE_KEY = "cici-platform-theme";
 export const PRODUCT_THEME_EVENT = "cici-product-theme-changed";
 
 export const PRODUCT_THEMES: readonly ProductThemeDefinition[] = [
@@ -82,31 +83,34 @@ export function normalizeProductTheme(value: unknown): ProductThemeCode {
     : DEFAULT_PRODUCT_THEME;
 }
 
-export function readStoredProductTheme(): ProductThemeCode {
+export function readStoredProductTheme(storageKey = PRODUCT_THEME_STORAGE_KEY): ProductThemeCode {
   try {
-    return normalizeProductTheme(window.localStorage.getItem(PRODUCT_THEME_STORAGE_KEY));
+    return normalizeProductTheme(window.localStorage.getItem(storageKey));
   } catch {
     return DEFAULT_PRODUCT_THEME;
   }
 }
 
-export function applyProductTheme(value: unknown, options: { persist?: boolean; emit?: boolean } = {}): ProductThemeCode {
+export function applyProductTheme(
+  value: unknown,
+  options: { persist?: boolean; emit?: boolean; storageKey?: string } = {},
+): ProductThemeCode {
   const themeCode = normalizeProductTheme(value);
   document.documentElement.dataset.theme = themeCode;
   document.documentElement.style.colorScheme = themeCode === "galaxy" ? "dark" : "light";
   if (options.persist !== false) {
     try {
-      window.localStorage.setItem(PRODUCT_THEME_STORAGE_KEY, themeCode);
+      window.localStorage.setItem(options.storageKey ?? PRODUCT_THEME_STORAGE_KEY, themeCode);
     } catch {
       // Theme application remains available when storage is restricted.
     }
   }
   if (options.emit !== false) {
-    window.dispatchEvent(new CustomEvent(PRODUCT_THEME_EVENT, { detail: { themeCode } }));
+    window.dispatchEvent(new CustomEvent(PRODUCT_THEME_EVENT, { detail: { themeCode, storageKey: options.storageKey ?? PRODUCT_THEME_STORAGE_KEY } }));
   }
   return themeCode;
 }
 
-export function initializeProductTheme(): ProductThemeCode {
-  return applyProductTheme(readStoredProductTheme(), { persist: false, emit: false });
+export function initializeProductTheme(storageKey = PRODUCT_THEME_STORAGE_KEY): ProductThemeCode {
+  return applyProductTheme(readStoredProductTheme(storageKey), { persist: false, emit: false, storageKey });
 }

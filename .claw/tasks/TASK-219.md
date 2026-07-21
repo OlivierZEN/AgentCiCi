@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-219
-status: ready
-updated_at: 2026-07-21T21:10:00+08:00
+status: in_progress
+updated_at: 2026-07-22T00:18:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -25,6 +25,12 @@ spec_path: docs/specs/FEAT-124-platform-operations-information-architecture.md
 
 ## Next Steps
 
-1. 完成任务分配提交并在专用分支通过 task-scoped 身份门禁。
-2. 先落地 Shell、导航、总览、主题隔离和不与 TASK-218 重叠的页面拆分。
-3. 在 TASK-218 合并后再处理模型子路由，随后完成全量桌面视觉和交互验证。
+1. 已完成 Shell、导航、总览、主题隔离及技能、工具、套餐、评测的非模型路由拆分。
+2. 在 TASK-218 合并后处理模型子路由，保持不修改其独占 `PlatformModelsPage.tsx`。
+3. 取得平台账号测试会话后补充受保护运营页的桌面截图、抽屉与八主题持久化验收。
+
+## 本轮验证
+
+- `frontend` 聚焦 Vitest：`theme`、`PlatformBillingPage`、`PlatformSkillsPage` 共 17 项通过。
+- `frontend` production build 通过；保留既有 Vite 大 chunk 提示。
+- 本地应用内浏览器可访问平台登录页；当前无可用的平台账号会话，因此没有将受保护页面视觉交互伪造为已验收。

@@ -41,6 +41,7 @@ updated_by: MANAGER-001
 
 能力治理
 ├── 技能目录                         /platform/skills
+├── 技能设置                         /platform/skills/:skillId
 ├── 策略与版本                       /platform/skills/policies
 ├── 依赖与影响                       /platform/skills/dependencies
 ├── 模型厂商                         /platform/models/providers
@@ -54,6 +55,7 @@ updated_by: MANAGER-001
 ├── 套餐目录                         /platform/billing
 ├── 套餐版本编辑                     /platform/billing/editions/:editionCode
 ├── 加购包与 Credits                  /platform/billing/packages
+├── 加购包设置                       /platform/billing/packages/:packageCode
 ├── 租户目录                         /platform/tenants
 ├── 租户生命周期                     /platform/tenants/:orgId
 └── 注册与演示线索                   /platform/website-leads
@@ -95,10 +97,10 @@ updated_by: MANAGER-001
 
 | 现有能力 | 新工作区 | 保全要求 |
 | --- | --- | --- |
-| 标准技能、模板草稿、发布/回滚、核心策略、版本历史、依赖图 | 技能目录、策略与版本、依赖与影响 | 保留所有请求、版本判断和影响数据，只拆页面职责。 |
+| 标准技能、模板草稿、发布/回滚、核心策略、版本历史、依赖图 | 技能目录、技能设置、策略与版本、依赖与影响 | 保留所有请求、版本判断和影响数据，只拆页面职责。 |
 | 模型厂商、凭据检测、模型目录、场景路由 | 模型厂商、运行模型目录、场景模型路由 | 保留保存、检测、拉取、启停与清除路由操作。 |
 | 平台集成、工具配置与依赖 | 平台集成、工具目录、工具治理 | 保留既有配置/保存流程。 |
-| SaaS/私有化版本、容量/模块/服务包、Credits | 套餐目录、套餐版本编辑、加购包与 Credits | 保留部署筛选、版本保存、包保存和审计原因。 |
+| SaaS/私有化版本、容量/模块/服务包、Credits | 套餐目录、套餐版本编辑、加购包与 Credits、加购包设置 | 保留部署筛选、版本保存、包保存和审计原因。 |
 | 租户开通、保留、导出、预演、销毁 | 租户目录、租户生命周期 | 保留独立高风险确认与所有历史记录。 |
 | 评测资产、用例、发布/归档、运行洞察 | 质量总览、标准评测资产、运行洞察 | 保留不可变版本、隐藏用例与发布门禁。 |
 | 网站预约线索、平台审计 | 注册与演示线索、平台审计 | 路径、筛选、状态更新和脱敏展示不变。 |
@@ -109,6 +111,12 @@ updated_by: MANAGER-001
 - 不复制业务逻辑，优先从现有复合页面抽取目录、详情、编辑视图以避免 API 行为漂移。
 - 跨页面规则同步维护 `DESIGN.json`、`DESIGN.md`。
 - TASK-218 当前独占 `PlatformModelsPage.tsx` 的厂商目录能力修复；本任务在其合并前不得编辑该文件，模型子路由拆分在该依赖解除后进行。
+
+## 本轮落地状态（2026-07-22）
+
+- 已落地：二级领域导航、运营总览的待办队列与低风险详情抽屉、技能目录/设置/策略/依赖路由、工具目录/治理路由、套餐目录/版本/加购包/包设置路由、评测总览/资产/运行洞察路由，以及平台独立主题偏好页。
+- 主题隔离：平台读取和写入 `cici-platform-theme`；用户/Admin 仍使用既有 `cici-product-theme`。平台服务端继续通过 `/auth/platform/me/theme` 保存八主题偏好。
+- 受限项：模型厂商、模型目录、场景路由的内容拆分仍等待 TASK-218 合并；当前二级路由保持兼容入口，不改变该任务独占的 `PlatformModelsPage.tsx` 逻辑。
 
 ## 验收标准
 

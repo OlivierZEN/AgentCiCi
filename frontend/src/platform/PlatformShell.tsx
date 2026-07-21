@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
-import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronRight, Palette } from "lucide-react";
+import { NavLink, Navigate, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { authFetch, clearAuthPayload, readAuthPayload, writeAuthPayload } from "../auth/authStorage";
 import { useAuthStorageSync } from "../auth/useAuthStorageSync";
 import { LS_PLATFORM_TOKEN } from "../constants";
 import AppVersionBadge from "../shared/AppVersionBadge";
-import ThemePreferencePanel from "../theme/ThemePreferencePanel";
-import { applyProductTheme } from "../theme/theme";
+import { applyProductTheme, PLATFORM_THEME_STORAGE_KEY, readStoredProductTheme } from "../theme/theme";
 
 type AuthPayload = {
   token: string;
@@ -25,8 +25,57 @@ function accountLabel(auth: AuthPayload): string {
 }
 
 export default function PlatformShell() {
-  const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
+  const [auth, setAuth] = useState<AuthPayload | null>(() => {
+    const storedAuth = readAuth();
+    applyProductTheme(storedAuth?.themeCode ?? readStoredProductTheme(PLATFORM_THEME_STORAGE_KEY), {
+      storageKey: PLATFORM_THEME_STORAGE_KEY,
+    });
+    return storedAuth;
+  });
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
+    capability: true,
+    operations: true,
+    quality: true,
+  });
   const nav = useNavigate();
+  const location = useLocation();
+
+  const navigationGroups = useMemo(() => [
+    {
+      id: "capability",
+      label: "能力治理",
+      items: [
+        { to: "/platform/skills", label: "技能目录", end: true },
+        { to: "/platform/skills/policies", label: "策略与版本" },
+        { to: "/platform/skills/dependencies", label: "依赖与影响" },
+        { to: "/platform/models/providers", label: "模型厂商" },
+        { to: "/platform/models/catalog", label: "运行模型目录" },
+        { to: "/platform/models/routes", label: "场景模型路由" },
+        { to: "/platform/integrations", label: "平台集成" },
+        { to: "/platform/tools", label: "工具目录" },
+      ],
+    },
+    {
+      id: "operations",
+      label: "运营管理",
+      items: [
+        { to: "/platform/billing", label: "套餐目录", end: true },
+        { to: "/platform/billing/packages", label: "加购包与 Credits" },
+        { to: "/platform/tenants", label: "租户目录" },
+        { to: "/platform/website-leads", label: "注册与演示线索" },
+      ],
+    },
+    {
+      id: "quality",
+      label: "风险与质量",
+      items: [
+        { to: "/platform/evaluation", label: "质量总览", end: true },
+        { to: "/platform/evaluation/suites", label: "标准评测资产" },
+        { to: "/platform/evaluation/runs", label: "运行洞察" },
+        { to: "/platform/audit", label: "平台审计" },
+      ],
+    },
+  ], []);
 
   useAuthStorageSync<AuthPayload>(LS_PLATFORM_TOKEN, (payload) => {
     setAuth(payload);
@@ -44,7 +93,7 @@ export default function PlatformShell() {
         const body = await response.json();
         if (!cancelled && response.ok && body.success) {
           const profile = body.data as AuthPayload;
-          applyProductTheme(profile.themeCode);
+          applyProductTheme(profile.themeCode, { storageKey: PLATFORM_THEME_STORAGE_KEY });
           const next = { ...auth, ...profile, token: auth.token };
           writeAuthPayload(LS_PLATFORM_TOKEN, next);
           setAuth(next);
@@ -72,53 +121,42 @@ export default function PlatformShell() {
             <span className="platform-nav__meta-label">平台账号</span>
             <strong className="platform-nav__org">{accountLabel(auth)}</strong>
           </div>
-          <details className="platform-theme-settings">
-            <summary>界面主题</summary>
-            <ThemePreferencePanel
-              token={auth.token}
-              endpoint="/auth/platform/me/theme"
-              initialTheme={auth.themeCode}
-              compact
-              onSaved={(themeCode) => {
-                const next = { ...auth, themeCode };
-                writeAuthPayload(LS_PLATFORM_TOKEN, next);
-                setAuth(next);
-              }}
-            />
-          </details>
         </div>
         <nav className="admin-nav-links platform-nav__links">
           <NavLink to="/platform" end className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>平台概览</span>
+            <span>运营总览</span>
           </NavLink>
-          <NavLink to="/platform/skills" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>标准技能</span>
-          </NavLink>
-          <NavLink to="/platform/models" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>模型配置</span>
-          </NavLink>
-          <NavLink to="/platform/integrations" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>集成配置</span>
-          </NavLink>
-          <NavLink to="/platform/tools" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>内置工具</span>
-          </NavLink>
-          <NavLink to="/platform/evaluation" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>智能体质量</span>
-          </NavLink>
-          <NavLink to="/platform/billing" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>计费配置</span>
-          </NavLink>
-          <NavLink to="/platform/tenants" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>租户生命周期</span>
-          </NavLink>
-          <NavLink to="/platform/website-leads" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>网站注册</span>
-          </NavLink>
-          <NavLink to="/platform/audit" className={({ isActive }) => (isActive ? "active" : "")}>
-            <span>平台审计</span>
-          </NavLink>
+          {navigationGroups.map((group) => {
+            const groupActive = group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
+            const expanded = expandedGroups[group.id];
+            return (
+              <section key={group.id} className={`platform-nav__group${groupActive ? " is-active" : ""}`}>
+                <button
+                  type="button"
+                  className="platform-nav__group-toggle"
+                  aria-expanded={expanded}
+                  onClick={() => setExpandedGroups((current) => ({ ...current, [group.id]: !current[group.id] }))}
+                >
+                  <span>{group.label}</span>
+                  {expanded ? <ChevronDown size={15} aria-hidden /> : <ChevronRight size={15} aria-hidden />}
+                </button>
+                {expanded ? (
+                  <div className="platform-nav__subnav">
+                    {group.items.map((item) => (
+                      <NavLink key={item.to} to={item.to} end={item.end} className={({ isActive }) => (isActive ? "active" : "")}>
+                        <span>{item.label}</span>
+                      </NavLink>
+                    ))}
+                  </div>
+                ) : null}
+              </section>
+            );
+          })}
         </nav>
+        <NavLink to="/platform/preferences/appearance" className={({ isActive }) => `platform-nav__preference${isActive ? " active" : ""}`}>
+          <Palette size={15} aria-hidden />
+          <span>平台偏好</span>
+        </NavLink>
         <div className="row admin-nav__logout-row platform-nav__logout-row">
           <button
             type="button"

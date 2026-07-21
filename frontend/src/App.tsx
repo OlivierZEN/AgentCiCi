@@ -31,6 +31,7 @@ import PlatformGuard from "./platform/PlatformGuard";
 import PlatformLogin from "./platform/PlatformLogin";
 import PlatformShell from "./platform/PlatformShell";
 import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
+import PlatformAppearancePage from "./platform/pages/PlatformAppearancePage";
 import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoServiceDemoRequestsPage";
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
 import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
@@ -92,12 +93,25 @@ const router = createBrowserRouter(createRoutesFromElements(
         <Route path="/platform" element={<PlatformGuard />}>
           <Route element={<PlatformShell />}>
             <Route index element={<PlatformHomePage />} />
+            <Route path="preferences/appearance" element={<PlatformAppearancePage />} />
             <Route path="models" element={<PlatformModelsPage />} />
+            <Route path="models/providers" element={<PlatformModelsPage />} />
+            <Route path="models/catalog" element={<PlatformModelsPage />} />
+            <Route path="models/routes" element={<PlatformModelsPage />} />
             <Route path="integrations" element={<PlatformIntegrationsPage />} />
             <Route path="billing" element={<PlatformBillingPage />} />
+            <Route path="billing/packages" element={<PlatformBillingPage />} />
+            <Route path="billing/packages/:packageCode" element={<PlatformBillingPage />} />
+            <Route path="billing/editions/:editionCode" element={<PlatformBillingPage />} />
             <Route path="skills" element={<PlatformSkillsPage />} />
+            <Route path="skills/policies" element={<PlatformSkillsPage />} />
+            <Route path="skills/dependencies" element={<PlatformSkillsPage />} />
+            <Route path="skills/:skillId" element={<PlatformSkillsPage />} />
             <Route path="tools" element={<PlatformToolsPage />} />
+            <Route path="tools/:toolName" element={<PlatformToolsPage />} />
             <Route path="evaluation" element={<PlatformEvaluationPage />} />
+            <Route path="evaluation/suites" element={<PlatformEvaluationPage />} />
+            <Route path="evaluation/runs" element={<PlatformEvaluationPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
             <Route path="tenants/:orgId" element={<PlatformTenantDetailPage />} />
             <Route path="website-leads" element={<PlatformAutoServiceDemoRequestsPage />} />

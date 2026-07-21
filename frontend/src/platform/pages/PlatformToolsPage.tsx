@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { useNavigate, useParams } from "react-router-dom";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
 type PlatformTool = {
@@ -70,6 +72,9 @@ function categoryLabel(category: string): string {
 
 export default function PlatformToolsPage() {
   const token = readToken();
+  const navigate = useNavigate();
+  const { toolName } = useParams<{ toolName: string }>();
+  const isDetailPage = Boolean(toolName);
   const [tools, setTools] = useState<PlatformTool[]>([]);
   const [selectedToolName, setSelectedToolName] = useState<string>("");
   const [form, setForm] = useState({
@@ -97,7 +102,7 @@ export default function PlatformToolsPage() {
       if (!res.ok || !json.success) throw new Error(json.message || "加载工具目录失败");
       const rows = (json.data ?? []) as PlatformTool[];
       setTools(rows);
-      const nextName = preferredToolName || selectedToolName || rows[0]?.toolName || "";
+      const nextName = preferredToolName || toolName || selectedToolName || rows[0]?.toolName || "";
       setSelectedToolName(nextName);
       const next = rows.find((item) => item.toolName === nextName) ?? null;
       if (next) {
@@ -117,7 +122,7 @@ export default function PlatformToolsPage() {
   useEffect(() => {
     void loadTools();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, toolName]);
 
   useEffect(() => {
     if (!selectedTool) return;
@@ -159,8 +164,9 @@ export default function PlatformToolsPage() {
     <div className="admin-page skills-catalog platform-page platform-tools-page">
       <header className="skills-catalog__header">
         <div className="platform-page-head__main">
+          {isDetailPage ? <button type="button" className="platform-page__back" onClick={() => navigate("/platform/tools")}><ArrowLeft size={15} />返回工具目录</button> : null}
           <h1 className="skills-catalog__title">内置工具治理</h1>
-          <p className="subtle skills-catalog__subtitle">统一管理工具展示名、风险级别、分类、启停状态和依赖关系。</p>
+          <p className="subtle skills-catalog__subtitle">{isDetailPage ? "维护单个工具的风险、分类、启停与技能影响。" : "浏览工具目录；进入单独的治理页面修改配置。"}</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">工具 {tools.length}</span>
@@ -171,7 +177,7 @@ export default function PlatformToolsPage() {
       {error ? <div className="platform-console__banner platform-console__banner--error">{error}</div> : null}
       {message ? <div className="platform-console__banner platform-console__banner--success">{message}</div> : null}
 
-      <div className="platform-console__grid">
+      {!isDetailPage ? (
         <section className="platform-console__panel skills-table-wrap">
           <table className="skills-data-table">
             <thead>
@@ -180,28 +186,26 @@ export default function PlatformToolsPage() {
                 <th>分类</th>
                 <th>风险</th>
                 <th>依赖技能</th>
+                <th aria-label="操作" />
               </tr>
             </thead>
             <tbody>
               {tools.map((tool) => (
-                <tr
-                  key={tool.toolName}
-                  className={`platform-console__select-row${tool.toolName === selectedToolName ? " platform-console__row--active" : ""}`}
-                  onClick={() => setSelectedToolName(tool.toolName)}
-                >
+                <tr key={tool.toolName} className="platform-console__select-row" onClick={() => navigate(`/platform/tools/${encodeURIComponent(tool.toolName)}`)}>
                   <td>
                     <div className="skills-data-table__skill-name">{tool.displayName}</div>
                   </td>
                   <td>{categoryLabel(tool.category)}</td>
                   <td>{riskLabel(tool.riskLevel)}</td>
                   <td>{tool.dependentSkillCodes.length}</td>
+                  <td><button type="button" className="platform-table-link" onClick={(event) => { event.stopPropagation(); navigate(`/platform/tools/${encodeURIComponent(tool.toolName)}`); }}>设置 <ExternalLink size={13} /></button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </section>
-
-        <section className="platform-console__panel">
+      ) : (
+        <section className="platform-console__panel platform-console__panel--detail">
           {selectedTool ? (
             <div className="platform-console__stack">
               <div className="platform-console__section">
@@ -281,7 +285,7 @@ export default function PlatformToolsPage() {
             <p className="skills-data-table__summary">请选择一个内置工具。</p>
           )}
         </section>
-      </div>
+      )}
     </div>
   );
 }
