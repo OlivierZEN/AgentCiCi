@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-21T10:35:00Z
+updated_at: 2026-07-21T11:03:00Z
 updated_by: MANAGER-001
-phase: runtime-execution-trace-correction
-active_task: "TASK-217"
-next_action: "Run desktop and production acceptance for real personal workflow schedule creation and corrected Trace execution semantics."
+phase: production-runtime-execution-trace-correction-complete
+active_task: "TASK-214"
+next_action: "Await the first authorized TASK-217 schedule creation for business-path observation; resume TASK-214 when prioritized."
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-217 is in progress for production Trace `df5e12f4`: real current-user/current-Agent schedule creation now reuses the personal workflow scheduler, requires a valid cadence before writes, makes authorized Tavily work observable, and renders static workflow parsing only as “工作流定义检查”. Blocking and streaming sessions deterministically request a cadence instead of returning a fake configuration JSON. Focused backend regression passes; full local suite remains blocked by the pre-existing shared-test-db Flyway V81 checksum mismatch and was not repaired.
+- TASK-217 is complete in production `2.7.12 / b20261d8b89b`: current-user/current-Agent schedule creation reuses the personal workflow scheduler, requires a valid cadence before writes, makes authorized Tavily work observable, and renders static workflow parsing only as “工作流定义检查”. Blocking and streaming sessions deterministically request a cadence instead of returning a fake configuration JSON. Focused backend regression, ACR inspect, Git tag, four-part backup, six healthy services, `x`/production-IP onechat HTTPS smoke and clean post-release logs passed. The full local suite remains blocked by the pre-existing shared-test-db Flyway V81 checksum mismatch and was not repaired; no authorized user session was available to create a production test task.
 
 - TASK-215 is complete in production `2.7.11 / 281f35b2cb2f`: Trace nodes retain the 220-character compact summary while administrators can expand and copy up to 12,000 characters of redacted saved detail. Focused backend tests, 27 frontend test files / 179 tests, production build, Compose configuration, ACR image inspection, release backup, six-container health, version and public smoke passed. The authenticated Trace interaction was previously verified locally; production browser reached the independent admin login boundary without console errors, but no administrator credential is available in this session.
 - TASK-216 is complete as a design-only exploration: four same-structure desktop conversation-workbench skins and their specification are preserved as visual references, without changing production theme facts.
@@ -49,7 +49,7 @@ read_next:
 - TASK-199 is complete in production `2.6.2`: first-open fixed recommendations and demo action seeds are removed. Confirmed interactions produce AI action candidates governed by verbatim-evidence validation, confidence, business-key deduplication/refresh, seven-day cooldown, historical validity and the existing human-confirmed CRM write path.
 - TASK-198 is complete in production `2.6.1`: V77 stores evidence-backed AI signals and versioned score snapshots; new interactions incrementally update the current customer with confidence gating, 90-day decay and lifecycle replacement. Queue filtering/sorting, detail metrics and the explanation drawer share one snapshot source.
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
-- Production currently runs `2.7.11 / 281f35b2cb2f`; backend/frontend and four state services are healthy, and the state services remain on `2.6.12`. The release backup is `/opt/cici/backups/20260721-181143-before-2.7.11-main-integration`; immediate application rollback is `2.7.10 / f922b86f1884`.
+- Production currently runs `2.7.12 / b20261d8b89b`; backend/frontend and four state services are healthy, and the state services remain on `2.6.12`. The release backup is `/opt/cici/backups/20260721-190058-before-2.7.12-task217-runtime-trace`; immediate application rollback is `2.7.11 / 281f35b2cb2f`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
 - TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
 - 已知风险：本机仍无法解析 `onechat.agentcici.com`，但显式使用生产 IP 的 smoke 返回 200；当前两个演示组织的密码登录用户均不能取得有效 CloudCC 当前用户会话，`customer-operations` 元数据发现按设计返回 `DATA_SOURCE_UNAVAILABLE`，需恢复用户绑定后再完成真实 CRM 目录/查询验收；另有跨用户不可见会话因 `ResponseStatusException` 被通用异常处理捕获而返回无数据的 500 而非 404/403，隔离成立但状态与日志语义需独立任务修复。

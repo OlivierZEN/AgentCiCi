@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-122
 title: 智能体定时任务真实创建与链路事实纠偏
-status: in_progress
+status: done
 owner_role: project-manager
 task_ids: TASK-217
 related_decisions: none
 related_issues: df5e12f4
-updated_at: 2026-07-21T00:00:00Z
+updated_at: 2026-07-21T11:03:00Z
 updated_by: MANAGER-001
 ---
 

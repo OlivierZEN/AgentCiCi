@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-21T10:15:00Z
+updated_at: 2026-07-21T11:03:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,12 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.7.12 TASK-217 智能体定时任务真实创建与链路事实纠偏 on 2026-07-21:
+  - Git/发布：main 提交 `b20261d8b89b8813fbbcc75b541143e0563dc42d`；`scripts/release-acr.sh --dry-run` 通过，annotated tag `2.7.12` 已推送。
+  - 镜像：backend index/amd64 `sha256:b2d1e4a053a6edadd6cdcefd481615a89258cd1821e02f3745f74031dd175b23` / `sha256:9b819a1b9949dd98d3db700bd36bacdeeef655be200f42288edb662ae089496b`；frontend index/amd64 `sha256:a3a6ff9734bb3f7da648a2003159289d26b704f6927fd48b06f665b7e205b616` / `sha256:52a0228d143371ac9e6da0570e047d387ac227656af12bdcfbe8cbf644b5ea8b`。
+  - 备份/部署：`/opt/cici/backups/20260721-190058-before-2.7.12-task217-runtime-trace` 的 env/PostgreSQL/KB/Qdrant 均非空；只 pull/force-recreate backend/frontend，database、Redis、RabbitMQ、Qdrant 的容器 ID 未变化。
+  - 运行/公网：六服务 healthy，health `UP`，版本 `2.7.12 / b20261d8b89b`，Nginx 有效，`x` HTTPS 200、显式生产-IP onechat HTTPS 200；发布窗口 backend/frontend error 和 Nginx 5xx 为 0。本机 onechat DNS 未解析，仍为已知外部解析风险。
 
 - 2.7.11 TASK-215 链路追踪全文查看与复制及本地记录整合 on 2026-07-21:
   - Git/发布：main 合并提交 `281f35b2cb2f81a90ec7a41f72d28ce71eb6a52a`；dry-run 与正式 ACR 构建完成，annotated tag `2.7.11` 已推送。
