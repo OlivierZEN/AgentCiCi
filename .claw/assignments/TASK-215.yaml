@@ -1,0 +1,62 @@
+task_id: TASK-215
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-21T00:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-120-trace-full-detail-expansion.md
+task_status_path: .claw/tasks/TASK-215.md
+branch: codex/TASK-215-trace-detail-expansion
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - frontend/src/admin/pages/**
+  - frontend/src/admin/**/*.test.*
+  - frontend/src/styles.css
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - frontend/src/admin/pages/AdminAgentRunMonitor.tsx
+  - frontend/src/admin/pages/AdminAgentRunMonitor.test.tsx
+  - frontend/src/styles.css
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceServiceTest.java
+  - docs/specs/FEAT-120-trace-full-detail-expansion.md
+  - .claw/tasks/TASK-215.md
+  - .claw/assignments/TASK-215.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/db/migration/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/RequireOrgAdmin.java
+task_boundary:
+  - "只改组织管理员 Trace 详情的受控全文查看和复制，不扩大组织或外部 API 权限。"
+  - "默认保持链路节点摘要密度；全文仅在管理员主动展开后显示，并继续脱敏。"
+  - "不新增移动端适配、不改 Trace 留存策略、不修改业务运行链路。"
+change_manifest_required: true
+signature: "MANAGER-001 SSH challenge allowed 2026-07-21; user confirmed the compact expand-and-copy trace-detail design."
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+notes: "Do not expose unredacted customer payloads, passwords, tokens, secrets or raw CRM data in list views, client state, error notices or generated test evidence."
