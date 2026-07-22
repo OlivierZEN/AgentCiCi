@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
-phase: feat131-phase2-ready
-active_task: "TASK-227"
-next_action: "在 TASK-227 中建设通用记忆候选、证据、审核与 TTL；不得接入外部应用入口、Chat 编排器或自动长期写入。"
+phase: feat131-phase2-governance-complete
+active_task: "none"
+next_action: "为 FEAT-131 的向量检索、治理 API 或 Chat 编排接入创建独立授权任务；保持候选审核和外部应用隔离边界。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-227 已由 MANAGER-001 分配并启动 FEAT-131 Phase 2：只建设通用候选、证据、审核、撤销与时效治理的关系型权威模型。候选在人工或确定性审核前不得被上下文读取，不接入任何外部应用、领域对象、页面、渠道或自动长期写入。
+- TASK-227 已完成 FEAT-131 Phase 2 的治理前置：V86 新增通用候选与证据表，候选以 `PENDING` 保存，只有显式审核通过才创建可读取的 `ACTIVE` 记忆；重复审核被拒绝。定向 JUnit、后端编译、diff 检查和新建后删除的 PostgreSQL 16 临时库 V1→V86 迁移均通过。不接入任何外部应用、领域对象、页面、渠道或自动长期写入。
 
 - TASK-226 已由 MANAGER-001 分配并启动：按 FEAT-131 Phase 1 建设通用主体、会话记忆与可信外部应用上下文核心。授权边界覆盖 memory/ai/agent 后端、迁移、定向测试和项目状态；禁止任何外部应用领域耦合、移动端、生产发布和外部业务写入。
 

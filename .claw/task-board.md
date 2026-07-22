@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-227 - 通用记忆候选、证据与时效治理
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-227.md`
 - assignment_path: `.claw/assignments/TASK-227.yaml`
 - blocked_by: `none`
-- next_action: 从 TASK-226 的 Phase 1 可信上下文核心创建分支，落地候选、证据、审核与 TTL 权威模型；不得引入外部应用领域耦合。
+- next_action: 已完成 V86 候选/证据与审核转化核心；向量检索、治理 API 与 Chat 编排须使用独立任务继续。
 
 ### TASK-226 - 通用主体记忆 Phase 1 核心
 

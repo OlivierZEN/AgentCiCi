@@ -18,6 +18,13 @@ last_run_status: passed
 - `backend-compile`：`mvn -q -DskipTests compile` 通过。
 - `static`：通用核心、V85 和定向测试未出现外部应用或领域耦合标识；`git diff --check` 通过。尚未接入外部应用、Chat 编排器、向量索引或生产发布。
 
+## TASK-227 - 通用记忆候选、证据与时效治理
+
+- `identity/assignment`：MANAGER-001 的 TASK-227 身份门禁、任务分支与 memory/迁移/测试/状态代表路径通过 `dev-login.py` 和 `check-assignment.py`。
+- `backend-focused`：`mvn -q -Dtest=ExternalMemoryContextServiceTest,MemoryCandidateGovernanceServiceTest,AgentMemoryFlywayMigrationTest test` 通过；候选不能以可读取状态提交，显式审核才会创建 `ACTIVE` 记录，重复审核被拒绝。
+- `fresh-flyway`：新建且验证后删除的 PostgreSQL 16 临时库成功从 V1 全量迁移至 V86；断言主体、记录、会话快照、候选与证据五张通用记忆表存在。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 和 `git diff --check` 通过；未接入外部应用、自动长期写入、向量索引或生产发布。
+
 ## FEAT-131 - 通用外部应用智能体记忆平台（设计规格）
 
 - `identity`：`MANAGER-001` 的 SSH challenge-response、Git 身份和本次规格/状态/验证记录路径经技能包 `dev-login.py` 验证为 `allowed`。

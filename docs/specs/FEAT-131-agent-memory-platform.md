@@ -434,3 +434,4 @@ Agent Builder 中每个 Agent 应可查看其允许读取的 memory scopes、记
 - 首版可信上下文以 `orgId + applicationCode + subjectType + externalSubjectRef + conversationRef` 建模；读取路径不自动创建外部主体，按 `SUBJECT_SHARED`、`CONVERSATION`、`AGENT_PRIVATE` 和 `DOMAIN_NAMESPACE` 过滤当前有效的 `ACTIVE/VERIFIED` 记忆，并限制为最多 16 条。
 - 提示词组装器只接受已授权的 `MemoryContext`，并在严格字符预算内放入会话摘要和记忆项，不会以超限内容覆盖模型上下文。
 - 新建并在验证后删除的 PostgreSQL 16 临时库已从 V1 全量迁移至 V85，三张记忆表存在性断言通过；首版仍未连接外部应用入口、Chat 编排器、向量索引或自动候选写入，以避免在没有完整授权与审计契约时扩大运行面。
+- `TASK-227` 已完成 Phase 2 治理前置：V86 增加 `memory_candidate` 与 `memory_evidence`；候选以 `PENDING` 状态保存，只有显式审核通过才生成 `ACTIVE` 记忆，且重复审核会被拒绝。新建并删除的 PostgreSQL 16 临时库已从 V1 迁移至 V86 并验证五张通用记忆表；向量索引、治理 API、Chat 编排器和任何外部应用接入仍保持后续独立任务边界。

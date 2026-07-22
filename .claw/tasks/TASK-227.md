@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-227
-status: ready
+status: done
 updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -34,4 +34,5 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 
 ## Progress
 
-- 已完成设计、任务拆分和授权，待从 `TASK-226` 的 Phase 1 通用核心创建实现分支后开始编码。
+- 已新增 V86 的候选与证据表、候选仓储和审核服务；候选始终以 `PENDING` 创建，只有审批操作会生成 `ACTIVE` 记忆。
+- 定向测试覆盖禁止提交可读记忆、审批转化与重复审核拒绝；新建并删除的 PostgreSQL 16 临时库已从 V1 迁移到 V86 并断言五张记忆表存在。
