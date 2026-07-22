@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T03:30:00Z
+updated_at: 2026-07-22T03:55:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T03:30:00Z
+last_run_at: 2026-07-22T03:55:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-226 - 通用主体记忆 Phase 1 核心
+
+- `identity/assignment`：MANAGER-001 的 SSH challenge-response、任务分支 `codex/TASK-226-agent-memory-core` 和 memory/迁移/测试/状态代表路径经 `dev-login.py` 与 `check-assignment.py` 验证为 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=ExternalMemoryContextServiceTest test` 通过；覆盖跨 `applicationCode` 主体隔离、`SUBJECT_SHARED`/`CONVERSATION`/`AGENT_PRIVATE`/`DOMAIN_NAMESPACE` scope 过滤、已过期记录排除，以及只读上下文不会隐式创建外部主体。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过。
+- `static`：通用核心、V85 和定向测试未出现外部应用或领域耦合标识；`git diff --check` 通过。尚未执行真实空库 Flyway、外部应用接入、向量索引或生产发布。
 
 ## FEAT-131 - 通用外部应用智能体记忆平台（设计规格）
 

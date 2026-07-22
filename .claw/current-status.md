@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T03:40:00Z
+updated_at: 2026-07-22T03:55:00Z
 updated_by: MANAGER-001
 phase: feat131-phase1-in-progress
 active_task: "TASK-226"
-next_action: "在 codex/TASK-226-agent-memory-core 完成通用主体记忆与可信外部应用上下文核心；先通过授权检查，再做定向隔离/上下文测试。"
+next_action: "为 TASK-226 复核 V85 迁移与通用命名，提交通用主体记忆核心；后续再按独立任务接入外部应用契约和 Chat 编排器。"
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,8 @@ read_next:
 ## Snapshot
 
 - TASK-226 已由 MANAGER-001 分配并启动：按 FEAT-131 Phase 1 建设通用主体、会话记忆与可信外部应用上下文核心。授权边界覆盖 memory/ai/agent 后端、迁移、定向测试和项目状态；禁止任何外部应用领域耦合、移动端、生产发布和外部业务写入。
+
+- TASK-226 已完成通用主体记忆核心首版：V85 新增主体、记忆记录、会话快照三张通用表；`ExternalMemoryContextService` 以组织、应用、外部主体与会话构造可信上下文，读取时按 scope/时效过滤且不隐式创建主体。定向 JUnit、后端编译和 diff 检查通过；尚未接入外部应用入口、Chat 编排器、向量索引或自动候选写入。
 
 - 已新增 `FEAT-131-agent-memory-platform.md` 通用平台设计基线：Agent CC 面向任何外部应用提供主体记忆、会话上下文、混合检索、路由移交、候选写入、Trace/评测和生命周期治理；外部应用仅通过可信契约接入并继续拥有其渠道、原始交互和领域事实。FollowUp 仅是首个参考接入方，不会在平台模型、接口、工具、Skills 或页面中形成耦合功能。
 

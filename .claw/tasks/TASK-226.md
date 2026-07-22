@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-226
 status: in_progress
-updated_at: 2026-07-22T03:40:00Z
+updated_at: 2026-07-22T03:55:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -31,3 +31,9 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 - 相同外部主体标识在不同组织或不同 `applicationCode` 下严格隔离；
 - Agent 上下文只能读取已授权、未过期且 scope 匹配的最小必要记忆；
 - `mvn` 定向测试、编译和 `git diff --check` 通过；结果写入 test report。
+
+## Progress
+
+- 已新增 V85、通用主体/记忆记录/会话快照模型、仓储与 `ExternalMemoryContextService`；没有引入外部应用或领域命名。
+- 定向测试覆盖不同 `applicationCode` 的主体隔离、scope 过滤及只读上下文不隐式创建主体。
+- 已通过 `mvn -q -Dtest=ExternalMemoryContextServiceTest test`、`mvn -q -DskipTests compile` 与 `git diff --check`；待提交代码和执行真实空库 Flyway 迁移验证。
