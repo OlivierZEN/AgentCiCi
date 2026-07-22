@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-21T11:15:00Z
+updated_at: 2026-07-22T10:15:00+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-225 - 对话技能选择的强制执行上下文与可观测性
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-130-forced-skill-execution-context.md`
+- task_status_path: `.claw/tasks/TASK-225.md`
+- assignment_path: `.claw/assignments/TASK-225.yaml`
+- blocked_by: `none`
+- next_action: 完成所选技能的强制业务上下文、Trace 状态与桌面端回归。
 
 ### TASK-224 - 生产发布构造器注入启动热修
 

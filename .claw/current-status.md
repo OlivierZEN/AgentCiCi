@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T09:55:00+08:00
+updated_at: 2026-07-22T10:15:00+08:00
 updated_by: MANAGER-001
-phase: task224-release-startup-hotfix
-active_task: "TASK-224"
-next_action: "修复 2.8.2 审计服务构造器注入启动失败，并以新版本重新发布。"
+phase: task225-forced-skill-execution-context
+active_task: "TASK-225"
+next_action: "实现工作台所选技能的强制业务上下文和选择/激活可观测性。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-225 is in progress after the user confirmed the desired behavior: a workbench skill selection must become the explicit, forced business execution context for that turn. FEAT-130 preserves platform safety and Agent direct-tool boundaries, prioritizes only the selected skill's procedure, output contract and file-backed references, and makes selection/effective/activation/rejection facts visible in Trace and both desktop monitors.
 
 - `2.8.2` 已完成镜像构建、tag 与 V84 正向迁移，但后端因 `AuditService` 的多构造器未标注注入入口而持续重启；已按运行手册回滚到健康的 `2.8.1`。TASK-224 已完成最小构造器注入修复与 Spring 容器回归，待合并 main 后以新版本重新发布，不覆盖失败的 `2.8.2` tag。
 

@@ -1,0 +1,70 @@
+task_id: TASK-225
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-22T10:15:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-130-forced-skill-execution-context.md
+task_status_path: .claw/tasks/TASK-225.md
+branch: codex/TASK-225-forced-skill-execution
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/**
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/**
+  - backend/src/test/java/com/codehouse/ciciassistant/skill/service/**
+  - frontend/src/assistant/**
+  - frontend/src/admin/pages/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/BuiltinSkillDocumentService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillPromptAssembler.java
+  - backend/src/main/java/com/codehouse/ciciassistant/skill/service/SkillResolverService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/skill/service/SkillPromptAssemblerTest.java
+  - frontend/src/assistant/AssistantApp.tsx
+  - frontend/src/admin/pages/AdminAgentRunMonitor.tsx
+  - docs/specs/FEAT-130-forced-skill-execution-context.md
+  - .claw/tasks/TASK-225.md
+  - .claw/assignments/TASK-225.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/RequireOrgAdmin.java
+task_boundary:
+  - "仅变更工作台所选技能的本轮业务上下文和可观测性。"
+  - "保留平台安全策略、技能绑定/版本、当前用户/组织/Agent 权限和 Agent 直接工具边界。"
+  - "不新增移动端实现、不发布生产、不创建外部业务记录。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-22; user explicitly requested selected-skill forced execution context and observable selection outcome."
+notes: "不得记录、显示或提交用户会话原文、token、API Key、未脱敏工具输入输出或跨租户 Trace 数据。"

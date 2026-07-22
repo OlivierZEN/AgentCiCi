@@ -10,6 +10,12 @@ status: active
 
 ## Open Issues
 
+- ISSUE-033:
+  - Symptom: 工作台选择指定技能后，回复行为没有稳定体现所选技能；只有用户在消息正文中再次声明技能时，模型才更稳定遵循该技能。
+  - Verified facts: 前端会提交 `activeSkillCode`，但当前后端仅将它用于技能专属工具授权；提示词和文件型参考文档仍并列注入所有绑定技能。
+  - Scope: 强制业务上下文、Trace 选择状态和两个运行监控视图，不改技能绑定或权限模型。
+  - Status: in_progress; TASK-225.
+
 - ISSUE-2026-07-15-session-not-found-status-mapped-500:
   - Symptom: a signed-in user requesting another user's non-org-scoped `/ai/sessions/{id}/messages` receives HTTP 500 `Unexpected server error` rather than a non-disclosing 404/403.
   - Verified facts: the response contains no `data` and no other user's content, so tenant/user isolation holds. `queryVisibleSession` correctly returns empty and throws `ResponseStatusException(HttpStatus.NOT_FOUND)`, but `GlobalExceptionHandler` has no dedicated handler and its generic exception path maps the status exception to 500 while producing ERROR logs.
