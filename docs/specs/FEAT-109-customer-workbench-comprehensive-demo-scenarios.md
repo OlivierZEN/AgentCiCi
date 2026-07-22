@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-203
 related_decisions: FEAT-081,FEAT-082,FEAT-103,FEAT-104,FEAT-105
 related_issues: none
-updated_at: 2026-07-14T06:28:42Z
+updated_at: 2026-07-21T05:16:00Z
 updated_by: MANAGER-001
 ---
 
@@ -86,6 +86,13 @@ updated_by: MANAGER-001
 4. AgentCiCi 侧只替换本演示组织、V2 稳定 ID 和旧 TASK-172 聚合种子；先备份，再写入互动档案、记忆、动态信号、评分快照和动作。
 5. 不执行未限定范围的 CloudCC 删除；旧 V1 CRM 记录优先复用或保留。
 
+## 新客数据隔离规则
+
+- 新客户实时判定以“没有合同且没有 `7-签约关单` 商机”为准，不能只依赖快照中的 `segment`。
+- 经营分析、产品销量、合同订单等后续演示数据不得复用新客户推进专属 Account；一旦补充合同或赢单商机，该客户会自然迁移到老客户经营。
+- 2026-07-21 增加隔离批次 `TASK-203-NEW-PIPELINE-R1`，包含 8 个专属新客户、7 位联系人、8 条线索、7 个开放商机、16 个任务和 16 个事件。
+- 隔离批次必须保持零合同、零赢单商机，并持续归 SalesA；其中至少 6 个客户命中默认“重点推进”，同时覆盖商机缺失、联系人缺失、下一步缺失和逾期任务。
+
 ## 验收标准
 
 - Owen/SalesA `integration-status.visibleAccounts > 0`，16 个核心客户均可按名称搜索并打开详情。
@@ -98,9 +105,19 @@ updated_by: MANAGER-001
 - 桌面端 AgentCiCi 与 CloudCC 嵌入入口均完成截图和控制台错误检查。
 - 执行日志不得输出密码、token、secret、cookie、客户真实隐私或数据库凭据。
 
+## 实施结果
+
+- CRM 批次 `TASK-203-DEMO-V2` 已完成 16 Account、30 Contact、8 Lead、21 Opportunity、30 Task、45 Event、8 Contract、8 Case；全部记录所有人为 SalesA。
+- SalesA 的销售简档原本缺少 Contract/Case 读取权限。已通过最小只读权限集 `cac203DemoVis01` 补齐，MetadataService plan `pla202604C39466BxSzs`、operation `ope202682B741D7w0fRu` 状态为 `VERIFIED`。
+- AgentCiCi 已完成 30 个确认批次、30 个互动档案、30 条记忆、30 条动态信号、16 个核心客户评分快照和 12 条证据驱动动作；动作按 `CREATE_TASK / CREATE_OPPORTUNITY / UPDATE_OPPORTUNITY` 各 4 条，均为 `PENDING`，未写回 CRM。
+- Owen/SalesA 回读 `ready=true / visibleAccounts=16 / syncStatus=READY`，新客和老客各 8。筛选实测：新客 `focus=4 / follow=8 / risk=1 / recommendations=7`；老客 `renewal=4 / health=5 / service=5 / expansion=8`。
+- 场景信号实测命中 `OPPORTUNITY_GAP / RELATION_GAP / NEXT_STEP_GAP / OVERDUE_TASK / SERVICE_RISK / RENEWAL_WINDOW / VALUE_STABLE / INTERACTION_GAP`；七种互动来源、七种记忆类型、五个评分维度及 `ACTIVE / PENDING / EXPIRED / SUPERSEDED` 信号状态均已覆盖。
+- 最新 AgentCiCi 备份为 `/opt/cici/backups/20260714-065319-before-task203-demo-v2`。工作站 DNS 无法解析 `onechat.agentcici.com`，因此最终验证使用同一 Owen/SalesA 身份的生产 IP-resolved HTTPS API；浏览器安全页未绕过。
+- 2026-07-21 回归发现原 16 个客户被后续经营分析演示补充合同或赢单商机后全部自然归入老客；已追加 `TASK-203-NEW-PIPELINE-R1` 隔离批次恢复新客演示。SalesA 回读可见客户 124、新客 60；隔离批次 8 个全部命中新客，6 个进入默认“重点推进”、2 个进入风险。生产页面已显示 6 条重点推进客户，CloudCC 连接正常且控制台无 error/warn。
+
 ## 回滚
 
 - CRM 侧保留 V2 记录并依批次标记识别；若必须清理，另行生成显式删除清单并获得批准。
 - AgentCiCi 写入前保存 PostgreSQL 备份；脚本只删除目标组织的 V1/V2 演示聚合记录，失败时恢复备份。
 - 权限调整若发生，必须保存 planId/operationId 和变更前快照，并通过 rollback plan 回退。
-
+- 本次权限回滚入口：source operation `ope202682B741D7w0fRu`，rollback plan `rbp2026D899C178B8m63`（可执行；仅在明确回滚窗口 apply）。
