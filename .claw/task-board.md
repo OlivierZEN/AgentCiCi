@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-225 - 对话技能选择的强制执行上下文与可观测性
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-130-forced-skill-execution-context.md`
 - task_status_path: `.claw/tasks/TASK-225.md`
 - assignment_path: `.claw/assignments/TASK-225.yaml`
 - blocked_by: `none`
-- next_action: 完成所选技能的强制业务上下文、Trace 状态与桌面端回归。
+- next_action: 已完成；等待有授权的组织用户会话补做受保护工作台/Trace 的桌面交互复核。
 
 ### TASK-223 - 定时任务周期解析越界修复
 

@@ -14,7 +14,9 @@ status: active
   - Symptom: 工作台选择指定技能后，回复行为没有稳定体现所选技能；只有用户在消息正文中再次声明技能时，模型才更稳定遵循该技能。
   - Verified facts: 前端会提交 `activeSkillCode`，但当前后端仅将它用于技能专属工具授权；提示词和文件型参考文档仍并列注入所有绑定技能。
   - Scope: 强制业务上下文、Trace 选择状态和两个运行监控视图，不改技能绑定或权限模型。
-  - Status: in_progress; TASK-225.
+  - Resolution: TASK-225 让有效选择只注入所选技能的业务流程、输出契约和文件型参考文档，同时保留平台安全与 Agent 直接工具边界；运行记录和两个监控视图已明确显示选择、有效上下文、实际激活及未采纳原因。
+  - Verification: 后端定向测试、编译、前端完整单测、构建和静态检查均通过；受保护工作台/Trace 的真实桌面交互仍需具备授权组织会话后补验。
+  - Status: resolved by TASK-225 on 2026-07-22.
 
 - ISSUE-2026-07-15-session-not-found-status-mapped-500:
   - Symptom: a signed-in user requesting another user's non-org-scoped `/ai/sessions/{id}/messages` receives HTTP 500 `Unexpected server error` rather than a non-disclosing 404/403.

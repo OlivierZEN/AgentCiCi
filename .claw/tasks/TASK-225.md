@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-225
-status: in_progress
+status: done
 updated_at: 2026-07-22T10:15:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -19,9 +19,12 @@ spec_path: docs/specs/FEAT-130-forced-skill-execution-context.md
 
 ## Current State
 
-- 已确认当前实现会发送 `activeSkillCode`，但它只影响技能专属工具授权；全部绑定技能的提示词和文件型文档仍被并列注入。
-- 已完成规格与桌面端紧凑文本状态设计；尚未改动运行代码。
+- 所选技能现在只注入自身的业务流程和输出契约；未选择时继续注入原有多技能业务上下文。
+- 文件型技能参考文档在选择有效时仅解析所选技能；平台安全策略、Agent 直接工具和手动/意图技能工具授权保持不变。
+- Trace 已保存用户请求、有效上下文、选择状态/原因、实际激活与候选绑定技能；工作台与管理端监控按相同顺序显示。
 
 ## Verification
 
-- 待实现后记录后端、前端构建、Trace 合约和桌面端检查结果。
+- `mvn -q -Dtest=AgentRunTraceServiceTest,SkillPromptAssemblerTest test` 通过。
+- `mvn -q -DskipTests compile`、`npm test`（28 文件/187 断言）、`npm run build`、`git diff --check` 通过。
+- 本地桌面浏览器已验证应用可加载且 console error 为 0；当前无已授权的组织用户会话，受保护的工作台/Trace 实际交互留待已登录会话复核，未伪造结果。

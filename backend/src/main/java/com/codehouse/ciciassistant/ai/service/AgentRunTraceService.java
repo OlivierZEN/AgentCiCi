@@ -90,7 +90,11 @@ public class AgentRunTraceService {
         detail.put("rag", ragDetail(input.ragResult()));
         detail.put("tools", tools.stream().map(ToolTrace::toPayload).toList());
         detail.put("skills", Map.of(
-                "activeSkillCode", emptyToBlank(input.activeSkillCode()),
+                "activeSkillCode", emptyToBlank(input.effectiveSkillCode()),
+                "requestedSkillCode", emptyToBlank(input.requestedSkillCode()),
+                "effectiveSkillCode", emptyToBlank(input.effectiveSkillCode()),
+                "selectionStatus", skillSelectionStatus(input),
+                "selectionReason", skillSelectionReason(input),
                 "skillNames", activatedSkillCodes,
                 "activatedSkillCodes", activatedSkillCodes,
                 "boundSkillCodes", boundSkillCodes,
@@ -113,7 +117,7 @@ public class AgentRunTraceService {
                 clip(input.question(), 80),
                 summary,
                 emptyToBlank(input.modelName()),
-                emptyToBlank(input.activeSkillCode()),
+                emptyToBlank(input.effectiveSkillCode()),
                 startedAt,
                 endedAt,
                 elapsedMs,
@@ -468,13 +472,24 @@ public class AgentRunTraceService {
                 ragCount > 0 ? "命中 " + ragCount + " 个知识片段。" : "本轮未触发知识库检索或无命中。",
                 ragDetail(rag))
                 : stageNode(ragStage, ragDetail(rag)));
+        String selectionStatus = skillSelectionStatus(input);
+        String selectionReason = skillSelectionReason(input);
         nodes.add(node("SKILL", "技能判定", activatedSkillCodes.isEmpty() ? "SKIPPED" : "SUCCESS",
                 startedAt, null, 0L,
-                activatedSkillCodes.isEmpty()
+                "FORCED".equals(selectionStatus)
+                        ? "用户选择 " + input.requestedSkillCode().trim() + " 已作为本轮强制业务上下文；实际激活："
+                                + (activatedSkillCodes.isEmpty() ? "无" : String.join("、", activatedSkillCodes))
+                        : "REJECTED".equals(selectionStatus)
+                                ? "用户选择 " + input.requestedSkillCode().trim() + " 未采纳：" + selectionReason
+                        : activatedSkillCodes.isEmpty()
                         ? "本轮未激活业务技能；当前智能体有 " + boundSkillCodes.size() + " 个绑定/候选技能。"
                         : "本轮激活技能：" + String.join("、", activatedSkillCodes),
                 Map.of(
-                        "activeSkillCode", emptyToBlank(input.activeSkillCode()),
+                        "activeSkillCode", emptyToBlank(input.effectiveSkillCode()),
+                        "requestedSkillCode", emptyToBlank(input.requestedSkillCode()),
+                        "effectiveSkillCode", emptyToBlank(input.effectiveSkillCode()),
+                        "selectionStatus", selectionStatus,
+                        "selectionReason", selectionReason,
                         "activatedSkillCodes", activatedSkillCodes,
                         "boundSkillCodes", boundSkillCodes
                 )));
@@ -672,6 +687,27 @@ public class AgentRunTraceService {
         return new ArrayList<>(out);
     }
 
+    private String skillSelectionStatus(ChatRunTraceInput input) {
+        String requested = emptyToBlank(input.requestedSkillCode());
+        String effective = emptyToBlank(input.effectiveSkillCode());
+        if (requested.isBlank() && effective.isBlank()) {
+            return "NOT_SELECTED";
+        }
+        if (requested.isBlank()) {
+            return "INHERITED";
+        }
+        return requested.equalsIgnoreCase(effective) ? "FORCED" : "REJECTED";
+    }
+
+    private String skillSelectionReason(ChatRunTraceInput input) {
+        return switch (skillSelectionStatus(input)) {
+            case "FORCED" -> "用户选择已验证，并作为本轮强制业务上下文执行。";
+            case "INHERITED" -> "未在本次请求中重新选择，沿用会话内已验证的技能上下文。";
+            case "REJECTED" -> "所选技能未绑定、已禁用或不在当前智能体范围内，未提升工具权限。";
+            default -> "用户未选择业务技能。";
+        };
+    }
+
     private Map<String, Object> ragDetail(RagService.RetrievalResult rag) {
         if (rag == null) {
             return Map.of("triggered", false, "contextCount", 0, "knowledgeBases", List.of(), "timingsMs", Map.of(), "fallbackUsed", false);
@@ -757,6 +793,10 @@ public class AgentRunTraceService {
         payload.put("skillNames", readList(item.getSkillNamesJson()));
         payload.put("activatedSkillCodes", readList(item.getSkillNamesJson()));
         payload.put("boundSkillCodes", skills.getOrDefault("boundSkillCodes", List.of()));
+        payload.put("requestedSkillCode", skills.getOrDefault("requestedSkillCode", ""));
+        payload.put("effectiveSkillCode", skills.getOrDefault("effectiveSkillCode", skills.getOrDefault("activeSkillCode", "")));
+        payload.put("selectionStatus", skills.getOrDefault("selectionStatus", ""));
+        payload.put("selectionReason", skills.getOrDefault("selectionReason", ""));
         payload.put("knowledgeBaseNames", readList(item.getKnowledgeBaseNamesJson()));
         payload.put("summary", item.getSummary());
         payload.put("errorReason", errorReason(detail, nodes));
@@ -1076,7 +1116,8 @@ public class AgentRunTraceService {
             String question,
             String answer,
             String modelName,
-            String activeSkillCode,
+            String requestedSkillCode,
+            String effectiveSkillCode,
             List<String> requestedKnowledgeBaseIds,
             List<String> effectiveKnowledgeBaseIds,
             RagService.RetrievalResult ragResult,

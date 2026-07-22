@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T10:15:00+08:00
 updated_by: MANAGER-001
-phase: task225-forced-skill-execution-context
-active_task: "TASK-225"
-next_action: "实现工作台所选技能的强制业务上下文和选择/激活可观测性。"
+phase: task225-forced-skill-execution-context-complete
+active_task: ""
+next_action: "等待有授权的组织用户会话补做 TASK-225 受保护工作台/Trace 的桌面交互复核；不影响已通过的代码与构建验证。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-225 is in progress after the user confirmed the desired behavior: a workbench skill selection must become the explicit, forced business execution context for that turn. FEAT-130 preserves platform safety and Agent direct-tool boundaries, prioritizes only the selected skill's procedure, output contract and file-backed references, and makes selection/effective/activation/rejection facts visible in Trace and both desktop monitors.
+- TASK-225 已完成：工作台所选技能成为本轮强制业务上下文，只注入该技能的流程、输出契约和文件型参考文档；平台安全、Agent 直接工具和技能工具授权边界保持不变。Trace 现在记录用户选择、有效上下文、选择状态/原因、实际激活和候选绑定技能，工作台及管理端监控同步展示。后端定向测试、后端编译、前端 28 文件/187 断言、前端构建和 diff 检查通过；当前无已授权组织用户会话，受保护页面的桌面交互复核留待后续完成，未伪造结果。
 
 - `2.8.3 / 651bc2294bee` 已健康发布：TASK-224 为两个审计服务的运行时构造器显式标注注入入口，消除 `2.8.2` 的启动重启问题。backend/frontend 与四个状态服务均健康，V84 成功，公网 x HTTPS 与显式生产 IP 的 onechat HTTPS 为 200；匿名 `/auth/me` 正确返回 401。`2.8.2` 仍保留为失败版本证据，线上已从其回滚并以新不可变版本恢复。
 

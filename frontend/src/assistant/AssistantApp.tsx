@@ -4181,7 +4181,7 @@ export default function AssistantApp() {
                                 <rect x="14" y="14" width="6" height="6" rx="1.5" />
                                 <path d="M17 3v6M14 6h6" />
                               </svg>
-                              {activeWorkbenchSkill ? activeWorkbenchSkill.skillName : "技能"}
+                              {activeWorkbenchSkill ? `优先 · ${activeWorkbenchSkill.skillName}` : "技能"}
                             </button>
                             {skillPickerOpen ? (
                               <div className="cici-composer-skill__menu" role="listbox" aria-label="选择技能">
@@ -4226,7 +4226,7 @@ export default function AssistantApp() {
                                         </svg>
                                       </span>
                                       <span className="cici-composer-skill__item-text">
-                                        <strong>{binding.skillName}</strong>
+                                        <strong>{binding.skillName}{selected ? " · 本轮优先执行" : ""}</strong>
                                       </span>
                                     </button>
                                   );
@@ -4624,11 +4624,26 @@ export default function AssistantApp() {
                                   "",
                                 );
                                 const bound = compactUnknownValue(monitorSelectedTrace.skills?.boundSkillCodes, "");
-                                return activated
-                                  ? `本轮激活：${activated}`
+                                const requested = compactUnknownValue(monitorSelectedTrace.skills?.requestedSkillCode, "");
+                                const effective = compactUnknownValue(
+                                  monitorSelectedTrace.skills?.effectiveSkillCode ?? monitorSelectedTrace.skills?.activeSkillCode,
+                                  "",
+                                );
+                                const selectionStatus = compactUnknownValue(monitorSelectedTrace.skills?.selectionStatus, "");
+                                const selectionReason = compactUnknownValue(monitorSelectedTrace.skills?.selectionReason, "");
+                                const selection = requested
+                                  ? selectionStatus === "FORCED"
+                                    ? `用户选择：${requested} · 有效上下文：${effective || "未生效"}`
+                                    : `用户选择：${requested} · 未采纳：${selectionReason || "未形成有效上下文"}`
+                                  : effective
+                                    ? `有效上下文：${effective}`
+                                    : "";
+                                const activation = activated
+                                  ? `实际激活：${activated}`
                                   : bound
                                     ? `未激活业务技能 · 候选：${bound}`
                                     : "";
+                                return [selection, activation].filter(Boolean).join(" · ");
                               })(),
                               compactUnknownValue((monitorSelectedTrace.rag?.knowledgeBases as unknown[] | undefined)?.map((kb) => compactUnknownValue(kb, "")), ""),
                             ].filter(Boolean).join(" · ") || "本轮未命中技能或知识库"

@@ -36,21 +36,25 @@ public class SkillPromptAssembler {
         if (!context.skillCodes().isEmpty()) {
             lines.add("Active skill codes: " + String.join(", ", context.skillCodes()));
         }
-        if (context.activeSkillCode() != null && !context.activeSkillCode().isBlank()) {
-            lines.add("Current skill execution context (authorizes skill-scoped tools from this skill): " + context.activeSkillCode().trim());
-        }
-        for (SkillResolverService.ResolvedSkill skill : context.skills()) {
-            if (skill.promptFragment() == null || skill.promptFragment().isBlank()) {
-                continue;
+        SkillResolverService.ResolvedSkill selectedSkill = selectedSkill(context);
+        if (selectedSkill != null) {
+            lines.add("Selected business skill is mandatory for this turn: " + selectedSkill.skillCode());
+            lines.add("Follow only this selected skill's business procedure and output contract. "
+                    + "Do not substitute another business skill because of inferred intent; platform safety policy, agent-bound tools, and handoff rules still apply.");
+            appendSkillPromptFragment(lines, selectedSkill);
+        } else {
+            for (SkillResolverService.ResolvedSkill skill : context.skills()) {
+                appendSkillPromptFragment(lines, skill);
             }
-            lines.add("- [" + skill.skillCode() + "] " + skill.promptFragment().trim());
         }
         if (!context.handoffRules().isEmpty()) {
             lines.add("Handoff rules:");
             context.handoffRules().forEach(rule -> lines.add("- " + rule));
         }
-        if (context.outputContract() != null && !context.outputContract().isBlank()) {
-            lines.add("Preferred output contract: " + context.outputContract());
+        String outputContract = selectedSkill != null ? selectedSkill.outputContract() : context.outputContract();
+        if (outputContract != null && !outputContract.isBlank()) {
+            lines.add((selectedSkill == null ? "Preferred" : "Mandatory selected-skill")
+                    + " output contract: " + outputContract.trim());
         }
         lines.add("Execution truth rule: a structured output is never evidence that an external or scheduled action happened. "
                 + "For an explicit request to create a scheduled task, call workflow_schedule_create only after the user supplies a clear cadence; "
@@ -58,6 +62,23 @@ public class SkillPromptAssembler {
         appendBuiltinRuntimeConfig(lines, runtimeConfig);
         appendBuiltinReferenceDocs(lines, builtinDocs);
         return String.join("\n", lines);
+    }
+
+    private SkillResolverService.ResolvedSkill selectedSkill(SkillResolverService.ResolvedSkillContext context) {
+        if (context.activeSkillCode() == null || context.activeSkillCode().isBlank()) {
+            return null;
+        }
+        return context.skills().stream()
+                .filter(skill -> skill.skillCode().equalsIgnoreCase(context.activeSkillCode().trim()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void appendSkillPromptFragment(List<String> lines, SkillResolverService.ResolvedSkill skill) {
+            if (skill.promptFragment() == null || skill.promptFragment().isBlank()) {
+                return;
+            }
+            lines.add("- [" + skill.skillCode() + "] " + skill.promptFragment().trim());
     }
 
     private String composePromptWithoutSkills(String basePrompt,

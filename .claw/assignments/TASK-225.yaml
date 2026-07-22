@@ -1,7 +1,7 @@
 task_id: TASK-225
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-22T10:15:00+08:00
 expires_at: none
 spec_path: docs/specs/FEAT-130-forced-skill-execution-context.md
