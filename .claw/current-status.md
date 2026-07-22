@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T00:24:45+08:00
+updated_at: 2026-07-22T09:16:00+08:00
 updated_by: MANAGER-001
-phase: local-worktree-integration-in-progress
-active_task: "TASK-222"
-next_action: "整合已提交的 TASK-170 与 TASK-219 worktree 改动，冲突以当前 main 为准。"
+phase: local-worktree-integration-verified
+active_task: ""
+next_action: "已完成 TASK-170 与 TASK-219 的主线整合；后续按各自规格继续完成未覆盖的验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-222 正在整合已提交的 TASK-170 安全规则平台与 TASK-219 模型目录导航收敛。TASK-170 相对主线较旧，冲突按当前 `main` 最新代码处理；两个来源分支的定向验证、构建与 diff 检查均已重新通过。
+- TASK-222 已完成 TASK-170 安全规则平台与 TASK-219 模型目录导航收敛。TASK-170 的冲突按当前 `main` 最新代码处理，迁移按主线时间线由 V71 重编号为 V84，避免 Flyway 乱序；安全规则、审计、聊天/工具编排 56 项后端定向测试、后端打包、TASK-219 的 20 项前端定向测试和前端生产构建均通过。
 
 - TASK-221 is in review: the complete `/admin/*` static audit now routes shared modals, organization/user dialogs, skills subpages and row menus, ontology workbench, operations/monitor, embedded apps and billing through current `--theme-*` values. AdminToolsPage no longer injects category gradients or fixed colors. Assignment check, 11 focused theme tests, production build and diff check pass. This session has no authenticated administrator, so logged-in blue-theme desktop evidence remains an explicit manual visual-acceptance item.
 
@@ -61,7 +61,7 @@ read_next:
 - TASK-197 is done in production `2.5.11`: confirmed interactions now retain archive linkage, AI analysis, original materials and typed customer memory; timeline and assistant evidence open the same auditable archive.
 - Production currently runs `2.8.1 / 9bc8510cbede`; backend/frontend and four state services are healthy, and the state services remain on `2.6.12`. The release backup is `/opt/cici/backups/20260721-190903-before-2.8.1-task214-onekeytoken`; immediate application rollback is `2.7.12 / b20261d8b89b`.
 - TASK-182 now uses current-user CloudCC tokens and record permissions for Account/Contact/Opportunity/Task/Event/Case/Contract projection, server-side new/existing queues, real metrics/signals, follow/notifications, all business tabs, customer-level AI history/actions, manually confirmed interaction ingestion, and supervisor summaries.
-- TASK-170 security rules platform remains in progress and may resume after TASK-200 merge/release planning.
+- TASK-170 security rules platform is merged into `main` and awaits its separate authenticated desktop/production acceptance;本地集成回归已通过。
 - 已知风险：本机仍无法解析 `onechat.agentcici.com`，但显式使用生产 IP 的 smoke 返回 200；当前两个演示组织的密码登录用户均不能取得有效 CloudCC 当前用户会话，`customer-operations` 元数据发现按设计返回 `DATA_SOURCE_UNAVAILABLE`，需恢复用户绑定后再完成真实 CRM 目录/查询验收；另有跨用户不可见会话因 `ResponseStatusException` 被通用异常处理捕获而返回无数据的 500 而非 404/403，隔离成立但状态与日志语义需独立任务修复。
 
 ## Read Next

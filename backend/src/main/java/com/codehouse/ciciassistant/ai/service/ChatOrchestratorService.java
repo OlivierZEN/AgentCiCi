@@ -119,6 +119,7 @@ public class ChatOrchestratorService {
     private final AgentRuntimeConcurrencyService agentRuntimeConcurrencyService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter;
+    private final SafetyGatewayService safetyGatewayService;
     private final Executor agentRuntimeExecutor;
     private final TransactionTemplate tx;
 
@@ -148,6 +149,7 @@ public class ChatOrchestratorService {
                                    AgentAccessControlService agentAccessControlService,
                                    BillingUsageMeteringService billingUsageMeteringService,
                                    CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter,
+                                   SafetyGatewayService safetyGatewayService,
                                    AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
                                    @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor,
                                    PlatformTransactionManager transactionManager) {
@@ -177,6 +179,7 @@ public class ChatOrchestratorService {
         this.agentAccessControlService = agentAccessControlService;
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.crmProductSalesAnswerFormatter = crmProductSalesAnswerFormatter;
+        this.safetyGatewayService = safetyGatewayService;
         this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
         this.agentRuntimeExecutor = agentRuntimeExecutor;
         this.tx = new TransactionTemplate(transactionManager);
@@ -700,10 +703,8 @@ public class ChatOrchestratorService {
                 String finalText;
                 if (forcedCrmProductSalesAnswer.isPresent()) {
                     finalText = forcedCrmProductSalesAnswer.get();
-                    safeSendDeltaInChunks(emitter, finalText);
                 } else if (scheduleCadenceClarification.isPresent()) {
                     finalText = scheduleCadenceClarification.get();
-                    safeSendDeltaInChunks(emitter, finalText);
                 } else {
                     StringBuilder acc = new StringBuilder();
                     log.info("chatStream start LLM stream: session={} model={} msgCount={} toolCount={}",
@@ -721,7 +722,6 @@ public class ChatOrchestratorService {
                                     showThinking,
                                     piece -> {
                                         acc.append(piece);
-                                        safeSendDelta(emitter, piece);
                                     },
                                     modelCredentials.apiBaseUrl(),
                                     modelCredentials.apiKey());
@@ -733,7 +733,6 @@ public class ChatOrchestratorService {
                                     showThinking,
                                     piece -> {
                                         acc.append(piece);
-                                        safeSendDelta(emitter, piece);
                                     });
                         }
                         log.info("chatStream LLM stream done: session={} chars={} elapsedMs={}",
@@ -744,7 +743,6 @@ public class ChatOrchestratorService {
                                 sessionId, System.currentTimeMillis() - streamStart, ex.getMessage());
                         String fallback = "（生成回复时发生错误，请重试。详情：" + ex.getMessage() + "）";
                         acc.append(fallback);
-                        safeSendDeltaInChunks(emitter, fallback);
                     } finally {
                         Instant finalModelEndedAt = Instant.now();
                         modelCallTraces.add(new AgentRunTraceService.ModelCallTraceInput(
@@ -766,12 +764,9 @@ public class ChatOrchestratorService {
                             : AssistantContentSanitizer.stripThinkingSections(acc.toString());
                     if (finalText == null || finalText.trim().isEmpty()) {
                         finalText = buildToolResultFallbackMessage(messages);
-                        safeSendDeltaInChunks(emitter, finalText);
                     } else {
                         String guardedFinalText = appendToolResultFallbackIfDeferred(finalText, messages);
                         if (!guardedFinalText.equals(finalText)) {
-                            String appended = guardedFinalText.substring(finalText.length());
-                            safeSendDeltaInChunks(emitter, appended);
                             finalText = guardedFinalText;
                         }
                     }

@@ -28,6 +28,7 @@ import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
+import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillRuntimeConfigService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
@@ -802,6 +803,7 @@ class ChatOrchestratorServiceModelIdentityTest {
         private final AgentRunTraceService agentRunTraceService = mock(AgentRunTraceService.class);
         private final AgentAccessControlService agentAccessControlService = mock(AgentAccessControlService.class);
         private final BillingUsageMeteringService billingUsageMeteringService = mock(BillingUsageMeteringService.class);
+        private final SafetyGatewayService safetyGatewayService = mock(SafetyGatewayService.class);
         private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
         private final CrmProductSalesAnswerFormatter formatter =
                 new CrmProductSalesAnswerFormatter(new ObjectMapper().findAndRegisterModules());
@@ -872,6 +874,12 @@ class ChatOrchestratorServiceModelIdentityTest {
             when(agentWorkflowRuntimeService.evaluateForChat(anyString(), anyString(), anyString(), anyList()))
                     .thenReturn(executionResult);
             when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+            when(safetyGatewayService.checkInput(anyString(), anyString(), anyString(), anyString()))
+                    .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
+                            "ALLOW", invocation.getArgument(3), List.of(), false, "test"));
+            when(safetyGatewayService.checkOutput(anyString(), anyString(), anyString(), anyString()))
+                    .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
+                            "ALLOW", invocation.getArgument(3), List.of(), false, "test"));
 
             service = new ChatOrchestratorService(
                     chatSessionRepository,
@@ -900,6 +908,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     agentAccessControlService,
                     billingUsageMeteringService,
                     formatter,
+                    safetyGatewayService,
                     new AgentRuntimeConcurrencyService(),
                     directExecutor,
                     transactionManager);

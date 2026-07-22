@@ -165,7 +165,7 @@ updated_by: MANAGER-001
 
 ## 数据模型
 
-新增 Flyway 迁移 `V71__security_rules_platform.sql`。
+新增 Flyway 迁移 `V84__security_rules_platform.sql`。该迁移原计划使用 V71，但合并时最新主线已包含 V72-V83；为避免已升级环境发生 Flyway 乱序迁移，按主线时间线重编号为 V84。
 
 表：
 

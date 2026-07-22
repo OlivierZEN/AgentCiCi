@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T00:30:00+08:00
+updated_at: 2026-07-22T09:16:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T00:30:00+08:00
+last_run_at: 2026-07-22T09:16:00+08:00
 last_run_status: passed
 ---
 
@@ -17,6 +17,9 @@ last_run_status: passed
 - `frontend`：`npm test -- AgentBuilderShell.test.ts` 25/25 通过；`npm run build` 通过，保留既有 Vite 大 chunk 警告。
 - `backend`：`mvn -Dtest=GlobalExceptionHandlerTest test` 2/2 通过，覆盖 `ResponseStatusException` 的 404/403 状态与消息映射；`MultitenantIsolationIntegrationTest` 主、测试代码编译成功，但启动 Spring 上下文时被共享测试库的 Flyway V81 checksum 不匹配阻断（数据库 `2112500543`，本地 `379982424`），未执行 repair。
 - `script/static`：`python3 -m py_compile scripts/seed-demo-environment.py` 与 `git diff --check` 通过。
+- `TASK-170 source`：安全规则分支的 `SecurityRedactionServiceTest`、`SafetyGatewayServiceTest`、`SecurityRulesServiceTest`、`AuditServiceSecurityTest`、`PlatformAuditServiceTest`、`ChatOrchestratorServiceModelIdentityTest` 定向测试及 `mvn -q -DskipTests package` 通过；前端生产构建通过。
+- `TASK-219 source`：`theme`、`PlatformBillingPage`、`PlatformSkillsPage` 共 20 项前端定向测试与前端生产构建通过。
+- `integrated regression`：TASK-170/TASK-219 合并后，同一组 7 个后端测试类共 56 项通过，`mvn -q -DskipTests package` 通过；上述 3 个前端测试文件共 20 项及 `npm run build` 通过。安全迁移由 V71 重编号为 V84，以匹配已到 V83 的主线迁移时间线；`git diff --check` 通过。
 
 ## TASK-218 - 厂商模型目录能力边界
 
@@ -43,7 +46,7 @@ last_run_status: passed
 
 ## TASK-219 - 运营管理端信息架构与独立主题重构（进行中）
 
-- `frontend-focused`: `npm test -- --run src/theme/theme.test.ts src/platform/pages/PlatformBillingPage.test.ts src/platform/pages/PlatformSkillsPage.test.ts` 通过，3 个文件、17 项断言全部通过。
+- `frontend-focused`: `npm test -- --run src/theme/theme.test.ts src/platform/pages/PlatformBillingPage.test.ts src/platform/pages/PlatformSkillsPage.test.ts` 通过，3 个文件、20 项断言全部通过。
 - `frontend-build`: `npm run build` 通过；Vite 保留既有大 chunk 警告，无 TypeScript 错误。
 - `static`: `git diff --check` 通过。
 - `browser`: 本地应用内浏览器访问 `/platform/login`，登录页语义与交互控件可用；当前没有平台账号会话，未对需鉴权的运营页伪造数据或宣称已完成视觉验收。待取得授权会话后补做桌面截图、导航展开、抽屉与八主题持久化检查。

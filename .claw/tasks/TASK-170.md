@@ -28,7 +28,7 @@ spec_path: docs/specs/FEAT-080-security-rules-platform.md
 ## Implementation Plan
 
 - 创建 FEAT-080、TASK-170 和授权边界。
-- 新增 V71 安全规则、检测事件、复核项数据模型。
+- 新增 V84 安全规则、检测事件、复核项数据模型（合并时按最新主线迁移时间线重编号）。
 - 实现 `SensitiveDataDetector`、`SecurityRuleEngine`、`PromptInjectionDetector`、`SafetyGatewayService`。
 - 接入 `AuditService` / `PlatformAuditService` 脱敏。
 - 接入聊天输入输出、工具调用、RAG/tool 上下文安全检查。
@@ -39,7 +39,7 @@ spec_path: docs/specs/FEAT-080-security-rules-platform.md
 
 - `dev-login.py` for `MANAGER-001` setup files -> allowed.
 - `dev-login.py` for `MANAGER-001` / `TASK-170` representative files -> allowed.
-- `check-assignment.py` for TASK-170 representative spec, state, V71 migration, backend security service, and admin frontend files -> allowed.
+- `check-assignment.py` for TASK-170 representative spec, state, security migration, backend security service, and admin frontend files -> allowed.
 - `git diff --check` -> success for TASK-170 setup files.
 - TDD RED: `mvn -q -Dtest=SecurityRedactionServiceTest,SafetyGatewayServiceTest,SecurityRulesServiceTest,AuditServiceSecurityTest test` -> failed as expected before security module implementation because target classes did not exist.
 - Focused GREEN: `mvn -q -Dtest=SecurityRedactionServiceTest,SafetyGatewayServiceTest,SecurityRulesServiceTest,AuditServiceSecurityTest,PlatformAuditServiceTest,ChatOrchestratorServiceModelIdentityTest test` in `backend/` -> success.
@@ -58,7 +58,7 @@ spec_path: docs/specs/FEAT-080-security-rules-platform.md
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
-- `backend/src/main/resources/db/migration/V71__security_rules_platform.sql`
+- `backend/src/main/resources/db/migration/V84__security_rules_platform.sql`
 - `backend/src/main/java/com/codehouse/ciciassistant/security/**`
 - `backend/src/main/java/com/codehouse/ciciassistant/ops/service/AuditService.java`
 - `backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformAuditService.java`

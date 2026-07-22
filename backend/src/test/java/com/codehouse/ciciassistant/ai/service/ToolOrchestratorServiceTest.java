@@ -12,6 +12,7 @@ import com.codehouse.ciciassistant.email.service.EmailToolService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
+import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.BuiltinToolCatalog;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
@@ -49,6 +50,7 @@ class ToolOrchestratorServiceTest {
                 tavily,
                 governance,
                 skillApi,
+                allowSafetyGateway(),
                 objectMapper
         );
 
@@ -89,7 +91,7 @@ class ToolOrchestratorServiceTest {
         ToolOrchestratorService orchestrator = new ToolOrchestratorService(
                 mcp, mock(CloudccOpenApiService.class), mock(CrmProductSalesAnalysisToolService.class),
                 mock(EmailToolService.class), mock(UserMemoryService.class), mock(TavilyToolService.class),
-                governance, skillApi, new ObjectMapper().findAndRegisterModules());
+                governance, skillApi, allowSafetyGateway(), new ObjectMapper().findAndRegisterModules());
         orchestrator.setAssistantScheduleToolService(schedules);
 
         assertThat(orchestrator.getToolDefinitions("org-1", List.of("tavily_search"), List.of()))
@@ -99,5 +101,16 @@ class ToolOrchestratorServiceTest {
                 "{\"cadence\":\"每天 09:00\",\"task\":\"搜索美国 K12\"}", List.of(), List.of(), "agent-1"))
                 .isEqualTo("{\"status\":\"CREATED\"}");
         verify(schedules).dispatch("org-1", "user-1", "agent-1", "{\"cadence\":\"每天 09:00\",\"task\":\"搜索美国 K12\"}");
+    }
+
+    private SafetyGatewayService allowSafetyGateway() {
+        SafetyGatewayService safetyGateway = mock(SafetyGatewayService.class);
+        when(safetyGateway.checkToolCall(anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
+                        "ALLOW", invocation.getArgument(3), List.of(), false, "test"));
+        when(safetyGateway.checkOutput(anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
+                        "ALLOW", invocation.getArgument(3), List.of(), false, "test"));
+        return safetyGateway;
     }
 }
