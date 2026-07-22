@@ -1684,6 +1684,10 @@ export default function AgentBuilderShell({
   const [accessDialogOpen, setAccessDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<AgentRecord | null>(null);
   const [isDeletingAgent, setIsDeletingAgent] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const avatarMenuRef = useRef<HTMLDivElement | null>(null);
+  const avatarTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const avatarFileInputRef = useRef<HTMLInputElement | null>(null);
   const skillDagRequestIdRef = useRef(0);
   const agentSelectionRequestIdRef = useRef(0);
   const readinessRequestIdRef = useRef(0);
@@ -1956,6 +1960,7 @@ export default function AgentBuilderShell({
   const selectedAgentPermissions = selectedAgentAccess.permissions ?? [];
   const canEditSelectedAgent = Boolean(selectedAgentAccess.canEdit);
   const canPublishSelectedAgent = selectedAgentPermissions.includes("PUBLISH");
+  const avatarMenuActions = resolveAgentAvatarMenuActions(draft.avatarBase64);
   const agentWriteBlocked = !canStartAgentWriteOperation(
     selectedAgentId,
     selectedAgentIdRef.current,

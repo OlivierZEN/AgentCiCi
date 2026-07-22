@@ -23,6 +23,8 @@ import {
   type BaseModelOption,
 } from "./AgentBuilderShell";
 
+const assistantCss = readFileSync(new URL("./cici-ui.css", import.meta.url), "utf8");
+
 describe("Agent Builder Skill DAG lifecycle", () => {
   it("requests an explicit compiled version without leaking the raw agent id", () => {
     expect(buildAgentSkillDagUrl("agent /售后", 12)).toBe("/agents/agent%20%2F%E5%94%AE%E5%90%8E/skill-dag?versionNo=12");

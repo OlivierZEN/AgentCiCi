@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-222 - 本地遗留分支审查与主线整合
+
+- `identity/assignment`：`MANAGER-001` 的 SSH challenge-response 与 TASK-222 代表文件/代码范围均通过 `dev-login.py` 和 `check-assignment.py`。
+- `merge`：TASK-160、TASK-203、TASK-204、TASK-210 均在专用整合分支完成合并；冲突保留当前 `main` 时间线，历史 `.claw` 快照未回填。
+- `frontend`：`npm test -- AgentBuilderShell.test.ts` 25/25 通过；`npm run build` 通过，保留既有 Vite 大 chunk 警告。
+- `backend`：`mvn -Dtest=GlobalExceptionHandlerTest test` 2/2 通过，覆盖 `ResponseStatusException` 的 404/403 状态与消息映射；`MultitenantIsolationIntegrationTest` 主、测试代码编译成功，但启动 Spring 上下文时被共享测试库的 Flyway V81 checksum 不匹配阻断（数据库 `2112500543`，本地 `379982424`），未执行 repair。
+- `script/static`：`python3 -m py_compile scripts/seed-demo-environment.py` 与 `git diff --check` 通过。
+
 ## TASK-218 - 厂商模型目录能力边界
 
 - 授权：`MANAGER-001` 的 SSH 持钥、TASK-218 分支和后端、前端、测试、规格、状态文件范围均通过 `dev-login.py` 与 `check-assignment.py`。

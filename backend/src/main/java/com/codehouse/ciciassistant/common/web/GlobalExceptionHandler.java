@@ -92,6 +92,14 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.fail("DATA_SOURCE_UNAVAILABLE"));
     }
 
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Void>> handleResponseStatus(ResponseStatusException ex) {
+        String reason = ex.getReason() == null || ex.getReason().isBlank()
+                ? ex.getStatusCode().toString()
+                : ex.getReason();
+        return ResponseEntity.status(ex.getStatusCode()).body(ApiResponse.fail(reason));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception ex) {
         log.error("Unhandled server exception", ex);

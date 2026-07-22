@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T00:24:45+08:00
 updated_by: MANAGER-001
-phase: local-branch-integration-in-progress
+phase: local-branch-integration-review
 active_task: "TASK-222"
-next_action: "按当前 main 时间线审查并整合四个未合并本地分支，完成定向验证。"
+next_action: "将 TASK-222 的已验证整合提交快进合并并推送到 main。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-222 正在审查 TASK-160、TASK-203、TASK-204 与 TASK-210 的本地未合并提交。所有直接合并均有冲突，冲突以当前 `main` 的最新代码与状态为准；不覆盖其他 worktree 的未提交工作。
+- TASK-222 已在专用整合分支合并 TASK-160、TASK-203、TASK-204 与 TASK-210。冲突按当前 `main` 最新代码与状态处理，补齐 TASK-204 头像菜单的缺失状态/测试读取，并在当前异常处理器中兼容 `ResponseStatusException` 映射。前端定向 25/25、生产构建、Python 编译和 diff 检查通过；多租户集成测试仍被既有共享库 Flyway V81 checksum 不匹配阻断，未 repair。
 
 - TASK-221 is in review: the complete `/admin/*` static audit now routes shared modals, organization/user dialogs, skills subpages and row menus, ontology workbench, operations/monitor, embedded apps and billing through current `--theme-*` values. AdminToolsPage no longer injects category gradients or fixed colors. Assignment check, 11 focused theme tests, production build and diff check pass. This session has no authenticated administrator, so logged-in blue-theme desktop evidence remains an explicit manual visual-acceptance item.
 
