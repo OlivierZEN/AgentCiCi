@@ -160,14 +160,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-204 - 智能体构建说明与头像交互精修
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md`
 - task_status_path: `.claw/tasks/TASK-204.md`
 - assignment_path: `.claw/assignments/TASK-204.yaml`
 - blocked_by: `none`
-- next_action: User reviews the written FEAT-110 design, then implementation starts on the assigned branch.
+- next_action: Done on `codex/TASK-204-agent-builder-avatar-polish`; integrate through the normal branch workflow.
 
 ### TASK-203 - 客户互动工作台全场景演示数据
 

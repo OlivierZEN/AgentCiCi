@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-110
 title: 智能体构建说明与头像交互精修
-status: approved
+status: implemented
 owner_role: project-manager
 task_ids: TASK-204
 related_decisions: none
 related_issues: none
-updated_at: 2026-07-14T09:05:01Z
+updated_at: 2026-07-14T09:28:46Z
 updated_by: MANAGER-001
 ---
 
@@ -128,7 +128,12 @@ updated_by: MANAGER-001
 
 - 已完成现状分析、方案比较和设计确认。
 - 用户已确认采用方案 A。
-- 待用户复核本书面规格后进入实现计划与编码。
+- 用户已复核书面规格并确认开始实现。
+- 详细实现计划见 `docs/specs/FEAT-110-agent-builder-guide-avatar-polish-plan.md`。
+- 已去除三层主题覆盖中的说明区背景、边框、圆角与阴影，并将局部内距收紧为 `2px 4px 6px`。
+- 已将头像改为唯一常驻入口；菜单按头像状态显示“上传头像”或“更换头像”，并仅在存在自定义头像时显示“移除头像”。
+- 已复用原有文件选择与裁剪链路，补齐外部点击、Escape 关闭、焦点返回和即时首字回退。
+- 13 个前端测试文件共 76 项测试、生产构建、差异检查和本地桌面端浏览器验收均通过；浏览器无横向溢出、无 console error/warning。
 
 ## 交接说明
 

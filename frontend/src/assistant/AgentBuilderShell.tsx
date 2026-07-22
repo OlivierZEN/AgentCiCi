@@ -149,6 +149,17 @@ export const AGENT_BUILDER_EDITOR_LAYOUT = Object.freeze({
   showModelGovernanceNotice: false,
 });
 
+export function resolveAgentAvatarMenuActions(avatarBase64: string): {
+  primaryLabel: "上传头像" | "更换头像";
+  canRemove: boolean;
+} {
+  const canRemove = Boolean(avatarBase64.trim());
+  return {
+    primaryLabel: canRemove ? "更换头像" : "上传头像",
+    canRemove,
+  };
+}
+
 export function resolveAgentCreationModel(
   draftModel: string,
   modelOptions: BaseModelOption[],
@@ -1721,6 +1732,27 @@ export default function AgentBuilderShell({
     const timer = window.setTimeout(() => setNoticeVisible(false), 2600);
     return () => window.clearTimeout(timer);
   }, [noticeTick, notice]);
+
+  useEffect(() => {
+    if (!avatarMenuOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!avatarMenuRef.current?.contains(event.target as Node)) {
+        setAvatarMenuOpen(false);
+      }
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setAvatarMenuOpen(false);
+      avatarTriggerRef.current?.focus();
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [avatarMenuOpen]);
 
   useEffect(() => {
     if (!token) return;
@@ -4109,33 +4141,73 @@ export default function AgentBuilderShell({
                   <div className="cici-builder-field">
                     {renderFieldTitle("智能体头像", false, "用于工作台、会话消息和智能体档案展示")}
                     <div className="cici-builder-avatar-row">
-                      <AvatarView
-                        src={draft.avatarBase64}
-                        fallback={getDisplayInitial(draft.name || "A", "A")}
-                        className="cici-builder-avatar-preview"
-                        alt={`${draft.name || "Agent"} 头像`}
-                      />
-                      <div className="cici-builder-avatar-actions">
-                        <label className="cici-builder__action cici-builder__action--ghost cici-builder-avatar-upload">
-                          上传图片
-                          <input
-                            type="file"
-                            accept="image/png,image/jpeg,image/webp"
-                            onChange={(event) => {
-                              const file = event.target.files?.[0];
-                              event.currentTarget.value = "";
-                              if (!file) return;
-                              void beginAvatarCrop(file);
-                            }}
-                          />
-                        </label>
+                      <div className="cici-builder-avatar-menu" ref={avatarMenuRef}>
                         <button
+                          ref={avatarTriggerRef}
                           type="button"
-                          className="cici-builder__action cici-builder__action--ghost"
-                          onClick={() => updateDraft("avatarBase64", "")}
+                          className="cici-builder-avatar-trigger"
+                          aria-label={`编辑 ${draft.name || "Agent"} 头像`}
+                          aria-haspopup="menu"
+                          aria-expanded={avatarMenuOpen}
+                          disabled={!canEditSelectedAgent}
+                          onClick={() => setAvatarMenuOpen((current) => !current)}
                         >
-                          清除头像
+                          <AvatarView
+                            src={draft.avatarBase64}
+                            fallback={getDisplayInitial(draft.name || "A", "A")}
+                            className="cici-builder-avatar-preview"
+                            alt={`${draft.name || "Agent"} 头像`}
+                          />
+                          <span className="cici-builder-avatar-trigger__overlay" aria-hidden>
+                            <svg viewBox="0 0 24 24">
+                              <path d="M8.5 7 10 5h4l1.5 2H18a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h2.5Z" />
+                              <circle cx="12" cy="13" r="3" />
+                            </svg>
+                            <span>编辑</span>
+                          </span>
                         </button>
+                        <input
+                          ref={avatarFileInputRef}
+                          className="cici-builder-avatar-file-input"
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          tabIndex={-1}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.currentTarget.value = "";
+                            setAvatarMenuOpen(false);
+                            if (!file) return;
+                            void beginAvatarCrop(file);
+                          }}
+                        />
+                        {avatarMenuOpen ? (
+                          <div className="cici-builder-avatar-popover" role="menu" aria-label="头像操作">
+                            <button
+                              type="button"
+                              role="menuitem"
+                              onClick={() => {
+                                setAvatarMenuOpen(false);
+                                avatarFileInputRef.current?.click();
+                              }}
+                            >
+                              {avatarMenuActions.primaryLabel}
+                            </button>
+                            {avatarMenuActions.canRemove ? (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                className="is-danger"
+                                onClick={() => {
+                                  updateDraft("avatarBase64", "");
+                                  setAvatarMenuOpen(false);
+                                  window.requestAnimationFrame(() => avatarTriggerRef.current?.focus());
+                                }}
+                              >
+                                移除头像
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>

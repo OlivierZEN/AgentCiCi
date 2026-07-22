@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-204
-status: ready
-updated_at: 2026-07-14T09:05:01Z
+status: done
+updated_at: 2026-07-14T09:28:46Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: frontend-agent
@@ -21,22 +21,30 @@ spec_path: docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md
 
 ## Current State
 
-- 用户已确认采用方案 A：头像为唯一常驻入口，菜单承载上传/更换和条件显示的移除动作。
-- 书面设计已写入 FEAT-110，等待用户复核后进入实现。
+- 方案 A 已实现：头像为唯一常驻入口，菜单承载上传/更换和条件显示的移除动作。
+- 说明区已去除嵌套卡片外观并收紧局部间距，不改变页面其他主要 gutter。
+- 头像裁剪与草稿保存数据流保持不变；外部点击、Escape、即时移除回退和无头像菜单状态均已验证。
+- 前端 13 个测试文件 / 76 项测试、生产构建、`git diff --check` 和本地桌面端浏览器验收通过。
 
 ## Next Action
 
-- 用户复核 FEAT-110 后编写实现计划，并在 TASK-204 分支完成代码与验证。
+- 完成；等待按正常分支集成流程合入主线。
 
 ## Changed Files
 
 - `docs/specs/FEAT-110-agent-builder-guide-avatar-polish.md`
+- `docs/specs/FEAT-110-agent-builder-guide-avatar-polish-plan.md`
 - `.claw/tasks/TASK-204.md`
 - `.claw/assignments/TASK-204.yaml`
 - `.claw/task-board.md`
 - `.claw/current-status.md`
+- `frontend/src/assistant/AgentBuilderShell.tsx`
+- `frontend/src/assistant/AgentBuilderShell.test.ts`
+- `frontend/src/assistant/cici-ui.css`
+- `.claw/test-report.md`
 
 ## Handoff
 
 - 目标分支：`codex/TASK-204-agent-builder-avatar-polish`。
+- 桌面端证据：`output/playwright/task204-agent-builder-avatar-menu-desktop.png`。
 - 保留未跟踪 `diagrams/`，本任务不读取、不修改、不提交。
