@@ -116,7 +116,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-210 - 客户互动工作台标准渠道图标治理
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `frontend-agent`
 - spec_path: `docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md`

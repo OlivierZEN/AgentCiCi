@@ -50,4 +50,5 @@ spec_path: docs/specs/FEAT-116-customer-workbench-standard-channel-icons.md
 
 - 分支：`codex/TASK-210-customer-workbench-standard-icons`。
 - 不触碰 TASK-208 的 CRM 分析实现范围。
-- 本地视觉证据位于 `output/playwright/task210-*.png`，未纳入发布产物。
+- 本地和生产视觉证据位于 `output/playwright/task210-*.png`，未纳入发布产物。
+- CloudCC 运行时验证保留已知 `actualVersions=[]` 元数据 warning；页面组件 ID、customPage V9、嵌入 URL 与真实运行页均匹配，本次无需修改 CloudCC 元数据。
