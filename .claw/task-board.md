@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-224 - 生产发布构造器注入启动热修
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md`
+- task_status_path: `.claw/tasks/TASK-224.md`
+- assignment_path: `.claw/assignments/TASK-224.yaml`
+- blocked_by: `none`
+- next_action: 修复审计服务构造器选择，验证 Spring 启动后以新版本重新发布；2.8.2 已回滚至 2.8.1。
+
 ### TASK-223 - 定时任务周期解析越界修复
 
 - status: `done`

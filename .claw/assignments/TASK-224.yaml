@@ -1,0 +1,46 @@
+task_id: TASK-224
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-22T09:55:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md
+task_status_path: .claw/tasks/TASK-224.md
+branch: codex/TASK-224-release-startup-hotfix
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/service/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/service/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ops/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/ops/service/AuditService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformAuditService.java
+  - docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md
+  - .claw/tasks/TASK-224.md
+  - .claw/assignments/TASK-224.yaml
+protected_paths:
+  - .claw/developers/**
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-080-security-rules-platform.md
+task_boundary:
+  - "只修复生产构造器注入选择和必要回归测试。"
+  - "不得回退或改写已成功执行的 V84 migration。"
+  - "不得覆盖失败的 2.8.2 不可变镜像或 Git tag。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user explicitly requested release of latest main, and 2.8.2 startup failure requires a minimal release hotfix."

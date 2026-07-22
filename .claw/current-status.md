@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T09:39:00+08:00
+updated_at: 2026-07-22T09:55:00+08:00
 updated_by: MANAGER-001
-phase: schedule-cadence-parser-repair-complete
-active_task: ""
-next_action: "TASK-223 已完成本地修复；若需要上线，按生产 Runbook 发布并观察首次真实创建。"
+phase: task224-release-startup-hotfix
+active_task: "TASK-224"
+next_action: "修复 2.8.2 审计服务构造器注入启动失败，并以新版本重新发布。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- `2.8.2` 已完成镜像构建、tag 与 V84 正向迁移，但后端因 `AuditService` 的多构造器未标注注入入口而持续重启；已按运行手册回滚到健康的 `2.8.1`。TASK-224 正在用最小构造器注入修复与 Spring 启动回归处理该发布阻塞，不覆盖失败的 `2.8.2` tag。
 
 - TASK-223 已完成本地修复：用户补充“每天 09:00”后失败的根因已验证为时钟正则与 `inferTrigger` 捕获组读取不一致。显式捕获时段/小时/分钟后，定向测试确认每日 `09:00` 生成 `0 0 9 * * *` 并可计算下一次执行时间，下午 `3点30分` 正确换算为 `0 30 15 * * *`；后端定向测试和编译、diff 检查均通过，尚未发布生产。
 
