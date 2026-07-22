@@ -2,7 +2,7 @@
 kind: feature-spec
 feature_id: FEAT-130
 title: 对话技能选择的强制执行上下文与可观测性
-status: in_progress
+status: completed
 owner_role: fullstack-agent
 task_ids: TASK-225
 related_decisions: none
@@ -64,3 +64,11 @@ updated_by: MANAGER-001
 - 风险：强制选择可能压制其他业务技能。仅压制其业务提示词和文件型文档，不绕过平台策略、权限或 Agent 直接工具。
 - 风险：旧 Trace 没有新字段。前端对缺失字段使用历史兼容文案。
 - 回滚：回退本功能提交即可恢复现有选择语义；不迁移或删除历史 Trace。
+
+## 实现与验证
+
+- `SkillPromptAssembler` 在存在有效选择时只注入所选技能的业务流程，并写入不得被其他业务技能替代的强制指令；所选技能的输出契约成为该轮唯一业务输出约束。
+- `BuiltinSkillDocumentService` 在存在有效选择时只解析所选技能的文件型参考文档；未选择时仍保持原有多技能解析。
+- `ChatOrchestratorService` 将请求技能码和解析后的有效技能码同时传入 `AgentRunTraceService`；Trace 持久化 `requestedSkillCode`、`effectiveSkillCode`、`selectionStatus`、`selectionReason`、`activatedSkillCodes`、`boundSkillCodes`，并保持旧 `activeSkillCode` 兼容字段。
+- 工作台输入按钮显示“优先 · 技能名称”，已选项显示“本轮优先执行”；用户与管理员监控以“用户选择 / 有效上下文 / 实际激活”呈现，并在未采纳时显示原因。
+- `mvn -q -Dtest=AgentRunTraceServiceTest,SkillPromptAssemblerTest test`、`mvn -q -DskipTests compile`、`npm test`（28 文件 / 187 断言）、`npm run build` 与 `git diff --check` 均通过。浏览器本地应用加载无 console error；因当前没有已授权组织用户会话，未对受保护工作台和 Trace 页面伪造交互验收。

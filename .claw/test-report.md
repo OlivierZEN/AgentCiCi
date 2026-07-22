@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T09:39:00+08:00
+updated_at: 2026-07-22T10:15:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T09:39:00+08:00
+last_run_at: 2026-07-22T10:15:00+08:00
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-225 - 对话技能选择的强制执行上下文与可观测性
+
+- `identity/assignment`：`MANAGER-001` 的 TASK-225 SSH challenge-response、Git 身份、签名指纹和全部实现/测试/状态代表路径经 `dev-login.py` 验证为 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=AgentRunTraceServiceTest,SkillPromptAssemblerTest test` 通过；覆盖所选技能只注入自身业务流程与输出契约、其他业务技能不进入提示词，以及 Trace 保存请求/有效技能码、`FORCED` 状态、强制上下文原因和实际激活结果。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过。
+- `frontend`：`npm test` 28 个文件、187 项断言全部通过；`npm run build` 通过，仅保留既有 Vite 大 chunk 提示。
+- `browser/static`：本地桌面浏览器可加载应用且 console error 为 0；当前无组织用户授权会话，未冒充完成受保护的工作台/Trace 交互验收。`git diff --check` 通过。
 
 ## TASK-224 - 生产发布构造器注入启动热修
 

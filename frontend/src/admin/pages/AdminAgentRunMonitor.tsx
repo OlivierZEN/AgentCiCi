@@ -798,11 +798,26 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                               "",
                             );
                             const bound = compactUnknownValue(selectedTrace.skills?.boundSkillCodes, "");
-                            return activated
-                              ? `本轮激活：${activated}`
+                            const requested = compactUnknownValue(selectedTrace.skills?.requestedSkillCode, "");
+                            const effective = compactUnknownValue(
+                              selectedTrace.skills?.effectiveSkillCode ?? selectedTrace.skills?.activeSkillCode,
+                              "",
+                            );
+                            const selectionStatus = compactUnknownValue(selectedTrace.skills?.selectionStatus, "");
+                            const selectionReason = compactUnknownValue(selectedTrace.skills?.selectionReason, "");
+                            const selection = requested
+                              ? selectionStatus === "FORCED"
+                                ? `用户选择：${requested} · 有效上下文：${effective || "未生效"}`
+                                : `用户选择：${requested} · 未采纳：${selectionReason || "未形成有效上下文"}`
+                              : effective
+                                ? `有效上下文：${effective}`
+                                : "";
+                            const activation = activated
+                              ? `实际激活：${activated}`
                               : bound
                                 ? `未激活业务技能 · 候选：${bound}`
                                 : "";
+                            return [selection, activation].filter(Boolean).join(" · ");
                           })(),
                           compactUnknownValue((selectedTrace.rag?.knowledgeBases as unknown[] | undefined)?.map((kb) => compactUnknownValue(kb, "")), ""),
                         ].filter(Boolean).join(" · ") || "本轮未命中技能或知识库"

@@ -36,7 +36,13 @@ public class BuiltinSkillDocumentService {
         }
         List<DocSection> sections = new ArrayList<>();
         List<DocRef> refs = new ArrayList<>();
-        for (SkillResolverService.ResolvedSkill skill : context.skills()) {
+        List<SkillResolverService.ResolvedSkill> skills = context.skills();
+        if (context.activeSkillCode() != null && !context.activeSkillCode().isBlank()) {
+            skills = context.skills().stream()
+                    .filter(skill -> skill.skillCode().equalsIgnoreCase(context.activeSkillCode().trim()))
+                    .toList();
+        }
+        for (SkillResolverService.ResolvedSkill skill : skills) {
             Optional<FileBackedBuiltinSkillBundle> bundle = catalog.findBundle(skill.skillCode());
             if (bundle.isEmpty()) {
                 continue;
