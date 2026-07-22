@@ -1,14 +1,19 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T10:29:33+08:00
+updated_at: 2026-07-22T03:30:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T10:29:33+08:00
+last_run_at: 2026-07-22T03:30:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## FEAT-131 - 通用外部应用智能体记忆平台（设计规格）
+
+- `identity`：`MANAGER-001` 的 SSH challenge-response、Git 身份和本次规格/状态/验证记录路径经技能包 `dev-login.py` 验证为 `allowed`。
+- `static`：已核对规格前置元数据、19 个设计章节、范围与交接说明；设计已更正为 Agent CC 面向任意外部应用的通用平台能力，FollowUp 仅为参考接入方。已跟踪文件及新增规格的 `git diff --check` 均通过。`validate-state.py .claw` 仍被仓库既有热状态超长、历史时区格式、终态任务仍在 Active Tasks、旧规格状态枚举和旧任务/assignment 格式等问题阻断；本次新增 FEAT-131 使用校验器要求的 `draft` 状态和 UTC 时间格式。该变更仅新增设计基线与项目状态，没有执行运行时代码、数据库迁移、前端构建、真实渠道或生产验证。
 
 ## TASK-225 - 对话技能选择的强制执行上下文与可观测性
 

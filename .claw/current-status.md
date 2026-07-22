@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T10:29:33+08:00
+updated_at: 2026-07-22T03:40:00Z
 updated_by: MANAGER-001
-phase: task225-forced-skill-execution-context-complete
-active_task: ""
-next_action: "等待有授权的组织用户会话补做已发布 TASK-225 的工作台/Trace 桌面交互复核；不影响已通过的发布门禁。"
+phase: feat131-phase1-in-progress
+active_task: "TASK-226"
+next_action: "在 codex/TASK-226-agent-memory-core 完成通用主体记忆与可信外部应用上下文核心；先通过授权检查，再做定向隔离/上下文测试。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,10 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-226 已由 MANAGER-001 分配并启动：按 FEAT-131 Phase 1 建设通用主体、会话记忆与可信外部应用上下文核心。授权边界覆盖 memory/ai/agent 后端、迁移、定向测试和项目状态；禁止任何外部应用领域耦合、移动端、生产发布和外部业务写入。
+
+- 已新增 `FEAT-131-agent-memory-platform.md` 通用平台设计基线：Agent CC 面向任何外部应用提供主体记忆、会话上下文、混合检索、路由移交、候选写入、Trace/评测和生命周期治理；外部应用仅通过可信契约接入并继续拥有其渠道、原始交互和领域事实。FollowUp 仅是首个参考接入方，不会在平台模型、接口、工具、Skills 或页面中形成耦合功能。
 
 - TASK-225 已发布生产 `2.8.4 / 2f2f1a013ec2`：工作台所选技能成为本轮强制业务上下文，只注入该技能的流程、输出契约和文件型参考文档；平台安全、Agent 直接工具和技能工具授权边界保持不变。Trace 现在记录用户选择、有效上下文、选择状态/原因、实际激活和候选绑定技能，工作台及管理端监控同步展示。后端定向测试、后端编译、前端 28 文件/187 断言、前端构建、ACR inspect、四类备份、六服务健康、版本与公网 HTTPS smoke 均通过；当前无已授权组织用户会话，受保护页面的桌面交互复核留待后续完成，未伪造结果。
 
