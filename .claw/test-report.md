@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-03T15:08:00+08:00
+updated_at: 2026-07-06T16:55:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-03T15:08:00+08:00
+last_run_at: 2026-07-06T16:55:00+08:00
 last_run_status: success
 ---
 
@@ -13,11 +13,27 @@ last_run_status: success
 ## Latest Run Summary
 
 - 状态：`success`
-- 范围：TASK-168 ASR WebSocket 鉴权与线上语音入口修复。
-- 命令：任务级门禁、assignment check、TDD RED/GREEN `TenantContextFilterTest`、RBAC focused regression、backend compile、static check、merge main、release dry-run、ACR build/push、production backup/deploy、production smoke、live ASR WebSocket smoke。
-- 环境：`/Volumes/AISpace/codehouse/cc-codeup-agentcici_PM`
+- 范围：TASK-170 安全规则平台与输入输出安全网关。
+- 命令：任务级门禁、assignment check、TDD RED/GREEN 安全模块测试、后端 focused regression、后端 package 编译、前端构建、Playwright 桌面端路由验证、static check。
+- 环境：`/Users/owenmacbook/.config/superpowers/worktrees/cc-codeup-agentcici_PM/codex-TASK-170-security-rules-platform`
 
 ## Latest Verified Results
+
+- TASK-170 安全规则平台与输入输出安全网关 (2026-07-06T16:55:00+08:00):
+  - Commands:
+    - `identity-manager`: `dev-login.py` for `MANAGER-001` before TASK-170 assignment creation -> **allowed**.
+    - `identity-task`: `dev-login.py` for `MANAGER-001` / `TASK-170` covering spec, task, assignment, migration, backend security service, AI runtime files, and admin frontend files -> **allowed**.
+    - `assignment`: `check-assignment.py` for TASK-170 representative implementation files -> **allowed**.
+    - `backend-focused-red`: `mvn -q -Dtest=SecurityRedactionServiceTest,SafetyGatewayServiceTest,SecurityRulesServiceTest,AuditServiceSecurityTest test` in `backend/` -> **failed as expected** before implementation because the security module classes did not exist.
+    - `backend-focused-green`: `mvn -q -Dtest=SecurityRedactionServiceTest,SafetyGatewayServiceTest,SecurityRulesServiceTest,AuditServiceSecurityTest,PlatformAuditServiceTest,ChatOrchestratorServiceModelIdentityTest test` in `backend/` -> **success**.
+    - `backend-package`: `mvn -q -DskipTests package` in `backend/` -> **success**.
+    - `frontend-install`: `npm ci` in `frontend/` -> **success**.
+    - `frontend-build`: `npm run build` in `frontend/` -> **success**; existing Vite large chunk warning remains.
+    - `playwright-desktop`: Vite dev server on `127.0.0.1:5174`; Playwright with system Chrome and mocked `/auth/me`, `/admin/organization/profile`, `/security-rules/*` opened `/admin/security-rules`, ran rule test, switched to events, asserted expected content, and captured `output/playwright/task170-security-rules-desktop.png` -> **success**.
+    - `static-check`: `git diff --check` -> **success**.
+  - Notes:
+    - Full backend `mvn -q test` was attempted but blocked by local shared test database Flyway validation: applied migration `V70` exists in `agentcici_test` but is not present in this isolated security branch lineage. This prevented application context startup for DB integration tests and is recorded as an environment/branch-state issue; focused TASK-170 tests and compile pass.
+    - Implemented coverage includes persistent audit redaction, security rule CRUD/test APIs, detection event review API, input/output gateway for chat, RAG context sanitization, tool argument and tool-result gating, and `/admin/security-rules`.
 
 - TASK-168 ASR WebSocket auth hotfix (2026-07-03T15:03:00+08:00):
   - Commands:

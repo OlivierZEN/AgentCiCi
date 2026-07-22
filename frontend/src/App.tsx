@@ -15,6 +15,7 @@ import AdminEmbedAppsPage from "./admin/pages/AdminEmbedAppsPage";
 import AdminWecomKfAccountsPage from "./admin/pages/AdminWecomKfAccountsPage";
 import AdminAgentBuilderPage from "./admin/pages/AdminAgentBuilderPage";
 import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
+import AdminSecurityRulesPage from "./admin/pages/AdminSecurityRulesPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
 import EmbedMeetingMinutesPage from "./embed/EmbedMeetingMinutesPage";
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="agent-builder" element={<AdminAgentBuilderPage />} />
             <Route path="agent-builder/:agentId/openapi-docs" element={<AdminAgentOpenApiDocsPage />} />
             <Route path="agent-builder/:agentId" element={<AdminAgentBuilderPage />} />
+            <Route path="security-rules" element={<AdminSecurityRulesPage />} />
             <Route path="integrations" element={<AdminIntegrationsPage />} />
             <Route path="embed-apps" element={<AdminEmbedAppsPage />} />
             <Route path="embed-apps/:appCode" element={<AdminEmbedAppsPage />} />

@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-170
-status: in_progress
-updated_at: 2026-07-06T16:20:00+08:00
+status: implemented
+updated_at: 2026-07-06T16:55:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -41,6 +41,14 @@ spec_path: docs/specs/FEAT-080-security-rules-platform.md
 - `dev-login.py` for `MANAGER-001` / `TASK-170` representative files -> allowed.
 - `check-assignment.py` for TASK-170 representative spec, state, V71 migration, backend security service, and admin frontend files -> allowed.
 - `git diff --check` -> success for TASK-170 setup files.
+- TDD RED: `mvn -q -Dtest=SecurityRedactionServiceTest,SafetyGatewayServiceTest,SecurityRulesServiceTest,AuditServiceSecurityTest test` -> failed as expected before security module implementation because target classes did not exist.
+- Focused GREEN: `mvn -q -Dtest=SecurityRedactionServiceTest,SafetyGatewayServiceTest,SecurityRulesServiceTest,AuditServiceSecurityTest,PlatformAuditServiceTest,ChatOrchestratorServiceModelIdentityTest test` in `backend/` -> success.
+- Backend compile/package: `mvn -q -DskipTests package` in `backend/` -> success.
+- Frontend dependencies: `npm ci` in `frontend/` -> success.
+- Frontend build: `npm run build` in `frontend/` -> success; existing Vite large chunk warning remains.
+- Desktop UI verification: Playwright with mocked `/security-rules/*` and `/auth/me` APIs opened `http://127.0.0.1:5174/admin/security-rules`, ran the rule test, switched to events, and captured `output/playwright/task170-security-rules-desktop.png` -> success.
+- Final static check: `git diff --check` -> success.
+- Full backend `mvn -q test` was attempted but blocked by local shared test database Flyway validation: applied migration `V70` exists in `agentcici_test` but is not present in this isolated security worktree based on `origin/main`; this is an environment/branch-state mismatch rather than a TASK-170 compile or focused regression failure.
 
 ## Changed Files
 
@@ -50,8 +58,22 @@ spec_path: docs/specs/FEAT-080-security-rules-platform.md
 - `.claw/task-board.md`
 - `.claw/current-status.md`
 - `.claw/test-report.md`
+- `backend/src/main/resources/db/migration/V71__security_rules_platform.sql`
+- `backend/src/main/java/com/codehouse/ciciassistant/security/**`
+- `backend/src/main/java/com/codehouse/ciciassistant/ops/service/AuditService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/platform/service/PlatformAuditService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java`
+- `backend/src/main/java/com/codehouse/ciciassistant/ai/service/ToolOrchestratorService.java`
+- `backend/src/test/java/com/codehouse/ciciassistant/security/**`
+- `backend/src/test/java/com/codehouse/ciciassistant/ops/AuditServiceSecurityTest.java`
+- `frontend/src/admin/pages/AdminSecurityRulesPage.tsx`
+- `frontend/src/admin/AdminShell.tsx`
+- `frontend/src/App.tsx`
+- `frontend/vite.config.js`
+- `frontend/vite.config.ts`
 
 ## Handoff
 
 - Branch/worktree for implementation: `codex/TASK-170-security-rules-platform`.
 - Isolated worktree: `/Users/owenmacbook/.config/superpowers/worktrees/cc-codeup-agentcici_PM/codex-TASK-170-security-rules-platform`.
+- Production-readiness scope implemented: sensitive data detection/redaction, custom sensitive lexicon CRUD/test, content moderation classification, prompt injection detection, input/output safety gateway, audit persistence redaction, chat/RAG/tool runtime integration, detection event review UI/API.

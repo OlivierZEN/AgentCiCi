@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-06T16:20:00+08:00
+updated_at: 2026-07-06T16:55:00+08:00
 updated_by: MANAGER-001
-phase: implementation
+phase: validation
 active_task: "TASK-170 安全规则平台与输入输出安全网关"
-next_action: "Validate TASK-170 assignment, run task-scoped dev-login/check-assignment, then implement V71 security rules platform and runtime gateway."
+next_action: "Review TASK-170 implementation, then decide whether to merge/release after reconciling local/main migration lineage around V70."
 read_next:
   goals: false
   decisions: false
@@ -24,7 +24,9 @@ read_next:
 
 - Current branch/worktree: `codex/TASK-170-security-rules-platform`; production is running release `2.1.12` from Git commit `caf4baf90575`.
 - User opened a goal to补齐 AgentCiCi 安全规则平台能力，并达到生产就绪状态.
-- TASK-170 is active and covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, runtime integration, and `/admin/security-rules`.
+- TASK-170 implementation is complete in the isolated worktree and covers FEAT-080: sensitive data detection/redaction, sensitive lexicon maintenance, content moderation classification, prompt injection detection, input/output safety gateway, audit redaction, chat/RAG/tool runtime integration, and `/admin/security-rules`.
+- Verification completed: focused backend security tests, backend package compile, frontend build, Playwright desktop route/screenshot, and `git diff --check` all passed.
+- Full backend `mvn test` is blocked in this local database by Flyway validation because migration `V70` was previously applied to `agentcici_test` but is not present in this branch lineage; targeted tests and compile are clean.
 - TASK-169 remains separate on branch `codex/TASK-169-kb-data-quality-annotation` and is not part of this isolated worktree.
 - FEAT-067 remains the source for existing enterprise KB readiness capabilities: parser/PDF, ACL, eval, connector skeleton, drift audit, embedding metadata, Qdrant smoke, and `/admin/kb` desktop validation.
 - TASK-168 is done in production release `2.1.12`; user should still retest AI 听记 and chat microphone from the browser when convenient.

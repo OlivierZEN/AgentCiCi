@@ -28,6 +28,7 @@ const adminNavItems: AdminNavItem[] = [
   { kind: "link", to: "/admin/tools", label: "工具" },
   { kind: "link", to: "/admin/skills", label: "技能" },
   { kind: "link", to: "/admin/agent-builder", label: "智能体构建" },
+  { kind: "link", to: "/admin/security-rules", label: "安全规则" },
   { kind: "link", to: "/admin/integrations", label: "集成应用" },
   { kind: "link", to: "/admin/embed-apps", label: "嵌入式智能应用" },
   { kind: "link", to: "/admin/channels/wechat-kf", label: "微信客服" },
