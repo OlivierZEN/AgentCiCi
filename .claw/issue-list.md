@@ -10,13 +10,6 @@ status: active
 
 ## Open Issues
 
-- ISSUE-032:
-  - Symptom: 用户先提出创建定时任务，补充“每天 09:00”后系统返回 `IndexOutOfBoundsException`，任务未创建。
-  - Verified facts: 截图显示周期补充在系统澄清后发生，当前消息明确为“每天 09:00”。
-  - Inferred root cause: `UserWorkflowService` 的时钟正则没有捕获组，但解析逻辑读取小时/分钟捕获组；待回归测试验证。
-  - Scope: 仅个人 workflow 自然语言时钟周期解析与创建路径，不涉及既有 trigger 或权限边界。
-  - Status: in_progress; TASK-223.
-
 - ISSUE-2026-07-15-session-not-found-status-mapped-500:
   - Symptom: a signed-in user requesting another user's non-org-scoped `/ai/sessions/{id}/messages` receives HTTP 500 `Unexpected server error` rather than a non-disclosing 404/403.
   - Verified facts: the response contains no `data` and no other user's content, so tenant/user isolation holds. `queryVisibleSession` correctly returns empty and throws `ResponseStatusException(HttpStatus.NOT_FOUND)`, but `GlobalExceptionHandler` has no dedicated handler and its generic exception path maps the status exception to 500 while producing ERROR logs.
@@ -62,6 +55,13 @@ status: active
   - Status: open (blocks assistant-entry CloudCC smoke, but does not change the separate CloudCC credential failure above).
 
 ## Resolved / Superseded
+
+- ISSUE-032:
+  - Symptom: 用户补充“每天 09:00”后系统返回 `IndexOutOfBoundsException`，未创建任务。
+  - Verified root cause: `UserWorkflowService.CLOCK_PATTERN` 没有定义捕获组，但 `inferTrigger` 读取时段、小时和分钟三组；合法时钟文本解析时必然越界。
+  - Resolution: TASK-223 将正则调整为对应的显式捕获组，并增加每日 09:00、下午 3:30 cron/nextFireAt 回归测试。
+  - Verification: `mvn -q -Dtest=UserWorkflowServiceTest test` 与 `mvn -q -DskipTests compile` 均通过。
+  - Status: resolved by TASK-223 on 2026-07-22; 未发布生产。
 
 - ISSUE-2026-07-15-crm-deterministic-stream-single-delta:
   - Symptom: CRM 产品销量答案能正确返回，但页面等待后一次性出现完整正文，失去普通对话的流式输出体验；Agent OpenAPI streaming 同样只有一个正文事件。

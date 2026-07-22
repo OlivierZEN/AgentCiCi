@@ -1,14 +1,21 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T09:16:00+08:00
+updated_at: 2026-07-22T09:39:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T09:16:00+08:00
+last_run_at: 2026-07-22T09:39:00+08:00
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-223 - 定时任务周期解析越界修复
+
+- `identity/assignment`：`MANAGER-001` 的 SSH challenge-response、TASK-223 分支和实现/测试/状态代表路径均通过 `dev-login.py` 与 `check-assignment.py`，0 finding。
+- `backend-focused`：`mvn -q -Dtest=UserWorkflowServiceTest test` 通过，覆盖“每天 09:00”生成 `0 0 9 * * *` 且计算非空下一次执行时间，以及“每天下午 3点30分”生成 `0 30 15 * * *`。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过。
+- `static`：`git diff --check` 通过；未执行生产发布或用户会话写入。
 
 ## TASK-222 - 本地遗留分支审查与主线整合
 

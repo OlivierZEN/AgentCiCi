@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-223 - 定时任务周期解析越界修复
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-128-schedule-cadence-parser-repair.md`
 - task_status_path: `.claw/tasks/TASK-223.md`
 - assignment_path: `.claw/assignments/TASK-223.yaml`
 - blocked_by: `none`
-- next_action: 补充“每天 09:00”解析回归后修复并验证真实 trigger 创建路径。
+- next_action: 已完成本地修复与定向验证；如需上线，按生产 Runbook 发布后观察首次真实创建。
 
 ### TASK-221 - 组织管理端全页面主题一致性治理
 

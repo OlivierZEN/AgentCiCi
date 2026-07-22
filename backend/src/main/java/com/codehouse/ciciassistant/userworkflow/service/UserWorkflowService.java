@@ -53,7 +53,7 @@ public class UserWorkflowService {
             "get_pending_approvals");
 
     private static final Pattern INTERVAL_PATTERN = Pattern.compile("每\\s*(\\d{1,3})\\s*分钟");
-    private static final Pattern CLOCK_PATTERN = Pattern.compile("(?:上午|下午|中午|晚上)?\\s*\\d{1,2}(?::\\s*\\d{1,2}|[点时](?:\\s*\\d{1,2}\\s*分?)?)");
+    private static final Pattern CLOCK_PATTERN = Pattern.compile("(上午|下午|中午|晚上)?\\s*(\\d{1,2})(?:(?::|[点时])\\s*(\\d{1,2})?\\s*分?)?");
     private static final Pattern NUMBERING_PREFIX = Pattern.compile("^[0-9]+[.)、]\\s*");
 
     private final AgentDefinitionService agentDefinitionService;

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T00:40:00+08:00
+updated_at: 2026-07-22T09:39:00+08:00
 updated_by: MANAGER-001
-phase: schedule-cadence-parser-repair
-active_task: "TASK-223"
-next_action: "修复“每天 09:00”周期解析越界，并验证真实 trigger 创建路径。"
+phase: schedule-cadence-parser-repair-complete
+active_task: ""
+next_action: "TASK-223 已完成本地修复；若需要上线，按生产 Runbook 发布并观察首次真实创建。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-223 is in progress after a user-reported production-path failure: the chat correctly asks for a cadence, but confirming “每天 09:00” returns `IndexOutOfBoundsException` and does not create a schedule. The working hypothesis is a mismatch between the clock regex and the capture groups read by `UserWorkflowService`; FEAT-128 defines the regression and safety boundary.
+- TASK-223 已完成本地修复：用户补充“每天 09:00”后失败的根因已验证为时钟正则与 `inferTrigger` 捕获组读取不一致。显式捕获时段/小时/分钟后，定向测试确认每日 `09:00` 生成 `0 0 9 * * *` 并可计算下一次执行时间，下午 `3点30分` 正确换算为 `0 30 15 * * *`；后端定向测试和编译、diff 检查均通过，尚未发布生产。
 
 - TASK-222 已完成 TASK-170 安全规则平台与 TASK-219 模型目录导航收敛。TASK-170 的冲突按当前 `main` 最新代码处理，迁移按主线时间线由 V71 重编号为 V84，避免 Flyway 乱序；安全规则、审计、聊天/工具编排 56 项后端定向测试、后端打包、TASK-219 的 20 项前端定向测试和前端生产构建均通过。
 

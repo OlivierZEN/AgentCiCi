@@ -2,12 +2,12 @@
 kind: feature-spec
 feature_id: FEAT-128
 title: 定时任务周期解析越界修复
-status: in_progress
+status: done
 owner_role: fullstack-agent
 task_ids: TASK-223
 related_decisions: none
 related_issues: ISSUE-032
-updated_at: 2026-07-22T00:40:00+08:00
+updated_at: 2026-07-22T09:39:00+08:00
 updated_by: MANAGER-001
 ---
 
@@ -48,3 +48,9 @@ updated_by: MANAGER-001
 
 - 风险：更改捕获组后误解析上午/下午语义。通过每日、上午、下午样例测试锁定 24 小时制转换。
 - 回滚：回退该后端解析修复即可恢复上一版本；不会删除既有 workflow 与执行审计。
+
+## 实现与验证
+
+- 已将时钟正则改为显式捕获时段、小时和分钟，使 `inferTrigger` 读取的三个捕获组与正则定义一致。
+- 回归测试覆盖“每天 09:00”生成 `0 0 9 * * *`、计算下一次执行时间，以及“每天下午 3点30分”生成 24 小时制 `0 30 15 * * *`。
+- `mvn -q -Dtest=UserWorkflowServiceTest test` 和 `mvn -q -DskipTests compile` 均已通过；未执行生产发布。
