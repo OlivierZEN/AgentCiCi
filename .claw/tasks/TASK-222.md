@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-222
-status: review
-updated_at: 2026-07-22T08:55:00+08:00
+status: done
+updated_at: 2026-07-22T09:00:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -25,4 +25,4 @@ spec_path: docs/specs/FEAT-127-local-branch-integration.md
 
 ## Next Action
 
-- 将已验证的整合分支快进合并并推送到 `main`。
+- 已完成：四个遗留分支均已合并并推送到 `main`；保留共享 Flyway V81 校验和问题作为独立环境阻塞。
