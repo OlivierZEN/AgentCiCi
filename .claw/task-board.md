@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-22T03:40:00Z
+updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -14,6 +14,17 @@ Recommended statuses: `todo` / `ready` / `in_progress` / `blocked` / `review` / 
 Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
+
+### TASK-227 - 通用记忆候选、证据与时效治理
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
+- task_status_path: `.claw/tasks/TASK-227.md`
+- assignment_path: `.claw/assignments/TASK-227.yaml`
+- blocked_by: `none`
+- next_action: 从 TASK-226 的 Phase 1 可信上下文核心创建分支，落地候选、证据、审核与 TTL 权威模型；不得引入外部应用领域耦合。
 
 ### TASK-226 - 通用主体记忆 Phase 1 核心
 
