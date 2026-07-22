@@ -1,0 +1,57 @@
+task_id: TASK-223
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-22T00:40:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-128-schedule-cadence-parser-repair.md
+task_status_path: .claw/tasks/TASK-223.md
+branch: codex/TASK-223-schedule-cadence-parser
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/userworkflow/**
+  - backend/src/test/java/com/codehouse/ciciassistant/userworkflow/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/userworkflow/service/UserWorkflowService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/userworkflow/service/UserWorkflowServiceTest.java
+  - docs/specs/FEAT-128-schedule-cadence-parser-repair.md
+  - .claw/tasks/TASK-223.md
+  - .claw/assignments/TASK-223.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+protected_paths:
+  - .claw/assignments/**
+  - .claw/developers/**
+  - .claw/current-status.md
+  - .claw/task-board.md
+  - .claw/issue-list.md
+  - .claw/test-report.md
+  - scripts/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+  - backend/src/main/resources/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/specs/FEAT-122-runtime-execution-trace-correction.md
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/RequireOrgAdmin.java
+task_boundary:
+  - "仅修复个人 workflow 定时任务的时钟周期解析与其回归测试。"
+  - "保留当前用户、当前组织、当前智能体边界及已有调度持久化模型。"
+  - "不新增移动端实现，不变更外部系统或既有任务。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 SSH challenge allowed 2026-07-22; user reported production schedule creation failure after confirming 每天 09:00."
+notes: "不得记录、显示或提交用户私密会话内容、token、API Key 或跨租户 schedule 数据。"

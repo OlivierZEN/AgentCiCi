@@ -10,6 +10,13 @@ status: active
 
 ## Open Issues
 
+- ISSUE-032:
+  - Symptom: 用户先提出创建定时任务，补充“每天 09:00”后系统返回 `IndexOutOfBoundsException`，任务未创建。
+  - Verified facts: 截图显示周期补充在系统澄清后发生，当前消息明确为“每天 09:00”。
+  - Inferred root cause: `UserWorkflowService` 的时钟正则没有捕获组，但解析逻辑读取小时/分钟捕获组；待回归测试验证。
+  - Scope: 仅个人 workflow 自然语言时钟周期解析与创建路径，不涉及既有 trigger 或权限边界。
+  - Status: in_progress; TASK-223.
+
 - ISSUE-2026-07-15-session-not-found-status-mapped-500:
   - Symptom: a signed-in user requesting another user's non-org-scoped `/ai/sessions/{id}/messages` receives HTTP 500 `Unexpected server error` rather than a non-disclosing 404/403.
   - Verified facts: the response contains no `data` and no other user's content, so tenant/user isolation holds. `queryVisibleSession` correctly returns empty and throws `ResponseStatusException(HttpStatus.NOT_FOUND)`, but `GlobalExceptionHandler` has no dedicated handler and its generic exception path maps the status exception to 500 while producing ERROR logs.

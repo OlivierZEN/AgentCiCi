@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T09:16:00+08:00
+updated_at: 2026-07-22T00:40:00+08:00
 updated_by: MANAGER-001
-phase: local-worktree-integration-verified
-active_task: ""
-next_action: "已完成 TASK-170 与 TASK-219 的主线整合；后续按各自规格继续完成未覆盖的验收。"
+phase: schedule-cadence-parser-repair
+active_task: "TASK-223"
+next_action: "修复“每天 09:00”周期解析越界，并验证真实 trigger 创建路径。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-223 is in progress after a user-reported production-path failure: the chat correctly asks for a cadence, but confirming “每天 09:00” returns `IndexOutOfBoundsException` and does not create a schedule. The working hypothesis is a mismatch between the clock regex and the capture groups read by `UserWorkflowService`; FEAT-128 defines the regression and safety boundary.
 
 - TASK-222 已完成 TASK-170 安全规则平台与 TASK-219 模型目录导航收敛。TASK-170 的冲突按当前 `main` 最新代码处理，迁移按主线时间线由 V71 重编号为 V84，避免 Flyway 乱序；安全规则、审计、聊天/工具编排 56 项后端定向测试、后端打包、TASK-219 的 20 项前端定向测试和前端生产构建均通过。
 
