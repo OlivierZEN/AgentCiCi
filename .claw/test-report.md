@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T09:39:00+08:00
+updated_at: 2026-07-22T10:03:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T09:39:00+08:00
+last_run_at: 2026-07-22T10:03:00+08:00
 last_run_status: passed
 ---
 
@@ -16,7 +16,10 @@ last_run_status: passed
 - `backend-focused`：`mvn -q -Dtest=AuditServiceSecurityTest,PlatformAuditServiceTest test` 通过。新增 `AnnotationConfigApplicationContext` 回归，验证两个审计服务均由 Spring 注入 `SecurityRedactionService`。
 - `backend-package`：`mvn -q -DskipTests package` 通过。
 - `frontend`：热修未改前端；main 前端树 `npm run build` 通过，保留既有 Vite 大 chunk 警告。
-- `compose/static`：Compose 配置和 `git diff --check` 通过；待合并与新版本生产验证。
+- `compose/static`：Compose 配置和 `git diff --check` 通过。
+- `release`：`2.8.3` tag 指向 `651bc2294bee`；backend/frontend ACR index digest 分别为 `sha256:382e10658dd3d066e0add5cd98804cab8d48877bd1eec51342ea02a1bb08b46a` 与 `sha256:9dd889eb547d0dac2a2feabe05678fa22c634652e40f4380bd3b2372cdef43b0`。
+- `backup/deploy`：备份 `/opt/cici/backups/20260722-095910-before-2.8.3-task224-startup-hotfix` 的 env/PostgreSQL/KB/Qdrant 均非空；仅拉取并重建 backend/frontend，四个状态服务保持运行。
+- `production`：六服务均 healthy；`/actuator/health` 为 `UP`，`/system/version` 返回 `2.8.3 / 651bc2294bee`，V84 为 success，Nginx 配置通过。`x` HTTP 301、HTTPS 200；显式生产 IP/SNI 的 onechat HTTPS 200，匿名 `/auth/me` 为预期 401。切换窗口出现 3 条 upstream 未就绪日志，稳定后 backend 无 ERROR/构造器异常。
 
 ## TASK-223 - 定时任务周期解析越界修复
 

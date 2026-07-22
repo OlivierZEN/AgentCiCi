@@ -26,17 +26,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - blocked_by: `none`
 - next_action: 完成所选技能的强制业务上下文、Trace 状态与桌面端回归。
 
-### TASK-224 - 生产发布构造器注入启动热修
-
-- status: `in_progress`
-- priority: `critical`
-- owner_role: `fullstack-agent`
-- spec_path: `docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md`
-- task_status_path: `.claw/tasks/TASK-224.md`
-- assignment_path: `.claw/assignments/TASK-224.yaml`
-- blocked_by: `none`
-- next_action: 修复审计服务构造器选择，验证 Spring 启动后以新版本重新发布；2.8.2 已回滚至 2.8.1。
-
 ### TASK-223 - 定时任务周期解析越界修复
 
 - status: `done`
@@ -986,6 +975,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
+
+### TASK-224 - 生产发布构造器注入启动热修
+
+- status: `done`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md`
+- task_status_path: `.claw/tasks/TASK-224.md`
+- assignment_path: `.claw/assignments/TASK-224.yaml`
+- blocked_by: `none`
+- next_action: 已发布 `2.8.3 / 651bc2294bee`；保留失败的 2.8.2 tag 作为不可变诊断证据。
 
 ### TASK-222 - 本地遗留分支审查与主线整合
 
