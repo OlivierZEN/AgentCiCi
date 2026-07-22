@@ -23,4 +23,12 @@ spec_path: docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md
 
 ## Next Action
 
-- 完成构造器注入修复与 Spring 上下文测试，走新的不可变发布版本。
+- 已标注两个运行时构造器，并新增无数据库 Spring 容器回归；合并 main 后以新的不可变发布版本完成生产验证。
+
+## Verification
+
+- `mvn -q -Dtest=AuditServiceSecurityTest,PlatformAuditServiceTest test` -> passed.
+- `mvn -q -DskipTests package` -> passed.
+- `npm run build`（main 前端树，无前端源文件改动） -> passed；仅保留既有 Vite 大 chunk 警告。
+- `docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` -> passed.
+- `git diff --check` -> passed.

@@ -8,9 +8,12 @@ import static org.mockito.Mockito.verify;
 import com.codehouse.ciciassistant.ops.domain.AuditLogEntity;
 import com.codehouse.ciciassistant.ops.domain.AuditLogRepository;
 import com.codehouse.ciciassistant.ops.service.AuditService;
+import com.codehouse.ciciassistant.platform.domain.PlatformAuditLogRepository;
+import com.codehouse.ciciassistant.platform.service.PlatformAuditService;
 import com.codehouse.ciciassistant.security.service.SecurityRedactionService;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 class AuditServiceSecurityTest {
 
@@ -29,5 +32,18 @@ class AuditServiceSecurityTest {
                 .contains("apiKey=[redacted]")
                 .doesNotContain("13812345678")
                 .doesNotContain("sk-test-abcdef1234567890");
+    }
+
+    @Test
+    void springContextSelectsSecurityAwareAuditConstructors() {
+        try (AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext()) {
+            context.registerBean(AuditLogRepository.class, () -> mock(AuditLogRepository.class));
+            context.registerBean(PlatformAuditLogRepository.class, () -> mock(PlatformAuditLogRepository.class));
+            context.register(SecurityRedactionService.class, AuditService.class, PlatformAuditService.class);
+            context.refresh();
+
+            assertThat(context.getBean(AuditService.class)).isNotNull();
+            assertThat(context.getBean(PlatformAuditService.class)).isNotNull();
+        }
     }
 }

@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-224 - 生产发布构造器注入启动热修
+
+- `production-failure/rollback`：`2.8.2` 已推送且 V84 成功应用，但 `AuditService` 与 `PlatformAuditService` 存在两个未标注构造器，Spring 无法选择注入入口，backend 重启；已立即将 `acr.env` 与 backend/frontend 回滚到健康的 `2.8.1`，六服务 health 正常。
+- `backend-focused`：`mvn -q -Dtest=AuditServiceSecurityTest,PlatformAuditServiceTest test` 通过。新增 `AnnotationConfigApplicationContext` 回归，验证两个审计服务均由 Spring 注入 `SecurityRedactionService`。
+- `backend-package`：`mvn -q -DskipTests package` 通过。
+- `frontend`：热修未改前端；main 前端树 `npm run build` 通过，保留既有 Vite 大 chunk 警告。
+- `compose/static`：Compose 配置和 `git diff --check` 通过；待合并与新版本生产验证。
+
 ## TASK-223 - 定时任务周期解析越界修复
 
 - `identity/assignment`：`MANAGER-001` 的 SSH challenge-response、TASK-223 分支和实现/测试/状态代表路径均通过 `dev-login.py` 与 `check-assignment.py`，0 finding。

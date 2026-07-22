@@ -9,6 +9,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class AuditService {
         this(repository, new SecurityRedactionService());
     }
 
+    @Autowired
     public AuditService(AuditLogRepository repository, SecurityRedactionService redactionService) {
         this.repository = repository;
         this.redactionService = redactionService;
