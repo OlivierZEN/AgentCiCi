@@ -1,0 +1,43 @@
+task_id: TASK-222
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-22T08:30:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-127-local-branch-integration.md
+task_status_path: .claw/tasks/TASK-222.md
+branch: codex/TASK-222-local-branch-integration
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/**
+  - frontend/**
+  - scripts/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - .claw/assignments/TASK-222.yaml
+  - .claw/tasks/TASK-222.md
+  - docs/specs/FEAT-127-local-branch-integration.md
+protected_paths:
+  - .claw/developers/**
+  - infra/**
+  - infrastructure/**
+  - .github/workflows/**
+touch_policy: exclusive
+shared_contracts:
+  - PRODUCT.md
+  - DESIGN.md
+  - DESIGN.json
+task_boundary:
+  - "审查并整合 TASK-160、TASK-203、TASK-204、TASK-210 的未合并提交。"
+  - "冲突按当前 main 最新代码处理；不覆盖其他 worktree 的未提交工作。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001 SSH challenge allowed 2026-07-22; user explicitly requested verification and merge of all remaining local branches."

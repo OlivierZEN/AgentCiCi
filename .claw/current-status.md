@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T00:24:45+08:00
 updated_by: MANAGER-001
-phase: production-runtime-execution-trace-correction-complete
-active_task: "TASK-221"
-next_action: "使用已登录蓝色主题管理员逐页完成 TASK-221 的桌面视觉复核。"
+phase: local-branch-integration-in-progress
+active_task: "TASK-222"
+next_action: "按当前 main 时间线审查并整合四个未合并本地分支，完成定向验证。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-222 正在审查 TASK-160、TASK-203、TASK-204 与 TASK-210 的本地未合并提交。所有直接合并均有冲突，冲突以当前 `main` 的最新代码与状态为准；不覆盖其他 worktree 的未提交工作。
 
 - TASK-221 is in review: the complete `/admin/*` static audit now routes shared modals, organization/user dialogs, skills subpages and row menus, ontology workbench, operations/monitor, embedded apps and billing through current `--theme-*` values. AdminToolsPage no longer injects category gradients or fixed colors. Assignment check, 11 focused theme tests, production build and diff check pass. This session has no authenticated administrator, so logged-in blue-theme desktop evidence remains an explicit manual visual-acceptance item.
 

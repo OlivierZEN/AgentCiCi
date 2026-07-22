@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-222 - 本地遗留分支审查与主线整合
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-127-local-branch-integration.md`
+- task_status_path: `.claw/tasks/TASK-222.md`
+- assignment_path: `.claw/assignments/TASK-222.yaml`
+- blocked_by: `none`
+- next_action: 按当前 `main` 时间线审查并整合 TASK-160、TASK-203、TASK-204、TASK-210。
+
 ### TASK-221 - 组织管理端全页面主题一致性治理
 
 - status: `review`
