@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-224
-status: in_progress
-updated_at: 2026-07-22T09:55:00+08:00
+status: done
+updated_at: 2026-07-22T10:03:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -21,9 +21,11 @@ spec_path: docs/specs/FEAT-129-release-startup-constructor-injection-hotfix.md
 
 - `2.8.2` 的 V84 已成功迁移，但后端因 `AuditService` 无法选择构造器而重启；已回滚至健康的 `2.8.1`。
 
-## Next Action
+## Completion
 
-- 已标注两个运行时构造器，并新增无数据库 Spring 容器回归；合并 main 后以新的不可变发布版本完成生产验证。
+- 已标注两个运行时构造器，并新增无数据库 Spring 容器回归。
+- `2.8.3 / 651bc2294bee` 已发布并稳定运行；V84 迁移成功，未回退历史迁移。
+- `2.8.2` 保留为失败的不可变版本，不覆盖其 tag 或镜像。
 
 ## Verification
 

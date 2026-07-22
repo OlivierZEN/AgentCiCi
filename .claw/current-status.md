@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T09:55:00+08:00
+updated_at: 2026-07-22T10:03:00+08:00
 updated_by: MANAGER-001
-phase: task224-release-startup-hotfix
-active_task: "TASK-224"
-next_action: "修复 2.8.2 审计服务构造器注入启动失败，并以新版本重新发布。"
+phase: production-2.8.3-healthy
+active_task: ""
+next_action: "2.8.3 已健康发布；观察首次真实定时任务创建并继续各独立任务的验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- `2.8.2` 已完成镜像构建、tag 与 V84 正向迁移，但后端因 `AuditService` 的多构造器未标注注入入口而持续重启；已按运行手册回滚到健康的 `2.8.1`。TASK-224 已完成最小构造器注入修复与 Spring 容器回归，待合并 main 后以新版本重新发布，不覆盖失败的 `2.8.2` tag。
+- `2.8.3 / 651bc2294bee` 已健康发布：TASK-224 为两个审计服务的运行时构造器显式标注注入入口，消除 `2.8.2` 的启动重启问题。backend/frontend 与四个状态服务均健康，V84 成功，公网 x HTTPS 与显式生产 IP 的 onechat HTTPS 为 200；匿名 `/auth/me` 正确返回 401。`2.8.2` 仍保留为失败版本证据，线上已从其回滚并以新不可变版本恢复。
 
 - TASK-223 已完成本地修复：用户补充“每天 09:00”后失败的根因已验证为时钟正则与 `inferTrigger` 捕获组读取不一致。显式捕获时段/小时/分钟后，定向测试确认每日 `09:00` 生成 `0 0 9 * * *` 并可计算下一次执行时间，下午 `3点30分` 正确换算为 `0 30 15 * * *`；后端定向测试和编译、diff 检查均通过，尚未发布生产。
 
