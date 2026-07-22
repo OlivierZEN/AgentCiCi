@@ -457,7 +457,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-170 - 安全规则平台与输入输出安全网关
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-080-security-rules-platform.md`

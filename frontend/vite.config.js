@@ -19,6 +19,7 @@ export default defineConfig(function (_a) {
                 "/models": { target: backendTarget, changeOrigin: true },
                 "/openapi": { target: backendTarget, changeOrigin: true },
                 "/tools": { target: backendTarget, changeOrigin: true },
+                "/security-rules": { target: backendTarget, changeOrigin: true },
                 "/integrations": { target: backendTarget, changeOrigin: true },
                 "/embed/v1": { target: backendTarget, changeOrigin: true },
                 "/mcp-servers": { target: backendTarget, changeOrigin: true },

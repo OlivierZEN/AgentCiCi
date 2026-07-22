@@ -28,6 +28,7 @@ import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
+import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.skill.service.SkillPromptAssembler;
 import com.codehouse.ciciassistant.skill.service.SkillResolverService;
 import com.codehouse.ciciassistant.skill.service.BuiltinSkillDocumentService;
@@ -378,15 +379,24 @@ public class ChatOrchestratorService {
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
         agentAccessControlService.require(orgId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
+        SafetyGatewayService.SafetyDecision inputDecision =
+                safetyGatewayService.checkInput(orgId, userId, "CHAT_INPUT", question);
+        if (inputDecision.blocked()) {
+            String blockedAnswer = blockedBySecurityMessage();
+            persistUserTurnCommitted(orgId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
+            persistAssistantTurnCommitted(orgId, userId, sessionId, blockedAnswer, "AI_CHAT_BLOCKED", "safety-gateway");
+            return blockedPayload(orgId, userId, sessionId, skillContext.agentId(), runId, blockedAnswer, inputDecision);
+        }
+        String safeQuestion = inputDecision.safeText();
         BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
-                builtinSkillDocumentService.resolveDocs(skillContext, question);
+                builtinSkillDocumentService.resolveDocs(skillContext, safeQuestion);
         stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                 "已解析当前智能体绑定技能、工具边界与会话激活技能。",
                 withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
         Instant userPersistStartedAt = Instant.now();
-        persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
+        persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
-                clipForTrace(question, 220), Map.of("sessionId", sessionId, "runId", runId)));
+                clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
 
         Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
@@ -395,14 +405,14 @@ public class ChatOrchestratorService {
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
         KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
-                question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+                safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
         boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
                 ? ragService.retrieveDetailed(
                 orgId,
                 effectiveKnowledgeBaseIds,
-                question,
+                safeQuestion,
                 metadataFilters,
                 KbAccessControlService.AccessPrincipal.user(userId, TenantContext.getRoles()))
                 : emptyRagRetrievalResult();
@@ -412,7 +422,7 @@ public class ChatOrchestratorService {
                         ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                         : "本轮输入未满足知识库检索条件。",
                 withRunId(ragDetailMetadata(ragResult, knowledgeDecision), runId)));
-        List<String> ragContext = ragResult.context();
+        List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
         Instant toolSchemaStartedAt = Instant.now();
         List<Map<String, Object>> tools = isWecomKfSession(sessionId)
                 ? List.of()
@@ -423,9 +433,9 @@ public class ChatOrchestratorService {
                 Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames(), "runId", runId)));
         RuntimeContext runtimeContext = runtimeContextPromptService.current();
 
-        chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
+        chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), safeQuestion);
         List<Map<String, Object>> messages = buildInitialMessages(
-                sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
+                sessionId, safeQuestion, ragContext, showThinking, skillContext, orgId, userId,
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
         appendConfirmedPendingEmailBodyToolResult(
                 messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
@@ -528,6 +538,7 @@ public class ChatOrchestratorService {
                 "policyBundle", executionResult.policyBundle()
         ));
         payload.put("timestamp", Instant.now().toString());
+        payload.put("safety", safetyPayload(inputDecision));
         return payload;
     }
 
@@ -576,15 +587,30 @@ public class ChatOrchestratorService {
         ResolvedSkillContext skillContext = skillResolverService.resolve(
                 orgId, requestedAgentId, sessionId, Optional.ofNullable(activeSkillCode));
         agentAccessControlService.require(orgId, userId, TenantContext.getRoles(), skillContext.agentId(), AgentPermission.RUN);
+                SafetyGatewayService.SafetyDecision inputDecision =
+                        safetyGatewayService.checkInput(orgId, userId, "CHAT_STREAM_INPUT", question);
+                if (inputDecision.blocked()) {
+                    String blockedAnswer = blockedBySecurityMessage();
+                    persistUserTurnCommitted(orgId, userId, sessionId, "[BLOCKED_BY_SECURITY_GATEWAY]", skillContext.agentId());
+                    persistAssistantTurnCommitted(orgId, userId, sessionId, blockedAnswer, "AI_CHAT_STREAM_BLOCKED", "safety-gateway");
+                    safeSendDeltaInChunks(emitter, blockedAnswer);
+                    emitter.send(SseEmitter.event().name("done").data(Map.of(
+                            "ok", true,
+                            "runId", runId,
+                            "safety", safetyPayload(inputDecision))));
+                    emitter.complete();
+                    return;
+                }
+                String safeQuestion = inputDecision.safeText();
                 BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs =
-                        builtinSkillDocumentService.resolveDocs(skillContext, question);
+                        builtinSkillDocumentService.resolveDocs(skillContext, safeQuestion);
                 stageTraces.add(stageTrace("SKILL_RESOLVE", "技能候选解析", "SUCCESS", skillStartedAt, Instant.now(),
                         "已解析当前智能体绑定技能、工具边界与会话激活技能。",
                         withRunId(skillTraceMetadata(skillContext, List.of(), builtinDocs), runId)));
                 Instant userPersistStartedAt = Instant.now();
-                persistUserTurnCommitted(orgId, userId, sessionId, question, skillContext.agentId());
+                persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
-                        clipForTrace(question, 220), Map.of("sessionId", sessionId, "runId", runId)));
+                        clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
 
                 Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
@@ -593,7 +619,7 @@ public class ChatOrchestratorService {
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
                 KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
-                        question, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+                        safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
                 boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
                 safeSendPhase(emitter, "model", modelName);
                 if (useKnowledgeRetrieval) {
@@ -610,7 +636,7 @@ public class ChatOrchestratorService {
                         ? ragService.retrieveDetailed(
                         orgId,
                         effectiveKnowledgeBaseIds,
-                        question,
+                        safeQuestion,
                         metadataFilters,
                         KbAccessControlService.AccessPrincipal.user(userId, TenantContext.getRoles()))
                         : emptyRagRetrievalResult();
@@ -620,7 +646,7 @@ public class ChatOrchestratorService {
                                 ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                                 : "本轮输入未满足知识库检索条件。",
                         withRunId(ragDetailMetadata(ragResult, knowledgeDecision), runId)));
-                List<String> ragContext = ragResult.context();
+                List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "rag_done", modelName, ragPhasePayload(ragResult));
                     log.info("chatStream RAG done: session={} agent={} kbs={} contexts={} timingsMs={} fallback={}",
@@ -640,9 +666,9 @@ public class ChatOrchestratorService {
                         "已加载本轮可用工具定义 " + tools.size() + " 个。",
                         Map.of("toolDefinitionCount", tools.size(), "allowedToolNames", skillContext.allowedToolNames(), "runId", runId)));
                 RuntimeContext runtimeContext = runtimeContextPromptService.current();
-                chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), question);
+                chatSessionStateService.mergeUserTurn(orgId, sessionId, skillContext.agentId(), safeQuestion);
                 List<Map<String, Object>> messages = buildInitialMessages(
-                        sessionId, question, ragContext, showThinking, skillContext, orgId, userId,
+                        sessionId, safeQuestion, ragContext, showThinking, skillContext, orgId, userId,
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
                 appendConfirmedPendingEmailBodyToolResult(
                         messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
@@ -750,6 +776,8 @@ public class ChatOrchestratorService {
                         }
                     }
                 }
+                finalText = applyOutputGateway(orgId, userId, "MODEL_STREAM_OUTPUT", finalText);
+                safeSendDeltaInChunks(emitter, finalText);
                 Instant wfStartedAt = Instant.now();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                         orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -1766,6 +1794,86 @@ public class ChatOrchestratorService {
                     "session=" + sessionId + ", model=" + modelName);
         });
         publishSessionUpdated(orgId, userId, sessionId, "session_deleted");
+    }
+
+    private List<String> sanitizeContextList(String orgId, String userId, String surface, List<String> context) {
+        if (context == null || context.isEmpty()) {
+            return List.of();
+        }
+        List<String> safeContext = new ArrayList<>();
+        for (String item : context) {
+            SafetyGatewayService.SafetyDecision decision =
+                    safetyGatewayService.checkInput(orgId, userId, surface, item);
+            if (!decision.blocked() && decision.safeText() != null && !decision.safeText().isBlank()) {
+                safeContext.add(decision.safeText());
+            }
+        }
+        return safeContext;
+    }
+
+    private String applyOutputGateway(String orgId, String userId, String surface, String answer) {
+        SafetyGatewayService.SafetyDecision decision =
+                safetyGatewayService.checkOutput(orgId, userId, surface, answer);
+        if (decision.blocked()) {
+            return blockedBySecurityMessage();
+        }
+        return decision.safeText();
+    }
+
+    private static String blockedBySecurityMessage() {
+        return "该内容触发安全规则，已停止处理。请调整输入或联系管理员复核。";
+    }
+
+    private static Map<String, Object> blockedPayload(String orgId,
+                                                      String userId,
+                                                      String sessionId,
+                                                      String agentId,
+                                                      String runId,
+                                                      String answer,
+                                                      SafetyGatewayService.SafetyDecision decision) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("orgId", orgId);
+        payload.put("userId", userId);
+        payload.put("runId", runId);
+        payload.put("sessionId", sessionId);
+        payload.put("agentId", agentId);
+        payload.put("answer", answer);
+        payload.put("model", Map.of("modelName", "safety-gateway"));
+        payload.put("ragContext", List.of());
+        payload.put("ragRetrieval", Map.of());
+        payload.put("effectiveKnowledgeBaseIds", List.of());
+        payload.put("resolvedSkills", List.of());
+        payload.put("resolvedSkillVersions", List.of());
+        payload.put("fileBackedSkillRefs", List.of());
+        payload.put("effectiveToolNames", List.of());
+        payload.put("agentDirectToolNames", List.of());
+        payload.put("skillDeclaredToolNames", List.of());
+        payload.put("skillScopedToolNames", List.of());
+        payload.put("skillApiToolNames", List.of());
+        payload.put("activeSkillCode", "");
+        payload.put("runtimePolicy", Map.of("maxToolCalls", 0));
+        payload.put("runtimeExecution", Map.of("status", "BLOCKED", "output", answer));
+        payload.put("runtimeGovernance", Map.of());
+        payload.put("timestamp", Instant.now().toString());
+        payload.put("safety", safetyPayload(decision));
+        return payload;
+    }
+
+    private static Map<String, Object> safetyPayload(SafetyGatewayService.SafetyDecision decision) {
+        return Map.of(
+                "action", decision.action(),
+                "blocked", decision.blocked(),
+                "policyVersion", decision.policyVersion(),
+                "findings", decision.findings().stream()
+                        .map(item -> Map.of(
+                                "category", item.category(),
+                                "riskType", item.riskType(),
+                                "severity", item.severity(),
+                                "action", item.action(),
+                                "ruleName", item.ruleName(),
+                                "confidence", item.confidence()))
+                        .toList()
+        );
     }
 
     private void touchSessionForAssistantReply(String sessionId) {

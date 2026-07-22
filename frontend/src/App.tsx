@@ -22,6 +22,7 @@ import AdminEmbedAppsPage from "./admin/pages/AdminEmbedAppsPage";
 import AdminWecomKfAccountsPage from "./admin/pages/AdminWecomKfAccountsPage";
 import AdminAgentBuilderPage from "./admin/pages/AdminAgentBuilderPage";
 import AdminAgentOpenApiDocsPage from "./admin/pages/AdminAgentOpenApiDocsPage";
+import AdminSecurityRulesPage from "./admin/pages/AdminSecurityRulesPage";
 import AdminSkillComposePage from "./admin/pages/AdminSkillComposePage";
 import AdminSkillsListPage from "./admin/pages/AdminSkillsListPage";
 import AdminEvaluationPage from "./admin/pages/AdminEvaluationPage";

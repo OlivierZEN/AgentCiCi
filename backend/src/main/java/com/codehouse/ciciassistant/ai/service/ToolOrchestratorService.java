@@ -7,6 +7,7 @@ import com.codehouse.ciciassistant.memory.service.UserMemoryService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService;
 import com.codehouse.ciciassistant.mcp.service.McpServerService.ResolvedTool;
 import com.codehouse.ciciassistant.platform.service.PlatformGovernanceService;
+import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
 import com.codehouse.ciciassistant.skill.service.SkillApiToolService;
 import com.codehouse.ciciassistant.tool.service.ToolNameNormalizer;
 import com.codehouse.ciciassistant.tool.tavily.TavilyToolService;
@@ -45,6 +46,7 @@ public class ToolOrchestratorService {
     private final TavilyToolService tavilyToolService;
     private final PlatformGovernanceService platformGovernanceService;
     private final SkillApiToolService skillApiToolService;
+    private final SafetyGatewayService safetyGatewayService;
     private final ObjectMapper objectMapper;
     private AssistantScheduleToolService assistantScheduleToolService;
 
@@ -56,6 +58,7 @@ public class ToolOrchestratorService {
                                    TavilyToolService tavilyToolService,
                                    PlatformGovernanceService platformGovernanceService,
                                    SkillApiToolService skillApiToolService,
+                                   SafetyGatewayService safetyGatewayService,
                                    ObjectMapper objectMapper) {
         this.mcpServerService = mcpServerService;
         this.cloudccOpenApiService = cloudccOpenApiService;
@@ -65,6 +68,7 @@ public class ToolOrchestratorService {
         this.tavilyToolService = tavilyToolService;
         this.platformGovernanceService = platformGovernanceService;
         this.skillApiToolService = skillApiToolService;
+        this.safetyGatewayService = safetyGatewayService;
         this.objectMapper = objectMapper;
     }
 
@@ -240,12 +244,19 @@ public class ToolOrchestratorService {
                 && !platformGovernanceService.isRuntimeToolEnabled(orgId, canonicalToolName)) {
             return "Tool is disabled by platform runtime control: " + canonicalToolName;
         }
+        SafetyGatewayService.SafetyDecision inputDecision =
+                safetyGatewayService.checkToolCall(orgId, userId, canonicalToolName, argumentsJson);
+        if (inputDecision.blocked()) {
+            return "Tool call blocked by security gateway: " + canonicalToolName;
+        }
+        String safeArgumentsJson = inputDecision.safeText();
 
         if (canonicalToolName != null && canonicalToolName.startsWith(SkillApiToolService.TOOL_PREFIX)) {
             if (normalizedAllowedToolNames.isEmpty() || !normalizedAllowedToolNames.contains(canonicalToolName)) {
                 return "Skill API tool is not active for the current skill context: " + canonicalToolName;
             }
-            return skillApiToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    skillApiToolService.dispatch(orgId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         if (AssistantScheduleToolService.TOOL_NAME.equals(canonicalToolName)) {
@@ -259,38 +270,56 @@ public class ToolOrchestratorService {
             return crmProductSalesAnalysisToolService.dispatch(orgId, userId, argumentsJson);
         }
         if (CloudccOpenApiService.toolName().equals(canonicalToolName)) {
-            return executeCloudccPageQuery(orgId, userId, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    executeCloudccPageQuery(orgId, userId, safeArgumentsJson));
         }
         if (CloudccOpenApiService.toolNameGetStandardObjects().equals(canonicalToolName)) {
-            return cloudccOpenApiService.getStandardObjects(orgId, userId);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    cloudccOpenApiService.getStandardObjects(orgId, userId));
         }
         if (CloudccOpenApiService.toolNameGetCustomObjects().equals(canonicalToolName)) {
-            return cloudccOpenApiService.getCustomObjects(orgId, userId);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    cloudccOpenApiService.getCustomObjects(orgId, userId));
         }
         if (CloudccOpenApiService.toolNameGetObjectFields().equals(canonicalToolName)) {
-            return executeGetObjectFields(orgId, userId, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    executeGetObjectFields(orgId, userId, safeArgumentsJson));
         }
 
         // Memory built-in tools
         if (TOOL_MEMORY_REMEMBER.equals(canonicalToolName)) {
-            return executeMemoryRemember(orgId, userId, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    executeMemoryRemember(orgId, userId, safeArgumentsJson));
         }
         if (TOOL_MEMORY_FORGET.equals(canonicalToolName)) {
-            return executeMemoryForget(orgId, userId, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    executeMemoryForget(orgId, userId, safeArgumentsJson));
         }
 
         // Email built-in tools
         if (canonicalToolName != null && canonicalToolName.startsWith("email_") && EmailToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
-            return emailToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    emailToolService.dispatch(orgId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         // Tavily web-search / web-extract built-in tools
         if (canonicalToolName != null && canonicalToolName.startsWith("tavily_") && TavilyToolService.ALL_TOOL_NAMES.contains(canonicalToolName)) {
-            return tavilyToolService.dispatch(orgId, userId, canonicalToolName, argumentsJson);
+            return safeToolResult(orgId, userId, canonicalToolName,
+                    tavilyToolService.dispatch(orgId, userId, canonicalToolName, safeArgumentsJson));
         }
 
         // MCP-discovered tools
-        return mcpServerService.executeTool(orgId, userId, canonicalToolName, argumentsJson);
+        return safeToolResult(orgId, userId, canonicalToolName,
+                mcpServerService.executeTool(orgId, userId, canonicalToolName, safeArgumentsJson));
+    }
+
+    private String safeToolResult(String orgId, String userId, String toolName, String rawResult) {
+        SafetyGatewayService.SafetyDecision decision =
+                safetyGatewayService.checkOutput(orgId, userId, "TOOL_RESULT:" + toolName, rawResult);
+        if (decision.blocked()) {
+            return "Tool result blocked by security gateway: " + toolName;
+        }
+        return decision.safeText();
     }
 
     private String executeCloudccPageQuery(String orgId, String userId, String argumentsJson) {

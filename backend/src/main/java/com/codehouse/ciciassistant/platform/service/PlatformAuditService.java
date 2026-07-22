@@ -2,29 +2,29 @@ package com.codehouse.ciciassistant.platform.service;
 
 import com.codehouse.ciciassistant.platform.domain.PlatformAuditLogEntity;
 import com.codehouse.ciciassistant.platform.domain.PlatformAuditLogRepository;
+import com.codehouse.ciciassistant.security.service.SecurityRedactionService;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.regex.Pattern;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PlatformAuditService {
 
-    private static final Pattern SECRET_PATTERN = Pattern.compile(
-            "(?i)(authorization|accessToken|refreshToken|api[_-]?key|token|password|secret|cookie)(\"?\\s*[:=]\\s*\"?)[^\",}\\s]+");
-    private static final Pattern AUTHORIZATION_PATTERN = Pattern.compile(
-            "(?i)(authorization\"?\\s*[:=]\\s*\"?)(bearer\\s+)?[A-Za-z0-9._~+/-]+(\\s+[A-Za-z0-9._~+/-]+)?");
-    private static final Pattern MOBILE_PATTERN = Pattern.compile("(1[3-9]\\d)\\d{4}(\\d{4})");
-
     private final PlatformAuditLogRepository repository;
+    private final SecurityRedactionService redactionService;
 
     public PlatformAuditService(PlatformAuditLogRepository repository) {
+        this(repository, new SecurityRedactionService());
+    }
+
+    public PlatformAuditService(PlatformAuditLogRepository repository, SecurityRedactionService redactionService) {
         this.repository = repository;
+        this.redactionService = redactionService;
     }
 
     public void log(String orgId,
@@ -34,7 +34,8 @@ public class PlatformAuditService {
                     String resourceType,
                     String resourceKey,
                     String detail) {
-        repository.save(new PlatformAuditLogEntity(orgId, userId, roleCode, eventType, resourceType, resourceKey, detail));
+        repository.save(new PlatformAuditLogEntity(
+                orgId, userId, roleCode, eventType, resourceType, resourceKey, redact(detail)));
     }
 
     public List<PlatformAuditLogEntity> latest(String orgId) {
@@ -87,12 +88,7 @@ public class PlatformAuditService {
     }
 
     private String redact(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "";
-        }
-        String withoutAuth = AUTHORIZATION_PATTERN.matcher(raw).replaceAll("$1[redacted]");
-        return MOBILE_PATTERN.matcher(SECRET_PATTERN.matcher(withoutAuth).replaceAll("$1$2[redacted]"))
-                .replaceAll("$1****$2");
+        return redactionService.redact(raw);
     }
 
     private String normalized(String value) {
