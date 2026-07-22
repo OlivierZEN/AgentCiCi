@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-222
-status: done
-updated_at: 2026-07-22T09:00:00+08:00
+status: in_progress
+updated_at: 2026-07-22T09:10:00+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: project-manager
@@ -19,10 +19,9 @@ spec_path: docs/specs/FEAT-127-local-branch-integration.md
 
 ## Current State
 
-- 四个分支已在专用整合分支合并；状态文件冲突保留当前 `main`，代码冲突按最新实现兼容整合。
-- TASK-204 补齐了被冲突丢失的头像菜单状态与测试 CSS 读取；TASK-160 在当前异常处理器中补入 `ResponseStatusException` 状态映射并有无 Spring 上下文的单元回归。
-- 前端定向测试 25/25、生产构建、Python 编译与 `git diff --check` 通过。多租户 Spring 集成测试被既有共享库 Flyway V81 checksum 不匹配阻断，未执行 repair。
+- 已完成的四个历史分支整合保持在 `main`。
+- 用户要求继续处理并整合 TASK-170 与 TASK-219 两个独立 worktree 的已验证新提交；TASK-170 需要按最新主线处理跨 304 个提交的冲突。
 
 ## Next Action
 
-- 已完成：四个遗留分支均已合并并推送到 `main`；保留共享 Flyway V81 校验和问题作为独立环境阻塞。
+- 先合并 TASK-219，再按当前 `main` 兼容整合 TASK-170，完成回归验证并推送。

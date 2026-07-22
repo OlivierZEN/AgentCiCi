@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-222 - 本地遗留分支审查与主线整合
+
+- status: `in_progress`
+- priority: `high`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-127-local-branch-integration.md`
+- task_status_path: `.claw/tasks/TASK-222.md`
+- assignment_path: `.claw/assignments/TASK-222.yaml`
+- blocked_by: `none`
+- next_action: 整合已提交的 TASK-170 与 TASK-219 worktree 改动，冲突以当前 `main` 为准。
+
 ### TASK-221 - 组织管理端全页面主题一致性治理
 
 - status: `review`
@@ -953,17 +964,6 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - next_action: If reopened, start with usage meter events, package/subscription entities, and the admin billing overview before any payment-provider work.
 
 ## Completed Tasks
-
-### TASK-222 - 本地遗留分支审查与主线整合
-
-- status: `done`
-- priority: `high`
-- owner_role: `project-manager`
-- spec_path: `docs/specs/FEAT-127-local-branch-integration.md`
-- task_status_path: `.claw/tasks/TASK-222.md`
-- assignment_path: `.claw/assignments/TASK-222.yaml`
-- blocked_by: `none`
-- next_action: 已合并并推送；共享测试库 Flyway V81 校验和问题保留为独立环境阻塞。
 
 ### TASK-213 - 通用本体建模与语义查询平台 V1
 
