@@ -7,7 +7,7 @@ owner_role: fullstack-agent
 task_ids: TASK-225
 related_decisions: none
 related_issues: ISSUE-033
-updated_at: 2026-07-22T10:15:00+08:00
+updated_at: 2026-07-22T10:29:33+08:00
 updated_by: MANAGER-001
 ---
 
@@ -72,3 +72,4 @@ updated_by: MANAGER-001
 - `ChatOrchestratorService` 将请求技能码和解析后的有效技能码同时传入 `AgentRunTraceService`；Trace 持久化 `requestedSkillCode`、`effectiveSkillCode`、`selectionStatus`、`selectionReason`、`activatedSkillCodes`、`boundSkillCodes`，并保持旧 `activeSkillCode` 兼容字段。
 - 工作台输入按钮显示“优先 · 技能名称”，已选项显示“本轮优先执行”；用户与管理员监控以“用户选择 / 有效上下文 / 实际激活”呈现，并在未采纳时显示原因。
 - `mvn -q -Dtest=AgentRunTraceServiceTest,SkillPromptAssemblerTest test`、`mvn -q -DskipTests compile`、`npm test`（28 文件 / 187 断言）、`npm run build` 与 `git diff --check` 均通过。浏览器本地应用加载无 console error；因当前没有已授权组织用户会话，未对受保护工作台和 Trace 页面伪造交互验收。
+- 已发布生产 `2.8.4 / 2f2f1a013ec2`：ACR backend/frontend 不可变镜像均已 inspect，发布前四类备份均非空，六容器健康，`/actuator/health` 为 `UP`，`/system/version` 与 Git/镜像版本一致，`x` HTTPS 和生产 IP/SNI 的 onechat HTTPS 均为 200；匿名 `/auth/me` 为预期 401。

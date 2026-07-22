@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-21T11:03:00Z
+updated_at: 2026-07-22T02:29:33Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,12 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.8.4 TASK-225 对话技能选择强制执行上下文与可观测性 on 2026-07-22:
+  - Git/发布：主线 merge commit `2f2f1a013ec22f7e9cc52314c3707370a0d3978e`；`scripts/release-acr.sh --dry-run` 和正式发布通过，annotated tag `2.8.4` 已推送。
+  - 镜像：backend/frontend index digest 分别为 `sha256:a173a2479309636f27f13fa5a0a2907f3b0893165f94a053c45dc19b50028002` 与 `sha256:0d94dc8d08d771a1297d09eb86f9d85834d68611a38b1a867cef7cd9e734e068`。
+  - 备份/部署：`/opt/cici/backups/20260722-102713-before-2.8.4-task225-forced-skill-context` 的 env/PostgreSQL/KB/Qdrant 均非空；仅 pull/force-recreate backend/frontend，database、Redis、RabbitMQ、Qdrant 容器 ID 保持不变。
+  - 运行/公网：六服务 healthy，health `UP`，版本 `2.8.4 / 2f2f1a013ec2`，Nginx 有效，x HTTP 301/HTTPS 200，显式生产 IP/SNI onechat HTTPS 200，匿名 `/auth/me` 401；稳定窗口未见 backend ERROR。无授权组织会话，未创建真实业务对话验证所选技能状态。
 
 - 2.7.12 TASK-217 智能体定时任务真实创建与链路事实纠偏 on 2026-07-21:
   - Git/发布：main 提交 `b20261d8b89b8813fbbcc75b541143e0563dc42d`；`scripts/release-acr.sh --dry-run` 通过，annotated tag `2.7.12` 已推送。

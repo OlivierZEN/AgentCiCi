@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-22T10:15:00+08:00
+updated_at: 2026-07-22T10:29:33+08:00
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -24,7 +24,7 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - task_status_path: `.claw/tasks/TASK-225.md`
 - assignment_path: `.claw/assignments/TASK-225.yaml`
 - blocked_by: `none`
-- next_action: 已完成；等待有授权的组织用户会话补做受保护工作台/Trace 的桌面交互复核。
+- next_action: 已发布 `2.8.4 / 2f2f1a013ec2`；等待有授权的组织用户会话补做受保护工作台/Trace 的桌面交互复核。
 
 ### TASK-223 - 定时任务周期解析越界修复
 

@@ -2,7 +2,7 @@
 kind: task-status
 task_id: TASK-225
 status: done
-updated_at: 2026-07-22T10:15:00+08:00
+updated_at: 2026-07-22T10:29:33+08:00
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -28,3 +28,4 @@ spec_path: docs/specs/FEAT-130-forced-skill-execution-context.md
 - `mvn -q -Dtest=AgentRunTraceServiceTest,SkillPromptAssemblerTest test` 通过。
 - `mvn -q -DskipTests compile`、`npm test`（28 文件/187 断言）、`npm run build`、`git diff --check` 通过。
 - 本地桌面浏览器已验证应用可加载且 console error 为 0；当前无已授权的组织用户会话，受保护的工作台/Trace 实际交互留待已登录会话复核，未伪造结果。
+- 已发布生产 `2.8.4 / 2f2f1a013ec2`；线上 Trace/工作台功能随 backend/frontend 同步更新，六服务健康、版本接口与公网 HTTPS smoke 通过。无授权组织会话，未创建真实业务对话验证选择态。

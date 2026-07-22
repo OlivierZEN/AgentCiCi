@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T10:15:00+08:00
+updated_at: 2026-07-22T10:29:33+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T10:15:00+08:00
+last_run_at: 2026-07-22T10:29:33+08:00
 last_run_status: passed
 ---
 
@@ -17,6 +17,8 @@ last_run_status: passed
 - `backend-compile`：`mvn -q -DskipTests compile` 通过。
 - `frontend`：`npm test` 28 个文件、187 项断言全部通过；`npm run build` 通过，仅保留既有 Vite 大 chunk 提示。
 - `browser/static`：本地桌面浏览器可加载应用且 console error 为 0；当前无组织用户授权会话，未冒充完成受保护的工作台/Trace 交互验收。`git diff --check` 通过。
+- `release`：主线 `2f2f1a013ec2` 已合并并推送；`scripts/release-acr.sh --dry-run`、ACR backend/frontend `2.8.4` 构建/推送/inspect 和 Git annotated tag 均成功。backend/frontend index digest 分别为 `sha256:a173a2479309636f27f13fa5a0a2907f3b0893165f94a053c45dc19b50028002` 与 `sha256:0d94dc8d08d771a1297d09eb86f9d85834d68611a38b1a867cef7cd9e734e068`。
+- `production`：备份 `/opt/cici/backups/20260722-102713-before-2.8.4-task225-forced-skill-context` 的 env/PostgreSQL/KB/Qdrant 均非空；仅拉取并强制重建 backend/frontend，四个状态服务容器 ID 未变化。六服务健康，health `UP`，`/system/version` 为 `2.8.4 / 2f2f1a013ec2`，Nginx 校验通过；x HTTP 301/HTTPS 200、生产 IP/SNI onechat HTTPS 200，匿名 `/auth/me` 为预期 401，稳定窗口无 backend ERROR。
 
 ## TASK-224 - 生产发布构造器注入启动热修
 

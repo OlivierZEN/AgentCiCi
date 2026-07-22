@@ -1,7 +1,7 @@
 ---
 kind: issue-list
 version: 3
-updated_at: 2026-07-15T02:05:24Z
+updated_at: 2026-07-22T02:29:33Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -15,7 +15,7 @@ status: active
   - Verified facts: 前端会提交 `activeSkillCode`，但当前后端仅将它用于技能专属工具授权；提示词和文件型参考文档仍并列注入所有绑定技能。
   - Scope: 强制业务上下文、Trace 选择状态和两个运行监控视图，不改技能绑定或权限模型。
   - Resolution: TASK-225 让有效选择只注入所选技能的业务流程、输出契约和文件型参考文档，同时保留平台安全与 Agent 直接工具边界；运行记录和两个监控视图已明确显示选择、有效上下文、实际激活及未采纳原因。
-  - Verification: 后端定向测试、编译、前端完整单测、构建和静态检查均通过；受保护工作台/Trace 的真实桌面交互仍需具备授权组织会话后补验。
+  - Verification: 后端定向测试、编译、前端完整单测、构建和静态检查均通过；已发布生产 `2.8.4 / 2f2f1a013ec2` 并通过健康、版本、HTTPS 与匿名鉴权边界 smoke。受保护工作台/Trace 的真实桌面交互仍需具备授权组织会话后补验。
   - Status: resolved by TASK-225 on 2026-07-22.
 
 - ISSUE-2026-07-15-session-not-found-status-mapped-500:
