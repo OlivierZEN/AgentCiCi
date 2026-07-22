@@ -96,7 +96,7 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="preferences/appearance" element={<PlatformAppearancePage />} />
             <Route path="models" element={<PlatformModelsPage />} />
             <Route path="models/providers" element={<PlatformModelsPage />} />
-            <Route path="models/catalog" element={<PlatformModelsPage />} />
+            <Route path="models/catalog" element={<Navigate to="/platform/models/providers" replace />} />
             <Route path="models/routes" element={<PlatformModelsPage />} />
             <Route path="integrations" element={<PlatformIntegrationsPage />} />
             <Route path="billing" element={<PlatformBillingPage />} />
