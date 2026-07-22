@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-22T03:40:00Z
+updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-226 - 通用主体记忆 Phase 1 核心
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-226.md`
 - assignment_path: `.claw/assignments/TASK-226.yaml`
 - blocked_by: `none`
-- next_action: 完成通用主体/会话记忆核心、可信外部应用上下文和定向隔离验证；不得引入外部应用领域耦合。
+- next_action: 已完成 Phase 1 通用核心和全新库 V1→V85 迁移验证；Phase 2 须另行创建授权任务，保持外部应用领域解耦。
 
 ### TASK-225 - 对话技能选择的强制执行上下文与可观测性
 

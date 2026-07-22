@@ -13,6 +13,7 @@ import com.codehouse.ciciassistant.memory.domain.MemoryRecordRepository;
 import com.codehouse.ciciassistant.memory.domain.MemorySubjectEntity;
 import com.codehouse.ciciassistant.memory.domain.MemorySubjectRepository;
 import com.codehouse.ciciassistant.memory.service.ExternalMemoryContextService;
+import com.codehouse.ciciassistant.memory.service.MemoryContextPromptAssembler;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -79,6 +80,25 @@ class ExternalMemoryContextServiceTest {
         assertThatThrownBy(() -> service.loadContext(context("app-alpha", "subject-7"), "agent-a", Set.of(), Instant.now()))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not registered");
+    }
+
+    @Test
+    void boundsTheAuthorizedMemoryPromptFragmentWithoutDroppingItsHeader() {
+        ExternalMemoryContextService.MemoryContext context = new ExternalMemoryContextService.MemoryContext(
+                7L, "摘要", List.of(record(7L, "SUBJECT_SHARED", null, Instant.parse("2026-07-23T00:00:00Z"))));
+
+        String prompt = new MemoryContextPromptAssembler().build(context, 24);
+
+        assertThat(prompt).hasSizeLessThanOrEqualTo(24).startsWith("## 当前主体上下文");
+        assertThat(prompt).endsWith("…");
+    }
+
+    @Test
+    void respectsTheCharacterBudgetWhenItIsShorterThanThePromptHeader() {
+        String prompt = new MemoryContextPromptAssembler().build(
+                new ExternalMemoryContextService.MemoryContext(7L, null, List.of()), 4);
+
+        assertThat(prompt).hasSizeLessThanOrEqualTo(4);
     }
 
     private static ExternalMemoryContextService.ExternalMemoryContext context(String applicationCode, String subjectRef) {

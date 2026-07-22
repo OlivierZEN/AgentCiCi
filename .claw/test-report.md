@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T03:55:00Z
+updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T03:55:00Z
+last_run_at: 2026-07-22T15:51:44Z
 last_run_status: passed
 ---
 
@@ -13,9 +13,10 @@ last_run_status: passed
 ## TASK-226 - 通用主体记忆 Phase 1 核心
 
 - `identity/assignment`：MANAGER-001 的 SSH challenge-response、任务分支 `codex/TASK-226-agent-memory-core` 和 memory/迁移/测试/状态代表路径经 `dev-login.py` 与 `check-assignment.py` 验证为 `allowed`。
-- `backend-focused`：`mvn -q -Dtest=ExternalMemoryContextServiceTest test` 通过；覆盖跨 `applicationCode` 主体隔离、`SUBJECT_SHARED`/`CONVERSATION`/`AGENT_PRIVATE`/`DOMAIN_NAMESPACE` scope 过滤、已过期记录排除，以及只读上下文不会隐式创建外部主体。
+- `backend-focused`：`mvn -q -Dtest=ExternalMemoryContextServiceTest,AgentMemoryFlywayMigrationTest test` 通过；覆盖跨 `applicationCode` 主体隔离、`SUBJECT_SHARED`/`CONVERSATION`/`AGENT_PRIVATE`/`DOMAIN_NAMESPACE` scope 过滤、已过期记录排除、只读上下文不隐式创建外部主体，以及提示词预算边界。
+- `fresh-flyway`：使用仅由环境变量提供连接信息的新建 PostgreSQL 16 临时库，执行 `AGENT_MEMORY_MIGRATION_TEST_URL=... AGENT_MEMORY_MIGRATION_TEST_USERNAME=... AGENT_MEMORY_MIGRATION_TEST_PASSWORD=... mvn -q -Dtest=AgentMemoryFlywayMigrationTest test`；成功从 V1 迁移至 V85，并断言 `memory_subject`、`memory_record`、`memory_conversation_snapshot` 存在。验证后临时库已删除。为兼容既有 V81 非事务并发索引，测试显式关闭 PostgreSQL transactional lock，与项目集成测试配置一致。
 - `backend-compile`：`mvn -q -DskipTests compile` 通过。
-- `static`：通用核心、V85 和定向测试未出现外部应用或领域耦合标识；`git diff --check` 通过。尚未执行真实空库 Flyway、外部应用接入、向量索引或生产发布。
+- `static`：通用核心、V85 和定向测试未出现外部应用或领域耦合标识；`git diff --check` 通过。尚未接入外部应用、Chat 编排器、向量索引或生产发布。
 
 ## FEAT-131 - 通用外部应用智能体记忆平台（设计规格）
 
