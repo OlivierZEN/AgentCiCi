@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { ArrowRight, CheckCircle2, ShieldAlert, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { authFetch, readAuthToken } from "../../auth/authStorage";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
@@ -36,8 +38,16 @@ function readToken(): string {
 
 export default function PlatformHomePage() {
   const token = readToken();
+  const navigate = useNavigate();
   const [data, setData] = useState<BootstrapPayload | null>(null);
   const [notice, setNotice] = useState("");
+  const [selectedAction, setSelectedAction] = useState<"policy" | "quality" | "audit" | null>(null);
+
+  const actionDetails = {
+    policy: { title: "核心策略版本", detail: data ? `当前为 v${data.policyBundleVersionNo}，覆盖 ${data.policyBundleLivePublishedAgentCount} 个已发布智能体。` : "正在加载策略状态。", to: "/platform/skills/policies" },
+    quality: { title: "质量运行洞察", detail: "查看跨租户质量运行指标与失败信号，不展示原始对话内容。", to: "/platform/evaluation/runs" },
+    audit: { title: "平台审计", detail: data ? `最近审计记录 ${data.recentAuditCount} 条，可按时间与操作对象追溯。` : "正在加载审计状态。", to: "/platform/audit" },
+  } as const;
 
   useEffect(() => {
     if (!token) return;
@@ -56,8 +66,9 @@ export default function PlatformHomePage() {
     <div className="admin-page skills-catalog platform-page platform-home-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
-          <h1 className="skills-catalog__title">平台概览</h1>
-          <p className="subtle skills-catalog__subtitle">集中查看当前平台治理状态，再进入具体工作台处理版本、工具与审计事项。</p>
+          <p className="platform-section-label">运营总览</p>
+          <h1 className="skills-catalog__title">今日治理优先事项</h1>
+          <p className="subtle skills-catalog__subtitle">先处理需要决策的能力、风险与审计事项，再进入对应工作区完成操作。</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">角色 {data?.roles.length ?? 0}</span>
@@ -68,7 +79,7 @@ export default function PlatformHomePage() {
       {notice ? <div className="platform-console__banner platform-console__banner--error">{notice}</div> : null}
       {data ? (
         <div className="platform-home__stack">
-          <section className="platform-console__stats platform-home__stats">
+          <section className="platform-console__stats platform-home__stats" aria-label="平台治理概况">
             <article className="platform-console__stat">
               <span>标准技能</span>
               <strong>{data.skillCount}</strong>
@@ -87,41 +98,16 @@ export default function PlatformHomePage() {
             </article>
           </section>
 
-          <div className="platform-console__grid platform-console__grid--balanced">
-            <section className="platform-console__panel">
-              <div className="platform-console__section">
-                <h2 className="platform-console__heading">控制面状态</h2>
-                <p className="skills-data-table__summary">当前平台运行治理事实与基础数据摘要。</p>
-              </div>
-              <div className="skills-table-wrap">
-                <table className="skills-data-table" style={{ minWidth: 0, tableLayout: "fixed", width: "100%" }}>
-                  <colgroup>
-                    <col style={{ width: "42%" }} />
-                    <col style={{ width: "58%" }} />
-                  </colgroup>
-                  <tbody>
-                    <tr><th>账号体系</th><td>平台底层专属账号</td></tr>
-                    <tr><th>平台角色</th><td>{data.roles.map(roleLabel).join("、") || "—"}</td></tr>
-                    <tr><th>核心策略版本</th><td>第 {data.policyBundleVersionNo} 版</td></tr>
-                    <tr><th>覆盖已发布智能体</th><td>{data.policyBundleLivePublishedAgentCount}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="platform-console__panel">
-              <div className="platform-console__section">
-                <h2 className="platform-console__heading">建议入口</h2>
-                <p className="skills-data-table__summary">按常见运营顺序进入工作台，减少不必要的页面跳转。</p>
-                <ul className="platform-console__summary-list platform-home__checklist">
-                  <li>先看概览，确认核心策略包与平台基础盘点。</li>
-                  <li>需要调整标准能力时进入平台技能页处理模板版本。</li>
-                  <li>需要收口风险或依赖时进入内置工具页。</li>
-                  <li>需要追踪动作事实时进入平台审计页。</li>
-                </ul>
-              </div>
-            </section>
-          </div>
+          <section className="platform-home__workbench" aria-label="运营工作台">
+            <div className="platform-home__queue">
+              <div className="platform-home__section-head"><div><p className="platform-section-label">优先队列</p><h2 className="platform-console__heading">需要确认的治理事项</h2></div><span>{data.hiddenSkillCount > 0 ? `${data.hiddenSkillCount} 项需关注` : "当前无阻塞项"}</span></div>
+              <button type="button" className="platform-home__action" onClick={() => setSelectedAction("policy")}><span className="platform-home__action-mark"><ShieldAlert size={17} /></span><span><strong>确认核心策略版本</strong><small>当前 v{data.policyBundleVersionNo}，覆盖 {data.policyBundleLivePublishedAgentCount} 个已发布智能体</small></span><ArrowRight size={17} /></button>
+              <button type="button" className="platform-home__action" onClick={() => setSelectedAction("quality")}><span className="platform-home__action-mark"><CheckCircle2 size={17} /></span><span><strong>查看质量运行洞察</strong><small>进入独立运行页判断是否需要回滚或补充评测资产</small></span><ArrowRight size={17} /></button>
+              <button type="button" className="platform-home__action" onClick={() => setSelectedAction("audit")}><span className="platform-home__action-mark"><ShieldAlert size={17} /></span><span><strong>复核近期平台审计</strong><small>{data.recentAuditCount} 条近期记录待追溯或归档</small></span><ArrowRight size={17} /></button>
+            </div>
+            <aside className="platform-home__health" aria-label="治理健康度"><p className="platform-section-label">治理健康</p><h2 className="platform-console__heading">能力运行基线</h2><dl><div><dt>平台角色</dt><dd>{data.roles.map(roleLabel).join("、") || "—"}</dd></div><div><dt>标准技能</dt><dd>{data.skillCount} 个，其中隐藏 {data.hiddenSkillCount} 个</dd></div><div><dt>内置工具</dt><dd>{data.builtinToolCount} 个，进入工具目录管理风险级别</dd></div></dl><button type="button" className="platform-button platform-button--secondary" onClick={() => navigate("/platform/tools")}>查看工具目录</button></aside>
+          </section>
+          {selectedAction ? <aside className="platform-home__drawer" aria-label={actionDetails[selectedAction].title}><div><button type="button" className="platform-home__drawer-close" aria-label="关闭详情" onClick={() => setSelectedAction(null)}><X size={17} /></button><p className="platform-section-label">事项详情</p><h2>{actionDetails[selectedAction].title}</h2><p>{actionDetails[selectedAction].detail}</p></div><button type="button" className="platform-button platform-button--primary" onClick={() => navigate(actionDetails[selectedAction].to)}>进入工作区 <ArrowRight size={15} /></button></aside> : null}
         </div>
       ) : null}
     </div>

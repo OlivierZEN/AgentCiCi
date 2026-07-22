@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-21T11:15:00Z
+updated_at: 2026-07-22T00:24:45+08:00
 updated_by: MANAGER-001
 phase: production-runtime-execution-trace-correction-complete
-active_task: "TASK-218"
-next_action: "移除未开放远程枚举厂商的本地预设目录，并验证 OneKeyToken 空目录反馈。"
+active_task: "TASK-221"
+next_action: "使用已登录蓝色主题管理员逐页完成 TASK-221 的桌面视觉复核。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,12 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-221 is in review: the complete `/admin/*` static audit now routes shared modals, organization/user dialogs, skills subpages and row menus, ontology workbench, operations/monitor, embedded apps and billing through current `--theme-*` values. AdminToolsPage no longer injects category gradients or fixed colors. Assignment check, 11 focused theme tests, production build and diff check pass. This session has no authenticated administrator, so logged-in blue-theme desktop evidence remains an explicit manual visual-acceptance item.
+
+- TASK-220 is in review: the quick-command dialog, composer popovers/actions, session selection and session menu now use only current `--theme-*` values, so the selected blue theme supplies its own surface, border, accent and overlay instead of gilded fallback colors. Assignment check, 9 targeted theme tests and production build pass. Local browser has no authenticated user session and correctly stops at login, so authenticated desktop visual evidence remains pending rather than fabricated.
+
+- TASK-219 is ready: the user selected the Product Design “运营中枢” direction and explicitly required genuine task-to-page separation, not cosmetic menu grouping. FEAT-124 defines the complete `/platform/*` route map, list/drawer/editor/version boundaries, function-preservation contract, visual acceptance and the platform-only eight-theme preference. The existing platform account already persists an independent server `themeCode`; implementation makes the setting visible and isolates the local fallback key from user/Admin surfaces. The model sub-route work is blocked only by active TASK-218’s exclusive `PlatformModelsPage.tsx` change.
 
 - TASK-217 is complete in production `2.7.12 / b20261d8b89b`: current-user/current-Agent schedule creation reuses the personal workflow scheduler, requires a valid cadence before writes, makes authorized Tavily work observable, and renders static workflow parsing only as “工作流定义检查”. Blocking and streaming sessions deterministically request a cadence instead of returning a fake configuration JSON. Focused backend regression, ACR inspect, Git tag, four-part backup, six healthy services, `x`/production-IP onechat HTTPS smoke and clean post-release logs passed. The full local suite remains blocked by the pre-existing shared-test-db Flyway V81 checksum mismatch and was not repaired; no authorized user session was available to create a production test task.
 

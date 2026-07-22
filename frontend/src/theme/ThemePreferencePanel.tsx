@@ -5,6 +5,7 @@ import {
   normalizeProductTheme,
   PRODUCT_THEME_EVENT,
   PRODUCT_THEMES,
+  PRODUCT_THEME_STORAGE_KEY,
   readStoredProductTheme,
   type ProductThemeCode,
 } from "./theme";
@@ -14,6 +15,7 @@ type Props = {
   initialTheme?: string;
   endpoint?: string;
   compact?: boolean;
+  storageKey?: string;
   onSaved?: (themeCode: ProductThemeCode) => void;
 };
 
@@ -24,33 +26,34 @@ export default function ThemePreferencePanel({
   initialTheme,
   endpoint = "/auth/me/theme",
   compact = false,
+  storageKey = PRODUCT_THEME_STORAGE_KEY,
   onSaved,
 }: Props) {
   const [selected, setSelected] = useState<ProductThemeCode>(() =>
-    normalizeProductTheme(initialTheme ?? readStoredProductTheme()),
+    normalizeProductTheme(initialTheme ?? readStoredProductTheme(storageKey)),
   );
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
 
   useEffect(() => {
     if (!initialTheme) return;
-    const next = applyProductTheme(initialTheme);
+    const next = applyProductTheme(initialTheme, { storageKey });
     setSelected(next);
-  }, [initialTheme]);
+  }, [initialTheme, storageKey]);
 
   useEffect(() => {
     const onThemeChanged = (event: Event) => {
-      const themeCode = (event as CustomEvent<{ themeCode?: string }>).detail?.themeCode;
-      if (themeCode) setSelected(normalizeProductTheme(themeCode));
+      const detail = (event as CustomEvent<{ themeCode?: string; storageKey?: string }>).detail;
+      if (detail?.themeCode && detail.storageKey === storageKey) setSelected(normalizeProductTheme(detail.themeCode));
     };
     window.addEventListener(PRODUCT_THEME_EVENT, onThemeChanged);
     return () => window.removeEventListener(PRODUCT_THEME_EVENT, onThemeChanged);
-  }, []);
+  }, [storageKey]);
 
   const selectTheme = async (themeCode: ProductThemeCode) => {
     if (saving) return;
     setSelected(themeCode);
-    applyProductTheme(themeCode);
+    applyProductTheme(themeCode, { storageKey });
     setSaving(true);
     setNotice("正在同步主题偏好...");
     try {
@@ -63,7 +66,7 @@ export default function ThemePreferencePanel({
       if (!response.ok || !body.success) {
         throw new Error(body.message || `HTTP ${response.status}`);
       }
-      const saved = applyProductTheme(body.data?.themeCode ?? themeCode);
+      const saved = applyProductTheme(body.data?.themeCode ?? themeCode, { storageKey });
       setSelected(saved);
       setNotice("主题偏好已同步");
       onSaved?.(saved);

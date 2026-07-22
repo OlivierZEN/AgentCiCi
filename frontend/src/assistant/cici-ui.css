@@ -17269,3 +17269,197 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* FEAT-125: workbench popovers must inherit the authenticated user's theme. */
+:root[data-theme] .cici-composer-tool,
+:root[data-theme] .cici-workbench__new-session-btn {
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+  box-shadow: none;
+}
+
+:root[data-theme] .cici-composer-tool:hover,
+:root[data-theme] .cici-composer-tool:focus-visible,
+:root[data-theme] .cici-composer-tool.is-active,
+:root[data-theme] .cici-composer-tool.has-selection,
+:root[data-theme] .cici-workbench__new-session-btn:hover,
+:root[data-theme] .cici-workbench__new-session-btn:focus-visible {
+  color: var(--theme-accent-strong);
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-line-strong);
+  box-shadow: none;
+  outline: 1px solid var(--theme-focus);
+  outline-offset: 1px;
+  transform: none;
+}
+
+:root[data-theme] .cici-composer-quick__menu,
+:root[data-theme] .cici-composer-skill__menu,
+:root[data-theme] .cici-quick-command-dialog,
+:root[data-theme] .cici-workbench__session-menu {
+  color: var(--theme-text);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+  box-shadow: none;
+}
+
+:root[data-theme] .cici-composer-quick__item,
+:root[data-theme] .cici-composer-skill__item,
+:root[data-theme] .cici-composer-quick__item-text strong,
+:root[data-theme] .cici-composer-skill__item-text strong {
+  color: var(--theme-text);
+}
+
+:root[data-theme] .cici-composer-quick__item-icon,
+:root[data-theme] .cici-composer-skill__item-icon,
+:root[data-theme] .cici-composer-quick__item-text span,
+:root[data-theme] .cici-composer-quick__empty,
+:root[data-theme] .cici-composer-skill__empty {
+  color: var(--theme-text-muted);
+}
+
+:root[data-theme] .cici-composer-quick__item:hover,
+:root[data-theme] .cici-composer-quick__item:focus-visible,
+:root[data-theme] .cici-composer-skill__item:hover,
+:root[data-theme] .cici-composer-skill__item:focus-visible,
+:root[data-theme] .cici-composer-skill__item.is-selected {
+  color: var(--theme-accent-strong);
+  background: transparent;
+  outline: 1px solid var(--theme-focus);
+  outline-offset: -1px;
+}
+
+:root[data-theme] .cici-composer-quick__item:hover .cici-composer-quick__item-text strong,
+:root[data-theme] .cici-composer-quick__item:focus-visible .cici-composer-quick__item-text strong,
+:root[data-theme] .cici-composer-quick__item:hover .cici-composer-quick__item-icon,
+:root[data-theme] .cici-composer-quick__item:focus-visible .cici-composer-quick__item-icon,
+:root[data-theme] .cici-composer-skill__item:hover .cici-composer-skill__item-text strong,
+:root[data-theme] .cici-composer-skill__item:focus-visible .cici-composer-skill__item-text strong,
+:root[data-theme] .cici-composer-skill__item:hover .cici-composer-skill__item-icon,
+:root[data-theme] .cici-composer-skill__item:focus-visible .cici-composer-skill__item-icon,
+:root[data-theme] .cici-composer-skill__item.is-selected .cici-composer-skill__item-text strong,
+:root[data-theme] .cici-composer-skill__item.is-selected .cici-composer-skill__item-icon {
+  color: var(--theme-accent-strong);
+}
+
+:root[data-theme] .cici-composer-quick__add {
+  color: var(--theme-accent-strong);
+  background: var(--theme-accent-soft);
+  border-color: var(--theme-line-strong);
+}
+
+:root[data-theme] .cici-composer-quick__add:hover,
+:root[data-theme] .cici-composer-quick__add:focus-visible {
+  color: var(--theme-surface);
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+  outline: 1px solid var(--theme-focus);
+  outline-offset: 1px;
+}
+
+:root[data-theme] .cici-quick-command-dialog-backdrop {
+  background: var(--theme-overlay);
+}
+
+:root[data-theme] .cici-quick-command-dialog__header {
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .cici-quick-command-dialog__header h3,
+:root[data-theme] .cici-quick-command-dialog__field,
+:root[data-theme] .cici-quick-command-dialog__field input,
+:root[data-theme] .cici-quick-command-dialog__field textarea {
+  color: var(--theme-text);
+}
+
+:root[data-theme] .cici-quick-command-dialog__header p,
+:root[data-theme] .cici-quick-command-dialog__close {
+  color: var(--theme-text-muted);
+}
+
+:root[data-theme] .cici-quick-command-dialog__field input,
+:root[data-theme] .cici-quick-command-dialog__field textarea,
+:root[data-theme] .cici-quick-command-dialog__btn--secondary {
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .cici-quick-command-dialog__field input:focus,
+:root[data-theme] .cici-quick-command-dialog__field textarea:focus,
+:root[data-theme] .cici-quick-command-dialog__close:hover,
+:root[data-theme] .cici-quick-command-dialog__close:focus-visible,
+:root[data-theme] .cici-quick-command-dialog__btn--secondary:hover,
+:root[data-theme] .cici-quick-command-dialog__btn--secondary:focus-visible {
+  color: var(--theme-accent-strong);
+  background: var(--theme-surface-muted);
+  border-color: var(--theme-line-strong);
+  box-shadow: none;
+  outline: 1px solid var(--theme-focus);
+  outline-offset: 1px;
+}
+
+:root[data-theme] .cici-quick-command-dialog__btn--primary {
+  color: var(--theme-surface);
+  background: var(--theme-accent);
+  border-color: var(--theme-accent);
+}
+
+:root[data-theme] .cici-quick-command-dialog__btn--primary:hover,
+:root[data-theme] .cici-quick-command-dialog__btn--primary:focus-visible {
+  color: var(--theme-surface);
+  background: var(--theme-accent-strong);
+  border-color: var(--theme-accent-strong);
+  outline: 1px solid var(--theme-focus);
+  outline-offset: 1px;
+}
+
+:root[data-theme] .cici-workbench__session-row {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+}
+
+:root[data-theme] .cici-workbench__session-row:hover {
+  background: transparent;
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .cici-workbench__session-row.is-active {
+  background: transparent;
+  border-color: var(--theme-line-strong);
+}
+
+:root[data-theme] .cici-workbench__session-row.is-active .cici-workbench__session-main strong,
+:root[data-theme] .cici-workbench__session-more-btn:hover {
+  color: var(--theme-accent-strong);
+}
+
+:root[data-theme] .cici-workbench__session-main:focus-visible,
+:root[data-theme] .cici-workbench__session-more-btn:focus-visible,
+:root[data-theme] .cici-workbench__session-menu-btn:focus-visible {
+  outline: 1px solid var(--theme-focus);
+  outline-offset: 1px;
+}
+
+:root[data-theme] .cici-workbench__session-menu-btn {
+  color: var(--theme-text-secondary);
+  background: var(--theme-surface);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .cici-workbench__session-menu-btn.is-danger {
+  color: var(--theme-danger);
+  background: var(--theme-danger-soft);
+  border-color: var(--theme-line);
+}
+
+:root[data-theme] .cici-workbench__session-more-btn {
+  transition: color 150ms ease-out, opacity 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme] .cici-workbench__session-more-btn {
+    transition: none;
+  }
+}

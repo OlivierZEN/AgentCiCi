@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 import SkillDependencyGraph, { type SkillDependencyGraphView } from "../../shared/SkillDependencyGraph";
 
@@ -325,6 +327,17 @@ function policyVersionToDraft(version: PolicyBundleVersion): PolicyBundleDraftFo
 
 export default function PlatformSkillsPage() {
   const token = readToken();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { skillId } = useParams<{ skillId: string }>();
+  const requestedSkillId = skillId && Number.isFinite(Number(skillId)) ? Number(skillId) : null;
+  const view = location.pathname.endsWith("/policies")
+    ? "policies"
+    : location.pathname.endsWith("/dependencies")
+      ? "dependencies"
+      : requestedSkillId != null
+        ? "detail"
+        : "directory";
   const [skills, setSkills] = useState<PlatformSkill[]>([]);
   const [policyBundle, setPolicyBundle] = useState<PolicyBundleSummary | null>(null);
   const [policyBundleVersions, setPolicyBundleVersions] = useState<PolicyBundleVersion[]>([]);
@@ -382,7 +395,7 @@ export default function PlatformSkillsPage() {
       setSkills(rows);
       await loadPolicyBundle();
       if (listRequestId !== skillListRequestIdRef.current || selectionEpoch !== skillSelectionEpochRef.current) return;
-      const nextId = preferredId ?? selectedSkillIdRef.current ?? rows[0]?.id ?? null;
+      const nextId = preferredId ?? requestedSkillId ?? selectedSkillIdRef.current ?? rows[0]?.id ?? null;
       selectedSkillIdRef.current = nextId;
       setSelectedSkillId(nextId);
       if (nextId != null) {
@@ -636,7 +649,7 @@ export default function PlatformSkillsPage() {
   useEffect(() => {
     void loadSkills();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [token, requestedSkillId]);
 
   async function saveDraft() {
     if (!selectedSkill || !canStartPlatformSkillWriteOperation(
@@ -733,8 +746,9 @@ export default function PlatformSkillsPage() {
     <div className="admin-page skills-catalog platform-page platform-skills-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
+          {view === "detail" ? <button type="button" className="platform-page__back" onClick={() => navigate("/platform/skills")}><ArrowLeft size={15} />返回技能目录</button> : null}
           <h1 className="skills-catalog__title">平台标准技能</h1>
-          <p className="subtle skills-catalog__subtitle">统一管理标准技能模板、治理配置、发布回滚与影响范围。</p>
+          <p className="subtle skills-catalog__subtitle">{view === "directory" ? "浏览平台标准技能；进入独立设置页维护模板与发布版本。" : view === "policies" ? "维护跨技能核心策略及其独立版本历史。" : view === "dependencies" ? "查看当前标准技能对 Agent 与工作流的依赖影响。" : "维护当前标准技能的治理配置、模板版本与发布回滚。"}</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">技能 {skills.length}</span>
@@ -747,7 +761,7 @@ export default function PlatformSkillsPage() {
       {message ? <div className="platform-console__banner platform-console__banner--success">{message}</div> : null}
 
       <div className="platform-console__grid">
-        {policyBundle ? (
+        {policyBundle && view === "policies" ? (
           <section className="platform-console__panel platform-console__panel--full">
             <div className="platform-console__stack">
               <div className="platform-console__section">
@@ -892,7 +906,7 @@ export default function PlatformSkillsPage() {
           </section>
         ) : null}
 
-        <section className="platform-console__panel skills-table-wrap">
+        {view === "directory" ? <section className="platform-console__panel skills-table-wrap">
           <div className="platform-panel__intro">
             <p className="platform-section-label">标准技能列表</p>
             <p className="skills-data-table__summary">选择左侧标准技能后，在右侧查看治理配置、影响摘要和版本历史。</p>
@@ -905,14 +919,15 @@ export default function PlatformSkillsPage() {
                 <th>派生</th>
                 <th>绑定智能体</th>
                 <th>治理</th>
+                <th aria-label="操作" />
               </tr>
             </thead>
             <tbody>
               {skills.map((skill) => (
                 <tr
                   key={skill.id}
-                  className={`platform-console__select-row${skill.id === selectedSkillId ? " platform-console__row--active" : ""}`}
-                  onClick={() => selectSkill(skill.id)}
+                  className="platform-console__select-row"
+                  onClick={() => navigate(`/platform/skills/${skill.id}`)}
                 >
                   <td>
                     <div className="skills-data-table__skill-name">{skill.name}</div>
@@ -932,22 +947,33 @@ export default function PlatformSkillsPage() {
                       <span className="skills-pill">{skill.enabled ? "已启用" : "已停用"}</span>
                     </div>
                   </td>
+                  <td><button type="button" className="platform-table-link" onClick={(event) => { event.stopPropagation(); navigate(`/platform/skills/${skill.id}`); }}>设置 <ExternalLink size={13} /></button></td>
                 </tr>
               ))}
               {!loading && skills.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="skills-data-table__summary">
+                  <td colSpan={6} className="skills-data-table__summary">
                     当前还没有平台标准技能。
                   </td>
                 </tr>
               ) : null}
             </tbody>
           </table>
-        </section>
+        </section> : null}
 
-        <section className="platform-console__panel">
+        {view === "detail" || view === "dependencies" ? <section className="platform-console__panel platform-console__panel--detail">
           {selectedSkill ? (
             <div className="platform-console__stack">
+              {view === "dependencies" ? <div className="platform-console__section platform-skill-dependency__selector">
+                <p className="platform-section-label">标准技能</p>
+                <label>
+                  查看依赖影响
+                  <select value={selectedSkill.id} onChange={(event) => selectSkill(Number(event.target.value))}>
+                    {skills.map((skill) => <option key={skill.id} value={skill.id}>{skill.name}</option>)}
+                  </select>
+                </label>
+              </div> : null}
+              {view === "detail" ? <>
               <div className="platform-console__section">
                 <p className="platform-section-label">当前技能</p>
                 <h2 className="platform-console__heading">{selectedSkill.name}</h2>
@@ -996,8 +1022,9 @@ export default function PlatformSkillsPage() {
                   </label>
                 </div>
               </div>
+              </> : null}
 
-              {selectedSkill.impact ? (
+              {selectedSkill.impact && (view === "detail" || view === "dependencies") ? (
                 <div className="platform-console__section">
                   <p className="platform-section-label">影响范围</p>
                   <h3 className="platform-console__subheading">影响摘要</h3>
@@ -1044,7 +1071,7 @@ export default function PlatformSkillsPage() {
                 />
               </div>
 
-              <div className="platform-console__section">
+              {view === "detail" ? <div className="platform-console__section">
                 <p className="platform-section-label">模板编辑器</p>
                 <h3 className="platform-console__subheading">新建模板版本</h3>
                 <div className="platform-console__form-grid">
@@ -1125,9 +1152,9 @@ export default function PlatformSkillsPage() {
                     {saving ? "处理中…" : "保存为新草稿版本"}
                   </button>
                 </div>
-              </div>
+              </div> : null}
 
-              <div className="platform-console__section">
+              {view === "detail" ? <div className="platform-console__section">
                 <p className="platform-section-label">历史记录</p>
                 <h3 className="platform-console__subheading">版本历史</h3>
                 <div className="skills-table-wrap">
@@ -1182,12 +1209,12 @@ export default function PlatformSkillsPage() {
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </div> : null}
             </div>
           ) : (
             <p className="skills-data-table__summary">请选择一个平台标准技能。</p>
           )}
-        </section>
+        </section> : null}
       </div>
     </div>
   );

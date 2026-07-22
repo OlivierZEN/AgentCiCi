@@ -444,6 +444,18 @@
         "Check desktop and compact widths for no incoherent overlap, no horizontal scrollbar, and consistent button styling."
       ]
     },
+    "platformOperationsInformationArchitecture": {
+      "purpose": "Platform operations navigation and page-responsibility rule for governance workspaces.",
+      "spec": "docs/specs/FEAT-124-platform-operations-information-architecture.md",
+      "rules": [
+        "Platform navigation groups concrete task pages under Overview, Capability Governance, Operations Management, Risk and Quality, and Platform Preferences; it must not merely add visual headings above the legacy flat links.",
+        "A platform list page is responsible for scanning, searching, filtering, concise row actions, and opening a low-risk summary drawer. It must not permanently render a full editor, version history, dependency graph, and list in the same canvas.",
+        "Configuration, draft, version, publishing, rollback, dependency, and high-risk lifecycle work use dedicated routes with breadcrumbs. Text tabs only switch lightweight views of the same object.",
+        "A platform overview prioritizes actionable queue items, governance health, recent changes, and risk follow-ups. Explanatory status tables and instruction copy do not replace task entry points.",
+        "Platform account theme selection reuses the approved eight-theme catalog but uses its own account endpoint and a platform-only local cache key. It never overwrites the user/Admin local theme choice.",
+        "All platform themes keep one information architecture, navigation geometry, control scale, icon vocabulary, density, motion, and overflow model. Themes only map semantic tokens."
+      ]
+    },
     "narrative": {
       "northStar": "The Gilded Ledger",
       "styleName": "鎏金账房",

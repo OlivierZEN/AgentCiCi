@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowLeft, ExternalLink } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 
 type BillingEdition = {
@@ -214,6 +216,10 @@ export const platformBillingLabels = {
 
 export default function PlatformBillingPage() {
   const token = readToken();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { editionCode, packageCode } = useParams<{ editionCode: string; packageCode: string }>();
+  const view = packageCode ? "package-detail" : editionCode ? "edition" : location.pathname.endsWith("/packages") ? "packages" : "catalog";
   const [catalog, setCatalog] = useState<BillingCatalog | null>(null);
   const [modeFilter, setModeFilter] = useState("private_deployment");
   const [selectedEditionCode, setSelectedEditionCode] = useState("");
@@ -244,11 +250,11 @@ export default function PlatformBillingPage() {
       if (!res.ok || !json.success) throw new Error(json.message || "加载计费配置失败");
       const nextCatalog = json.data as BillingCatalog;
       setCatalog(nextCatalog);
-      const nextEditionCode = preferredEdition || selectedEditionCode || nextCatalog.editions[0]?.editionCode || "";
+      const nextEditionCode = preferredEdition || editionCode || selectedEditionCode || nextCatalog.editions[0]?.editionCode || "";
       setSelectedEditionCode(nextEditionCode);
       const nextEdition = nextCatalog.editions.find((item) => item.editionCode === nextEditionCode) ?? nextCatalog.editions[0] ?? null;
       setEditionForm(nextEdition ? editionToForm(nextEdition) : null);
-      const nextPackageCode = preferredPackage || selectedPackageCode || nextCatalog.packages[0]?.packageCode || "";
+      const nextPackageCode = preferredPackage || packageCode || selectedPackageCode || nextCatalog.packages[0]?.packageCode || "";
       setSelectedPackageCode(nextPackageCode);
       const nextPackage = nextCatalog.packages.find((item) => item.packageCode === nextPackageCode) ?? nextCatalog.packages[0] ?? null;
       if (nextPackage) {
@@ -269,7 +275,7 @@ export default function PlatformBillingPage() {
   useEffect(() => {
     void loadCatalog();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, modeFilter]);
+  }, [token, modeFilter, editionCode, packageCode]);
 
   useEffect(() => {
     if (selectedEdition) setEditionForm(editionToForm(selectedEdition));
@@ -343,8 +349,9 @@ export default function PlatformBillingPage() {
     <div className="admin-page skills-catalog platform-page platform-billing-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
+          {view !== "catalog" ? <button type="button" className="platform-page__back" onClick={() => navigate(view === "edition" ? "/platform/billing" : "/platform/billing/packages")}><ArrowLeft size={15} />返回{view === "edition" ? "套餐目录" : "加购包目录"}</button> : null}
           <h1 className="skills-catalog__title">计费版本配置</h1>
-          <p className="subtle skills-catalog__subtitle">维护 SaaS 与私有化版本、容量包、模块包、服务包和 Credits 策略。</p>
+          <p className="subtle skills-catalog__subtitle">{view === "catalog" ? "浏览 SaaS 与私有化套餐，进入单独的版本页面修改资源和计费策略。" : view === "edition" ? "维护当前套餐的资源、计费与适用包策略。" : "维护容量包、模块包、服务包与 Credits 策略。"}</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">当前模式 {deploymentLabel(catalog?.currentDeploymentMode ?? "")}</span>
@@ -366,7 +373,7 @@ export default function PlatformBillingPage() {
       {message ? <div className="platform-console__banner platform-console__banner--success">{message}</div> : null}
 
       <div className="platform-console__grid platform-billing__grid">
-        <section className="platform-console__panel skills-table-wrap">
+        {view === "catalog" ? <section className="platform-console__panel skills-table-wrap">
           <table className="skills-data-table platform-billing__edition-table">
             <thead>
               <tr>
@@ -375,14 +382,15 @@ export default function PlatformBillingPage() {
                 <th>容量</th>
                 <th>计费策略</th>
                 <th>版本号</th>
+                <th aria-label="操作" />
               </tr>
             </thead>
             <tbody>
               {(catalog?.editions ?? []).map((edition) => (
                 <tr
                   key={edition.editionCode}
-                  className={`platform-console__select-row${edition.editionCode === selectedEditionCode ? " platform-console__row--active" : ""}`}
-                  onClick={() => setSelectedEditionCode(edition.editionCode)}
+                  className="platform-console__select-row"
+                  onClick={() => navigate(`/platform/billing/editions/${encodeURIComponent(edition.editionCode)}`)}
                 >
                   <td>
                     <div className="skills-data-table__skill-name">{edition.displayName}</div>
@@ -392,18 +400,19 @@ export default function PlatformBillingPage() {
                   <td>{formatLimit(edition.agentLimit)} Agent · {formatLimit(edition.knowledgeStorageMb)} MB</td>
                   <td>{billingTypeLabel(edition.billingTypePolicy)} · {overageLabel(edition.overageMode)}</td>
                   <td className="skills-data-table__mono">v{edition.versionNo}</td>
+                  <td><button type="button" className="platform-table-link" onClick={(event) => { event.stopPropagation(); navigate(`/platform/billing/editions/${encodeURIComponent(edition.editionCode)}`); }}>设置 <ExternalLink size={13} /></button></td>
                 </tr>
               ))}
               {!catalog?.editions.length ? (
                 <tr>
-                  <td colSpan={5} className="skills-data-table__summary">当前部署模式还没有计费版本。</td>
+                  <td colSpan={6} className="skills-data-table__summary">当前部署模式还没有计费版本。</td>
                 </tr>
               ) : null}
             </tbody>
           </table>
-        </section>
+        </section> : null}
 
-        <section className="platform-console__panel">
+        {view === "edition" ? <section className="platform-console__panel platform-console__panel--detail">
           {selectedEdition && editionForm ? (
             <div className="platform-console__stack">
               <div className="platform-console__section">
@@ -542,9 +551,9 @@ export default function PlatformBillingPage() {
           ) : (
             <p className="skills-data-table__summary">请选择一个版本。</p>
           )}
-        </section>
+        </section> : null}
 
-        <section className="platform-console__panel platform-console__panel--full">
+        {view === "packages" ? <section className="platform-console__panel platform-console__panel--full">
           <div className="platform-billing__package-layout">
             <div className="skills-table-wrap">
               <table className="skills-data-table">
@@ -554,14 +563,15 @@ export default function PlatformBillingPage() {
                     <th>类型</th>
                     <th>状态</th>
                     <th>版本</th>
+                    <th aria-label="操作" />
                   </tr>
                 </thead>
                 <tbody>
                   {(catalog?.packages ?? []).map((item) => (
                     <tr
                       key={item.packageCode}
-                      className={`platform-console__select-row${item.packageCode === selectedPackageCode ? " platform-console__row--active" : ""}`}
-                      onClick={() => setSelectedPackageCode(item.packageCode)}
+                      className="platform-console__select-row"
+                      onClick={() => navigate(`/platform/billing/packages/${encodeURIComponent(item.packageCode)}`)}
                     >
                       <td>
                         <div className="skills-data-table__skill-name">{item.displayName}</div>
@@ -570,11 +580,18 @@ export default function PlatformBillingPage() {
                       <td>{packageTypeLabel(item.packageType)}</td>
                       <td>{item.enabled ? "启用" : "停用"}</td>
                       <td className="skills-data-table__mono">v{item.versionNo}</td>
+                      <td><button type="button" className="platform-table-link" onClick={(event) => { event.stopPropagation(); navigate(`/platform/billing/packages/${encodeURIComponent(item.packageCode)}`); }}>设置 <ExternalLink size={13} /></button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            {null}
+            {selectedPackage ? null : null}
+          </div>
+        </section> : null}
+        {view === "package-detail" ? <section className="platform-console__panel platform-console__panel--detail">
+          <div className="platform-billing__package-layout">
             {selectedPackage ? (
               <div className="platform-billing__package-form">
                 <h3 className="platform-console__subheading">{selectedPackage.displayName}</h3>
@@ -608,9 +625,9 @@ export default function PlatformBillingPage() {
                   <button type="button" className="platform-button platform-button--primary" disabled={saving || !packageForm.reason.trim()} onClick={savePackage}>保存包</button>
                 </div>
               </div>
-            ) : null}
+            ) : <p className="skills-data-table__summary">未找到该加购包。</p>}
           </div>
-        </section>
+        </section> : null}
       </div>
     </div>
   );

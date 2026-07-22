@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Archive, EyeOff, PlayCircle, Plus, RefreshCw, Send, ShieldCheck } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LS_PLATFORM_TOKEN, PLATFORM_API_BASE } from "../../constants";
 import "../../shared/evaluation-quality.css";
 
@@ -24,7 +25,13 @@ function dateTime(value?: string) { return value ? new Date(value).toLocaleStrin
 
 export default function PlatformEvaluationPage() {
   const token = readToken();
-  const [tab, setTab] = useState<"overview" | "suites" | "runs">("overview");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const tab: "overview" | "suites" | "runs" = location.pathname.endsWith("/suites")
+    ? "suites"
+    : location.pathname.endsWith("/runs")
+      ? "runs"
+      : "overview";
   const [overview, setOverview] = useState<Overview>({});
   const [suites, setSuites] = useState<Suite[]>([]);
   const [runs, setRuns] = useState<Run[]>([]);
@@ -86,7 +93,7 @@ export default function PlatformEvaluationPage() {
         scopeType, visibility: hiddenResults ? "SEALED" : "AUTHORIZED", templateCode: templateCode.trim(),
         appCode: appCode.trim() || null, industryCode: industryCode.trim() || null, hiddenResults, mandatory,
       }) });
-      setNotice("已创建新的不可变草稿版本。添加并审核用例后再发布。 "); setShowSuiteForm(false); await loadAll(); setTab("suites");
+      setNotice("已创建新的不可变草稿版本。添加并审核用例后再发布。 "); setShowSuiteForm(false); await loadAll(); navigate("/platform/evaluation/suites");
     } catch (cause) { setError(cause instanceof Error ? cause.message : String(cause)); }
     finally { setBusy(false); }
   };
@@ -116,7 +123,7 @@ export default function PlatformEvaluationPage() {
   const summary = overview.summary ?? {};
   return <section className="evaluation-page" aria-labelledby="platform-evaluation-title">
     <header className="evaluation-page__header"><div><p className="evaluation-page__kicker">平台运营治理</p><h1 id="platform-evaluation-title">智能体质量</h1><p>维护平台标准、应用标准与行业评测资产；租户只能看到被授权的摘要或结果。</p></div><button type="button" className="evaluation-button evaluation-button--secondary" onClick={() => void loadAll()} disabled={loading || busy}><RefreshCw size={15} />刷新</button></header>
-    <nav className="evaluation-tabs" aria-label="平台评测页面">{(["overview", "suites", "runs"] as const).map((item) => <button type="button" key={item} className={tab === item ? "is-active" : ""} onClick={() => setTab(item)}>{{ overview: "治理概览", suites: "标准评测资产", runs: "全局运行洞察" }[item]}</button>)}</nav>
+    <nav className="evaluation-tabs" aria-label="平台评测页面">{(["overview", "suites", "runs"] as const).map((item) => <button type="button" key={item} className={tab === item ? "is-active" : ""} onClick={() => navigate(item === "overview" ? "/platform/evaluation" : `/platform/evaluation/${item}`)}>{{ overview: "治理概览", suites: "标准评测资产", runs: "全局运行洞察" }[item]}</button>)}</nav>
     {notice ? <div className="evaluation-notice" role="status">{notice}</div> : null}{error ? <div className="evaluation-error" role="alert">{error}</div> : null}{loading ? <div className="evaluation-loading">正在汇总平台质量资产…</div> : null}
 
     {!loading && tab === "overview" ? <div className="evaluation-section-stack">

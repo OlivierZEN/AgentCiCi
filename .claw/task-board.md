@@ -15,6 +15,28 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-221 - 组织管理端全页面主题一致性治理
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-126-admin-theme-completeness-audit.md`
+- task_status_path: `.claw/tasks/TASK-221.md`
+- assignment_path: `.claw/assignments/TASK-221.yaml`
+- blocked_by: `none`
+- next_action: 使用已登录蓝色主题管理员逐页完成主体、弹窗、行菜单和折叠详情视觉复核。
+
+### TASK-220 - 用户会话工作台浮层与操作面主题收敛
+
+- status: `review`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-125-user-workbench-surface-polish.md`
+- task_status_path: `.claw/tasks/TASK-220.md`
+- assignment_path: `.claw/assignments/TASK-220.yaml`
+- blocked_by: `none`
+- next_action: 使用已登录蓝色主题账号完成弹窗、菜单与会话历史的桌面视觉验收。
+
 ### TASK-218 - 厂商模型目录能力边界
 
 - status: `in_progress`
@@ -25,6 +47,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 - assignment_path: `.claw/assignments/TASK-218.yaml`
 - blocked_by: `none`
 - next_action: 移除 OneKeyToken 本地预设目录，未开放远程枚举时展示空目录。
+
+### TASK-219 - 运营管理端信息架构与独立主题重构
+
+- status: `ready`
+- priority: `high`
+- owner_role: `frontend-agent`
+- spec_path: `docs/specs/FEAT-124-platform-operations-information-architecture.md`
+- task_status_path: `.claw/tasks/TASK-219.md`
+- assignment_path: `.claw/assignments/TASK-219.yaml`
+- blocked_by: `TASK-218 (PlatformModelsPage.tsx 子路由拆分)`
+- next_action: Start the non-overlapping Shell, overview, routing and isolated platform-theme work on `codex/TASK-219-platform-operations-ia`; merge TASK-218 before editing the model page.
 
 ### TASK-217 - 智能体定时任务真实创建与链路事实纠偏
 

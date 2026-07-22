@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-21T12:15:00Z
+updated_at: 2026-07-22T00:30:00+08:00
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-21T12:15:00Z
+last_run_at: 2026-07-22T00:30:00+08:00
 last_run_status: passed
 ---
 
@@ -16,6 +16,29 @@ last_run_status: passed
 - 后端：`mvn -q -DskipTests compile` 通过；全新临时 PostgreSQL 16 从空库成功应用 79 个迁移至 V83，`PlatformModelProviderIntegrationTest` 通过。覆盖 OneKeyToken 检测不回填样例模型、`models/fetch` 返回 `count=0`、空 `models/modelDetails`、`catalogSource=unavailable` 与 `remoteFetchSupported=false`。
 - 前端：`npm test -- --run PlatformModelsPage.test.tsx` 2/2 通过，覆盖未开放远程枚举时的明确空态；`npm run build` 成功转换 1,948 个模块，仅保留既有大 chunk 提示。
 - 静态检查：`git diff --check` 通过。未执行生产发布或远程凭据调用。
+
+## TASK-221 - 组织管理端全页面主题一致性治理（本地验收）
+
+- `identity/assignment`: `check-assignment.py` 从仓库根目录返回 `allowed`，确认 Admin 工具页、共享主题层和主题契约测试都在 TASK-221 授权范围内。
+- `static-audit`: 覆盖 `/admin/*` 路由清单与共享浮层选择器。主题层将共享模态与遮罩、组织/用户弹窗、技能二级页/发布框/行菜单、业务本体工作台、运维与观测、嵌入应用和计费面板映射到当前 `--theme-*`；工具卡片不再存在内联类别渐变或固定色。
+- `frontend-focused`: `npm run test -- --run src/theme/theme.test.ts` 通过，1 个测试文件 / 11 项测试；新增契约锁定 Admin 弹窗、折叠行菜单、二级页和工具卡的主题继承。
+- `frontend-build`: `npm run build` 通过，转换 1,949 个模块；仅保留既有 Vite 大 chunk 警告。
+- `static`: `git diff --check` 通过。
+- `browser`: 当前本地 Browser 无可用管理员认证态，无法进入 `/admin/*` 查看当前蓝色主题，未伪造截图或视觉结果。已登录管理员应按 FEAT-126 路由清单复核页面主体、弹窗、轻量菜单和折叠详情。
+
+## TASK-220 - 用户会话工作台浮层与操作面主题收敛（本地验收）
+
+- `identity/assignment`: `dev-login.py` 的 SSH challenge-response 以及 TASK-220 的 `check-assignment.py` 均返回 `allowed`，0 finding。
+- `frontend-focused`: `npm run test -- --run src/theme/theme.test.ts` 通过，1 个测试文件 / 9 项测试；新增契约确认快捷指令菜单、弹窗、当前会话项和遮罩只走当前主题 token。
+- `frontend-build`: `npm run build` 通过，转换 1,949 个模块；仅保留既有 Vite 大 chunk 警告。
+- `static`: `git diff --check` 通过；快捷指令与技能菜单、快捷指令弹窗、输入区操作、会话选中行和会话操作菜单均由 `--theme-*` token 覆盖，蓝色主题不再读取鎏金账房固定颜色。
+
+## TASK-219 - 运营管理端信息架构与独立主题重构（进行中）
+
+- `frontend-focused`: `npm test -- --run src/theme/theme.test.ts src/platform/pages/PlatformBillingPage.test.ts src/platform/pages/PlatformSkillsPage.test.ts` 通过，3 个文件、17 项断言全部通过。
+- `frontend-build`: `npm run build` 通过；Vite 保留既有大 chunk 警告，无 TypeScript 错误。
+- `static`: `git diff --check` 通过。
+- `browser`: 本地应用内浏览器访问 `/platform/login`，登录页语义与交互控件可用；当前没有平台账号会话，未对需鉴权的运营页伪造数据或宣称已完成视觉验收。待取得授权会话后补做桌面截图、导航展开、抽屉与八主题持久化检查。
 
 ## TASK-214 - OneKeyToken 实时凭据检测修复（生产发布）
 
