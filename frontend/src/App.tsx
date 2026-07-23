@@ -34,6 +34,7 @@ import PlatformShell from "./platform/PlatformShell";
 import PlatformAuditPage from "./platform/pages/PlatformAuditPage";
 import PlatformAppearancePage from "./platform/pages/PlatformAppearancePage";
 import PlatformAutoServiceDemoRequestsPage from "./platform/pages/PlatformAutoServiceDemoRequestsPage";
+import PlatformRegisteredUsersPage from "./platform/pages/PlatformRegisteredUsersPage";
 import PlatformHomePage from "./platform/pages/PlatformHomePage";
 import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
 import PlatformModelsPage from "./platform/pages/PlatformModelsPage";
@@ -115,7 +116,9 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="evaluation/runs" element={<PlatformEvaluationPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
             <Route path="tenants/:orgId" element={<PlatformTenantDetailPage />} />
-            <Route path="website-leads" element={<PlatformAutoServiceDemoRequestsPage />} />
+            <Route path="registered-users" element={<PlatformRegisteredUsersPage />} />
+            <Route path="demo-leads" element={<PlatformAutoServiceDemoRequestsPage />} />
+            <Route path="website-leads" element={<Navigate to="/platform/demo-leads" replace />} />
             <Route path="audit" element={<PlatformAuditPage />} />
           </Route>
         </Route>

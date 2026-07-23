@@ -14667,6 +14667,58 @@ td.skills-data-table__actions > * {
   text-align: center;
 }
 
+.registered-users-page {
+  display: grid;
+  gap: 14px;
+}
+
+.registered-users-page__panel {
+  display: grid;
+  gap: 16px;
+  padding: 16px;
+}
+
+.registered-users-page__panel-head,
+.registered-users-page__search,
+.registered-users-page__pagination,
+.registered-users-page__pagination > div {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.registered-users-page__panel-head,
+.registered-users-page__pagination {
+  justify-content: space-between;
+}
+
+.registered-users-page__search input {
+  min-width: 250px;
+}
+
+.registered-users-page__table-wrap {
+  overflow-x: auto;
+}
+
+.registered-users-page__table {
+  min-width: 760px;
+}
+
+.registered-users-page__status {
+  color: var(--platform-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.registered-users-page__status--active {
+  color: var(--platform-success, #2d7a51);
+}
+
+.registered-users-page__pagination {
+  color: var(--platform-muted);
+  font-size: 12px;
+}
+
 @media (max-width: 760px) {
   .autoservice-demo-admin__summary {
     grid-template-columns: 1fr;
@@ -14699,6 +14751,26 @@ td.skills-data-table__actions > * {
 
   .autoservice-demo-admin__search input {
     width: 100%;
+  }
+
+  .registered-users-page__panel-head,
+  .registered-users-page__search,
+  .registered-users-page__pagination {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .registered-users-page__search input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .registered-users-page__pagination > div {
+    justify-content: stretch;
+  }
+
+  .registered-users-page__pagination > div .platform-button {
+    flex: 1;
   }
 
   .autoservice-demo-admin__table {
