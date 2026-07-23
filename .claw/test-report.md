@@ -10,6 +10,11 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-229 - 通用可信运行时记忆上下文
+
+- `backend-focused`：可信上下文只在显式作用域内、组织与最终 Agent 同时匹配时组装提示词；作用域关闭后不残留。`ChatOrchestratorServiceModelIdentityTest` 与语义检索回归共同通过。
+- `backend-compile/static`：后端编译与 `git diff --check` 通过。
+
 ## TASK-228 - 通用记忆受控语义检索
 
 - `backend-focused`：语义检索测试验证向量命中只有在关系库上下文已授权时才返回；未授权命中不会回读记录；邮件与令牌文本在 embedding 前脱敏，索引失败不向调用方传播。候选审核测试验证审核成功会触发最佳努力索引。定向测试与编译通过。

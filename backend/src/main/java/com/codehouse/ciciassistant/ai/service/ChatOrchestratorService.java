@@ -25,6 +25,7 @@ import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnswerForm
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesIntentRouter;
 import com.codehouse.ciciassistant.memory.domain.UserMemoryEntity;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
+import com.codehouse.ciciassistant.memory.service.TrustedMemoryRuntimeContextService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.kb.service.KbAccessControlService;
@@ -50,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.regex.Matcher;
@@ -111,6 +113,7 @@ public class ChatOrchestratorService {
     private final ChatSessionStateService chatSessionStateService;
     private final ChatSessionStateRepository chatSessionStateRepository;
     private final RuntimeContextPromptService runtimeContextPromptService;
+    private final TrustedMemoryRuntimeContextService trustedMemoryRuntimeContextService;
     private final AgentWorkflowRuntimeService agentWorkflowRuntimeService;
     private final AgentWorkflowVersionRepository agentWorkflowVersionRepository;
     private final AgentWorkflowExecutionLogService agentWorkflowExecutionLogService;
@@ -142,6 +145,7 @@ public class ChatOrchestratorService {
                                    ChatSessionStateService chatSessionStateService,
                                    ChatSessionStateRepository chatSessionStateRepository,
                                    RuntimeContextPromptService runtimeContextPromptService,
+                                   TrustedMemoryRuntimeContextService trustedMemoryRuntimeContextService,
                                    AgentWorkflowRuntimeService agentWorkflowRuntimeService,
                                    AgentWorkflowVersionRepository agentWorkflowVersionRepository,
                                    AgentWorkflowExecutionLogService agentWorkflowExecutionLogService,
@@ -172,6 +176,7 @@ public class ChatOrchestratorService {
         this.chatSessionStateService = chatSessionStateService;
         this.chatSessionStateRepository = chatSessionStateRepository;
         this.runtimeContextPromptService = runtimeContextPromptService;
+        this.trustedMemoryRuntimeContextService = trustedMemoryRuntimeContextService;
         this.agentWorkflowRuntimeService = agentWorkflowRuntimeService;
         this.agentWorkflowVersionRepository = agentWorkflowVersionRepository;
         this.agentWorkflowExecutionLogService = agentWorkflowExecutionLogService;
@@ -1728,6 +1733,11 @@ public class ChatOrchestratorService {
             system = chatSessionStateService.buildPromptBlock(sessionState.get()) + "\n---\n\n" + system;
         }
         system = runtimeContextPromptService.buildPromptBlock(runtimeContext) + "\n---\n\n" + system;
+        String trustedMemoryPrompt = Objects.toString(
+                trustedMemoryRuntimeContextService.buildPrompt(orgId, skillContext.agentId(), question), "");
+        if (!trustedMemoryPrompt.isBlank()) {
+            system = trustedMemoryPrompt + "\n---\n\n" + system;
+        }
         messages.add(Map.of("role", "system", "content", system));
         messages.addAll(buildRecentHistoryMessages(orgId, sessionId, question));
 
