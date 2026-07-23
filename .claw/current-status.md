@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T12:15:00+08:00
+updated_at: 2026-07-23T04:30:00Z
 updated_by: MANAGER-001
-phase: release-version-patch-limit-updated
-active_task: null
-next_action: "生产修订版本上限已调整为365；下次发布前仍应执行标准 dry-run。"
+phase: agent-runtime-mixed-orchestration-p1-authorized
+active_task: TASK-235
+next_action: "将 TASK-235 分配信息提交并推送至 origin/main，随后在专用分支实现运行事实与真实计划状态机。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-235 已获授权，启动 FEAT-133 P1：先建设可恢复、可审计的真实 Plan-Exec 运行事实、计划/步骤状态机、Schema 校验、恢复租约与真实 Trace 投影；不接入聊天主路径、不执行工具、不新增 UI。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

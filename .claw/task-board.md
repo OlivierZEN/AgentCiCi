@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-235 - 混合智能体运行时 P1：计划状态机基础
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
+- task_status_path: `.claw/tasks/TASK-235.md`
+- assignment_path: `.claw/assignments/TASK-235.yaml`
+- blocked_by: `none`
+- next_action: 先创建可恢复的任务、计划、步骤与事件持久化及服务端状态机；不接入聊天、工具或 UI。
+
 ### TASK-233 - 通用记忆人工管理与生产就绪审计
 
 - status: `done`

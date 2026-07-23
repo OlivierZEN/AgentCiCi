@@ -1,0 +1,58 @@
+task_id: TASK-235
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T04:30:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
+task_status_path: .claw/tasks/TASK-235.md
+branch: codex/TASK-235-agent-task-runtime-foundation
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentTaskRunEntity.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentTaskPlanEntity.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentTaskStepEntity.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentTaskEventEntity.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentTaskRuntimeService.java
+  - backend/src/main/resources/db/migration/V91__agent_task_runtime_foundation.sql
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/AgentTaskRuntimeIntegrationTest.java
+  - docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
+  - .claw/tasks/TASK-235.md
+  - .claw/assignments/TASK-235.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/**
+  - frontend/**
+  - deploy/**
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentWorkflowRuntimeService.java
+  - docs/specs/FEAT-122-runtime-execution-trace-correction.md
+task_boundary:
+  - "只实施 FEAT-133 P1 的持久化运行事实、计划/步骤状态机、Schema 校验和恢复租约。"
+  - "不接入 ChatOrchestratorService、OpenAPI、工具、RAG、记忆、评测、费用或前端。"
+  - "不执行任何外部副作用，不实现重规划、Reflect、并行步骤、可编辑画布或任意代码执行。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user explicitly authorized starting FEAT-133 implementation, scoped first to P1 runtime foundation."
