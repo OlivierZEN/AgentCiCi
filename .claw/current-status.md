@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T10:18:00Z
+updated_at: 2026-07-23T10:30:00Z
 updated_by: MANAGER-001
-phase: feat131-memory-governance-ready
-active_task: "TASK-232"
-next_action: "在 TASK-232 中提供通用记忆候选审核 API，并补齐 Trace 与评测发布门禁证据。"
+phase: feat131-memory-production-audit-ready
+active_task: "TASK-233"
+next_action: "在 TASK-233 中补齐已生效记忆的人工管理 API，并对 FEAT-131 执行生产就绪证据审计。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-233 已获授权：人工治理必须覆盖已生效记忆与主体删除，调用既有生命周期服务并同时验证组织、Agent、角色和 legal hold；完成后执行 FEAT-131 的逐项生产就绪审计，不发布生产。
 
 - TASK-232 已获授权：提供通用记忆候选的查询、审核通过和拒绝 API；API 必须沿用当前组织与 Agent 权限边界，Trace/评测仅记录最小、脱敏的记忆治理证据。
 
