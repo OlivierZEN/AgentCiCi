@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T06:40:00Z
+updated_at: 2026-07-23T07:05:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p5-shape-pending
-active_task: none
-next_action: "等待用户确认 P5 Trace 管理界面的 shape；确认后创建独立任务、授权并实施桌面端 Trace 执行投影。"
+phase: agent-runtime-mixed-orchestration-p5-implementation
+active_task: TASK-239
+next_action: "在已确认 shape 下实现同组织 Trace 运行执行投影、现有 Trace 详情的多主题桌面界面，并完成定向后端/前端与浏览器验收。"
 read_next:
   goals: false
   decisions: false
@@ -34,7 +34,7 @@ read_next:
 
 - TASK-238 已完成实现并进入 review：V92 的审查事实与 `REFLECT_GATE` 事件均按组织隔离；成功 Plan-Exec 才可进入默认关闭的精确 Agent Gate。Gate 验证 Agent、步骤、预算、确认和输出，阻断即 `HANDOFF`，不调用新模型或工具。评测增加运行模式、审查状态和确认前零写入断言；定向回归通过，隔离 PostgreSQL 从 V1→V92 的运行时集成 5/5 通过。
 
-- TASK-238 已完成并集成至 `main`（`6817ba5`）。P5 的现有 Trace 详情扩展需要先由用户确认 task-specific shape；在此之前不修改前端、路由或视觉事实源。
+- TASK-238 已完成并集成至 `main`（`6817ba5`）。用户已确认 P5 shape：组织管理员与平台运营在现有 Trace 详情中查看“运行执行”，默认运行总览，保留回归集入口；多主题使用同一布局和语义 token。TASK-239 已获授权，开始补齐 Trace 与运行事实的精确关联、脱敏投影和桌面端 `gilded`/`galaxy` 验收，不新增路由或移动端实现。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

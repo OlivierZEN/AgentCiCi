@@ -1,0 +1,66 @@
+task_id: TASK-239
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T07:05:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
+task_status_path: .claw/tasks/TASK-239.md
+branch: codex/TASK-239-trace-runtime-execution
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/domain/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - frontend/src/admin/**
+  - frontend/src/theme/**
+  - frontend/src/styles.css
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentTaskRuntimeService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceServiceTest.java
+  - frontend/src/admin/pages/AdminAgentRunMonitor.tsx
+  - frontend/src/admin/pages/AdminAgentRunMonitor.test.tsx
+  - frontend/src/styles.css
+  - frontend/src/theme/theme.css
+  - docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
+  - .claw/tasks/TASK-239.md
+  - .claw/assignments/TASK-239.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/**
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - frontend/src/assistant/**
+  - deploy/**
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentPlanExecCanaryService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentTaskReflectService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/api/AdminAgentRunTraceController.java
+task_boundary:
+  - "只实施 FEAT-133 P5 的 Trace 与运行事实精确关联、组织隔离脱敏投影及现有 Trace 详情桌面端界面。"
+  - "保持所有主题共享信息树与交互，验证 gilded 与 galaxy；不新增路由、移动端或主题专属布局。"
+  - "不改变工具、写入、凭据、确认、路由、计划状态机、Reflect、评测、生产灰度或发布。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user explicitly confirmed FEAT-133 P5 Trace runtime-execution shape and multi-theme direction."

@@ -4,10 +4,10 @@ feature_id: FEAT-133
 title: 可执行计划、动态路由与受控反思的混合智能体运行时
 status: in_progress
 owner_role: project-manager
-task_ids: TASK-235,TASK-236,TASK-237,TASK-238
+task_ids: TASK-235,TASK-236,TASK-237,TASK-238,TASK-239
 related_decisions: DEC-006,DEC-010,DEC-018,DEC-027
 related_issues: none
-updated_at: 2026-07-23T06:30:00Z
+updated_at: 2026-07-23T07:05:00Z
 updated_by: MANAGER-001
 ---
 
@@ -324,6 +324,15 @@ P1 不得提前实现自由多 Agent、并行步骤、可编辑画布或任意�
 - Reviewer 仅接收目标摘要、输出草稿、脱敏步骤/证据摘要和固定量表，返回严格 Schema 的 `PASS | REVISE | HANDOFF`、问题码与有限修订目标；禁止保存或返回自然语言思维链。首期不新增工具或写步骤，`REVISE` 只允许重新生成无副作用的最终回答，超过轮次转 `HANDOFF`。
 - 审查记录、Gate 和问题码以组织隔离的运行事实持久化；聊天兼容响应和流事件只投影脱敏 `reviewStatus`。评测断言先覆盖 Gate、审查轮次、确认前零写入和终态；发布门禁只读取这些事实，不能由模型建议放行。
 
+### 13.4 P5 实施契约：Trace 运行执行投影与多主题界面
+
+- 用户已确认：使用者为组织管理员和平台运营；默认焦点为运行总览；仅在现有 `/admin/ops` 的 Trace 详情内新增内联“运行执行”分区，不新增路由、独立控制台或计划画布，保留“加入回归集”操作。
+- Trace 与运行事实必须建立精确、持久化关联：仅在同一 Trace 保存时写入对应 `runtimeRunId`；不得由会话、时间窗口、Agent 或模型名称推测关联。详情读取必须以 `org_id + traceId` 查询 Trace，再以同一 `org_id + runtimeRunId` 查询运行、计划、步骤、事件和审查事实；未关联的历史 Trace 返回明确的空态，不得返回其他运行的信息。
+- 后端只返回管理员可审计的脱敏投影：模式、终态、风险、计划修订、审查状态、步骤种类/状态/耗时、最小证据摘要，以及有条件的确认或部分完成原因。不得返回模型思维链、原始模型/工具 payload、密钥、凭据、未脱敏用户正文或跨组织标识；工作流“定义检查”仍与真实计划步骤明确区分。
+- Trace 详情默认先展示紧凑运行总览（模式、终态、风险、计划修订、审查状态），其后为步骤/事件时间线；每个步骤默认收起证据，使用文字命令展开并仅允许复制已脱敏详情。仅在存在时显示确认等待或失败/部分完成原因；没有关联运行事实时显示“此 Trace 没有关联运行执行事实”。
+- 多主题只允许切换既有语义 token 的调色板：所有主题必须共享同一信息树、顺序、密度、图标语义、交互和可访问状态，禁止按主题分叉布局、硬编码鎏金色或新增主题专属视觉。`gilded` 为默认基线，`galaxy` 作为深色回归主题，文字、边界、焦点和状态均须保持可读性；不新增移动端适配。
+- P5 不改变模式路由、计划状态机、工具、凭据、确认、审查、评测结论或生产灰度；其职责仅为已持久化事实的受权只读投影及桌面端验收。
+
 ## 14. 验收标准
 
 ### 14.1 P1：计划执行真实性
@@ -389,6 +398,7 @@ agent-runtime.resume.enabled
 - P3 验证：规则单元覆盖关闭/精确白名单、Direct/ReAct/Plan-Exec、确认续执行、敏感标记与 P2 未启动回退；连同 P2 和既有聊天回归共 48 项通过。后端编译、diff 检查及全新后删除 PostgreSQL 16 V1→V91 的 4/4 集成用例通过；共享测试库的 V81 checksum 漂移未改动。
 - TASK-238 已完成 P4 实现并进入 review：V92 新增组织隔离的 `agent_task_review`；默认关闭的精确 Agent Reflect Gate 仅审查成功的 Plan-Exec 运行。Gate 校验组织/Agent、终态、步骤预算、轮次预算、确认和输出；通过时记录 `PASS`，阻断时记录 `HANDOFF`，不调用新模型、工具、凭据或写操作。聊天/流式投影最小 `reviewStatus`，评测新增模式、审查状态和确认前零写入断言。
 - P4 验证：Reflect、路由、P2、评测断言和既有 Chat 定向回归通过；新建后删除 PostgreSQL 16 库迁移 V1→V92 并通过 5/5 运行时集成用例，确认审查事实、`REFLECT_GATE` 事件和跨组织拒绝。共享测试库的 V81 checksum 漂移未改动。
+- P5 已获得用户确认的 shape，TASK-239 获授权实施：在现有 Trace 详情新增“运行执行”分区，默认运行总览、步骤时间线与条件性例外说明；支持现有主题切换，验证 `gilded` 与 `galaxy`，不新建路由或移动端实现。
 - 验证证据：后端编译、diff 检查通过；新建后删除的 PostgreSQL 16 临时库从空库全量迁移至 V91，并通过 3 个运行时集成用例。默认共享测试库仍因既有 V81 checksum 漂移无法启动，未 repair、未改写历史迁移。
 - 实施前先读取：`docs/specs/FEAT-004-agent-flow-compile-triggers-and-executions.md`、`docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`、`docs/specs/FEAT-122-runtime-execution-trace-correction.md`、`docs/specs/FEAT-130-forced-skill-execution-context.md`、`docs/specs/FEAT-131-agent-memory-platform.md`。
 - 首个实现任务必须以 P1 为边界，并明确禁止把 `workflow_code` 字符串解析误升级为任意代码执行器。
