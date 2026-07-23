@@ -1,7 +1,7 @@
 ---
 kind: devops
 version: 3
-updated_at: 2026-07-22T02:29:33Z
+updated_at: 2026-07-23T11:56:00Z
 updated_by: MANAGER-001
 status: active
 ---
@@ -21,6 +21,13 @@ status: active
 - Capacity inference from code/config: current deployment is suitable for pilot/small production traffic, but high-concurrency AI streaming depends on adding explicit executors, pool sizing, distributed rate limits, and queue/backpressure controls before scaling backend replicas.
 
 ## Latest Release
+
+- 2.8.5 FEAT-131 通用外部应用智能体记忆平台 on 2026-07-23:
+  - Git/发布：主线提交 `02d380d10508beaf67c96993b9df55978d72072f`；`scripts/release-acr.sh --dry-run` 和 `--version 2.8.5` 成功，annotated tag `2.8.5` 已推送。
+  - 镜像：backend/frontend index digest 分别为 `sha256:0936e7b4d0e3040cf907284b7edc41dc891b1091b73d247e1be734e6c5870e30` 与 `sha256:abc3417bcb95f42897abe6ba32a00df7244e20aef3892f9e84875a8c776619ce`。
+  - 备份/部署：`/opt/cici/backups/20260723-115248-before-2.8.5-feat131-memory` 的 env/PostgreSQL/KB/Qdrant 均非空；backend/frontend 已重建至 2.8.5，database、Redis、RabbitMQ、Qdrant 未重启。
+  - 运行/迁移：六服务 healthy，health `UP`，版本 `2.8.5 / 02d380d10508`；生产库从 V84 正向迁移 V85–V90 成功，Nginx 有效。
+  - 公网：x HTTP 301/HTTPS 200，显式生产 IP/SNI onechat HTTPS 200，匿名 `/auth/me` 401；稳定窗口 backend error 0、真实 Nginx 5xx 0。未使用未获授权的生产账号或 API Key 验证受保护记忆管理/OpenAPI 端点。
 
 - 2.8.4 TASK-225 对话技能选择强制执行上下文与可观测性 on 2026-07-22:
   - Git/发布：主线 merge commit `2f2f1a013ec22f7e9cc52314c3707370a0d3978e`；`scripts/release-acr.sh --dry-run` 和正式发布通过，annotated tag `2.8.4` 已推送。

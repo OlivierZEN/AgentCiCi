@@ -10,6 +10,13 @@ last_run_status: passed
 
 # Test Report
 
+## Production Release 2.8.5 - FEAT-131
+
+- `release`：`scripts/release-acr.sh --dry-run` 与 `--version 2.8.5` 成功；backend/frontend ACR index digest 分别为 `sha256:0936e7b4d0e3040cf907284b7edc41dc891b1091b73d247e1be734e6c5870e30` 与 `sha256:abc3417bcb95f42897abe6ba32a00df7244e20aef3892f9e84875a8c776619ce`，Git annotated tag `2.8.5` 已推送。
+- `backup`：线上备份 `/opt/cici/backups/20260723-115248-before-2.8.5-feat131-memory` 的 `acr.env.before-release`、`postgres.dump`、`kb-files.tgz` 与 `qdrant.tgz` 均非空。
+- `production`：仅重建 backend/frontend，四个状态服务保持运行；六服务健康。后端 `/system/version` 返回 `2.8.5 / 02d380d10508`，Flyway V85–V90 均成功，Nginx 配置校验通过。
+- `smoke`：`x` HTTP 301、`x` HTTPS 200、生产 IP/SNI 的 onechat HTTPS 200，匿名 `/auth/me` 为预期 401；稳定观察窗口 backend error 0、真实 Nginx 5xx 0。未持有受权生产测试账号或 API Key，因此未创建真实主体或调用受保护 OpenAPI 记忆路径。
+
 ## TASK-233 - 通用记忆人工管理与生产就绪审计
 
 - `backend-focused`：11 个通用记忆定向回归、后端编译与 `git diff --check` 通过；覆盖可信上下文、受控语义检索、候选审核、OpenAPI 阻塞/流式、Trace/评测状态、两份独立适配契约、撤销/主体删除/过期和跨 Agent 拒绝。生命周期删除同时脱敏证据引用。

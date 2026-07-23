@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T10:45:00Z
+updated_at: 2026-07-23T11:56:00Z
 updated_by: MANAGER-001
 phase: feat131-memory-production-ready
 active_task: null
-next_action: "等待用户授权生产发布；发布前按 Runbook 执行 dry-run 与非敏感外部适配验收。"
+next_action: "FEAT-131 已发布至生产 2.8.5；持续观察运行日志，待具备受权测试凭据后补做真实 OpenAPI 记忆绑定验收。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- FEAT-131 通用外部应用智能体记忆平台已完成生产就绪审计，未执行生产发布。可信凭据绑定、受控上下文注入、关系库二次授权的脱敏语义检索、候选/人工治理、Trace/评测状态、保留/删除/legal hold、组织导出与 purge、两个独立通用适配契约均有代码与验证证据。全新 PostgreSQL 16 库 V1→V90 迁移及平台生命周期集成测试 6/6 通过；默认共享测试库的既有 V81 checksum 漂移未修复或掩盖。
+- FEAT-131 通用外部应用智能体记忆平台已发布至生产 `2.8.5 / 02d380d10508`。可信凭据绑定、受控上下文注入、关系库二次授权的脱敏语义检索、候选/人工治理、Trace/评测状态、保留/删除/legal hold、组织导出与 purge、两个独立通用适配契约均有代码与验证证据；生产数据库已正向迁移 V85–V90，六服务健康，公网 HTTPS smoke 通过。默认共享测试库的既有 V81 checksum 漂移未修复或掩盖。
 
 ## Historical Notes
 

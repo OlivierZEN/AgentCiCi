@@ -475,3 +475,7 @@ FEAT-131 已完成代码、数据迁移、受控运行时、治理和生命周�
 ### 21.4 上线操作约束
 
 上线必须遵循既有生产发布 Runbook，先执行 dry-run；部署后以非敏感验证主体完成凭据绑定、跨应用隔离、禁用绑定安全降级、候选审核、撤销/删除、Trace 状态和组织 dry-run 验收。任何生产保留期限、legal hold 例外或真实主体删除均由组织策略和合规授权决定。
+
+### 21.5 生产发布记录（2026-07-23）
+
+已发布 `2.8.5 / 02d380d10508`。backend/frontend 的 ACR index digest 分别为 `sha256:0936e7b4d0e3040cf907284b7edc41dc891b1091b73d247e1be734e6c5870e30`、`sha256:abc3417bcb95f42897abe6ba32a00df7244e20aef3892f9e84875a8c776619ce`；发布前四类备份均非空。生产 Flyway 从 V84 正向执行 V85–V90，六服务健康，版本接口、Nginx、HTTP→HTTPS、x HTTPS、onechat SNI HTTPS 和匿名认证边界均通过，稳定窗口 backend error 与真实 Nginx 5xx 均为 0。未持有受权的生产测试账号或 API Key，因此没有创建真实主体、候选或执行受保护的 OpenAPI 记忆调用。
