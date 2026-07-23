@@ -32,4 +32,5 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 ## Progress
 
 - 已新增 V87 向量片段登记和受控语义检索服务；仅索引 `ACTIVE/VERIFIED` 且 `NORMAL` 的记录，向量命中必须交叉关系库授权结果。
+- 向量化前使用统一安全脱敏服务；索引失败只降级，不中断关系型上下文路径；已提供向量片段删除入口。
 - 定向测试、编译、diff 检查和临时 PostgreSQL 16 的 V1→V87 迁移验证通过；治理状态待提交。

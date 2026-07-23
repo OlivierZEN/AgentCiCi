@@ -2,6 +2,7 @@ package com.codehouse.ciciassistant.memory.service;
 
 import com.codehouse.ciciassistant.kb.service.*;
 import com.codehouse.ciciassistant.memory.domain.*;
+import com.codehouse.ciciassistant.security.service.SecurityRedactionService;
 import java.util.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,12 +11,25 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class MemorySemanticRetrievalService {
     private static final String COLLECTION_SCOPE = "agent-memory";
-    private final EmbeddingService embeddings; private final VectorStoreClient vectors; private final MemoryVectorFragmentRepository fragments; private final MemoryRecordRepository records; private final ExternalMemoryContextService contexts;
-    public MemorySemanticRetrievalService(EmbeddingService embeddings, VectorStoreClient vectors, MemoryVectorFragmentRepository fragments, MemoryRecordRepository records, ExternalMemoryContextService contexts) { this.embeddings=embeddings; this.vectors=vectors; this.fragments=fragments; this.records=records; this.contexts=contexts; }
+    private final EmbeddingService embeddings; private final VectorStoreClient vectors; private final MemoryVectorFragmentRepository fragments; private final MemoryRecordRepository records; private final ExternalMemoryContextService contexts; private final SecurityRedactionService redaction;
+    public MemorySemanticRetrievalService(EmbeddingService embeddings, VectorStoreClient vectors, MemoryVectorFragmentRepository fragments, MemoryRecordRepository records, ExternalMemoryContextService contexts, SecurityRedactionService redaction) { this.embeddings=embeddings; this.vectors=vectors; this.fragments=fragments; this.records=records; this.contexts=contexts; this.redaction=redaction; }
     @Transactional public void index(MemoryRecordEntity record) {
         if (record == null || record.getId() == null || !Set.of("ACTIVE", "VERIFIED").contains(record.getStatus()) || !"NORMAL".equals(record.getSensitivity())) return;
-        String vectorId=vectors.upsert(new VectorUpsertCommand(record.getOrgId(), COLLECTION_SCOPE, record.getId(), record.getId(), 0, record.getContent(), Integer.toHexString(record.getContent().hashCode()), embeddings.embed(record.getContent())));
-        fragments.save(new MemoryVectorFragmentEntity(record.getOrgId(), record.getId(), vectorId, record.getContent()));
+        String safeText=redaction.redact(record.getContent());
+        if (safeText.isBlank()) return;
+        try {
+            String vectorId=vectors.upsert(new VectorUpsertCommand(record.getOrgId(), COLLECTION_SCOPE, record.getId(), record.getId(), 0, safeText, Integer.toHexString(safeText.hashCode()), embeddings.embed(safeText)));
+            fragments.save(new MemoryVectorFragmentEntity(record.getOrgId(), record.getId(), vectorId, safeText));
+        } catch (RuntimeException ignored) {
+            // Vector indexing is best-effort and must not interrupt the relational memory path.
+        }
+    }
+    @Transactional public void remove(MemoryRecordEntity record) {
+        if (record == null || record.getId() == null) return;
+        fragments.findByOrgIdAndMemoryRecordIdAndStatus(record.getOrgId(), record.getId(), "ACTIVE").ifPresent(fragment -> {
+            vectors.deleteByVectorIds(record.getOrgId(), List.of(fragment.getVectorId()));
+            fragment.markDeleted(); fragments.save(fragment);
+        });
     }
     @Transactional(readOnly = true) public List<MemoryRecordEntity> retrieve(ExternalMemoryContextService.ExternalMemoryContext context, String agentId, Set<String> namespaces, String query, int topK) {
         if (query == null || query.isBlank()) return List.of();

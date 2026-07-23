@@ -16,5 +16,7 @@ public class MemoryVectorFragmentEntity {
     @Column(name = "deleted_at") private Instant deletedAt;
     protected MemoryVectorFragmentEntity() {}
     public MemoryVectorFragmentEntity(String orgId, Long memoryRecordId, String vectorId, String redactedText) { this.orgId=orgId; this.memoryRecordId=memoryRecordId; this.vectorId=vectorId; this.redactedText=redactedText; this.status="ACTIVE"; this.indexedAt=Instant.now(); }
+    public void markDeleted() { this.status = "DELETED"; this.deletedAt = Instant.now(); }
+    public String getVectorId(){return vectorId;}
     public Long getMemoryRecordId(){return memoryRecordId;}
 }
