@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T08:00:00Z
+updated_at: 2026-07-23T08:10:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-240 - 混合智能体运行时 P6：组织隔离灰度与运营验证
 
-- status: `in_progress`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-240.md`
 - assignment_path: `.claw/assignments/TASK-240.yaml`
 - blocked_by: `production pilot organization and agent selection`
-- next_action: 先实现默认关闭的组织 + Agent 双白名单与脱敏指标；真实发布/试点只在用户指定目标与观察窗口后执行。
+- next_action: 默认关闭实现、预发布质量门和发布 dry-run 已通过；等待用户指定生产试点组织、只读 Agent 与观察窗口后执行 Runbook。
 
 ### TASK-239 - 混合智能体运行时 P5：Trace 运行执行投影与多主题界面
 

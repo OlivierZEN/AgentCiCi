@@ -1,14 +1,24 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T07:50:00Z
+updated_at: 2026-07-23T08:10:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T07:50:00Z
+last_run_at: 2026-07-23T08:10:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-240 - 混合智能体运行时 P6：组织隔离灰度与运营验证
+
+- `identity/assignment`：MANAGER-001 的 TASK-240 身份门禁、分支及组织/Agent 开关、指标、Chat 可信组织输入、测试与治理文件代表路径授权均返回 `allowed`。
+- `backend-focused`：`AgentPlanExecCanaryServiceTest`、`AgentRuntimeModeRouterTest`、`AgentTaskReflectServiceTest`、`AgentRuntimeOperationsMetricsTest` 与 `ChatOrchestratorServiceModelIdentityTest` 通过；覆盖组织 + Agent 双命中、跨组织不启动、跨组织 Reflect 拒绝与指标固定标签归一。
+- `backend-compile`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 通过。
+- `fresh-postgresql-integration`：新建后删除 PostgreSQL 16 临时库完整迁移 V1→V92，`AgentTaskRuntimeIntegrationTest` 5/5 通过；覆盖组织白名单命中的固定无工具计划、Reflect 与跨组织拒绝。
+- `frontend/compose/static`：`npm run build` 通过（仅既有 Vite 大 chunk 提示）；`docker compose --env-file deploy/acr.env.example -f deploy/docker-compose.acr.yml config` 与 `git diff --check` 通过。
+- `release-dry-run`：`./scripts/release-acr.sh --dry-run` 通过，候选版本 `2.8.6`，统一计划 backend/frontend 镜像、Git tag、`CICI_APP_VERSION`、`VITE_CICI_APP_VERSION` 与 `CICI_IMAGE_TAG`；未构建、推送、打 tag、备份、部署或修改生产开关。
+- `production-prerequisite`：真实灰度必须先由用户指定生产组织 ID、只读 Agent ID 与观察窗口；在此之前 P6 保持默认关闭，不能表述为已生产发布。
 
 ## TASK-239 - 混合智能体运行时 P5：Trace 运行执行投影与多主题界面
 

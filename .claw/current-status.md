@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T08:00:00Z
+updated_at: 2026-07-23T08:10:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p6-implementation
+phase: agent-runtime-mixed-orchestration-p6-pilot-selection
 active_task: TASK-240
-next_action: "实施默认关闭的组织 + Agent 运行时灰度与脱敏运营指标；真实生产试点等待用户指定组织、只读 Agent 与观察窗口。"
+next_action: "P6 默认关闭实现与预发布质量门已完成；等待用户指定生产试点组织、只读 Agent 与观察窗口后，按 Runbook 执行发布和灰度。"
 read_next:
   goals: false
   decisions: false
@@ -38,7 +38,7 @@ read_next:
 
 - TASK-239 已完成 P5：阻塞/流式 Chat 将精确 `runtimeRunId` 作为 Trace 脱敏详情的一部分保存；Trace 详情仅以同组织运行 ID 回读运行、计划、步骤、事件和审查事实，未关联历史 Trace 显示明确空态。现有详情新增运行总览、步骤/事件时间线、折叠证据与条件性例外说明，样式仅用语义主题 token。后端定向回归、V1→V92 全新库集成、前端 3/3 与生产构建通过；受权组织管理员在隔离最小事实库完成 `gilded`/`galaxy` 的关联 Trace、展开/复制和 1280px 无横向溢出验收。审计日志的独立 `/ops/audit/logs` 在该最小库返回 500，不归因于 P5 Trace 投影。
 
-- TASK-240 已获授权实施 P6：当前三项运行时能力仍默认关闭且仅有 Agent 白名单。P6 将补齐组织 + Agent 精确灰度和低基数脱敏运营指标，再进行发布质量门；没有用户明确指定生产组织、只读 Agent 与观察窗口时，不发布镜像、不改线上配置或开启任何生产开关。
+- TASK-240 已完成 P6 默认关闭实现并进入试点选择 review：Plan-Exec、模式路由与 Reflect 均要求服务器开关、精确组织和精确 Agent 同时命中；Chat/流式/OpenAPI/评测均传递可信组织。新增三类只含固定 `mode/outcome/reason` 标签的 Micrometer 指标，未知错误统一为 `OTHER`。定向单元、V1→V92 全新 PostgreSQL 16 集成、编译、前端构建、Compose 渲染、静态检查和 `release-acr.sh --dry-run` 均通过，候选版本为 `2.8.6`。生产仍未推镜像、备份、部署或开关；需用户指定试点组织、只读 Agent 与观察窗口。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 
