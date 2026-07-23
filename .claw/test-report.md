@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T10:45:00Z
+updated_at: 2026-07-23T04:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T10:45:00Z
+last_run_at: 2026-07-23T04:35:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-235 - 混合智能体运行时 P1：计划状态机基础
+
+- `identity/assignment`：MANAGER-001 的任务级身份门禁、分支与实体、服务、迁移、测试、状态文件代表路径授权均返回 `allowed`。
+- `backend-compile`：`JAVA_HOME=/opt/homebrew/Cellar/openjdk@21/21.0.11/libexec/openjdk.jdk/Contents/Home mvn -q -Dmaven.repo.local=.m2 -DskipTests compile` 通过。
+- `fresh-postgresql-integration`：新建后删除的 PostgreSQL 16 临时库从 V1 全量迁移至 V91；`TEST_DATABASE_URL=jdbc:postgresql://localhost:5432/agentcici_task235_test ... -Dtest=AgentTaskRuntimeIntegrationTest test` 通过，3 个测试、0 failure、0 error、0 skipped，覆盖依赖推进/事件、非法计划与过期版本、失效租约恢复。
+- `shared-environment-limit`：默认 `agentcici_test` 在应用初始化前因既有 Flyway V81 checksum 不一致失败（数据库 `2112500543`，本地 `379982424`）；本任务未修改 V81、未执行 Flyway repair，隔离库验证不等同于全量套件通过。
+- `static`：`git diff --check` 通过；临时数据库已强制断开连接并删除。
 
 ## TASK-234 - 发布修订版本号上限调整为365
 

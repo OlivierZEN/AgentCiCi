@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-235
-status: ready
-updated_at: 2026-07-23T04:30:00Z
+status: review
+updated_at: 2026-07-23T04:35:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -32,6 +32,12 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - 运行重领只允许失效租约，步骤事件与持久化状态一致；
 - 定向单元/集成测试、后端编译、迁移验证和 diff 检查通过。
 
+## Implementation result
+
+- V91 建立 `agent_task_run`、`agent_task_plan`、`agent_task_step`、`agent_task_event`，并为组织、会话、Agent、状态与恢复查询建立索引。
+- `AgentTaskRuntimeService` 仅实现只读计划事实：创建运行、附加受限 JSON 计划、按依赖认领/完成步骤、失败、乐观锁冲突拒绝和失效租约恢复；没有接入模型、工具、聊天路径或外部副作用。
+- 集成测试覆盖依赖推进与事件事实、循环计划/过期版本拒绝、仅失效租约可恢复。
+
 ## Next action
 
-- 完成分配提交与主线推送后，切换到 `codex/TASK-235-agent-task-runtime-foundation` 并通过任务级身份与授权检查。
+- 进行代码复核；通过后以独立任务将该稳定契约灰度接入 Chat/OpenAPI，仍不得绕过现有工具确认与审计边界。

@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T04:30:00Z
+updated_at: 2026-07-23T04:35:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p1-authorized
+phase: agent-runtime-mixed-orchestration-p1-review
 active_task: TASK-235
-next_action: "将 TASK-235 分配信息提交并推送至 origin/main，随后在专用分支实现运行事实与真实计划状态机。"
+next_action: "复核 TASK-235 的 P1 计划状态机；通过后新建受限任务实施 P2 Chat/OpenAPI 灰度接入。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-235 已获授权，启动 FEAT-133 P1：先建设可恢复、可审计的真实 Plan-Exec 运行事实、计划/步骤状态机、Schema 校验、恢复租约与真实 Trace 投影；不接入聊天主路径、不执行工具、不新增 UI。
+- TASK-235 已完成 FEAT-133 P1 并进入 review：V91 提供组织隔离的运行、计划、步骤和事件事实；服务端实现严格 Plan Schema 校验、依赖状态机、乐观锁和失效租约恢复。新建后删除的 PostgreSQL 16 库从 V1 迁移至 V91，并通过 3/3 集成用例、后端编译和 diff 检查。未接入聊天主路径、工具、RAG、记忆、评测或 UI。默认共享测试库的既有 V81 checksum 漂移仍未修复、未 repair。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

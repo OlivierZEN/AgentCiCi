@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T10:45:00Z
+updated_at: 2026-07-23T04:35:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-235 - 混合智能体运行时 P1：计划状态机基础
 
-- status: `ready`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-235.md`
 - assignment_path: `.claw/assignments/TASK-235.yaml`
 - blocked_by: `none`
-- next_action: 先创建可恢复的任务、计划、步骤与事件持久化及服务端状态机；不接入聊天、工具或 UI。
+- next_action: 复核 P1 的持久化计划状态机；后续 Chat/OpenAPI 灰度必须以独立任务接入，且不改变工具确认与审计边界。
 
 ### TASK-233 - 通用记忆人工管理与生产就绪审计
 

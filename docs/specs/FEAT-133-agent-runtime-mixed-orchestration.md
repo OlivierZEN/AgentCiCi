@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-235
 related_decisions: DEC-006,DEC-010,DEC-018,DEC-027
 related_issues: none
-updated_at: 2026-07-23T04:30:00Z
+updated_at: 2026-07-23T04:35:00Z
 updated_by: MANAGER-001
 ---
 
@@ -357,7 +357,8 @@ agent-runtime.resume.enabled
 
 ## 16. 实现进展与交接
 
-- 当前状态：TASK-235 已获授权，开始 P1 的运行事实与真实计划状态机实现；尚未创建迁移或业务代码。
+- 当前状态：TASK-235 已完成 P1 实现并进入 review。V91 新增任务运行、计划、步骤与事件四类组织隔离事实；`AgentTaskRuntimeService` 提供严格计划 Schema 校验、依赖推进、乐观锁、租约与失效恢复，尚未接入聊天、工具、RAG、记忆、评测或 UI。
+- 验证证据：后端编译、diff 检查通过；新建后删除的 PostgreSQL 16 临时库从空库全量迁移至 V91，并通过 3 个运行时集成用例。默认共享测试库仍因既有 V81 checksum 漂移无法启动，未 repair、未改写历史迁移。
 - 实施前先读取：`docs/specs/FEAT-004-agent-flow-compile-triggers-and-executions.md`、`docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`、`docs/specs/FEAT-122-runtime-execution-trace-correction.md`、`docs/specs/FEAT-130-forced-skill-execution-context.md`、`docs/specs/FEAT-131-agent-memory-platform.md`。
 - 首个实现任务必须以 P1 为边界，并明确禁止把 `workflow_code` 字符串解析误升级为任意代码执行器。
 - 若产品决定新增计划查看/恢复界面，必须先完成独立 UI shape、用户确认与设计事实源检查；本规格不授权直接改造产品信息架构。
