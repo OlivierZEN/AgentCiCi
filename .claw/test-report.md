@@ -10,6 +10,11 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-230 - 受认证凭据记忆上下文绑定
+
+- `backend-focused`：绑定测试锁定可信应用、主体类型、身份等级和命名空间来自已认证凭据绑定，客户端只能提供外部主体标识；OpenAPI 阻塞/流式和可信作用域回归通过。
+- `backend-compile/static`：后端编译与 `git diff --check` 通过。
+
 ## TASK-229 - 通用可信运行时记忆上下文
 
 - `backend-focused`：可信上下文只在显式作用域内、组织与最终 Agent 同时匹配时组装提示词；作用域关闭后不残留。Trace 元数据只记录注入/数量/截断状态。`ChatOrchestratorServiceModelIdentityTest` 与语义检索回归共同通过。

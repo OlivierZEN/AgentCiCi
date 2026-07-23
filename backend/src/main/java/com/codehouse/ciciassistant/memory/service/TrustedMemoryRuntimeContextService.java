@@ -40,8 +40,13 @@ public class TrustedMemoryRuntimeContextService {
             lastResolution.set(Resolution.none());
             return "";
         }
-        ExternalMemoryContextService.MemoryContext structured = contexts.loadContext(
-                request.context(), resolvedAgentId, request.domainNamespaces(), null);
+        ExternalMemoryContextService.MemoryContext structured;
+        try {
+            structured = contexts.loadContext(request.context(), resolvedAgentId, request.domainNamespaces(), null);
+        } catch (IllegalArgumentException ignored) {
+            lastResolution.set(Resolution.none());
+            return "";
+        }
         String prompt = assembler.build(structured, PROMPT_BUDGET);
         var semantic = retrieval.retrieve(request.context(), resolvedAgentId, request.domainNamespaces(), question, 4);
         if (semantic.isEmpty()) {

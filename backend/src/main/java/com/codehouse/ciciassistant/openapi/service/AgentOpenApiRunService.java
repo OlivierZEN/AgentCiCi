@@ -49,6 +49,7 @@ public class AgentOpenApiRunService {
     private final AgentOpenApiRateLimitService rateLimitService;
     private final AgentOpenApiCallLogService callLogService;
     private final ChatOrchestratorService chatOrchestratorService;
+    private final AgentOpenApiMemoryContextService memoryContextService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final AgentRunTraceRepository traceRepository;
     private final AgentKnowledgeBindingRepository knowledgeBindingRepository;
@@ -67,6 +68,7 @@ public class AgentOpenApiRunService {
                                   AgentOpenApiRateLimitService rateLimitService,
                                   AgentOpenApiCallLogService callLogService,
                                   ChatOrchestratorService chatOrchestratorService,
+                                  AgentOpenApiMemoryContextService memoryContextService,
                                   BillingUsageMeteringService billingUsageMeteringService,
                                   AgentRunTraceRepository traceRepository,
                                   AgentKnowledgeBindingRepository knowledgeBindingRepository,
@@ -84,6 +86,7 @@ public class AgentOpenApiRunService {
         this.rateLimitService = rateLimitService;
         this.callLogService = callLogService;
         this.chatOrchestratorService = chatOrchestratorService;
+        this.memoryContextService = memoryContextService;
         this.billingUsageMeteringService = billingUsageMeteringService;
         this.traceRepository = traceRepository;
         this.knowledgeBindingRepository = knowledgeBindingRepository;
@@ -250,15 +253,13 @@ public class AgentOpenApiRunService {
     private void invokeChatStream(ChatStreamExecution execution,
                                   ChatCommand command,
                                   SseEmitter emitter) {
-        chatOrchestratorService.chatStreamBlocking(
-                execution.auth().credential().getOrgId(),
-                execution.auth().credential().getRunAsUserId(),
-                execution.session().internalSessionId(),
-                command.message().trim(),
-                command.knowledgeBaseIds(),
-                execution.auth().credential().getAgentId(),
-                command.activeSkillCode(),
-                emitter);
+        memoryContextService.withTrustedContext(execution.auth(), externalUserId(command.externalUser()), () -> {
+            chatOrchestratorService.chatStreamBlocking(
+                    execution.auth().credential().getOrgId(), execution.auth().credential().getRunAsUserId(),
+                    execution.session().internalSessionId(), command.message().trim(), command.knowledgeBaseIds(),
+                    execution.auth().credential().getAgentId(), command.activeSkillCode(), emitter);
+            return null;
+        });
     }
 
     private void recordOpenApiBillingSafely(AgentOpenApiAuthService.AuthenticatedCredential auth,
@@ -321,14 +322,10 @@ public class AgentOpenApiRunService {
     private Map<String, Object> invokeChat(AgentOpenApiAuthService.AuthenticatedCredential auth,
                                            AgentOpenApiSessionService.SessionResolution session,
                                            ChatCommand command) {
-        return chatOrchestratorService.chat(
-                auth.credential().getOrgId(),
-                auth.credential().getRunAsUserId(),
-                session.internalSessionId(),
-                command.message().trim(),
-                command.knowledgeBaseIds(),
-                auth.credential().getAgentId(),
-                command.activeSkillCode());
+        return memoryContextService.withTrustedContext(auth, externalUserId(command.externalUser()), () ->
+                chatOrchestratorService.chat(
+                        auth.credential().getOrgId(), auth.credential().getRunAsUserId(), session.internalSessionId(),
+                        command.message().trim(), command.knowledgeBaseIds(), auth.credential().getAgentId(), command.activeSkillCode()));
     }
 
     private long normalizedTimeoutMs() {
