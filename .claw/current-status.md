@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-235 的 FEAT-133 P1 已复核、快进集成并推送至 `main`（`fcc2200`）：V91 提供组织隔离的运行、计划、步骤和事件事实，服务端实现严格 Plan Schema 校验、依赖状态机、乐观锁和失效租约恢复。新建后删除的 PostgreSQL 16 库从 V1 迁移至 V91，并通过 3/3 集成用例、后端编译和 diff 检查。
+- TASK-241 / FEAT-134 已完成两端受控开户实现，待生产发布：AgentCiCi V93 对 ACTIVE `org_id` 创建唯一 reservation 并记录完成回写；Semattice 取消公开 `tenant.provision`，强制 HMAC caller -> AgentCiCi reservation -> 本地 projection -> completion 链路。两个方向采用独立密钥、五分钟窗口和 nonce 防重放；AgentCiCi 也可作为受控发起方，其他 allowlist 服务仍可发起。定向 Java、Go 全量、vet、构建、Compose 与 diff 检查通过；共享测试库的既有 Flyway V81 checksum mismatch 未 repair。
 
 - TASK-236 已完成 FEAT-133 P2 并集成至 `main`（`cbf9728`）：默认关闭的精确 Agent 白名单可将 Web、流式和 OpenAPI 统一接入固定 `RETRIEVE → SYNTHESIZE` 计划。灰度运行禁用所有工具、确认续执行和 CRM 快捷路径；初始化失败安全回退到既有聊天链路，运行事实携带最小回退原因。定向回归、后端编译与新建后删除的 PostgreSQL 16 V1→V91 集成验证通过；共享测试库的既有 V81 checksum 漂移仍未修复、未 repair。
 

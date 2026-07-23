@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-241 - AgentCiCi / Semattice 受控开户绑定
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-134-agentcici-semattice-controlled-provisioning.md`
+- task_status_path: `.claw/tasks/TASK-241.md`
+- assignment_path: `.claw/assignments/TASK-241.yaml`
+- blocked_by: `none`
+- next_action: 注入两台线上主机的成对 HMAC 密钥，按 Runbook 发布、执行匿名拒绝与受控跨服务 smoke，并记录回滚点。
+
 ### TASK-240 - 混合智能体运行时 P6：组织隔离灰度与运营验证
 
 - status: `in_progress`

@@ -4,10 +4,14 @@ import com.codehouse.ciciassistant.auth.RequirePlatformRole;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
 import com.codehouse.ciciassistant.platform.service.PlatformTenantLifecycleService;
+import com.codehouse.ciciassistant.semattice.SematticeProvisioningClient;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,9 +29,12 @@ import org.springframework.web.bind.annotation.RestController;
 public class PlatformTenantLifecycleController {
 
     private final PlatformTenantLifecycleService tenantLifecycleService;
+    private final SematticeProvisioningClient sematticeProvisioningClient;
 
-    public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService) {
+    public PlatformTenantLifecycleController(PlatformTenantLifecycleService tenantLifecycleService,
+                                             SematticeProvisioningClient sematticeProvisioningClient) {
         this.tenantLifecycleService = tenantLifecycleService;
+        this.sematticeProvisioningClient = sematticeProvisioningClient;
     }
 
     @GetMapping
@@ -50,6 +57,15 @@ public class PlatformTenantLifecycleController {
                 ),
                 actorId(),
                 actorRole()));
+    }
+
+    @PostMapping("/{orgId}/semattice-provisionings")
+    @RequirePlatformRole({RoleCodes.PLATFORM_ADMIN, RoleCodes.PLATFORM_OPERATOR})
+    public ApiResponse<SematticeProvisioningClient.ProvisioningView> provisionSemattice(
+            @PathVariable @Pattern(regexp = "^org[a-z0-9]{17}$") String orgId,
+            @Valid @RequestBody SematticeProvisioningRequest request) {
+        return ApiResponse.ok(sematticeProvisioningClient.provision(orgId, request.idempotencyKey(), request.displayName(),
+                request.serviceTier(), request.entitlements()));
     }
 
     @GetMapping("/{orgId}/retention")
@@ -222,6 +238,18 @@ public class PlatformTenantLifecycleController {
             String initialPassword,
             String provisionNote
     ) {
+    }
+
+    public record SematticeProvisioningRequest(
+            @NotBlank @Pattern(regexp = "^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$") String idempotencyKey,
+            @NotBlank @Size(max = 256) String displayName,
+            @NotBlank @Size(max = 64) String serviceTier,
+            JsonNode entitlements
+    ) {
+        @AssertTrue(message = "entitlements must be a JSON object")
+        public boolean hasValidEntitlements() {
+            return entitlements == null || entitlements.isObject();
+        }
     }
 
     public record LifecycleActionRequest(String reason) {
