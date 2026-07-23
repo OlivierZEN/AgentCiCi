@@ -2,9 +2,9 @@
 kind: feature-spec
 feature_id: FEAT-134
 title: AgentCiCi and Semattice controlled provisioning
-status: in_implementation
-updated_at: 2026-07-23T08:15:00Z
-updated_by: MANAGER-001
+status: done
+updated_at: 2026-07-24T00:55:00Z
+updated_by: integration-agent after production acceptance
 owner_role: integration-agent
 ---
 
@@ -56,3 +56,9 @@ AgentCiCi 是组织身份和 Semattice 订阅绑定的唯一事实源。任何�
 - AgentCiCi、其他允许调用方均可触发；未登记调用方不能触发。
 - 并发请求不会创建重复 binding 或 tenant；失败恢复、完成回调重试和跨端状态一致均有测试。
 - 两仓库定向测试、构建、迁移、发布 dry-run 和线上 smoke 均通过后才分别发布。
+
+## 2026-07-24 生产发布验收
+
+- AgentCiCi `main` 已发布不可变镜像版本 `2.8.6`（提交 `a945aff4008d`）；后端与前端容器均处于 healthy，后端 `/actuator/health` 返回 `UP`。
+- Semattice 已原子切换到 `/opt/semattice/releases/20260724T0045Z-controlled-provisioning`，生产 schema 已前进至 version 16，边缘 `/healthz` 返回 `ok`。
+- 线上跨主机 smoke 使用不会存在的、格式合法的 `company_id`：无 HMAC 请求被 Semattice 以 403 拒绝；AgentCiCi 签名请求通过 Semattice inbound 认证并到达 AgentCiCi 校验，最终以 `FAILED_PRECONDITION` / 412 拒绝。该验证没有创建 tenant、reservation 或 binding，证明双方 HMAC 和“先验证 AgentCiCi org，再开户”的 fail-closed 链路有效。
