@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,21 +26,38 @@ public class AgentTaskReflectService {
     private final AgentTaskReviewRepository reviewRepository;
     private final AgentTaskEventRepository eventRepository;
     private final ObjectMapper objectMapper;
+    private final AgentRuntimeOperationsMetrics operationsMetrics;
 
     public AgentTaskReflectService(AgentRuntimeReflectProperties properties, AgentTaskRunRepository runRepository,
                                    AgentTaskStepRepository stepRepository, AgentTaskReviewRepository reviewRepository,
                                    AgentTaskEventRepository eventRepository, ObjectMapper objectMapper) {
+        this(properties, runRepository, stepRepository, reviewRepository, eventRepository, objectMapper,
+                AgentRuntimeOperationsMetrics.noop());
+    }
+
+    @Autowired
+    public AgentTaskReflectService(AgentRuntimeReflectProperties properties, AgentTaskRunRepository runRepository,
+                                   AgentTaskStepRepository stepRepository, AgentTaskReviewRepository reviewRepository,
+                                   AgentTaskEventRepository eventRepository, ObjectMapper objectMapper,
+                                   AgentRuntimeOperationsMetrics operationsMetrics) {
         this.properties = properties; this.runRepository = runRepository; this.stepRepository = stepRepository;
         this.reviewRepository = reviewRepository; this.eventRepository = eventRepository; this.objectMapper = objectMapper;
+        this.operationsMetrics = operationsMetrics;
     }
 
     @Transactional
     public ReflectResult reflect(ReflectCommand command) {
-        if (command == null || !command.reflectRequired() || !properties.isEnabledFor(command == null ? "" : command.agentId())) {
+        if (command == null || !command.reflectRequired() || !properties.isEnabled()
+                || !properties.isAgentAllowlisted(command.agentId())) {
+            operationsMetrics.recordReflect("SKIPPED", "SCOPE_NOT_ALLOWLISTED");
             return ReflectResult.skipped();
         }
         AgentTaskRunEntity run = runRepository.findByIdAndOrgId(command.runId(), command.orgId())
                 .orElseThrow(() -> new IllegalArgumentException("Task run not found"));
+        if (!properties.isOrgAllowlisted(command.orgId())) {
+            operationsMetrics.recordReflect("SKIPPED", "SCOPE_NOT_ALLOWLISTED");
+            return ReflectResult.skipped();
+        }
         List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(command.orgId(), command.runId());
         List<AgentTaskReviewEntity> previousReviews = reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc(
                 command.orgId(), command.runId());
@@ -54,6 +72,7 @@ public class AgentTaskReflectService {
         eventRepository.save(new AgentTaskEventEntity(command.orgId(), command.runId(), null, "REFLECT_GATE", json(Map.of(
                 "reviewId", saved.getId(), "gateStatus", gateStatus, "reviewerStatus", reviewerStatus,
                 "issueCodes", issues)), now));
+        operationsMetrics.recordReflect(reviewerStatus, issues.isEmpty() ? "NONE" : issues.getFirst());
         return new ReflectResult(true, saved.getId(), gateStatus, reviewerStatus, List.copyOf(issues));
     }
 

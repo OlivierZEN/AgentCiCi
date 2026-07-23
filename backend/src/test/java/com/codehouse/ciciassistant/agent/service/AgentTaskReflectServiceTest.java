@@ -95,6 +95,7 @@ class AgentTaskReflectServiceTest {
 
         private Fixture(boolean enabled) {
             properties.setEnabled(enabled);
+            properties.setAllowedOrgIds(List.of("org-a"));
             properties.setAllowedAgentIds(List.of("agent-a"));
             service = new AgentTaskReflectService(properties, runRepository, stepRepository, reviewRepository,
                     eventRepository, new ObjectMapper());

@@ -256,7 +256,7 @@ public class ChatOrchestratorService {
         KnowledgeRetrievalRouter.Decision decision = KnowledgeRetrievalRouter.decide(
                 question, knowledgeBaseIds, List.of(), "evaluation-" + version.getId());
         AgentRuntimeModeRouter.ModeDecision evaluationModeDecision = agentRuntimeModeRouter.decide(
-                new AgentRuntimeModeRouter.RoutingInput(agentId, "evaluation", question,
+                new AgentRuntimeModeRouter.RoutingInput(orgId, agentId, "evaluation", question,
                         skillContext.allowedToolNames(), decision.shouldRetrieve(), false));
         RagService.RetrievalResult ragResult = decision.shouldRetrieve()
                 ? ragService.retrieveDetailed(
@@ -437,7 +437,7 @@ public class ChatOrchestratorService {
         KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                 safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
         AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
-                new AgentRuntimeModeRouter.RoutingInput(skillContext.agentId(), channel, safeQuestion,
+                new AgentRuntimeModeRouter.RoutingInput(orgId, skillContext.agentId(), channel, safeQuestion,
                         skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
                         pendingEmailFromState(orgId, sessionId).isPresent()));
         AgentPlanExecCanaryService.CanaryExecution planExec = modeDecision.usesPlanExec()
@@ -695,7 +695,7 @@ public class ChatOrchestratorService {
                 KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                         safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
                 AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
-                        new AgentRuntimeModeRouter.RoutingInput(skillContext.agentId(), channel, safeQuestion,
+                        new AgentRuntimeModeRouter.RoutingInput(orgId, skillContext.agentId(), channel, safeQuestion,
                                 skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
                                 pendingEmailFromState(orgId, sessionId).isPresent()));
                 AgentPlanExecCanaryService.CanaryExecution planExec = modeDecision.usesPlanExec()

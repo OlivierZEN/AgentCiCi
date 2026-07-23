@@ -17,6 +17,7 @@ class AgentRuntimeModeRouterTest {
                 .isEqualTo(AgentRuntimeModeRouter.Mode.LEGACY_REACT);
 
         properties.setEnabled(true);
+        properties.setAllowedOrgIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-ab"));
         assertThat(router.decide(input("agent-a", "先查询订单，再查询工单", List.of("get_order"), false, false)).mode())
                 .isEqualTo(AgentRuntimeModeRouter.Mode.LEGACY_REACT);
@@ -37,6 +38,21 @@ class AgentRuntimeModeRouterTest {
         assertThat(react.reasonCodes()).containsExactly(AgentRuntimeModeRouter.ReasonCode.READONLY_TOOL_LOOKUP);
         assertThat(plan.mode()).isEqualTo(AgentRuntimeModeRouter.Mode.PLAN_EXEC);
         assertThat(plan.reasonCodes()).containsExactly(AgentRuntimeModeRouter.ReasonCode.EXPLICIT_DEPENDENCY);
+    }
+
+    @Test
+    void shouldKeepLegacyPathOutsideTheExactOrganizationAllowlist() {
+        AgentRuntimeModeRouterProperties properties = new AgentRuntimeModeRouterProperties();
+        properties.setEnabled(true);
+        properties.setAllowedOrgIds(List.of("org-a"));
+        properties.setAllowedAgentIds(List.of("agent-a"));
+        AgentRuntimeModeRouter router = new AgentRuntimeModeRouter(properties);
+
+        AgentRuntimeModeRouter.ModeDecision decision = router.decide(new AgentRuntimeModeRouter.RoutingInput(
+                "org-b", "agent-a", "web", "先查询订单，再查询工单", List.of("get_order"), false, false));
+
+        assertThat(decision.mode()).isEqualTo(AgentRuntimeModeRouter.Mode.LEGACY_REACT);
+        assertThat(decision.reasonCodes()).containsExactly(AgentRuntimeModeRouter.ReasonCode.SCOPE_NOT_ALLOWLISTED);
     }
 
     @Test
@@ -72,6 +88,7 @@ class AgentRuntimeModeRouterTest {
     private static AgentRuntimeModeRouter enabledRouter() {
         AgentRuntimeModeRouterProperties properties = new AgentRuntimeModeRouterProperties();
         properties.setEnabled(true);
+        properties.setAllowedOrgIds(List.of("org-a"));
         properties.setAllowedAgentIds(List.of("agent-a"));
         return new AgentRuntimeModeRouter(properties);
     }
@@ -80,6 +97,6 @@ class AgentRuntimeModeRouterTest {
                                                               List<String> tools, boolean externalFactRequired,
                                                               boolean pendingConfirmation) {
         return new AgentRuntimeModeRouter.RoutingInput(
-                agentId, "web", question, tools, externalFactRequired, pendingConfirmation);
+                "org-a", agentId, "web", question, tools, externalFactRequired, pendingConfirmation);
     }
 }
