@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-230 - 受认证凭据记忆上下文绑定
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
+- task_status_path: `.claw/tasks/TASK-230.md`
+- assignment_path: `.claw/assignments/TASK-230.yaml`
+- blocked_by: `none`
+- next_action: 从已认证 API 凭据建立通用外部主体记忆上下文，客户端 metadata 不参与信任决策。
+
 ### TASK-229 - 通用可信运行时记忆上下文
 
 - status: `ready`
