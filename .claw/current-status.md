@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T10:12:00Z
+updated_at: 2026-07-23T10:18:00Z
 updated_by: MANAGER-001
-phase: feat131-memory-lifecycle-review
-active_task: "TASK-231"
-next_action: "复核 TASK-231 生命周期变更，并继续完成候选审核治理 API、Trace/评测和两个独立适配契约。"
+phase: feat131-memory-governance-ready
+active_task: "TASK-232"
+next_action: "在 TASK-232 中提供通用记忆候选审核 API，并补齐 Trace 与评测发布门禁证据。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-232 已获授权：提供通用记忆候选的查询、审核通过和拒绝 API；API 必须沿用当前组织与 Agent 权限边界，Trace/评测仅记录最小、脱敏的记忆治理证据。
 
 - TASK-231 已获授权：通用记忆生命周期必须与既有组织保留、legal hold、导出和 purge 一致；实现仅能使用通用主体、应用、记录、证据和向量模型，不得引入外部应用领域对象或生产发布。
 

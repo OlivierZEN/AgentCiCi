@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-232 - 通用记忆审核 API 与质量门禁
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
+- task_status_path: `.claw/tasks/TASK-232.md`
+- assignment_path: `.claw/assignments/TASK-232.yaml`
+- blocked_by: `none`
+- next_action: 提供受 Agent 权限保护的候选审核/拒绝/查询 API，并将记忆注入的最小 Trace 证据接入现有评测与发布门禁。
+
 ### TASK-231 - 通用记忆生命周期与组织清理闭环
 
 - status: `ready`
