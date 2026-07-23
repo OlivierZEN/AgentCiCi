@@ -16,5 +16,7 @@ public class AgentApiMemoryBindingEntity {
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     protected AgentApiMemoryBindingEntity() {}
     public AgentApiMemoryBindingEntity(Long credentialId, String applicationCode, String subjectType, String identityLevel, String namespaces) { this.credentialId=credentialId; this.applicationCode=applicationCode; this.subjectType=subjectType; this.identityLevel=identityLevel; this.domainNamespacesJson=namespaces; this.enabled=true; this.createdAt=Instant.now(); this.updatedAt=createdAt; }
-    public Long getCredentialId(){return credentialId;} public String getApplicationCode(){return applicationCode;} public String getSubjectType(){return subjectType;} public String getIdentityLevel(){return identityLevel;} public String getDomainNamespacesJson(){return domainNamespacesJson;} public boolean isEnabled(){return enabled;}
+    public void update(String applicationCode, String subjectType, String identityLevel, String namespaces) { this.applicationCode=applicationCode; this.subjectType=subjectType; this.identityLevel=identityLevel; this.domainNamespacesJson=namespaces; this.enabled=true; this.updatedAt=Instant.now(); }
+    public void disable() { this.enabled=false; this.updatedAt=Instant.now(); }
+    public Long getId(){return id;} public Long getCredentialId(){return credentialId;} public String getApplicationCode(){return applicationCode;} public String getSubjectType(){return subjectType;} public String getIdentityLevel(){return identityLevel;} public String getDomainNamespacesJson(){return domainNamespacesJson;} public boolean isEnabled(){return enabled;} public Instant getCreatedAt(){return createdAt;} public Instant getUpdatedAt(){return updatedAt;}
 }

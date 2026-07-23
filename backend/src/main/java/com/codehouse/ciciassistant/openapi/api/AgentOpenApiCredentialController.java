@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.openapi.api;
 import com.codehouse.ciciassistant.agent.domain.AgentPermission;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.common.api.ApiResponse;
+import com.codehouse.ciciassistant.openapi.service.AgentApiMemoryBindingService;
 import com.codehouse.ciciassistant.openapi.service.AgentOpenApiCredentialService;
 import com.codehouse.ciciassistant.tenant.TenantContext;
 import jakarta.validation.Valid;
@@ -23,11 +24,14 @@ import org.springframework.web.bind.annotation.RestController;
 public class AgentOpenApiCredentialController {
 
     private final AgentOpenApiCredentialService credentialService;
+    private final AgentApiMemoryBindingService memoryBindingService;
     private final AgentAccessControlService accessControlService;
 
     public AgentOpenApiCredentialController(AgentOpenApiCredentialService credentialService,
+                                            AgentApiMemoryBindingService memoryBindingService,
                                             AgentAccessControlService accessControlService) {
         this.credentialService = credentialService;
+        this.memoryBindingService = memoryBindingService;
         this.accessControlService = accessControlService;
     }
 
@@ -85,6 +89,34 @@ public class AgentOpenApiCredentialController {
                         request.allowTraceRead(),
                         request.status(),
                         request.scopes())));
+    }
+
+    @GetMapping("/{credentialId}/memory-binding")
+    public ApiResponse<AgentApiMemoryBindingService.BindingView> getMemoryBinding(@PathVariable String agentId,
+                                                                                   @PathVariable Long credentialId) {
+        requireOpenApi(agentId);
+        return ApiResponse.ok(memoryBindingService.get(TenantContext.requireOrgId(), agentId, credentialId));
+    }
+
+    @PutMapping("/{credentialId}/memory-binding")
+    public ApiResponse<AgentApiMemoryBindingService.BindingView> upsertMemoryBinding(@PathVariable String agentId,
+                                                                                       @PathVariable Long credentialId,
+                                                                                       @Valid @RequestBody MemoryBindingRequest request) {
+        requireOpenApi(agentId);
+        return ApiResponse.ok(memoryBindingService.upsert(
+                TenantContext.requireOrgId(), agentId, credentialId,
+                TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context")),
+                new AgentApiMemoryBindingService.BindingCommand(request.applicationCode(), request.subjectType(),
+                        request.identityLevel(), request.domainNamespaces())));
+    }
+
+    @PostMapping("/{credentialId}/memory-binding/disable")
+    public ApiResponse<AgentApiMemoryBindingService.BindingView> disableMemoryBinding(@PathVariable String agentId,
+                                                                                        @PathVariable Long credentialId) {
+        requireOpenApi(agentId);
+        return ApiResponse.ok(memoryBindingService.disable(
+                TenantContext.requireOrgId(), agentId, credentialId,
+                TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"))));
     }
 
     @PostMapping("/{credentialId}/rotate")
@@ -148,6 +180,14 @@ public class AgentOpenApiCredentialController {
             Boolean allowTraceRead,
             String status,
             List<String> scopes
+    ) {
+    }
+
+    public record MemoryBindingRequest(
+            @NotBlank String applicationCode,
+            @NotBlank String subjectType,
+            @NotBlank String identityLevel,
+            List<String> domainNamespaces
     ) {
     }
 }
