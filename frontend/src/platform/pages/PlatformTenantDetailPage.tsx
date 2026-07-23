@@ -331,12 +331,12 @@ export default function PlatformTenantDetailPage() {
     <div className="admin-page skills-catalog platform-page platform-tenants-page">
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
-          <h1 className="skills-catalog__title">租户生命周期</h1>
-          <p className="subtle skills-catalog__subtitle">聚焦单租户的保留、导出、预演与真实销毁治理。</p>
+          <h1 className="skills-catalog__title">AgentCiCi 应用生命周期</h1>
+          <p className="subtle skills-catalog__subtitle">管理当前租户的 AgentCiCi 应用保留、导出、预演与真实销毁。</p>
         </div>
         <div className="platform-page-head__aside">
-          <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate("/platform/tenants")}>
-            返回租户列表
+          <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate(`/platform/tenants/${encodeURIComponent(orgId)}`)}>
+            返回租户应用
           </button>
         </div>
       </header>
