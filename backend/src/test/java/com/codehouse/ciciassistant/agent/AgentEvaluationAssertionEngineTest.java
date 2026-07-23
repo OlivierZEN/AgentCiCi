@@ -60,6 +60,24 @@ class AgentEvaluationAssertionEngineTest {
         assertThat(outcome.assertionResults().getFirst()).containsEntry("actual", "NOT_INJECTED");
     }
 
+    @Test
+    void shouldEvaluateRuntimeReflectAndNoWriteAssertionsFromRedactedFacts() {
+        var outcome = engine.evaluate(evalCase("""
+                {"assertions":[
+                  {"type":"RUNTIME_MODE_EQUALS","expected":"PLAN_EXEC"},
+                  {"type":"REFLECT_STATUS_EQUALS","expected":"PASS"},
+                  {"type":"NO_WRITE_BEFORE_CONFIRMATION","expected":false}
+                ]}
+                """), "答复", "ok", List.of(), Map.of(
+                "executionMode", "PLAN_EXEC",
+                "reviewerStatus", "PASS",
+                "writeSideEffectsExecuted", false,
+                "requiresConfirmation", false), 1L);
+
+        assertThat(outcome.passed()).isTrue();
+        assertThat(outcome.assertionResults()).hasSize(3);
+    }
+
     private AgentEvalCaseEntity evalCase(String assertionConfigJson) {
         return new AgentEvalCaseEntity(
                 "demo-org", "evaluation-test", 1L, "复合断言", "请给出建议",

@@ -7,8 +7,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codehouse.ciciassistant.agent.service.AgentTaskRuntimeService;
+import com.codehouse.ciciassistant.agent.service.AgentTaskReflectService;
 import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
 import com.codehouse.ciciassistant.agent.config.AgentRuntimePlanExecProperties;
+import com.codehouse.ciciassistant.agent.config.AgentRuntimeReflectProperties;
+import com.codehouse.ciciassistant.agent.domain.AgentTaskReviewRepository;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -21,6 +24,9 @@ class AgentTaskRuntimeIntegrationTest {
     @Autowired private AgentTaskRuntimeService runtimeService;
     @Autowired private AgentPlanExecCanaryService canaryService;
     @Autowired private AgentRuntimePlanExecProperties canaryProperties;
+    @Autowired private AgentTaskReflectService reflectService;
+    @Autowired private AgentRuntimeReflectProperties reflectProperties;
+    @Autowired private AgentTaskReviewRepository reviewRepository;
 
     @Test
     void shouldPersistAndAdvanceDependentPlanSteps() {
@@ -116,6 +122,40 @@ class AgentTaskRuntimeIntegrationTest {
         } finally {
             canaryProperties.setEnabled(false);
             canaryProperties.setAllowedAgentIds(List.of());
+        }
+    }
+
+    @Test
+    void shouldPersistControlledReflectForSucceededPlanWithoutCrossOrgLeakage() {
+        canaryProperties.setEnabled(true);
+        canaryProperties.setAllowedAgentIds(List.of("reflect-agent"));
+        reflectProperties.setEnabled(true);
+        reflectProperties.setAllowedAgentIds(List.of("reflect-agent"));
+        reflectProperties.setMaxRounds(1);
+        try {
+            AgentPlanExecCanaryService.CanaryExecution execution = canaryService.start(
+                    "demo-org", "reflect-session", "reflect-agent", "web", "生成结构化报告", "reflect-executor");
+            canaryService.completeRetrieve(execution, "knowledge_context_count=1");
+            canaryService.completeSynthesis(execution, "结构化报告已完成");
+
+            AgentTaskReflectService.ReflectResult review = reflectService.reflect(
+                    new AgentTaskReflectService.ReflectCommand("demo-org", execution.runId(), "reflect-agent",
+                            true, false, "结构化报告已完成"));
+
+            assertThat(review.selected()).isTrue();
+            assertThat(review.gateStatus()).isEqualTo("PASS");
+            assertThat(review.reviewerStatus()).isEqualTo("PASS");
+            assertThat(reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc("demo-org", execution.runId())).hasSize(1);
+            assertThat(runtimeService.snapshot("demo-org", execution.runId()).events())
+                    .extracting(AgentTaskRuntimeService.EventView::type).contains("REFLECT_GATE");
+            assertThrows(IllegalArgumentException.class, () -> reflectService.reflect(
+                    new AgentTaskReflectService.ReflectCommand("other-org", execution.runId(), "reflect-agent",
+                            true, false, "结构化报告已完成")));
+        } finally {
+            canaryProperties.setEnabled(false);
+            canaryProperties.setAllowedAgentIds(List.of());
+            reflectProperties.setEnabled(false);
+            reflectProperties.setAllowedAgentIds(List.of());
         }
     }
 }

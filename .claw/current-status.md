@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T06:00:00Z
+updated_at: 2026-07-23T06:30:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p4-authorized
+phase: agent-runtime-mixed-orchestration-p4-review
 active_task: TASK-238
-next_action: "在独立分支实现受控 Reflect：确定性 Gate 先行，审查器不得新增工具、写入或越过确认。"
+next_action: "复核 TASK-238 的 V92 审查事实、确定性 Gate 与评测断言；通过后集成并按设计治理实施 P5 Trace 界面。"
 read_next:
   goals: false
   decisions: false
@@ -31,6 +31,8 @@ read_next:
 - TASK-237 已完成实现并进入 review：路由器在 RAG/工具 Schema 前以服务端确定性规则选择 Direct、ReAct 或 Plan-Exec，确认续执行保留既有路径；P2 未启动时自动回退既有 ReAct。Chat、流式与 OpenAPI 共享脱敏 `modeDecision` 投影。规则/P2/聊天定向回归 48 项、编译和 diff 检查通过；全新后删除的 PostgreSQL 16 从 V1 迁移至 V91，并通过 4/4 集成用例。
 
 - TASK-237 已完成并集成至 `main`（`5c08c33`）。TASK-238 已获授权实施 P4：默认关闭的受控 Reflect 仅对 P2/P3 已启动、且 P3 标记为需要审查的运行创建组织隔离事实；确定性 Gate 优先，审查不新增工具、写入、确认或自由重规划。
+
+- TASK-238 已完成实现并进入 review：V92 的审查事实与 `REFLECT_GATE` 事件均按组织隔离；成功 Plan-Exec 才可进入默认关闭的精确 Agent Gate。Gate 验证 Agent、步骤、预算、确认和输出，阻断即 `HANDOFF`，不调用新模型或工具。评测增加运行模式、审查状态和确认前零写入断言；定向回归通过，隔离 PostgreSQL 从 V1→V92 的运行时集成 5/5 通过。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

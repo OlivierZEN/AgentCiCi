@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-238
-status: ready
-updated_at: 2026-07-23T06:00:00Z
+status: review
+updated_at: 2026-07-23T06:30:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: backend-agent
@@ -28,3 +28,18 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - 开关/白名单不命中时不改变既有路径；Gate 阻断时 reviewer 不可放行；
 - 审查 Schema 严格受限、修订只限无副作用最终回答，超出上限转人工；
 - 组织隔离、规则/评测断言、后端编译、全新 PostgreSQL 迁移与静态 diff 检查通过。
+
+## Implementation result
+
+- V92 新增 `agent_task_review`，按组织、运行和审查轮次保存 Gate/审查状态、问题码和脱敏结果摘要；`REFLECT_GATE` 事件与 P1 运行事实同源。
+- `AgentTaskReflectService` 在精确 Agent 白名单命中后执行确定性 Gate：组织与 Agent 一致、Plan-Exec 成功终态、全部步骤成功、步骤/审查轮次预算、确认和非空输出。首期 reviewer 为固定 Schema 的确定性审查，只有 `PASS` 或 `HANDOFF`，不调用模型、工具、凭据或写入。
+- Chat/流式只投影最小审查状态；评测支持 `RUNTIME_MODE_EQUALS`、`REFLECT_STATUS_EQUALS` 与 `NO_WRITE_BEFORE_CONFIRMATION` 三类确定性断言。
+
+## Verification
+
+- `AgentTaskReflectServiceTest`、`AgentEvaluationAssertionEngineTest`、P2/P3 与 Chat 定向回归通过；后端 `compile` 与 `git diff --check` 通过。
+- 新建后删除 PostgreSQL 16 临时库完整迁移 V1→V92，`AgentTaskRuntimeIntegrationTest` 5/5 通过，覆盖审查记录持久化、`REFLECT_GATE` 事件和跨组织拒绝。
+
+## Next action
+
+- 复核后集成至 `main`；随后使用设计治理创建独立 TASK 实施 P5 Trace 管理界面与桌面端验收。

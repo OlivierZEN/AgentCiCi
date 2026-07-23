@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T05:45:00Z
+updated_at: 2026-07-23T06:30:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T05:45:00Z
+last_run_at: 2026-07-23T06:30:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-238 - 混合智能体运行时 P4：受控 Reflect 与评测门禁
+
+- `identity/assignment`：TASK-238 的任务级 SSH 身份门禁、分支与代表性实现、迁移、测试和治理文件范围检查均返回 `allowed`。
+- `backend-focused`：`AgentTaskReflectServiceTest`、`AgentEvaluationAssertionEngineTest`、`AgentRuntimeModeRouterTest`、`AgentPlanExecCanaryServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 共 57 项通过。覆盖默认关闭/精确白名单、组织与 Agent 一致、成功计划/步骤、审查轮次、确认阻断、稳定模式/审查/零写入断言及既有 Chat 回归。
+- `fresh-postgresql-integration`：新建后删除的 PostgreSQL 16 临时库完整迁移 V1→V92；`AgentTaskRuntimeIntegrationTest` 5/5 通过，确认 V92 审查记录、`REFLECT_GATE` 运行事件与跨组织拒绝。
+- `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、`test-compile` 与 `git diff --check` 通过。
+- `environment-limit`：默认共享 `agentcici_test` 的既有 Flyway V81 checksum 漂移（数据库 `2112500543`，本地 `379982424`）未修复、未 repair；隔离库验证不等同于全量套件通过。
 
 ## TASK-237 - 混合智能体运行时 P3：规则优先模式路由
 

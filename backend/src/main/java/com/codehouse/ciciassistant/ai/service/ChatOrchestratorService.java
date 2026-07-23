@@ -5,6 +5,7 @@ import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeModeRouter;
 import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
+import com.codehouse.ciciassistant.agent.service.AgentTaskReflectService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
@@ -124,6 +125,7 @@ public class ChatOrchestratorService {
     private final AgentRuntimeConcurrencyService agentRuntimeConcurrencyService;
     private final AgentRuntimeModeRouter agentRuntimeModeRouter;
     private final AgentPlanExecCanaryService agentPlanExecCanaryService;
+    private final AgentTaskReflectService agentTaskReflectService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter;
     private final SafetyGatewayService safetyGatewayService;
@@ -161,6 +163,7 @@ public class ChatOrchestratorService {
                                    AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
                                    AgentRuntimeModeRouter agentRuntimeModeRouter,
                                    AgentPlanExecCanaryService agentPlanExecCanaryService,
+                                   AgentTaskReflectService agentTaskReflectService,
                                    @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor,
                                    PlatformTransactionManager transactionManager) {
         this.chatSessionRepository = chatSessionRepository;
@@ -194,6 +197,7 @@ public class ChatOrchestratorService {
         this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
         this.agentRuntimeModeRouter = agentRuntimeModeRouter;
         this.agentPlanExecCanaryService = agentPlanExecCanaryService;
+        this.agentTaskReflectService = agentTaskReflectService;
         this.agentRuntimeExecutor = agentRuntimeExecutor;
         this.tx = new TransactionTemplate(transactionManager);
     }
@@ -251,6 +255,9 @@ public class ChatOrchestratorService {
         List<String> knowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, List.of());
         KnowledgeRetrievalRouter.Decision decision = KnowledgeRetrievalRouter.decide(
                 question, knowledgeBaseIds, List.of(), "evaluation-" + version.getId());
+        AgentRuntimeModeRouter.ModeDecision evaluationModeDecision = agentRuntimeModeRouter.decide(
+                new AgentRuntimeModeRouter.RoutingInput(agentId, "evaluation", question,
+                        skillContext.allowedToolNames(), decision.shouldRetrieve(), false));
         RagService.RetrievalResult ragResult = decision.shouldRetrieve()
                 ? ragService.retrieveDetailed(
                         orgId,
@@ -312,6 +319,11 @@ public class ChatOrchestratorService {
                 .toList();
         Map<String, Object> context = new LinkedHashMap<>();
         context.put("runMode", "EVALUATION");
+        context.put("executionMode", evaluationModeDecision.mode().name());
+        context.put("modeReasonCodes", evaluationModeDecision.reasonCodes().stream().map(Enum::name).toList());
+        context.put("requiresConfirmation", evaluationModeDecision.requiresConfirmation());
+        context.put("reviewerStatus", "NOT_REQUESTED");
+        context.put("confirmationCompleted", false);
         context.put("evaluationVersionNo", versionNo);
         context.put("modelName", modelName);
         context.put("toolCalls", plannedToolCalls);
@@ -497,6 +509,8 @@ public class ChatOrchestratorService {
         } catch (RuntimeException ex) {
             agentPlanExecCanaryService.fail(planExec, "SYNTHESIS_STATE_UPDATE_FAILED");
         }
+        AgentTaskReflectService.ReflectResult reflectResult = reflectSafely(
+                orgId, skillContext.agentId(), planExec, modeDecision, answer);
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -585,6 +599,7 @@ public class ChatOrchestratorService {
         runtimeExecutionPayload.put("trace", executionResult.executionTrace());
         runtimeExecutionPayload.put("contextSnapshot", executionResult.contextSnapshot());
         runtimeExecutionPayload.put("modeDecision", agentRuntimeModeRouter.payload(modeDecision));
+        runtimeExecutionPayload.put("review", reflectPayload(reflectResult));
         if (planExec.selected()) runtimeExecutionPayload.put("taskRun", agentPlanExecCanaryService.payload(planExec));
         payload.put("runtimeExecution", runtimeExecutionPayload);
         payload.put("runtimeGovernance", Map.of(
@@ -864,6 +879,9 @@ public class ChatOrchestratorService {
                 } catch (RuntimeException ex) {
                     agentPlanExecCanaryService.fail(planExec, "SYNTHESIS_STATE_UPDATE_FAILED");
                 }
+                AgentTaskReflectService.ReflectResult reflectResult = reflectSafely(
+                        orgId, skillContext.agentId(), planExec, modeDecision, finalText);
+                if (reflectResult.selected()) safeSendPhase(emitter, "review_completed", null, reflectPayload(reflectResult));
                 safeSendDeltaInChunks(emitter, finalText);
                 Instant wfStartedAt = Instant.now();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
@@ -928,6 +946,29 @@ public class ChatOrchestratorService {
     }
 
     // ── Function calling loop ──
+
+    private AgentTaskReflectService.ReflectResult reflectSafely(String orgId, String agentId,
+                                                                  AgentPlanExecCanaryService.CanaryExecution planExec,
+                                                                  AgentRuntimeModeRouter.ModeDecision decision,
+                                                                  String output) {
+        if (planExec == null || !planExec.active() || decision == null || !decision.reflectRequired()) {
+            return new AgentTaskReflectService.ReflectResult(false, null, "SKIPPED", "NOT_REQUESTED", List.of());
+        }
+        try {
+            AgentTaskReflectService.ReflectResult result = agentTaskReflectService.reflect(
+                    new AgentTaskReflectService.ReflectCommand(orgId, planExec.runId(), agentId,
+                            true, decision.requiresConfirmation(), output));
+            return result == null ? new AgentTaskReflectService.ReflectResult(false, null, "SKIPPED", "NOT_REQUESTED", List.of()) : result;
+        } catch (RuntimeException ignored) {
+            return new AgentTaskReflectService.ReflectResult(false, null, "SKIPPED", "REFLECT_UNAVAILABLE", List.of());
+        }
+    }
+
+    private static Map<String, Object> reflectPayload(AgentTaskReflectService.ReflectResult result) {
+        if (result == null) return Map.of("selected", false, "gateStatus", "SKIPPED", "reviewerStatus", "NOT_REQUESTED");
+        return Map.of("selected", result.selected(), "reviewId", result.reviewId() == null ? "" : result.reviewId(),
+                "gateStatus", result.gateStatus(), "reviewerStatus", result.reviewerStatus(), "issueCodes", result.issueCodes());
+    }
 
     /**
      * Run the full tool-calling loop: model → tool calls → execute → feed back → repeat.

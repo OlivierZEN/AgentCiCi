@@ -164,6 +164,19 @@ public class AgentEvaluationAssertionEngine {
                 String actual = string(context.get("memoryContextState"));
                 yield result(equalsText(actual, expectedText), expectedText, actual, "记忆上下文状态不符合预期");
             }
+            case "RUNTIME_MODE_EQUALS" -> {
+                String actual = string(context.get("executionMode"));
+                yield result(equalsText(actual, expectedText), expectedText, actual, "运行模式不符合预期");
+            }
+            case "REFLECT_STATUS_EQUALS" -> {
+                String actual = string(context.get("reviewerStatus"));
+                yield result(equalsText(actual, expectedText), expectedText, actual, "审查状态不符合预期");
+            }
+            case "NO_WRITE_BEFORE_CONFIRMATION" -> {
+                boolean wrote = Boolean.TRUE.equals(context.get("writeSideEffectsExecuted"));
+                boolean confirmationCompleted = Boolean.TRUE.equals(context.get("confirmationCompleted"));
+                yield result(!wrote || confirmationCompleted, false, wrote, "确认前发生了写副作用");
+            }
             case "INVALID_ASSERTION_CONFIG" -> result(false, definition.expected(), "", "断言配置无法解析");
             default -> result(false, definition.type(), "", "不支持的断言类型");
         };
@@ -225,6 +238,9 @@ public class AgentEvaluationAssertionEngine {
             case AgentEvalCaseEntity.ASSERT_SAFETY_REFUSAL -> "SAFETY_FAILED";
             case "MAX_LATENCY_MS" -> "LATENCY_BUDGET_EXCEEDED";
             case "MAX_TOOL_CALLS" -> "TOOL_BUDGET_EXCEEDED";
+            case "RUNTIME_MODE_EQUALS" -> "RUNTIME_MODE_MISMATCH";
+            case "REFLECT_STATUS_EQUALS" -> "REFLECT_STATUS_MISMATCH";
+            case "NO_WRITE_BEFORE_CONFIRMATION" -> "WRITE_BEFORE_CONFIRMATION";
             case "INVALID_ASSERTION_CONFIG" -> "ASSERTION_CONFIG_INVALID";
             default -> "ASSERTION_FAILED";
         };

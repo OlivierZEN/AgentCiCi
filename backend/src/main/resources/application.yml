@@ -83,6 +83,11 @@ app:
       max-steps: 6
       max-replans: 1
       max-reflect-rounds: 1
+    reflect:
+      # P4 is a server-owned, read-only review gate and remains disabled by default.
+      enabled: false
+      allowed-agent-ids: []
+      max-rounds: 1
   kb:
     indexing:
       mode: local
