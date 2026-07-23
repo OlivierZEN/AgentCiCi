@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-22T15:51:44Z
+updated_at: 2026-07-23T10:20:00Z
 updated_by: MANAGER-001
-phase: feat131-credential-binding-ready
-active_task: "TASK-230"
-next_action: "在 TASK-230 中以受认证 API 凭据建立通用外部主体记忆上下文，客户端 metadata 不参与信任决策。"
+phase: feat131-memory-lifecycle-ready
+active_task: "TASK-231"
+next_action: "在 TASK-231 中将通用记忆数据与向量纳入既有组织保留、导出和 purge，并实现可审计的主体删除与过期清理。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-231 已获授权：通用记忆生命周期必须与既有组织保留、legal hold、导出和 purge 一致；实现仅能使用通用主体、应用、记录、证据和向量模型，不得引入外部应用领域对象或生产发布。
 
 - TASK-230 已获授权：将 API 凭据与通用应用、主体类型、身份等级和命名空间绑定，OpenAPI 只能使用该绑定建立记忆作用域；绑定缺失安全降级为无记忆。
 

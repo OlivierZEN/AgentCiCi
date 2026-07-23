@@ -432,4 +432,10 @@ Agent Builder 中每个 Agent 应可查看其允许读取的 memory scopes、记
 - `docs/specs/FEAT-130-forced-skill-execution-context.md`：技能选择、上下文和 Trace 语义；
 - `/Volumes/AISpace/workbench/mydoc/0-解决方案资料/PRODUCT-002-followup-current-functional-requirements.md`：FollowUp 当前能力与未完成边界；它是首个参考接入方，不是 Agent CC 平台功能定义。
 
-本规格为平台设计基线，尚未创建实现任务、数据迁移或接口。进入实现前必须将本规格拆分为任务卡和授权范围，并对通用保留期限、人工审核责任、外部应用集成认证与至少两个独立适配方的验收完成产品确认。
+## 20. 已授权实施与生命周期契约
+
+- `TASK-226` 至 `TASK-230` 已分别落地通用关系型核心、候选审核、受控语义检索、可信运行时注入和凭据绑定；实现保持应用无关，所有外部应用属性均由服务端可信契约导出。
+- `TASK-231` 负责生命周期闭环：将 `memory_subject`、`memory_record`、`memory_conversation_snapshot`、`memory_candidate`、`memory_evidence`、`memory_vector_fragment` 和 API 凭据绑定纳入既有组织导出、dry-run manifest、real purge 与残留行校验。
+- 主体删除、撤销和过期清理必须先请求移除派生向量，再使关系型记录立即不可读取。向量删除失败不得恢复可读状态，应留下不含正文和原始向量的最小审计摘要，以便重试或组织 purge 收口。
+- 组织级 `legal hold` 是主体删除和组织 purge 的硬阻断条件；导出仅包括经现有字段脱敏后的关系型记录和执行清单，不导出 embedding、原始向量内容、密钥或跨组织数据。
+- 进入最终验收前，仍须完成候选审核治理 API、Trace/评测门禁、两个独立通用适配契约及生产就绪审计；不在未经授权时执行生产发布。

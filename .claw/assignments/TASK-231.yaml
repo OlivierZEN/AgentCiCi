@@ -1,0 +1,43 @@
+task_id: TASK-231
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T10:20:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-131-agent-memory-platform.md
+task_status_path: .claw/tasks/TASK-231.md
+branch: codex/TASK-231-memory-lifecycle-governance
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - docs/specs/FEAT-131-agent-memory-platform.md
+  - .claw/tasks/TASK-231.md
+  - .claw/assignments/TASK-231.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths: [".claw/developers/**", "scripts/**", ".github/workflows/**", "infra/**", "infrastructure/**"]
+touch_policy: exclusive
+shared_contracts: ["docs/specs/FEAT-131-agent-memory-platform.md"]
+task_boundary:
+  - "通用记忆生命周期必须遵从现有组织 retention policy 和 legal hold；任何删除、导出和 purge 都不得绕过组织或主体隔离。"
+  - "向量只作为派生索引；移除失败必须使关系型记录立即不可读，并在审计中保留最小错误摘要。"
+  - "不得引入外部应用领域对象、移动端实现、生产发布或外部业务写入。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 verified 2026-07-23; active production-readiness goal authorizes this scope."
+notes: "组织级 purge 复用 PlatformTenantLifecycleService；导出不得包含原始 embedding、向量物理内容或秘密。"
