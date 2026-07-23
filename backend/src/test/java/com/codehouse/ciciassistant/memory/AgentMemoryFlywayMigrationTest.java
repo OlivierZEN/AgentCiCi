@@ -39,7 +39,7 @@ class AgentMemoryFlywayMigrationTest {
                      FROM information_schema.tables
                      WHERE table_schema = 'public'
                        AND table_name IN ('memory_subject', 'memory_record', 'memory_conversation_snapshot',
-                                           'memory_candidate', 'memory_evidence')
+                                           'memory_candidate', 'memory_evidence', 'memory_vector_fragment')
                      ORDER BY table_name
                      """)) {
             java.util.List<String> found = new java.util.ArrayList<>();
@@ -47,7 +47,7 @@ class AgentMemoryFlywayMigrationTest {
                 found.add(tables.getString(1));
             }
             assertThat(found).containsExactly(
-                    "memory_candidate", "memory_conversation_snapshot", "memory_evidence", "memory_record", "memory_subject");
+                    "memory_candidate", "memory_conversation_snapshot", "memory_evidence", "memory_record", "memory_subject", "memory_vector_fragment");
         }
     }
 }

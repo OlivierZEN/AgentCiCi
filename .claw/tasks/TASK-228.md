@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-228
-status: ready
+status: in_progress
 updated_at: 2026-07-23T00:10:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -28,3 +28,8 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 - 非法主体、过期、撤销、敏感或 scope 不匹配的关系库记录，即使被向量召回也不会返回；
 - 向量索引仅保存最小必要的脱敏内容与定位信息；
 - 定向检索/隔离测试、编译、全新库迁移和 diff 检查通过。
+
+## Progress
+
+- 已新增 V87 向量片段登记和受控语义检索服务；仅索引 `ACTIVE/VERIFIED` 且 `NORMAL` 的记录，向量命中必须交叉关系库授权结果。
+- 定向测试、编译、diff 检查和临时 PostgreSQL 16 的 V1→V87 迁移验证通过；治理状态待提交。

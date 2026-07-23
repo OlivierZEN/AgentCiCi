@@ -10,6 +10,11 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-228 - 通用记忆受控语义检索
+
+- `backend-focused`：`MemorySemanticRetrievalServiceTest` 验证向量命中只有在关系库上下文已授权时才返回；未授权命中不会回读记录。定向测试与编译通过。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V87，并验证 `memory_vector_fragment`。
+
 ## TASK-226 - 通用主体记忆 Phase 1 核心
 
 - `identity/assignment`：MANAGER-001 的 SSH challenge-response、任务分支 `codex/TASK-226-agent-memory-core` 和 memory/迁移/测试/状态代表路径经 `dev-login.py` 与 `check-assignment.py` 验证为 `allowed`。
