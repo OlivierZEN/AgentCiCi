@@ -19,6 +19,8 @@ allowed_write_roots:
   - backend/src/test/java/com/codehouse/ciciassistant/platform/**
   - deploy/acr.env.example
   - deploy/docker-compose.acr.yml
+  - deploy/nginx.cici.conf
+  - deploy/nginx.cici.ssl.conf
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
