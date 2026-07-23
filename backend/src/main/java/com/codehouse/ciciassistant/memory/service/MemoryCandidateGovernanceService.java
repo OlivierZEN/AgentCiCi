@@ -9,8 +9,8 @@ import org.springframework.transaction.annotation.Transactional;
 /** Governs generic memory proposals; only an explicit review can create readable memory. */
 @Service
 public class MemoryCandidateGovernanceService {
-    private final ExternalMemoryContextService contextService; private final MemoryCandidateRepository candidates; private final MemoryRecordRepository records;
-    public MemoryCandidateGovernanceService(ExternalMemoryContextService contextService, MemoryCandidateRepository candidates, MemoryRecordRepository records) { this.contextService=contextService; this.candidates=candidates; this.records=records; }
+    private final ExternalMemoryContextService contextService; private final MemoryCandidateRepository candidates; private final MemoryRecordRepository records; private final MemorySemanticRetrievalService semanticRetrieval;
+    public MemoryCandidateGovernanceService(ExternalMemoryContextService contextService, MemoryCandidateRepository candidates, MemoryRecordRepository records, MemorySemanticRetrievalService semanticRetrieval) { this.contextService=contextService; this.candidates=candidates; this.records=records; this.semanticRetrieval=semanticRetrieval; }
     @Transactional public MemoryCandidateEntity submit(ExternalMemoryContextService.ExternalMemoryContext context, ExternalMemoryContextService.MemoryWriteCommand command) {
         if (command == null) throw new IllegalArgumentException("memory candidate command is required");
         MemorySubjectEntity subject=contextService.resolveSubject(context);
@@ -21,7 +21,9 @@ public class MemoryCandidateGovernanceService {
         MemoryCandidateEntity candidate=candidates.findByIdAndOrgId(candidateId, orgId).orElseThrow(() -> new IllegalArgumentException("memory candidate not found"));
         if (!"PENDING".equals(candidate.getStatus())) throw new IllegalStateException("memory candidate is not pending");
         candidate.review("APPROVED", reviewer, reason); candidates.save(candidate);
-        return records.save(new MemoryRecordEntity(orgId, candidate.getSubjectId(), candidate.getScope(), candidate.getScopeKey(), candidate.getMemoryType(), candidate.getContent(), "ACTIVE", candidate.getSensitivity(), candidate.getConfidence(), candidate.getValidFrom(), candidate.getValidTo(), candidate.getSourceType(), candidate.getSourceRefsJson()));
+        MemoryRecordEntity record=records.save(new MemoryRecordEntity(orgId, candidate.getSubjectId(), candidate.getScope(), candidate.getScopeKey(), candidate.getMemoryType(), candidate.getContent(), "ACTIVE", candidate.getSensitivity(), candidate.getConfidence(), candidate.getValidFrom(), candidate.getValidTo(), candidate.getSourceType(), candidate.getSourceRefsJson()));
+        semanticRetrieval.index(record);
+        return record;
     }
     @Transactional public void reject(String orgId, Long candidateId, String reviewer, String reason) { MemoryCandidateEntity c=candidates.findByIdAndOrgId(candidateId, orgId).orElseThrow(() -> new IllegalArgumentException("memory candidate not found")); if (!"PENDING".equals(c.getStatus())) throw new IllegalStateException("memory candidate is not pending"); c.review("REJECTED", reviewer, reason); candidates.save(c); }
 }

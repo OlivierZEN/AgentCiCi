@@ -12,7 +12,7 @@ last_run_status: passed
 
 ## TASK-228 - 通用记忆受控语义检索
 
-- `backend-focused`：`MemorySemanticRetrievalServiceTest` 验证向量命中只有在关系库上下文已授权时才返回；未授权命中不会回读记录；邮件与令牌文本在 embedding 前脱敏，索引失败不向调用方传播。定向测试与编译通过。
+- `backend-focused`：语义检索测试验证向量命中只有在关系库上下文已授权时才返回；未授权命中不会回读记录；邮件与令牌文本在 embedding 前脱敏，索引失败不向调用方传播。候选审核测试验证审核成功会触发最佳努力索引。定向测试与编译通过。
 - `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V87，并验证 `memory_vector_fragment`。
 
 ## TASK-226 - 通用主体记忆 Phase 1 核心

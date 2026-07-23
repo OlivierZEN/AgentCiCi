@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.memory.domain.MemoryCandidateEntity;
@@ -13,6 +14,7 @@ import com.codehouse.ciciassistant.memory.domain.MemoryRecordRepository;
 import com.codehouse.ciciassistant.memory.domain.MemorySubjectEntity;
 import com.codehouse.ciciassistant.memory.service.ExternalMemoryContextService;
 import com.codehouse.ciciassistant.memory.service.MemoryCandidateGovernanceService;
+import com.codehouse.ciciassistant.memory.service.MemorySemanticRetrievalService;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -23,7 +25,9 @@ class MemoryCandidateGovernanceServiceTest {
     private final ExternalMemoryContextService contextService = mock(ExternalMemoryContextService.class);
     private final MemoryCandidateRepository candidateRepository = mock(MemoryCandidateRepository.class);
     private final MemoryRecordRepository recordRepository = mock(MemoryRecordRepository.class);
-    private final MemoryCandidateGovernanceService service = new MemoryCandidateGovernanceService(contextService, candidateRepository, recordRepository);
+    private final MemorySemanticRetrievalService semanticRetrieval = mock(MemorySemanticRetrievalService.class);
+    private final MemoryCandidateGovernanceService service = new MemoryCandidateGovernanceService(
+            contextService, candidateRepository, recordRepository, semanticRetrieval);
 
     @Test
     void rejectsAnAttemptToSubmitReadableMemoryWithoutReview() {
@@ -48,6 +52,7 @@ class MemoryCandidateGovernanceServiceTest {
         assertThat(candidate.getStatus()).isEqualTo("APPROVED");
         assertThat(record.getStatus()).isEqualTo("ACTIVE");
         assertThat(record.getOrgId()).isEqualTo("org-a");
+        verify(semanticRetrieval).index(record);
     }
 
     @Test
