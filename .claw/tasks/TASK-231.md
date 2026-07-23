@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-231
-status: ready
+status: review
 updated_at: 2026-07-23T10:20:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -34,4 +34,7 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 
 ## Progress
 
-- 尚未开始实现。
+- 通用主体删除会撤销并脱敏关联记录、候选和主体标识，删除会话摘要；每条记录都会请求删除派生向量。向量物理删除失败不恢复关系型可读状态，保留活跃片段以便后续重试，并记录不含正文的失败数量。
+- 已新增过期清理 worker：仅清理已到期的 `ACTIVE/VERIFIED` 记录；legal hold 激活时跳过该组织的物理向量清理和状态更新。
+- `PlatformTenantLifecycleService` 的 dry-run manifest、导出表集合、real purge 删除顺序、残留行校验与向量巡检/删除已覆盖六张通用记忆表及 API 记忆绑定；向量删除汇总同时包含知识库和通用记忆向量 ID。
+- 定向生命周期、语义检索、可信上下文和迁移测试及后端编译通过。既有 `PlatformTenantLifecycleIntegrationTest` 仍因共享测试库 V81 checksum 不一致而无法加载 Spring Context；该失败早于本任务，未执行 Flyway repair 或修改历史迁移。

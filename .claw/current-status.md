@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T10:20:00Z
+updated_at: 2026-07-23T10:12:00Z
 updated_by: MANAGER-001
-phase: feat131-memory-lifecycle-ready
+phase: feat131-memory-lifecycle-review
 active_task: "TASK-231"
-next_action: "在 TASK-231 中将通用记忆数据与向量纳入既有组织保留、导出和 purge，并实现可审计的主体删除与过期清理。"
+next_action: "复核 TASK-231 生命周期变更，并继续完成候选审核治理 API、Trace/评测和两个独立适配契约。"
 read_next:
   goals: false
   decisions: false
@@ -23,6 +23,8 @@ read_next:
 ## Snapshot
 
 - TASK-231 已获授权：通用记忆生命周期必须与既有组织保留、legal hold、导出和 purge 一致；实现仅能使用通用主体、应用、记录、证据和向量模型，不得引入外部应用领域对象或生产发布。
+
+- TASK-231 已进入 review：主体删除会立即撤销并脱敏关系型记忆，过期清理与组织 purge 同步处理派生向量；legal hold 统一阻断。定向测试、编译及新建后删除的 V1→V88 PostgreSQL 迁移通过；既有平台生命周期集成测试受共享库 V81 checksum 不一致阻断，未修改历史迁移或执行 repair。
 
 - TASK-230 已获授权：将 API 凭据与通用应用、主体类型、身份等级和命名空间绑定，OpenAPI 只能使用该绑定建立记忆作用域；绑定缺失安全降级为无记忆。
 

@@ -56,6 +56,10 @@ public class PlatformTenantLifecycleService {
             new DomainGroup("members", "组织成员", List.of("organization_member")),
             new DomainGroup("chat", "会话与消息", List.of("chat_session", "chat_message", "chat_session_state")),
             new DomainGroup("memory", "专属记忆", List.of("user_memory")),
+            new DomainGroup("agent_memory", "通用主体记忆与受控向量索引", List.of(
+                    "memory_evidence", "memory_vector_fragment", "memory_candidate", "memory_conversation_snapshot",
+                    "memory_record", "memory_subject"
+            )),
             new DomainGroup("user_workflows", "个人工作流与快捷指令", List.of(
                     "user_agent_profile",
                     "user_workflow_spec",
@@ -119,6 +123,7 @@ public class PlatformTenantLifecycleService {
             )),
             new DomainGroup("open_api", "Agent Open API 凭证、会话、调用与用量", List.of(
                     "agent_api_credential",
+                    "agent_api_memory_binding",
                     "agent_api_session_map",
                     "agent_api_call_log",
                     "agent_api_usage_daily"
@@ -223,6 +228,12 @@ public class PlatformTenantLifecycleService {
             "chat_message",
             "chat_session_state",
             "chat_session",
+            "memory_evidence",
+            "memory_vector_fragment",
+            "memory_candidate",
+            "memory_conversation_snapshot",
+            "memory_record",
+            "memory_subject",
             "user_memory",
             "user_quick_command",
             "user_workflow_execution",
@@ -233,6 +244,7 @@ public class PlatformTenantLifecycleService {
             "agent_api_call_log",
             "agent_api_session_map",
             "agent_api_usage_daily",
+            "agent_api_memory_binding",
             "agent_api_credential",
             "wecom_kf_message",
             "wecom_kf_conversation",
@@ -760,7 +772,8 @@ public class PlatformTenantLifecycleService {
     }
 
     private Map<String, Object> auditVectorStore(String orgId) {
-        List<String> registeredVectorIds = registeredVectorIds(orgId);
+        List<String> registeredVectorIds = new ArrayList<>(registeredVectorIds(orgId));
+        registeredVectorIds.addAll(memoryVectorIds(orgId));
         VectorStoreAuditResult audit = vectorStoreClient.auditOrgVectors(orgId, registeredVectorIds);
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("status", audit.success() ? "SCANNED" : "FAILED");
@@ -1126,7 +1139,8 @@ public class PlatformTenantLifecycleService {
     }
 
     private void deleteVectors(String orgId, Map<String, Object> result, List<String> failures) {
-        List<String> vectorIds = registeredVectorIds(orgId);
+        List<String> vectorIds = new ArrayList<>(registeredVectorIds(orgId));
+        vectorIds.addAll(memoryVectorIds(orgId));
         if (!vectorIds.isEmpty()) {
             VectorDeleteResult byIds = vectorStoreClient.deleteByVectorIds(orgId, vectorIds);
             result.put("vectorDeleteByIds", Map.of(
@@ -1149,6 +1163,10 @@ public class PlatformTenantLifecycleService {
                 failures.add("vector kb " + rawKbId + ": " + byKb.message());
             }
         }
+    }
+
+    private List<String> memoryVectorIds(String orgId) {
+        return jdbcTemplate.queryForList("SELECT vector_id FROM memory_vector_fragment WHERE org_id = ? AND status = 'ACTIVE'", String.class, orgId);
     }
 
     private void deleteKbFiles(String orgId, Map<String, Object> result, List<String> failures) {

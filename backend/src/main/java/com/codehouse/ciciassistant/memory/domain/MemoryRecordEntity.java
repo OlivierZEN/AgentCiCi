@@ -100,4 +100,6 @@ public class MemoryRecordEntity {
     public Instant getValidTo() { return validTo; }
     public String getSourceType() { return sourceType; }
     public String getSourceRefsJson() { return sourceRefsJson; }
+    public void markExpired() { this.status = "EXPIRED"; this.updatedAt = Instant.now(); }
+    public void revokeAndRedact() { this.status = "REVOKED"; this.content = "[deleted]"; this.sourceRefsJson = "[]"; this.updatedAt = Instant.now(); }
 }

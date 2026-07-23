@@ -24,12 +24,15 @@ public class MemorySemanticRetrievalService {
             // Vector indexing is best-effort and must not interrupt the relational memory path.
         }
     }
-    @Transactional public void remove(MemoryRecordEntity record) {
-        if (record == null || record.getId() == null) return;
-        fragments.findByOrgIdAndMemoryRecordIdAndStatus(record.getOrgId(), record.getId(), "ACTIVE").ifPresent(fragment -> {
-            vectors.deleteByVectorIds(record.getOrgId(), List.of(fragment.getVectorId()));
-            fragment.markDeleted(); fragments.save(fragment);
-        });
+    @Transactional public boolean remove(MemoryRecordEntity record) {
+        if (record == null || record.getId() == null) return true;
+        return fragments.findByOrgIdAndMemoryRecordIdAndStatus(record.getOrgId(), record.getId(), "ACTIVE").map(fragment -> {
+            try {
+                VectorDeleteResult result=vectors.deleteByVectorIds(record.getOrgId(), List.of(fragment.getVectorId()));
+                if (!result.success()) return false;
+                fragment.markDeleted(); fragments.save(fragment); return true;
+            } catch (RuntimeException ignored) { return false; }
+        }).orElse(true);
     }
     @Transactional(readOnly = true) public List<MemoryRecordEntity> retrieve(ExternalMemoryContextService.ExternalMemoryContext context, String agentId, Set<String> namespaces, String query, int topK) {
         if (query == null || query.isBlank()) return List.of();

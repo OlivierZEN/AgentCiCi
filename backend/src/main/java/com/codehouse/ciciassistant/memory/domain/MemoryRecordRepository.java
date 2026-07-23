@@ -8,4 +8,8 @@ public interface MemoryRecordRepository extends JpaRepository<MemoryRecordEntity
 
     List<MemoryRecordEntity> findByOrgIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(
             String orgId, Long subjectId, Collection<String> statuses);
+
+    List<MemoryRecordEntity> findByOrgIdAndSubjectId(String orgId, Long subjectId);
+
+    List<MemoryRecordEntity> findByStatusInAndValidToBefore(Collection<String> statuses, java.time.Instant cutoff);
 }

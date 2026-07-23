@@ -60,4 +60,5 @@ public class MemorySubjectEntity {
     public String getSubjectType() { return subjectType; }
     public String getExternalRef() { return externalRef; }
     public String getIdentityLevel() { return identityLevel; }
+    public void anonymize() { this.externalRef = "deleted-" + id; this.identityLevel = "ANONYMOUS"; this.updatedAt = Instant.now(); }
 }

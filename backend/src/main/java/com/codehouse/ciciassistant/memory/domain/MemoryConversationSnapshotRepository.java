@@ -7,4 +7,6 @@ public interface MemoryConversationSnapshotRepository extends JpaRepository<Memo
 
     Optional<MemoryConversationSnapshotEntity> findByOrgIdAndApplicationCodeAndConversationRef(
             String orgId, String applicationCode, String conversationRef);
+
+    long deleteByOrgIdAndSubjectId(String orgId, Long subjectId);
 }

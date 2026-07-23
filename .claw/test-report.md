@@ -10,6 +10,14 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-231 - 通用记忆生命周期与组织清理闭环
+
+- `identity/assignment`：MANAGER-001 已通过 TASK-231 身份门禁与 memory/platform/迁移/测试/状态代表路径授权检查。
+- `backend-focused`：`mvn -q -Dtest=MemoryLifecycleServiceTest,MemorySemanticRetrievalServiceTest,ExternalMemoryContextServiceTest,AgentMemoryFlywayMigrationTest test` 通过。覆盖主体删除立即撤销并脱敏、向量删除失败仍不可读取、过期清理、legal hold 阻断及既有授权回读边界。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V88，并断言通用记忆与凭据绑定表存在。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
+- `platform-integration-baseline`：`mvn -q -Dtest=PlatformTenantLifecycleIntegrationTest test` 未进入用例：共享测试库已有 Flyway V81 checksum `2112500543` 与当前文件 `379982424` 不一致，Spring Context 启动即失败。该既有环境基线未被本任务改动；未修复历史迁移或执行 repair。
+
 ## TASK-230 - 受认证凭据记忆上下文绑定
 
 - `backend-focused`：绑定测试锁定可信应用、主体类型、身份等级、命名空间和内部会话 ID 都来自服务端；客户端只能提供外部主体标识。空会话、绑定缺失或禁用均不进入记忆作用域；OpenAPI 阻塞/流式和可信作用域回归通过。
