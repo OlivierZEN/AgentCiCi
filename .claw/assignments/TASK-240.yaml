@@ -1,0 +1,60 @@
+task_id: TASK-240
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T08:00:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
+task_status_path: .claw/tasks/TASK-240.md
+branch: codex/TASK-240-production-canary-operations
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/config/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/config/AgentRuntimePlanExecProperties.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/config/AgentRuntimeModeRouterProperties.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/config/AgentRuntimeReflectProperties.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentPlanExecCanaryService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentRuntimeModeRouter.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentTaskReflectService.java
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/AgentPlanExecCanaryServiceTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/AgentRuntimeModeRouterTest.java
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/AgentTaskReflectServiceTest.java
+  - docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
+  - .claw/tasks/TASK-240.md
+  - .claw/assignments/TASK-240.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - backend/src/main/java/com/codehouse/ciciassistant/tool/**
+  - backend/src/main/java/com/codehouse/ciciassistant/openapi/**
+  - backend/src/main/resources/application.yml
+  - frontend/**
+  - deploy/**
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
+task_boundary:
+  - "只实施 FEAT-133 P6 的组织隔离开关、低基数运营指标、验证与生产灰度清单。"
+  - "默认关闭；没有用户明确指定试点组织、只读 Agent 和观察窗口时，不执行生产发布或线上开关变更。"
+  - "保持既有工具、写入、凭据、确认、审查、Trace 脱敏和组织隔离边界。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user goal explicitly includes FEAT-133 P6, while production target selection remains an explicit safety prerequisite."
