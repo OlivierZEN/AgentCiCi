@@ -50,5 +50,12 @@ class AgentMemoryFlywayMigrationTest {
             assertThat(found).containsExactly(
                     "agent_api_memory_binding", "memory_candidate", "memory_conversation_snapshot", "memory_evidence", "memory_record", "memory_subject", "memory_vector_fragment");
         }
+        try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
+             ResultSet columns = connection.createStatement().executeQuery("""
+                     SELECT column_name FROM information_schema.columns
+                     WHERE table_schema = 'public' AND table_name = 'memory_candidate' AND column_name = 'agent_id'
+                     """)) {
+            assertThat(columns.next()).isTrue();
+        }
     }
 }

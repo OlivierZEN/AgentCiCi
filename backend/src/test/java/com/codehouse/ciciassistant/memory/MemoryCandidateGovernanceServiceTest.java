@@ -15,6 +15,7 @@ import com.codehouse.ciciassistant.memory.domain.MemorySubjectEntity;
 import com.codehouse.ciciassistant.memory.service.ExternalMemoryContextService;
 import com.codehouse.ciciassistant.memory.service.MemoryCandidateGovernanceService;
 import com.codehouse.ciciassistant.memory.service.MemorySemanticRetrievalService;
+import com.codehouse.ciciassistant.ops.service.AuditService;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -26,28 +27,29 @@ class MemoryCandidateGovernanceServiceTest {
     private final MemoryCandidateRepository candidateRepository = mock(MemoryCandidateRepository.class);
     private final MemoryRecordRepository recordRepository = mock(MemoryRecordRepository.class);
     private final MemorySemanticRetrievalService semanticRetrieval = mock(MemorySemanticRetrievalService.class);
+    private final AuditService audit = mock(AuditService.class);
     private final MemoryCandidateGovernanceService service = new MemoryCandidateGovernanceService(
-            contextService, candidateRepository, recordRepository, semanticRetrieval);
+            contextService, candidateRepository, recordRepository, semanticRetrieval, audit);
 
     @Test
     void rejectsAnAttemptToSubmitReadableMemoryWithoutReview() {
         ExternalMemoryContextService.MemoryWriteCommand command = command("ACTIVE");
 
-        assertThatThrownBy(() -> service.submit(context(), command))
+        assertThatThrownBy(() -> service.submit(context(), "agent-a", command))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("cannot be submitted");
     }
 
     @Test
     void approvalCreatesTheOnlyReadableRecordFromAPendingCandidate() throws Exception {
-        MemoryCandidateEntity candidate = new MemoryCandidateEntity("org-a", 7L, "SUBJECT_SHARED", null,
+        MemoryCandidateEntity candidate = new MemoryCandidateEntity("org-a", "agent-a", 7L, "SUBJECT_SHARED", null,
                 "PREFERENCE", "brief preference", "NORMAL", BigDecimal.ONE, Instant.now(), null, "HUMAN", "[]");
         setId(candidate, 3L);
-        when(candidateRepository.findByIdAndOrgId(3L, "org-a")).thenReturn(Optional.of(candidate));
+        when(candidateRepository.findByIdAndOrgIdAndAgentId(3L, "org-a", "agent-a")).thenReturn(Optional.of(candidate));
         when(candidateRepository.save(any(MemoryCandidateEntity.class))).thenAnswer(i -> i.getArgument(0));
         when(recordRepository.save(any(MemoryRecordEntity.class))).thenAnswer(i -> i.getArgument(0));
 
-        MemoryRecordEntity record = service.approve("org-a", 3L, "reviewer-1", "confirmed");
+        MemoryRecordEntity record = service.approve("org-a", "agent-a", 3L, "reviewer-1", "confirmed");
 
         assertThat(candidate.getStatus()).isEqualTo("APPROVED");
         assertThat(record.getStatus()).isEqualTo("ACTIVE");
@@ -57,13 +59,13 @@ class MemoryCandidateGovernanceServiceTest {
 
     @Test
     void refusesASecondReviewOfTheSameCandidate() throws Exception {
-        MemoryCandidateEntity candidate = new MemoryCandidateEntity("org-a", 7L, "SUBJECT_SHARED", null,
+        MemoryCandidateEntity candidate = new MemoryCandidateEntity("org-a", "agent-a", 7L, "SUBJECT_SHARED", null,
                 "PREFERENCE", "brief preference", "NORMAL", BigDecimal.ONE, Instant.now(), null, "HUMAN", "[]");
         setId(candidate, 3L);
         candidate.review("REJECTED", "reviewer-1", "not supported");
-        when(candidateRepository.findByIdAndOrgId(3L, "org-a")).thenReturn(Optional.of(candidate));
+        when(candidateRepository.findByIdAndOrgIdAndAgentId(3L, "org-a", "agent-a")).thenReturn(Optional.of(candidate));
 
-        assertThatThrownBy(() -> service.approve("org-a", 3L, "reviewer-2", "retry"))
+        assertThatThrownBy(() -> service.approve("org-a", "agent-a", 3L, "reviewer-2", "retry"))
                 .isInstanceOf(IllegalStateException.class);
     }
 

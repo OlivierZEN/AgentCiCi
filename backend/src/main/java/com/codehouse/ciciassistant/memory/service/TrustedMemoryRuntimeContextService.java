@@ -62,9 +62,10 @@ public class TrustedMemoryRuntimeContextService {
 
     public Map<String, Object> traceMetadata() {
         Resolution resolution = lastResolution.get();
-        if (resolution == null || !resolution.injected()) return Map.of("memoryInjected", false);
+        if (resolution == null || !resolution.injected()) return Map.of("memoryInjected", false, "memoryContextState", "NOT_INJECTED");
         Map<String, Object> out = new LinkedHashMap<>();
         out.put("memoryInjected", true);
+        out.put("memoryContextState", resolution.truncated() ? "TRUNCATED" : "INJECTED");
         out.put("structuredRecordCount", resolution.structuredRecordCount());
         out.put("semanticHitCount", resolution.semanticHitCount());
         out.put("truncated", resolution.truncated());

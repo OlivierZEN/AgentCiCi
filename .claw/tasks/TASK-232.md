@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-232
-status: ready
+status: in_progress
 updated_at: 2026-07-23T10:18:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -32,4 +32,5 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 
 ## Progress
 
-- 尚未开始实现。
+- V89 为候选补充产生 Agent 归属；新候选必须带 `agentId`，审核与查询使用组织、归属 Agent 和 `MANAGE` 权限共同过滤。
+- 已提供候选最小视图、批准和拒绝 API；审核事件只记录 Agent 与候选 ID，不记录主体标识或正文。Trace 现明确输出 `NOT_INJECTED`、`INJECTED` 或 `TRUNCATED` 状态。
