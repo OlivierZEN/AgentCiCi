@@ -35,3 +35,4 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 - V89 为候选补充产生 Agent 归属；新候选必须带 `agentId`，审核与查询使用组织、归属 Agent 和 `MANAGE` 权限共同过滤。
 - 已提供候选最小视图、批准和拒绝 API；审核事件只记录 Agent 与候选 ID，不记录主体标识或正文。Trace 现明确输出 `NOT_INJECTED`、`INJECTED` 或 `TRUNCATED` 状态。
 - 现有评测断言引擎已支持 `MEMORY_CONTEXT_STATE`，评测 dry-run 固定标记 `NOT_INJECTED` 并只输出状态型 Trace，不携带记忆正文或主体标识。
+- 两个独立通用适配契约以 `adapter-alpha` 与 `adapter-beta` 配置验证：相同外部主体标识在不同凭据绑定、应用代码、主体类型和内部会话下产生不同可信上下文；禁用其中一个绑定时只对该适配安全降级。

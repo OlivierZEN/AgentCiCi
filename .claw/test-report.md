@@ -14,6 +14,7 @@ last_run_status: passed
 
 - `backend-focused`：候选审核、可信运行时 Trace、记忆 Flyway 与 `MEMORY_CONTEXT_STATE` 评测断言测试通过；V89 验证 `memory_candidate.agent_id` 存在，重复审核仍安全拒绝。
 - `backend-compile/static`：后端编译与 `git diff --check` 通过。
+- `adapter-contract`：`GenericExternalMemoryAdapterContractTest` 使用两份独立的通用凭据绑定验证应用、主体类型、命名空间和内部会话不串读；禁用绑定不进入可信记忆作用域。
 
 ## TASK-231 - 通用记忆生命周期与组织清理闭环
 
