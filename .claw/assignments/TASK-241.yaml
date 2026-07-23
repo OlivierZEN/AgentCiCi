@@ -14,9 +14,11 @@ allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/platform/**
   - backend/src/main/java/com/codehouse/ciciassistant/auth/domain/**
   - backend/src/main/java/com/codehouse/ciciassistant/auth/service/**
+  - backend/src/main/java/com/codehouse/ciciassistant/tenant/**
   - backend/src/main/resources/db/migration/**
   - backend/src/test/java/com/codehouse/ciciassistant/semattice/**
   - backend/src/test/java/com/codehouse/ciciassistant/platform/**
+  - backend/src/test/java/com/codehouse/ciciassistant/tenant/**
   - deploy/acr.env.example
   - deploy/docker-compose.acr.yml
   - deploy/nginx.cici.conf
