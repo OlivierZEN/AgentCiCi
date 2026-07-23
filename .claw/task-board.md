@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-228 - 通用记忆受控语义检索
+
+- status: `ready`
+- priority: `high`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
+- task_status_path: `.claw/tasks/TASK-228.md`
+- assignment_path: `.claw/assignments/TASK-228.yaml`
+- blocked_by: `none`
+- next_action: 仅建立已审核非敏感记忆的向量片段及关系库二次授权检索。
+
 ### TASK-227 - 通用记忆候选、证据与时效治理
 
 - status: `done`
