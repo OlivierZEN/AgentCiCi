@@ -1,0 +1,44 @@
+task_id: TASK-232
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T10:18:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-131-agent-memory-platform.md
+task_status_path: .claw/tasks/TASK-232.md
+branch: codex/TASK-232-memory-governance-api
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - docs/specs/FEAT-131-agent-memory-platform.md
+  - .claw/tasks/TASK-232.md
+  - .claw/assignments/TASK-232.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths: [".claw/developers/**", "scripts/**", ".github/workflows/**", "infra/**", "infrastructure/**"]
+touch_policy: exclusive
+shared_contracts: ["docs/specs/FEAT-131-agent-memory-platform.md"]
+task_boundary:
+  - "审核和读取必须由当前组织、当前 Agent 与既有权限服务共同约束；不接受客户端声明的组织、主体或角色。"
+  - "Trace 与评测只保存最小治理状态和数量，不得保存记忆正文、外部主体标识或原始向量。"
+  - "不得新增外部应用领域对象、自动批准、生产发布或外部业务写入。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 verified 2026-07-23; active production-readiness goal authorizes this scope."
+notes: "候选审核复用 V86 权威模型；质量门禁复用既有 Agent 评测控制面。"
