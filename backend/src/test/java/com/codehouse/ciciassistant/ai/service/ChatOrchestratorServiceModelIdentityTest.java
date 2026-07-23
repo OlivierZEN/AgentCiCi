@@ -26,6 +26,7 @@ import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnalysisTo
 import com.codehouse.ciciassistant.crmanalysis.service.CrmProductSalesAnswerFormatter;
 import com.codehouse.ciciassistant.feishu.domain.FeishuBotBindingRepository;
 import com.codehouse.ciciassistant.memory.service.UserMemoryService;
+import com.codehouse.ciciassistant.memory.service.TrustedMemoryRuntimeContextService;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.security.service.SafetyGatewayService;
@@ -795,6 +796,7 @@ class ChatOrchestratorServiceModelIdentityTest {
         private final ChatSessionStateService chatSessionStateService = mock(ChatSessionStateService.class);
         private final ChatSessionStateRepository chatSessionStateRepository = mock(ChatSessionStateRepository.class);
         private final RuntimeContextPromptService runtimeContextPromptService = mock(RuntimeContextPromptService.class);
+        private final TrustedMemoryRuntimeContextService trustedMemoryRuntimeContextService = mock(TrustedMemoryRuntimeContextService.class);
         private final AgentWorkflowRuntimeService agentWorkflowRuntimeService = mock(AgentWorkflowRuntimeService.class);
         private final AgentWorkflowVersionRepository agentWorkflowVersionRepository =
                 mock(AgentWorkflowVersionRepository.class);
@@ -901,6 +903,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     chatSessionStateService,
                     chatSessionStateRepository,
                     runtimeContextPromptService,
+                    trustedMemoryRuntimeContextService,
                     agentWorkflowRuntimeService,
                     agentWorkflowVersionRepository,
                     agentWorkflowExecutionLogService,

@@ -7,7 +7,7 @@ owner_role: shared
 task_ids: TASK-226
 related_decisions: FEAT-023,FEAT-024,FEAT-031,FEAT-103,FEAT-130
 related_issues: none
-updated_at: 2026-07-22T03:40:00Z
+updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
 ---
 
@@ -432,8 +432,15 @@ Agent Builder 中每个 Agent 应可查看其允许读取的 memory scopes、记
 - `docs/specs/FEAT-130-forced-skill-execution-context.md`：技能选择、上下文和 Trace 语义；
 - `/Volumes/AISpace/workbench/mydoc/0-解决方案资料/PRODUCT-002-followup-current-functional-requirements.md`：FollowUp 当前能力与未完成边界；它是首个参考接入方，不是 Agent CC 平台功能定义。
 
-## 20. 已授权实施与生命周期契约
+本规格是平台设计基线；Phase 1 已由 `TASK-226` 以独立任务卡和授权范围落地。进入后续阶段前仍须明确通用保留期限、人工审核责任、外部应用集成认证，以及至少两个独立适配方的验收计划。
 
+## 20. 实现进展
+
+- `TASK-226` 已完成 Phase 1 通用后端核心增量：新增 `memory_subject`、`memory_record` 和 `memory_conversation_snapshot` 的 V85 迁移、JPA 模型/仓储、`ExternalMemoryContextService` 与 `MemoryContextPromptAssembler`。
+- 首版可信上下文以 `orgId + applicationCode + subjectType + externalSubjectRef + conversationRef` 建模；读取路径不自动创建外部主体，按 `SUBJECT_SHARED`、`CONVERSATION`、`AGENT_PRIVATE` 和 `DOMAIN_NAMESPACE` 过滤当前有效的 `ACTIVE/VERIFIED` 记忆，并限制为最多 16 条。
+- 提示词组装器只接受已授权的 `MemoryContext`，并在严格字符预算内放入会话摘要和记忆项，不会以超限内容覆盖模型上下文。
+- 新建并在验证后删除的 PostgreSQL 16 临时库已从 V1 全量迁移至 V85，三张记忆表存在性断言通过；首版仍未连接外部应用入口、Chat 编排器、向量索引或自动候选写入，以避免在没有完整授权与审计契约时扩大运行面。
+- `TASK-227` 已完成 Phase 2 治理前置：V86 增加 `memory_candidate` 与 `memory_evidence`；候选以 `PENDING` 状态保存，只有显式审核通过才生成 `ACTIVE` 记忆，且重复审核会被拒绝。新建并删除的 PostgreSQL 16 临时库已从 V1 迁移至 V86 并验证五张通用记忆表；向量索引、治理 API、Chat 编排器和任何外部应用接入仍保持后续独立任务边界。
 - `TASK-226` 至 `TASK-230` 已分别落地通用关系型核心、候选审核、受控语义检索、可信运行时注入和凭据绑定；实现保持应用无关，所有外部应用属性均由服务端可信契约导出。
 - `TASK-231` 负责生命周期闭环：将 `memory_subject`、`memory_record`、`memory_conversation_snapshot`、`memory_candidate`、`memory_evidence`、`memory_vector_fragment` 和 API 凭据绑定纳入既有组织导出、dry-run manifest、real purge 与残留行校验。
 - `TASK-232` 的候选审核以候选写入时固化的 `agent_id` 作为权限归属，不能由 scope、请求参数或外部 metadata 推断。候选审核 API 必须同时校验组织、归属 Agent 和既有 Agent 权限。

@@ -49,6 +49,17 @@ class AgentEvaluationAssertionEngineTest {
         assertThat(outcome.failureSummary()).isEqualTo("断言配置无法解析");
     }
 
+    @Test
+    void shouldEvaluateRedactedMemoryContextStateWithoutMemoryContent() {
+        var outcome = engine.evaluate(evalCase("""
+                {"assertions":[{"type":"MEMORY_CONTEXT_STATE","expected":"NOT_INJECTED"}]}
+                """), "任意输出", "ok", List.of("memory-context:not-injected"),
+                Map.of("memoryContextState", "NOT_INJECTED"), 1L);
+
+        assertThat(outcome.passed()).isTrue();
+        assertThat(outcome.assertionResults().getFirst()).containsEntry("actual", "NOT_INJECTED");
+    }
+
     private AgentEvalCaseEntity evalCase(String assertionConfigJson) {
         return new AgentEvalCaseEntity(
                 "demo-org", "evaluation-test", 1L, "复合断言", "请给出建议",

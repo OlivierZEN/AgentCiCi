@@ -72,36 +72,36 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-228 - 通用记忆受控语义检索
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-228.md`
 - assignment_path: `.claw/assignments/TASK-228.yaml`
 - blocked_by: `none`
-- next_action: 仅建立已审核非敏感记忆的向量片段及关系库二次授权检索。
+- next_action: 已完成 V87 受控索引、脱敏、二次授权与审核成功后的最佳努力索引；运行时接入须以独立任务继续。
 
 ### TASK-227 - 通用记忆候选、证据与时效治理
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-227.md`
 - assignment_path: `.claw/assignments/TASK-227.yaml`
 - blocked_by: `none`
-- next_action: 从 TASK-226 的 Phase 1 可信上下文核心创建分支，落地候选、证据、审核与 TTL 权威模型；不得引入外部应用领域耦合。
+- next_action: 已完成 V86 候选/证据与审核转化核心；向量检索、治理 API 与 Chat 编排须使用独立任务继续。
 
 ### TASK-226 - 通用主体记忆 Phase 1 核心
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-226.md`
 - assignment_path: `.claw/assignments/TASK-226.yaml`
 - blocked_by: `none`
-- next_action: 完成通用主体/会话记忆核心、可信外部应用上下文和定向隔离验证；不得引入外部应用领域耦合。
+- next_action: 已完成 Phase 1 通用核心和全新库 V1→V85 迁移验证；Phase 2 须另行创建授权任务，保持外部应用领域解耦。
 
 ### TASK-225 - 对话技能选择的强制执行上下文与可观测性
 

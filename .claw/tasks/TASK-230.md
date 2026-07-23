@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-230
-status: ready
+status: in_progress
 updated_at: 2026-07-23T01:10:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -28,3 +28,10 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 - 同一外部主体标识在不同凭据绑定下无法互相读取；
 - 伪造应用、主体类型、身份等级或 scope 的客户端 metadata 不影响可信上下文；
 - 绑定缺失或禁用时不注入记忆且不影响现有 OpenAPI 调用。
+
+## Progress
+
+- 已新增 V88 凭据绑定表、绑定服务和 OpenAPI 阻塞/流式调用接入。可信上下文完全由已认证凭据及其绑定导出；绑定缺失、主体缺失或主体未注册均安全降级为无记忆。
+- 记忆 `CONVERSATION` scope 使用平台内部会话 ID，不复用外部主体标识；不同会话不会因同一主体而串读。外部运行时默认只读取 `NORMAL` 敏感级别，`INTERNAL` 与 `SENSITIVE` 不注入提示词。
+- 已提供与既有凭据权限一致的绑定读取、幂等配置和禁用 API；配置只允许受控的通用应用代码、主体类型、身份等级与命名空间，并写入脱敏审计日志。
+- 定向绑定、可信作用域、OpenAPI 会话回归、后端编译和 V1→V88 PostgreSQL 全量迁移通过；待完成跨绑定检索契约、生命周期与两个适配契约验收。

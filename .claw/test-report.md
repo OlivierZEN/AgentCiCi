@@ -10,6 +10,58 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-233 - 通用记忆人工管理与生产就绪审计
+
+- `backend-focused`：生命周期回归验证跨 Agent 主体删除拒绝、已归属记录撤销即脱敏、向量删除失败仍不可读取；候选审核持续将归属复制至记录。后端编译与 `git diff --check` 通过。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V90，并验证候选与已生效记录均存在 `agent_id` 归属列。
+
+## TASK-232 - 通用记忆审核 API 与质量门禁
+
+- `backend-focused`：候选审核、可信运行时 Trace、记忆 Flyway 与 `MEMORY_CONTEXT_STATE` 评测断言测试通过；V89 验证 `memory_candidate.agent_id` 存在，重复审核仍安全拒绝。
+- `backend-compile/static`：后端编译与 `git diff --check` 通过。
+- `adapter-contract`：`GenericExternalMemoryAdapterContractTest` 使用两份独立的通用凭据绑定验证应用、主体类型、命名空间和内部会话不串读；禁用绑定不进入可信记忆作用域。
+
+## TASK-231 - 通用记忆生命周期与组织清理闭环
+
+- `identity/assignment`：MANAGER-001 已通过 TASK-231 身份门禁与 memory/platform/迁移/测试/状态代表路径授权检查。
+- `backend-focused`：`mvn -q -Dtest=MemoryLifecycleServiceTest,MemorySemanticRetrievalServiceTest,ExternalMemoryContextServiceTest,AgentMemoryFlywayMigrationTest test` 通过。覆盖主体删除立即撤销并脱敏、向量删除失败仍不可读取、过期清理、legal hold 阻断及既有授权回读边界。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V88，并断言通用记忆与凭据绑定表存在。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
+- `platform-integration-baseline`：`mvn -q -Dtest=PlatformTenantLifecycleIntegrationTest test` 未进入用例：共享测试库已有 Flyway V81 checksum `2112500543` 与当前文件 `379982424` 不一致，Spring Context 启动即失败。该既有环境基线未被本任务改动；未修复历史迁移或执行 repair。
+
+## TASK-230 - 受认证凭据记忆上下文绑定
+
+- `backend-focused`：绑定测试锁定可信应用、主体类型、身份等级、命名空间和内部会话 ID 都来自服务端；客户端只能提供外部主体标识。空会话、绑定缺失或禁用均不进入记忆作用域；OpenAPI 阻塞/流式和可信作用域回归通过。
+- `binding-governance`：受控配置服务验证凭据必须属于当前组织及 Agent，应用代码、主体类型、身份等级和命名空间逐项校验且规范化；重复配置更新同一绑定，禁用保留审计链并令运行时安全降级。读取、配置和禁用 API 与既有 OPENAPI 权限边界一致。
+- `memory-isolation`：`ExternalMemoryContextServiceTest` 验证同主体不同应用、scope、时效和敏感级别的过滤；外部运行时只返回 `NORMAL` 记忆，`INTERNAL`/`SENSITIVE` 不会进入提示词。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V88，并断言凭据绑定表与六张通用记忆表存在。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
+
+## TASK-229 - 通用可信运行时记忆上下文
+
+- `backend-focused`：可信上下文只在显式作用域内、组织与最终 Agent 同时匹配时组装提示词；作用域关闭后不残留。Trace 元数据只记录注入/数量/截断状态。`ChatOrchestratorServiceModelIdentityTest` 与语义检索回归共同通过。
+- `backend-compile/static`：后端编译与 `git diff --check` 通过。
+
+## TASK-228 - 通用记忆受控语义检索
+
+- `backend-focused`：语义检索测试验证向量命中只有在关系库上下文已授权时才返回；未授权命中不会回读记录；邮件与令牌文本在 embedding 前脱敏，索引失败不向调用方传播。候选审核测试验证审核成功会触发最佳努力索引。定向测试与编译通过。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V87，并验证 `memory_vector_fragment`。
+
+## TASK-226 - 通用主体记忆 Phase 1 核心
+
+- `identity/assignment`：MANAGER-001 的 SSH challenge-response、任务分支 `codex/TASK-226-agent-memory-core` 和 memory/迁移/测试/状态代表路径经 `dev-login.py` 与 `check-assignment.py` 验证为 `allowed`。
+- `backend-focused`：`mvn -q -Dtest=ExternalMemoryContextServiceTest,AgentMemoryFlywayMigrationTest test` 通过；覆盖跨 `applicationCode` 主体隔离、`SUBJECT_SHARED`/`CONVERSATION`/`AGENT_PRIVATE`/`DOMAIN_NAMESPACE` scope 过滤、已过期记录排除、只读上下文不隐式创建外部主体，以及提示词预算边界。
+- `fresh-flyway`：使用仅由环境变量提供连接信息的新建 PostgreSQL 16 临时库，执行 `AGENT_MEMORY_MIGRATION_TEST_URL=... AGENT_MEMORY_MIGRATION_TEST_USERNAME=... AGENT_MEMORY_MIGRATION_TEST_PASSWORD=... mvn -q -Dtest=AgentMemoryFlywayMigrationTest test`；成功从 V1 迁移至 V85，并断言 `memory_subject`、`memory_record`、`memory_conversation_snapshot` 存在。验证后临时库已删除。为兼容既有 V81 非事务并发索引，测试显式关闭 PostgreSQL transactional lock，与项目集成测试配置一致。
+- `backend-compile`：`mvn -q -DskipTests compile` 通过。
+- `static`：通用核心、V85 和定向测试未出现外部应用或领域耦合标识；`git diff --check` 通过。尚未接入外部应用、Chat 编排器、向量索引或生产发布。
+
+## TASK-227 - 通用记忆候选、证据与时效治理
+
+- `identity/assignment`：MANAGER-001 的 TASK-227 身份门禁、任务分支与 memory/迁移/测试/状态代表路径通过 `dev-login.py` 和 `check-assignment.py`。
+- `backend-focused`：`mvn -q -Dtest=ExternalMemoryContextServiceTest,MemoryCandidateGovernanceServiceTest,AgentMemoryFlywayMigrationTest test` 通过；候选不能以可读取状态提交，显式审核才会创建 `ACTIVE` 记录，重复审核被拒绝。
+- `fresh-flyway`：新建且验证后删除的 PostgreSQL 16 临时库成功从 V1 全量迁移至 V86；断言主体、记录、会话快照、候选与证据五张通用记忆表存在。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 和 `git diff --check` 通过；未接入外部应用、自动长期写入、向量索引或生产发布。
+
 ## FEAT-131 - 通用外部应用智能体记忆平台（设计规格）
 
 - `identity`：`MANAGER-001` 的 SSH challenge-response、Git 身份和本次规格/状态/验证记录路径经技能包 `dev-login.py` 验证为 `allowed`。

@@ -160,6 +160,10 @@ public class AgentEvaluationAssertionEngine {
                 int actual = collectionSize(context.get("toolCalls"));
                 yield result(maximum >= 0 && actual <= maximum, maximum, actual, "工具调用次数超过上限");
             }
+            case "MEMORY_CONTEXT_STATE" -> {
+                String actual = string(context.get("memoryContextState"));
+                yield result(equalsText(actual, expectedText), expectedText, actual, "记忆上下文状态不符合预期");
+            }
             case "INVALID_ASSERTION_CONFIG" -> result(false, definition.expected(), "", "断言配置无法解析");
             default -> result(false, definition.type(), "", "不支持的断言类型");
         };

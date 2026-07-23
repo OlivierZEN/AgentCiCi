@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-226
-status: in_progress
-updated_at: 2026-07-22T03:40:00Z
+status: done
+updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -31,3 +31,10 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 - 相同外部主体标识在不同组织或不同 `applicationCode` 下严格隔离；
 - Agent 上下文只能读取已授权、未过期且 scope 匹配的最小必要记忆；
 - `mvn` 定向测试、编译和 `git diff --check` 通过；结果写入 test report。
+
+## Progress
+
+- 已新增 V85、通用主体/记忆记录/会话快照模型、仓储与 `ExternalMemoryContextService`；没有引入外部应用或领域命名。
+- 新增 `MemoryContextPromptAssembler`，仅将已经过授权过滤的会话摘要和记忆项在严格字符预算内组装为通用提示词片段；该类尚未接入任一外部应用入口或 Chat 编排器。
+- 定向测试覆盖不同 `applicationCode` 的主体隔离、scope 过滤、只读上下文不隐式创建主体，以及提示词预算小于标题时仍不越界。
+- 已通过定向 JUnit、后端编译和 `git diff --check`；在新建且验证后删除的 PostgreSQL 16 临时库上，从 V1 完整迁移至 V85 并断言三张记忆表存在。
