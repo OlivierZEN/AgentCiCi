@@ -10,6 +10,11 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-233 - 通用记忆人工管理与生产就绪审计
+
+- `backend-focused`：生命周期回归验证跨 Agent 主体删除拒绝、已归属记录撤销即脱敏、向量删除失败仍不可读取；候选审核持续将归属复制至记录。后端编译与 `git diff --check` 通过。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V90，并验证候选与已生效记录均存在 `agent_id` 归属列。
+
 ## TASK-232 - 通用记忆审核 API 与质量门禁
 
 - `backend-focused`：候选审核、可信运行时 Trace、记忆 Flyway 与 `MEMORY_CONTEXT_STATE` 评测断言测试通过；V89 验证 `memory_candidate.agent_id` 存在，重复审核仍安全拒绝。

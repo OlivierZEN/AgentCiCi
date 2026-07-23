@@ -24,6 +24,7 @@ public class MemoryCandidateGovernanceService {
         if (!"PENDING".equals(candidate.getStatus())) throw new IllegalStateException("memory candidate is not pending");
         candidate.review("APPROVED", reviewer, reason); candidates.save(candidate);
         MemoryRecordEntity record=records.save(new MemoryRecordEntity(orgId, candidate.getSubjectId(), candidate.getScope(), candidate.getScopeKey(), candidate.getMemoryType(), candidate.getContent(), "ACTIVE", candidate.getSensitivity(), candidate.getConfidence(), candidate.getValidFrom(), candidate.getValidTo(), candidate.getSourceType(), candidate.getSourceRefsJson()));
+        record.assignAgent(agentId); records.save(record);
         semanticRetrieval.index(record);
         audit.log(orgId, reviewer, "agent.memory.candidate.approve", "agent=" + agentId + ",candidateId=" + candidateId);
         return record;

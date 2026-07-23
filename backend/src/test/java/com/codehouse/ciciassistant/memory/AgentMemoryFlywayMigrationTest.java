@@ -53,9 +53,12 @@ class AgentMemoryFlywayMigrationTest {
         try (Connection connection = DriverManager.getConnection(jdbcUrl, username, password);
              ResultSet columns = connection.createStatement().executeQuery("""
                      SELECT column_name FROM information_schema.columns
-                     WHERE table_schema = 'public' AND table_name = 'memory_candidate' AND column_name = 'agent_id'
+                     WHERE table_schema = 'public' AND table_name IN ('memory_candidate', 'memory_record') AND column_name = 'agent_id'
+                     ORDER BY table_name
                      """)) {
-            assertThat(columns.next()).isTrue();
+            java.util.List<String> found = new java.util.ArrayList<>();
+            while (columns.next()) found.add(columns.getString(1));
+            assertThat(found).containsExactly("agent_id", "agent_id");
         }
     }
 }

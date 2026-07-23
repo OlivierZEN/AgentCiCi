@@ -46,7 +46,8 @@ class MemoryLifecycleServiceTest {
         when(policies.findById("org-a")).thenReturn(Optional.empty());
         MemoryLifecycleService service=service(subjects, records, candidates, snapshots, semantic, policies, audit);
 
-        var result=service.deleteSubject("org-a", "app-a", "EXTERNAL_USER", "subject-a", "actor-a", "right to erase");
+        record.assignAgent("agent-a");
+        var result=service.deleteSubject("org-a", "app-a", "EXTERNAL_USER", "subject-a", "agent-a", "actor-a", "right to erase");
 
         assertThat(result.records()).isEqualTo(1);
         assertThat(result.vectorFailures()).isEqualTo(1);
@@ -68,7 +69,7 @@ class MemoryLifecycleServiceTest {
         when(policies.findById("org-a")).thenReturn(Optional.of(held));
         MemoryLifecycleService service=service(subjects, records, candidates, snapshots, semantic, policies, mock(AuditService.class));
 
-        assertThatThrownBy(() -> service.deleteSubject("org-a", "app-a", "EXTERNAL_USER", "subject-a", "actor-a", "delete"))
+        assertThatThrownBy(() -> service.deleteSubject("org-a", "app-a", "EXTERNAL_USER", "subject-a", "agent-a", "actor-a", "delete"))
                 .isInstanceOf(IllegalStateException.class).hasMessageContaining("Legal hold");
         MemoryRecordEntity expired=record(8L, Instant.now().minusSeconds(30));
         when(records.findByStatusInAndValidToBefore(any(), any())).thenReturn(List.of(expired));
@@ -95,6 +96,29 @@ class MemoryLifecycleServiceTest {
         assertThat(result.vectorFailures()).isZero();
         assertThat(expired.getStatus()).isEqualTo("EXPIRED");
         verify(records).save(expired);
+    }
+
+    @Test void rejectsCrossAgentSubjectDeletionAndRevokesOnlyOwnedRecords() throws Exception {
+        MemoryRecordRepository records=mock(MemoryRecordRepository.class);
+        MemorySemanticRetrievalService semantic=mock(MemorySemanticRetrievalService.class);
+        MemoryRecordEntity owned=record(8L, Instant.now().plusSeconds(60)); owned.assignAgent("agent-a");
+        MemoryRecordEntity other=record(9L, Instant.now().plusSeconds(60)); other.assignAgent("agent-b");
+        MemorySubjectRepository subjects=mock(MemorySubjectRepository.class);
+        when(subjects.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef("org-a", "app-a", "EXTERNAL_USER", "subject-a"))
+                .thenReturn(Optional.of(subject(7L, "subject-a")));
+        when(records.findByOrgIdAndSubjectId("org-a", 7L)).thenReturn(List.of(owned, other));
+        OrganizationRetentionPolicyRepository policies=mock(OrganizationRetentionPolicyRepository.class);
+        when(policies.findById("org-a")).thenReturn(Optional.empty());
+        MemoryLifecycleService service=service(subjects, records, mock(MemoryCandidateRepository.class), mock(MemoryConversationSnapshotRepository.class), semantic, policies, mock(AuditService.class));
+
+        assertThatThrownBy(() -> service.deleteSubject("org-a", "app-a", "EXTERNAL_USER", "subject-a", "agent-a", "actor-a", "delete"))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("exclusively owned");
+        when(records.findByIdAndOrgIdAndAgentId(8L, "org-a", "agent-a")).thenReturn(Optional.of(owned));
+        when(semantic.remove(owned)).thenReturn(false);
+
+        assertThat(service.revokeRecord("org-a", "agent-a", 8L, "actor-a", "incorrect")).isFalse();
+        assertThat(owned.getStatus()).isEqualTo("REVOKED");
+        assertThat(owned.getContent()).isEqualTo("[deleted]");
     }
 
     private static MemoryLifecycleService service(MemorySubjectRepository subjects, MemoryRecordRepository records,

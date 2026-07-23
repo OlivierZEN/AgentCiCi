@@ -20,6 +20,9 @@ public class MemoryRecordEntity {
     @Column(name = "org_id", nullable = false, length = 64)
     private String orgId;
 
+    @Column(name = "agent_id", length = 64)
+    private String agentId;
+
     @Column(name = "subject_id", nullable = false)
     private Long subjectId;
 
@@ -88,6 +91,7 @@ public class MemoryRecordEntity {
 
     public Long getId() { return id; }
     public String getOrgId() { return orgId; }
+    public String getAgentId() { return agentId; }
     public Long getSubjectId() { return subjectId; }
     public String getScope() { return scope; }
     public String getScopeKey() { return scopeKey; }
@@ -101,5 +105,6 @@ public class MemoryRecordEntity {
     public String getSourceType() { return sourceType; }
     public String getSourceRefsJson() { return sourceRefsJson; }
     public void markExpired() { this.status = "EXPIRED"; this.updatedAt = Instant.now(); }
+    public void assignAgent(String agentId) { this.agentId = agentId == null || agentId.isBlank() ? null : agentId.trim(); this.updatedAt = Instant.now(); }
     public void revokeAndRedact() { this.status = "REVOKED"; this.content = "[deleted]"; this.sourceRefsJson = "[]"; this.updatedAt = Instant.now(); }
 }

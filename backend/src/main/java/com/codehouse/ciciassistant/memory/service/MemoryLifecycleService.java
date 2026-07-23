@@ -37,14 +37,17 @@ public class MemoryLifecycleService {
 
     @Transactional
     public DeletionResult deleteSubject(String orgId, String applicationCode, String subjectType,
-                                        String externalSubjectRef, String actorUserId, String reason) {
+                                        String externalSubjectRef, String agentId, String actorUserId, String reason) {
         requireDeletionAllowed(orgId);
         MemorySubjectEntity subject=subjects.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef(
                         required(orgId, "orgId"), required(applicationCode, "applicationCode"),
                         required(subjectType, "subjectType"), required(externalSubjectRef, "externalSubjectRef"))
                 .orElseThrow(() -> new IllegalArgumentException("Memory subject not found"));
-        int vectorFailures=0;
         List<MemoryRecordEntity> subjectRecords=records.findByOrgIdAndSubjectId(orgId, subject.getId());
+        if (subjectRecords.stream().anyMatch(record -> !agentId.equals(record.getAgentId()))) {
+            throw new IllegalArgumentException("Memory subject is not exclusively owned by the target agent");
+        }
+        int vectorFailures=0;
         for (MemoryRecordEntity record:subjectRecords) {
             if (!semantic.remove(record)) vectorFailures++;
             record.revokeAndRedact();
@@ -60,6 +63,17 @@ public class MemoryLifecycleService {
                         + ",candidates=" + subjectCandidates.size() + ",snapshots=" + removedSnapshots
                         + ",vectorFailures=" + vectorFailures + ",reason=" + safeReason(reason));
         return new DeletionResult(subjectRecords.size(), subjectCandidates.size(), removedSnapshots, vectorFailures);
+    }
+
+    @Transactional
+    public boolean revokeRecord(String orgId, String agentId, Long recordId, String actorUserId, String reason) {
+        requireDeletionAllowed(orgId);
+        MemoryRecordEntity record=records.findByIdAndOrgIdAndAgentId(recordId, orgId, agentId)
+                .orElseThrow(() -> new IllegalArgumentException("Memory record not found"));
+        if (!READABLE_STATUSES.contains(record.getStatus())) throw new IllegalStateException("Memory record is not readable");
+        boolean vectorRemoved=semantic.remove(record); record.revokeAndRedact(); records.save(record);
+        audit.log(orgId, actorUserId, "agent.memory.record.revoke", "agent=" + agentId + ",recordId=" + recordId + ",vectorRemoved=" + vectorRemoved + ",reason=" + safeReason(reason));
+        return vectorRemoved;
     }
 
     @Scheduled(fixedDelayString = "${app.memory.expiry-worker-delay-ms:3600000}", initialDelayString = "${app.memory.expiry-worker-initial-delay-ms:120000}")
