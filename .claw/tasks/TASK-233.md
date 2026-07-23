@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-233
-status: ready
+status: in_progress
 updated_at: 2026-07-23T10:30:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -32,3 +32,4 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 
 - V90 为已生效记忆增加归属 `agent_id`；候选审核生成记录时固化此归属。管理 API 只返回最小记录视图，并提供按 Agent 撤销和按应用主体删除入口。
 - 主体删除前验证主体的全部记录均归属目标 Agent；跨 Agent 主体删除被拒绝。撤销或删除始终调用派生向量清理并立即撤销/脱敏关系型记录。
+- 生产审计中的全新数据库组织 purge 回归发现附属证据表不应被假定具有直接 `org_id` 过滤键；正在以实际租户键关系补齐 dry-run、导出和删除闭环。

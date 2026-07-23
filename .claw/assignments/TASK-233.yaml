@@ -12,9 +12,11 @@ scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/memory/**
   - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/java/com/codehouse/ciciassistant/platform/**
   - backend/src/main/resources/db/migration/**
   - backend/src/test/java/com/codehouse/ciciassistant/memory/**
   - backend/src/test/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/test/java/com/codehouse/ciciassistant/platform/**
   - docs/specs/**
   - .claw/tasks/**
   - .claw/assignments/**
@@ -35,6 +37,7 @@ task_boundary:
   - "已生效记忆的管理操作必须验证组织、Agent 与现有权限，且不能通过请求参数扩大主体或应用范围。"
   - "法律保留生效时删除与撤销安全拒绝；审计中不得写入正文、外部主体标识或原始向量。"
   - "生产就绪审计必须如实陈述验证范围和环境限制，不执行生产发布。"
+  - "组织 purge、导出和 dry-run 必须按表的实际租户键清理通用记忆附属数据，不能假定所有关联表都以 org_id 直接过滤。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true

@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-233 - 通用记忆人工管理与生产就绪审计
 
-- status: `ready`
+- status: `in_progress`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-233.md`
 - assignment_path: `.claw/assignments/TASK-233.yaml`
 - blocked_by: `none`
-- next_action: 为已生效记忆和主体删除提供受 Agent 权限保护的管理 API，并完成生产就绪证据审计。
+- next_action: 修复全新数据库组织 purge 对通用记忆附属表的实际租户键处理，并完成生产就绪证据审计。
 
 ### TASK-232 - 通用记忆审核 API 与质量门禁
 
