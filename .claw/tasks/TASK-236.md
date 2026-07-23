@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-236
-status: review
+status: done
 updated_at: 2026-07-23T05:15:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -44,6 +44,6 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - 灰度命中时禁用工具 Schema、确认续执行和 CRM 快捷路径；初始化或状态更新失败保留既有聊天路径，并以最小 `fallbackReason` 投影运行事实。
 - 单元回归和全新 PostgreSQL 集成验证均通过；临时库已删除。
 
-## Next action
+## Handoff
 
-- 进行 P2 代码复核；通过后以独立任务实现 P3 规则优先的模式路由器，不改变 P2 的默认关闭和无工具边界。
+- 已在 `main` 集成并推送 `cbf9728`。后续 TASK-237 仅增加服务端规则路由；不得放宽 P2 默认关闭、精确白名单和无工具边界。

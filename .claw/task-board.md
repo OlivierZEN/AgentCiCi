@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T05:15:00Z
+updated_at: 2026-07-23T05:30:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-237 - 混合智能体运行时 P3：规则优先模式路由
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
+- task_status_path: `.claw/tasks/TASK-237.md`
+- assignment_path: `.claw/assignments/TASK-237.yaml`
+- blocked_by: `none`
+- next_action: 在 P2 的默认关闭、精确白名单和无工具计划边界之上实现规则优先模式路由；双开关未命中必须保持旧链路。
+
 ### TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-236.md`
 - assignment_path: `.claw/assignments/TASK-236.yaml`
 - blocked_by: `none`
-- next_action: 复核默认关闭的两步只读 Plan-Exec 灰度；通过后以独立任务实现 P3 模式路由，不开放工具或 UI。
+- next_action: 已集成 `cbf9728`；后续由 TASK-237 增加服务端规则路由，不改变 P2 无工具边界。
 
 ### TASK-235 - 混合智能体运行时 P1：计划状态机基础
 

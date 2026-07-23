@@ -4,10 +4,10 @@ feature_id: FEAT-133
 title: 可执行计划、动态路由与受控反思的混合智能体运行时
 status: in_progress
 owner_role: project-manager
-task_ids: TASK-235,TASK-236
+task_ids: TASK-235,TASK-236,TASK-237
 related_decisions: DEC-006,DEC-010,DEC-018,DEC-027
 related_issues: none
-updated_at: 2026-07-23T05:15:00Z
+updated_at: 2026-07-23T05:30:00Z
 updated_by: MANAGER-001
 ---
 
@@ -309,6 +309,14 @@ P1 不得提前实现自由多 Agent、并行步骤、可编辑画布或任意�
 - 任一配置关闭、计划解析/校验失败、运行时不受支持或执行器失败时，不得产生新工具副作用；回退到原有聊天路径，记录脱敏的回退原因与 `runId`。已进入既有人工确认流程的任务不重新计划。
 - P2 不实现通用模式选择、重规划、并行、Reflect、管理 UI 或生产放量；模式推断与审查分别留给 P3/P4，页面留给 P5。
 
+### 13.2 P3 实施契约：规则优先模式路由
+
+- 服务端仅以 `app.agent-runtime.mode-router` 作为 P3 总开关；默认 `enabled=false`，`allowed-agent-ids` 默认空，且必须精确匹配。关闭、白名单不命中、特征解析异常或策略无效时返回 `LEGACY_REACT`，继续既有路径，绝不创建 Plan-Exec 运行。
+- 路由只消费已授权 Agent、有效工具/知识上下文、可信 channel、会话确认状态和请求的结构化特征；客户端、提示词和 OpenAPI 调用方不能指定模式。P3 只实现确定性规则，模型建议保留为未来受限输入，不能改变本阶段结果。
+- 求值顺序固定为：既有确认续执行保留原路径；无工具且无外部事实需求为 `DIRECT`；独立只读查询为 `REACT`；显式顺序/依赖、多源、中间产物、跨步骤核验或超过 ReAct 预算为 `PLAN_EXEC`。写入或敏感意图仅标记 `requiresConfirmation` 与风险，不能执行或放大权限。
+- 输出为稳定的模式、原因码、风险、预算和 `reflectRequired` 布尔值；P3 仅计算审查需求，不调用 reviewer、不重规划、不新增工具、写入、确认机制、管理 UI 或生产放量。
+- `PLAN_EXEC` 只有 P2 灰度与 P3 路由两个服务端开关及精确 Agent 白名单都命中时才进入 P2 的无工具固定计划；其他模式保持既有兼容响应和审计边界。
+
 ## 14. 验收标准
 
 ### 14.1 P1：计划执行真实性
@@ -368,7 +376,7 @@ agent-runtime.resume.enabled
 ## 16. 实现进展与交接
 
 - 当前状态：TASK-235 已经复核并集成至 `main`（`fcc2200`）。V91 新增任务运行、计划、步骤与事件四类组织隔离事实；`AgentTaskRuntimeService` 提供严格计划 Schema 校验、依赖推进、乐观锁、租约与失效恢复。
-- TASK-236 已完成 P2 实现并进入 review：`AgentPlanExecCanaryService` 仅为服务端精确白名单创建固定 `RETRIEVE → SYNTHESIZE` 计划；Web、流式和 OpenAPI 共享该运行事实。默认关闭，启用时常规工具、确认续执行和 CRM 快捷路径均被禁用；未命中或初始化失败安全保留既有链路并记录最小回退原因。
+- TASK-236 已完成 P2 实现并集成至 `main`（`cbf9728`）：`AgentPlanExecCanaryService` 仅为服务端精确白名单创建固定 `RETRIEVE → SYNTHESIZE` 计划；Web、流式和 OpenAPI 共享该运行事实。默认关闭，启用时常规工具、确认续执行和 CRM 快捷路径均被禁用；未命中或初始化失败安全保留既有链路并记录最小回退原因。
 - P2 验证：默认关闭/精确白名单、固定计划推进、工具步骤不存在、Web 既有回归、后端编译均通过；新建后删除的 PostgreSQL 16 库从 V1 迁移至 V91，并通过 4 个状态机/灰度集成用例。共享测试库的既有 V81 checksum 漂移未修改。
 - 验证证据：后端编译、diff 检查通过；新建后删除的 PostgreSQL 16 临时库从空库全量迁移至 V91，并通过 3 个运行时集成用例。默认共享测试库仍因既有 V81 checksum 漂移无法启动，未 repair、未改写历史迁移。
 - 实施前先读取：`docs/specs/FEAT-004-agent-flow-compile-triggers-and-executions.md`、`docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`、`docs/specs/FEAT-122-runtime-execution-trace-correction.md`、`docs/specs/FEAT-130-forced-skill-execution-context.md`、`docs/specs/FEAT-131-agent-memory-platform.md`。
