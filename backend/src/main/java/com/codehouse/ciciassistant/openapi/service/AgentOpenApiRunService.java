@@ -258,7 +258,7 @@ public class AgentOpenApiRunService {
             chatOrchestratorService.chatStreamBlocking(
                     execution.auth().credential().getOrgId(), execution.auth().credential().getRunAsUserId(),
                     execution.session().internalSessionId(), command.message().trim(), command.knowledgeBaseIds(),
-                    execution.auth().credential().getAgentId(), command.activeSkillCode(), emitter);
+                    execution.auth().credential().getAgentId(), command.activeSkillCode(), Map.of(), "openapi", emitter);
             return null;
         });
     }
@@ -326,7 +326,8 @@ public class AgentOpenApiRunService {
         return memoryContextService.withTrustedContext(auth, externalUserId(command.externalUser()), session.internalSessionId(), () ->
                 chatOrchestratorService.chat(
                         auth.credential().getOrgId(), auth.credential().getRunAsUserId(), session.internalSessionId(),
-                        command.message().trim(), command.knowledgeBaseIds(), auth.credential().getAgentId(), command.activeSkillCode()));
+                        command.message().trim(), command.knowledgeBaseIds(), auth.credential().getAgentId(), command.activeSkillCode(),
+                        Map.of(), "openapi"));
     }
 
     private long normalizedTimeoutMs() {
@@ -385,6 +386,8 @@ public class AgentOpenApiRunService {
         runtime.put("boundSkillCodes", listValue(chatPayload.get("resolvedSkills")));
         runtime.put("toolCallCount", trace == null ? 0 : trace.getToolCallCount());
         runtime.put("ragContextCount", trace == null ? listValue(chatPayload.get("ragContext")).size() : trace.getRagContextCount());
+        Map<String, Object> taskRun = mapValue(mapValue(chatPayload.get("runtimeExecution")).get("taskRun"));
+        if (!taskRun.isEmpty()) runtime.put("taskRun", taskRun);
         return runtime;
     }
 

@@ -70,6 +70,11 @@ app:
     cors-allowed-origins: ["*"]
     cors-allowed-origin-patterns: []
     cors-max-age-seconds: 3600
+  agent-runtime:
+    plan-exec:
+      # P2 canary is server-owned and disabled until an exact test Agent is allowlisted.
+      enabled: false
+      allowed-agent-ids: []
   kb:
     indexing:
       mode: local

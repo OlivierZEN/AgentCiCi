@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T04:35:00Z
+updated_at: 2026-07-23T05:15:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T04:35:00Z
+last_run_at: 2026-07-23T05:15:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
+
+- `identity/assignment`：TASK-236 的任务级 SSH 身份门禁与代表性实现、迁移状态、测试和治理文件范围检查均返回 `allowed`。
+- `backend-focused`：`AgentPlanExecCanaryServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 合计 44 项通过。覆盖默认关闭不创建运行、精确 Agent 匹配、固定 `RETRIEVE → SYNTHESIZE` 无工具计划、既有 Web 聊天回归。
+- `fresh-postgresql-integration`：新建后删除的 PostgreSQL 16 临时库完整迁移 V1→V91；`AgentTaskRuntimeIntegrationTest` 4/4 通过，新增用例确认 P2 canary 的两步任务均成功、运行终态为 `SUCCEEDED` 且存在真实事件。
+- `backend-compile/static`：`mvn -q -DskipTests test-compile`、`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
+- `environment-limit`：默认共享 `agentcici_test` 仍在应用初始化前因既有 Flyway V81 checksum 漂移失败（数据库 `2112500543`，本地 `379982424`）；本任务未修改历史迁移或执行 repair，隔离库验证不等同于全量套件通过。
 
 ## TASK-235 - 混合智能体运行时 P1：计划状态机基础
 

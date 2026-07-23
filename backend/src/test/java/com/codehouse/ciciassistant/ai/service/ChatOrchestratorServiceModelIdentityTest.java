@@ -14,6 +14,7 @@ import static org.mockito.Mockito.when;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
+import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
@@ -804,6 +805,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                 mock(AgentWorkflowExecutionLogService.class);
         private final AgentRunTraceService agentRunTraceService = mock(AgentRunTraceService.class);
         private final AgentAccessControlService agentAccessControlService = mock(AgentAccessControlService.class);
+        private final AgentPlanExecCanaryService agentPlanExecCanaryService = mock(AgentPlanExecCanaryService.class);
         private final BillingUsageMeteringService billingUsageMeteringService = mock(BillingUsageMeteringService.class);
         private final SafetyGatewayService safetyGatewayService = mock(SafetyGatewayService.class);
         private final PlatformTransactionManager transactionManager = mock(PlatformTransactionManager.class);
@@ -875,6 +877,8 @@ class ChatOrchestratorServiceModelIdentityTest {
             when(chatSessionRepository.findById(anyString())).thenReturn(Optional.empty());
             when(agentWorkflowRuntimeService.evaluateForChat(anyString(), anyString(), anyString(), anyList()))
                     .thenReturn(executionResult);
+            when(agentPlanExecCanaryService.start(anyString(), anyString(), anyString(), anyString(), anyString(), anyString()))
+                    .thenReturn(AgentPlanExecCanaryService.CanaryExecution.notSelected());
             when(transactionManager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
             when(safetyGatewayService.checkInput(anyString(), anyString(), anyString(), anyString()))
                     .thenAnswer(invocation -> new SafetyGatewayService.SafetyDecision(
@@ -913,6 +917,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     formatter,
                     safetyGatewayService,
                     new AgentRuntimeConcurrencyService(),
+                    agentPlanExecCanaryService,
                     directExecutor,
                     transactionManager);
         }

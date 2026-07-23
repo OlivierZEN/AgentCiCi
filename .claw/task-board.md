@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T04:50:00Z
+updated_at: 2026-07-23T05:15:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
 
-- status: `ready`
+- status: `review`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-236.md`
 - assignment_path: `.claw/assignments/TASK-236.yaml`
 - blocked_by: `none`
-- next_action: 在专用分支实现默认关闭、精确 Agent 白名单的 Web/OpenAPI Plan-Exec 灰度；不引入写工具、模式路由或 UI。
+- next_action: 复核默认关闭的两步只读 Plan-Exec 灰度；通过后以独立任务实现 P3 模式路由，不开放工具或 UI。
 
 ### TASK-235 - 混合智能体运行时 P1：计划状态机基础
 

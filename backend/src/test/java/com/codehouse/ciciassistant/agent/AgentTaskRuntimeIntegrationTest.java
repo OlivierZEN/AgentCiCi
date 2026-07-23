@@ -4,9 +4,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import com.codehouse.ciciassistant.agent.service.AgentTaskRuntimeService;
+import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
+import com.codehouse.ciciassistant.agent.config.AgentRuntimePlanExecProperties;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 class AgentTaskRuntimeIntegrationTest {
 
     @Autowired private AgentTaskRuntimeService runtimeService;
+    @Autowired private AgentPlanExecCanaryService canaryService;
+    @Autowired private AgentRuntimePlanExecProperties canaryProperties;
 
     @Test
     void shouldPersistAndAdvanceDependentPlanSteps() {
@@ -85,5 +91,31 @@ class AgentTaskRuntimeIntegrationTest {
         AgentTaskRuntimeService.ClaimedStep reclaimed = runtimeService.claimNextReadyStep("demo-org", run.id(), "executor-b", 30).orElseThrow();
         assertEquals(claimed.step().id(), reclaimed.step().id());
         assertEquals(2, reclaimed.step().attemptNo());
+    }
+
+    @Test
+    void shouldPersistFixedCanaryPlanToSuccessfulTerminalState() {
+        canaryProperties.setEnabled(true);
+        canaryProperties.setAllowedAgentIds(List.of("canary-agent"));
+        try {
+            AgentPlanExecCanaryService.CanaryExecution execution = canaryService.start(
+                    "demo-org", "canary-session", "canary-agent", "openapi", "整理只读资料", "test-executor");
+            assertThat(execution.active()).isTrue();
+            canaryService.completeRetrieve(execution, "knowledge_context_count=1");
+            assertThat(execution.step().kind()).isEqualTo("SYNTHESIZE");
+            canaryService.completeSynthesis(execution, "已完成只读总结");
+
+            AgentTaskRuntimeService.RunSnapshot snapshot = runtimeService.snapshot("demo-org", execution.runId());
+            assertThat(snapshot.run().status()).isEqualTo("SUCCEEDED");
+            assertThat(snapshot.steps()).extracting(AgentTaskRuntimeService.StepView::kind)
+                    .containsExactly("RETRIEVE", "SYNTHESIZE");
+            assertThat(snapshot.steps()).extracting(AgentTaskRuntimeService.StepView::status)
+                    .containsExactly("SUCCEEDED", "SUCCEEDED");
+            assertThat(snapshot.events()).extracting(AgentTaskRuntimeService.EventView::type)
+                    .contains("RUN_CREATED", "PLAN_VALIDATED", "STEP_SUCCEEDED", "RUN_SUCCEEDED");
+        } finally {
+            canaryProperties.setEnabled(false);
+            canaryProperties.setAllowedAgentIds(List.of());
+        }
     }
 }

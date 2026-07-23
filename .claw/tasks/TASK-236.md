@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-236
-status: in_progress
-updated_at: 2026-07-23T05:00:00Z
+status: review
+updated_at: 2026-07-23T05:15:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -37,6 +37,13 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - 命中白名单时固定执行 `RETRIEVE → SYNTHESIZE` 两步：前者封装既有 RAG 决策和脱敏摘要，后者封装既有模型回复。
 - 灰度运行向模型传入空工具定义；任何工具（含只读）留待 P3 的路由与显式工具政策后再开放，因此 P2 不可能产生新写副作用。
 
+## Implementation result
+
+- 新增 `app.agent-runtime.plan-exec.enabled` 与精确 `allowed-agent-ids` 服务端配置，默认关闭且不接受客户端模式选择。
+- `AgentPlanExecCanaryService` 将既有 RAG/生成工作映射到持久化的 `RETRIEVE → SYNTHESIZE` 两步计划；Web、流式与 OpenAPI 分别传入可信 `web`/`openapi` channel。
+- 灰度命中时禁用工具 Schema、确认续执行和 CRM 快捷路径；初始化或状态更新失败保留既有聊天路径，并以最小 `fallbackReason` 投影运行事实。
+- 单元回归和全新 PostgreSQL 集成验证均通过；临时库已删除。
+
 ## Next action
 
-- 建立默认关闭的配置和共享 canary 适配层，再接入 Web 与 OpenAPI 路径并补定向回归。
+- 进行 P2 代码复核；通过后以独立任务实现 P3 规则优先的模式路由器，不改变 P2 的默认关闭和无工具边界。

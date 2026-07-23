@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.ai.service;
 import com.codehouse.ciciassistant.agent.domain.AgentPermission;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
+import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionEntity;
@@ -120,6 +121,7 @@ public class ChatOrchestratorService {
     private final AgentRunTraceService agentRunTraceService;
     private final AgentAccessControlService agentAccessControlService;
     private final AgentRuntimeConcurrencyService agentRuntimeConcurrencyService;
+    private final AgentPlanExecCanaryService agentPlanExecCanaryService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter;
     private final SafetyGatewayService safetyGatewayService;
@@ -155,6 +157,7 @@ public class ChatOrchestratorService {
                                    CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter,
                                    SafetyGatewayService safetyGatewayService,
                                    AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
+                                   AgentPlanExecCanaryService agentPlanExecCanaryService,
                                    @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor,
                                    PlatformTransactionManager transactionManager) {
         this.chatSessionRepository = chatSessionRepository;
@@ -186,6 +189,7 @@ public class ChatOrchestratorService {
         this.crmProductSalesAnswerFormatter = crmProductSalesAnswerFormatter;
         this.safetyGatewayService = safetyGatewayService;
         this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
+        this.agentPlanExecCanaryService = agentPlanExecCanaryService;
         this.agentRuntimeExecutor = agentRuntimeExecutor;
         this.tx = new TransactionTemplate(transactionManager);
     }
@@ -199,10 +203,16 @@ public class ChatOrchestratorService {
     public Map<String, Object> chat(String orgId, String userId, String sessionId,
                                      String question, List<String> kbIds, String requestedAgentId,
                                      String activeSkillCode, Map<String, String> metadataFilters) {
+        return chat(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode, metadataFilters, "web");
+    }
+
+    public Map<String, Object> chat(String orgId, String userId, String sessionId,
+                                     String question, List<String> kbIds, String requestedAgentId,
+                                     String activeSkillCode, Map<String, String> metadataFilters, String channel) {
         String runId = newRunId();
         return agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId,
                 () -> chatLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
-                        activeSkillCode, metadataFilters, runId));
+                        activeSkillCode, metadataFilters, runId, channel));
     }
 
     /**
@@ -379,7 +389,7 @@ public class ChatOrchestratorService {
     private Map<String, Object> chatLocked(String orgId, String userId, String sessionId,
                                            String question, List<String> kbIds, String requestedAgentId,
                                            String activeSkillCode, Map<String, String> metadataFilters,
-                                           String runId) {
+                                           String runId, String channel) {
         Instant runStartedAt = Instant.now();
         List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
         List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -406,6 +416,8 @@ public class ChatOrchestratorService {
         persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                 clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
+        AgentPlanExecCanaryService.CanaryExecution planExec = agentPlanExecCanaryService.start(
+                orgId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-" + runId);
 
         Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
         String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
@@ -431,9 +443,15 @@ public class ChatOrchestratorService {
                         ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                         : "本轮输入未满足知识库检索条件。",
                 withRunId(ragDetailMetadata(ragResult, knowledgeDecision), runId)));
+        try {
+            agentPlanExecCanaryService.completeRetrieve(planExec,
+                    useKnowledgeRetrieval ? "knowledge_context_count=" + ragResult.context().size() : "knowledge_retrieval_skipped");
+        } catch (RuntimeException ex) {
+            agentPlanExecCanaryService.fail(planExec, "RETRIEVE_STATE_UPDATE_FAILED");
+        }
         List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
         Instant toolSchemaStartedAt = Instant.now();
-        List<Map<String, Object>> tools = isWecomKfSession(sessionId)
+        List<Map<String, Object>> tools = planExec.active() || isWecomKfSession(sessionId)
                 ? List.of()
                 : toolOrchestratorService.getToolDefinitions(
                 orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
@@ -449,15 +467,22 @@ public class ChatOrchestratorService {
         stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                 "已按可信运行时上下文完成记忆装配。",
                 withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
-        appendConfirmedPendingEmailBodyToolResult(
-                messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
-        Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
+        if (!planExec.active()) {
+            appendConfirmedPendingEmailBodyToolResult(
+                    messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
+        }
+        Optional<String> forcedCrmProductSalesAnswer = planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
         int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
         String answer = forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
                 modelName, messages, tools, orgId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)));
+        try {
+            agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(answer, 1024));
+        } catch (RuntimeException ex) {
+            agentPlanExecCanaryService.fail(planExec, "SYNTHESIS_STATE_UPDATE_FAILED");
+        }
         Instant wfStartedAt = Instant.now();
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
@@ -537,15 +562,16 @@ public class ChatOrchestratorService {
                         ? ""
                         : skillContext.policyBundle().versionNo().toString()
         ));
-        payload.put("runtimeExecution", Map.of(
-                "status", executionResult.executionStatus(),
-                "output", executionResult.executionOutput(),
-                "publishedVersionId", executionResult.publishedVersionId() == null ? "" : executionResult.publishedVersionId().toString(),
-                "resolvedSkillVersions", executionResult.resolvedSkillVersions(),
-                "policyBundle", executionResult.policyBundle(),
-                "trace", executionResult.executionTrace(),
-                "contextSnapshot", executionResult.contextSnapshot()
-        ));
+        Map<String, Object> runtimeExecutionPayload = new LinkedHashMap<>();
+        runtimeExecutionPayload.put("status", executionResult.executionStatus());
+        runtimeExecutionPayload.put("output", executionResult.executionOutput());
+        runtimeExecutionPayload.put("publishedVersionId", executionResult.publishedVersionId() == null ? "" : executionResult.publishedVersionId().toString());
+        runtimeExecutionPayload.put("resolvedSkillVersions", executionResult.resolvedSkillVersions());
+        runtimeExecutionPayload.put("policyBundle", executionResult.policyBundle());
+        runtimeExecutionPayload.put("trace", executionResult.executionTrace());
+        runtimeExecutionPayload.put("contextSnapshot", executionResult.contextSnapshot());
+        if (planExec.selected()) runtimeExecutionPayload.put("taskRun", agentPlanExecCanaryService.payload(planExec));
+        payload.put("runtimeExecution", runtimeExecutionPayload);
         payload.put("runtimeGovernance", Map.of(
                 "resolvedSkillVersions", executionResult.resolvedSkillVersions(),
                 "policyBundle", executionResult.policyBundle()
@@ -578,10 +604,17 @@ public class ChatOrchestratorService {
     public void chatStreamBlocking(String orgId, String userId, String sessionId,
                                    String question, List<String> kbIds, String requestedAgentId,
                                    String activeSkillCode, Map<String, String> metadataFilters, SseEmitter emitter) {
+        chatStreamBlocking(orgId, userId, sessionId, question, kbIds, requestedAgentId, activeSkillCode,
+                metadataFilters, "web", emitter);
+    }
+
+    public void chatStreamBlocking(String orgId, String userId, String sessionId,
+                                   String question, List<String> kbIds, String requestedAgentId,
+                                   String activeSkillCode, Map<String, String> metadataFilters, String channel, SseEmitter emitter) {
         String runId = newRunId();
         agentRuntimeConcurrencyService.run(orgId, userId, requestedAgentId, sessionId, () -> {
             chatStreamBlockingLocked(orgId, userId, sessionId, question, kbIds, requestedAgentId,
-                    activeSkillCode, metadataFilters, emitter, runId);
+                    activeSkillCode, metadataFilters, channel, emitter, runId);
             return null;
         });
     }
@@ -589,7 +622,7 @@ public class ChatOrchestratorService {
     private void chatStreamBlockingLocked(String orgId, String userId, String sessionId,
                                           String question, List<String> kbIds, String requestedAgentId,
                                           String activeSkillCode, Map<String, String> metadataFilters,
-                                          SseEmitter emitter, String runId) {
+                                          String channel, SseEmitter emitter, String runId) {
             Instant runStartedAt = Instant.now();
             List<AgentRunTraceService.StageTraceInput> stageTraces = new ArrayList<>();
             List<AgentRunTraceService.ModelCallTraceInput> modelCallTraces = new ArrayList<>();
@@ -624,6 +657,11 @@ public class ChatOrchestratorService {
                 persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                         clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
+                AgentPlanExecCanaryService.CanaryExecution planExec = agentPlanExecCanaryService.start(
+                        orgId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-stream-" + runId);
+                if (planExec.selected()) {
+                    safeSendPhase(emitter, "runtime_started", null, agentPlanExecCanaryService.payload(planExec));
+                }
 
                 Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
                 String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
@@ -659,6 +697,13 @@ public class ChatOrchestratorService {
                                 ? "知识库检索完成，命中 " + ragResult.context().size() + " 个片段。"
                                 : "本轮输入未满足知识库检索条件。",
                         withRunId(ragDetailMetadata(ragResult, knowledgeDecision), runId)));
+                try {
+                    agentPlanExecCanaryService.completeRetrieve(planExec,
+                            useKnowledgeRetrieval ? "knowledge_context_count=" + ragResult.context().size() : "knowledge_retrieval_skipped");
+                    if (planExec.active()) safeSendPhase(emitter, "step_completed", null, agentPlanExecCanaryService.payload(planExec));
+                } catch (RuntimeException ex) {
+                    agentPlanExecCanaryService.fail(planExec, "RETRIEVE_STATE_UPDATE_FAILED");
+                }
                 List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
                 if (useKnowledgeRetrieval) {
                     safeSendPhase(emitter, "rag_done", modelName, ragPhasePayload(ragResult));
@@ -671,7 +716,7 @@ public class ChatOrchestratorService {
                             ragResult.fallbackUsed());
                 }
                 Instant toolSchemaStartedAt = Instant.now();
-                List<Map<String, Object>> tools = isWecomKfSession(sessionId)
+                List<Map<String, Object>> tools = planExec.active() || isWecomKfSession(sessionId)
                         ? List.of()
                         : toolOrchestratorService.getToolDefinitions(
                         orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
@@ -686,9 +731,11 @@ public class ChatOrchestratorService {
                 stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                         "已按可信运行时上下文完成记忆装配。",
                         withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
-                appendConfirmedPendingEmailBodyToolResult(
-                        messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
-                Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
+                if (!planExec.active()) {
+                    appendConfirmedPendingEmailBodyToolResult(
+                            messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
+                }
+                Optional<String> forcedCrmProductSalesAnswer = planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                         messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
                 int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
@@ -785,6 +832,12 @@ public class ChatOrchestratorService {
                     }
                 }
                 finalText = applyOutputGateway(orgId, userId, "MODEL_STREAM_OUTPUT", finalText);
+                try {
+                    agentPlanExecCanaryService.completeSynthesis(planExec, clipForTrace(finalText, 1024));
+                    if (planExec.selected()) safeSendPhase(emitter, "runtime_completed", null, agentPlanExecCanaryService.payload(planExec));
+                } catch (RuntimeException ex) {
+                    agentPlanExecCanaryService.fail(planExec, "SYNTHESIS_STATE_UPDATE_FAILED");
+                }
                 safeSendDeltaInChunks(emitter, finalText);
                 Instant wfStartedAt = Instant.now();
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
