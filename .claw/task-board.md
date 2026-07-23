@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-234 - 发布修订版本号上限调整为365
+
+- status: `in_progress`
+- priority: `medium`
+- owner_role: `project-manager`
+- spec_path: `docs/specs/FEAT-132-release-version-patch-limit.md`
+- task_status_path: `.claw/tasks/TASK-234.md`
+- assignment_path: `.claw/assignments/TASK-234.yaml`
+- blocked_by: `none`
+- next_action: 修改版本递增与校验，添加脚本回归并更新发布手册。
+
 ### TASK-233 - 通用记忆人工管理与生产就绪审计
 
 - status: `done`

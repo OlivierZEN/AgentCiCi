@@ -10,6 +10,10 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-234 - 发布修订版本号上限调整为365
+
+- 待执行：脚本级版本校验与递增回归、发布脚本 dry-run 和静态检查。
+
 ## Production Release 2.8.5 - FEAT-131
 
 - `release`：`scripts/release-acr.sh --dry-run` 与 `--version 2.8.5` 成功；backend/frontend ACR index digest 分别为 `sha256:0936e7b4d0e3040cf907284b7edc41dc891b1091b73d247e1be734e6c5870e30` 与 `sha256:abc3417bcb95f42897abe6ba32a00df7244e20aef3892f9e84875a8c776619ce`，Git annotated tag `2.8.5` 已推送。

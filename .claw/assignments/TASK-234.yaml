@@ -1,0 +1,43 @@
+task_id: TASK-234
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T12:05:00+08:00
+expires_at: none
+spec_path: docs/specs/FEAT-132-release-version-patch-limit.md
+task_status_path: .claw/tasks/TASK-234.md
+branch: codex/TASK-234-release-version-patch-limit
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - scripts/**
+  - docs/specs/**
+  - docs/production-release-runbook.md
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - scripts/release-acr.sh
+  - scripts/test-release-versioning.sh
+  - docs/production-release-runbook.md
+  - docs/specs/FEAT-132-release-version-patch-limit.md
+  - .claw/tasks/TASK-234.md
+  - .claw/assignments/TASK-234.yaml
+protected_paths:
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - docs/production-release-runbook.md
+task_boundary:
+  - "只调整生产版本的修订段上限为365。"
+  - "不变更主/次版本上限、历史 tag、镜像或线上环境。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user explicitly requested the patch-segment maximum change."
