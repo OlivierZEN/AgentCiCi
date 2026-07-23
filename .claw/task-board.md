@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-238 - 混合智能体运行时 P4：受控 Reflect 与评测门禁
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-238.md`
 - assignment_path: `.claw/assignments/TASK-238.yaml`
 - blocked_by: `none`
-- next_action: 复核 V92 审查事实、Gate 与评测断言；通过后集成 main 并按设计治理创建 P5 Trace 管理界面任务。
+- next_action: 已集成 `6817ba5`；P5 需先完成用户确认的 UI shape，再扩展现有 Trace 详情。
 
 ### TASK-237 - 混合智能体运行时 P3：规则优先模式路由
 

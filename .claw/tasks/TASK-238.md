@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-238
-status: review
+status: done
 updated_at: 2026-07-23T06:30:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -40,6 +40,6 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - `AgentTaskReflectServiceTest`、`AgentEvaluationAssertionEngineTest`、P2/P3 与 Chat 定向回归通过；后端 `compile` 与 `git diff --check` 通过。
 - 新建后删除 PostgreSQL 16 临时库完整迁移 V1→V92，`AgentTaskRuntimeIntegrationTest` 5/5 通过，覆盖审查记录持久化、`REFLECT_GATE` 事件和跨组织拒绝。
 
-## Next action
+## Handoff
 
-- 复核后集成至 `main`；随后使用设计治理创建独立 TASK 实施 P5 Trace 管理界面与桌面端验收。
+- 已在 `main` 集成并推送 `6817ba5`。P5 必须先取得用户确认的 UI shape，再在现有 Trace 详情中实施桌面端运行执行投影。

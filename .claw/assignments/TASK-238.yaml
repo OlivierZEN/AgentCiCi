@@ -1,7 +1,7 @@
 task_id: TASK-238
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: active
+status: completed
 assigned_at: 2026-07-23T06:00:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
