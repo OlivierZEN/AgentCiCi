@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-241 - AgentCiCi / Semattice 受控开户绑定
+
+- status: `blocked`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-134-agentcici-semattice-controlled-provisioning.md`
+- task_status_path: `.claw/tasks/TASK-241.md`
+- assignment_path: `.claw/assignments/TASK-241.yaml`
+- blocked_by: `Semattice production migration 13 requires a dedicated migrator connection not present in the runtime host configuration`
+- next_action: 使用专用 migrator 显式执行 Semattice migration 13；随后重新部署并验证真实成功开户。
+
 ### TASK-240 - 混合智能体运行时 P6：组织隔离灰度与运营验证
 
 - status: `in_progress`

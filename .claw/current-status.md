@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-235 的 FEAT-133 P1 已复核、快进集成并推送至 `main`（`fcc2200`）：V91 提供组织隔离的运行、计划、步骤和事件事实，服务端实现严格 Plan Schema 校验、依赖状态机、乐观锁和失效租约恢复。新建后删除的 PostgreSQL 16 库从 V1 迁移至 V91，并通过 3/3 集成用例、后端编译和 diff 检查。
+- TASK-241 / FEAT-134：AgentCiCi 已发布内测 `2.8.5-beta.3 / bef088d5769c`，V93 正向迁移、双向密钥注入、未签名 HMAC 403 与健康检查均通过。Semattice 的实现与 Go 全量/race/vet/build 已通过，但其 ECS 仍是 migration 1–12；试验性新制品在真实 reservation 后因缺少 migration 13 返回 500，已立刻原子回滚到上一健康 release。继续发布必须使用专用 migrator 显式执行 migration 13，不能复用运行时 control/runtime 凭据或改写历史。
 
 - TASK-236 已完成 FEAT-133 P2 并集成至 `main`（`cbf9728`）：默认关闭的精确 Agent 白名单可将 Web、流式和 OpenAPI 统一接入固定 `RETRIEVE → SYNTHESIZE` 计划。灰度运行禁用所有工具、确认续执行和 CRM 快捷路径；初始化失败安全回退到既有聊天链路，运行事实携带最小回退原因。定向回归、后端编译与新建后删除的 PostgreSQL 16 V1→V91 集成验证通过；共享测试库的既有 V81 checksum 漂移仍未修复、未 repair。
 

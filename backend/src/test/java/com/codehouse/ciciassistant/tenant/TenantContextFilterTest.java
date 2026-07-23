@@ -39,4 +39,16 @@ class TenantContextFilterTest {
         assertThat(response.getStatus()).isEqualTo(401);
         assertThat(response.getContentAsString()).contains("Authentication required");
     }
+
+    @Test
+    void shouldLetSematticeInternalProvisioningReachItsHmacValidator() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/internal/semattice/provisioning/reservations");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isNotEqualTo(401);
+        assertThat(chain.getRequest()).isSameAs(request);
+    }
 }
