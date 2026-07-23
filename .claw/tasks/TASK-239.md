@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-239
-status: in_progress
-updated_at: 2026-07-23T07:05:00Z
+status: review
+updated_at: 2026-07-23T07:10:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -32,3 +32,15 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - 默认总览先展示模式、终态、风险、计划修订和审查状态，步骤证据默认收起且复制内容保持脱敏；确认、失败或部分完成原因只在存在时展示；
 - 现有 Trace 详情信息架构、回归集入口和工作流定义检查仍可用，界面在 `gilded` 与 `galaxy` 下使用语义 token、无外层横向溢出、console error/warning；
 - 后端定向单元/集成、前端定向测试与生产构建、桌面端截图/交互状态、静态 diff 检查通过；共享测试库 V81 checksum 历史漂移与本任务结果分开记录。
+
+## Implementation result
+
+- Chat 的阻塞与流式路径仅在真实 Plan-Exec 运行存活时，将最小 `runtimeRunId`、模式风险、确认约束和审查状态写入该 Trace 的既有脱敏详情；不按会话或时间推测关联。
+- Trace 详情以 Trace 的 `org_id` 加 `runtimeRunId` 回读运行、计划、步骤、事件和审查事实，并仅投影管理员可见的模式、终态、修订、最小脱敏证据和事件类型；历史/未关联 Trace 返回明确空态。
+- 现有 Trace 详情增加“运行执行”总览、步骤/事件时间线、默认收起的证据复制，以及有条件的确认/失败说明；样式仅使用现有主题语义 token。
+
+## Verification
+
+- 后端 `AgentRunTraceServiceTest` 加 P2–P4/Chat 定向回归通过；新建后删除的 PostgreSQL 16 临时库完整迁移 V1→V92，`AgentTaskRuntimeIntegrationTest` 通过。
+- 前端 `AdminAgentRunMonitor.test.tsx` 3/3 与 `npm run build` 通过；新增样式未加入硬编码色、渐变或主题专属布局。
+- 本地 Playwright 能到达并截图管理员登录边界，console error 为 0；当前没有受权组织管理员会话，无法进入 `/admin/ops` 验收真实 Trace 的 `gilded`/`galaxy` 切换、证据展开/复制和外层溢出。该项保留为 review 阻断，未伪称完成。

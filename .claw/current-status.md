@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T07:05:00Z
+updated_at: 2026-07-23T07:10:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p5-implementation
+phase: agent-runtime-mixed-orchestration-p5-review
 active_task: TASK-239
-next_action: "在已确认 shape 下实现同组织 Trace 运行执行投影、现有 Trace 详情的多主题桌面界面，并完成定向后端/前端与浏览器验收。"
+next_action: "等待受权组织管理员完成真实 Trace 的 gilded/galaxy 桌面交互验收；通过后集成 TASK-239 并创建 P6 生产灰度与运营验证任务。"
 read_next:
   goals: false
   decisions: false
@@ -35,6 +35,8 @@ read_next:
 - TASK-238 已完成实现并进入 review：V92 的审查事实与 `REFLECT_GATE` 事件均按组织隔离；成功 Plan-Exec 才可进入默认关闭的精确 Agent Gate。Gate 验证 Agent、步骤、预算、确认和输出，阻断即 `HANDOFF`，不调用新模型或工具。评测增加运行模式、审查状态和确认前零写入断言；定向回归通过，隔离 PostgreSQL 从 V1→V92 的运行时集成 5/5 通过。
 
 - TASK-238 已完成并集成至 `main`（`6817ba5`）。用户已确认 P5 shape：组织管理员与平台运营在现有 Trace 详情中查看“运行执行”，默认运行总览，保留回归集入口；多主题使用同一布局和语义 token。TASK-239 已获授权，开始补齐 Trace 与运行事实的精确关联、脱敏投影和桌面端 `gilded`/`galaxy` 验收，不新增路由或移动端实现。
+
+- TASK-239 已完成代码与自动化验证，等待受权管理员 UI review：阻塞/流式 Chat 将精确 `runtimeRunId` 作为 Trace 脱敏详情的一部分保存；Trace 详情仅以同组织运行 ID 回读运行、计划、步骤、事件和审查事实，未关联历史 Trace 显示明确空态。现有详情新增运行总览、步骤/事件时间线、折叠证据与条件性例外说明，样式仅用语义主题 token。后端定向回归、V1→V92 全新库集成、前端 3/3 测试和生产构建通过；本地浏览器止于正确的组织管理员登录边界，缺少受权会话，未把登录截图作为 P5 视觉验收。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

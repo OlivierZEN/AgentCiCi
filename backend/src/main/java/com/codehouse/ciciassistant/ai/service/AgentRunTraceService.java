@@ -4,6 +4,7 @@ import com.codehouse.ciciassistant.agent.domain.AgentDefinitionEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentDefinitionRepository;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
+import com.codehouse.ciciassistant.agent.service.AgentTaskRuntimeService;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceEntity;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
 import com.codehouse.ciciassistant.ai.domain.ChatMessageEntity;
@@ -45,15 +46,18 @@ public class AgentRunTraceService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final AgentDefinitionRepository agentDefinitionRepository;
+    private final AgentTaskRuntimeService agentTaskRuntimeService;
 
     public AgentRunTraceService(AgentRunTraceRepository traceRepository,
                                 ChatSessionRepository chatSessionRepository,
                                 ChatMessageRepository chatMessageRepository,
-                                AgentDefinitionRepository agentDefinitionRepository) {
+                                AgentDefinitionRepository agentDefinitionRepository,
+                                AgentTaskRuntimeService agentTaskRuntimeService) {
         this.traceRepository = traceRepository;
         this.chatSessionRepository = chatSessionRepository;
         this.chatMessageRepository = chatMessageRepository;
         this.agentDefinitionRepository = agentDefinitionRepository;
+        this.agentTaskRuntimeService = agentTaskRuntimeService;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -412,7 +416,70 @@ public class AgentRunTraceService {
         payload.put("tools", detail.getOrDefault("tools", List.of()));
         payload.put("skills", detail.getOrDefault("skills", Map.of()));
         payload.put("rag", detail.getOrDefault("rag", Map.of()));
+        payload.put("runtimeExecution", runtimeExecutionProjection(orgId, detail));
         return payload;
+    }
+
+    private Map<String, Object> runtimeExecutionProjection(String orgId, Map<String, Object> detail) {
+        Map<String, Object> execution = mapValue(detail.get("runtimeExecution"));
+        Map<String, Object> context = mapValue(execution.get("contextSnapshot"));
+        Map<String, Object> link = mapValue(context.get("runtimeTask"));
+        long runtimeRunId = positiveLong(link.get("runtimeRunId"));
+        if (runtimeRunId < 1) {
+            return Map.of("associated", false, "emptyReason", "NO_EXECUTION_FACTS");
+        }
+        Optional<AgentTaskRuntimeService.TraceExecutionView> view = agentTaskRuntimeService.traceExecution(orgId, runtimeRunId);
+        if (view.isEmpty()) {
+            return Map.of("associated", false, "emptyReason", "NO_EXECUTION_FACTS");
+        }
+        AgentTaskRuntimeService.TraceExecutionView runtime = view.get();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("associated", true);
+        payload.put("runId", runtime.runId());
+        payload.put("mode", runtime.mode());
+        payload.put("terminalStatus", runtime.terminalStatus());
+        payload.put("riskLevel", allowedRiskLevel(link.get("riskLevel")));
+        payload.put("planRevision", runtime.planRevision());
+        payload.put("reviewStatus", runtime.reviewStatus());
+        payload.put("reviewGateStatus", runtime.reviewGateStatus());
+        payload.put("requiresConfirmation", Boolean.TRUE.equals(link.get("requiresConfirmation")));
+        payload.put("partialReason", redact(runtime.partialReason()));
+        payload.put("steps", runtime.steps().stream().map(step -> Map.of(
+                "key", step.key(),
+                "kind", step.kind(),
+                "status", step.status(),
+                "attemptNo", step.attemptNo(),
+                "startedAt", step.startedAt() == null ? "" : step.startedAt().toString(),
+                "completedAt", step.completedAt() == null ? "" : step.completedAt().toString(),
+                "elapsedMs", elapsedBetween(step.startedAt(), step.completedAt()),
+                "evidenceSummary", redact(step.evidenceSummary())
+        )).toList());
+        payload.put("events", runtime.events().stream().map(event -> Map.of(
+                "type", event.type(),
+                "occurredAt", event.occurredAt() == null ? "" : event.occurredAt().toString()
+        )).toList());
+        return payload;
+    }
+
+    private Map<String, Object> mapValue(Object value) {
+        if (!(value instanceof Map<?, ?> map)) return Map.of();
+        return normalizeMap(map);
+    }
+
+    private static long positiveLong(Object value) {
+        if (value instanceof Number number) return Math.max(0L, number.longValue());
+        try { return Math.max(0L, Long.parseLong(String.valueOf(value))); }
+        catch (Exception ex) { return 0L; }
+    }
+
+    private static String allowedRiskLevel(Object value) {
+        String risk = emptyToBlank(String.valueOf(value)).toUpperCase(Locale.ROOT);
+        return List.of("LOW", "MEDIUM", "HIGH").contains(risk) ? risk : "LOW";
+    }
+
+    private static long elapsedBetween(Instant startedAt, Instant completedAt) {
+        if (startedAt == null || completedAt == null) return 0L;
+        return Math.max(0L, Duration.between(startedAt, completedAt).toMillis());
     }
 
     private Map<String, Object> newRuntimeSnapshot(String agentId, String agentName, String avatarBase64, String summary) {

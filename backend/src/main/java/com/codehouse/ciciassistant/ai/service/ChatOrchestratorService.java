@@ -515,6 +515,9 @@ public class ChatOrchestratorService {
         AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                 orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
         executionResult.contextSnapshot().put("runId", runId);
+        if (planExec.active()) {
+            executionResult.contextSnapshot().put("runtimeTask", runtimeTaskTracePayload(planExec, modeDecision, reflectResult));
+        }
         Instant wfEndedAt = Instant.now();
         int wfMs = elapsedMs(wfStartedAt, wfEndedAt);
         stageTraces.add(stageTrace("WORKFLOW", "工作流定义检查",
@@ -887,6 +890,9 @@ public class ChatOrchestratorService {
                 AgentWorkflowRuntimeService.RuntimeExecutionResult executionResult = agentWorkflowRuntimeService.evaluateForChat(
                         orgId, skillContext.agentId(), question, skillContext.allowedToolNames());
                 executionResult.contextSnapshot().put("runId", runId);
+                if (planExec.active()) {
+                    executionResult.contextSnapshot().put("runtimeTask", runtimeTaskTracePayload(planExec, modeDecision, reflectResult));
+                }
                 Instant wfEndedAt = Instant.now();
                 int wfMs = elapsedMs(wfStartedAt, wfEndedAt);
                 stageTraces.add(stageTrace("WORKFLOW", "工作流定义检查",
@@ -968,6 +974,19 @@ public class ChatOrchestratorService {
         if (result == null) return Map.of("selected", false, "gateStatus", "SKIPPED", "reviewerStatus", "NOT_REQUESTED");
         return Map.of("selected", result.selected(), "reviewId", result.reviewId() == null ? "" : result.reviewId(),
                 "gateStatus", result.gateStatus(), "reviewerStatus", result.reviewerStatus(), "issueCodes", result.issueCodes());
+    }
+
+    private static Map<String, Object> runtimeTaskTracePayload(AgentPlanExecCanaryService.CanaryExecution execution,
+                                                                 AgentRuntimeModeRouter.ModeDecision decision,
+                                                                 AgentTaskReflectService.ReflectResult reflectResult) {
+        if (execution == null || !execution.active() || decision == null) return Map.of();
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("runtimeRunId", execution.runId());
+        payload.put("mode", decision.mode().name());
+        payload.put("riskLevel", decision.riskLevel().name());
+        payload.put("requiresConfirmation", decision.requiresConfirmation());
+        payload.put("reviewStatus", reflectResult == null ? "NOT_REQUESTED" : reflectResult.reviewerStatus());
+        return payload;
     }
 
     /**

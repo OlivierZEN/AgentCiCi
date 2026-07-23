@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { traceNodeTextDetail } from "./AdminAgentRunMonitor";
+import { traceNodeTextDetail, traceRuntimeEmptyMessage } from "./AdminAgentRunMonitor";
 
 describe("traceNodeTextDetail", () => {
   it("prefers the separately retained and redacted user input over the compact node summary", () => {
@@ -18,5 +18,12 @@ describe("traceNodeTextDetail", () => {
     );
 
     expect(detail).toEqual({ text: "旧版保留文本", truncated: true, historicalFallback: true });
+  });
+
+  it("keeps historical traces explicit instead of inferring an execution run", () => {
+    expect(traceRuntimeEmptyMessage()).toBe("此 Trace 没有关联运行执行事实");
+    expect(traceRuntimeEmptyMessage({ associated: false, emptyReason: "NO_EXECUTION_FACTS" }))
+      .toBe("此 Trace 没有关联运行执行事实");
+    expect(traceRuntimeEmptyMessage({ associated: true, runId: 42 })).toBe("");
   });
 });

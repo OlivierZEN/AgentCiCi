@@ -10,6 +10,15 @@ last_run_status: passed
 
 # Test Report
 
+## TASK-239 - 混合智能体运行时 P5：Trace 运行执行投影与多主题界面
+
+- `identity/assignment`：MANAGER-001 的任务级 SSH 身份、任务分支及后端/前端/主题/状态代表性文件授权检查均返回 `allowed`。
+- `backend-focused`：`AgentRunTraceServiceTest`、`AgentTaskReflectServiceTest`、`AgentRuntimeModeRouterTest`、`AgentPlanExecCanaryServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 通过；覆盖精确运行关联、同组织回读、最小脱敏步骤证据、空态、P2–P4 与 Chat 回归。
+- `fresh-postgresql-integration`：新建后删除 PostgreSQL 16 临时库完整迁移 V1→V92，`AgentTaskRuntimeIntegrationTest` 通过；临时数据库已删除。
+- `frontend`：`AdminAgentRunMonitor.test.tsx` 3/3 通过，`npm run build` 通过；仅保留既有 Vite 大 chunk 提示。
+- `browser-review-pending`：Playwright 访问本地 `/admin/ops` 正确重定向至组织管理员登录页，console error 为 0；本会话没有受权管理员凭据，无法对真实 Trace 完成 `gilded`/`galaxy` 的展开、复制和外层横向溢出验收。登录页的既有 password-field DOM warning 不归因于 P5，未作为通过证据。
+- `environment-limit`：默认共享 `agentcici_test` 的 Flyway V81 checksum 漂移未修复、未执行 repair；隔离库验证不等同于全量套件通过。
+
 ## TASK-238 - 混合智能体运行时 P4：受控 Reflect 与评测门禁
 
 - `identity/assignment`：TASK-238 的任务级 SSH 身份门禁、分支与代表性实现、迁移、测试和治理文件范围检查均返回 `allowed`。

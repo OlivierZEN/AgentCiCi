@@ -55,6 +55,33 @@ type AgentTraceNodePayload = {
   metadata?: Record<string, unknown>;
 };
 
+type RuntimeExecutionStepPayload = {
+  key?: string;
+  kind?: string;
+  status?: string;
+  attemptNo?: number;
+  startedAt?: string;
+  completedAt?: string;
+  elapsedMs?: number;
+  evidenceSummary?: string;
+};
+
+type RuntimeExecutionPayload = {
+  associated?: boolean;
+  emptyReason?: string;
+  runId?: number;
+  mode?: string;
+  terminalStatus?: string;
+  riskLevel?: string;
+  planRevision?: number;
+  reviewStatus?: string;
+  reviewGateStatus?: string;
+  requiresConfirmation?: boolean;
+  partialReason?: string;
+  steps?: RuntimeExecutionStepPayload[];
+  events?: Array<{ type?: string; occurredAt?: string }>;
+};
+
 type AgentTraceDetailPayload = {
   traceId: string;
   sessionId?: string;
@@ -72,6 +99,7 @@ type AgentTraceDetailPayload = {
   tools?: Array<Record<string, unknown>>;
   skills?: Record<string, unknown>;
   detail?: Record<string, unknown>;
+  runtimeExecution?: RuntimeExecutionPayload;
   errorReason?: string;
 };
 
@@ -208,6 +236,31 @@ function formatTraceStepElapsed(ms?: number) {
   return formatMonitorElapsed(ms);
 }
 
+function runtimeStatusLabel(status?: string) {
+  switch ((status ?? "").toUpperCase()) {
+    case "PLAN_EXEC": return "计划执行";
+    case "DIRECT": return "直接生成";
+    case "REACT": return "工具循环";
+    case "LOW": return "低";
+    case "MEDIUM": return "中";
+    case "HIGH": return "高";
+    case "RETRIEVE": return "检索";
+    case "SYNTHESIZE": return "生成";
+    case "VERIFY": return "核验";
+    case "TOOL": return "工具";
+    case "REQUEST_CONFIRMATION": return "请求确认";
+    case "SUCCEEDED": return "已完成";
+    case "FAILED": return "失败";
+    case "RUNNING": return "运行中";
+    case "READY": return "待执行";
+    case "CREATED": return "已创建";
+    case "HANDOFF": return "需人工处理";
+    case "PASS": return "通过";
+    case "NOT_REQUESTED": return "未请求";
+    default: return status || "—";
+  }
+}
+
 function numberFromMetadata(metadata: Record<string, unknown> | undefined, keys: string[]) {
   if (!metadata) return 0;
   for (const key of keys) {
@@ -260,6 +313,10 @@ export function traceNodeTextDetail(node: AgentTraceNodePayload, trace?: AgentTr
   };
 }
 
+export function traceRuntimeEmptyMessage(runtime?: RuntimeExecutionPayload): string {
+  return runtime?.associated ? "" : "此 Trace 没有关联运行执行事实";
+}
+
 export default function AdminAgentRunMonitor({ token }: Props) {
   const [runtimeSnapshots, setRuntimeSnapshots] = useState<AgentRuntimeSnapshotPayload[]>([]);
   const [runLogs, setRunLogs] = useState<AgentRunLogPayload[]>([]);
@@ -277,6 +334,7 @@ export default function AdminAgentRunMonitor({ token }: Props) {
   const [feedbackBusy, setFeedbackBusy] = useState(false);
   const [feedbackNotice, setFeedbackNotice] = useState("");
   const [expandedTraceNodeIds, setExpandedTraceNodeIds] = useState<Set<string>>(new Set());
+  const [expandedRuntimeStepKeys, setExpandedRuntimeStepKeys] = useState<Set<string>>(new Set());
   const [traceDetailNotice, setTraceDetailNotice] = useState("");
 
   const loadRuntimeSnapshots = async () => {
@@ -506,6 +564,15 @@ export default function AdminAgentRunMonitor({ token }: Props) {
     setTraceDetailNotice("");
   };
 
+  const toggleRuntimeStepEvidence = (stepKey: string) => {
+    setExpandedRuntimeStepKeys((current) => {
+      const next = new Set(current);
+      if (next.has(stepKey)) next.delete(stepKey); else next.add(stepKey);
+      return next;
+    });
+    setTraceDetailNotice("");
+  };
+
   const copyTraceNodeDetail = async (text: string) => {
     try {
       if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
@@ -713,6 +780,77 @@ export default function AdminAgentRunMonitor({ token }: Props) {
                   <span>耗时</span>
                   <strong>{selectedTrace ? formatMonitorElapsed(selectedTrace.elapsedMs) : "—"}</strong>
                 </div>
+              </section>
+              <section className="cici-monitor-runtime" aria-label="运行执行">
+                <header className="cici-monitor-runtime__head">
+                  <div>
+                    <span>运行执行</span>
+                    <p>计划运行事实</p>
+                  </div>
+                  {selectedTrace?.runtimeExecution?.associated ? <span>运行 #{selectedTrace.runtimeExecution.runId}</span> : null}
+                </header>
+                {selectedTrace?.runtimeExecution?.associated ? (
+                  <>
+                    <div className="cici-monitor-runtime__summary">
+                      <div><span>模式</span><strong>{runtimeStatusLabel(selectedTrace.runtimeExecution.mode)}</strong></div>
+                      <div><span>终态</span><strong>{runtimeStatusLabel(selectedTrace.runtimeExecution.terminalStatus)}</strong></div>
+                      <div><span>风险</span><strong>{runtimeStatusLabel(selectedTrace.runtimeExecution.riskLevel)}</strong></div>
+                      <div><span>计划修订</span><strong>v{selectedTrace.runtimeExecution.planRevision ?? 0}</strong></div>
+                      <div><span>审查</span><strong>{runtimeStatusLabel(selectedTrace.runtimeExecution.reviewStatus)}</strong></div>
+                    </div>
+                    {selectedTrace.runtimeExecution.steps?.length ? (
+                      <div className="cici-monitor-runtime__timeline" aria-label="运行步骤">
+                        {selectedTrace.runtimeExecution.steps.map((step, index) => {
+                          const stepKey = step.key || `runtime-step-${index}`;
+                          const evidence = step.evidenceSummary?.trim() || "";
+                          const expanded = expandedRuntimeStepKeys.has(stepKey);
+                          return (
+                            <article className="cici-monitor-runtime-step" key={stepKey}>
+                              <span className={`cici-monitor-runtime-step__dot is-${monitorStatusSeverity(step.status)}`} aria-hidden />
+                              <div>
+                                <h3><span>{step.key || "运行步骤"}</span><em>{runtimeStatusLabel(step.kind)}</em></h3>
+                                <p>{runtimeStatusLabel(step.status)} · {formatMonitorElapsed(step.elapsedMs)}</p>
+                                {evidence ? (
+                                  <div className="cici-monitor-runtime-step__evidence">
+                                    <button
+                                      type="button"
+                                      className="cici-monitor-trace-step__detail-command"
+                                      aria-expanded={expanded}
+                                      aria-controls={`runtime-evidence-${stepKey}`}
+                                      onClick={() => toggleRuntimeStepEvidence(stepKey)}
+                                    >
+                                      {expanded ? "收起证据" : "展开证据"}
+                                    </button>
+                                    {expanded ? (
+                                      <section id={`runtime-evidence-${stepKey}`} className="cici-monitor-runtime-step__evidence-detail" aria-label={`${step.key || "运行步骤"}脱敏证据`}>
+                                        <p>{evidence}</p>
+                                        <button type="button" className="cici-monitor-trace-step__detail-command" onClick={() => void copyTraceNodeDetail(evidence)}>复制证据</button>
+                                      </section>
+                                    ) : null}
+                                  </div>
+                                ) : null}
+                              </div>
+                              <time>{formatMonitorDateTime(step.completedAt || step.startedAt)}</time>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    ) : null}
+                    {selectedTrace.runtimeExecution.events?.length ? (
+                      <p className="cici-monitor-runtime__events">运行事件：{selectedTrace.runtimeExecution.events
+                        .map((event) => `${event.type || "EVENT"} ${formatMonitorDateTime(event.occurredAt)}`)
+                        .join(" · ")}</p>
+                    ) : null}
+                    {selectedTrace.runtimeExecution.requiresConfirmation ? (
+                      <p className="cici-monitor-runtime__exception">此运行受人工确认约束；未经既有确认流程不会执行写入。</p>
+                    ) : null}
+                    {selectedTrace.runtimeExecution.partialReason ? (
+                      <p className="cici-monitor-runtime__exception is-warning">未完成原因：{selectedTrace.runtimeExecution.partialReason}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="cici-monitor-runtime__empty">{traceRuntimeEmptyMessage(selectedTrace?.runtimeExecution)}</p>
+                )}
               </section>
               <section className={`cici-monitor-trace-steps${selectedTrace?.nodes?.length ? "" : " cici-monitor-trace-steps--empty"}`}>
                 {selectedTrace?.nodes?.length ? (

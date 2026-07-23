@@ -6,6 +6,8 @@ import com.codehouse.ciciassistant.agent.domain.AgentTaskPlanEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentTaskPlanRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentTaskRunEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentTaskRunRepository;
+import com.codehouse.ciciassistant.agent.domain.AgentTaskReviewEntity;
+import com.codehouse.ciciassistant.agent.domain.AgentTaskReviewRepository;
 import com.codehouse.ciciassistant.agent.domain.AgentTaskStepEntity;
 import com.codehouse.ciciassistant.agent.domain.AgentTaskStepRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,17 +44,20 @@ public class AgentTaskRuntimeService {
     private final AgentTaskPlanRepository planRepository;
     private final AgentTaskStepRepository stepRepository;
     private final AgentTaskEventRepository eventRepository;
+    private final AgentTaskReviewRepository reviewRepository;
     private final ObjectMapper objectMapper;
 
     public AgentTaskRuntimeService(AgentTaskRunRepository runRepository,
                                    AgentTaskPlanRepository planRepository,
                                    AgentTaskStepRepository stepRepository,
                                    AgentTaskEventRepository eventRepository,
+                                   AgentTaskReviewRepository reviewRepository,
                                    ObjectMapper objectMapper) {
         this.runRepository = runRepository;
         this.planRepository = planRepository;
         this.stepRepository = stepRepository;
         this.eventRepository = eventRepository;
+        this.reviewRepository = reviewRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -204,6 +209,38 @@ public class AgentTaskRuntimeService {
                         .map(item -> new EventView(item.getEventType(), item.getStepId(), item.getPayloadRedactedJson(), item.getOccurredAt())).toList());
     }
 
+    /**
+     * Returns only stable, administrator-safe execution facts for a Trace that already holds an exact run id.
+     * Every repository access includes orgId, so a trace association never becomes a cross-tenant lookup key.
+     */
+    @Transactional(readOnly = true)
+    public Optional<TraceExecutionView> traceExecution(String orgId, long runId) {
+        AgentTaskRunEntity run = runRepository.findByIdAndOrgId(runId, required(orgId, "orgId")).orElse(null);
+        if (run == null) return Optional.empty();
+        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(orgId, runId);
+        int planRevision = planRepository.findTopByOrgIdAndRunIdOrderByRevisionNoDesc(orgId, runId)
+                .map(AgentTaskPlanEntity::getRevisionNo).orElse(0);
+        List<AgentTaskReviewEntity> reviews = reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc(orgId, runId);
+        AgentTaskReviewEntity latestReview = reviews.isEmpty() ? null : reviews.get(reviews.size() - 1);
+        List<TraceEventView> events = eventRepository.findByOrgIdAndRunIdOrderByOccurredAtAscIdAsc(orgId, runId).stream()
+                .map(event -> new TraceEventView(event.getEventType(), event.getOccurredAt())).toList();
+        String partialReason = steps.stream()
+                .filter(step -> AgentTaskStepEntity.STATUS_FAILED.equals(step.getStatus()))
+                .map(AgentTaskStepEntity::getErrorCode)
+                .filter(code -> code != null && !code.isBlank())
+                .findFirst().orElse("");
+        return Optional.of(new TraceExecutionView(
+                run.getId(), run.getMode(), run.getStatus(), planRevision,
+                latestReview == null ? "NOT_REQUESTED" : latestReview.getReviewerStatus(),
+                latestReview == null ? "SKIPPED" : latestReview.getGateStatus(),
+                partialReason,
+                steps.stream().map(step -> new TraceStepView(
+                        step.getStepKey(), step.getStepKind(), step.getStatus(), step.getAttemptNo(),
+                        step.getStartedAt(), step.getCompletedAt(),
+                        safeEvidence(step.getResultSummary(), step.getErrorCode()))).toList(),
+                events));
+    }
+
     private void promoteSatisfiedSteps(AgentTaskRunEntity run, List<AgentTaskStepEntity> steps, Instant now) {
         Map<String, AgentTaskStepEntity> byKey = new HashMap<>();
         for (AgentTaskStepEntity item : steps) byKey.put(item.getStepKey(), item);
@@ -318,6 +355,12 @@ public class AgentTaskRuntimeService {
     private static String bounded(String value, int max, String field) { String safe = required(value, field); if (safe.length() > max) throw new IllegalArgumentException(field + " exceeds " + max + " characters"); return safe; }
     private static String defaulted(String value, String fallback) { return value == null || value.isBlank() ? fallback : value.trim(); }
     private static String emptyToNull(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private static String safeEvidence(String resultSummary, String errorCode) {
+        String source = resultSummary == null || resultSummary.isBlank() ? errorCode : resultSummary;
+        if (source == null || source.isBlank()) return "";
+        String compact = source.replaceAll("\\s+", " ").trim();
+        return compact.length() > 220 ? compact.substring(0, 219) + "…" : compact;
+    }
     private static String sha256(String value) { try { byte[] bytes = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)); StringBuilder out = new StringBuilder(64); for (byte item : bytes) out.append(String.format("%02x", item)); return out.toString(); } catch (Exception ex) { throw new IllegalStateException("SHA-256 unavailable", ex); } }
 
     private RunView toRunView(AgentTaskRunEntity item) { return new RunView(item.getId(), item.getOrgId(), item.getAgentId(), item.getMode(), item.getStatus(), item.getGoalSummary(), item.getCurrentPlanId(), item.getVersion()); }
@@ -332,6 +375,12 @@ public class AgentTaskRuntimeService {
     public record ClaimedStep(StepView step, Instant leaseExpiresAt) { }
     public record EventView(String type, Long stepId, String payloadRedactedJson, Instant occurredAt) { }
     public record RunSnapshot(RunView run, List<StepView> steps, List<EventView> events) { }
+    public record TraceExecutionView(Long runId, String mode, String terminalStatus, int planRevision,
+                                     String reviewStatus, String reviewGateStatus, String partialReason,
+                                     List<TraceStepView> steps, List<TraceEventView> events) { }
+    public record TraceStepView(String key, String kind, String status, int attemptNo,
+                                Instant startedAt, Instant completedAt, String evidenceSummary) { }
+    public record TraceEventView(String type, Instant occurredAt) { }
     private record PlanStep(String key, String kind, List<String> dependsOn, List<String> allowedToolNames, List<String> expectedEvidence) { }
     private record ValidatedPlan(String goalSummary, List<PlanStep> steps, String canonicalJson) { }
 }

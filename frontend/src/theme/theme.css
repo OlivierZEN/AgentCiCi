@@ -1727,6 +1727,8 @@
 :root[data-theme] .cici-monitor-agent,
 :root[data-theme] .cici-monitor-log,
 :root[data-theme] .cici-monitor-trace-summary,
+:root[data-theme] .cici-monitor-runtime,
+:root[data-theme] .cici-monitor-runtime-step__evidence-detail,
 :root[data-theme] .cici-monitor-trace-steps,
 :root[data-theme] .cici-monitor-detail-groups article {
   border-color: var(--theme-line);
@@ -1775,6 +1777,8 @@
 :root[data-theme] .cici-monitor-log strong,
 :root[data-theme] .cici-monitor-trace-summary strong,
 :root[data-theme] .cici-monitor-trace-step h3,
+:root[data-theme] .cici-monitor-runtime__summary strong,
+:root[data-theme] .cici-monitor-runtime-step h3,
 :root[data-theme] .cici-monitor-detail-groups h3 {
   color: var(--theme-text);
 }
@@ -1787,6 +1791,12 @@
 :root[data-theme] .cici-monitor-trace-summary span,
 :root[data-theme] .cici-monitor-trace-step p,
 :root[data-theme] .cici-monitor-trace-step time,
+:root[data-theme] .cici-monitor-runtime__head > div > span,
+:root[data-theme] .cici-monitor-runtime__head p,
+:root[data-theme] .cici-monitor-runtime__summary span,
+:root[data-theme] .cici-monitor-runtime-step p,
+:root[data-theme] .cici-monitor-runtime-step time,
+:root[data-theme] .cici-monitor-runtime__empty,
 :root[data-theme] .cici-monitor-detail-groups p,
 :root[data-theme] .cici-monitor__empty {
   color: var(--theme-text-muted);
