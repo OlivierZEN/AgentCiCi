@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-235
-status: review
-updated_at: 2026-07-23T04:35:00Z
+status: done
+updated_at: 2026-07-23T04:50:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -38,6 +38,7 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - `AgentTaskRuntimeService` 仅实现只读计划事实：创建运行、附加受限 JSON 计划、按依赖认领/完成步骤、失败、乐观锁冲突拒绝和失效租约恢复；没有接入模型、工具、聊天路径或外部副作用。
 - 集成测试覆盖依赖推进与事件事实、循环计划/过期版本拒绝、仅失效租约可恢复。
 
-## Next action
+## Handoff
 
-- 进行代码复核；通过后以独立任务将该稳定契约灰度接入 Chat/OpenAPI，仍不得绕过现有工具确认与审计边界。
+- 已经复核、快进集成并推送到 `main`，提交为 `fcc2200`。
+- 后续 P2 由 TASK-236 负责接入 Chat/OpenAPI；不得改写 P1 的组织隔离、乐观锁、租约恢复或无副作用边界。

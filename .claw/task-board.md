@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T04:35:00Z
+updated_at: 2026-07-23T04:50:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
+- task_status_path: `.claw/tasks/TASK-236.md`
+- assignment_path: `.claw/assignments/TASK-236.yaml`
+- blocked_by: `none`
+- next_action: 在专用分支实现默认关闭、精确 Agent 白名单的 Web/OpenAPI Plan-Exec 灰度；不引入写工具、模式路由或 UI。
+
 ### TASK-235 - 混合智能体运行时 P1：计划状态机基础
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-235.md`
 - assignment_path: `.claw/assignments/TASK-235.yaml`
 - blocked_by: `none`
-- next_action: 复核 P1 的持久化计划状态机；后续 Chat/OpenAPI 灰度必须以独立任务接入，且不改变工具确认与审计边界。
+- next_action: 已集成 `fcc2200`；后续由 TASK-236 灰度接入聊天与 OpenAPI，仍保持工具确认与审计边界。
 
 ### TASK-233 - 通用记忆人工管理与生产就绪审计
 

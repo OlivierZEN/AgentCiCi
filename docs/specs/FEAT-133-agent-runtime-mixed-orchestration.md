@@ -4,10 +4,10 @@ feature_id: FEAT-133
 title: 可执行计划、动态路由与受控反思的混合智能体运行时
 status: in_progress
 owner_role: project-manager
-task_ids: TASK-235
+task_ids: TASK-235,TASK-236
 related_decisions: DEC-006,DEC-010,DEC-018,DEC-027
 related_issues: none
-updated_at: 2026-07-23T04:35:00Z
+updated_at: 2026-07-23T04:50:00Z
 updated_by: MANAGER-001
 ---
 
@@ -299,6 +299,15 @@ FEAT-106 增加可选确定性断言：期望模式、步骤数范围、步骤�
 
 P1 不得提前实现自由多 Agent、并行步骤、可编辑画布或任意脚本执行。P2 只允许少量只读工具和明确的测试 Agent；任何写工具必须在 P4 的确认/幂等验证后才可进入灰度。
 
+### 13.1 P2 实施契约：聊天与 OpenAPI 受限灰度
+
+- 以服务端 `app.agent-runtime.plan-exec` 配置作为唯一开关；默认 `enabled=false`，`allowed-agent-ids` 默认空。客户端请求、OpenAPI API key、会话标识或提示词均不能自行选择或扩大 Plan-Exec 范围。
+- P2 只对配置中的精确 Agent 白名单生效，并将 Web 与 OpenAPI 统一传入 `channel=web|openapi`。P3 的模式路由器上线前，未命中的请求必须继续原有 Direct/ReAct 路径，不得以语义猜测触发计划。
+- 灰度运行只能使用既有会话、认证、组织/Agent 权限、RAG、模型路由、`ToolOrchestrator`、人工确认、Trace 和计费入口；不得创建第二套工具调用、凭据解析或确认机制。首期只允许现有白名单中的只读工具，写工具一律在计划校验或执行前停止。
+- 非流式成功响应在不改变既有字段的前提下增加可忽略的 `runtimeExecution` 扩展；流式仅增加脱敏的运行状态事件。两条路径必须返回同一运行事实，且 OpenAPI 的会话、限流、幂等日志和账单语义保持不变。
+- 任一配置关闭、计划解析/校验失败、运行时不受支持或执行器失败时，不得产生新工具副作用；回退到原有聊天路径，记录脱敏的回退原因与 `runId`。已进入既有人工确认流程的任务不重新计划。
+- P2 不实现通用模式选择、重规划、并行、Reflect、管理 UI 或生产放量；模式推断与审查分别留给 P3/P4，页面留给 P5。
+
 ## 14. 验收标准
 
 ### 14.1 P1：计划执行真实性
@@ -357,7 +366,8 @@ agent-runtime.resume.enabled
 
 ## 16. 实现进展与交接
 
-- 当前状态：TASK-235 已完成 P1 实现并进入 review。V91 新增任务运行、计划、步骤与事件四类组织隔离事实；`AgentTaskRuntimeService` 提供严格计划 Schema 校验、依赖推进、乐观锁、租约与失效恢复，尚未接入聊天、工具、RAG、记忆、评测或 UI。
+- 当前状态：TASK-235 已经复核并集成至 `main`（`fcc2200`）。V91 新增任务运行、计划、步骤与事件四类组织隔离事实；`AgentTaskRuntimeService` 提供严格计划 Schema 校验、依赖推进、乐观锁、租约与失效恢复。
+- TASK-236 已获授权，开始 P2：只为服务端精确白名单 Agent 灰度接入现有 Web/OpenAPI 聊天链路；默认关闭、只读、保持现有确认/审计/回退边界。
 - 验证证据：后端编译、diff 检查通过；新建后删除的 PostgreSQL 16 临时库从空库全量迁移至 V91，并通过 3 个运行时集成用例。默认共享测试库仍因既有 V81 checksum 漂移无法启动，未 repair、未改写历史迁移。
 - 实施前先读取：`docs/specs/FEAT-004-agent-flow-compile-triggers-and-executions.md`、`docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`、`docs/specs/FEAT-122-runtime-execution-trace-correction.md`、`docs/specs/FEAT-130-forced-skill-execution-context.md`、`docs/specs/FEAT-131-agent-memory-platform.md`。
 - 首个实现任务必须以 P1 为边界，并明确禁止把 `workflow_code` 字符串解析误升级为任意代码执行器。
