@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
-phase: feat131-semantic-retrieval-ready
-active_task: "TASK-228"
-next_action: "在 TASK-228 中建设已审核非敏感记忆的受控语义检索及关系库二次授权。"
+phase: feat131-runtime-context-ready
+active_task: "TASK-229"
+next_action: "在 TASK-229 中将可信通用外部主体上下文注入 Chat 编排器，并保持内部聊天路径不变。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-229 已获授权：只建立由可信服务端认证层提供的通用外部主体运行时上下文，并注入授权后的记忆；不添加任何外部应用领域功能或客户端信任边界。
 
 - TASK-228 已获授权：为通用记忆建立受控语义检索，向量命中只能作为候选，必须回读关系库完成组织、主体、scope、状态和有效期校验。
 
