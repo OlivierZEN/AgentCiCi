@@ -3,6 +3,7 @@ package com.codehouse.ciciassistant.ai.service;
 import com.codehouse.ciciassistant.agent.domain.AgentPermission;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
+import com.codehouse.ciciassistant.agent.service.AgentRuntimeModeRouter;
 import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
@@ -121,6 +122,7 @@ public class ChatOrchestratorService {
     private final AgentRunTraceService agentRunTraceService;
     private final AgentAccessControlService agentAccessControlService;
     private final AgentRuntimeConcurrencyService agentRuntimeConcurrencyService;
+    private final AgentRuntimeModeRouter agentRuntimeModeRouter;
     private final AgentPlanExecCanaryService agentPlanExecCanaryService;
     private final BillingUsageMeteringService billingUsageMeteringService;
     private final CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter;
@@ -157,6 +159,7 @@ public class ChatOrchestratorService {
                                    CrmProductSalesAnswerFormatter crmProductSalesAnswerFormatter,
                                    SafetyGatewayService safetyGatewayService,
                                    AgentRuntimeConcurrencyService agentRuntimeConcurrencyService,
+                                   AgentRuntimeModeRouter agentRuntimeModeRouter,
                                    AgentPlanExecCanaryService agentPlanExecCanaryService,
                                    @Qualifier("agentRuntimeExecutor") Executor agentRuntimeExecutor,
                                    PlatformTransactionManager transactionManager) {
@@ -189,6 +192,7 @@ public class ChatOrchestratorService {
         this.crmProductSalesAnswerFormatter = crmProductSalesAnswerFormatter;
         this.safetyGatewayService = safetyGatewayService;
         this.agentRuntimeConcurrencyService = agentRuntimeConcurrencyService;
+        this.agentRuntimeModeRouter = agentRuntimeModeRouter;
         this.agentPlanExecCanaryService = agentPlanExecCanaryService;
         this.agentRuntimeExecutor = agentRuntimeExecutor;
         this.tx = new TransactionTemplate(transactionManager);
@@ -416,17 +420,25 @@ public class ChatOrchestratorService {
         persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
         stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                 clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
-        AgentPlanExecCanaryService.CanaryExecution planExec = agentPlanExecCanaryService.start(
-                orgId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-" + runId);
-
-        Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
-        String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
-        ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
-        boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
         List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
         List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
         KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                 safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+        AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
+                new AgentRuntimeModeRouter.RoutingInput(skillContext.agentId(), channel, safeQuestion,
+                        skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
+                        pendingEmailFromState(orgId, sessionId).isPresent()));
+        AgentPlanExecCanaryService.CanaryExecution planExec = modeDecision.usesPlanExec()
+                ? agentPlanExecCanaryService.start(orgId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-" + runId)
+                : AgentPlanExecCanaryService.CanaryExecution.notSelected();
+        if (modeDecision.usesPlanExec() && !planExec.active()) modeDecision = agentRuntimeModeRouter.fallbackToReact(modeDecision);
+        stageTraces.add(stageTrace("MODE_ROUTING", "运行模式路由", "SUCCESS", Instant.now(), Instant.now(),
+                "已按服务端规则选择 " + modeDecision.mode() + "。",
+                withRunId(agentRuntimeModeRouter.payload(modeDecision), runId)));
+        Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
+        String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
+        ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
+        boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
         boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
         Instant ragStartedAt = Instant.now();
         RagService.RetrievalResult ragResult = useKnowledgeRetrieval
@@ -451,7 +463,7 @@ public class ChatOrchestratorService {
         }
         List<String> ragContext = sanitizeContextList(orgId, userId, "RAG_CONTEXT", ragResult.context());
         Instant toolSchemaStartedAt = Instant.now();
-        List<Map<String, Object>> tools = planExec.active() || isWecomKfSession(sessionId)
+        List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(sessionId)
                 ? List.of()
                 : toolOrchestratorService.getToolDefinitions(
                 orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
@@ -467,14 +479,16 @@ public class ChatOrchestratorService {
         stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                 "已按可信运行时上下文完成记忆装配。",
                 withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
-        if (!planExec.active()) {
+        if (!modeDecision.suppressesTools() && !planExec.active()) {
             appendConfirmedPendingEmailBodyToolResult(
                     messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         }
-        Optional<String> forcedCrmProductSalesAnswer = planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+        Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                 messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
         Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
-        int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
+        int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
+                ? resolveMaxToolRounds(skillContext.maxToolCalls())
+                : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
         String answer = forcedCrmProductSalesAnswer.orElseGet(() -> scheduleCadenceClarification.orElseGet(() -> runToolLoop(
                 modelName, messages, tools, orgId, userId, sessionId,
                 showThinking, skillContext, maxToolRounds, modelCredentials, modelCallTraces, toolCallTraces, runId)));
@@ -570,6 +584,7 @@ public class ChatOrchestratorService {
         runtimeExecutionPayload.put("policyBundle", executionResult.policyBundle());
         runtimeExecutionPayload.put("trace", executionResult.executionTrace());
         runtimeExecutionPayload.put("contextSnapshot", executionResult.contextSnapshot());
+        runtimeExecutionPayload.put("modeDecision", agentRuntimeModeRouter.payload(modeDecision));
         if (planExec.selected()) runtimeExecutionPayload.put("taskRun", agentPlanExecCanaryService.payload(planExec));
         payload.put("runtimeExecution", runtimeExecutionPayload);
         payload.put("runtimeGovernance", Map.of(
@@ -657,20 +672,29 @@ public class ChatOrchestratorService {
                 persistUserTurnCommitted(orgId, userId, sessionId, safeQuestion, skillContext.agentId());
                 stageTraces.add(stageTrace("USER_MESSAGE", "用户输入", "SUCCESS", userPersistStartedAt, Instant.now(),
                         clipForTrace(safeQuestion, 220), Map.of("sessionId", sessionId, "runId", runId)));
-                AgentPlanExecCanaryService.CanaryExecution planExec = agentPlanExecCanaryService.start(
-                        orgId, sessionId, skillContext.agentId(), channel, safeQuestion, "chat-stream-" + runId);
-                if (planExec.selected()) {
-                    safeSendPhase(emitter, "runtime_started", null, agentPlanExecCanaryService.payload(planExec));
-                }
-
-                Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
-                String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
-                ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
-                boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
                 List<String> effectiveKnowledgeBaseIds = skillResolverService.resolveKnowledgeBaseIds(skillContext, kbIds);
                 List<String> requestedKnowledgeBaseIds = normalizeKnowledgeBaseIds(kbIds);
                 KnowledgeRetrievalRouter.Decision knowledgeDecision = KnowledgeRetrievalRouter.decide(
                         safeQuestion, effectiveKnowledgeBaseIds, requestedKnowledgeBaseIds, sessionId);
+                AgentRuntimeModeRouter.ModeDecision modeDecision = agentRuntimeModeRouter.decide(
+                        new AgentRuntimeModeRouter.RoutingInput(skillContext.agentId(), channel, safeQuestion,
+                                skillContext.allowedToolNames(), knowledgeDecision.shouldRetrieve(),
+                                pendingEmailFromState(orgId, sessionId).isPresent()));
+                AgentPlanExecCanaryService.CanaryExecution planExec = modeDecision.usesPlanExec()
+                        ? agentPlanExecCanaryService.start(orgId, sessionId, skillContext.agentId(), channel,
+                                safeQuestion, "chat-stream-" + runId)
+                        : AgentPlanExecCanaryService.CanaryExecution.notSelected();
+                if (modeDecision.usesPlanExec() && !planExec.active()) modeDecision = agentRuntimeModeRouter.fallbackToReact(modeDecision);
+                stageTraces.add(stageTrace("MODE_ROUTING", "运行模式路由", "SUCCESS", Instant.now(), Instant.now(),
+                        "已按服务端规则选择 " + modeDecision.mode() + "。",
+                        withRunId(agentRuntimeModeRouter.payload(modeDecision), runId)));
+                safeSendPhase(emitter, "runtime_started", null, Map.of(
+                        "modeDecision", agentRuntimeModeRouter.payload(modeDecision),
+                        "taskRun", agentPlanExecCanaryService.payload(planExec)));
+                Map<String, String> routedModel = modelRouterService.route(orgId, "chat", skillContext.agentModel());
+                String modelName = resolveModelName(skillContext.agentModel(), routedModel.get("provider"), routedModel.get("modelName"));
+                ModelCallCredentials modelCredentials = resolveModelCallCredentials(orgId, routedModel.get("provider"));
+                boolean showThinking = chatThinkingConfigService.isEnabled(orgId);
                 boolean useKnowledgeRetrieval = knowledgeDecision.shouldRetrieve();
                 safeSendPhase(emitter, "model", modelName);
                 if (useKnowledgeRetrieval) {
@@ -716,7 +740,7 @@ public class ChatOrchestratorService {
                             ragResult.fallbackUsed());
                 }
                 Instant toolSchemaStartedAt = Instant.now();
-                List<Map<String, Object>> tools = planExec.active() || isWecomKfSession(sessionId)
+                List<Map<String, Object>> tools = modeDecision.suppressesTools() || planExec.active() || isWecomKfSession(sessionId)
                         ? List.of()
                         : toolOrchestratorService.getToolDefinitions(
                         orgId, skillContext.allowedToolNames(), skillContext.skillApiTools());
@@ -731,14 +755,16 @@ public class ChatOrchestratorService {
                 stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
                         "已按可信运行时上下文完成记忆装配。",
                         withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
-                if (!planExec.active()) {
+                if (!modeDecision.suppressesTools() && !planExec.active()) {
                     appendConfirmedPendingEmailBodyToolResult(
                             messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 }
-                Optional<String> forcedCrmProductSalesAnswer = planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
+                Optional<String> forcedCrmProductSalesAnswer = modeDecision.suppressesTools() || planExec.active() ? Optional.empty() : appendForcedCrmProductSalesToolResult(
                         messages, orgId, userId, sessionId, skillContext, toolCallTraces, runId, question);
                 Optional<String> scheduleCadenceClarification = scheduleCadenceClarification(question);
-                int maxToolRounds = resolveMaxToolRounds(skillContext.maxToolCalls());
+                int maxToolRounds = modeDecision.mode() == AgentRuntimeModeRouter.Mode.LEGACY_REACT
+                        ? resolveMaxToolRounds(skillContext.maxToolCalls())
+                        : Math.min(resolveMaxToolRounds(skillContext.maxToolCalls()), modeDecision.budget().maxToolRounds());
                 boolean pendingApprovalsUsed = forcedCrmProductSalesAnswer.isEmpty() && scheduleCadenceClarification.isEmpty()
                         && resolveToolCalls(
                         modelName, messages, tools, orgId, userId, sessionId,

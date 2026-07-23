@@ -7,7 +7,7 @@ owner_role: project-manager
 task_ids: TASK-235,TASK-236,TASK-237
 related_decisions: DEC-006,DEC-010,DEC-018,DEC-027
 related_issues: none
-updated_at: 2026-07-23T05:30:00Z
+updated_at: 2026-07-23T05:45:00Z
 updated_by: MANAGER-001
 ---
 
@@ -378,6 +378,8 @@ agent-runtime.resume.enabled
 - 当前状态：TASK-235 已经复核并集成至 `main`（`fcc2200`）。V91 新增任务运行、计划、步骤与事件四类组织隔离事实；`AgentTaskRuntimeService` 提供严格计划 Schema 校验、依赖推进、乐观锁、租约与失效恢复。
 - TASK-236 已完成 P2 实现并集成至 `main`（`cbf9728`）：`AgentPlanExecCanaryService` 仅为服务端精确白名单创建固定 `RETRIEVE → SYNTHESIZE` 计划；Web、流式和 OpenAPI 共享该运行事实。默认关闭，启用时常规工具、确认续执行和 CRM 快捷路径均被禁用；未命中或初始化失败安全保留既有链路并记录最小回退原因。
 - P2 验证：默认关闭/精确白名单、固定计划推进、工具步骤不存在、Web 既有回归、后端编译均通过；新建后删除的 PostgreSQL 16 库从 V1 迁移至 V91，并通过 4 个状态机/灰度集成用例。共享测试库的既有 V81 checksum 漂移未修改。
+- TASK-237 已完成 P3 实现并进入 review：`AgentRuntimeModeRouter` 以默认关闭的精确 Agent 白名单、确定性特征和收紧预算选择 `DIRECT`、`REACT` 或 `PLAN_EXEC`。确认续执行、关闭、未命中、无效输入与 P2 未启动均安全保留/回退既有 ReAct；只有 P2/P3 双门均命中才创建无工具固定计划。聊天、流式与 OpenAPI 共享该路由决定，兼容响应/流事件新增脱敏的 `modeDecision` 投影。
+- P3 验证：规则单元覆盖关闭/精确白名单、Direct/ReAct/Plan-Exec、确认续执行、敏感标记与 P2 未启动回退；连同 P2 和既有聊天回归共 48 项通过。后端编译、diff 检查及全新后删除 PostgreSQL 16 V1→V91 的 4/4 集成用例通过；共享测试库的 V81 checksum 漂移未改动。
 - 验证证据：后端编译、diff 检查通过；新建后删除的 PostgreSQL 16 临时库从空库全量迁移至 V91，并通过 3 个运行时集成用例。默认共享测试库仍因既有 V81 checksum 漂移无法启动，未 repair、未改写历史迁移。
 - 实施前先读取：`docs/specs/FEAT-004-agent-flow-compile-triggers-and-executions.md`、`docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`、`docs/specs/FEAT-122-runtime-execution-trace-correction.md`、`docs/specs/FEAT-130-forced-skill-execution-context.md`、`docs/specs/FEAT-131-agent-memory-platform.md`。
 - 首个实现任务必须以 P1 为边界，并明确禁止把 `workflow_code` 字符串解析误升级为任意代码执行器。

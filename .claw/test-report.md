@@ -1,14 +1,22 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T05:15:00Z
+updated_at: 2026-07-23T05:45:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T05:15:00Z
+last_run_at: 2026-07-23T05:45:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-237 - 混合智能体运行时 P3：规则优先模式路由
+
+- `identity/assignment`：TASK-237 的任务级 SSH 身份门禁、分支与代表性实现、测试和治理文件范围检查均返回 `allowed`。
+- `backend-focused`：`AgentRuntimeModeRouterTest`、`AgentPlanExecCanaryServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 共 48 项通过。覆盖默认关闭和精确白名单回退、Direct/ReAct/Plan-Exec 的稳定原因码、确认续执行保留、敏感意图仅标记确认/风险、P2 未启动回退既有 ReAct，以及聊天模型身份回归。
+- `fresh-postgresql-integration`：新建后删除的 PostgreSQL 16 临时库完整迁移 V1→V91；`AgentTaskRuntimeIntegrationTest` 4/4 通过，验证 Spring 完整装配与既有 P1/P2 运行事实。
+- `backend-compile/static`：`mvn -q -Dmaven.repo.local=.m2 -DskipTests compile`、`test-compile` 与 `git diff --check` 通过。
+- `environment-limit`：默认共享 `agentcici_test` 的既有 Flyway V81 checksum 漂移（数据库 `2112500543`，本地 `379982424`）未修复、未 repair；隔离库验证不等同于全量套件通过。
 
 ## TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
 

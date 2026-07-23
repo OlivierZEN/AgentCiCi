@@ -75,6 +75,14 @@ app:
       # P2 canary is server-owned and disabled until an exact test Agent is allowlisted.
       enabled: false
       allowed-agent-ids: []
+    mode-router:
+      # P3 is also server-owned. Both this and plan-exec must match before a durable plan starts.
+      enabled: false
+      allowed-agent-ids: []
+      max-react-tool-rounds: 3
+      max-steps: 6
+      max-replans: 1
+      max-reflect-rounds: 1
   kb:
     indexing:
       mode: local

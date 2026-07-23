@@ -12,8 +12,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.codehouse.ciciassistant.agent.domain.AgentWorkflowVersionRepository;
+import com.codehouse.ciciassistant.agent.config.AgentRuntimeModeRouterProperties;
 import com.codehouse.ciciassistant.agent.service.AgentAccessControlService;
 import com.codehouse.ciciassistant.agent.service.AgentRuntimeConcurrencyService;
+import com.codehouse.ciciassistant.agent.service.AgentRuntimeModeRouter;
 import com.codehouse.ciciassistant.agent.service.AgentPlanExecCanaryService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowExecutionLogService;
 import com.codehouse.ciciassistant.agent.service.AgentWorkflowRuntimeService;
@@ -805,6 +807,8 @@ class ChatOrchestratorServiceModelIdentityTest {
                 mock(AgentWorkflowExecutionLogService.class);
         private final AgentRunTraceService agentRunTraceService = mock(AgentRunTraceService.class);
         private final AgentAccessControlService agentAccessControlService = mock(AgentAccessControlService.class);
+        private final AgentRuntimeModeRouter agentRuntimeModeRouter =
+                new AgentRuntimeModeRouter(new AgentRuntimeModeRouterProperties());
         private final AgentPlanExecCanaryService agentPlanExecCanaryService = mock(AgentPlanExecCanaryService.class);
         private final BillingUsageMeteringService billingUsageMeteringService = mock(BillingUsageMeteringService.class);
         private final SafetyGatewayService safetyGatewayService = mock(SafetyGatewayService.class);
@@ -917,6 +921,7 @@ class ChatOrchestratorServiceModelIdentityTest {
                     formatter,
                     safetyGatewayService,
                     new AgentRuntimeConcurrencyService(),
+                    agentRuntimeModeRouter,
                     agentPlanExecCanaryService,
                     directExecutor,
                     transactionManager);

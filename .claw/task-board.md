@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T05:30:00Z
+updated_at: 2026-07-23T05:45:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-237 - 混合智能体运行时 P3：规则优先模式路由
 
-- status: `ready`
+- status: `review`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-237.md`
 - assignment_path: `.claw/assignments/TASK-237.yaml`
 - blocked_by: `none`
-- next_action: 在 P2 的默认关闭、精确白名单和无工具计划边界之上实现规则优先模式路由；双开关未命中必须保持旧链路。
+- next_action: 复核规则优先路由、P2/P3 双门和兼容投影；通过后集成 main 并创建独立 P4 Reflect 任务。
 
 ### TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
 
