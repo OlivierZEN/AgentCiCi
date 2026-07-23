@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T05:45:00Z
+updated_at: 2026-07-23T06:00:00Z
 updated_by: MANAGER-001
-phase: agent-runtime-mixed-orchestration-p3-review
-active_task: TASK-237
-next_action: "复核 TASK-237 的规则优先路由与 P2/P3 双门；通过后集成并以独立任务实施 P4 受控 Reflect。"
+phase: agent-runtime-mixed-orchestration-p4-authorized
+active_task: TASK-238
+next_action: "在独立分支实现受控 Reflect：确定性 Gate 先行，审查器不得新增工具、写入或越过确认。"
 read_next:
   goals: false
   decisions: false
@@ -29,6 +29,8 @@ read_next:
 - TASK-237 已获授权实施 FEAT-133 P3：新增规则优先模式路由。默认关闭的精确 Agent 白名单、P2/P3 双开关与稳定原因码共同限定 Plan-Exec；关闭、未命中或特征解析失败均保持既有 Direct/ReAct 链路，不新增工具、写入、确认、Reflect、重规划、UI 或生产放量。
 
 - TASK-237 已完成实现并进入 review：路由器在 RAG/工具 Schema 前以服务端确定性规则选择 Direct、ReAct 或 Plan-Exec，确认续执行保留既有路径；P2 未启动时自动回退既有 ReAct。Chat、流式与 OpenAPI 共享脱敏 `modeDecision` 投影。规则/P2/聊天定向回归 48 项、编译和 diff 检查通过；全新后删除的 PostgreSQL 16 从 V1 迁移至 V91，并通过 4/4 集成用例。
+
+- TASK-237 已完成并集成至 `main`（`5c08c33`）。TASK-238 已获授权实施 P4：默认关闭的受控 Reflect 仅对 P2/P3 已启动、且 P3 标记为需要审查的运行创建组织隔离事实；确定性 Gate 优先，审查不新增工具、写入、确认或自由重规划。
 
 - TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 

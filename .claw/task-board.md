@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T05:45:00Z
+updated_at: 2026-07-23T06:00:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -15,16 +15,27 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-238 - 混合智能体运行时 P4：受控 Reflect 与评测门禁
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `backend-agent`
+- spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
+- task_status_path: `.claw/tasks/TASK-238.md`
+- assignment_path: `.claw/assignments/TASK-238.yaml`
+- blocked_by: `none`
+- next_action: 建立组织隔离的确定性 Gate、受限审查事实与评测断言；不新增工具、写入或确认路径。
+
 ### TASK-237 - 混合智能体运行时 P3：规则优先模式路由
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `backend-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-237.md`
 - assignment_path: `.claw/assignments/TASK-237.yaml`
 - blocked_by: `none`
-- next_action: 复核规则优先路由、P2/P3 双门和兼容投影；通过后集成 main 并创建独立 P4 Reflect 任务。
+- next_action: 已集成 `5c08c33`；后续由 TASK-238 受控接入 Reflect 与评测事实。
 
 ### TASK-236 - 混合智能体运行时 P2：Chat/OpenAPI 受限灰度
 

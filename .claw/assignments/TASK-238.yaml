@@ -1,19 +1,21 @@
-task_id: TASK-237
+task_id: TASK-238
 assignee: MANAGER-001
 assigned_by: MANAGER-001
-status: completed
-assigned_at: 2026-07-23T05:30:00Z
+status: active
+assigned_at: 2026-07-23T06:00:00Z
 expires_at: none
 spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
-task_status_path: .claw/tasks/TASK-237.md
-branch: codex/TASK-237-runtime-mode-router
+task_status_path: .claw/tasks/TASK-238.md
+branch: codex/TASK-238-controlled-reflect
 pr_url: n/a
 scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/agent/config/**
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/**
   - backend/src/main/java/com/codehouse/ciciassistant/agent/service/**
   - backend/src/main/java/com/codehouse/ciciassistant/ai/service/**
   - backend/src/main/resources/application.yml
+  - backend/src/main/resources/db/migration/**
   - backend/src/test/java/com/codehouse/ciciassistant/agent/**
   - backend/src/test/java/com/codehouse/ciciassistant/ai/**
   - docs/specs/**
@@ -23,15 +25,18 @@ allowed_write_roots:
   - .claw/current-status.md
   - .claw/test-report.md
 scope_files:
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/config/AgentRuntimeReflectProperties.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentTaskReviewEntity.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/domain/AgentTaskReviewRepository.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentTaskReflectService.java
   - backend/src/main/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorService.java
-  - backend/src/main/java/com/codehouse/ciciassistant/agent/config/AgentRuntimeModeRouterProperties.java
-  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentRuntimeModeRouter.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentEvaluationAssertionEngine.java
   - backend/src/main/resources/application.yml
-  - backend/src/test/java/com/codehouse/ciciassistant/agent/service/AgentRuntimeModeRouterTest.java
-  - backend/src/test/java/com/codehouse/ciciassistant/ai/service/ChatOrchestratorServiceModelIdentityTest.java
+  - backend/src/main/resources/db/migration/V92__agent_task_runtime_review.sql
+  - backend/src/test/java/com/codehouse/ciciassistant/agent/service/AgentTaskReflectServiceTest.java
   - docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
-  - .claw/tasks/TASK-237.md
-  - .claw/assignments/TASK-237.yaml
+  - .claw/tasks/TASK-238.md
+  - .claw/assignments/TASK-238.yaml
   - .claw/task-board.md
   - .claw/current-status.md
   - .claw/test-report.md
@@ -46,16 +51,15 @@ protected_paths:
   - infrastructure/**
 touch_policy: exclusive
 shared_contracts:
-  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentPlanExecCanaryService.java
   - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentTaskRuntimeService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentRuntimeModeRouter.java
+  - backend/src/main/java/com/codehouse/ciciassistant/agent/service/AgentPlanExecCanaryService.java
   - backend/src/main/java/com/codehouse/ciciassistant/ai/service/AgentRunTraceService.java
-  - backend/src/main/java/com/codehouse/ciciassistant/openapi/service/AgentOpenApiRunService.java
 task_boundary:
-  - "只实施 FEAT-133 P3 的服务端规则优先路由与 Chat 汇合接入。"
-  - "Plan-Exec 必须同时命中 P3 和 P2 的服务端开关及精确 Agent 白名单。"
-  - "不新增工具、写入、确认、Reflect、重规划、并行、管理 UI、评测门禁或生产发布。"
+  - "只实施 FEAT-133 P4 的确定性 Gate、受限审查事实和评测门禁读取。"
+  - "不新增工具、写入、确认、自由重规划、并行、管理 UI 或生产发布。"
 change_manifest_required: true
 preflight_required: true
 local_login_required: true
 identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
-signature: "MANAGER-001; goal explicitly authorizes FEAT-133 P3 after P2 integration."
+signature: "MANAGER-001; goal explicitly authorizes FEAT-133 P4 after P1-P3 integration."

@@ -1,7 +1,7 @@
 ---
 kind: task-status
 task_id: TASK-237
-status: review
+status: done
 updated_at: 2026-07-23T05:45:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
@@ -40,6 +40,6 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - `AgentRuntimeModeRouterTest`、`AgentPlanExecCanaryServiceTest`、`ChatOrchestratorServiceModelIdentityTest` 共 48 项通过；后端 `compile`、`test-compile` 与 `git diff --check` 通过。
 - 新建后删除的 PostgreSQL 16 临时库完整迁移 V1→V91，并通过 `AgentTaskRuntimeIntegrationTest` 4/4；默认共享库的既有 V81 checksum 漂移未修复或 repair。
 
-## Next action
+## Handoff
 
-- 复核后集成至 `main`；随后以独立 TASK 实施 P4 受控 Reflect 与评测发布门禁，不扩大工具或写入范围。
+- 已在 `main` 集成并推送 `5c08c33`。后续 TASK-238 仅实施受控 Reflect 与评测事实，不得放宽 P2/P3 双门、工具、写入或确认边界。

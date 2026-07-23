@@ -4,10 +4,10 @@ feature_id: FEAT-133
 title: 可执行计划、动态路由与受控反思的混合智能体运行时
 status: in_progress
 owner_role: project-manager
-task_ids: TASK-235,TASK-236,TASK-237
+task_ids: TASK-235,TASK-236,TASK-237,TASK-238
 related_decisions: DEC-006,DEC-010,DEC-018,DEC-027
 related_issues: none
-updated_at: 2026-07-23T05:45:00Z
+updated_at: 2026-07-23T06:00:00Z
 updated_by: MANAGER-001
 ---
 
@@ -316,6 +316,13 @@ P1 不得提前实现自由多 Agent、并行步骤、可编辑画布或任意�
 - 求值顺序固定为：既有确认续执行保留原路径；无工具且无外部事实需求为 `DIRECT`；独立只读查询为 `REACT`；显式顺序/依赖、多源、中间产物、跨步骤核验或超过 ReAct 预算为 `PLAN_EXEC`。写入或敏感意图仅标记 `requiresConfirmation` 与风险，不能执行或放大权限。
 - 输出为稳定的模式、原因码、风险、预算和 `reflectRequired` 布尔值；P3 仅计算审查需求，不调用 reviewer、不重规划、不新增工具、写入、确认机制、管理 UI 或生产放量。
 - `PLAN_EXEC` 只有 P2 灰度与 P3 路由两个服务端开关及精确 Agent 白名单都命中时才进入 P2 的无工具固定计划；其他模式保持既有兼容响应和审计边界。
+
+### 13.3 P4 实施契约：受控 Reflect 与评测门禁
+
+- 服务端 `app.agent-runtime.reflect` 默认关闭且使用精确 Agent 白名单；只有 P3 已标记 `reflectRequired`、P2/P3 已启动的真实运行与 P4 开关都命中时才创建审查事实。任何开关未命中都不改变既有答案、工具、确认或运行终态。
+- 先执行确定性 Gate：验证运行/组织归属、计划终态、步骤预算、确认/写入事实、输出非空与脱敏约束。Gate 阻断后只能返回 `HANDOFF` 或 `PARTIAL` 事实，reviewer 不得覆盖。
+- Reviewer 仅接收目标摘要、输出草稿、脱敏步骤/证据摘要和固定量表，返回严格 Schema 的 `PASS | REVISE | HANDOFF`、问题码与有限修订目标；禁止保存或返回自然语言思维链。首期不新增工具或写步骤，`REVISE` 只允许重新生成无副作用的最终回答，超过轮次转 `HANDOFF`。
+- 审查记录、Gate 和问题码以组织隔离的运行事实持久化；聊天兼容响应和流事件只投影脱敏 `reviewStatus`。评测断言先覆盖 Gate、审查轮次、确认前零写入和终态；发布门禁只读取这些事实，不能由模型建议放行。
 
 ## 14. 验收标准
 
