@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T12:05:00+08:00
+updated_at: 2026-07-23T12:15:00+08:00
 updated_by: MANAGER-001
-phase: task234-release-version-patch-limit
-active_task: "TASK-234"
-next_action: "将生产版本修订段上限调整为365，并验证自动进位规则。"
+phase: release-version-patch-limit-updated
+active_task: null
+next_action: "生产修订版本上限已调整为365；下次发布前仍应执行标准 dry-run。"
 read_next:
   goals: false
   decisions: false
@@ -22,7 +22,7 @@ read_next:
 
 ## Snapshot
 
-- TASK-234 正在按用户要求调整生产版本规则：修订段最大值由 12 改为 365，`2.8.365` 的下一版为 `2.9.1`；不发布生产。
+- TASK-234 已按用户要求调整生产版本规则：修订段最大值为 365，`2.8.365` 的下一版为 `2.9.1`；主、次版本上限仍为 12。脚本级边界回归与 dry-run 校验均通过，未发布生产。
 
 - FEAT-131 通用外部应用智能体记忆平台已发布至生产 `2.8.5 / 02d380d10508`。可信凭据绑定、受控上下文注入、关系库二次授权的脱敏语义检索、候选/人工治理、Trace/评测状态、保留/删除/legal hold、组织导出与 purge、两个独立通用适配契约均有代码与验证证据；生产数据库已正向迁移 V85–V90，六服务健康，公网 HTTPS smoke 通过。默认共享测试库的既有 V81 checksum 漂移未修复或掩盖。
 

@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
+assert_next_version() {
+  local current_version="$1"
+  local expected_version="$2"
+  local case_dir="$TMP_DIR/${current_version//./-}"
+  local remote_dir="$case_dir/remote.git"
+  local repo_dir="$case_dir/repo"
+
+  git init --bare "$remote_dir" >/dev/null
+  git init "$repo_dir" >/dev/null
+  git -C "$repo_dir" config user.email 'release-test@example.invalid'
+  git -C "$repo_dir" config user.name 'release-version-test'
+  mkdir -p "$repo_dir/scripts"
+  cp "$ROOT_DIR/scripts/release-acr.sh" "$repo_dir/scripts/release-acr.sh"
+  chmod +x "$repo_dir/scripts/release-acr.sh"
+  git -C "$repo_dir" add scripts/release-acr.sh
+  git -C "$repo_dir" commit -m 'test fixture' >/dev/null
+  git -C "$repo_dir" remote add origin "$remote_dir"
+  git -C "$repo_dir" tag "$current_version"
+  git -C "$repo_dir" push origin HEAD --tags >/dev/null
+
+  local release_output actual_version
+  release_output="$(cd "$repo_dir" && ./scripts/release-acr.sh --dry-run --production)"
+  actual_version="$(printf '%s\n' "$release_output" | awk '/^[[:space:]]+version:/ { print $2; exit }')"
+  [[ "$actual_version" == "$expected_version" ]] || {
+    echo "expected next version $expected_version after $current_version, got $actual_version" >&2
+    exit 1
+  }
+}
+
+assert_invalid_version_rejected() {
+  local case_dir="$TMP_DIR/invalid"
+  git init "$case_dir" >/dev/null
+  git -C "$case_dir" config user.email 'release-test@example.invalid'
+  git -C "$case_dir" config user.name 'release-version-test'
+  mkdir -p "$case_dir/scripts"
+  cp "$ROOT_DIR/scripts/release-acr.sh" "$case_dir/scripts/release-acr.sh"
+  chmod +x "$case_dir/scripts/release-acr.sh"
+  git -C "$case_dir" add scripts/release-acr.sh
+  git -C "$case_dir" commit -m 'test fixture' >/dev/null
+
+  if (cd "$case_dir" && ./scripts/release-acr.sh --dry-run --version 2.8.366 --production >/dev/null 2>&1); then
+    echo '2.8.366 should be rejected' >&2
+    exit 1
+  fi
+}
+
+assert_next_version 2.8.364 2.8.365
+assert_next_version 2.8.365 2.9.1
+assert_next_version 2.12.365 3.0.1
+assert_invalid_version_rejected
+
+echo 'release versioning tests passed'

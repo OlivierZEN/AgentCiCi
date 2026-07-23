@@ -12,6 +12,9 @@ CICI_RELEASE_VERSION="${CICI_RELEASE_VERSION:-${RELEASE_VERSION:-}}"
 EXPLICIT_VERSION=false
 CHANNEL_EXPLICIT=false
 INITIAL_PRODUCTION_VERSION="${INITIAL_PRODUCTION_VERSION:-2.0.1}"
+MAX_MAJOR_VERSION=12
+MAX_MINOR_VERSION=12
+MAX_PATCH_VERSION=365
 
 usage() {
   cat <<'EOF'
@@ -146,7 +149,7 @@ validate_production_version() {
   local major="$((10#${BASH_REMATCH[1]}))"
   local minor="$((10#${BASH_REMATCH[2]}))"
   local patch="$((10#${BASH_REMATCH[3]}))"
-  [[ "$major" -ge 0 && "$major" -le 12 && "$minor" -ge 0 && "$minor" -le 12 && "$patch" -ge 1 && "$patch" -le 12 ]]
+  [[ "$major" -ge 0 && "$major" -le "$MAX_MAJOR_VERSION" && "$minor" -ge 0 && "$minor" -le "$MAX_MINOR_VERSION" && "$patch" -ge 1 && "$patch" -le "$MAX_PATCH_VERSION" ]]
 }
 
 validate_release_version() {
@@ -189,12 +192,12 @@ increment_production_version() {
   minor="$((10#$minor))"
   patch="$((10#$patch))"
 
-  if (( patch < 12 )); then
+  if (( patch < MAX_PATCH_VERSION )); then
     patch=$((patch + 1))
-  elif (( minor < 12 )); then
+  elif (( minor < MAX_MINOR_VERSION )); then
     minor=$((minor + 1))
     patch=1
-  elif (( major < 12 )); then
+  elif (( major < MAX_MAJOR_VERSION )); then
     major=$((major + 1))
     minor=0
     patch=1
@@ -261,7 +264,7 @@ fi
 
 if ! validate_release_version "$CICI_RELEASE_VERSION"; then
   echo "Invalid release version: $CICI_RELEASE_VERSION" >&2
-  echo "Expected production version N.N.N with numeric segments 0-12 and patch 1-12, or test version N.N.N-beta.N." >&2
+  echo "Expected production version N.N.N with major/minor 0-12 and patch 1-365, or test version N.N.N-beta.N." >&2
   exit 2
 fi
 

@@ -12,7 +12,9 @@ last_run_status: passed
 
 ## TASK-234 - 发布修订版本号上限调整为365
 
-- 待执行：脚本级版本校验与递增回归、发布脚本 dry-run 和静态检查。
+- `versioning`：`bash scripts/test-release-versioning.sh` 通过，在临时 Git 远端验证 `2.8.364 → 2.8.365`、`2.8.365 → 2.9.1`、`2.12.365 → 3.0.1`，并拒绝 `2.8.366`。
+- `dry-run`：`./scripts/release-acr.sh --dry-run --version 2.8.365 --production` 成功生成对应发布计划；`2.8.366` 被校验拒绝且错误提示声明修订段范围为 `1-365`。
+- `static`：两个脚本 `bash -n` 与 `git diff --check` 通过；未执行生产发布。
 
 ## Production Release 2.8.5 - FEAT-131
 
