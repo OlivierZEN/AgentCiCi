@@ -441,3 +441,8 @@ Agent Builder 中每个 Agent 应可查看其允许读取的 memory scopes、记
 - 提示词组装器只接受已授权的 `MemoryContext`，并在严格字符预算内放入会话摘要和记忆项，不会以超限内容覆盖模型上下文。
 - 新建并在验证后删除的 PostgreSQL 16 临时库已从 V1 全量迁移至 V85，三张记忆表存在性断言通过；首版仍未连接外部应用入口、Chat 编排器、向量索引或自动候选写入，以避免在没有完整授权与审计契约时扩大运行面。
 - `TASK-227` 已完成 Phase 2 治理前置：V86 增加 `memory_candidate` 与 `memory_evidence`；候选以 `PENDING` 状态保存，只有显式审核通过才生成 `ACTIVE` 记忆，且重复审核会被拒绝。新建并删除的 PostgreSQL 16 临时库已从 V1 迁移至 V86 并验证五张通用记忆表；向量索引、治理 API、Chat 编排器和任何外部应用接入仍保持后续独立任务边界。
+- `TASK-226` 至 `TASK-230` 已分别落地通用关系型核心、候选审核、受控语义检索、可信运行时注入和凭据绑定；实现保持应用无关，所有外部应用属性均由服务端可信契约导出。
+- `TASK-231` 负责生命周期闭环：将 `memory_subject`、`memory_record`、`memory_conversation_snapshot`、`memory_candidate`、`memory_evidence`、`memory_vector_fragment` 和 API 凭据绑定纳入既有组织导出、dry-run manifest、real purge 与残留行校验。
+- 主体删除、撤销和过期清理必须先请求移除派生向量，再使关系型记录立即不可读取。向量删除失败不得恢复可读状态，应留下不含正文和原始向量的最小审计摘要，以便重试或组织 purge 收口。
+- 组织级 `legal hold` 是主体删除和组织 purge 的硬阻断条件；导出仅包括经现有字段脱敏后的关系型记录和执行清单，不导出 embedding、原始向量内容、密钥或跨组织数据。
+- 进入最终验收前，仍须完成候选审核治理 API、Trace/评测门禁、两个独立通用适配契约及生产就绪审计；不在未经授权时执行生产发布。

@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-231 - 通用记忆生命周期与组织清理闭环
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
+- task_status_path: `.claw/tasks/TASK-231.md`
+- assignment_path: `.claw/assignments/TASK-231.yaml`
+- blocked_by: `none`
+- next_action: 将通用记忆、证据、会话快照、向量片段与 API 绑定纳入组织保留/导出/purge，并实现主体删除、过期清理和向量同步删除。
+
 ### TASK-230 - 受认证凭据记忆上下文绑定
 
 - status: `ready`
