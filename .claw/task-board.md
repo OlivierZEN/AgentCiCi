@@ -15,6 +15,17 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-229 - 通用可信运行时记忆上下文
+
+- status: `ready`
+- priority: `critical`
+- owner_role: `fullstack-agent`
+- spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
+- task_status_path: `.claw/tasks/TASK-229.md`
+- assignment_path: `.claw/assignments/TASK-229.yaml`
+- blocked_by: `none`
+- next_action: 接入可信外部主体上下文和授权记忆提示词，保持内部聊天路径不变。
+
 ### TASK-228 - 通用记忆受控语义检索
 
 - status: `done`

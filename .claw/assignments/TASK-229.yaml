@@ -1,0 +1,41 @@
+task_id: TASK-229
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T00:35:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-131-agent-memory-platform.md
+task_status_path: .claw/tasks/TASK-229.md
+branch: codex/TASK-229-runtime-memory-context
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/test/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/test/java/com/codehouse/ciciassistant/ai/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - docs/specs/FEAT-131-agent-memory-platform.md
+  - .claw/tasks/TASK-229.md
+  - .claw/assignments/TASK-229.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths: [".claw/developers/**", "scripts/**", ".github/workflows/**", "infra/**", "infrastructure/**"]
+touch_policy: exclusive
+shared_contracts: ["docs/specs/FEAT-131-agent-memory-platform.md"]
+task_boundary:
+  - "仅实现可信通用外部主体上下文和 Chat 编排器的授权记忆注入。"
+  - "不得添加外部应用领域对象、客户端信任边界或具体渠道实现。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 verified 2026-07-23; active production-readiness goal authorizes this scope."
+notes: "外部上下文必须由服务端认证层建立，客户端值仅可作为未受信输入。"
