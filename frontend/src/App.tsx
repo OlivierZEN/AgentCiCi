@@ -40,6 +40,7 @@ import PlatformBillingPage from "./platform/pages/PlatformBillingPage";
 import PlatformModelsPage from "./platform/pages/PlatformModelsPage";
 import PlatformIntegrationsPage from "./platform/pages/PlatformIntegrationsPage";
 import PlatformSkillsPage from "./platform/pages/PlatformSkillsPage";
+import PlatformTenantApplicationsPage from "./platform/pages/PlatformTenantApplicationsPage";
 import PlatformTenantDetailPage from "./platform/pages/PlatformTenantDetailPage";
 import PlatformTenantsPage from "./platform/pages/PlatformTenantsPage";
 import PlatformToolsPage from "./platform/pages/PlatformToolsPage";
@@ -115,7 +116,8 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="evaluation/suites" element={<PlatformEvaluationPage />} />
             <Route path="evaluation/runs" element={<PlatformEvaluationPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
-            <Route path="tenants/:orgId" element={<PlatformTenantDetailPage />} />
+            <Route path="tenants/:orgId" element={<PlatformTenantApplicationsPage />} />
+            <Route path="tenants/:orgId/applications/agentcici" element={<PlatformTenantDetailPage />} />
             <Route path="registered-users" element={<PlatformRegisteredUsersPage />} />
             <Route path="demo-leads" element={<PlatformAutoServiceDemoRequestsPage />} />
             <Route path="website-leads" element={<Navigate to="/platform/demo-leads" replace />} />

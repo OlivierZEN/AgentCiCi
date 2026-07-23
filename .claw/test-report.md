@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T07:50:00Z
+updated_at: 2026-07-24T00:00:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T07:50:00Z
+last_run_at: 2026-07-24T00:00:00Z
 last_run_status: passed
 ---
 
@@ -186,12 +186,15 @@ last_run_status: passed
 - `frontend-build`: `npm run build` 通过，转换 1,949 个模块；仅保留既有 Vite 大 chunk 警告。
 - `static`: `git diff --check` 通过；快捷指令与技能菜单、快捷指令弹窗、输入区操作、会话选中行和会话操作菜单均由 `--theme-*` token 覆盖，蓝色主题不再读取鎏金账房固定颜色。
 
-## TASK-219 - 运营管理端信息架构与独立主题重构（进行中）
+## TASK-219 - 运营管理端信息架构与独立主题重构（租户应用中心）
 
 - `frontend-focused`: `npm test -- --run src/theme/theme.test.ts src/platform/pages/PlatformBillingPage.test.ts src/platform/pages/PlatformSkillsPage.test.ts` 通过，3 个文件、20 项断言全部通过。
 - `frontend-build`: `npm run build` 通过；Vite 保留既有大 chunk 警告，无 TypeScript 错误。
+- `identity/assignment`: MANAGER-001 的 SSH challenge-response、GitHub 身份、TASK-219 分支与租户页面、样式、规格、任务状态和测试报告路径均经 `dev-login.py` 验证为 `allowed`。
+- `frontend-build`: `npm run build` 通过，转换 1,949 个模块；TypeScript 无错误，仅保留既有 Vite 大 chunk 警告。
 - `static`: `git diff --check` 通过。
-- `browser`: 本地应用内浏览器访问 `/platform/login`，登录页语义与交互控件可用；当前没有平台账号会话，未对需鉴权的运营页伪造数据或宣称已完成视觉验收。待取得授权会话后补做桌面截图、导航展开、抽屉与八主题持久化检查。
+- `browser`: 使用仅本机的脱敏 fixture 响应进入受保护 `/platform/tenants/org5nszpgj99jaysxv6y`，没有读取或写入生产。Playwright 在 `1920 × 1080`、`crm-blue` 主题下完成全页视觉检查，确认页面只保留租户身份与 AgentCiCi、Semattice 两张应用卡片，正文不存在“保留策略”“组织导出”或“预演与销毁记录”，且无横向溢出；点击 Semattice 开通后成功提示、运行中状态、已开通汇总 1→2 及已开通禁用态均正确。截图是本机临时证据，不纳入版本控制。
+- `routing`: 点击 AgentCiCi 卡片进入 `/platform/tenants/org5nszpgj99jaysxv6y/applications/agentcici`，展示“AgentCiCi 应用生命周期”与原有保留、导出、预演、销毁治理；页面无横向溢出，返回按钮指向租户应用页。
 
 ## TASK-214 - OneKeyToken 实时凭据检测修复（生产发布）
 
