@@ -15,6 +15,7 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 ## Scope
 
 - 提供按组织与 Agent 权限隔离的通用候选查询、审核通过和拒绝 API；
+- 候选必须持久化其产生时的 Agent 归属；审核 API 只能读取路径 Agent 的候选，拒绝以 scopeKey 等可伪造字段推断归属；
 - 审核操作必须带操作者和原因，写入脱敏审计，并复用候选审核服务的幂等与索引规则；
 - 将记忆上下文注入的最小 Trace 证据纳入既有评测/发布质量检查，禁止把记忆正文、外部主体标识或向量内容写入 Trace/评测资产。
 
