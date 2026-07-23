@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
-phase: feat131-phase2-ready
-active_task: "TASK-227"
-next_action: "在 TASK-227 中建设通用记忆候选、证据、审核与 TTL；不得接入外部应用入口、Chat 编排器或自动长期写入。"
+phase: feat131-semantic-retrieval-ready
+active_task: "TASK-228"
+next_action: "在 TASK-228 中建设已审核非敏感记忆的受控语义检索及关系库二次授权。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-228 已获授权：为通用记忆建立受控语义检索，向量命中只能作为候选，必须回读关系库完成组织、主体、scope、状态和有效期校验。
 
 - TASK-227 已由 MANAGER-001 分配并启动 FEAT-131 Phase 2：只建设通用候选、证据、审核、撤销与时效治理的关系型权威模型。候选在人工或确定性审核前不得被上下文读取，不接入任何外部应用、领域对象、页面、渠道或自动长期写入。
 

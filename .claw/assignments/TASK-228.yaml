@@ -1,0 +1,41 @@
+task_id: TASK-228
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-23T00:10:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-131-agent-memory-platform.md
+task_status_path: .claw/tasks/TASK-228.md
+branch: codex/TASK-228-memory-semantic-retrieval
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/memory/**
+  - backend/src/main/java/com/codehouse/ciciassistant/kb/service/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/memory/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+scope_files:
+  - docs/specs/FEAT-131-agent-memory-platform.md
+  - .claw/tasks/TASK-228.md
+  - .claw/assignments/TASK-228.yaml
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths: [".claw/developers/**", "scripts/**", ".github/workflows/**", "infra/**", "infrastructure/**"]
+touch_policy: exclusive
+shared_contracts: ["docs/specs/FEAT-131-agent-memory-platform.md", "docs/specs/FEAT-024-account-tenant-lifecycle-and-data-retention.md"]
+task_boundary:
+  - "只实现已审核非敏感记忆的受控语义检索和关系库二次授权。"
+  - "不得写入外部应用领域对象、自动长期记忆或原始会话内容。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: "ssh_challenge_response + git_platform_account + ssh_commit_signing"
+signature: "MANAGER-001 verified 2026-07-23; user authorized the next FEAT-131 phase."
+notes: "向量存储不可作为权限或事实源。"
