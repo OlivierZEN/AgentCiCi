@@ -13,6 +13,7 @@ allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/memory/**
   - backend/src/main/java/com/codehouse/ciciassistant/agent/**
   - backend/src/main/java/com/codehouse/ciciassistant/ai/**
+  - backend/src/main/resources/db/migration/**
   - backend/src/test/java/com/codehouse/ciciassistant/memory/**
   - backend/src/test/java/com/codehouse/ciciassistant/agent/**
   - backend/src/test/java/com/codehouse/ciciassistant/ai/**
