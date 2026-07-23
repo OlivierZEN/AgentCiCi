@@ -3,9 +3,9 @@ kind: current-status
 version: 4
 updated_at: 2026-07-22T15:51:44Z
 updated_by: MANAGER-001
-phase: feat131-runtime-context-ready
-active_task: "TASK-229"
-next_action: "在 TASK-229 中将可信通用外部主体上下文注入 Chat 编排器，并保持内部聊天路径不变。"
+phase: feat131-credential-binding-ready
+active_task: "TASK-230"
+next_action: "在 TASK-230 中以受认证 API 凭据建立通用外部主体记忆上下文，客户端 metadata 不参与信任决策。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,8 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- TASK-230 已获授权：将 API 凭据与通用应用、主体类型、身份等级和命名空间绑定，OpenAPI 只能使用该绑定建立记忆作用域；绑定缺失安全降级为无记忆。
 
 - TASK-229 已获授权：只建立由可信服务端认证层提供的通用外部主体运行时上下文，并注入授权后的记忆；不添加任何外部应用领域功能或客户端信任边界。
 
