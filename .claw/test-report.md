@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-22T15:51:44Z
+updated_at: 2026-07-23T10:45:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-22T15:51:44Z
+last_run_at: 2026-07-23T10:45:00Z
 last_run_status: passed
 ---
 
@@ -12,8 +12,10 @@ last_run_status: passed
 
 ## TASK-233 - 通用记忆人工管理与生产就绪审计
 
-- `backend-focused`：生命周期回归验证跨 Agent 主体删除拒绝、已归属记录撤销即脱敏、向量删除失败仍不可读取；候选审核持续将归属复制至记录。后端编译与 `git diff --check` 通过。
-- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V90，并验证候选与已生效记录均存在 `agent_id` 归属列。
+- `backend-focused`：11 个通用记忆定向回归、后端编译与 `git diff --check` 通过；覆盖可信上下文、受控语义检索、候选审核、OpenAPI 阻塞/流式、Trace/评测状态、两份独立适配契约、撤销/主体删除/过期和跨 Agent 拒绝。生命周期删除同时脱敏证据引用。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V90，并验证候选与已生效记录各自存在 `agent_id` 归属列。
+- `fresh-platform-integration`：另一个新建后删除的 PostgreSQL 16 临时库执行 `PlatformTenantLifecycleIntegrationTest`，6/6 通过。实际写入 API 记忆绑定后，dry-run 计数、脱敏导出、real purge 与残留行校验均通过；绑定通过所属凭据的组织关系处理，不假定其存在 `org_id`。
+- `environment-limit`：默认共享测试库的历史 V81 checksum 漂移仍未修复、未执行 repair；全新库验证用于隔离该既有环境问题，未将其表述为全量套件通过。
 
 ## TASK-232 - 通用记忆审核 API 与质量门禁
 

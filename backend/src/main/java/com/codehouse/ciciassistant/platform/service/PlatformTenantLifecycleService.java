@@ -870,7 +870,7 @@ public class PlatformTenantLifecycleService {
 
     private void writeTableExport(ZipOutputStream zip, String orgId, String table) throws IOException {
         zip.putNextEntry(new ZipEntry("tables/" + table + ".jsonl"));
-        List<Map<String, Object>> rows = jdbcTemplate.queryForList("SELECT * FROM " + table + " WHERE org_id = ?", orgId);
+        List<Map<String, Object>> rows = tenantRows(table, orgId);
         for (Map<String, Object> row : rows) {
             zip.write(objectMapper.writeValueAsString(redactRow(table, row)).getBytes(StandardCharsets.UTF_8));
             zip.write('\n');
@@ -1118,7 +1118,7 @@ public class PlatformTenantLifecycleService {
         deleteExportArchives(orgId, result, failures);
         for (String table : PURGE_DELETE_TABLES) {
             try {
-                int deleted = jdbcTemplate.update("DELETE FROM " + table + " WHERE org_id = ?", orgId);
+                int deleted = deleteTenantRows(table, orgId);
                 result.put(table, deleted);
             } catch (Exception ex) {
                 failures.add(table + ": " + ex.getMessage());
@@ -1221,8 +1221,38 @@ public class PlatformTenantLifecycleService {
     }
 
     private long countRows(String table, String orgId) {
-        Long value = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE org_id = ?", Long.class, orgId);
+        Long value;
+        if ("agent_api_memory_binding".equals(table)) {
+            value = jdbcTemplate.queryForObject("""
+                    SELECT COUNT(*) FROM agent_api_memory_binding binding
+                    JOIN agent_api_credential credential ON credential.id = binding.credential_id
+                    WHERE credential.org_id = ?
+                    """, Long.class, orgId);
+        } else {
+            value = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE org_id = ?", Long.class, orgId);
+        }
         return value == null ? 0L : value;
+    }
+
+    private List<Map<String, Object>> tenantRows(String table, String orgId) {
+        if ("agent_api_memory_binding".equals(table)) {
+            return jdbcTemplate.queryForList("""
+                    SELECT binding.* FROM agent_api_memory_binding binding
+                    JOIN agent_api_credential credential ON credential.id = binding.credential_id
+                    WHERE credential.org_id = ?
+                    """, orgId);
+        }
+        return jdbcTemplate.queryForList("SELECT * FROM " + table + " WHERE org_id = ?", orgId);
+    }
+
+    private int deleteTenantRows(String table, String orgId) {
+        if ("agent_api_memory_binding".equals(table)) {
+            return jdbcTemplate.update("""
+                    DELETE FROM agent_api_memory_binding
+                    WHERE credential_id IN (SELECT id FROM agent_api_credential WHERE org_id = ?)
+                    """, orgId);
+        }
+        return jdbcTemplate.update("DELETE FROM " + table + " WHERE org_id = ?", orgId);
     }
 
     private String buildTenantCreateAuditDetail(UserAccountEntity account, boolean reusedExistingAccount, String provisionNote) {
