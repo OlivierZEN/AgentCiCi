@@ -309,11 +309,12 @@ public class ChatOrchestratorService {
         context.put("effectiveKnowledgeBaseIds", knowledgeBaseIds);
         context.put("promptTokens", completion.promptTokens());
         context.put("completionTokens", completion.completionTokens());
+        context.put("memoryContextState", "NOT_INJECTED");
         return new EvaluationDryRunResult(
                 output,
                 plannedToolCalls,
                 ragSources,
-                List.of("model:evaluation", "tools:planned-only", "side-effects:blocked"),
+                List.of("model:evaluation", "tools:planned-only", "side-effects:blocked", "memory-context:not-injected"),
                 context);
     }
 

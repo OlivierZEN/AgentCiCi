@@ -12,7 +12,7 @@ last_run_status: passed
 
 ## TASK-232 - 通用记忆审核 API 与质量门禁
 
-- `backend-focused`：候选审核、可信运行时 Trace 和记忆 Flyway 测试通过；V89 验证 `memory_candidate.agent_id` 存在，重复审核仍安全拒绝。
+- `backend-focused`：候选审核、可信运行时 Trace、记忆 Flyway 与 `MEMORY_CONTEXT_STATE` 评测断言测试通过；V89 验证 `memory_candidate.agent_id` 存在，重复审核仍安全拒绝。
 - `backend-compile/static`：后端编译与 `git diff --check` 通过。
 
 ## TASK-231 - 通用记忆生命周期与组织清理闭环
