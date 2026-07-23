@@ -12,7 +12,7 @@ last_run_status: passed
 
 ## TASK-229 - 通用可信运行时记忆上下文
 
-- `backend-focused`：可信上下文只在显式作用域内、组织与最终 Agent 同时匹配时组装提示词；作用域关闭后不残留。`ChatOrchestratorServiceModelIdentityTest` 与语义检索回归共同通过。
+- `backend-focused`：可信上下文只在显式作用域内、组织与最终 Agent 同时匹配时组装提示词；作用域关闭后不残留。Trace 元数据只记录注入/数量/截断状态。`ChatOrchestratorServiceModelIdentityTest` 与语义检索回归共同通过。
 - `backend-compile/static`：后端编译与 `git diff --check` 通过。
 
 ## TASK-228 - 通用记忆受控语义检索

@@ -32,4 +32,5 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 ## Progress
 
 - 已实现服务端显式作用域 `TrustedMemoryRuntimeContextService`，并接入 Chat 系统提示词装配。作用域要求组织和最终解析 Agent 同时匹配，退出后自动清除；无上下文时不注入。
-- 定向作用域、Chat 编排回归与后端编译通过；尚待补充从受认证适配层建立该上下文的接口契约和 Trace 证据。
+- Trace 记录是否注入、结构化记忆数量、语义命中数量和截断状态，不记录主体标识或记忆正文。
+- 定向作用域、Chat 编排回归与后端编译通过；尚待补充从受认证适配层建立该上下文的接口契约。

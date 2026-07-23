@@ -21,7 +21,11 @@ class TrustedMemoryRuntimeContextServiceTest {
         try (TrustedMemoryRuntimeContextService.Scope ignored=service.enter(new TrustedMemoryRuntimeContextService.TrustedMemoryRequest(context, "agent-a", Set.of()))) {
             assertThat(service.buildPrompt("org", "agent-b", "question")).isEmpty();
             assertThat(service.buildPrompt("org", "agent-a", "question")).contains("已确认");
+            assertThat(service.traceMetadata()).containsEntry("memoryInjected", true)
+                    .containsEntry("structuredRecordCount", 0)
+                    .containsEntry("semanticHitCount", 0);
         }
         assertThat(service.buildPrompt("org", "agent-a", "question")).isEmpty();
+        assertThat(service.traceMetadata()).containsEntry("memoryInjected", false);
     }
 }

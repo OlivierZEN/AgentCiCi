@@ -1,6 +1,8 @@
 package com.codehouse.ciciassistant.memory.service;
 
 import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 /**
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class TrustedMemoryRuntimeContextService {
     private static final int PROMPT_BUDGET = 3_000;
     private final ThreadLocal<TrustedMemoryRequest> current = new ThreadLocal<>();
+    private final ThreadLocal<Resolution> lastResolution = new ThreadLocal<>();
     private final ExternalMemoryContextService contexts;
     private final MemorySemanticRetrievalService retrieval;
     private final MemoryContextPromptAssembler assembler = new MemoryContextPromptAssembler();
@@ -34,21 +37,41 @@ public class TrustedMemoryRuntimeContextService {
         TrustedMemoryRequest request = current.get();
         if (request == null || !request.context().orgId().equals(orgId)
                 || !request.agentId().equals(resolvedAgentId)) {
+            lastResolution.set(Resolution.none());
             return "";
         }
         ExternalMemoryContextService.MemoryContext structured = contexts.loadContext(
                 request.context(), resolvedAgentId, request.domainNamespaces(), null);
         String prompt = assembler.build(structured, PROMPT_BUDGET);
         var semantic = retrieval.retrieve(request.context(), resolvedAgentId, request.domainNamespaces(), question, 4);
-        if (semantic.isEmpty()) return prompt;
+        if (semantic.isEmpty()) {
+            lastResolution.set(new Resolution(true, structured.records().size(), 0, prompt.length() >= PROMPT_BUDGET));
+            return prompt;
+        }
         StringBuilder output = new StringBuilder(prompt).append("- 相关历史：\n");
         semantic.forEach(record -> output.append("  - ").append(record.getContent()).append('\n'));
-        return output.length() <= PROMPT_BUDGET ? output.toString() : output.substring(0, PROMPT_BUDGET - 1) + "…";
+        boolean truncated = output.length() > PROMPT_BUDGET;
+        lastResolution.set(new Resolution(true, structured.records().size(), semantic.size(), truncated));
+        return truncated ? output.substring(0, PROMPT_BUDGET - 1) + "…" : output.toString();
+    }
+
+    public Map<String, Object> traceMetadata() {
+        Resolution resolution = lastResolution.get();
+        if (resolution == null || !resolution.injected()) return Map.of("memoryInjected", false);
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("memoryInjected", true);
+        out.put("structuredRecordCount", resolution.structuredRecordCount());
+        out.put("semanticHitCount", resolution.semanticHitCount());
+        out.put("truncated", resolution.truncated());
+        return out;
     }
 
     public record TrustedMemoryRequest(ExternalMemoryContextService.ExternalMemoryContext context,
                                        String agentId, Set<String> domainNamespaces) {
         public TrustedMemoryRequest { domainNamespaces = domainNamespaces == null ? Set.of() : Set.copyOf(domainNamespaces); }
+    }
+    private record Resolution(boolean injected, int structuredRecordCount, int semanticHitCount, boolean truncated) {
+        static Resolution none() { return new Resolution(false, 0, 0, false); }
     }
     @FunctionalInterface public interface Scope extends AutoCloseable { @Override void close(); }
 }

@@ -445,6 +445,9 @@ public class ChatOrchestratorService {
         List<Map<String, Object>> messages = buildInitialMessages(
                 sessionId, safeQuestion, ragContext, showThinking, skillContext, orgId, userId,
                 runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
+        stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
+                "已按可信运行时上下文完成记忆装配。",
+                withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
         appendConfirmedPendingEmailBodyToolResult(
                 messages, orgId, userId, sessionId, skillContext, null, toolCallTraces, runId, question);
         Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
@@ -679,6 +682,9 @@ public class ChatOrchestratorService {
                 List<Map<String, Object>> messages = buildInitialMessages(
                         sessionId, safeQuestion, ragContext, showThinking, skillContext, orgId, userId,
                         runtimeContext, routedModel.get("provider"), modelName, builtinDocs);
+                stageTraces.add(stageTrace("MEMORY_CONTEXT", "主体记忆上下文", "SUCCESS", Instant.now(), Instant.now(),
+                        "已按可信运行时上下文完成记忆装配。",
+                        withRunId(trustedMemoryRuntimeContextService.traceMetadata(), runId)));
                 appendConfirmedPendingEmailBodyToolResult(
                         messages, orgId, userId, sessionId, skillContext, emitter, toolCallTraces, runId, question);
                 Optional<String> forcedCrmProductSalesAnswer = appendForcedCrmProductSalesToolResult(
