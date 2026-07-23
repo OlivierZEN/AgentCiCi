@@ -156,6 +156,7 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(domainRows(dryRun.path("manifest"), "members")).isEqualTo(1);
         assertThat(tableRows(dryRun.path("manifest"), "chat", "chat_message")).isEqualTo(1);
         assertThat(tableRows(dryRun.path("manifest"), "memory", "user_memory")).isEqualTo(1);
+        assertThat(tableRows(dryRun.path("manifest"), "open_api", "agent_api_memory_binding")).isEqualTo(1);
         assertThat(domainRows(dryRun.path("manifest"), "ontology")).isEqualTo(ONTOLOGY_TABLES.size() + 1L);
         for (String table : ONTOLOGY_TABLES) {
             assertThat(tableRows(dryRun.path("manifest"), "ontology", table))
@@ -314,6 +315,11 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(countRows("user_memory", createdOrg.orgId())).isZero();
         assertThat(countRows("knowledge_base", createdOrg.orgId())).isZero();
         assertThat(countRows("agent_api_credential", createdOrg.orgId())).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM agent_api_memory_binding binding
+                JOIN agent_api_credential credential ON credential.id = binding.credential_id
+                WHERE credential.org_id = ?
+                """, Long.class, createdOrg.orgId())).isZero();
         assertThat(countRows("wecom_kf_account", createdOrg.orgId())).isZero();
         assertThat(countRows("integration_app", createdOrg.orgId())).isZero();
         assertThat(countRows("agent_run_trace", createdOrg.orgId())).isZero();
@@ -767,6 +773,15 @@ class PlatformTenantLifecycleIntegrationTest {
                 "pub" + UUID.randomUUID().toString().replace("-", "").substring(0, 12), orgId, "cici-system", "API key",
                 "cici_ak", "secret-hash", "ACTIVE", memberId, "[]", "[\"chat\"]", 60, 100, 1000, 2000,
                 true, false, memberId, Timestamp.from(now), Timestamp.from(now));
+        Long credentialId = jdbcTemplate.queryForObject(
+                "SELECT id FROM agent_api_credential WHERE org_id = ? ORDER BY id DESC LIMIT 1", Long.class, orgId);
+        jdbcTemplate.update("""
+                        INSERT INTO agent_api_memory_binding(credential_id, application_code, subject_type, identity_level,
+                            domain_namespaces_json, enabled, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                credentialId, "external-service", "EXTERNAL_USER", "VERIFIED", "[]", true,
+                Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO wecom_kf_account(org_id, corp_id, open_kfid, name, secret_cipher, secret_iv, token,
                             encoding_aes_key_cipher, encoding_aes_key_iv, agent_id, run_as_user_id, enabled, created_at, updated_at)

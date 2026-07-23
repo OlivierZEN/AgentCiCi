@@ -11,6 +11,7 @@ import com.codehouse.ciciassistant.ops.service.AuditService;
 import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyRepository;
 import java.time.Instant;
 import java.util.List;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,14 +26,15 @@ public class MemoryLifecycleService {
     private final MemoryConversationSnapshotRepository snapshots;
     private final MemorySemanticRetrievalService semantic;
     private final OrganizationRetentionPolicyRepository retentionPolicies;
+    private final JdbcTemplate jdbcTemplate;
     private final AuditService audit;
 
     public MemoryLifecycleService(MemorySubjectRepository subjects, MemoryRecordRepository records,
                                   MemoryCandidateRepository candidates, MemoryConversationSnapshotRepository snapshots,
                                   MemorySemanticRetrievalService semantic,
-                                  OrganizationRetentionPolicyRepository retentionPolicies, AuditService audit) {
+                                  OrganizationRetentionPolicyRepository retentionPolicies, JdbcTemplate jdbcTemplate, AuditService audit) {
         this.subjects=subjects; this.records=records; this.candidates=candidates; this.snapshots=snapshots;
-        this.semantic=semantic; this.retentionPolicies=retentionPolicies; this.audit=audit;
+        this.semantic=semantic; this.retentionPolicies=retentionPolicies; this.jdbcTemplate=jdbcTemplate; this.audit=audit;
     }
 
     @Transactional
@@ -56,13 +58,14 @@ public class MemoryLifecycleService {
         List<MemoryCandidateEntity> subjectCandidates=candidates.findByOrgIdAndSubjectId(orgId, subject.getId());
         subjectCandidates.forEach(MemoryCandidateEntity::revokeAndRedact);
         candidates.saveAll(subjectCandidates);
+        int redactedEvidence=redactEvidence(orgId, subject.getId());
         long removedSnapshots=snapshots.deleteByOrgIdAndSubjectId(orgId, subject.getId());
         subject.anonymize(); subjects.save(subject);
         audit.log(orgId, actorUserId, "agent.memory.subject.delete",
                 "application=" + applicationCode + ",subjectId=" + subject.getId() + ",records=" + subjectRecords.size()
                         + ",candidates=" + subjectCandidates.size() + ",snapshots=" + removedSnapshots
-                        + ",vectorFailures=" + vectorFailures + ",reason=" + safeReason(reason));
-        return new DeletionResult(subjectRecords.size(), subjectCandidates.size(), removedSnapshots, vectorFailures);
+                        + ",evidence=" + redactedEvidence + ",vectorFailures=" + vectorFailures + ",reason=" + safeReason(reason));
+        return new DeletionResult(subjectRecords.size(), subjectCandidates.size(), redactedEvidence, removedSnapshots, vectorFailures);
     }
 
     @Transactional
@@ -99,8 +102,18 @@ public class MemoryLifecycleService {
             throw new IllegalStateException("Legal hold is active; memory deletion is blocked");
         }
     }
+    private int redactEvidence(String orgId, Long subjectId) {
+        return jdbcTemplate.update("""
+                UPDATE memory_evidence
+                SET reference_value = '[deleted]', excerpt = NULL
+                WHERE org_id = ? AND (
+                    candidate_id IN (SELECT id FROM memory_candidate WHERE org_id = ? AND subject_id = ?)
+                    OR memory_record_id IN (SELECT id FROM memory_record WHERE org_id = ? AND subject_id = ?)
+                )
+                """, orgId, orgId, subjectId, orgId, subjectId);
+    }
     private String required(String raw, String field) { String value=raw == null ? "" : raw.trim(); if (value.isBlank()) throw new IllegalArgumentException(field + " is required"); return value; }
     private String safeReason(String raw) { String value=raw == null ? "" : raw.trim(); return value.isBlank() ? "unspecified" : value.substring(0, Math.min(value.length(), 160)); }
-    public record DeletionResult(int records, int candidates, long snapshots, int vectorFailures) {}
+    public record DeletionResult(int records, int candidates, int evidence, long snapshots, int vectorFailures) {}
     public record ExpiryResult(int expired, int vectorFailures, int skippedLegalHold) {}
 }

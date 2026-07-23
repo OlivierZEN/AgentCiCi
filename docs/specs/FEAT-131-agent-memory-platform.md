@@ -447,3 +447,31 @@ Agent Builder 中每个 Agent 应可查看其允许读取的 memory scopes、记
 - 主体删除、撤销和过期清理必须先请求移除派生向量，再使关系型记录立即不可读取。向量删除失败不得恢复可读状态，应留下不含正文和原始向量的最小审计摘要，以便重试或组织 purge 收口。
 - 组织级 `legal hold` 是主体删除和组织 purge 的硬阻断条件；导出仅包括经现有字段脱敏后的关系型记录和执行清单，不导出 embedding、原始向量内容、密钥或跨组织数据。
 - 进入最终验收前，仍须完成候选审核治理 API、Trace/评测门禁、两个独立通用适配契约及生产就绪审计；不在未经授权时执行生产发布。
+
+## 21. 生产就绪审计结论（2026-07-23）
+
+### 21.1 结论与边界
+
+FEAT-131 已完成代码、数据迁移、受控运行时、治理和生命周期的生产就绪验收；实现是 Agent CC 面向任意外部应用的通用能力，不包含特定接入应用的领域对象、渠道逻辑或页面。本结论不代表生产发布：当前未执行镜像构建、部署、数据迁移到生产或真实生产 purge。
+
+### 21.2 能力与证据
+
+| 验收项 | 实现与验证证据 |
+|---|---|
+| 可信运行时与上下文预算 | 受认证 API 凭据绑定固定应用、主体类型、身份等级和命名空间；可信作用域只接受服务端导出的上下文。Chat Trace 只记录 `NOT_INJECTED`、`INJECTED`、`TRUNCATED` 及数量，不记录主体标识或正文。 |
+| 关系库权威与语义检索 | V85–V90 建立主体、记录、会话快照、候选、证据、向量片段、凭据绑定与 Agent 归属。向量内容先脱敏，命中后必须以关系库的组织、主体、Agent scope、状态、敏感级别和有效期二次授权。 |
+| 候选与人工治理 | 候选审核、拒绝、已生效记录最小查询、撤销和按主体删除均要求组织、Agent、`MANAGE` 权限与 legal hold 校验；审核和生命周期审计不写入正文、外部主体标识或原始向量。 |
+| 删除、保留和 purge | 主体删除立即撤销/脱敏记录、候选、证据引用和会话摘要；向量删除失败也不恢复关系库可读状态。组织 dry-run、导出、real purge 与残留行校验覆盖所有记忆表；凭据绑定通过所属凭据的租户关系计数、导出和删除，而不错误假定存在 `org_id`。 |
+| Trace/评测 | `MEMORY_CONTEXT_STATE` 已接入断言引擎；运行时 Trace 仅产生状态型证据。 |
+| 独立适配契约 | `GenericExternalMemoryAdapterContractTest` 用两份独立通用凭据绑定验证相同外部主体在不同应用、主体类型、命名空间和内部会话下不串读；禁用单个绑定只对该适配安全降级。 |
+
+### 21.3 已执行验证
+
+- 定向回归通过：`ExternalMemoryContextServiceTest`、`MemoryCandidateGovernanceServiceTest`、`MemorySemanticRetrievalServiceTest`、`MemoryLifecycleServiceTest`、`TrustedMemoryRuntimeContextServiceTest`、`AgentOpenApiMemoryContextServiceTest`、`AgentOpenApiConversationServiceTest`、`GenericExternalMemoryAdapterContractTest`、`AgentEvaluationAssertionEngineTest`、`ChatOrchestratorServiceModelIdentityTest` 和 `AgentMemoryFlywayMigrationTest`；后端编译与 `git diff --check` 通过。
+- 全新、验证后删除的 PostgreSQL 16 临时库已从 V1 迁移至 V90，并断言通用记忆表、凭据绑定表及候选/已生效记录的 `agent_id` 归属列。
+- 全新 PostgreSQL 16 临时库上的 `PlatformTenantLifecycleIntegrationTest` 通过 6/6：覆盖 dry-run、脱敏导出、真实 purge、残留行校验、向量巡检/清理，以及 API 记忆绑定经凭据归属的实际清理路径。
+- 默认共享测试库仍存在历史 V81 checksum 漂移；未修改历史迁移或执行 Flyway repair。上述全新库集成验证不依赖该漂移环境，且不是对全量 Maven 套件成功的声称。
+
+### 21.4 上线操作约束
+
+上线必须遵循既有生产发布 Runbook，先执行 dry-run；部署后以非敏感验证主体完成凭据绑定、跨应用隔离、禁用绑定安全降级、候选审核、撤销/删除、Trace 状态和组织 dry-run 验收。任何生产保留期限、legal hold 例外或真实主体删除均由组织策略和合规授权决定。

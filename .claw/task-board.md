@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-22T15:51:44Z
+updated_at: 2026-07-23T10:45:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,58 +17,58 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-233 - 通用记忆人工管理与生产就绪审计
 
-- status: `in_progress`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-233.md`
 - assignment_path: `.claw/assignments/TASK-233.yaml`
 - blocked_by: `none`
-- next_action: 修复全新数据库组织 purge 对通用记忆附属表的实际租户键处理，并完成生产就绪证据审计。
+- next_action: 已完成生产就绪审计；未执行生产发布，等待用户授权后按 Runbook 进入发布流程。
 
 ### TASK-232 - 通用记忆审核 API 与质量门禁
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-232.md`
 - assignment_path: `.claw/assignments/TASK-232.yaml`
 - blocked_by: `none`
-- next_action: 提供受 Agent 权限保护的候选审核/拒绝/查询 API，并将记忆注入的最小 Trace 证据接入现有评测与发布门禁。
+- next_action: 已完成候选治理 API、Trace/评测状态与两份独立通用适配契约。
 
 ### TASK-231 - 通用记忆生命周期与组织清理闭环
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-231.md`
 - assignment_path: `.claw/assignments/TASK-231.yaml`
 - blocked_by: `none`
-- next_action: 将通用记忆、证据、会话快照、向量片段与 API 绑定纳入组织保留/导出/purge，并实现主体删除、过期清理和向量同步删除。
+- next_action: 已完成生命周期闭环，并在新建 PostgreSQL 库上通过平台 dry-run、导出与 real purge 6/6 集成验证。
 
 ### TASK-230 - 受认证凭据记忆上下文绑定
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-230.md`
 - assignment_path: `.claw/assignments/TASK-230.yaml`
 - blocked_by: `none`
-- next_action: 从已认证 API 凭据建立通用外部主体记忆上下文，客户端 metadata 不参与信任决策。
+- next_action: 已完成受认证凭据绑定和 OpenAPI 阻塞/流式可信上下文接入。
 
 ### TASK-229 - 通用可信运行时记忆上下文
 
-- status: `ready`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-229.md`
 - assignment_path: `.claw/assignments/TASK-229.yaml`
 - blocked_by: `none`
-- next_action: 接入可信外部主体上下文和授权记忆提示词，保持内部聊天路径不变。
+- next_action: 已完成可信运行时作用域、提示词预算、Trace 状态与内部聊天路径安全降级。
 
 ### TASK-228 - 通用记忆受控语义检索
 

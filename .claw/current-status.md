@@ -1,11 +1,11 @@
 ---
 kind: current-status
 version: 4
-updated_at: 2026-07-23T10:30:00Z
+updated_at: 2026-07-23T10:45:00Z
 updated_by: MANAGER-001
-phase: feat131-memory-production-audit-ready
-active_task: "TASK-233"
-next_action: "在 TASK-233 中补齐已生效记忆的人工管理 API，并对 FEAT-131 执行生产就绪证据审计。"
+phase: feat131-memory-production-ready
+active_task: null
+next_action: "等待用户授权生产发布；发布前按 Runbook 执行 dry-run 与非敏感外部适配验收。"
 read_next:
   goals: false
   decisions: false
@@ -21,6 +21,10 @@ read_next:
 `current-status.md` is the hot index. Rewrite it as the latest snapshot; do not append session history.
 
 ## Snapshot
+
+- FEAT-131 通用外部应用智能体记忆平台已完成生产就绪审计，未执行生产发布。可信凭据绑定、受控上下文注入、关系库二次授权的脱敏语义检索、候选/人工治理、Trace/评测状态、保留/删除/legal hold、组织导出与 purge、两个独立通用适配契约均有代码与验证证据。全新 PostgreSQL 16 库 V1→V90 迁移及平台生命周期集成测试 6/6 通过；默认共享测试库的既有 V81 checksum 漂移未修复或掩盖。
+
+## Historical Notes
 
 - TASK-233 已获授权：人工治理必须覆盖已生效记忆与主体删除，调用既有生命周期服务并同时验证组织、Agent、角色和 legal hold；完成后执行 FEAT-131 的逐项生产就绪审计，不发布生产。
 
