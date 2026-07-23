@@ -32,6 +32,8 @@ spec_path: docs/specs/FEAT-134-agentcici-semattice-controlled-provisioning.md
 ## Verification
 
 - `mvn -q -Dtest=InternalHmacVerifierTest,SematticeProvisioningServiceTest test`、`mvn -q -DskipTests package`、前端 `npm run build`、Compose config 与 diff 检查均通过。
+- 2026-07-24 本机真实跨服务验收：以 `admin@cloudcc.com` 的运营平台令牌创建新的 AgentCiCi 组织 `orgc9h2xs5puanlbykmc`，再经 `POST /platform/tenants/{orgId}/semattice-provisionings` 开通。Semattice 在独立 PostgreSQL 16 控制/运行角色下回调 reservation 与 completion；两侧均记录同一 `company_id` 和 tenant UUID `22369429-94c0-5dc2-ad04-600673f62829`，状态分别为 `PROVISIONED` 与 `active`。同一幂等键重试返回同一 tenant UUID，Semattice `tenant_operation` 仍为一条成功记录。临时本机 HMAC 未写入仓库或项目状态。
+- 同日浏览器端到端验证：真实运营端登录后，在新建组织 `orgnuctqa4lpdn9zz1qx` 的“租户应用”页面点击“开通 Semattice”。成功提示显示企业身份绑定完成，应用计数从 1 变为 2，卡片状态变为“运行中”，按钮变为禁用的“已开通”。
 - `mvn -q test` 被共享 `agentcici_test` 的既有 Flyway V81 checksum mismatch 阻断；未修改历史 migration 或执行 repair。
 - AgentCiCi 已发布内测版 `2.8.5-beta.3 / bef088d5769c`；V93 已在生产正向执行，backend/frontend 健康，HMAC endpoint 的未签名请求返回 403。
 - Semattice 上线试验发现其生产库尚未显式执行 migration 13，且运行服务不持有 migrator URL；已原子回滚 Semattice 到上一健康 release，未留下失败开户路径。
