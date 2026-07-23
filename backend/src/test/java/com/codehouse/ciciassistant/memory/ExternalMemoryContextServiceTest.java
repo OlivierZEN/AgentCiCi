@@ -59,6 +59,7 @@ class ExternalMemoryContextServiceTest {
                 record(7L, "DOMAIN_NAMESPACE", "namespace-a", now.plusSeconds(3600)),
                 record(7L, "AGENT_PRIVATE", "agent-b", now.plusSeconds(3600)),
                 record(7L, "CONVERSATION", "conversation-2", now.plusSeconds(3600)),
+                record(7L, "SUBJECT_SHARED", null, now.plusSeconds(3600), "SENSITIVE"),
                 record(7L, "SUBJECT_SHARED", null, now.minusSeconds(1))));
         when(snapshotRepository.findByOrgIdAndApplicationCodeAndConversationRef(
                 "org-a", "app-alpha", "conversation-1")).thenReturn(Optional.empty());
@@ -116,8 +117,12 @@ class ExternalMemoryContextServiceTest {
     }
 
     private static MemoryRecordEntity record(Long subjectId, String scope, String scopeKey, Instant validTo) {
+        return record(subjectId, scope, scopeKey, validTo, "NORMAL");
+    }
+
+    private static MemoryRecordEntity record(Long subjectId, String scope, String scopeKey, Instant validTo, String sensitivity) {
         return new MemoryRecordEntity("org-a", subjectId, scope, scopeKey, "SUMMARY", scope,
-                "ACTIVE", "NORMAL", BigDecimal.ONE, Instant.parse("2026-07-22T00:00:00Z"), validTo,
+                "ACTIVE", sensitivity, BigDecimal.ONE, Instant.parse("2026-07-22T00:00:00Z"), validTo,
                 "HUMAN", "[]");
     }
 }

@@ -32,4 +32,5 @@ spec_path: docs/specs/FEAT-131-agent-memory-platform.md
 ## Progress
 
 - 已新增 V88 凭据绑定表、绑定服务和 OpenAPI 阻塞/流式调用接入。可信上下文完全由已认证凭据及其绑定导出；绑定缺失、主体缺失或主体未注册均安全降级为无记忆。
-- 定向绑定、可信作用域、OpenAPI 会话回归与后端编译通过；待补充绑定管理 API、生命周期与两个适配契约验收。
+- 记忆 `CONVERSATION` scope 使用平台内部会话 ID，不复用外部主体标识；不同会话不会因同一主体而串读。外部运行时默认只读取 `NORMAL` 敏感级别，`INTERNAL` 与 `SENSITIVE` 不注入提示词。
+- 定向绑定、可信作用域、OpenAPI 会话回归、后端编译和 V1→V88 PostgreSQL 全量迁移通过；待补充绑定管理 API、生命周期与两个适配契约验收。

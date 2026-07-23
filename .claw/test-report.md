@@ -12,8 +12,10 @@ last_run_status: passed
 
 ## TASK-230 - 受认证凭据记忆上下文绑定
 
-- `backend-focused`：绑定测试锁定可信应用、主体类型、身份等级和命名空间来自已认证凭据绑定，客户端只能提供外部主体标识；OpenAPI 阻塞/流式和可信作用域回归通过。
-- `backend-compile/static`：后端编译与 `git diff --check` 通过。
+- `backend-focused`：绑定测试锁定可信应用、主体类型、身份等级、命名空间和内部会话 ID 都来自服务端；客户端只能提供外部主体标识。空会话、绑定缺失或禁用均不进入记忆作用域；OpenAPI 阻塞/流式和可信作用域回归通过。
+- `memory-isolation`：`ExternalMemoryContextServiceTest` 验证同主体不同应用、scope、时效和敏感级别的过滤；外部运行时只返回 `NORMAL` 记忆，`INTERNAL`/`SENSITIVE` 不会进入提示词。
+- `fresh-flyway`：新建后删除的 PostgreSQL 16 临时库从 V1 成功迁移至 V88，并断言凭据绑定表与六张通用记忆表存在。
+- `backend-compile/static`：`mvn -q -DskipTests compile` 与 `git diff --check` 通过。
 
 ## TASK-229 - 通用可信运行时记忆上下文
 

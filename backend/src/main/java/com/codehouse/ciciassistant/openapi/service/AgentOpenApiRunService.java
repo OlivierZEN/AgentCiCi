@@ -253,7 +253,8 @@ public class AgentOpenApiRunService {
     private void invokeChatStream(ChatStreamExecution execution,
                                   ChatCommand command,
                                   SseEmitter emitter) {
-        memoryContextService.withTrustedContext(execution.auth(), externalUserId(command.externalUser()), () -> {
+        memoryContextService.withTrustedContext(execution.auth(), externalUserId(command.externalUser()),
+                execution.session().internalSessionId(), () -> {
             chatOrchestratorService.chatStreamBlocking(
                     execution.auth().credential().getOrgId(), execution.auth().credential().getRunAsUserId(),
                     execution.session().internalSessionId(), command.message().trim(), command.knowledgeBaseIds(),
@@ -322,7 +323,7 @@ public class AgentOpenApiRunService {
     private Map<String, Object> invokeChat(AgentOpenApiAuthService.AuthenticatedCredential auth,
                                            AgentOpenApiSessionService.SessionResolution session,
                                            ChatCommand command) {
-        return memoryContextService.withTrustedContext(auth, externalUserId(command.externalUser()), () ->
+        return memoryContextService.withTrustedContext(auth, externalUserId(command.externalUser()), session.internalSessionId(), () ->
                 chatOrchestratorService.chat(
                         auth.credential().getOrgId(), auth.credential().getRunAsUserId(), session.internalSessionId(),
                         command.message().trim(), command.knowledgeBaseIds(), auth.credential().getAgentId(), command.activeSkillCode()));

@@ -14,11 +14,13 @@ import org.springframework.stereotype.Service;
 public class AgentOpenApiMemoryContextService {
     private final AgentApiMemoryBindingRepository bindings; private final TrustedMemoryRuntimeContextService runtime; private final ObjectMapper json;
     public AgentOpenApiMemoryContextService(AgentApiMemoryBindingRepository bindings, TrustedMemoryRuntimeContextService runtime, ObjectMapper json) { this.bindings=bindings; this.runtime=runtime; this.json=json; }
-    public <T> T withTrustedContext(AgentOpenApiAuthService.AuthenticatedCredential auth, String externalSubjectRef, Supplier<T> action) {
-        if (externalSubjectRef == null || externalSubjectRef.isBlank()) return action.get();
+    public <T> T withTrustedContext(AgentOpenApiAuthService.AuthenticatedCredential auth, String externalSubjectRef,
+                                    String conversationRef, Supplier<T> action) {
+        if (externalSubjectRef == null || externalSubjectRef.isBlank()
+                || conversationRef == null || conversationRef.isBlank()) return action.get();
         return bindings.findByCredentialIdAndEnabledTrue(auth.credential().getId()).map(binding -> {
             Set<String> namespaces=parseNamespaces(binding.getDomainNamespacesJson());
-            var context=new ExternalMemoryContextService.ExternalMemoryContext(auth.credential().getOrgId(), binding.getApplicationCode(), "openapi-" + externalSubjectRef.trim(), externalSubjectRef.trim(), binding.getSubjectType(), binding.getIdentityLevel());
+            var context=new ExternalMemoryContextService.ExternalMemoryContext(auth.credential().getOrgId(), binding.getApplicationCode(), conversationRef.trim(), externalSubjectRef.trim(), binding.getSubjectType(), binding.getIdentityLevel());
             try (var ignored=runtime.enter(new TrustedMemoryRuntimeContextService.TrustedMemoryRequest(context, auth.credential().getAgentId(), namespaces))) { return action.get(); }
         }).orElseGet(action);
     }

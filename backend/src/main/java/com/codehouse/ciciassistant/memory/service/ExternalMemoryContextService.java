@@ -106,6 +106,7 @@ public class ExternalMemoryContextService {
                 .findByOrgIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(context.orgId(), subject.getId(), List.of("ACTIVE", "VERIFIED"))
                 .stream()
                 .filter(item -> isCurrent(item, effectiveNow))
+                .filter(item -> "NORMAL".equals(item.getSensitivity()))
                 .filter(item -> isVisible(item, context.conversationRef(), agentId, namespaces))
                 .limit(MAX_CONTEXT_RECORDS)
                 .toList();

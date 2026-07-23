@@ -25,11 +25,39 @@ class AgentOpenApiMemoryContextServiceTest {
         when(runtime.enter(any())).thenReturn(() -> {});
         AgentOpenApiMemoryContextService service=new AgentOpenApiMemoryContextService(bindings, runtime, new ObjectMapper());
 
-        assertThat(service.withTrustedContext(auth, "subject-a", () -> "ok")).isEqualTo("ok");
+        assertThat(service.withTrustedContext(auth, "subject-a", "session-internal-a", () -> "ok")).isEqualTo("ok");
         ArgumentCaptor<TrustedMemoryRuntimeContextService.TrustedMemoryRequest> captor=ArgumentCaptor.forClass(TrustedMemoryRuntimeContextService.TrustedMemoryRequest.class);
         verify(runtime).enter(captor.capture());
         assertThat(captor.getValue().context().applicationCode()).isEqualTo("app-a");
         assertThat(captor.getValue().context().externalSubjectRef()).isEqualTo("subject-a");
+        assertThat(captor.getValue().context().conversationRef()).isEqualTo("session-internal-a");
         assertThat(captor.getValue().domainNamespaces()).containsExactly("ns-a");
+    }
+
+    @Test void bypassesMemoryWhenTheTrustedConversationIsMissing() {
+        AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
+        TrustedMemoryRuntimeContextService runtime=mock(TrustedMemoryRuntimeContextService.class);
+        AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
+        when(credential.getId()).thenReturn(9L); when(credential.getOrgId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
+        AgentOpenApiAuthService.AuthenticatedCredential auth=new AgentOpenApiAuthService.AuthenticatedCredential(credential, mock(AgentDefinitionEntity.class), "127.0.0.1", null);
+        when(bindings.findByCredentialIdAndEnabledTrue(9L)).thenReturn(Optional.empty());
+        AgentOpenApiMemoryContextService service=new AgentOpenApiMemoryContextService(bindings, runtime, new ObjectMapper());
+
+        assertThat(service.withTrustedContext(auth, "subject-a", "", () -> "ok")).isEqualTo("ok");
+        verifyNoInteractions(bindings, runtime);
+    }
+
+    @Test void bypassesMemoryWhenTheCredentialHasNoEnabledBinding() {
+        AgentApiMemoryBindingRepository bindings=mock(AgentApiMemoryBindingRepository.class);
+        TrustedMemoryRuntimeContextService runtime=mock(TrustedMemoryRuntimeContextService.class);
+        AgentApiCredentialEntity credential=mock(AgentApiCredentialEntity.class);
+        when(credential.getId()).thenReturn(9L); when(credential.getOrgId()).thenReturn("org-a"); when(credential.getAgentId()).thenReturn("agent-a");
+        AgentOpenApiAuthService.AuthenticatedCredential auth=new AgentOpenApiAuthService.AuthenticatedCredential(credential, mock(AgentDefinitionEntity.class), "127.0.0.1", null);
+        when(bindings.findByCredentialIdAndEnabledTrue(9L)).thenReturn(Optional.empty());
+        AgentOpenApiMemoryContextService service=new AgentOpenApiMemoryContextService(bindings, runtime, new ObjectMapper());
+
+        assertThat(service.withTrustedContext(auth, "subject-a", "session-internal-a", () -> "ok")).isEqualTo("ok");
+        verify(bindings).findByCredentialIdAndEnabledTrue(9L);
+        verifyNoInteractions(runtime);
     }
 }
