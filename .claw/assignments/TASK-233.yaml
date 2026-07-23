@@ -12,6 +12,7 @@ scope_mode: task_bounded_broad_code
 allowed_write_roots:
   - backend/src/main/java/com/codehouse/ciciassistant/memory/**
   - backend/src/main/java/com/codehouse/ciciassistant/agent/**
+  - backend/src/main/resources/db/migration/**
   - backend/src/test/java/com/codehouse/ciciassistant/memory/**
   - backend/src/test/java/com/codehouse/ciciassistant/agent/**
   - docs/specs/**
