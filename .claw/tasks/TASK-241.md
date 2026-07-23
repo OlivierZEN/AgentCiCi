@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-241
-status: in_progress
-updated_at: 2026-07-23T08:34:00Z
+status: blocked
+updated_at: 2026-07-23T08:50:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: integration-agent
@@ -33,7 +33,10 @@ spec_path: docs/specs/FEAT-134-agentcici-semattice-controlled-provisioning.md
 
 - `mvn -q -Dtest=InternalHmacVerifierTest,SematticeProvisioningServiceTest test`、`mvn -q -DskipTests package`、前端 `npm run build`、Compose config 与 diff 检查均通过。
 - `mvn -q test` 被共享 `agentcici_test` 的既有 Flyway V81 checksum mismatch 阻断；未修改历史 migration 或执行 repair。
+- AgentCiCi 已发布内测版 `2.8.5-beta.3 / bef088d5769c`；V93 已在生产正向执行，backend/frontend 健康，HMAC endpoint 的未签名请求返回 403。
+- Semattice 上线试验发现其生产库尚未显式执行 migration 13，且运行服务不持有 migrator URL；已原子回滚 Semattice 到上一健康 release，未留下失败开户路径。
 
 ## Handoff
 
 - 本任务与 Semattice `TASK-026` 必须采用同一接口契约、错误码与签名规范；任一端未通过质量门不得单独发布。
+- 继续条件：在 Semattice ECS 以专用 `semattice_migrator` 身份显式执行 migration 13，并核验 schema history；之后重新部署已构建制品、重试相同失败 smoke idempotency key 并完成成功开户验收。
