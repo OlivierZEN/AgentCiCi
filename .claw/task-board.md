@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-228 - 通用记忆受控语义检索
 
-- status: `ready`
+- status: `done`
 - priority: `high`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-131-agent-memory-platform.md`
 - task_status_path: `.claw/tasks/TASK-228.md`
 - assignment_path: `.claw/assignments/TASK-228.yaml`
 - blocked_by: `none`
-- next_action: 仅建立已审核非敏感记忆的向量片段及关系库二次授权检索。
+- next_action: 已完成 V87 受控索引、脱敏、二次授权与审核成功后的最佳努力索引；运行时接入须以独立任务继续。
 
 ### TASK-227 - 通用记忆候选、证据与时效治理
 
