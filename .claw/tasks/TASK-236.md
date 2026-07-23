@@ -1,8 +1,8 @@
 ---
 kind: task-status
 task_id: TASK-236
-status: ready
-updated_at: 2026-07-23T04:50:00Z
+status: in_progress
+updated_at: 2026-07-23T05:00:00Z
 updated_by: MANAGER-001
 assignee: MANAGER-001
 owner_role: fullstack-agent
@@ -32,6 +32,11 @@ spec_path: docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md
 - 计划/执行异常不触发新工具副作用，并留下最小脱敏回退原因；
 - 认证、组织隔离、确认、Trace、OpenAPI 限流/幂等和账单回归通过；后端编译、定向集成测试、全新 PostgreSQL 迁移与 diff 检查通过。
 
+## Implementation approach
+
+- 命中白名单时固定执行 `RETRIEVE → SYNTHESIZE` 两步：前者封装既有 RAG 决策和脱敏摘要，后者封装既有模型回复。
+- 灰度运行向模型传入空工具定义；任何工具（含只读）留待 P3 的路由与显式工具政策后再开放，因此 P2 不可能产生新写副作用。
+
 ## Next action
 
-- 切换到 `codex/TASK-236-plan-exec-chat-canary`，通过任务级身份门禁与授权检查后，先以回归测试锁定现有 Web/OpenAPI 兼容契约。
+- 建立默认关闭的配置和共享 canary 适配层，再接入 Web 与 OpenAPI 路径并补定向回归。
