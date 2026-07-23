@@ -398,7 +398,7 @@ agent-runtime.resume.enabled
 - P3 验证：规则单元覆盖关闭/精确白名单、Direct/ReAct/Plan-Exec、确认续执行、敏感标记与 P2 未启动回退；连同 P2 和既有聊天回归共 48 项通过。后端编译、diff 检查及全新后删除 PostgreSQL 16 V1→V91 的 4/4 集成用例通过；共享测试库的 V81 checksum 漂移未改动。
 - TASK-238 已完成 P4 实现并进入 review：V92 新增组织隔离的 `agent_task_review`；默认关闭的精确 Agent Reflect Gate 仅审查成功的 Plan-Exec 运行。Gate 校验组织/Agent、终态、步骤预算、轮次预算、确认和输出；通过时记录 `PASS`，阻断时记录 `HANDOFF`，不调用新模型、工具、凭据或写操作。聊天/流式投影最小 `reviewStatus`，评测新增模式、审查状态和确认前零写入断言。
 - P4 验证：Reflect、路由、P2、评测断言和既有 Chat 定向回归通过；新建后删除 PostgreSQL 16 库迁移 V1→V92 并通过 5/5 运行时集成用例，确认审查事实、`REFLECT_GATE` 事件和跨组织拒绝。共享测试库的 V81 checksum 漂移未改动。
-- TASK-239 已完成 P5 实现并等待受权 UI review：Chat 的阻塞/流式路径只在真实 Plan-Exec 运行存活时将最小 `runtimeRunId` 和风险/确认/审查投影保存到对应 Trace；详情以同组织运行 ID 回读计划、步骤、事件和审查事实，历史 Trace 明确空态。现有 Trace 详情已新增“运行执行”总览、步骤/事件时间线、折叠复制的脱敏证据与条件性例外说明，所有主题共享 token 化布局。后端定向回归、全新 PostgreSQL V1→V92、前端 3/3 与生产构建通过；本地浏览器没有管理员会话，`gilded`/`galaxy` 的真实 Trace 桌面交互验收仍待完成。
+- TASK-239 已完成 P5：Chat 的阻塞/流式路径只在真实 Plan-Exec 运行存活时将最小 `runtimeRunId` 和风险/确认/审查投影保存到对应 Trace；详情以同组织运行 ID 回读计划、步骤、事件和审查事实，历史 Trace 明确空态。现有 Trace 详情已新增“运行执行”总览、步骤/事件时间线、折叠复制的脱敏证据与条件性例外说明，所有主题共享 token 化布局。后端定向回归、全新 PostgreSQL V1→V92、前端 3/3 与生产构建通过；受权组织管理员已在隔离最小事实库完成 `gilded`/`galaxy` 的关联 Trace、证据展开/复制和 1280px 无横向溢出验收。既有审计日志接口在该最小库产生 500，已与 P5 Trace 投影分开记录。
 - 验证证据：后端编译、diff 检查通过；新建后删除的 PostgreSQL 16 临时库从空库全量迁移至 V91，并通过 3 个运行时集成用例。默认共享测试库仍因既有 V81 checksum 漂移无法启动，未 repair、未改写历史迁移。
 - 实施前先读取：`docs/specs/FEAT-004-agent-flow-compile-triggers-and-executions.md`、`docs/specs/FEAT-106-multi-tenant-agent-evaluation-control-plane.md`、`docs/specs/FEAT-122-runtime-execution-trace-correction.md`、`docs/specs/FEAT-130-forced-skill-execution-context.md`、`docs/specs/FEAT-131-agent-memory-platform.md`。
 - 首个实现任务必须以 P1 为边界，并明确禁止把 `workflow_code` 字符串解析误升级为任意代码执行器。

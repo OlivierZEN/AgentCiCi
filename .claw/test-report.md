@@ -1,10 +1,10 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-23T06:30:00Z
+updated_at: 2026-07-23T07:50:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-23T06:30:00Z
+last_run_at: 2026-07-23T07:50:00Z
 last_run_status: passed
 ---
 
@@ -16,7 +16,8 @@ last_run_status: passed
 - `backend-focused`：`AgentRunTraceServiceTest`、`AgentTaskReflectServiceTest`、`AgentRuntimeModeRouterTest`、`AgentPlanExecCanaryServiceTest` 与 `ChatOrchestratorServiceModelIdentityTest` 通过；覆盖精确运行关联、同组织回读、最小脱敏步骤证据、空态、P2–P4 与 Chat 回归。
 - `fresh-postgresql-integration`：新建后删除 PostgreSQL 16 临时库完整迁移 V1→V92，`AgentTaskRuntimeIntegrationTest` 通过；临时数据库已删除。
 - `frontend`：`AdminAgentRunMonitor.test.tsx` 3/3 通过，`npm run build` 通过；仅保留既有 Vite 大 chunk 提示。
-- `browser-review-pending`：Playwright 访问本地 `/admin/ops` 正确重定向至组织管理员登录页，console error 为 0；本会话没有受权管理员凭据，无法对真实 Trace 完成 `gilded`/`galaxy` 的展开、复制和外层横向溢出验收。登录页的既有 password-field DOM warning 不归因于 P5，未作为通过证据。
+- `browser-desktop`：使用受权组织管理员在新建后删除的 V1→V92 最小事实库登录 `/admin/ops`，完成关联 Trace 的运行总览、两步时间线、`gilded` 与 `galaxy` 同构主题、证据展开和“已复制脱敏后的详情内容”状态验收；两个主题均测得 `scrollWidth=1280`、`innerWidth=1280`、`overflow=false`。证据截图为 `output/playwright/task239-gilded-runtime-execution.png`、`task239-galaxy-runtime-execution.png`，均为忽略的本地验收产物。
+- `browser-independent-observation`：同一最小库的既有审计日志面板调用 `/ops/audit/logs?limit=80` 返回 500，产生 2 条 console error；Trace 运行执行读取、展开与复制不产生错误。该接口不在 TASK-239 授权修改范围内，未掩盖或归因给 P5。
 - `environment-limit`：默认共享 `agentcici_test` 的 Flyway V81 checksum 漂移未修复、未执行 repair；隔离库验证不等同于全量套件通过。
 
 ## TASK-238 - 混合智能体运行时 P4：受控 Reflect 与评测门禁

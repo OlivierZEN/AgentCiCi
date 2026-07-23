@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-23T06:30:00Z
+updated_at: 2026-07-23T07:50:00Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,14 +17,14 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-239 - 混合智能体运行时 P5：Trace 运行执行投影与多主题界面
 
-- status: `review`
+- status: `done`
 - priority: `critical`
 - owner_role: `fullstack-agent`
 - spec_path: `docs/specs/FEAT-133-agent-runtime-mixed-orchestration.md`
 - task_status_path: `.claw/tasks/TASK-239.md`
 - assignment_path: `.claw/assignments/TASK-239.yaml`
 - blocked_by: `none`
-- next_action: 代码与自动化验证已通过；等待受权组织管理员完成真实 Trace 的 `gilded`/`galaxy` 桌面交互和溢出验收后再集成，并继续 P6。
+- next_action: 已完成受权组织管理员的隔离 Trace 桌面验收并待集成；随后创建 P6 生产灰度与运营验证任务。
 
 ### TASK-238 - 混合智能体运行时 P4：受控 Reflect 与评测门禁
 
