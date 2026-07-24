@@ -15,6 +15,16 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ## Active Tasks
 
+### TASK-242 - 顶层租户 company_id 统一
+
+- status: `in_progress`
+- priority: `critical`
+- owner_role: `integration-agent`
+- spec_path: `docs/specs/FEAT-135-company-id-unification.md`
+- task_status_path: `.claw/tasks/TASK-242.md`
+- assignment_path: `.claw/assignments/TASK-242.yaml`
+- next_action: 完成 V94 无损 schema 重命名、全栈契约切换与跨产品验收。
+
 ### TASK-241 - AgentCiCi / Semattice 受控开户绑定
 
 - status: `blocked`

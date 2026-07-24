@@ -42,16 +42,16 @@ public class WecomKfConversationService {
         if (message == null || blank(message.msgId()).isBlank()) {
             return;
         }
-        String orgId = resolved.account().getOrgId();
-        if (messageRepository.existsByOrgIdAndMsgId(orgId, message.msgId())) {
+        String companyId = resolved.account().getCompanyId();
+        if (messageRepository.existsByCompanyIdAndMsgId(companyId, message.msgId())) {
             return;
         }
         String externalUserId = blank(message.externalUserId());
         String openKfId = blank(message.openKfId()).isBlank() ? resolved.account().getOpenKfId() : blank(message.openKfId());
         WecomKfConversationEntity conversation = conversationRepository
-                .findByOrgIdAndCorpIdAndOpenKfIdAndExternalUserId(orgId, resolved.account().getCorpId(), openKfId, externalUserId)
+                .findByCompanyIdAndCorpIdAndOpenKfIdAndExternalUserId(companyId, resolved.account().getCorpId(), openKfId, externalUserId)
                 .orElseGet(() -> new WecomKfConversationEntity(
-                        orgId,
+                        companyId,
                         resolved.account().getCorpId(),
                         openKfId,
                         externalUserId,
@@ -65,7 +65,7 @@ public class WecomKfConversationService {
         String msgType = blank(message.msgType()).isBlank() ? "unknown" : blank(message.msgType());
         String content = "text".equalsIgnoreCase(msgType) ? blank(message.content()) : "非文本消息";
         messageRepository.save(new WecomKfMessageEntity(
-                orgId,
+                companyId,
                 message.msgId(),
                 resolved.account().getCorpId(),
                 openKfId,
@@ -80,7 +80,7 @@ public class WecomKfConversationService {
         String traceId = "";
         if ("text".equalsIgnoreCase(msgType) && !content.isBlank()) {
             Map<String, Object> result = chatOrchestratorService.chat(
-                    orgId,
+                    companyId,
                     conversation.getRunAsUserId(),
                     conversation.getSessionId(),
                     content,
@@ -114,7 +114,7 @@ public class WecomKfConversationService {
             }
         }
         messageRepository.save(new WecomKfMessageEntity(
-                conversation.getOrgId(),
+                conversation.getCompanyId(),
                 outboundMessageId(inboundMsgId),
                 conversation.getCorpId(),
                 conversation.getOpenKfId(),
@@ -128,8 +128,8 @@ public class WecomKfConversationService {
 
     private String annotateLatestTrace(WecomKfConversationEntity conversation, String requestId, String externalUserId) {
         AgentRunTraceEntity trace = traceRepository
-                .findFirstByOrgIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
-                        conversation.getOrgId(),
+                .findFirstByCompanyIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
+                        conversation.getCompanyId(),
                         conversation.getSessionId(),
                         conversation.getAgentId())
                 .orElse(null);

@@ -91,7 +91,7 @@ class EmbedAppIntegrationTest {
     @Test
     void shouldIssueEmbedTokenCreateSessionAndSummarizeWithOriginGuard() throws Exception {
         String adminToken = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String plainKey = createPlainKey(runAsUserId);
 
         mockMvc.perform(put("/embed/v1/admin/apps/meeting-minutes/config")
@@ -192,7 +192,7 @@ class EmbedAppIntegrationTest {
                 .andExpect(jsonPath("$.data.skillCode").value("ai-meeting-notetaker"));
 
         MeetingSessionEntity stored = meetingSessionRepository.findById(sessionId).orElseThrow();
-        assertThat(stored.getOrgId()).isEqualTo("demo-org");
+        assertThat(stored.getCompanyId()).isEqualTo("demo-org");
         assertThat(stored.getUserId()).isEqualTo(runAsUserId);
         assertThat(stored.getSource()).isEqualTo("cloudcc");
         assertThat(stored.getObjectType()).isEqualTo("Opportunity");
@@ -203,7 +203,7 @@ class EmbedAppIntegrationTest {
                 .orElseThrow();
         assertThat(workflowUsage.getBillableItemCode()).isEqualTo("workflow_credit");
         assertThat(workflowUsage.getWorkCreditQuantity()).isGreaterThan(BigDecimal.ZERO);
-        assertThat(billingSubscriptionRepository.findByOrgId("demo-org").orElseThrow().getConsumedCredits())
+        assertThat(billingSubscriptionRepository.findByCompanyId("demo-org").orElseThrow().getConsumedCredits())
                 .isGreaterThan(BigDecimal.ZERO);
 
         MvcResult previewResult = mockMvc.perform(post("/embed/v1/apps/meeting-minutes/sessions/{sessionId}/writeback-preview", sessionId)
@@ -255,7 +255,7 @@ class EmbedAppIntegrationTest {
     @Test
     void shouldRejectUnknownWritebackItemAndRollbackInsertedCloudccRecords() throws Exception {
         String adminToken = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
 
         mockMvc.perform(put("/embed/v1/admin/apps/meeting-minutes/config")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + adminToken)
@@ -394,7 +394,7 @@ class EmbedAppIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }
@@ -409,13 +409,13 @@ class EmbedAppIntegrationTest {
 
     private void configureCloudcc(String userId, HttpServer server) {
         jdbcTemplate.update("""
-                UPDATE organization_member
+                UPDATE company_member
                 SET cc_username = ?, cc_safetymark = ?
-                WHERE org_id = ? AND id = ?
+                WHERE company_id = ? AND id = ?
                 """, "cloudcc-user", "cloudcc-safety", "demo-org", userId);
         integrationAppService.update("demo-org", IntegrationAppService.APP_CODE_CLOUDCC_CRM,
                 true, "cloudcc", Map.of(
-                        "orgId", "cloudcc-org",
+                        "companyId", "cloudcc-org",
                         "orgapi_switch_address", "http://localhost:%d/domain".formatted(server.getAddress().getPort()),
                         "clientId", "cloudcc-client",
                         "secretKey", "cloudcc-secret"

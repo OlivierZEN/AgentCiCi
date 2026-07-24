@@ -79,19 +79,19 @@ class PlatformTenantLifecycleIntegrationTest {
     void shouldManageTenantRetentionAndCreateContentFreeDryRunManifest() throws Exception {
         String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402401", "生命周期测试组织");
-        seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
-        seedOntologyRows(createdOrg.orgId(), createdOrg.memberId());
+        seedSensitiveRows(createdOrg.companyId(), createdOrg.memberId());
+        seedOntologyRows(createdOrg.companyId(), createdOrg.memberId());
 
         MvcResult listResult = mockMvc.perform(get("/platform/tenants")
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andReturn();
-        JsonNode tenant = findByOrgId(objectMapper.readTree(listResult.getResponse().getContentAsString()).path("data"),
-                createdOrg.orgId());
+        JsonNode tenant = findByCompanyId(objectMapper.readTree(listResult.getResponse().getContentAsString()).path("data"),
+                createdOrg.companyId());
         assertThat(tenant).isNotNull();
         assertThat(tenant.path("memberCount").asLong()).isEqualTo(1);
 
-        mockMvc.perform(patch("/platform/tenants/{orgId}/retention", createdOrg.orgId())
+        mockMvc.perform(patch("/platform/tenants/{companyId}/retention", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -108,7 +108,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.data.retention.legalHold").value(true))
                 .andExpect(jsonPath("$.data.retention.policySource").value("PLATFORM_TEST"));
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/suspend", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/suspend", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -117,7 +117,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUSPENDED"));
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/resume", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/resume", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -126,7 +126,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"));
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -135,7 +135,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Tenant must be PENDING_PURGE before real purge"));
 
-        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -169,13 +169,13 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(responseText).doesNotContain("secret-memory-content");
 
         long jobId = dryRun.path("id").asLong();
-        mockMvc.perform(get("/platform/tenants/{orgId}/purge-jobs/{jobId}", createdOrg.orgId(), jobId)
+        mockMvc.perform(get("/platform/tenants/{companyId}/purge-jobs/{jobId}", createdOrg.companyId(), jobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(jobId))
                 .andExpect(jsonPath("$.data.manifest.totals.unsupported").value(2));
 
-        MvcResult exportResult = mockMvc.perform(post("/platform/tenants/{orgId}/export-jobs", createdOrg.orgId())
+        MvcResult exportResult = mockMvc.perform(post("/platform/tenants/{companyId}/export-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -186,12 +186,12 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         long exportJobId = objectMapper.readTree(exportResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        mockMvc.perform(get("/platform/tenants/{orgId}/export-jobs/{jobId}/download", createdOrg.orgId(), exportJobId)
+        mockMvc.perform(get("/platform/tenants/{companyId}/export-jobs/{jobId}/download", createdOrg.companyId(), exportJobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("Platform operators can view export metadata but cannot download business-content archives"));
 
-        MvcResult downloadResult = mockMvc.perform(get("/admin/organization/export-jobs/{jobId}/download", exportJobId)
+        MvcResult downloadResult = mockMvc.perform(get("/admin/company/export-jobs/{jobId}/download", exportJobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + createdOrg.token()))
                 .andExpect(status().isOk())
                 .andReturn();
@@ -245,7 +245,7 @@ class PlatformTenantLifecycleIntegrationTest {
         assertThat(malformedMetadataField.path("metadata_json").asText()).isEqualTo("[REDACTED]");
         assertThat(zipEntries).containsKey("files/lifecycle-source.txt");
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/pending-purge", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/pending-purge", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -254,7 +254,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PENDING_PURGE"));
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -264,11 +264,11 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "confirmationText": "PURGE %s",
                                   "reason": "blocked by hold"
                                 }
-                                """.formatted(jobId, createdOrg.orgId())))
+                                """.formatted(jobId, createdOrg.companyId())))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Legal hold is active; purge is blocked"));
 
-        mockMvc.perform(patch("/platform/tenants/{orgId}/retention", createdOrg.orgId())
+        mockMvc.perform(patch("/platform/tenants/{companyId}/retention", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -284,7 +284,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.retention.legalHold").value(false));
 
-        MvcResult purgeResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult purgeResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -294,7 +294,7 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "confirmationText": "PURGE %s",
                                   "reason": "customer confirmed export"
                                 }
-                        """.formatted(jobId, createdOrg.orgId())))
+                        """.formatted(jobId, createdOrg.companyId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.dryRun").value(false))
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
@@ -302,7 +302,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         long purgeJobId = objectMapper.readTree(purgeResult.getResponse().getContentAsString()).path("data").path("id").asLong();
         tenantLifecycleService.processQueuedPurgeJobs();
-        MvcResult finishedPurgeResult = mockMvc.perform(get("/platform/tenants/{orgId}/purge-jobs/{jobId}", createdOrg.orgId(), purgeJobId)
+        MvcResult finishedPurgeResult = mockMvc.perform(get("/platform/tenants/{companyId}/purge-jobs/{jobId}", createdOrg.companyId(), purgeJobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUCCEEDED"))
@@ -311,29 +311,29 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         JsonNode purge = objectMapper.readTree(finishedPurgeResult.getResponse().getContentAsString()).path("data");
         assertThat(purge.path("result").path("remainingBusinessRows").asLong()).isZero();
-        assertThat(countRows("chat_message", createdOrg.orgId())).isZero();
-        assertThat(countRows("user_memory", createdOrg.orgId())).isZero();
-        assertThat(countRows("knowledge_base", createdOrg.orgId())).isZero();
-        assertThat(countRows("agent_api_credential", createdOrg.orgId())).isZero();
+        assertThat(countRows("chat_message", createdOrg.companyId())).isZero();
+        assertThat(countRows("user_memory", createdOrg.companyId())).isZero();
+        assertThat(countRows("knowledge_base", createdOrg.companyId())).isZero();
+        assertThat(countRows("agent_api_credential", createdOrg.companyId())).isZero();
         assertThat(jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM agent_api_memory_binding binding
                 JOIN agent_api_credential credential ON credential.id = binding.credential_id
-                WHERE credential.org_id = ?
-                """, Long.class, createdOrg.orgId())).isZero();
-        assertThat(countRows("wecom_kf_account", createdOrg.orgId())).isZero();
-        assertThat(countRows("integration_app", createdOrg.orgId())).isZero();
-        assertThat(countRows("agent_run_trace", createdOrg.orgId())).isZero();
+                WHERE credential.company_id = ?
+                """, Long.class, createdOrg.companyId())).isZero();
+        assertThat(countRows("wecom_kf_account", createdOrg.companyId())).isZero();
+        assertThat(countRows("integration_app", createdOrg.companyId())).isZero();
+        assertThat(countRows("agent_run_trace", createdOrg.companyId())).isZero();
         for (String table : ONTOLOGY_TABLES) {
-            assertThat(countRows(table, createdOrg.orgId()))
+            assertThat(countRows(table, createdOrg.companyId()))
                     .as("purged row count for %s", table)
                     .isZero();
         }
-        assertThat(countRows("organization_member", createdOrg.orgId())).isZero();
+        assertThat(countRows("company_member", createdOrg.companyId())).isZero();
         assertThat(countRows("user_account", null)).isGreaterThan(0);
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM org WHERE id = ?", String.class, createdOrg.orgId()))
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM company WHERE id = ?", String.class, createdOrg.companyId()))
                 .isEqualTo("PURGED");
-        assertThat(Files.exists(kbFilePath(createdOrg.orgId()))).isFalse();
-        assertThat(Files.exists(kbOrphanFilePath(createdOrg.orgId()))).isFalse();
+        assertThat(Files.exists(kbFilePath(createdOrg.companyId()))).isFalse();
+        assertThat(Files.exists(kbOrphanFilePath(createdOrg.companyId()))).isFalse();
     }
 
     @Test
@@ -373,34 +373,34 @@ class PlatformTenantLifecycleIntegrationTest {
                                 }
                                 """.formatted(reusableMobile, reusableEmail)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.orgId").isNotEmpty())
+                .andExpect(jsonPath("$.data.companyId").isNotEmpty())
                 .andExpect(jsonPath("$.data.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.data.ownerMemberId").isNotEmpty())
                 .andExpect(jsonPath("$.data.ownerAccountId").isNotEmpty())
                 .andExpect(jsonPath("$.data.reusedExistingAccount").value(false))
                 .andReturn();
         JsonNode firstProvision = objectMapper.readTree(firstProvisionResult.getResponse().getContentAsString()).path("data");
-        String firstOrgId = firstProvision.path("orgId").asText();
+        String firstCompanyId = firstProvision.path("companyId").asText();
         String ownerAccountId = firstProvision.path("ownerAccountId").asText();
-        assertThat(firstOrgId).matches("^org[a-z0-9]{17}$");
+        assertThat(firstCompanyId).matches("^org[a-z0-9]{17}$");
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM organization_retention_policy WHERE org_id = ?",
+                "SELECT COUNT(*) FROM company_retention_policy WHERE company_id = ?",
                 Long.class,
-                firstOrgId)).isEqualTo(1L);
+                firstCompanyId)).isEqualTo(1L);
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM platform_audit_log WHERE org_id = ? AND event_type = 'platform.tenant.create'",
+                "SELECT COUNT(*) FROM platform_audit_log WHERE company_id = ? AND event_type = 'platform.tenant.create'",
                 Long.class,
-                firstOrgId)).isEqualTo(1L);
+                firstCompanyId)).isEqualTo(1L);
 
         mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "%s",
+                                  "companyId": "%s",
                                   "mobile": "%s",
                                   "password": "tenantPass1"
                                 }
-                                """.formatted(firstOrgId, reusableMobile)))
+                                """.formatted(firstCompanyId, reusableMobile)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accountId").value(ownerAccountId));
 
@@ -420,10 +420,10 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.data.ownerAccountId").value(ownerAccountId))
                 .andReturn();
 
-        String secondOrgId = objectMapper.readTree(secondProvisionResult.getResponse().getContentAsString()).path("data").path("orgId").asText();
-        assertThat(secondOrgId).matches("^org[a-z0-9]{17}$");
+        String secondCompanyId = objectMapper.readTree(secondProvisionResult.getResponse().getContentAsString()).path("data").path("companyId").asText();
+        assertThat(secondCompanyId).matches("^org[a-z0-9]{17}$");
         assertThat(jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM organization_member WHERE account_id = ? AND role_code = 'OWNER'",
+                "SELECT COUNT(*) FROM company_member WHERE account_id = ? AND role_code = 'OWNER'",
                 Long.class,
                 ownerAccountId)).isGreaterThanOrEqualTo(2L);
     }
@@ -432,9 +432,9 @@ class PlatformTenantLifecycleIntegrationTest {
     void shouldCancelQueuedRealPurgeJobBeforeWorkerRuns() throws Exception {
         String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402403", "销毁取消测试组织");
-        seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
+        seedSensitiveRows(createdOrg.companyId(), createdOrg.memberId());
 
-        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -444,7 +444,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         long dryRunJobId = objectMapper.readTree(dryRunResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/pending-purge", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/pending-purge", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -453,7 +453,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PENDING_PURGE"));
 
-        MvcResult queueResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult queueResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -463,13 +463,13 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "confirmationText": "PURGE %s",
                                   "reason": "operator queued purge"
                                 }
-                                """.formatted(dryRunJobId, createdOrg.orgId())))
+                                """.formatted(dryRunJobId, createdOrg.companyId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andReturn();
         long queuedJobId = objectMapper.readTree(queueResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs/{jobId}/cancel", createdOrg.orgId(), queuedJobId)
+        mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs/{jobId}/cancel", createdOrg.companyId(), queuedJobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -479,8 +479,8 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.data.status").value("CANCELED"));
 
         tenantLifecycleService.processQueuedPurgeJobs();
-        assertThat(countRows("chat_message", createdOrg.orgId())).isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM org WHERE id = ?", String.class, createdOrg.orgId()))
+        assertThat(countRows("chat_message", createdOrg.companyId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM company WHERE id = ?", String.class, createdOrg.companyId()))
                 .isEqualTo("PENDING_PURGE");
     }
 
@@ -488,9 +488,9 @@ class PlatformTenantLifecycleIntegrationTest {
     void shouldDeadLetterExpiredRunningRealPurgeJobWithoutDeletingData() throws Exception {
         String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402404", "销毁死信测试组织");
-        seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
+        seedSensitiveRows(createdOrg.companyId(), createdOrg.memberId());
 
-        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -500,7 +500,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         long dryRunJobId = objectMapper.readTree(dryRunResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/pending-purge", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/pending-purge", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -509,7 +509,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("PENDING_PURGE"));
 
-        MvcResult queueResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult queueResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -519,14 +519,14 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "confirmationText": "PURGE %s",
                                   "reason": "operator queued purge"
                                 }
-                                """.formatted(dryRunJobId, createdOrg.orgId())))
+                                """.formatted(dryRunJobId, createdOrg.companyId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
                 .andReturn();
         long queuedJobId = objectMapper.readTree(queueResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
         jdbcTemplate.update("""
-                        UPDATE organization_purge_job
+                        UPDATE company_purge_job
                         SET status = 'RUNNING',
                             worker_id = 'stale-worker',
                             locked_at = TIMESTAMP '2000-01-01 00:00:00',
@@ -540,7 +540,7 @@ class PlatformTenantLifecycleIntegrationTest {
 
         tenantLifecycleService.processQueuedPurgeJobs();
 
-        mockMvc.perform(get("/platform/tenants/{orgId}/purge-jobs/{jobId}", createdOrg.orgId(), queuedJobId)
+        mockMvc.perform(get("/platform/tenants/{companyId}/purge-jobs/{jobId}", createdOrg.companyId(), queuedJobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DEAD_LETTER"))
@@ -548,8 +548,8 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andExpect(jsonPath("$.data.attemptCount").value(1))
                 .andExpect(jsonPath("$.data.deadLetterAt").isNotEmpty())
                 .andExpect(jsonPath("$.data.result.workerId").value("stale-worker"));
-        assertThat(countRows("chat_message", createdOrg.orgId())).isEqualTo(1);
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM org WHERE id = ?", String.class, createdOrg.orgId()))
+        assertThat(countRows("chat_message", createdOrg.companyId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM company WHERE id = ?", String.class, createdOrg.companyId()))
                 .isEqualTo("PENDING_PURGE");
     }
 
@@ -557,9 +557,9 @@ class PlatformTenantLifecycleIntegrationTest {
     void shouldRetryFailedRealPurgeJobFromSourceDryRun() throws Exception {
         String platformToken = platformToken();
         CreatedOrg createdOrg = registerOrg("13902402402", "销毁重试测试组织");
-        seedSensitiveRows(createdOrg.orgId(), createdOrg.memberId());
+        seedSensitiveRows(createdOrg.companyId(), createdOrg.memberId());
 
-        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs", createdOrg.orgId())
+        MvcResult dryRunResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -569,7 +569,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 .andReturn();
         long dryRunJobId = objectMapper.readTree(dryRunResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        mockMvc.perform(post("/platform/tenants/{orgId}/pending-purge", createdOrg.orgId())
+        mockMvc.perform(post("/platform/tenants/{companyId}/pending-purge", createdOrg.companyId())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -580,14 +580,14 @@ class PlatformTenantLifecycleIntegrationTest {
 
         Instant now = Instant.now();
         jdbcTemplate.update("""
-                        INSERT INTO organization_purge_job(
-                            org_id, dry_run, status, phase, requested_by, reason, started_at, finished_at,
+                        INSERT INTO company_purge_job(
+                            company_id, dry_run, status, phase, requested_by, reason, started_at, finished_at,
                             error_message, manifest_json, source_dry_run_job_id, confirmation_text,
                             manifest_version, manifest_hash, result_json, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                createdOrg.orgId(),
+                createdOrg.companyId(),
                 false,
                 "PARTIAL_FAILED",
                 "REAL_PURGE",
@@ -598,20 +598,20 @@ class PlatformTenantLifecycleIntegrationTest {
                 "vector cleanup failed",
                 "{}",
                 dryRunJobId,
-                "PURGE " + createdOrg.orgId(),
+                "PURGE " + createdOrg.companyId(),
                 "v2",
                 "failed-manifest-hash",
                 "{\"failures\":[\"vector cleanup failed\"]}",
                 Timestamp.from(now),
                 Timestamp.from(now));
         Long failedJobId = jdbcTemplate.queryForObject(
-                "SELECT MAX(id) FROM organization_purge_job WHERE org_id = ? AND status = 'PARTIAL_FAILED'",
+                "SELECT MAX(id) FROM company_purge_job WHERE company_id = ? AND status = 'PARTIAL_FAILED'",
                 Long.class,
-                createdOrg.orgId()
+                createdOrg.companyId()
         );
 
-        MvcResult retryResult = mockMvc.perform(post("/platform/tenants/{orgId}/purge-jobs/{jobId}/retry",
-                        createdOrg.orgId(), failedJobId)
+        MvcResult retryResult = mockMvc.perform(post("/platform/tenants/{companyId}/purge-jobs/{jobId}/retry",
+                        createdOrg.companyId(), failedJobId)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -619,7 +619,7 @@ class PlatformTenantLifecycleIntegrationTest {
                                   "confirmationText": "PURGE %s",
                                   "reason": "operator retry after cleanup fix"
                                 }
-                        """.formatted(createdOrg.orgId())))
+                        """.formatted(createdOrg.companyId())))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.dryRun").value(false))
                 .andExpect(jsonPath("$.data.status").value("QUEUED"))
@@ -629,17 +629,17 @@ class PlatformTenantLifecycleIntegrationTest {
         JsonNode retry = objectMapper.readTree(retryResult.getResponse().getContentAsString()).path("data");
         assertThat(retry.path("id").asLong()).isNotEqualTo(failedJobId.longValue());
         tenantLifecycleService.processQueuedPurgeJobs();
-        MvcResult finishedRetryResult = mockMvc.perform(get("/platform/tenants/{orgId}/purge-jobs/{jobId}",
-                        createdOrg.orgId(), retry.path("id").asLong())
+        MvcResult finishedRetryResult = mockMvc.perform(get("/platform/tenants/{companyId}/purge-jobs/{jobId}",
+                        createdOrg.companyId(), retry.path("id").asLong())
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + platformToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("SUCCEEDED"))
                 .andReturn();
         JsonNode finishedRetry = objectMapper.readTree(finishedRetryResult.getResponse().getContentAsString()).path("data");
         assertThat(finishedRetry.path("result").path("remainingBusinessRows").asLong()).isZero();
-        assertThat(countRows("chat_message", createdOrg.orgId())).isZero();
-        assertThat(countRows("organization_member", createdOrg.orgId())).isZero();
-        assertThat(jdbcTemplate.queryForObject("SELECT status FROM org WHERE id = ?", String.class, createdOrg.orgId()))
+        assertThat(countRows("chat_message", createdOrg.companyId())).isZero();
+        assertThat(countRows("company_member", createdOrg.companyId())).isZero();
+        assertThat(jdbcTemplate.queryForObject("SELECT status FROM company WHERE id = ?", String.class, createdOrg.companyId()))
                 .isEqualTo("PURGED");
     }
 
@@ -651,13 +651,13 @@ class PlatformTenantLifecycleIntegrationTest {
                                 {
                                   "mobile": "%s",
                                   "password": "szyd1234",
-                                  "organizationName": "%s"
+                                  "companyName": "%s"
                                 }
                                 """.formatted(mobileToRegister, name)))
                 .andExpect(status().isOk())
                 .andReturn();
         JsonNode data = objectMapper.readTree(registerResult.getResponse().getContentAsString()).path("data");
-        return new CreatedOrg(data.path("orgId").asText(), data.path("memberId").asText(), data.path("token").asText());
+        return new CreatedOrg(data.path("companyId").asText(), data.path("memberId").asText(), data.path("token").asText());
     }
 
     private String uniqueMobile(String seedMobile) {
@@ -682,43 +682,43 @@ class PlatformTenantLifecycleIntegrationTest {
         throw new IllegalStateException("Unable to allocate a unique mobile fixture");
     }
 
-    private void seedSensitiveRows(String orgId, String memberId) {
+    private void seedSensitiveRows(String companyId, String memberId) {
         Instant now = Instant.now();
         String sessionId = "retention-" + UUID.randomUUID();
         jdbcTemplate.update("""
-                        INSERT INTO chat_session(id, org_id, user_id, title, updated_at)
+                        INSERT INTO chat_session(id, company_id, user_id, title, updated_at)
                         VALUES (?, ?, ?, ?, ?)
                         """,
-                sessionId, orgId, memberId, "Sensitive Session", Timestamp.from(now));
+                sessionId, companyId, memberId, "Sensitive Session", Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO chat_message(session_id, org_id, role_code, content, created_at)
+                        INSERT INTO chat_message(session_id, company_id, role_code, content, created_at)
                         VALUES (?, ?, ?, ?, ?)
                         """,
-                sessionId, orgId, "USER", "客户绝密消息", Timestamp.from(now));
+                sessionId, companyId, "USER", "客户绝密消息", Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO chat_session_state(session_id, org_id, agent_id, summary, state_json, updated_at)
+                        INSERT INTO chat_session_state(session_id, company_id, agent_id, summary, state_json, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?)
                         """,
-                sessionId, orgId, "cici-system", "Sensitive state", "{\"stage\":\"secret\"}", Timestamp.from(now));
+                sessionId, companyId, "cici-system", "Sensitive state", "{\"stage\":\"secret\"}", Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO user_memory(org_id, user_id, agent_id, category, source, content, memory_key, created_at, updated_at)
+                        INSERT INTO user_memory(company_id, user_id, agent_id, category, source, content, memory_key, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, memberId, "cici-system", "FACT", "MANUAL", "secret-memory-content", "retention.test",
+                companyId, memberId, "cici-system", "FACT", "MANUAL", "secret-memory-content", "retention.test",
                 Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO integration_app(org_id, app_code, app_name, description, enabled, config_json, created_at, updated_at)
+                        INSERT INTO integration_app(company_id, app_code, app_name, description, enabled, config_json, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, "secret_app", "Secret App", "Export redaction test", true,
+                companyId, "secret_app", "Secret App", "Export redaction test", true,
                 "{\"accessToken\":\"tenant-secret-token\",\"safe\":\"visible\"}", Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO knowledge_base(org_id, name, description, status, created_at, updated_at)
+                        INSERT INTO knowledge_base(company_id, name, description, status, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?)
                         """,
-                orgId, "Retention KB", "Sensitive KB", "ACTIVE", Timestamp.from(now), Timestamp.from(now));
-        Long kbId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM knowledge_base WHERE org_id = ?", Long.class, orgId);
-        Path file = kbFilePath(orgId);
+                companyId, "Retention KB", "Sensitive KB", "ACTIVE", Timestamp.from(now), Timestamp.from(now));
+        Long kbId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM knowledge_base WHERE company_id = ?", Long.class, companyId);
+        Path file = kbFilePath(companyId);
         try {
             Files.createDirectories(file.getParent());
             Files.writeString(file, "exportable source file", StandardCharsets.UTF_8);
@@ -726,14 +726,14 @@ class PlatformTenantLifecycleIntegrationTest {
             throw new IllegalStateException(ex);
         }
         jdbcTemplate.update("""
-                        INSERT INTO kb_document(org_id, knowledge_base_id, name, content_type, storage_path, status, created_at, updated_at, file_size)
+                        INSERT INTO kb_document(company_id, knowledge_base_id, name, content_type, storage_path, status, created_at, updated_at, file_size)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, kbId, "lifecycle-source.txt", "text/plain", file.toString(), "PUBLISHED",
+                companyId, kbId, "lifecycle-source.txt", "text/plain", file.toString(), "PUBLISHED",
                 Timestamp.from(now), Timestamp.from(now), 22L);
-        Long docId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM kb_document WHERE org_id = ?", Long.class, orgId);
+        Long docId = jdbcTemplate.queryForObject("SELECT MAX(id) FROM kb_document WHERE company_id = ?", Long.class, companyId);
         String registeredVectorId = vectorStoreClient.upsert(new VectorUpsertCommand(
-                orgId,
+                companyId,
                 String.valueOf(kbId),
                 docId,
                 1L,
@@ -743,7 +743,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 List.of(0.1f, 0.2f, 0.3f, 0.4f)
         ));
         vectorStoreClient.upsert(new VectorUpsertCommand(
-                orgId,
+                companyId,
                 String.valueOf(kbId),
                 999999L,
                 999999L,
@@ -752,7 +752,7 @@ class PlatformTenantLifecycleIntegrationTest {
                 "orphan-hash",
                 List.of(0.4f, 0.3f, 0.2f, 0.1f)
         ));
-        Path orphanFile = kbOrphanFilePath(orgId);
+        Path orphanFile = kbOrphanFilePath(companyId);
         try {
             Files.createDirectories(orphanFile.getParent());
             Files.writeString(orphanFile, "orphan source file", StandardCharsets.UTF_8);
@@ -760,21 +760,21 @@ class PlatformTenantLifecycleIntegrationTest {
             throw new IllegalStateException(ex);
         }
         jdbcTemplate.update("""
-                        INSERT INTO kb_chunk(org_id, knowledge_base_id, document_id, chunk_index, content, tags, vector_id, content_hash, status, enabled)
+                        INSERT INTO kb_chunk(company_id, knowledge_base_id, document_id, chunk_index, content, tags, vector_id, content_hash, status, enabled)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, String.valueOf(kbId), docId, 0, "sensitive kb chunk", "retention", registeredVectorId, "hash", "ACTIVE", true);
+                companyId, String.valueOf(kbId), docId, 0, "sensitive kb chunk", "retention", registeredVectorId, "hash", "ACTIVE", true);
         jdbcTemplate.update("""
-                        INSERT INTO agent_api_credential(public_id, org_id, agent_id, name, key_prefix, key_hash, status, run_as_user_id,
+                        INSERT INTO agent_api_credential(public_id, company_id, agent_id, name, key_prefix, key_hash, status, run_as_user_id,
                             allowed_ips_json, scopes_json, rate_limit_per_minute, daily_quota, max_prompt_chars, max_response_chars,
                             allow_stream, allow_trace_read, created_by, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                "pub" + UUID.randomUUID().toString().replace("-", "").substring(0, 12), orgId, "cici-system", "API key",
+                "pub" + UUID.randomUUID().toString().replace("-", "").substring(0, 12), companyId, "cici-system", "API key",
                 "cici_ak", "secret-hash", "ACTIVE", memberId, "[]", "[\"chat\"]", 60, 100, 1000, 2000,
                 true, false, memberId, Timestamp.from(now), Timestamp.from(now));
         Long credentialId = jdbcTemplate.queryForObject(
-                "SELECT id FROM agent_api_credential WHERE org_id = ? ORDER BY id DESC LIMIT 1", Long.class, orgId);
+                "SELECT id FROM agent_api_credential WHERE company_id = ? ORDER BY id DESC LIMIT 1", Long.class, companyId);
         jdbcTemplate.update("""
                         INSERT INTO agent_api_memory_binding(credential_id, application_code, subject_type, identity_level,
                             domain_namespaces_json, enabled, created_at, updated_at)
@@ -783,159 +783,159 @@ class PlatformTenantLifecycleIntegrationTest {
                 credentialId, "external-service", "EXTERNAL_USER", "VERIFIED", "[]", true,
                 Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO wecom_kf_account(org_id, corp_id, open_kfid, name, secret_cipher, secret_iv, token,
+                        INSERT INTO wecom_kf_account(company_id, corp_id, open_kfid, name, secret_cipher, secret_iv, token,
                             encoding_aes_key_cipher, encoding_aes_key_iv, agent_id, run_as_user_id, enabled, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, "corp", "kf", "WeCom", "secret-cipher", "iv", "token", "aes-cipher", "aes-iv",
+                companyId, "corp", "kf", "WeCom", "secret-cipher", "iv", "token", "aes-cipher", "aes-iv",
                 "cici-system", memberId, true, Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
-                        INSERT INTO agent_run_trace(trace_id, org_id, user_id, session_id, agent_id, channel, status, title, summary,
+                        INSERT INTO agent_run_trace(trace_id, company_id, user_id, session_id, agent_id, channel, status, title, summary,
                             started_at, ended_at, elapsed_ms, model_call_count, tool_call_count, rag_context_count,
                             knowledge_base_names_json, skill_names_json, nodes_json, detail_json, created_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                "trace-" + UUID.randomUUID(), orgId, memberId, sessionId, "cici-system", "web", "SUCCESS", "trace", "summary",
+                "trace-" + UUID.randomUUID(), companyId, memberId, sessionId, "cici-system", "web", "SUCCESS", "trace", "summary",
                 Timestamp.from(now), Timestamp.from(now), 1, 0, 0, 0, "[]", "[]", "[]", "{}", Timestamp.from(now));
     }
 
-    private void seedOntologyRows(String orgId, String memberId) {
+    private void seedOntologyRows(String companyId, String memberId) {
         Instant now = Instant.now();
         jdbcTemplate.update("""
                         INSERT INTO ontology_workspace(
-                            org_id, key, name, description, status, draft_revision, created_by, updated_by,
+                            company_id, key, name, description, status, draft_revision, created_by, updated_by,
                             created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, "lifecycle-ontology", "Lifecycle Ontology", "Lifecycle governance fixture", "PUBLISHED", 1L,
+                companyId, "lifecycle-ontology", "Lifecycle Ontology", "Lifecycle governance fixture", "PUBLISHED", 1L,
                 memberId, memberId, Timestamp.from(now), Timestamp.from(now));
         Long workspaceId = jdbcTemplate.queryForObject(
-                "SELECT id FROM ontology_workspace WHERE org_id = ? AND key = 'lifecycle-ontology'",
+                "SELECT id FROM ontology_workspace WHERE company_id = ? AND key = 'lifecycle-ontology'",
                 Long.class,
-                orgId);
+                companyId);
 
         jdbcTemplate.update("""
                         INSERT INTO ontology_concept(
-                            org_id, workspace_id, key, name, concept_type, queryable, enabled, created_at, updated_at
+                            company_id, workspace_id, key, name, concept_type, queryable, enabled, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "project", "Project", "ENTITY", true, true,
+                companyId, workspaceId, "project", "Project", "ENTITY", true, true,
                 Timestamp.from(now), Timestamp.from(now));
         Long conceptId = jdbcTemplate.queryForObject(
-                "SELECT id FROM ontology_concept WHERE org_id = ? AND workspace_id = ? AND key = 'project'",
+                "SELECT id FROM ontology_concept WHERE company_id = ? AND workspace_id = ? AND key = 'project'",
                 Long.class,
-                orgId,
+                companyId,
                 workspaceId);
 
         jdbcTemplate.update("""
                         INSERT INTO ontology_property(
-                            org_id, workspace_id, concept_id, key, name, data_type, required, multiple,
+                            company_id, workspace_id, concept_id, key, name, data_type, required, multiple,
                             sensitive, queryable, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, conceptId, "name", "Name", "STRING", true, false, false, true,
+                companyId, workspaceId, conceptId, "name", "Name", "STRING", true, false, false, true,
                 Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_relation(
-                            org_id, workspace_id, key, name, source_concept_id, target_concept_id, cardinality,
+                            company_id, workspace_id, key, name, source_concept_id, target_concept_id, cardinality,
                             queryable, enabled, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "parent-project", "Parent Project", conceptId, conceptId, "MANY_TO_ONE",
+                companyId, workspaceId, "parent-project", "Parent Project", conceptId, conceptId, "MANY_TO_ONE",
                 true, true, Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_metric(
-                            org_id, workspace_id, key, name, concept_id, aggregation, measure_property_key,
+                            company_id, workspace_id, key, name, concept_id, aggregation, measure_property_key,
                             created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "project-count", "Project Count", conceptId, "COUNT", "name",
+                companyId, workspaceId, "project-count", "Project Count", conceptId, "COUNT", "name",
                 Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_action(
-                            org_id, workspace_id, key, name, concept_id, description, parameters_json,
+                            company_id, workspace_id, key, name, concept_id, description, parameters_json,
                             created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "review-project", "Review Project", conceptId, "Read-only modeled action", "[]",
+                companyId, workspaceId, "review-project", "Review Project", conceptId, "Read-only modeled action", "[]",
                 Timestamp.from(now), Timestamp.from(now));
 
         jdbcTemplate.update("""
                         INSERT INTO ontology_data_source(
-                            org_id, workspace_id, key, name, source_type, config_json, sample_data_json,
+                            company_id, workspace_id, key, name, source_type, config_json, sample_data_json,
                             status, created_by, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "sample", "Sample Source", "INLINE_SAMPLE",
+                companyId, workspaceId, "sample", "Sample Source", "INLINE_SAMPLE",
                 "{\"accessToken\":\"ontology-data-source-secret\"}",
                 "{\"projects\":[{\"id\":\"p-1\",\"name\":\"sample-project-alpha\",\"owner\":\"visible-sample-owner\",\"connector\":{\"accessKey\":\"ontology-sample-access-key-secret\",\"privateKey\":\"ontology-sample-private-key-secret\",\"private_key\":\"ontology-sample-private-snake-secret\",\"cookie\":\"ontology-sample-cookie-secret\"}}]}",
                 "VALID", memberId, Timestamp.from(now), Timestamp.from(now));
         Long dataSourceId = jdbcTemplate.queryForObject(
-                "SELECT id FROM ontology_data_source WHERE org_id = ? AND workspace_id = ? AND key = 'sample'",
+                "SELECT id FROM ontology_data_source WHERE company_id = ? AND workspace_id = ? AND key = 'sample'",
                 Long.class,
-                orgId,
+                companyId,
                 workspaceId);
 
         jdbcTemplate.update("""
                         INSERT INTO ontology_physical_object(
-                            org_id, workspace_id, data_source_id, object_key, name, object_type, metadata_json,
+                            company_id, workspace_id, data_source_id, object_key, name, object_type, metadata_json,
                             discovered_at, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, dataSourceId, "projects", "Projects", "OBJECT",
+                companyId, workspaceId, dataSourceId, "projects", "Projects", "OBJECT",
                 "{\"catalog\":\"project-catalog-v1\",\"label\":\"delivery-metadata\",\"connection\":{\"credential\":\"ontology-object-metadata-credential\",\"privateKey\":\"ontology-object-metadata-private-key\",\"cookie\":\"ontology-object-metadata-cookie\"}}",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         Long objectId = jdbcTemplate.queryForObject(
-                "SELECT id FROM ontology_physical_object WHERE org_id = ? AND data_source_id = ? AND object_key = 'projects'",
+                "SELECT id FROM ontology_physical_object WHERE company_id = ? AND data_source_id = ? AND object_key = 'projects'",
                 Long.class,
-                orgId,
+                companyId,
                 dataSourceId);
         jdbcTemplate.update("""
                         INSERT INTO ontology_physical_field(
-                            org_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
+                            company_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
                             multiple, metadata_json, discovered_at, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, objectId, "name", "Name", "STRING", false, false,
+                companyId, workspaceId, objectId, "name", "Name", "STRING", false, false,
                 "{\"businessLabel\":\"Project Name\",\"sourceSystem\":\"crm-read-model\",\"source\":{\"accessKey\":\"ontology-field-metadata-access-key\",\"private_key\":\"ontology-field-metadata-private-snake\",\"cookie\":\"ontology-field-metadata-cookie\"}}",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_physical_field(
-                            org_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
+                            company_id, workspace_id, physical_object_id, field_key, name, data_type, nullable,
                             multiple, metadata_json, discovered_at, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, objectId, "description", "Description", "STRING", true, false,
+                companyId, workspaceId, objectId, "description", "Description", "STRING", true, false,
                 "not-json ontology-malformed-metadata-password",
                 Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_mapping(
-                            org_id, workspace_id, target_type, target_key, data_source_id, physical_object_key,
+                            company_id, workspace_id, target_type, target_key, data_source_id, physical_object_key,
                             physical_field_key, confidence, source, validation_status, last_validated_at,
                             created_by, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "PROPERTY", "project.name", dataSourceId, "projects", "name", 1.0,
+                companyId, workspaceId, "PROPERTY", "project.name", dataSourceId, "projects", "name", 1.0,
                 "MANUAL", "VALID", Timestamp.from(now), memberId, Timestamp.from(now), Timestamp.from(now));
         jdbcTemplate.update("""
                         INSERT INTO ontology_ai_proposal(
-                            org_id, workspace_id, proposal_type, status, instruction, payload_json, diff_json,
+                            company_id, workspace_id, proposal_type, status, instruction, payload_json, diff_json,
                             validation_json, created_by, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, "REFINE", "PENDING", "Refine project vocabulary", "{}", "[]", "{}",
+                companyId, workspaceId, "REFINE", "PENDING", "Refine project vocabulary", "{}", "[]", "{}",
                 memberId, Timestamp.from(now), Timestamp.from(now));
 
         String snapshot = """
@@ -963,48 +963,48 @@ class PlatformTenantLifecycleIntegrationTest {
                 """;
         jdbcTemplate.update("""
                         INSERT INTO ontology_version(
-                            org_id, workspace_id, version_no, source_draft_revision, content_hash, snapshot_json,
+                            company_id, workspace_id, version_no, source_draft_revision, content_hash, snapshot_json,
                             json_schema, graphql_sdl, query_contract_json, validation_summary_json,
                             published_by, published_at, created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, 1, 1L, "lifecycle-hash", snapshot, "{}", "type Query { project: String }",
+                companyId, workspaceId, 1, 1L, "lifecycle-hash", snapshot, "{}", "type Query { project: String }",
                 "{}", "{}", memberId, Timestamp.from(now), Timestamp.from(now), Timestamp.from(now));
         Long versionId = jdbcTemplate.queryForObject(
-                "SELECT id FROM ontology_version WHERE org_id = ? AND workspace_id = ? AND version_no = 1",
+                "SELECT id FROM ontology_version WHERE company_id = ? AND workspace_id = ? AND version_no = 1",
                 Long.class,
-                orgId,
+                companyId,
                 workspaceId);
         jdbcTemplate.update("""
                         INSERT INTO ontology_query_audit(
-                            org_id, workspace_id, version_id, data_source_id, user_id, concept_key, query_json,
+                            company_id, workspace_id, version_id, data_source_id, user_id, concept_key, query_json,
                             result_count, duration_ms, status, evidence_json, sensitive_values_redacted,
                             created_at, updated_at
                         )
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                orgId, workspaceId, versionId, dataSourceId, memberId, "project", "{}", 1, 3L, "SUCCESS", "{}", true,
+                companyId, workspaceId, versionId, dataSourceId, memberId, "project", "{}", 1, 3L, "SUCCESS", "{}", true,
                 Timestamp.from(now), Timestamp.from(now));
     }
 
-    private long countRows(String table, String orgId) {
-        if (orgId == null) {
+    private long countRows(String table, String companyId) {
+        if (companyId == null) {
             return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table, Long.class);
         }
-        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE org_id = ?", Long.class, orgId);
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE company_id = ?", Long.class, companyId);
     }
 
-    private Path kbFilePath(String orgId) {
+    private Path kbFilePath(String companyId) {
         return Path.of("data/kb-files").toAbsolutePath().normalize()
-                .resolve(orgId)
+                .resolve(companyId)
                 .resolve("retention")
                 .resolve("lifecycle-source.txt");
     }
 
-    private Path kbOrphanFilePath(String orgId) {
+    private Path kbOrphanFilePath(String companyId) {
         return Path.of("data/kb-files").toAbsolutePath().normalize()
-                .resolve(orgId)
+                .resolve(companyId)
                 .resolve("orphan")
                 .resolve("orphan-source.txt");
     }
@@ -1030,12 +1030,12 @@ class PlatformTenantLifecycleIntegrationTest {
         return null;
     }
 
-    private JsonNode findByOrgId(JsonNode rows, String orgId) {
+    private JsonNode findByCompanyId(JsonNode rows, String companyId) {
         if (rows == null || !rows.isArray()) {
             return null;
         }
         for (JsonNode row : rows) {
-            if (orgId.equals(row.path("orgId").asText())) {
+            if (companyId.equals(row.path("companyId").asText())) {
                 return row;
             }
         }
@@ -1070,7 +1070,7 @@ class PlatformTenantLifecycleIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }
@@ -1096,6 +1096,6 @@ class PlatformTenantLifecycleIntegrationTest {
         return objectMapper.readTree(loginResult.getResponse().getContentAsString()).path("data").path("token").asText();
     }
 
-    private record CreatedOrg(String orgId, String memberId, String token) {
+    private record CreatedOrg(String companyId, String memberId, String token) {
     }
 }

@@ -1,7 +1,7 @@
 package com.codehouse.ciciassistant.ai.service;
 
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -9,14 +9,14 @@ public class ChatThinkingConfigService {
 
     public static final String SCENE_CODE = "chat_show_thinking";
 
-    private final OrgModelConfigRepository repository;
+    private final CompanyModelConfigRepository repository;
 
-    public ChatThinkingConfigService(OrgModelConfigRepository repository) {
+    public ChatThinkingConfigService(CompanyModelConfigRepository repository) {
         this.repository = repository;
     }
 
-    public boolean isEnabled(String orgId) {
-        OrgModelConfigEntity entity = repository.findByOrgIdAndSceneCode(orgId, SCENE_CODE).orElse(null);
+    public boolean isEnabled(String companyId) {
+        CompanyModelConfigEntity entity = repository.findByCompanyIdAndSceneCode(companyId, SCENE_CODE).orElse(null);
         if (entity == null) {
             return false;
         }

@@ -19,7 +19,7 @@ public class AgentTaskStepEntity {
     public static final String STATUS_FAILED = "FAILED";
 
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
-    @Column(name = "org_id", nullable = false, length = 64) private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64) private String companyId;
     @Column(name = "run_id", nullable = false) private Long runId;
     @Column(name = "plan_id", nullable = false) private Long planId;
     @Column(name = "step_key", nullable = false, length = 64) private String stepKey;
@@ -40,9 +40,9 @@ public class AgentTaskStepEntity {
     @Column(name = "created_at", nullable = false) private Instant createdAt;
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     protected AgentTaskStepEntity() { }
-    public AgentTaskStepEntity(String orgId, long runId, long planId, String stepKey, int stepOrder, String stepKind,
+    public AgentTaskStepEntity(String companyId, long runId, long planId, String stepKey, int stepOrder, String stepKind,
                                String dependsOnJson, String allowedToolNamesJson, String expectedEvidenceJson, boolean ready, Instant now) {
-        this.orgId = orgId; this.runId = runId; this.planId = planId; this.stepKey = stepKey; this.stepOrder = stepOrder;
+        this.companyId = companyId; this.runId = runId; this.planId = planId; this.stepKey = stepKey; this.stepOrder = stepOrder;
         this.stepKind = stepKind; this.status = ready ? STATUS_READY : STATUS_PENDING; this.dependsOnJson = dependsOnJson;
         this.allowedToolNamesJson = allowedToolNamesJson; this.expectedEvidenceJson = expectedEvidenceJson;
         this.createdAt = now; this.updatedAt = now;
@@ -52,7 +52,7 @@ public class AgentTaskStepEntity {
     public void succeed(String summary, Instant now) { status = STATUS_SUCCEEDED; resultSummary = summary; completedAt = now; leaseOwner = null; leaseExpiresAt = null; updatedAt = now; }
     public void fail(String errorCode, Instant now) { status = STATUS_FAILED; this.errorCode = errorCode; completedAt = now; leaseOwner = null; leaseExpiresAt = null; updatedAt = now; }
     public void recover(Instant now) { status = STATUS_READY; leaseOwner = null; leaseExpiresAt = null; updatedAt = now; }
-    public Long getId() { return id; } public String getOrgId() { return orgId; } public Long getRunId() { return runId; }
+    public Long getId() { return id; } public String getCompanyId() { return companyId; } public Long getRunId() { return runId; }
     public Long getPlanId() { return planId; } public String getStepKey() { return stepKey; } public int getStepOrder() { return stepOrder; }
     public String getStepKind() { return stepKind; } public String getStatus() { return status; } public String getDependsOnJson() { return dependsOnJson; }
     public String getAllowedToolNamesJson() { return allowedToolNamesJson; } public String getExpectedEvidenceJson() { return expectedEvidenceJson; }

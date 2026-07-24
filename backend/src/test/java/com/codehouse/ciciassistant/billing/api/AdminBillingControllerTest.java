@@ -24,10 +24,10 @@ class AdminBillingControllerTest {
     }
 
     @Test
-    void readsBillingOverviewForCurrentOrganizationOnly() {
+    void readsBillingOverviewForCurrentCompanyOnly() {
         AdminBillingService service = mock(AdminBillingService.class);
         AdminBillingController controller = new AdminBillingController(service);
-        TenantContext.setOrgId("org-demo");
+        TenantContext.setCompanyId("org-demo");
         AdminSubscriptionView subscription = new AdminSubscriptionView(
                 "org-demo",
                 "private_deployment",
@@ -65,12 +65,12 @@ class AdminBillingControllerTest {
         var response = controller.overview();
 
         assertThat(response.success()).isTrue();
-        assertThat(response.data().subscription().orgId()).isEqualTo("org-demo");
+        assertThat(response.data().subscription().companyId()).isEqualTo("org-demo");
         verify(service).overview("org-demo");
     }
 
     @Test
-    void requiresOrganizationAdminRole() {
+    void requiresCompanyAdminRole() {
         assertThat(AdminBillingController.class).hasAnnotation(RequireOrgAdmin.class);
     }
 }

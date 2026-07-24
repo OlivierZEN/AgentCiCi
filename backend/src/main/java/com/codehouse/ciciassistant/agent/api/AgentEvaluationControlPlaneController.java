@@ -31,19 +31,19 @@ public class AgentEvaluationControlPlaneController {
 
     @GetMapping("/overview")
     public ApiResponse<Map<String, Object>> overview() {
-        return ApiResponse.ok(service.tenantOverview(TenantContext.requireOrgId()));
+        return ApiResponse.ok(service.tenantOverview(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/suites")
     public ApiResponse<List<Map<String, Object>>> suites(
             @RequestParam(name = "agentId", required = false) String agentId) {
-        return ApiResponse.ok(service.tenantSuites(TenantContext.requireOrgId(), agentId));
+        return ApiResponse.ok(service.tenantSuites(TenantContext.requireCompanyId(), agentId));
     }
 
     @PostMapping("/suites")
     public ApiResponse<Map<String, Object>> createSuite(@Valid @RequestBody TenantSuiteRequest request) {
         return ApiResponse.ok(service.createTenantSuite(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 request.agentId(),
                 new AgentEvaluationControlPlaneService.TenantSuiteCommand(
                         request.name(), request.description(), request.gateMode(), request.minPassRate(),
@@ -54,14 +54,14 @@ public class AgentEvaluationControlPlaneController {
     @GetMapping("/suites/{suiteId}/cases")
     public ApiResponse<List<Map<String, Object>>> cases(@PathVariable Long suiteId,
                                                         @RequestParam String agentId) {
-        return ApiResponse.ok(service.tenantCases(TenantContext.requireOrgId(), agentId, suiteId));
+        return ApiResponse.ok(service.tenantCases(TenantContext.requireCompanyId(), agentId, suiteId));
     }
 
     @PostMapping("/suites/{suiteId}/cases")
     public ApiResponse<Map<String, Object>> createCase(@PathVariable Long suiteId,
                                                        @Valid @RequestBody CaseRequest request) {
         return ApiResponse.ok(service.addTenantCase(
-                TenantContext.requireOrgId(), request.agentId(), suiteId, caseCommand(request, false)));
+                TenantContext.requireCompanyId(), request.agentId(), suiteId, caseCommand(request, false)));
     }
 
     @PutMapping("/suites/{suiteId}/cases/{caseId}")
@@ -69,13 +69,13 @@ public class AgentEvaluationControlPlaneController {
                                                        @PathVariable Long caseId,
                                                        @Valid @RequestBody CaseRequest request) {
         return ApiResponse.ok(service.updateTenantCase(
-                TenantContext.requireOrgId(), request.agentId(), suiteId, caseId, caseCommand(request, false)));
+                TenantContext.requireCompanyId(), request.agentId(), suiteId, caseId, caseCommand(request, false)));
     }
 
     @PostMapping("/runs")
     public ApiResponse<Map<String, Object>> run(@Valid @RequestBody RunRequest request) {
         return ApiResponse.ok(service.runTenantSuite(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 request.agentId(),
                 request.suiteId(),
                 new AgentEvaluationControlPlaneService.RunSuiteCommand(
@@ -86,18 +86,18 @@ public class AgentEvaluationControlPlaneController {
     @GetMapping("/runs")
     public ApiResponse<List<Map<String, Object>>> runs(
             @RequestParam(name = "agentId", required = false) String agentId) {
-        return ApiResponse.ok(service.tenantRuns(TenantContext.requireOrgId(), agentId));
+        return ApiResponse.ok(service.tenantRuns(TenantContext.requireCompanyId(), agentId));
     }
 
     @GetMapping("/runs/{runId}")
     public ApiResponse<Map<String, Object>> runDetail(@PathVariable Long runId) {
-        return ApiResponse.ok(service.tenantRunDetail(TenantContext.requireOrgId(), runId));
+        return ApiResponse.ok(service.tenantRunDetail(TenantContext.requireCompanyId(), runId));
     }
 
     @PostMapping("/cases/from-trace")
     public ApiResponse<Map<String, Object>> fromTrace(@Valid @RequestBody TraceCaseRequest request) {
         return ApiResponse.ok(service.createCaseFromTrace(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 actorId(),
                 new AgentEvaluationControlPlaneService.TraceCaseCommand(
                         request.suiteId(), request.traceId(), request.agentId(), request.name(),
@@ -106,13 +106,13 @@ public class AgentEvaluationControlPlaneController {
 
     @GetMapping("/issues")
     public ApiResponse<List<Map<String, Object>>> issues() {
-        return ApiResponse.ok(service.listIssues(TenantContext.requireOrgId()));
+        return ApiResponse.ok(service.listIssues(TenantContext.requireCompanyId()));
     }
 
     @PostMapping("/issues")
     public ApiResponse<Map<String, Object>> createIssue(@Valid @RequestBody IssueRequest request) {
         return ApiResponse.ok(service.createIssue(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 new AgentEvaluationControlPlaneService.IssueCommand(
                         request.agentId(), request.runId(), request.caseId(), request.title(),
                         request.rootCauseType(), request.severity(), request.description()),
@@ -123,7 +123,7 @@ public class AgentEvaluationControlPlaneController {
     public ApiResponse<Map<String, Object>> updateIssue(@PathVariable Long issueId,
                                                         @Valid @RequestBody IssueUpdateRequest request) {
         return ApiResponse.ok(service.updateIssue(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 issueId,
                 new AgentEvaluationControlPlaneService.IssueUpdateCommand(
                         request.status(), request.rootCauseType(), request.severity(), request.ownerUserId(),

@@ -33,8 +33,8 @@ public class AdminAgentRunTraceController {
             @RequestParam(name = "type", required = false) String type,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "limit", defaultValue = "80") int limit) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(traceService.listOrgRunLogs(orgId, new AgentRunTraceService.RunLogQuery(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(traceService.listOrgRunLogs(companyId, new AgentRunTraceService.RunLogQuery(
                 parseInstant(from),
                 parseInstant(to),
                 blankToNull(agentId),
@@ -47,8 +47,8 @@ public class AdminAgentRunTraceController {
 
     @GetMapping("/{traceId}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable String traceId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(traceService.orgTraceDetail(orgId, traceId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(traceService.orgTraceDetail(companyId, traceId));
     }
 
     private Instant parseInstant(String value) {

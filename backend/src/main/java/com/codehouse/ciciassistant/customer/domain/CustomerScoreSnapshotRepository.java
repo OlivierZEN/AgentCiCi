@@ -6,6 +6,6 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerScoreSnapshotRepository extends JpaRepository<CustomerScoreSnapshotEntity, Long> {
-    Optional<CustomerScoreSnapshotEntity> findByOrgIdAndCrmAccountId(String orgId, String crmAccountId);
-    List<CustomerScoreSnapshotEntity> findByOrgIdAndCrmAccountIdIn(String orgId, Collection<String> crmAccountIds);
+    Optional<CustomerScoreSnapshotEntity> findByCompanyIdAndCrmAccountId(String companyId, String crmAccountId);
+    List<CustomerScoreSnapshotEntity> findByCompanyIdAndCrmAccountIdIn(String companyId, Collection<String> crmAccountIds);
 }

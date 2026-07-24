@@ -53,7 +53,7 @@ public class BillingMeteringService {
     public List<UsageMeterEventEntity> recordAssistantChat(ChatUsageCommand command) {
         String chatItemCode = command.ragChunkCount() > 0 ? "rag_message" : "standard_message";
         UsageMeterEventEntity chatEvent = recordUsage(new UsageCommand(
-                command.orgId(),
+                command.companyId(),
                 command.userId(),
                 command.agentId(),
                 "assistant_chat",
@@ -80,7 +80,7 @@ public class BillingMeteringService {
         }
         BigDecimal tokenUnits = new BigDecimal(totalTokens).divide(new BigDecimal("1000"), 4, RoundingMode.HALF_UP);
         UsageMeterEventEntity modelEvent = recordUsage(new UsageCommand(
-                command.orgId(),
+                command.companyId(),
                 command.userId(),
                 command.agentId(),
                 "model_usage",
@@ -118,9 +118,9 @@ public class BillingMeteringService {
             credits = BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
-        BillingSubscriptionEntity subscription = adminBillingService.ensureBillingState(command.orgId());
+        BillingSubscriptionEntity subscription = adminBillingService.ensureBillingState(command.companyId());
         UsageMeterEventEntity event = usageMeterEventRepository.save(new UsageMeterEventEntity(
-                command.orgId(),
+                command.companyId(),
                 command.userId(),
                 command.agentId(),
                 command.domain(),
@@ -139,7 +139,7 @@ public class BillingMeteringService {
             BigDecimal balanceAfter = subscription.getRemainingCredits().subtract(credits).max(BigDecimal.ZERO)
                     .setScale(2, RoundingMode.HALF_UP);
             creditLedgerRepository.save(new BillingCreditLedgerEntity(
-                    command.orgId(),
+                    command.companyId(),
                     "usage_debit",
                     credits.negate(),
                     balanceAfter,
@@ -220,7 +220,7 @@ public class BillingMeteringService {
                                    boolean productionReady) {
     }
 
-    public record UsageCommand(String orgId,
+    public record UsageCommand(String companyId,
                                String userId,
                                String agentId,
                                String domain,
@@ -235,7 +235,7 @@ public class BillingMeteringService {
                                Map<String, Object> metadata) {
     }
 
-    public record ChatUsageCommand(String orgId,
+    public record ChatUsageCommand(String companyId,
                                    String userId,
                                    String agentId,
                                    String sessionId,

@@ -7,10 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SkillApiToolRepository extends JpaRepository<SkillApiToolEntity, Long> {
 
-    void deleteByOrgIdAndSkillVersionId(String orgId, Long skillVersionId);
+    void deleteByCompanyIdAndSkillVersionId(String companyId, Long skillVersionId);
 
-    List<SkillApiToolEntity> findByOrgIdAndSkillVersionIdInAndEnabledTrueOrderByIdAsc(
-            String orgId, Collection<Long> skillVersionIds);
+    List<SkillApiToolEntity> findByCompanyIdAndSkillVersionIdInAndEnabledTrueOrderByIdAsc(
+            String companyId, Collection<Long> skillVersionIds);
 
-    Optional<SkillApiToolEntity> findByOrgIdAndToolNameAndEnabledTrue(String orgId, String toolName);
+    Optional<SkillApiToolEntity> findByCompanyIdAndToolNameAndEnabledTrue(String companyId, String toolName);
 }

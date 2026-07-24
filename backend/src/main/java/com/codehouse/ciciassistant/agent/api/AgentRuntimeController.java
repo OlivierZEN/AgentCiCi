@@ -42,24 +42,24 @@ public class AgentRuntimeController {
             @PathVariable String agentId,
             @RequestParam(name = "versionNo", required = false) Integer versionNo,
             @RequestParam(name = "limit", defaultValue = "50") int limit) {
-        String orgId = TenantContext.requireOrgId();
-        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.DEBUG);
-        return ApiResponse.ok(executionLogService.list(orgId, agentId, versionNo, limit));
+        String companyId = TenantContext.requireCompanyId();
+        accessControlService.require(companyId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.DEBUG);
+        return ApiResponse.ok(executionLogService.list(companyId, agentId, versionNo, limit));
     }
 
     @GetMapping("/{agentId}/runtime/triggers")
     public ApiResponse<Map<String, Object>> listTriggers(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
-        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
-        return ApiResponse.ok(runtimeCatalogService.buildTriggers(orgId, agentId));
+        String companyId = TenantContext.requireCompanyId();
+        accessControlService.require(companyId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.VIEW);
+        return ApiResponse.ok(runtimeCatalogService.buildTriggers(companyId, agentId));
     }
 
     @PostMapping("/{agentId}/runtime/schedules/sync")
     public ApiResponse<Map<String, Object>> syncSchedules(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
-        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
-        Long publishedVersionId = runtimeCatalogService.publishedVersionId(orgId, agentId);
-        return ApiResponse.ok(runtimeScheduleSyncService.syncFromCompiledVersion(orgId, agentId, publishedVersionId));
+        String companyId = TenantContext.requireCompanyId();
+        accessControlService.require(companyId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.PUBLISH);
+        Long publishedVersionId = runtimeCatalogService.publishedVersionId(companyId, agentId);
+        return ApiResponse.ok(runtimeScheduleSyncService.syncFromCompiledVersion(companyId, agentId, publishedVersionId));
     }
 
     @PutMapping("/{agentId}/runtime/schedules/{triggerKey}")
@@ -67,22 +67,22 @@ public class AgentRuntimeController {
             @PathVariable String agentId,
             @PathVariable String triggerKey,
             @RequestBody UpdateScheduleRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
+        String companyId = TenantContext.requireCompanyId();
+        accessControlService.require(companyId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.EDIT);
         boolean enabled = request != null && request.enabled != null && request.enabled;
-        return ApiResponse.ok(runtimeScheduleSyncService.updateEnabled(orgId, agentId, triggerKey, enabled));
+        return ApiResponse.ok(runtimeScheduleSyncService.updateEnabled(companyId, agentId, triggerKey, enabled));
     }
 
     @PostMapping("/{agentId}/runtime/schedules/run-now")
     public ApiResponse<Map<String, Object>> runScheduleNow(
             @PathVariable String agentId,
             @RequestBody RunNowRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        accessControlService.require(orgId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.RUN);
+        String companyId = TenantContext.requireCompanyId();
+        accessControlService.require(companyId, requireUserId(), TenantContext.getRoles(), agentId, AgentPermission.RUN);
         if (request == null || request.triggerKey == null || request.triggerKey.isBlank()) {
             throw new IllegalArgumentException("triggerKey is required");
         }
-        return ApiResponse.ok(runtimeScheduleSyncService.runNow(orgId, agentId, request.triggerKey));
+        return ApiResponse.ok(runtimeScheduleSyncService.runNow(companyId, agentId, request.triggerKey));
     }
 
     public static final class UpdateScheduleRequest {

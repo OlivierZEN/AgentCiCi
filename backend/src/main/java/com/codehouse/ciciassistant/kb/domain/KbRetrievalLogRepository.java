@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbRetrievalLogRepository extends JpaRepository<KbRetrievalLogEntity, Long> {
 
-    List<KbRetrievalLogEntity> findTop50ByOrgIdAndKnowledgeBaseIdOrderByIdDesc(String orgId, Long knowledgeBaseId);
+    List<KbRetrievalLogEntity> findTop50ByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(String companyId, Long knowledgeBaseId);
 }

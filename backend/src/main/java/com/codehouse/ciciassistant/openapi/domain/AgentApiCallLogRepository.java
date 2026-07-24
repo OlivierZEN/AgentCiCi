@@ -9,8 +9,8 @@ public interface AgentApiCallLogRepository extends JpaRepository<AgentApiCallLog
 
     Optional<AgentApiCallLogEntity> findByRequestIdAndCredentialId(String requestId, Long credentialId);
 
-    List<AgentApiCallLogEntity> findTop100ByOrgIdAndAgentIdAndCreatedAtBetweenOrderByCreatedAtDesc(
-            String orgId,
+    List<AgentApiCallLogEntity> findTop100ByCompanyIdAndAgentIdAndCreatedAtBetweenOrderByCreatedAtDesc(
+            String companyId,
             String agentId,
             Instant from,
             Instant to);

@@ -33,7 +33,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class AgentWorkflowSkillRefServiceTest {
 
-    private static final String ORG_ID = "demo-org";
+    private static final String COMPANY_ID = "demo-org";
 
     @Mock
     private AgentWorkflowSkillRefRepository workflowSkillRefRepository;
@@ -75,14 +75,14 @@ class AgentWorkflowSkillRefServiceTest {
                 }]}}
                 """);
         when(skill.getId()).thenReturn(16L);
-        when(skillDefinitionRepository.findByIdAndOrgId(16L, ORG_ID)).thenReturn(Optional.of(skill));
+        when(skillDefinitionRepository.findByIdAndCompanyId(16L, COMPANY_ID)).thenReturn(Optional.of(skill));
         when(historicalVersion.getId()).thenReturn(201L);
-        when(skillVersionRepository.findByOrgIdAndSkillIdAndVersionNo(ORG_ID, 16L, 1))
+        when(skillVersionRepository.findByCompanyIdAndSkillIdAndVersionNo(COMPANY_ID, 16L, 1))
                 .thenReturn(Optional.of(historicalVersion));
-        when(agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
-                ORG_ID, "sales-agent")).thenReturn(List.of());
+        when(agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
+                COMPANY_ID, "sales-agent")).thenReturn(List.of());
 
-        service.ensureWorkflowSkillRefs(ORG_ID, "sales-agent", workflowVersion);
+        service.ensureWorkflowSkillRefs(COMPANY_ID, "sales-agent", workflowVersion);
 
         ArgumentCaptor<AgentWorkflowSkillRefEntity> captor = ArgumentCaptor.forClass(AgentWorkflowSkillRefEntity.class);
         org.mockito.Mockito.verify(workflowSkillRefRepository).save(captor.capture());
@@ -93,7 +93,7 @@ class AgentWorkflowSkillRefServiceTest {
     void missingHistoricalManifestVersionShouldStayMissingAndFailClosedAtRuntime() {
         AgentWorkflowVersionEntity workflowVersion = org.mockito.Mockito.mock(AgentWorkflowVersionEntity.class);
         SkillDefinitionEntity skill = new SkillDefinitionEntity(
-                ORG_ID,
+                COMPANY_ID,
                 "crm-business-analysis",
                 "CRM 经营分析",
                 "分析销售数据",
@@ -125,23 +125,23 @@ class AgentWorkflowSkillRefServiceTest {
                   "resolved":true
                 }]}}
                 """);
-        when(skillDefinitionRepository.findByIdAndOrgId(16L, ORG_ID)).thenReturn(Optional.of(skill));
-        when(skillVersionRepository.findByOrgIdAndSkillIdAndVersionNo(ORG_ID, 16L, 99))
+        when(skillDefinitionRepository.findByIdAndCompanyId(16L, COMPANY_ID)).thenReturn(Optional.of(skill));
+        when(skillVersionRepository.findByCompanyIdAndSkillIdAndVersionNo(COMPANY_ID, 16L, 99))
                 .thenReturn(Optional.empty());
-        when(agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
-                ORG_ID, "sales-agent")).thenReturn(List.of());
+        when(agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(
+                COMPANY_ID, "sales-agent")).thenReturn(List.of());
 
-        service.ensureWorkflowSkillRefs(ORG_ID, "sales-agent", workflowVersion);
+        service.ensureWorkflowSkillRefs(COMPANY_ID, "sales-agent", workflowVersion);
 
         ArgumentCaptor<AgentWorkflowSkillRefEntity> captor = ArgumentCaptor.forClass(AgentWorkflowSkillRefEntity.class);
         verify(workflowSkillRefRepository).save(captor.capture());
         AgentWorkflowSkillRefEntity savedRef = captor.getValue();
         assertThat(savedRef.getSkillVersionId()).isNull();
-        verify(skillVersionRepository, never()).findByIdAndOrgId(202L, ORG_ID);
+        verify(skillVersionRepository, never()).findByIdAndCompanyId(202L, COMPANY_ID);
 
-        when(workflowSkillRefRepository.findByOrgIdAndWorkflowVersionIdOrderByIdAsc(ORG_ID, 302L))
+        when(workflowSkillRefRepository.findByCompanyIdAndWorkflowVersionIdOrderByIdAsc(COMPANY_ID, 302L))
                 .thenReturn(List.of(savedRef));
-        AgentWorkflowSkillRefService.RuntimeSkillRef runtimeRef = service.listRuntimeSkillRefs(ORG_ID, 302L).getFirst();
+        AgentWorkflowSkillRefService.RuntimeSkillRef runtimeRef = service.listRuntimeSkillRefs(COMPANY_ID, 302L).getFirst();
         assertThat(runtimeRef.skillVersionNo()).isNull();
         assertThat(runtimeRef.promptFragment()).isEmpty();
         assertThat(runtimeRef.toolWhitelist()).isEmpty();

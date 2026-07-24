@@ -6,26 +6,26 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbChunkRepository extends JpaRepository<KbChunkEntity, Long> {
 
-    List<KbChunkEntity> findTop5ByOrgIdAndKnowledgeBaseIdIn(String orgId, List<String> knowledgeBaseIds);
+    List<KbChunkEntity> findTop5ByCompanyIdAndKnowledgeBaseIdIn(String companyId, List<String> knowledgeBaseIds);
 
-    List<KbChunkEntity> findTop50ByOrgIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
-            String orgId,
+    List<KbChunkEntity> findTop50ByCompanyIdAndKnowledgeBaseIdInAndStatusAndEnabledTrueOrderByIdDesc(
+            String companyId,
             List<String> knowledgeBaseIds,
             String status);
 
-    List<KbChunkEntity> findByOrgIdAndDocumentIdAndStatusNot(String orgId, Long documentId, String status);
+    List<KbChunkEntity> findByCompanyIdAndDocumentIdAndStatusNot(String companyId, Long documentId, String status);
 
-    List<KbChunkEntity> findByOrgIdAndKnowledgeBaseIdAndStatusNot(String orgId, String knowledgeBaseId, String status);
+    List<KbChunkEntity> findByCompanyIdAndKnowledgeBaseIdAndStatusNot(String companyId, String knowledgeBaseId, String status);
 
-    List<KbChunkEntity> findByOrgIdAndStatusNot(String orgId, String status);
+    List<KbChunkEntity> findByCompanyIdAndStatusNot(String companyId, String status);
 
-    List<KbChunkEntity> findByOrgIdAndDocumentIdAndStatusNotOrderByChunkIndexAscIdAsc(String orgId, Long documentId, String status);
+    List<KbChunkEntity> findByCompanyIdAndDocumentIdAndStatusNotOrderByChunkIndexAscIdAsc(String companyId, Long documentId, String status);
 
-    List<KbChunkEntity> findByIdInAndOrgId(List<Long> ids, String orgId);
+    List<KbChunkEntity> findByIdInAndCompanyId(List<Long> ids, String companyId);
 
-    Optional<KbChunkEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbChunkEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    long countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(String orgId, Long documentId, String status);
+    long countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(String companyId, Long documentId, String status);
 
-    long countByOrgIdAndKnowledgeBaseIdAndStatusAndEnabledTrue(String orgId, String knowledgeBaseId, String status);
+    long countByCompanyIdAndKnowledgeBaseIdAndStatusAndEnabledTrue(String companyId, String knowledgeBaseId, String status);
 }

@@ -3,7 +3,7 @@ package com.codehouse.ciciassistant.auth.domain;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface OrgRepository extends JpaRepository<OrgEntity, String> {
+public interface CompanyRepository extends JpaRepository<CompanyEntity, String> {
 
-    List<OrgEntity> findAllByOrderByIdAsc();
+    List<CompanyEntity> findAllByOrderByIdAsc();
 }

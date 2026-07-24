@@ -105,28 +105,28 @@ public class UserWorkflowService {
     }
 
     @Transactional
-    public WorkflowBundle getBundle(String orgId, String userId, String requestedAgentId) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
-        UserAgentProfileEntity profile = getOrCreateProfile(orgId, userId, agent.agentId());
-        UserWorkflowSpecEntity spec = getOrCreateSpec(orgId, userId, agent.agentId());
+    public WorkflowBundle getBundle(String companyId, String userId, String requestedAgentId) {
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
+        UserAgentProfileEntity profile = getOrCreateProfile(companyId, userId, agent.agentId());
+        UserWorkflowSpecEntity spec = getOrCreateSpec(companyId, userId, agent.agentId());
         List<UserWorkflowVersionEntity> versions = userWorkflowVersionRepository
-                .findByOrgIdAndUserIdAndAgentIdOrderByVersionNoDesc(orgId, userId, agent.agentId());
+                .findByCompanyIdAndUserIdAndAgentIdOrderByVersionNoDesc(companyId, userId, agent.agentId());
         List<UserWorkflowTriggerEntity> triggers = userWorkflowTriggerRepository
-                .findByOrgIdAndUserIdAndAgentIdOrderByIdAsc(orgId, userId, agent.agentId());
+                .findByCompanyIdAndUserIdAndAgentIdOrderByIdAsc(companyId, userId, agent.agentId());
         List<UserWorkflowExecutionEntity> executions = userWorkflowExecutionRepository
-                .findTop20ByOrgIdAndUserIdAndAgentIdOrderByIdDesc(orgId, userId, agent.agentId());
+                .findTop20ByCompanyIdAndUserIdAndAgentIdOrderByIdDesc(companyId, userId, agent.agentId());
         UserWorkflowVersionEntity latestDraft = spec.getDraftVersionNo() == null
                 ? null
-                : userWorkflowVersionRepository.findByOrgIdAndUserIdAndAgentIdAndVersionNo(
-                        orgId, userId, agent.agentId(), spec.getDraftVersionNo())
+                : userWorkflowVersionRepository.findByCompanyIdAndUserIdAndAgentIdAndVersionNo(
+                        companyId, userId, agent.agentId(), spec.getDraftVersionNo())
                 .orElse(null);
         return new WorkflowBundle(agent, profile, spec, versions, triggers, executions, latestDraft);
     }
 
     @Transactional
-    public UserAgentProfileEntity updateProfile(String orgId, String userId, String requestedAgentId, UpdateProfileCommand command) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
-        UserAgentProfileEntity profile = getOrCreateProfile(orgId, userId, agent.agentId());
+    public UserAgentProfileEntity updateProfile(String companyId, String userId, String requestedAgentId, UpdateProfileCommand command) {
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
+        UserAgentProfileEntity profile = getOrCreateProfile(companyId, userId, agent.agentId());
         profile.update(
                 safeTimezone(command.timezone()),
                 safeText(command.locale()).isBlank() ? "zh-CN" : safeText(command.locale()),
@@ -134,24 +134,24 @@ public class UserWorkflowService {
                 toJson(normalizeMap(command.personalContext())),
                 command.enabled() == null || command.enabled()
         );
-        auditService.log(orgId, userId, "user.workflow.profile.update", "agent=" + agent.agentId());
+        auditService.log(companyId, userId, "user.workflow.profile.update", "agent=" + agent.agentId());
         return profile;
     }
 
     @Transactional
-    public UserWorkflowSpecEntity updateSpec(String orgId, String userId, String requestedAgentId, String sourceText) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
-        UserWorkflowSpecEntity spec = getOrCreateSpec(orgId, userId, agent.agentId());
+    public UserWorkflowSpecEntity updateSpec(String companyId, String userId, String requestedAgentId, String sourceText) {
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
+        UserWorkflowSpecEntity spec = getOrCreateSpec(companyId, userId, agent.agentId());
         spec.updateSourceText(safeText(sourceText).trim());
-        auditService.log(orgId, userId, "user.workflow.spec.update", "agent=" + agent.agentId());
+        auditService.log(companyId, userId, "user.workflow.spec.update", "agent=" + agent.agentId());
         return spec;
     }
 
     @Transactional
-    public CompileResult compile(String orgId, String userId, String requestedAgentId, CompileCommand command) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
-        UserWorkflowSpecEntity spec = getOrCreateSpec(orgId, userId, agent.agentId());
-        UserAgentProfileEntity profile = getOrCreateProfile(orgId, userId, agent.agentId());
+    public CompileResult compile(String companyId, String userId, String requestedAgentId, CompileCommand command) {
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
+        UserWorkflowSpecEntity spec = getOrCreateSpec(companyId, userId, agent.agentId());
+        UserAgentProfileEntity profile = getOrCreateProfile(companyId, userId, agent.agentId());
         String sourceText = safeText(command.sourceText()).trim();
         if (!sourceText.isBlank()) {
             spec.updateSourceText(sourceText);
@@ -187,7 +187,7 @@ public class UserWorkflowService {
         Map<String, Object> manifest = new LinkedHashMap<>();
         manifest.put("type", "user_workflow_pack");
         manifest.put("agentId", agent.agentId());
-        manifest.put("scope", Map.of("orgId", orgId, "userId", userId));
+        manifest.put("scope", Map.of("companyId", companyId, "userId", userId));
         manifest.put("sharedAgentPublishedVersionId", agent.definition().getPublishedVersionId());
         manifest.put("allowedTools", agent.allowedToolIds());
         manifest.put("timezone", profile.getTimezone());
@@ -216,13 +216,13 @@ public class UserWorkflowService {
         agent.allowedToolIds().forEach(toolId -> dependencies.add("tool:" + toolId));
 
         Integer versionNo = userWorkflowVersionRepository
-                .findTopByOrgIdAndUserIdAndAgentIdOrderByVersionNoDesc(orgId, userId, agent.agentId())
+                .findTopByCompanyIdAndUserIdAndAgentIdOrderByVersionNoDesc(companyId, userId, agent.agentId())
                 .map(item -> item.getVersionNo() + 1)
                 .orElse(1);
 
         String workflowCode = buildWorkflowCode(agent.agentId(), routines);
         UserWorkflowVersionEntity version = new UserWorkflowVersionEntity(
-                orgId,
+                companyId,
                 userId,
                 agent.agentId(),
                 spec.getId(),
@@ -239,7 +239,7 @@ public class UserWorkflowService {
         );
         userWorkflowVersionRepository.save(version);
         spec.markCompiled(versionNo);
-        auditService.log(orgId, userId, "user.workflow.compile", "agent=" + agent.agentId() + ",version=" + versionNo);
+        auditService.log(companyId, userId, "user.workflow.compile", "agent=" + agent.agentId() + ",version=" + versionNo);
         return new CompileResult(version, manifest, preview, summary, warnings, dependencies, routines);
     }
 
@@ -248,13 +248,13 @@ public class UserWorkflowService {
      * The caller supplies only human-readable schedule text and task content; this service owns the tenant scope.
      */
     @Transactional
-    public AssistantScheduleResult createScheduledRoutine(String orgId,
+    public AssistantScheduleResult createScheduledRoutine(String companyId,
                                                            String userId,
                                                            String requestedAgentId,
                                                            String title,
                                                            String cadence,
                                                            String task) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
         String normalizedCadence = safeText(cadence).trim();
         String normalizedTask = safeText(task).trim();
         if (!looksLikeExecutableSchedule(normalizedCadence)) {
@@ -263,22 +263,22 @@ public class UserWorkflowService {
         if (normalizedTask.isBlank()) {
             throw new IllegalArgumentException("定时任务内容不能为空。");
         }
-        UserWorkflowSpecEntity spec = getOrCreateSpec(orgId, userId, agent.agentId());
+        UserWorkflowSpecEntity spec = getOrCreateSpec(companyId, userId, agent.agentId());
         String routineLine = normalizedCadence + " " + normalizedTask;
         String source = safeText(spec.getSourceText()).trim();
         if (!source.lines().map(String::trim).anyMatch(routineLine::equals)) {
             source = source.isBlank() ? routineLine : source + "\n" + routineLine;
         }
-        CompileResult compiled = compile(orgId, userId, agent.agentId(), new CompileCommand(source));
-        UserWorkflowVersionEntity published = publish(orgId, userId, agent.agentId(), compiled.version().getVersionNo());
+        CompileResult compiled = compile(companyId, userId, agent.agentId(), new CompileCommand(source));
+        UserWorkflowVersionEntity published = publish(companyId, userId, agent.agentId(), compiled.version().getVersionNo());
         CompiledRoutine routine = parseManifestRoutines(published).stream()
                 .filter(item -> routineLine.equals(item.rawLine()))
                 .findFirst()
                 .orElseThrow(() -> new IllegalStateException("已发布版本未生成定时 routine"));
         UserWorkflowTriggerEntity trigger = userWorkflowTriggerRepository
-                .findByOrgIdAndUserIdAndAgentIdAndRoutineKey(orgId, userId, agent.agentId(), routine.routineKey())
+                .findByCompanyIdAndUserIdAndAgentIdAndRoutineKey(companyId, userId, agent.agentId(), routine.routineKey())
                 .orElseThrow(() -> new IllegalStateException("已发布版本未生成定时 trigger"));
-        auditService.log(orgId, userId, "user.workflow.schedule.create",
+        auditService.log(companyId, userId, "user.workflow.schedule.create",
                 "agent=" + agent.agentId() + ",trigger=" + trigger.getId());
         return new AssistantScheduleResult(
                 trigger.getId(),
@@ -288,26 +288,26 @@ public class UserWorkflowService {
                 published.getVersionNo());
     }
 
-    public List<UserWorkflowVersionEntity> listVersions(String orgId, String userId, String requestedAgentId) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
-        return userWorkflowVersionRepository.findByOrgIdAndUserIdAndAgentIdOrderByVersionNoDesc(orgId, userId, agentId);
+    public List<UserWorkflowVersionEntity> listVersions(String companyId, String userId, String requestedAgentId) {
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
+        return userWorkflowVersionRepository.findByCompanyIdAndUserIdAndAgentIdOrderByVersionNoDesc(companyId, userId, agentId);
     }
 
-    public List<UserQuickCommandEntity> listQuickCommands(String orgId, String userId, String requestedAgentId) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
-        return userQuickCommandRepository.findByOrgIdAndUserIdAndAgentIdAndEnabledTrueOrderBySortOrderAscIdAsc(
-                orgId,
+    public List<UserQuickCommandEntity> listQuickCommands(String companyId, String userId, String requestedAgentId) {
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
+        return userQuickCommandRepository.findByCompanyIdAndUserIdAndAgentIdAndEnabledTrueOrderBySortOrderAscIdAsc(
+                companyId,
                 userId,
                 agentId
         );
     }
 
     @Transactional
-    public UserQuickCommandEntity createQuickCommand(String orgId,
+    public UserQuickCommandEntity createQuickCommand(String companyId,
                                                     String userId,
                                                     String requestedAgentId,
                                                     CreateQuickCommandCommand command) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
         String promptText = limitText(safeText(command.promptText()).trim(), 2000);
         if (promptText.isBlank()) {
             throw new IllegalArgumentException("快捷指令内容不能为空");
@@ -316,86 +316,86 @@ public class UserWorkflowService {
         if (title.isBlank()) {
             title = deriveQuickCommandTitle(promptText);
         }
-        int nextSortOrder = userQuickCommandRepository.maxSortOrder(orgId, userId, agentId) + 1;
+        int nextSortOrder = userQuickCommandRepository.maxSortOrder(companyId, userId, agentId) + 1;
         UserQuickCommandEntity saved = userQuickCommandRepository.save(new UserQuickCommandEntity(
-                orgId,
+                companyId,
                 userId,
                 agentId,
                 title,
                 promptText,
                 nextSortOrder
         ));
-        auditService.log(orgId, userId, "user.quick_command.create", "agent=" + agentId + ",id=" + saved.getId());
+        auditService.log(companyId, userId, "user.quick_command.create", "agent=" + agentId + ",id=" + saved.getId());
         return saved;
     }
 
     @Transactional
-    public UserWorkflowVersionEntity publish(String orgId, String userId, String requestedAgentId, Integer versionNo) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
-        UserWorkflowSpecEntity spec = getOrCreateSpec(orgId, userId, agent.agentId());
+    public UserWorkflowVersionEntity publish(String companyId, String userId, String requestedAgentId, Integer versionNo) {
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
+        UserWorkflowSpecEntity spec = getOrCreateSpec(companyId, userId, agent.agentId());
         UserWorkflowVersionEntity target = userWorkflowVersionRepository
-                .findByOrgIdAndUserIdAndAgentIdAndVersionNo(orgId, userId, agent.agentId(), versionNo)
+                .findByCompanyIdAndUserIdAndAgentIdAndVersionNo(companyId, userId, agent.agentId(), versionNo)
                 .orElseThrow(() -> new IllegalArgumentException("个人工作流版本不存在: " + versionNo));
-        userWorkflowVersionRepository.findByOrgIdAndUserIdAndAgentIdAndPublishStatus(orgId, userId, agent.agentId(), "PUBLISHED")
+        userWorkflowVersionRepository.findByCompanyIdAndUserIdAndAgentIdAndPublishStatus(companyId, userId, agent.agentId(), "PUBLISHED")
                 .ifPresent(previous -> previous.setPublishStatus("ARCHIVED"));
         target.setPublishStatus("PUBLISHED");
         spec.markPublished(target.getId());
-        materializeTriggers(orgId, userId, agent.agentId(), target, getOrCreateProfile(orgId, userId, agent.agentId()).getTimezone());
-        auditService.log(orgId, userId, "user.workflow.publish", "agent=" + agent.agentId() + ",version=" + versionNo);
+        materializeTriggers(companyId, userId, agent.agentId(), target, getOrCreateProfile(companyId, userId, agent.agentId()).getTimezone());
+        auditService.log(companyId, userId, "user.workflow.publish", "agent=" + agent.agentId() + ",version=" + versionNo);
         return target;
     }
 
     @Transactional
-    public UserWorkflowVersionEntity rollback(String orgId, String userId, String requestedAgentId, Integer versionNo) {
-        return publish(orgId, userId, requestedAgentId, versionNo);
+    public UserWorkflowVersionEntity rollback(String companyId, String userId, String requestedAgentId, Integer versionNo) {
+        return publish(companyId, userId, requestedAgentId, versionNo);
     }
 
-    public List<UserWorkflowTriggerEntity> listTriggers(String orgId, String userId, String requestedAgentId) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
-        return userWorkflowTriggerRepository.findByOrgIdAndUserIdAndAgentIdOrderByIdAsc(orgId, userId, agentId);
+    public List<UserWorkflowTriggerEntity> listTriggers(String companyId, String userId, String requestedAgentId) {
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
+        return userWorkflowTriggerRepository.findByCompanyIdAndUserIdAndAgentIdOrderByIdAsc(companyId, userId, agentId);
     }
 
     @Transactional
-    public UserWorkflowTriggerEntity updateTrigger(String orgId,
+    public UserWorkflowTriggerEntity updateTrigger(String companyId,
                                                    String userId,
                                                    String requestedAgentId,
                                                    Long triggerId,
                                                    UpdateTriggerCommand command) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
         UserWorkflowTriggerEntity trigger = userWorkflowTriggerRepository
-                .findByIdAndOrgIdAndUserIdAndAgentId(triggerId, orgId, userId, agentId)
+                .findByIdAndCompanyIdAndUserIdAndAgentId(triggerId, companyId, userId, agentId)
                 .orElseThrow(() -> new IllegalArgumentException("个人 workflow trigger 不存在: " + triggerId));
         boolean enabled = command.enabled() == null || command.enabled();
         Instant nextFireAt = enabled ? computeNextFire(trigger.getTriggerType(), trigger.getCronExpr(), trigger.getTimezone(), trigger.getIntervalSeconds(), Instant.now()) : null;
         trigger.updateEnabled(enabled, nextFireAt);
-        auditService.log(orgId, userId, "user.workflow.trigger.update", "agent=" + agentId + ",trigger=" + triggerId + ",enabled=" + enabled);
+        auditService.log(companyId, userId, "user.workflow.trigger.update", "agent=" + agentId + ",trigger=" + triggerId + ",enabled=" + enabled);
         return trigger;
     }
 
-    public List<UserWorkflowExecutionEntity> listExecutions(String orgId, String userId, String requestedAgentId) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
-        return userWorkflowExecutionRepository.findTop20ByOrgIdAndUserIdAndAgentIdOrderByIdDesc(orgId, userId, agentId);
+    public List<UserWorkflowExecutionEntity> listExecutions(String companyId, String userId, String requestedAgentId) {
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
+        return userWorkflowExecutionRepository.findTop20ByCompanyIdAndUserIdAndAgentIdOrderByIdDesc(companyId, userId, agentId);
     }
 
-    public UserWorkflowExecutionEntity getExecution(String orgId, String userId, String requestedAgentId, Long executionId) {
-        String agentId = loadAgentContext(orgId, requestedAgentId).agentId();
-        return userWorkflowExecutionRepository.findByIdAndOrgIdAndUserIdAndAgentId(executionId, orgId, userId, agentId)
+    public UserWorkflowExecutionEntity getExecution(String companyId, String userId, String requestedAgentId, Long executionId) {
+        String agentId = loadAgentContext(companyId, requestedAgentId).agentId();
+        return userWorkflowExecutionRepository.findByIdAndCompanyIdAndUserIdAndAgentId(executionId, companyId, userId, agentId)
                 .orElseThrow(() -> new IllegalArgumentException("执行记录不存在: " + executionId));
     }
 
     @Transactional
-    public UserWorkflowExecutionEntity runNow(String orgId, String userId, String requestedAgentId, String routineKey) {
-        AgentContext agent = loadAgentContext(orgId, requestedAgentId);
+    public UserWorkflowExecutionEntity runNow(String companyId, String userId, String requestedAgentId, String routineKey) {
+        AgentContext agent = loadAgentContext(companyId, requestedAgentId);
         UserWorkflowVersionEntity version = userWorkflowVersionRepository
-                .findByOrgIdAndUserIdAndAgentIdAndPublishStatus(orgId, userId, agent.agentId(), "PUBLISHED")
+                .findByCompanyIdAndUserIdAndAgentIdAndPublishStatus(companyId, userId, agent.agentId(), "PUBLISHED")
                 .orElseThrow(() -> new IllegalArgumentException("请先发布个人 workflow 后再执行。"));
         CompiledRoutine routine = findRoutine(version, routineKey);
         UserWorkflowExecutionEntity execution = new UserWorkflowExecutionEntity(
-                orgId,
+                companyId,
                 userId,
                 agent.agentId(),
                 version.getId(),
-                userWorkflowTriggerRepository.findByOrgIdAndUserIdAndAgentIdAndRoutineKey(orgId, userId, agent.agentId(), routine.routineKey())
+                userWorkflowTriggerRepository.findByCompanyIdAndUserIdAndAgentIdAndRoutineKey(companyId, userId, agent.agentId(), routine.routineKey())
                         .map(UserWorkflowTriggerEntity::getId)
                         .orElse(null),
                 routine.routineKey(),
@@ -403,8 +403,8 @@ public class UserWorkflowService {
                 Instant.now()
         );
         userWorkflowExecutionRepository.save(execution);
-        executeWorkflow(version, routine, getOrCreateProfile(orgId, userId, agent.agentId()), execution);
-        auditService.log(orgId, userId, "user.workflow.run_now", "agent=" + agent.agentId() + ",routine=" + routine.routineKey());
+        executeWorkflow(version, routine, getOrCreateProfile(companyId, userId, agent.agentId()), execution);
+        auditService.log(companyId, userId, "user.workflow.run_now", "agent=" + agent.agentId() + ",routine=" + routine.routineKey());
         recordWorkflowBillingSafely(execution);
         return execution;
     }
@@ -422,7 +422,7 @@ public class UserWorkflowService {
             Instant nextFireAt = computeNextFire(trigger.getTriggerType(), trigger.getCronExpr(), trigger.getTimezone(), trigger.getIntervalSeconds(), now);
             trigger.markTriggered(now, nextFireAt);
             UserWorkflowExecutionEntity execution = new UserWorkflowExecutionEntity(
-                    trigger.getOrgId(),
+                    trigger.getCompanyId(),
                     trigger.getUserId(),
                     trigger.getAgentId(),
                     trigger.getVersionId(),
@@ -432,7 +432,7 @@ public class UserWorkflowService {
                     now
             );
             userWorkflowExecutionRepository.save(execution);
-            UserAgentProfileEntity profile = getOrCreateProfile(trigger.getOrgId(), trigger.getUserId(), trigger.getAgentId());
+            UserAgentProfileEntity profile = getOrCreateProfile(trigger.getCompanyId(), trigger.getUserId(), trigger.getAgentId());
             try {
                 executeWorkflow(version.get(), findRoutine(version.get(), trigger.getRoutineKey()), profile, execution);
                 recordWorkflowBillingSafely(execution);
@@ -445,13 +445,13 @@ public class UserWorkflowService {
         }
     }
 
-    private void materializeTriggers(String orgId,
+    private void materializeTriggers(String companyId,
                                      String userId,
                                      String agentId,
                                      UserWorkflowVersionEntity version,
                                      String timezone) {
         List<CompiledRoutine> routines = parseManifestRoutines(version);
-        userWorkflowTriggerRepository.deleteByOrgIdAndUserIdAndAgentId(orgId, userId, agentId);
+        userWorkflowTriggerRepository.deleteByCompanyIdAndUserIdAndAgentId(companyId, userId, agentId);
         for (CompiledRoutine routine : routines) {
             Instant nextFireAt = computeNextFire(
                     routine.triggerType(),
@@ -461,7 +461,7 @@ public class UserWorkflowService {
                     Instant.now()
             );
             userWorkflowTriggerRepository.save(new UserWorkflowTriggerEntity(
-                    orgId,
+                    companyId,
                     userId,
                     agentId,
                     version.getId(),
@@ -502,7 +502,7 @@ public class UserWorkflowService {
         List<String> snippets = new ArrayList<>();
         for (String toolName : actualToolNames(routine)) {
             String argumentsJson = buildToolArgs(routine, toolName);
-            String result = toolOrchestratorService.executeTool(version.getOrgId(), profile.getUserId(), toolName, argumentsJson);
+            String result = toolOrchestratorService.executeTool(version.getCompanyId(), profile.getUserId(), toolName, argumentsJson);
             trace.add(Map.of(
                     "type", "tool",
                     "toolName", toolName,
@@ -526,7 +526,7 @@ public class UserWorkflowService {
         }
         if (routine.rawLine().contains("工作总结")) {
             List<UserWorkflowExecutionEntity> recent = userWorkflowExecutionRepository
-                    .findTop20ByOrgIdAndUserIdAndAgentIdOrderByIdDesc(version.getOrgId(), profile.getUserId(), version.getAgentId());
+                    .findTop20ByCompanyIdAndUserIdAndAgentIdOrderByIdDesc(version.getCompanyId(), profile.getUserId(), version.getAgentId());
             String digest = recent.stream()
                     .filter(item -> "SUCCESS".equals(item.getStatus()) && item.getOutputSummary() != null && !item.getOutputSummary().isBlank())
                     .limit(5)
@@ -560,7 +560,7 @@ public class UserWorkflowService {
                 + resultsBlock
                 + "通知目标：" + notificationTarget.type()
                 + (notificationTarget.value().isBlank() ? "" : " / " + notificationTarget.value());
-        NotificationDelivery delivery = deliverNotification(version.getOrgId(), profile.getUserId(), notificationTarget, outputSummary);
+        NotificationDelivery delivery = deliverNotification(version.getCompanyId(), profile.getUserId(), notificationTarget, outputSummary);
         trace.add(Map.of(
                 "type", "notification",
                 "targetType", notificationTarget.type(),
@@ -576,7 +576,7 @@ public class UserWorkflowService {
             return;
         }
         billingUsageMeteringService.recordWorkflowRunSafely(new BillingUsageMeteringService.WorkflowRunMeteringInput(
-                execution.getOrgId(),
+                execution.getCompanyId(),
                 execution.getUserId(),
                 execution.getAgentId(),
                 "user_workflow",
@@ -585,7 +585,7 @@ public class UserWorkflowService {
                 execution.getTriggerSource(),
                 0,
                 "user-workflow-run",
-                execution.getOrgId() + ":user:" + execution.getUserId() + ":workflow-execution:" + execution.getId(),
+                execution.getCompanyId() + ":user:" + execution.getUserId() + ":workflow-execution:" + execution.getId(),
                 Instant.now()));
     }
 
@@ -747,10 +747,10 @@ public class UserWorkflowService {
         return routines;
     }
 
-    private AgentContext loadAgentContext(String orgId, String requestedAgentId) {
+    private AgentContext loadAgentContext(String companyId, String requestedAgentId) {
         String agentId = safeText(requestedAgentId).isBlank() ? "cici-system" : safeText(requestedAgentId).trim().toLowerCase(Locale.ROOT);
-        agentDefinitionService.warmupBuiltinAgents(orgId);
-        AgentDefinitionService.AgentDetail detail = agentDefinitionService.get(orgId, agentId);
+        agentDefinitionService.warmupBuiltinAgents(companyId);
+        AgentDefinitionService.AgentDetail detail = agentDefinitionService.get(companyId, agentId);
         LinkedHashSet<String> tools = new LinkedHashSet<>(detail.toolIds());
         if ("cici-system".equals(detail.definition().getAgentId())) {
             tools.addAll(EXTRA_CICI_TOOLS);
@@ -758,10 +758,10 @@ public class UserWorkflowService {
         return new AgentContext(detail.definition(), List.copyOf(tools));
     }
 
-    private UserAgentProfileEntity getOrCreateProfile(String orgId, String userId, String agentId) {
-        return userAgentProfileRepository.findByOrgIdAndUserIdAndAgentId(orgId, userId, agentId)
+    private UserAgentProfileEntity getOrCreateProfile(String companyId, String userId, String agentId) {
+        return userAgentProfileRepository.findByCompanyIdAndUserIdAndAgentId(companyId, userId, agentId)
                 .orElseGet(() -> userAgentProfileRepository.save(new UserAgentProfileEntity(
-                        orgId,
+                        companyId,
                         userId,
                         agentId,
                         "Asia/Shanghai",
@@ -772,9 +772,9 @@ public class UserWorkflowService {
                 )));
     }
 
-    private UserWorkflowSpecEntity getOrCreateSpec(String orgId, String userId, String agentId) {
-        return userWorkflowSpecRepository.findByOrgIdAndUserIdAndAgentId(orgId, userId, agentId)
-                .orElseGet(() -> userWorkflowSpecRepository.save(new UserWorkflowSpecEntity(orgId, userId, agentId, "")));
+    private UserWorkflowSpecEntity getOrCreateSpec(String companyId, String userId, String agentId) {
+        return userWorkflowSpecRepository.findByCompanyIdAndUserIdAndAgentId(companyId, userId, agentId)
+                .orElseGet(() -> userWorkflowSpecRepository.save(new UserWorkflowSpecEntity(companyId, userId, agentId, "")));
     }
 
     private String deriveQuickCommandTitle(String promptText) {
@@ -946,20 +946,20 @@ public class UserWorkflowService {
         return new NotificationTarget(type, safeText(json.get("value")));
     }
 
-    private NotificationDelivery deliverNotification(String orgId, String userId, NotificationTarget target, String text) {
+    private NotificationDelivery deliverNotification(String companyId, String userId, NotificationTarget target, String text) {
         if (!"feishu_dm".equals(target.type())) {
             return new NotificationDelivery("SKIPPED", target.value(), "当前通知模式为记录执行结果，不主动外发。");
         }
         String resolvedOpenId = target.value();
         if (resolvedOpenId.isBlank()) {
-            resolvedOpenId = feishuBotPairingService.findActiveBindingForUser(orgId, userId)
+            resolvedOpenId = feishuBotPairingService.findActiveBindingForUser(companyId, userId)
                     .map(FeishuBotBindingEntity::getOpenId)
                     .orElse("");
         }
         if (resolvedOpenId.isBlank()) {
             return new NotificationDelivery("FAILED", "", "未找到可用的飞书 open_id；请先完成飞书配对或手动填写通知目标。");
         }
-        FeishuBotConfigService.FeishuBotConfig config = feishuBotConfigService.getEnabledConfig(orgId).orElse(null);
+        FeishuBotConfigService.FeishuBotConfig config = feishuBotConfigService.getEnabledConfig(companyId).orElse(null);
         if (config == null) {
             return new NotificationDelivery("FAILED", resolvedOpenId, "组织尚未启用可用的飞书机器人配置。");
         }

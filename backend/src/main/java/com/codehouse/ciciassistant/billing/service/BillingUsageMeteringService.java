@@ -68,10 +68,10 @@ public class BillingUsageMeteringService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BillingRunMeteringResult recordChatRun(ChatRunMeteringInput input) {
-        if (input == null || blank(input.orgId()) || blank(input.sessionId())) {
+        if (input == null || blank(input.companyId()) || blank(input.sessionId())) {
             return BillingRunMeteringResult.empty();
         }
-        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingSubscriptionEntity subscription = ensureBillingState(input.companyId());
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
         boolean billableRun = input.billable();
         String billingType = billableRun ? billingTypeFor(edition) : "non_billable";
@@ -104,10 +104,10 @@ public class BillingUsageMeteringService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BillingRunMeteringResult recordOpenApiChatRun(OpenApiChatMeteringInput input) {
-        if (input == null || blank(input.orgId()) || blank(input.requestId())) {
+        if (input == null || blank(input.companyId()) || blank(input.requestId())) {
             return BillingRunMeteringResult.empty();
         }
-        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingSubscriptionEntity subscription = ensureBillingState(input.companyId());
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
         String billingType = billingTypeFor(edition);
         boolean chargeCredits = chargesCredits(billingType);
@@ -116,7 +116,7 @@ public class BillingUsageMeteringService {
                 ? (input.stream() ? OPEN_API_STREAM_CREDITS : OPEN_API_SYNC_CREDITS)
                 : BigDecimal.ZERO;
         UsageMeterEventEntity event = new UsageMeterEventEntity(
-                input.orgId(),
+                input.companyId(),
                 input.userId(),
                 input.agentId(),
                 "open_api_chat",
@@ -153,10 +153,10 @@ public class BillingUsageMeteringService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BillingRunMeteringResult recordKbIndexing(KbIndexingMeteringInput input) {
-        if (input == null || blank(input.orgId()) || blank(input.sourceId()) || input.chunkCount() <= 0) {
+        if (input == null || blank(input.companyId()) || blank(input.sourceId()) || input.chunkCount() <= 0) {
             return BillingRunMeteringResult.empty();
         }
-        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingSubscriptionEntity subscription = ensureBillingState(input.companyId());
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
         String billingType = billingTypeFor(edition);
         boolean chargeCredits = chargesCredits(billingType);
@@ -166,7 +166,7 @@ public class BillingUsageMeteringService {
                 ? KB_INDEXING_CREDITS_PER_CHUNK.multiply(quantity).setScale(2, RoundingMode.HALF_UP)
                 : BigDecimal.ZERO;
         UsageMeterEventEntity event = new UsageMeterEventEntity(
-                input.orgId(),
+                input.companyId(),
                 input.userId(),
                 input.agentId(),
                 "kb_indexing",
@@ -201,16 +201,16 @@ public class BillingUsageMeteringService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BillingRunMeteringResult recordWorkflowRun(WorkflowRunMeteringInput input) {
-        if (input == null || blank(input.orgId()) || blank(input.sourceId())) {
+        if (input == null || blank(input.companyId()) || blank(input.sourceId())) {
             return BillingRunMeteringResult.empty();
         }
-        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingSubscriptionEntity subscription = ensureBillingState(input.companyId());
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
         String billingType = billingTypeFor(edition);
         boolean chargeCredits = chargesCredits(billingType);
         Instant occurredAt = input.endedAt() == null ? Instant.now().truncatedTo(ChronoUnit.SECONDS) : input.endedAt().truncatedTo(ChronoUnit.SECONDS);
         UsageMeterEventEntity event = new UsageMeterEventEntity(
-                input.orgId(),
+                input.companyId(),
                 input.userId(),
                 input.agentId(),
                 "workflow_run",
@@ -244,10 +244,10 @@ public class BillingUsageMeteringService {
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public BillingRunMeteringResult recordMeetingMinutesRun(MeetingMinutesMeteringInput input) {
-        if (input == null || blank(input.orgId()) || blank(input.sessionId())) {
+        if (input == null || blank(input.companyId()) || blank(input.sessionId())) {
             return BillingRunMeteringResult.empty();
         }
-        BillingSubscriptionEntity subscription = ensureBillingState(input.orgId());
+        BillingSubscriptionEntity subscription = ensureBillingState(input.companyId());
         BillingEditionEntity edition = editionRepository.findByEditionCode(subscription.getEditionCode()).orElseThrow();
         boolean billableRun = input.billable();
         String billingType = billableRun ? billingTypeFor(edition) : "non_billable";
@@ -353,7 +353,7 @@ public class BillingUsageMeteringService {
                                         Instant occurredAt,
                                         Map<String, Object> metadata) {
         return new UsageMeterEventEntity(
-                input.orgId(),
+                input.companyId(),
                 input.userId(),
                 input.agentId(),
                 domain,
@@ -370,7 +370,7 @@ public class BillingUsageMeteringService {
     }
 
     private String usageSourceId(ChatRunMeteringInput input, String domain) {
-        return input.orgId() + ":" + input.sessionId() + ":" + domain;
+        return input.companyId() + ":" + input.sessionId() + ":" + domain;
     }
 
     private UsageMeterEventEntity meetingEvent(MeetingMinutesMeteringInput input,
@@ -385,7 +385,7 @@ public class BillingUsageMeteringService {
                                                Instant occurredAt,
                                                Map<String, Object> metadata) {
         return new UsageMeterEventEntity(
-                input.orgId(),
+                input.companyId(),
                 input.userId(),
                 "ai-meeting-notetaker",
                 domain,
@@ -402,14 +402,14 @@ public class BillingUsageMeteringService {
     }
 
     private String usageSourceId(MeetingMinutesMeteringInput input, String domain) {
-        return input.orgId() + ":" + input.sessionId() + ":" + domain;
+        return input.companyId() + ":" + input.sessionId() + ":" + domain;
     }
 
     private void appendUsageDebit(BillingSubscriptionEntity subscription, UsageMeterEventEntity event) {
         BigDecimal currentBalance = currentBalance(subscription);
         BigDecimal nextBalance = currentBalance.subtract(event.getWorkCreditQuantity()).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
         creditLedgerRepository.save(new BillingCreditLedgerEntity(
-                subscription.getOrgId(),
+                subscription.getCompanyId(),
                 "usage_debit",
                 event.getWorkCreditQuantity().negate(),
                 nextBalance,
@@ -437,13 +437,13 @@ public class BillingUsageMeteringService {
         return new BillingRunMeteringResult(1, debited.setScale(2, RoundingMode.HALF_UP), chargeCredits, event.getBillingType());
     }
 
-    BillingSubscriptionEntity ensureBillingState(String orgId) {
+    BillingSubscriptionEntity ensureBillingState(String companyId) {
         configurationService.ensureDefaultCatalog();
-        BillingSubscriptionEntity subscription = subscriptionRepository.findByOrgId(orgId)
-                .orElseGet(() -> createDefaultSubscription(orgId));
-        if (creditLedgerRepository.findByOrgIdOrderByOccurredAtAsc(orgId).isEmpty()) {
+        BillingSubscriptionEntity subscription = subscriptionRepository.findByCompanyId(companyId)
+                .orElseGet(() -> createDefaultSubscription(companyId));
+        if (creditLedgerRepository.findByCompanyIdOrderByOccurredAtAsc(companyId).isEmpty()) {
             creditLedgerRepository.save(new BillingCreditLedgerEntity(
-                    orgId,
+                    companyId,
                     "included_grant",
                     subscription.getIncludedCredits(),
                     subscription.getIncludedCredits(),
@@ -455,25 +455,25 @@ public class BillingUsageMeteringService {
         return refreshSubscriptionBalance(subscription);
     }
 
-    private BillingSubscriptionEntity createDefaultSubscription(String orgId) {
+    private BillingSubscriptionEntity createDefaultSubscription(String companyId) {
         BillingEditionEntity edition = editionRepository.findByEditionCode("saas_business")
                 .orElseGet(() -> editionRepository.findFirstByDeploymentModeAndEnabledTrueOrderBySortOrderAscEditionCodeAsc("saas")
                         .orElseThrow());
         Instant now = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        BillingSubscriptionEntity subscription = new BillingSubscriptionEntity(orgId, edition.getDeploymentMode(), edition.getEditionCode(),
+        BillingSubscriptionEntity subscription = new BillingSubscriptionEntity(companyId, edition.getDeploymentMode(), edition.getEditionCode(),
                 now.minus(7, ChronoUnit.DAYS), now.plus(358, ChronoUnit.DAYS));
         BigDecimal included = effectiveIncludedCredits(edition);
         subscription.setIncludedCredits(included);
         subscription.setRemainingCredits(included);
         subscription.setOperationSeatsUsed(1);
-        subscription.setBuilderSeatsUsed(activeBuilderSeatUsers(orgId));
+        subscription.setBuilderSeatsUsed(activeBuilderSeatUsers(companyId));
         subscription.setPackageCodes(edition.getPackageCodes());
         subscription.setUpdatedAt(now);
         return subscriptionRepository.save(subscription);
     }
 
     BillingSubscriptionEntity refreshSubscriptionBalance(BillingSubscriptionEntity subscription) {
-        BigDecimal consumed = creditLedgerRepository.findByOrgIdOrderByOccurredAtAsc(subscription.getOrgId()).stream()
+        BigDecimal consumed = creditLedgerRepository.findByCompanyIdOrderByOccurredAtAsc(subscription.getCompanyId()).stream()
                 .filter(item -> "usage_debit".equals(item.getEntryType()))
                 .map(BillingCreditLedgerEntity::getCreditsDelta)
                 .map(BigDecimal::abs)
@@ -481,20 +481,20 @@ public class BillingUsageMeteringService {
                 .setScale(2, RoundingMode.HALF_UP);
         subscription.setConsumedCredits(consumed);
         subscription.setRemainingCredits(subscription.getIncludedCredits().subtract(consumed).max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP));
-        subscription.setBuilderSeatsUsed(activeBuilderSeatUsers(subscription.getOrgId()));
+        subscription.setBuilderSeatsUsed(activeBuilderSeatUsers(subscription.getCompanyId()));
         subscription.setUpdatedAt(Instant.now());
         return subscriptionRepository.save(subscription);
     }
 
-    private int activeBuilderSeatUsers(String orgId) {
+    private int activeBuilderSeatUsers(String companyId) {
         Long count = entityManager.createQuery("""
                         select count(member)
                         from UserEntity member
-                        where member.org.id = :orgId
+                        where member.org.id = :companyId
                           and member.memberStatus = :memberStatus
                           and member.roleCode in :builderRoles
                         """, Long.class)
-                .setParameter("orgId", orgId)
+                .setParameter("companyId", companyId)
                 .setParameter("memberStatus", UserEntity.STATUS_ACTIVE)
                 .setParameter("builderRoles", List.of(RoleCodes.OWNER, RoleCodes.ORG_ADMIN))
                 .getSingleResult();
@@ -502,7 +502,7 @@ public class BillingUsageMeteringService {
     }
 
     private BigDecimal currentBalance(BillingSubscriptionEntity subscription) {
-        List<BillingCreditLedgerEntity> ledger = creditLedgerRepository.findByOrgIdOrderByIdAsc(subscription.getOrgId());
+        List<BillingCreditLedgerEntity> ledger = creditLedgerRepository.findByCompanyIdOrderByIdAsc(subscription.getCompanyId());
         if (ledger.isEmpty()) {
             return subscription.getRemainingCredits().setScale(2, RoundingMode.HALF_UP);
         }
@@ -550,7 +550,7 @@ public class BillingUsageMeteringService {
     private String openApiSourceId(OpenApiChatMeteringInput input) {
         String source = blank(input.idempotencyKey()) ? input.requestId() : input.idempotencyKey();
         String fingerprint = UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8)).toString();
-        return input.orgId() + ":credential-" + Math.max(0L, input.credentialId()) + ":"
+        return input.companyId() + ":credential-" + Math.max(0L, input.credentialId()) + ":"
                 + (input.stream() ? "stream" : "sync") + ":" + fingerprint;
     }
 
@@ -571,7 +571,7 @@ public class BillingUsageMeteringService {
     }
 
     public record ChatRunMeteringInput(
-            String orgId,
+            String companyId,
             String userId,
             String agentId,
             String sessionId,
@@ -586,7 +586,7 @@ public class BillingUsageMeteringService {
     }
 
     public record MeetingMinutesMeteringInput(
-            String orgId,
+            String companyId,
             String userId,
             String sessionId,
             String modelName,
@@ -600,7 +600,7 @@ public class BillingUsageMeteringService {
     }
 
     public record OpenApiChatMeteringInput(
-            String orgId,
+            String companyId,
             String userId,
             String agentId,
             long credentialId,
@@ -616,7 +616,7 @@ public class BillingUsageMeteringService {
     }
 
     public record KbIndexingMeteringInput(
-            String orgId,
+            String companyId,
             String userId,
             String agentId,
             String knowledgeBaseId,
@@ -632,7 +632,7 @@ public class BillingUsageMeteringService {
     }
 
     public record WorkflowRunMeteringInput(
-            String orgId,
+            String companyId,
             String userId,
             String agentId,
             String workflowKind,

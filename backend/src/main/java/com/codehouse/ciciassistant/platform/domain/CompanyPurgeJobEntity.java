@@ -9,8 +9,8 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "organization_purge_job")
-public class OrganizationPurgeJobEntity {
+@Table(name = "company_purge_job")
+public class CompanyPurgeJobEntity {
 
     public static final String STATUS_SUCCEEDED = "SUCCEEDED";
     public static final String STATUS_QUEUED = "QUEUED";
@@ -26,8 +26,8 @@ public class OrganizationPurgeJobEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "dry_run", nullable = false)
     private boolean dryRun;
@@ -95,12 +95,12 @@ public class OrganizationPurgeJobEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationPurgeJobEntity() {
+    protected CompanyPurgeJobEntity() {
     }
 
-    public OrganizationPurgeJobEntity(String orgId, String requestedBy, String reason, String manifestJson) {
+    public CompanyPurgeJobEntity(String companyId, String requestedBy, String reason, String manifestJson) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.dryRun = true;
         this.status = STATUS_SUCCEEDED;
         this.phase = PHASE_DRY_RUN_MANIFEST;
@@ -115,7 +115,7 @@ public class OrganizationPurgeJobEntity {
         this.updatedAt = now;
     }
 
-    public static OrganizationPurgeJobEntity realPurge(String orgId,
+    public static CompanyPurgeJobEntity realPurge(String companyId,
                                                        String requestedBy,
                                                        String reason,
                                                        Long sourceDryRunJobId,
@@ -123,8 +123,8 @@ public class OrganizationPurgeJobEntity {
                                                        String manifestJson,
                                                        String manifestHash) {
         Instant now = Instant.now();
-        OrganizationPurgeJobEntity job = new OrganizationPurgeJobEntity();
-        job.orgId = orgId;
+        CompanyPurgeJobEntity job = new CompanyPurgeJobEntity();
+        job.companyId = companyId;
         job.dryRun = false;
         job.status = STATUS_QUEUED;
         job.phase = PHASE_REAL_PURGE;
@@ -195,8 +195,8 @@ public class OrganizationPurgeJobEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public boolean isDryRun() {

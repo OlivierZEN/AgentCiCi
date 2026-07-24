@@ -30,8 +30,8 @@ public class CustomerWorkbenchRecommendationEntity {
     @Column(name = "public_id", nullable = false, unique = true, length = 64)
     private String publicId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "crm_account_id", nullable = false, length = 128)
     private String crmAccountId;
@@ -113,7 +113,7 @@ public class CustomerWorkbenchRecommendationEntity {
     }
 
     public CustomerWorkbenchRecommendationEntity(String publicId,
-                                                 String orgId,
+                                                 String companyId,
                                                  String crmAccountId,
                                                  String recommendationType,
                                                  String title,
@@ -121,7 +121,7 @@ public class CustomerWorkbenchRecommendationEntity {
                                                  BigDecimal confidence,
                                                  String crmPayload) {
         this.publicId = publicId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.crmAccountId = crmAccountId;
         this.recommendationType = recommendationType;
         this.title = title;
@@ -138,7 +138,7 @@ public class CustomerWorkbenchRecommendationEntity {
 
     public Long getId() { return id; }
     public String getPublicId() { return publicId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getCrmAccountId() { return crmAccountId; }
     public String getRecommendationType() { return recommendationType; }
     public String getTitle() { return title; }

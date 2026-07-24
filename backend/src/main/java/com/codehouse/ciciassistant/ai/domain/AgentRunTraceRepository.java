@@ -18,20 +18,20 @@ public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEnti
         Instant getLastActiveAt();
     }
 
-    Optional<AgentRunTraceEntity> findByTraceIdAndOrgId(String traceId, String orgId);
+    Optional<AgentRunTraceEntity> findByTraceIdAndCompanyId(String traceId, String companyId);
 
-    Optional<AgentRunTraceEntity> findFirstByOrgIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
-            String orgId,
+    Optional<AgentRunTraceEntity> findFirstByCompanyIdAndSessionIdAndAgentIdOrderByStartedAtDesc(
+            String companyId,
             String sessionId,
             String agentId);
 
-    List<AgentRunTraceEntity> findByOrgIdAndStartedAtBetweenOrderByStartedAtDesc(
-            String orgId,
+    List<AgentRunTraceEntity> findByCompanyIdAndStartedAtBetweenOrderByStartedAtDesc(
+            String companyId,
             Instant from,
             Instant to);
 
-    List<AgentRunTraceEntity> findTop500ByOrgIdAndStartedAtBetweenOrderByStartedAtDesc(
-            String orgId,
+    List<AgentRunTraceEntity> findTop500ByCompanyIdAndStartedAtBetweenOrderByStartedAtDesc(
+            String companyId,
             Instant from,
             Instant to);
 
@@ -43,18 +43,18 @@ public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEnti
                    avg(t.elapsedMs) as avgLatencyMs,
                    max(t.startedAt) as lastActiveAt
             from AgentRunTraceEntity t
-            where t.orgId = :orgId
+            where t.companyId = :companyId
               and t.startedAt between :from and :to
             group by t.agentId
             """)
     List<AgentRuntimeStatsProjection> summarizeOrgRuntime(
-            @Param("orgId") String orgId,
+            @Param("companyId") String companyId,
             @Param("from") Instant from,
             @Param("to") Instant to);
 
     @Query("""
             select t from AgentRunTraceEntity t
-            where t.orgId = :orgId
+            where t.companyId = :companyId
               and t.startedAt between :from and :to
               and (
                 t.userId = :userId
@@ -69,7 +69,7 @@ public interface AgentRunTraceRepository extends JpaRepository<AgentRunTraceEnti
             order by t.startedAt desc
             """)
     List<AgentRunTraceEntity> findVisibleRecent(
-            @Param("orgId") String orgId,
+            @Param("companyId") String companyId,
             @Param("userId") String userId,
             @Param("from") Instant from,
             @Param("to") Instant to);

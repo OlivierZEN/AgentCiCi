@@ -50,40 +50,40 @@ public class CustomerMemoryService {
     }
 
     @Transactional
-    public List<Map<String, Object>> replaceForEvent(String orgId, String accountId,
+    public List<Map<String, Object>> replaceForEvent(String companyId, String accountId,
                                                      String eventId, String batchId,
                                                      Instant occurredAt, String analysisJson,
                                                      List<String> evidenceIds) {
-        repository.deleteByOrgIdAndSourceEventId(orgId, eventId);
+        repository.deleteByCompanyIdAndSourceEventId(companyId, eventId);
         Map<String, Object> analysis = parseMap(analysisJson);
         double confidence = Boolean.TRUE.equals(analysis.get("degraded")) ? 0.55 : 0.85;
         String evidence = json(evidenceIds == null ? List.of() : evidenceIds);
         List<CustomerMemoryItemEntity> created = new ArrayList<>();
         ANALYSIS_TYPES.forEach((field, type) -> strings(analysis.get(field)).forEach(content -> {
-            String publicId = "cmi_" + sha256(orgId + ":" + eventId + ":" + type + ":" + content).substring(0, 40);
-            created.add(new CustomerMemoryItemEntity(publicId, orgId, accountId, eventId, batchId,
+            String publicId = "cmi_" + sha256(companyId + ":" + eventId + ":" + type + ":" + content).substring(0, 40);
+            created.add(new CustomerMemoryItemEntity(publicId, companyId, accountId, eventId, batchId,
                     type, clip(content, 2000), confidence, occurredAt, evidence));
         }));
         if (created.isEmpty() && !text(analysis.get("summary")).isBlank()) {
             String content = clip(text(analysis.get("summary")), 2000);
             created.add(new CustomerMemoryItemEntity(
-                    "cmi_" + sha256(orgId + ":" + eventId + ":FACT:" + content).substring(0, 40),
-                    orgId, accountId, eventId, batchId, "FACT", content, confidence, occurredAt, evidence));
+                    "cmi_" + sha256(companyId + ":" + eventId + ":FACT:" + content).substring(0, 40),
+                    companyId, accountId, eventId, batchId, "FACT", content, confidence, occurredAt, evidence));
         }
         return repository.saveAll(created).stream().map(this::view).toList();
     }
 
     @Transactional
-    public List<Map<String, Object>> activeMemory(String orgId, String accountId) {
-        ensureBackfilled(orgId, accountId);
-        return repository.findByOrgIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
-                orgId, accountId, CustomerMemoryItemEntity.STATUS_ACTIVE).stream().map(this::view).toList();
+    public List<Map<String, Object>> activeMemory(String companyId, String accountId) {
+        ensureBackfilled(companyId, accountId);
+        return repository.findByCompanyIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
+                companyId, accountId, CustomerMemoryItemEntity.STATUS_ACTIVE).stream().map(this::view).toList();
     }
 
     @Transactional
-    public AssistantContext buildAssistantContext(String orgId, String accountId,
+    public AssistantContext buildAssistantContext(String companyId, String accountId,
                                                    String userMessage, Map<String, Object> customer) {
-        ensureBackfilled(orgId, accountId);
+        ensureBackfilled(companyId, accountId);
         boolean historyRequested = requestsHistory(userMessage);
         List<Map<String, Object>> fullTimeline = maps(customer.get("timeline"));
         Instant cutoff = Instant.now().minus(DEFAULT_RECENT_WINDOW);
@@ -94,8 +94,8 @@ public class CustomerMemoryService {
                 .toList();
 
         List<CustomerMemoryItemEntity> ranked = repository
-                .findByOrgIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
-                        orgId, accountId, CustomerMemoryItemEntity.STATUS_ACTIVE).stream()
+                .findByCompanyIdAndCrmAccountIdAndStatusOrderByOccurredAtDesc(
+                        companyId, accountId, CustomerMemoryItemEntity.STATUS_ACTIVE).stream()
                 .sorted(Comparator.comparingDouble((CustomerMemoryItemEntity item) -> relevance(item, userMessage)).reversed()
                         .thenComparing(CustomerMemoryItemEntity::getOccurredAt, Comparator.reverseOrder()))
                 .limit(EVIDENCE_LIMIT)
@@ -112,12 +112,12 @@ public class CustomerMemoryService {
         return new AssistantContext(compactCustomer(customer), recent, memories, evidence, meta);
     }
 
-    private void ensureBackfilled(String orgId, String accountId) {
+    private void ensureBackfilled(String companyId, String accountId) {
         for (CustomerInteractionEventEntity event : eventRepository
-                .findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId)) {
+                .findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId)) {
             if (text(event.getSourceBatchId()).isBlank() || "{}".equals(text(event.getAnalysisJson()))) continue;
-            if (!repository.findByOrgIdAndSourceEventId(orgId, event.getPublicId()).isEmpty()) continue;
-            replaceForEvent(orgId, accountId, event.getPublicId(), event.getSourceBatchId(),
+            if (!repository.findByCompanyIdAndSourceEventId(companyId, event.getPublicId()).isEmpty()) continue;
+            replaceForEvent(companyId, accountId, event.getPublicId(), event.getSourceBatchId(),
                     event.getOccurredAt(), event.getAnalysisJson(), List.of());
         }
     }

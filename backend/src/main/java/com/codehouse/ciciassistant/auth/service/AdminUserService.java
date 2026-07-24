@@ -3,7 +3,7 @@ package com.codehouse.ciciassistant.auth.service;
 import com.codehouse.ciciassistant.auth.RoleCodes;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierRepository;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
@@ -21,29 +21,29 @@ import org.springframework.transaction.annotation.Transactional;
 public class AdminUserService {
 
     private final UserRepository userRepository;
-    private final OrgRepository orgRepository;
+    private final CompanyRepository companyRepository;
     private final UserAccountRepository userAccountRepository;
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
 
     public AdminUserService(UserRepository userRepository,
-                            OrgRepository orgRepository,
+                            CompanyRepository companyRepository,
                             UserAccountRepository userAccountRepository,
                             AccountLoginIdentifierRepository accountLoginIdentifierRepository) {
         this.userRepository = userRepository;
-        this.orgRepository = orgRepository;
+        this.companyRepository = companyRepository;
         this.userAccountRepository = userAccountRepository;
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
     }
 
-    public List<Map<String, Object>> listUsers(String orgId) {
-        return userRepository.findByOrg_IdOrderByCreatedAtDesc(orgId).stream()
+    public List<Map<String, Object>> listUsers(String companyId) {
+        return userRepository.findByCompany_IdOrderByCreatedAtDesc(companyId).stream()
                 .map(this::toRow)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public Map<String, Object> inviteMember(
-            String orgId,
+            String companyId,
             String mobile,
             String nickname,
             String roleCode) {
@@ -53,10 +53,10 @@ public class AdminUserService {
         }
         String normalizedRole = normalizeMemberRole(roleCode);
         UserAccountEntity account = findOrCreateMobileAccount(mobileValue);
-        UserEntity target = userRepository.findByOrg_IdAndAccount_Id(orgId, account.getId())
+        UserEntity target = userRepository.findByCompany_IdAndAccount_Id(companyId, account.getId())
                 .orElseGet(() -> {
-                    var org = orgRepository.findById(orgId)
-                            .orElseThrow(() -> new IllegalArgumentException("Organization not found"));
+                    var org = companyRepository.findById(companyId)
+                            .orElseThrow(() -> new IllegalArgumentException("Company not found"));
                     return new UserEntity(org, account, normalizedRole);
                 });
         if (!RoleCodes.OWNER.equals(target.getRoleCode())) {
@@ -69,9 +69,9 @@ public class AdminUserService {
     }
 
     @Transactional
-    public Map<String, Object> updateRole(String orgId, String actorUserId, String targetUserId, String newRoleCode) {
+    public Map<String, Object> updateRole(String companyId, String actorUserId, String targetUserId, String newRoleCode) {
         String role = normalizeMemberRole(newRoleCode);
-        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+        UserEntity target = userRepository.findByIdAndCompany_Id(targetUserId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (RoleCodes.OWNER.equals(target.getRoleCode())) {
             throw new ForbiddenException("Owner 角色请通过所有权转让处理");
@@ -79,7 +79,7 @@ public class AdminUserService {
         if (targetUserId.equals(actorUserId)
                 && RoleCodes.ORG_USER.equals(role)
                 && RoleCodes.ORG_ADMIN.equals(target.getRoleCode())) {
-            long adminCount = userRepository.findByOrg_IdOrderByCreatedAtDesc(orgId).stream()
+            long adminCount = userRepository.findByCompany_IdOrderByCreatedAtDesc(companyId).stream()
                     .filter(u -> RoleCodes.ORG_ADMIN.equals(u.getRoleCode()))
                     .filter(u -> UserEntity.STATUS_ACTIVE.equals(u.getMemberStatus()))
                     .count();
@@ -93,21 +93,21 @@ public class AdminUserService {
     }
 
     @Transactional
-    public Map<String, Object> suspendMember(String orgId, String actorUserId, String targetUserId) {
-        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+    public Map<String, Object> suspendMember(String companyId, String actorUserId, String targetUserId) {
+        UserEntity target = userRepository.findByIdAndCompany_Id(targetUserId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (target.getId().equals(actorUserId)) {
             throw new ForbiddenException("不能停用当前登录成员");
         }
-        assertNotLastActiveOwner(orgId, target);
+        assertNotLastActiveOwner(companyId, target);
         target.setMemberStatus(UserEntity.STATUS_SUSPENDED);
         userRepository.save(target);
         return toRow(target);
     }
 
     @Transactional
-    public Map<String, Object> restoreMember(String orgId, String targetUserId) {
-        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+    public Map<String, Object> restoreMember(String companyId, String targetUserId) {
+        UserEntity target = userRepository.findByIdAndCompany_Id(targetUserId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         target.setMemberStatus(UserEntity.STATUS_ACTIVE);
         userRepository.save(target);
@@ -115,13 +115,13 @@ public class AdminUserService {
     }
 
     @Transactional
-    public Map<String, Object> transferOwner(String orgId, String actorUserId, String targetUserId) {
-        UserEntity actor = userRepository.findByIdAndOrg_Id(actorUserId, orgId)
+    public Map<String, Object> transferOwner(String companyId, String actorUserId, String targetUserId) {
+        UserEntity actor = userRepository.findByIdAndCompany_Id(actorUserId, companyId)
                 .orElseThrow(() -> new ForbiddenException("需要 Owner 权限"));
         if (!RoleCodes.OWNER.equals(actor.getRoleCode()) || !UserEntity.STATUS_ACTIVE.equals(actor.getMemberStatus())) {
             throw new ForbiddenException("需要 Owner 权限");
         }
-        UserEntity target = userRepository.findByIdAndOrg_Id(targetUserId, orgId)
+        UserEntity target = userRepository.findByIdAndCompany_Id(targetUserId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         if (!UserEntity.STATUS_ACTIVE.equals(target.getMemberStatus())) {
             throw new ForbiddenException("只能转让给有效成员");
@@ -138,14 +138,14 @@ public class AdminUserService {
 
     @Transactional
     public Map<String, Object> updateProfile(
-            String orgId,
+            String companyId,
             String userId,
             String mobile,
             String nickname,
             String ccUsername,
             String ccSafetymark,
             String avatarBase64) {
-        UserEntity target = userRepository.findByIdAndOrg_Id(userId, orgId)
+        UserEntity target = userRepository.findByIdAndCompany_Id(userId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
         String mobileValue = trimOrNull(mobile);
         if (mobileValue != null && !mobileValue.matches("^1\\d{10}$")) {
@@ -238,12 +238,12 @@ public class AdminUserService {
         return account;
     }
 
-    private void assertNotLastActiveOwner(String orgId, UserEntity target) {
+    private void assertNotLastActiveOwner(String companyId, UserEntity target) {
         if (!RoleCodes.OWNER.equals(target.getRoleCode()) || !UserEntity.STATUS_ACTIVE.equals(target.getMemberStatus())) {
             return;
         }
-        long ownerCount = userRepository.countByOrg_IdAndRoleCodeAndMemberStatus(
-                orgId,
+        long ownerCount = userRepository.countByCompany_IdAndRoleCodeAndMemberStatus(
+                companyId,
                 RoleCodes.OWNER,
                 UserEntity.STATUS_ACTIVE);
         if (ownerCount <= 1) {

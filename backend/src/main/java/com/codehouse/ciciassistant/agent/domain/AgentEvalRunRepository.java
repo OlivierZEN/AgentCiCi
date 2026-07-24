@@ -5,14 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentEvalRunRepository extends JpaRepository<AgentEvalRunEntity, Long> {
 
-    List<AgentEvalRunEntity> findByOrgIdAndSuiteIdOrderByCreatedAtDesc(String orgId, Long suiteId);
+    List<AgentEvalRunEntity> findByCompanyIdAndSuiteIdOrderByCreatedAtDesc(String companyId, Long suiteId);
 
-    List<AgentEvalRunEntity> findByOrgIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(
-            String orgId,
+    List<AgentEvalRunEntity> findByCompanyIdAndAgentIdAndVersionNoOrderByCreatedAtDesc(
+            String companyId,
             String agentId,
             Integer versionNo);
 
-    List<AgentEvalRunEntity> findByOrgIdOrderByCreatedAtDesc(String orgId);
+    List<AgentEvalRunEntity> findByCompanyIdOrderByCreatedAtDesc(String companyId);
 
     List<AgentEvalRunEntity> findTop200ByOrderByCreatedAtDesc();
 }

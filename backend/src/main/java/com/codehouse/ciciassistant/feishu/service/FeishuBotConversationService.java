@@ -18,7 +18,7 @@ public class FeishuBotConversationService {
     public String ask(FeishuBotBindingEntity binding, String tenantKey, String chatId, String question) {
         String sessionId = "feishu:" + tenantKey + ":" + chatId;
         Map<String, Object> result = chatOrchestratorService.chat(
-                binding.getOrgId(),
+                binding.getCompanyId(),
                 binding.getUserId(),
                 sessionId,
                 question,

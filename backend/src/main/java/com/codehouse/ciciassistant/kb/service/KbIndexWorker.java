@@ -21,6 +21,6 @@ public class KbIndexWorker {
     @RabbitListener(queues = KbAsyncConfig.KB_INDEX_QUEUE)
     public void consume(String payload) throws Exception {
         KbIndexTask task = objectMapper.readValue(payload, KbIndexTask.class);
-        knowledgeBaseService.indexDocument(task.orgId(), task.documentId());
+        knowledgeBaseService.indexDocument(task.companyId(), task.documentId());
     }
 }

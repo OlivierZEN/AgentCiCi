@@ -17,8 +17,8 @@ public class UserMemoryEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -59,7 +59,7 @@ public class UserMemoryEntity {
     protected UserMemoryEntity() {
     }
 
-    public UserMemoryEntity(String orgId,
+    public UserMemoryEntity(String companyId,
                             String userId,
                             String agentId,
                             String category,
@@ -67,7 +67,7 @@ public class UserMemoryEntity {
                             String content,
                             String memoryKey,
                             BigDecimal confidence) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.agentId = agentId;
         this.category = category;
@@ -95,7 +95,7 @@ public class UserMemoryEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getUserId() { return userId; }
     public String getAgentId() { return agentId; }
     public String getCategory() { return category; }

@@ -1,14 +1,23 @@
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T00:00:00Z
+updated_at: 2026-07-24T02:35:00Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T00:00:00Z
+last_run_at: 2026-07-24T02:35:00Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-242 - 顶层租户 `company_id` 统一
+
+- `identity/assignment`：`check-assignment.py .claw --developer MANAGER-001 --task TASK-242 --branch agent/TASK-242-company-id-unification --git-username OwenZheng-Cloud --require-developer-scopes` 返回 `allowed`。
+- `backend/package`：`mvn -q -DskipTests package` 通过；包含 `company_id` 全量字段、Company 根实体/成员关系、JWT、平台生命周期和 Semattice reservation binding 的编译验证。
+- `frontend/build`：`npm run build` 通过；仅有既有 Vite 大 chunk 警告。
+- `fresh-postgresql`：新建后删除的 PostgreSQL 16 临时库执行 V1→V94，`AgentMemoryFlywayMigrationTest`、`TenantContextFilterTest`、`PlatformTenantLifecycleIntegrationTest`、`SematticeProvisioningServiceTest`、`AuthFlowIntegrationTest` 与 `RbacProductionReadinessIntegrationTest` 全部通过。断言 0 个 `org_id` 列、至少 131 个 `company_id` 列、根表为 `company` / `company_member`，并验证只带旧 `org_id` 的 JWT 被 401 fail closed。
+- `static`：`git diff --check` 通过；迁移只新增 V94，未修改 V1–V93。临时数据库容器已删除。
+- `state-limit`：`validate-state.py .claw` 仍被仓库既有历史状态文件格式、过期 Active Tasks、旧规格状态和值班索引超长阻断；本任务新增 FEAT-135 已使用合法 `verified` 状态及 UTC 时间，不修改无关历史档案。
 
 ## TASK-239 - 混合智能体运行时 P5：Trace 运行执行投影与多主题界面
 

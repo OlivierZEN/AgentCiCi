@@ -16,8 +16,8 @@ public class KbEvalRunEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "suite_id", nullable = false)
     private Long suiteId;
@@ -67,9 +67,9 @@ public class KbEvalRunEntity {
     protected KbEvalRunEntity() {
     }
 
-    public KbEvalRunEntity(String orgId, Long suiteId, Long knowledgeBaseId, int caseCount) {
+    public KbEvalRunEntity(String companyId, Long suiteId, Long knowledgeBaseId, int caseCount) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.suiteId = suiteId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.status = "RUNNING";
@@ -101,7 +101,7 @@ public class KbEvalRunEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public Long getSuiteId() { return suiteId; }
 

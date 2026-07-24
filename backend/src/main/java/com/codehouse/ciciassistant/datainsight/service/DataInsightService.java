@@ -40,14 +40,14 @@ public class DataInsightService {
     }
 
     @Transactional(readOnly = true)
-    public Map<String, Object> dashboard(String orgId) {
-        List<CustomerWorkbenchSnapshotEntity> snapshots = workbenchSnapshotRepository.findByOrgIdOrderByUpdatedAtDesc(orgId);
+    public Map<String, Object> dashboard(String companyId) {
+        List<CustomerWorkbenchSnapshotEntity> snapshots = workbenchSnapshotRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId);
         if (snapshots.isEmpty()) {
-            return mockDashboard(orgId);
+            return mockDashboard(companyId);
         }
-        List<CustomerInteractionEventEntity> events = interactionEventRepository.findByOrgIdOrderByOccurredAtDesc(orgId);
+        List<CustomerInteractionEventEntity> events = interactionEventRepository.findByCompanyIdOrderByOccurredAtDesc(companyId);
         List<CustomerWorkbenchRecommendationEntity> recommendations =
-                recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId);
+                recommendationRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId);
 
         List<AccountMetric> accounts = snapshots.stream().map(this::accountMetric).toList();
         long totalPipeline = accounts.stream().mapToLong(AccountMetric::pipelineAmount).sum();
@@ -63,7 +63,7 @@ public class DataInsightService {
         long riskSegment = accounts.stream().filter(item -> "RISK".equals(item.segment())).count();
         long strategicCustomers = accounts.stream().filter(item -> "STRATEGIC".equals(item.segment())).count();
         long existingCustomers = accounts.stream().filter(item -> "EXISTING".equals(item.segment())).count();
-        long totalLeads = Math.max(newCustomers + riskSegment, DEMO_ORG_ID.equals(orgId) ? 6 : Math.max(1, newCustomers));
+        long totalLeads = Math.max(newCustomers + riskSegment, DEMO_ORG_ID.equals(companyId) ? 6 : Math.max(1, newCustomers));
         long openOpportunities = Math.max(1, accounts.size() - riskSegment);
         long paymentTarget = Math.max(paidAmount + 1, Math.round(contractAmount * 1.35));
         int avgHealth = (int) Math.round(accounts.stream().mapToInt(AccountMetric::healthScore).average().orElse(0));
@@ -71,13 +71,13 @@ public class DataInsightService {
         int winRate = Math.max(18, Math.min(86, (avgHealth + avgProgress) / 2));
 
         Map<String, Object> data = new LinkedHashMap<>();
-        data.put("sourceMode", DEMO_ORG_ID.equals(orgId) ? "REAL_CRM_DEMO" : "REAL_AGGREGATE");
-        data.put("sourceLabel", DEMO_ORG_ID.equals(orgId) ? "智能体平台演示环境 · CRM 真实模拟数据" : "组织 CRM 聚合数据");
-        data.put("sourceDescription", DEMO_ORG_ID.equals(orgId)
+        data.put("sourceMode", DEMO_ORG_ID.equals(companyId) ? "REAL_CRM_DEMO" : "REAL_AGGREGATE");
+        data.put("sourceLabel", DEMO_ORG_ID.equals(companyId) ? "智能体平台演示环境 · CRM 真实模拟数据" : "组织 CRM 聚合数据");
+        data.put("sourceDescription", DEMO_ORG_ID.equals(companyId)
                 ? "客户、联系人、商机、任务和互动来自绑定 CloudCC CRM 演示批次。"
                 : "基于当前组织客户工作台聚合数据生成。");
         data.put("updatedAt", Instant.now().toString());
-        data.put("context", context(DEMO_ORG_ID.equals(orgId)));
+        data.put("context", context(DEMO_ORG_ID.equals(companyId)));
         data.put("summary", linkedMap(
                 "totalCustomers", accounts.size(),
                 "totalLeads", totalLeads,
@@ -121,8 +121,8 @@ public class DataInsightService {
         return data;
     }
 
-    private Map<String, Object> mockDashboard(String orgId) {
-        long seed = Math.abs((orgId == null ? "mock" : orgId).hashCode());
+    private Map<String, Object> mockDashboard(String companyId) {
+        long seed = Math.abs((companyId == null ? "mock" : companyId).hashCode());
         List<AccountMetric> accounts = List.of(
                 new AccountMetric("mock-001", "北京智造科技有限公司", "制造业", "NEW", "华北", "方案评审", 82, 86, 1, 3, 1_760_000 + seed % 80_000, 680_000, 410_000, 520_000, 2, "MES 集成评审"),
                 new AccountMetric("mock-002", "上海云链信息技术有限公司", "软件服务", "RISK", "华东", "续约挽回", 48, 58, 3, 2, 960_000, 720_000, 360_000, 480_000, 1, "续约风险"),
@@ -217,7 +217,7 @@ public class DataInsightService {
     private Map<String, Object> context(boolean demo) {
         return linkedMap(
                 "userName", "郑岩",
-                "orgName", demo ? "北京神州云动内部系统DEMO环境挂载专用" : "当前组织",
+                "companyName", demo ? "北京神州云动内部系统DEMO环境挂载专用" : "当前组织",
                 "currency", "CNY",
                 "dashboardName", "销售云主页"
         );

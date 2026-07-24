@@ -11,33 +11,33 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     @Query("""
             select m
             from UserEntity m
-            where m.org.id = :orgId
+            where m.company.id = :companyId
               and m.account.primaryMobile = :mobile
               and m.memberStatus = 'ACTIVE'
             """)
-    Optional<UserEntity> findByOrgIdAndMobile(@Param("orgId") String orgId, @Param("mobile") String mobile);
+    Optional<UserEntity> findByCompanyIdAndMobile(@Param("companyId") String companyId, @Param("mobile") String mobile);
 
-    Optional<UserEntity> findByOrg_IdAndAccount_Id(String orgId, String accountId);
+    Optional<UserEntity> findByCompany_IdAndAccount_Id(String companyId, String accountId);
 
-    Optional<UserEntity> findByOrg_IdAndAccount_IdAndMemberStatus(String orgId, String accountId, String memberStatus);
+    Optional<UserEntity> findByCompany_IdAndAccount_IdAndMemberStatus(String companyId, String accountId, String memberStatus);
 
     List<UserEntity> findByAccount_IdAndMemberStatusOrderByCreatedAtDesc(String accountId, String memberStatus);
 
-    long countByOrg_IdAndRoleCodeAndMemberStatus(String orgId, String roleCode, String memberStatus);
+    long countByCompany_IdAndRoleCodeAndMemberStatus(String companyId, String roleCode, String memberStatus);
 
-    long countByOrg_IdAndMemberStatus(String orgId, String memberStatus);
+    long countByCompany_IdAndMemberStatus(String companyId, String memberStatus);
 
-    List<UserEntity> findByOrg_IdOrderByCreatedAtDesc(String orgId);
+    List<UserEntity> findByCompany_IdOrderByCreatedAtDesc(String companyId);
 
-    Optional<UserEntity> findFirstByOrg_IdAndRoleCodeAndMemberStatusOrderByCreatedAtAsc(
-            String orgId, String roleCode, String memberStatus);
+    Optional<UserEntity> findFirstByCompany_IdAndRoleCodeAndMemberStatusOrderByCreatedAtAsc(
+            String companyId, String roleCode, String memberStatus);
 
-    Optional<UserEntity> findByIdAndOrg_Id(String id, String orgId);
+    Optional<UserEntity> findByIdAndCompany_Id(String id, String companyId);
 
     Optional<UserEntity> findByCcUsername(String ccUsername);
 
-    Optional<UserEntity> findByOrg_IdAndCcUsernameIgnoreCaseAndMemberStatus(
-            String orgId,
+    Optional<UserEntity> findByCompany_IdAndCcUsernameIgnoreCaseAndMemberStatus(
+            String companyId,
             String ccUsername,
             String memberStatus);
 }

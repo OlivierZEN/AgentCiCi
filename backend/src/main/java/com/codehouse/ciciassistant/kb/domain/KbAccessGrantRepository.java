@@ -5,15 +5,15 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbAccessGrantRepository extends JpaRepository<KbAccessGrantEntity, String> {
 
-    List<KbAccessGrantEntity> findByOrgIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-            String orgId,
+    List<KbAccessGrantEntity> findByCompanyIdAndKnowledgeBaseIdAndDocumentIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+            String companyId,
             Long knowledgeBaseId,
             Long documentId,
             String targetType,
             String status);
 
-    List<KbAccessGrantEntity> findByOrgIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
-            String orgId,
+    List<KbAccessGrantEntity> findByCompanyIdAndKnowledgeBaseIdAndChunkIdAndTargetTypeAndStatusOrderByPrincipalTypeAscPrincipalIdAsc(
+            String companyId,
             Long knowledgeBaseId,
             Long chunkId,
             String targetType,

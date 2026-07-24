@@ -12,14 +12,14 @@ type KnowledgeBase = {
   status: string;
 };
 
-type AdminTokenPayload = { orgId?: string };
+type AdminTokenPayload = { companyId?: string };
 
-function readOrgIdFromAdminToken(): string {
+function readCompanyIdFromAdminToken(): string {
   const raw = localStorage.getItem(LS_ADMIN_TOKEN);
   if (!raw) return "demo-org";
   try {
     const parsed = JSON.parse(raw) as AdminTokenPayload;
-    return parsed.orgId?.trim() || "demo-org";
+    return parsed.companyId?.trim() || "demo-org";
   } catch {
     return "demo-org";
   }
@@ -29,7 +29,7 @@ export default function AdminAgentBuilderPage() {
   const nav = useNavigate();
   const { agentId } = useParams<{ agentId?: string }>();
   const token = useAdminToken();
-  const orgId = useMemo(() => readOrgIdFromAdminToken(), []);
+  const companyId = useMemo(() => readCompanyIdFromAdminToken(), []);
   const [kbs, setKbs] = useState<KnowledgeBase[]>([]);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function AdminAgentBuilderPage() {
   return (
     <AgentBuilderShell
       kbs={kbs}
-      orgId={orgId}
+      companyId={companyId}
       token={token}
       pageMode={agentId ? "editor" : "list"}
       focusAgentId={agentId}

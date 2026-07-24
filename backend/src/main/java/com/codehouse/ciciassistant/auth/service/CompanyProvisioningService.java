@@ -5,8 +5,8 @@ import com.codehouse.ciciassistant.auth.domain.AccountAuthCredentialEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountAuthCredentialRepository;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierEntity;
 import com.codehouse.ciciassistant.auth.domain.AccountLoginIdentifierRepository;
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
@@ -17,29 +17,29 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class OrganizationProvisioningService {
+public class CompanyProvisioningService {
 
-    private final OrgRepository orgRepository;
+    private final CompanyRepository companyRepository;
     private final UserAccountRepository userAccountRepository;
     private final AccountAuthCredentialRepository accountAuthCredentialRepository;
     private final AccountLoginIdentifierRepository accountLoginIdentifierRepository;
     private final UserRepository userRepository;
-    private final OrganizationIdGenerator organizationIdGenerator;
+    private final CompanyIdGenerator companyIdGenerator;
     private final PasswordHashService passwordHashService;
 
-    public OrganizationProvisioningService(OrgRepository orgRepository,
+    public CompanyProvisioningService(CompanyRepository companyRepository,
                                            UserAccountRepository userAccountRepository,
                                            AccountAuthCredentialRepository accountAuthCredentialRepository,
                                            AccountLoginIdentifierRepository accountLoginIdentifierRepository,
                                            UserRepository userRepository,
-                                           OrganizationIdGenerator organizationIdGenerator,
+                                           CompanyIdGenerator companyIdGenerator,
                                            PasswordHashService passwordHashService) {
-        this.orgRepository = orgRepository;
+        this.companyRepository = companyRepository;
         this.userAccountRepository = userAccountRepository;
         this.accountAuthCredentialRepository = accountAuthCredentialRepository;
         this.accountLoginIdentifierRepository = accountLoginIdentifierRepository;
         this.userRepository = userRepository;
-        this.organizationIdGenerator = organizationIdGenerator;
+        this.companyIdGenerator = companyIdGenerator;
         this.passwordHashService = passwordHashService;
     }
 
@@ -54,16 +54,16 @@ public class OrganizationProvisioningService {
     }
 
     @Transactional
-    public OrgEntity createOrganization(String organizationName) {
-        String name = trimToNull(organizationName);
+    public CompanyEntity createCompany(String companyName) {
+        String name = trimToNull(companyName);
         if (name == null) {
             throw new IllegalArgumentException("组织名称不能为空");
         }
         String id;
         do {
-            id = organizationIdGenerator.nextId();
-        } while (orgRepository.existsById(id));
-        return orgRepository.save(new OrgEntity(id, name, "ACTIVE"));
+            id = companyIdGenerator.nextId();
+        } while (companyRepository.existsById(id));
+        return companyRepository.save(new CompanyEntity(id, name, "ACTIVE"));
     }
 
     @Transactional
@@ -91,7 +91,7 @@ public class OrganizationProvisioningService {
     }
 
     @Transactional
-    public UserEntity createOwnerMembership(OrgEntity org, UserAccountEntity account, String ownerDisplayName) {
+    public UserEntity createOwnerMembership(CompanyEntity org, UserAccountEntity account, String ownerDisplayName) {
         UserEntity member = new UserEntity(org, account, RoleCodes.OWNER);
         member.setNickname(resolveMemberDisplayName(ownerDisplayName, account));
         return userRepository.save(member);

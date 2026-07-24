@@ -11,20 +11,20 @@ public interface AgentApiMessageRepository extends JpaRepository<AgentApiMessage
             String idempotencyKey,
             String status);
 
-    Optional<AgentApiMessageEntity> findByMessageIdAndOrgIdAndCredentialIdAndAgentId(
+    Optional<AgentApiMessageEntity> findByMessageIdAndCompanyIdAndCredentialIdAndAgentId(
             String messageId,
-            String orgId,
+            String companyId,
             Long credentialId,
             String agentId);
 
-    List<AgentApiMessageEntity> findTop100ByOrgIdAndCredentialIdAndAgentIdAndExternalSessionIdOrderByCreatedAtDesc(
-            String orgId,
+    List<AgentApiMessageEntity> findTop100ByCompanyIdAndCredentialIdAndAgentIdAndExternalSessionIdOrderByCreatedAtDesc(
+            String companyId,
             Long credentialId,
             String agentId,
             String externalSessionId);
 
-    List<AgentApiMessageEntity> findTop100ByOrgIdAndCredentialIdAndAgentIdOrderByCreatedAtDesc(
-            String orgId,
+    List<AgentApiMessageEntity> findTop100ByCompanyIdAndCredentialIdAndAgentIdOrderByCreatedAtDesc(
+            String companyId,
             Long credentialId,
             String agentId);
 }

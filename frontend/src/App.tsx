@@ -15,7 +15,7 @@ import AdminDataQualityPage from "./admin/pages/AdminDataQualityPage";
 import AdminToolsPage from "./admin/pages/AdminToolsPage";
 import AdminOpsPage from "./admin/pages/AdminOpsPage";
 import AdminUsersPage from "./admin/pages/AdminUsersPage";
-import AdminOrganizationPage from "./admin/pages/AdminOrganizationPage";
+import AdminCompanyPage from "./admin/pages/AdminCompanyPage";
 import AdminBillingPage from "./admin/pages/AdminBillingPage";
 import AdminIntegrationsPage from "./admin/pages/AdminIntegrationsPage";
 import AdminEmbedAppsPage from "./admin/pages/AdminEmbedAppsPage";
@@ -89,7 +89,7 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="ops" element={<AdminOpsPage />} />
             <Route path="billing" element={<AdminBillingPage />} />
             <Route path="users" element={<AdminUsersPage />} />
-            <Route path="organization" element={<AdminOrganizationPage />} />
+            <Route path="company" element={<AdminCompanyPage />} />
           </Route>
         </Route>
         <Route path="/platform/login" element={<PlatformLogin />} />
@@ -116,8 +116,8 @@ const router = createBrowserRouter(createRoutesFromElements(
             <Route path="evaluation/suites" element={<PlatformEvaluationPage />} />
             <Route path="evaluation/runs" element={<PlatformEvaluationPage />} />
             <Route path="tenants" element={<PlatformTenantsPage />} />
-            <Route path="tenants/:orgId" element={<PlatformTenantApplicationsPage />} />
-            <Route path="tenants/:orgId/applications/agentcici" element={<PlatformTenantDetailPage />} />
+            <Route path="tenants/:companyId" element={<PlatformTenantApplicationsPage />} />
+            <Route path="tenants/:companyId/applications/agentcici" element={<PlatformTenantDetailPage />} />
             <Route path="registered-users" element={<PlatformRegisteredUsersPage />} />
             <Route path="demo-leads" element={<PlatformAutoServiceDemoRequestsPage />} />
             <Route path="website-leads" element={<Navigate to="/platform/demo-leads" replace />} />

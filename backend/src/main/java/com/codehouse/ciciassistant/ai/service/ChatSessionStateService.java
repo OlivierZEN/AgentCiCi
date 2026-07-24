@@ -40,20 +40,20 @@ public class ChatSessionStateService {
         this.objectMapper = objectMapper;
     }
 
-    public Optional<ChatSessionStateEntity> get(String orgId, String sessionId) {
-        return repository.findBySessionIdAndOrgId(sessionId, orgId);
+    public Optional<ChatSessionStateEntity> get(String companyId, String sessionId) {
+        return repository.findBySessionIdAndCompanyId(sessionId, companyId);
     }
 
     /**
      * Merges optional client override into persisted session state and returns the effective active skill code
      * (validated against {@code allowedSkillCodes}). Empty-string override clears the active skill.
      */
-    public Optional<String> mergeAndGetActiveSkillCode(String orgId,
+    public Optional<String> mergeAndGetActiveSkillCode(String companyId,
                                                          String sessionId,
                                                          String agentId,
                                                          Optional<String> requestOverride,
                                                          List<String> allowedSkillCodes) {
-        Map<String, Object> state = loadState(orgId, sessionId);
+        Map<String, Object> state = loadState(companyId, sessionId);
         List<String> allowedNormalized = allowedSkillCodes == null ? List.of() : allowedSkillCodes.stream()
                 .filter(Objects::nonNull)
                 .map(code -> code.trim().toLowerCase(Locale.ROOT))
@@ -71,15 +71,15 @@ public class ChatSessionStateService {
                     state.put(ACTIVE_SKILL_CODE_KEY, normalized);
                 }
             }
-            upsert(orgId, sessionId, agentId, state, deriveSummary(state));
+            upsert(companyId, sessionId, agentId, state, deriveSummary(state));
         }
 
-        Map<String, Object> afterLoad = loadState(orgId, sessionId);
+        Map<String, Object> afterLoad = loadState(companyId, sessionId);
         Object persistedObj = afterLoad.get(ACTIVE_SKILL_CODE_KEY);
         String persisted = persistedObj == null ? "" : persistedObj.toString().trim().toLowerCase(Locale.ROOT);
         if (!persisted.isEmpty() && !allowedNormalized.contains(persisted)) {
             afterLoad.remove(ACTIVE_SKILL_CODE_KEY);
-            upsert(orgId, sessionId, agentId, afterLoad, deriveSummary(afterLoad));
+            upsert(companyId, sessionId, agentId, afterLoad, deriveSummary(afterLoad));
             return Optional.empty();
         }
         if (persisted.isEmpty()) {
@@ -139,8 +139,8 @@ public class ChatSessionStateService {
         return block.toString();
     }
 
-    public void mergeUserTurn(String orgId, String sessionId, String agentId, String question) {
-        Map<String, Object> state = loadState(orgId, sessionId);
+    public void mergeUserTurn(String companyId, String sessionId, String agentId, String question) {
+        Map<String, Object> state = loadState(companyId, sessionId);
         String normalized = question == null ? "" : question.toLowerCase(Locale.ROOT);
         if (normalized.contains("先不要") || normalized.contains("暂不") || normalized.contains("不要发")) {
             appendDistinct(state, "deferred_actions", "hold_action");
@@ -160,11 +160,11 @@ public class ChatSessionStateService {
         }
         enrichStateFromUserQuestion(state, question);
         updateMissingFields(state);
-        upsert(orgId, sessionId, agentId, state, deriveSummary(state));
+        upsert(companyId, sessionId, agentId, state, deriveSummary(state));
     }
 
-    public void mergeToolResult(String orgId, String sessionId, String agentId, String toolName, String toolResult) {
-        Map<String, Object> state = loadState(orgId, sessionId);
+    public void mergeToolResult(String companyId, String sessionId, String agentId, String toolName, String toolResult) {
+        Map<String, Object> state = loadState(companyId, sessionId);
         String normalizedTool = toolName == null ? "" : toolName.toLowerCase(Locale.ROOT);
         if (normalizedTool.contains("lead")) {
             Integer leadCount = extractFirstInteger(toolResult);
@@ -208,7 +208,7 @@ public class ChatSessionStateService {
             removeDistinct(state, "deferred_actions", "send_email");
         }
         updateMissingFields(state);
-        upsert(orgId, sessionId, agentId, state, deriveSummary(state));
+        upsert(companyId, sessionId, agentId, state, deriveSummary(state));
     }
 
     private record EmailSearchCandidate(String messageId, String from, String subject) {}
@@ -331,12 +331,12 @@ public class ChatSessionStateService {
         return "";
     }
 
-    private void upsert(String orgId, String sessionId, String agentId, Map<String, Object> state, String summary) {
+    private void upsert(String companyId, String sessionId, String agentId, Map<String, Object> state, String summary) {
         Instant now = Instant.now();
         String safeSummary = summary == null || summary.isBlank() ? "会话进行中" : clip(summary, MAX_SUMMARY_LENGTH);
         String stateJson = stringifyState(state);
-        ChatSessionStateEntity entity = repository.findBySessionIdAndOrgId(sessionId, orgId)
-                .orElseGet(() -> new ChatSessionStateEntity(sessionId, orgId, agentId, safeSummary, stateJson, now));
+        ChatSessionStateEntity entity = repository.findBySessionIdAndCompanyId(sessionId, companyId)
+                .orElseGet(() -> new ChatSessionStateEntity(sessionId, companyId, agentId, safeSummary, stateJson, now));
         entity.setAgentId(agentId);
         entity.setSummary(safeSummary);
         entity.setStateJson(stateJson);
@@ -344,8 +344,8 @@ public class ChatSessionStateService {
         repository.save(entity);
     }
 
-    private Map<String, Object> loadState(String orgId, String sessionId) {
-        return repository.findBySessionIdAndOrgId(sessionId, orgId)
+    private Map<String, Object> loadState(String companyId, String sessionId) {
+        return repository.findBySessionIdAndCompanyId(sessionId, companyId)
                 .map(item -> parseState(item.getStateJson()))
                 .orElseGet(() -> {
                     Map<String, Object> state = new LinkedHashMap<>();

@@ -29,17 +29,17 @@ public class AuditService {
         this.redactionService = redactionService;
     }
 
-    public void log(String orgId, String userId, String eventType, String detail) {
-        repository.save(new AuditLogEntity(orgId, userId, eventType, redact(detail)));
+    public void log(String companyId, String userId, String eventType, String detail) {
+        repository.save(new AuditLogEntity(companyId, userId, eventType, redact(detail)));
     }
 
-    public List<Map<String, Object>> latest(String orgId) {
-        return repository.findTop50ByOrgIdOrderByIdDesc(orgId).stream()
+    public List<Map<String, Object>> latest(String companyId) {
+        return repository.findTop50ByCompanyIdOrderByIdDesc(companyId).stream()
                 .map(this::toPayload)
                 .toList();
     }
 
-    public Map<String, Object> query(String orgId, AuditLogQuery query) {
+    public Map<String, Object> query(String companyId, AuditLogQuery query) {
         Instant to = query.to() == null ? Instant.now() : query.to();
         Instant from = query.from() == null ? to.minus(Duration.ofDays(7)) : query.from();
         if (from.isAfter(to)) {
@@ -52,7 +52,7 @@ public class AuditService {
         String eventType = normalized(query.eventType());
         String q = normalized(query.q());
         List<AuditLogEntity> rows = repository.searchOrgAuditLogs(
-                orgId, from, to, eventType, q, PageRequest.of(0, limit + 1));
+                companyId, from, to, eventType, q, PageRequest.of(0, limit + 1));
         boolean hasMore = rows.size() > limit;
         List<Map<String, Object>> items = rows.stream()
                 .limit(limit)
@@ -70,7 +70,7 @@ public class AuditService {
     private Map<String, Object> toPayload(AuditLogEntity item) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("id", item.getId());
-        payload.put("orgId", item.getOrgId());
+        payload.put("companyId", item.getCompanyId());
         payload.put("userId", item.getUserId());
         payload.put("eventType", item.getEventType());
         payload.put("detail", redact(item.getDetail()));

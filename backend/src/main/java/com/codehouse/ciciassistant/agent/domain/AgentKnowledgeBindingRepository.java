@@ -5,11 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentKnowledgeBindingRepository extends JpaRepository<AgentKnowledgeBindingEntity, Long> {
 
-    List<AgentKnowledgeBindingEntity> findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String orgId, String agentId);
+    List<AgentKnowledgeBindingEntity> findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(String companyId, String agentId);
 
-    void deleteByOrgIdAndAgentId(String orgId, String agentId);
+    void deleteByCompanyIdAndAgentId(String companyId, String agentId);
 
-    void deleteByOrgIdAndKnowledgeBaseId(String orgId, Long knowledgeBaseId);
+    void deleteByCompanyIdAndKnowledgeBaseId(String companyId, Long knowledgeBaseId);
 
-    long countByOrgIdAndKnowledgeBaseId(String orgId, Long knowledgeBaseId);
+    long countByCompanyIdAndKnowledgeBaseId(String companyId, Long knowledgeBaseId);
 }

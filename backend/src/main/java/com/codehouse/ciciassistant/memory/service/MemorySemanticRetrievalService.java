@@ -18,17 +18,17 @@ public class MemorySemanticRetrievalService {
         String safeText=redaction.redact(record.getContent());
         if (safeText.isBlank()) return;
         try {
-            String vectorId=vectors.upsert(new VectorUpsertCommand(record.getOrgId(), COLLECTION_SCOPE, record.getId(), record.getId(), 0, safeText, Integer.toHexString(safeText.hashCode()), embeddings.embed(safeText)));
-            fragments.save(new MemoryVectorFragmentEntity(record.getOrgId(), record.getId(), vectorId, safeText));
+            String vectorId=vectors.upsert(new VectorUpsertCommand(record.getCompanyId(), COLLECTION_SCOPE, record.getId(), record.getId(), 0, safeText, Integer.toHexString(safeText.hashCode()), embeddings.embed(safeText)));
+            fragments.save(new MemoryVectorFragmentEntity(record.getCompanyId(), record.getId(), vectorId, safeText));
         } catch (RuntimeException ignored) {
             // Vector indexing is best-effort and must not interrupt the relational memory path.
         }
     }
     @Transactional public boolean remove(MemoryRecordEntity record) {
         if (record == null || record.getId() == null) return true;
-        return fragments.findByOrgIdAndMemoryRecordIdAndStatus(record.getOrgId(), record.getId(), "ACTIVE").map(fragment -> {
+        return fragments.findByCompanyIdAndMemoryRecordIdAndStatus(record.getCompanyId(), record.getId(), "ACTIVE").map(fragment -> {
             try {
-                VectorDeleteResult result=vectors.deleteByVectorIds(record.getOrgId(), List.of(fragment.getVectorId()));
+                VectorDeleteResult result=vectors.deleteByVectorIds(record.getCompanyId(), List.of(fragment.getVectorId()));
                 if (!result.success()) return false;
                 fragment.markDeleted(); fragments.save(fragment); return true;
             } catch (RuntimeException ignored) { return false; }
@@ -38,6 +38,6 @@ public class MemorySemanticRetrievalService {
         if (query == null || query.isBlank()) return List.of();
         List<MemoryRecordEntity> allowed=contexts.loadContext(context, agentId, namespaces, null).records();
         Set<Long> allowedIds=new HashSet<>(); for (MemoryRecordEntity record:allowed) allowedIds.add(record.getId());
-        return vectors.search(new VectorSearchQuery(context.orgId(), List.of(COLLECTION_SCOPE), query, embeddings.embed(query), Math.max(1, Math.min(topK, 16)))).stream().map(VectorSearchHit::chunkId).filter(Objects::nonNull).filter(allowedIds::contains).map(records::findById).flatMap(Optional::stream).toList();
+        return vectors.search(new VectorSearchQuery(context.companyId(), List.of(COLLECTION_SCOPE), query, embeddings.embed(query), Math.max(1, Math.min(topK, 16)))).stream().map(VectorSearchHit::chunkId).filter(Objects::nonNull).filter(allowedIds::contains).map(records::findById).flatMap(Optional::stream).toList();
     }
 }

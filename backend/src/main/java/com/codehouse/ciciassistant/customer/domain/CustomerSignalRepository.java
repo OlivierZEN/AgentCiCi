@@ -10,18 +10,18 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 public interface CustomerSignalRepository extends JpaRepository<CustomerSignalEntity, Long> {
-    List<CustomerSignalEntity> findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(String orgId, String crmAccountId);
-    Optional<CustomerSignalEntity> findByOrgIdAndPublicId(String orgId, String publicId);
-    long countByOrgIdAndCrmAccountIdAndStatus(String orgId, String crmAccountId, String status);
+    List<CustomerSignalEntity> findByCompanyIdAndCrmAccountIdOrderByUpdatedAtDesc(String companyId, String crmAccountId);
+    Optional<CustomerSignalEntity> findByCompanyIdAndPublicId(String companyId, String publicId);
+    long countByCompanyIdAndCrmAccountIdAndStatus(String companyId, String crmAccountId, String status);
 
     @Modifying
     @Transactional
     @Query(value = """
             INSERT INTO customer_signal
-                (public_id, org_id, crm_account_id, mode, signal_type, title, detail, severity, status,
+                (public_id, company_id, crm_account_id, mode, signal_type, title, detail, severity, status,
                  evidence_json, assignee, source_updated_at, created_at, updated_at)
             VALUES
-                (:publicId, :orgId, :accountId, :mode, :signalType, :title, :detail, :severity, 'OPEN',
+                (:publicId, :companyId, :accountId, :mode, :signalType, :title, :detail, :severity, 'OPEN',
                  :evidenceJson, NULL, :sourceUpdatedAt, :now, :now)
             ON CONFLICT (public_id) DO UPDATE SET
                 mode = EXCLUDED.mode,
@@ -34,7 +34,7 @@ public interface CustomerSignalRepository extends JpaRepository<CustomerSignalEn
                 updated_at = EXCLUDED.updated_at
             """, nativeQuery = true)
     int upsertSignal(@Param("publicId") String publicId,
-                     @Param("orgId") String orgId,
+                     @Param("companyId") String companyId,
                      @Param("accountId") String accountId,
                      @Param("mode") String mode,
                      @Param("signalType") String signalType,

@@ -14,8 +14,8 @@ public class AgentApiFileEntity {
     @Column(name = "file_id", nullable = false, length = 64)
     private String fileId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "credential_id", nullable = false)
     private Long credentialId;
@@ -48,7 +48,7 @@ public class AgentApiFileEntity {
     }
 
     public AgentApiFileEntity(String fileId,
-                              String orgId,
+                              String companyId,
                               Long credentialId,
                               String agentId,
                               String externalUserId,
@@ -58,7 +58,7 @@ public class AgentApiFileEntity {
                               String mimeType,
                               String storageKey) {
         this.fileId = fileId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.credentialId = credentialId;
         this.agentId = agentId;
         this.externalUserId = externalUserId;

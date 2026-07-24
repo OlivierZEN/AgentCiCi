@@ -101,10 +101,10 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
             session.close(CloseStatus.NOT_ACCEPTABLE.withReason("invalid token"));
             return;
         }
-        String orgId = String.valueOf(claims.get("org_id"));
+        String companyId = String.valueOf(claims.get("company_id"));
         String memberId = claims.get("member_id", String.class);
         String userId = memberId == null || memberId.isBlank() ? claims.getSubject() : memberId;
-        SessionCtx ctx = new SessionCtx(session, orgId, userId);
+        SessionCtx ctx = new SessionCtx(session, companyId, userId);
         sessions.put(session.getId(), ctx);
         sendClientEvent(session, Map.of("type", "status", "message", "connected"));
     }
@@ -124,7 +124,7 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
                 boolean needsIflytekConfig = "iflytek".equalsIgnoreCase(requestedProvider)
                         || "xunfei".equalsIgnoreCase(requestedProvider)
                         || ("auto".equalsIgnoreCase(requestedProvider) && speakerDiarization);
-                IflytekRuntimeConfig iflytekConfig = needsIflytekConfig ? resolveIflytekConfig(ctx.orgId) : null;
+                IflytekRuntimeConfig iflytekConfig = needsIflytekConfig ? resolveIflytekConfig(ctx.companyId) : null;
                 String provider = selectRealtimeProvider(
                         requestedProvider,
                         speakerDiarization,
@@ -278,13 +278,13 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
         return URLEncoder.encode(value == null ? "" : value, StandardCharsets.UTF_8);
     }
 
-    private IflytekRuntimeConfig resolveIflytekConfig(String orgId) {
-        var integrationEnabled = integrationAppService.isEnabled(orgId, IntegrationAppService.APP_CODE_IFLYTEK_ASR);
+    private IflytekRuntimeConfig resolveIflytekConfig(String companyId) {
+        var integrationEnabled = integrationAppService.isEnabled(companyId, IntegrationAppService.APP_CODE_IFLYTEK_ASR);
         if (integrationEnabled.isPresent() && !integrationEnabled.get()) {
             return new IflytekRuntimeConfig(false, "", "", "", iflytekUrl, iflytekLang, iflytekDomain);
         }
         Map<String, Object> rawConfig = integrationAppService
-                .findRawConfig(orgId, IntegrationAppService.APP_CODE_IFLYTEK_ASR)
+                .findRawConfig(companyId, IntegrationAppService.APP_CODE_IFLYTEK_ASR)
                 .orElse(Map.of());
         boolean enabled = integrationEnabled.orElse(iflytekEnabled);
         String appId = firstNonBlank(configString(rawConfig, "appId"), iflytekAppId);
@@ -649,16 +649,16 @@ public class AliyunRealtimeAsrWebSocketHandler extends BinaryWebSocketHandler {
     private static final class SessionCtx {
         private final WebSocketSession clientSession;
         @SuppressWarnings("unused")
-        private final String orgId;
+        private final String companyId;
         @SuppressWarnings("unused")
         private final String userId;
         private volatile boolean started;
         private volatile AliyunWsClient aliyunClient;
         private volatile IflytekWsClient iflytekClient;
 
-        private SessionCtx(WebSocketSession clientSession, String orgId, String userId) {
+        private SessionCtx(WebSocketSession clientSession, String companyId, String userId) {
             this.clientSession = clientSession;
-            this.orgId = orgId;
+            this.companyId = companyId;
             this.userId = userId;
         }
     }

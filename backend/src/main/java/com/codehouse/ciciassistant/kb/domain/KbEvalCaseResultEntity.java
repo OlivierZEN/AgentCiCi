@@ -16,8 +16,8 @@ public class KbEvalCaseResultEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "run_id", nullable = false)
     private Long runId;
@@ -55,7 +55,7 @@ public class KbEvalCaseResultEntity {
     protected KbEvalCaseResultEntity() {
     }
 
-    public KbEvalCaseResultEntity(String orgId,
+    public KbEvalCaseResultEntity(String companyId,
                                   Long runId,
                                   Long caseId,
                                   String status,
@@ -66,7 +66,7 @@ public class KbEvalCaseResultEntity {
                                   Long matchedDocumentId,
                                   Long matchedChunkId,
                                   String resultSummaryJson) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.runId = runId;
         this.caseId = caseId;
         this.status = status;
@@ -82,7 +82,7 @@ public class KbEvalCaseResultEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public Long getRunId() { return runId; }
 

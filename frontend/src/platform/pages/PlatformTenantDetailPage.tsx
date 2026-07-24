@@ -23,7 +23,7 @@ export default function PlatformTenantDetailPage() {
   const token = readPlatformToken();
   const navigate = useNavigate();
   const location = useLocation();
-  const { orgId = "" } = useParams();
+  const { companyId = "" } = useParams();
   const flashMessage = (location.state as LocationState)?.flash ?? "";
   const [detail, setDetail] = useState<TenantDetail | null>(null);
   const [form, setForm] = useState({
@@ -50,7 +50,7 @@ export default function PlatformTenantDetailPage() {
   const exportJobs = detail?.exportJobs ?? [];
   const latestManifest = purgeJobs.find((job) => job.manifest)?.manifest ?? null;
   const latestDryRun = purgeJobs.find((job) => job.dryRun && job.status === "SUCCEEDED") ?? null;
-  const expectedPurgeText = orgId ? `PURGE ${orgId}` : "";
+  const expectedPurgeText = companyId ? `PURGE ${companyId}` : "";
   const modalSourceDryRunId = purgeMode === "retry" ? retryJob?.sourceDryRunJobId : latestDryRun?.id;
   const modalSourceRows = purgeMode === "retry" ? retryJob?.totalRows : latestDryRun?.totalRows;
   const hasActiveRealPurge = purgeJobs.some((job) => !job.dryRun && ["QUEUED", "RUNNING"].includes(job.status));
@@ -62,13 +62,13 @@ export default function PlatformTenantDetailPage() {
   }, [flashMessage]);
 
   useEffect(() => {
-    if (!token || !orgId) return;
+    if (!token || !companyId) return;
     void loadDetail().catch((err) => setError(err instanceof Error ? err.message : "加载租户详情失败"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, orgId]);
+  }, [token, companyId]);
 
   async function loadDetail() {
-    const nextDetail = await fetchTenantDetail(token, orgId);
+    const nextDetail = await fetchTenantDetail(token, companyId);
     setDetail(nextDetail);
     setForm({
       graceUntil: toDateInput(nextDetail.retention.graceUntil),
@@ -108,12 +108,12 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function saveRetention() {
-    if (!orgId) return;
+    if (!companyId) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/retention`, {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/retention`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -146,12 +146,12 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function changeStatus(action: "suspend" | "resume") {
-    if (!orgId) return;
+    if (!companyId) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/${action}`, {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/${action}`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -173,12 +173,12 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function markPendingPurge() {
-    if (!orgId) return;
+    if (!companyId) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/pending-purge`, {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/pending-purge`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -200,12 +200,12 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function createExportJob() {
-    if (!orgId) return;
+    if (!companyId) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/export-jobs`, {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/export-jobs`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -227,12 +227,12 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function createDryRun() {
-    if (!orgId) return;
+    if (!companyId) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/purge-jobs`, {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/purge-jobs`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -254,7 +254,7 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function submitPurgeConfirmation() {
-    if (!orgId) return;
+    if (!companyId) return;
     if (purgeMode === "execute" && !latestDryRun) return;
     if (purgeMode === "retry" && !retryJob) return;
     setBusy(true);
@@ -262,8 +262,8 @@ export default function PlatformTenantDetailPage() {
     setMessage("");
     try {
       const endpoint = purgeMode === "retry"
-        ? `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/purge-jobs/${retryJob?.id}/retry`
-        : `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/purge-jobs`;
+        ? `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/purge-jobs/${retryJob?.id}/retry`
+        : `${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/purge-jobs`;
       const payload = purgeMode === "retry"
         ? {
             confirmationText: purgeConfirmText,
@@ -301,12 +301,12 @@ export default function PlatformTenantDetailPage() {
   }
 
   async function cancelQueuedPurge(job: PurgeJob) {
-    if (!orgId) return;
+    if (!companyId) return;
     setBusy(true);
     setError("");
     setMessage("");
     try {
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/purge-jobs/${job.id}/cancel`, {
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/purge-jobs/${job.id}/cancel`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -335,7 +335,7 @@ export default function PlatformTenantDetailPage() {
           <p className="subtle skills-catalog__subtitle">管理当前租户的 AgentCiCi 应用保留、导出、预演与真实销毁。</p>
         </div>
         <div className="platform-page-head__aside">
-          <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate(`/platform/tenants/${encodeURIComponent(orgId)}`)}>
+          <button type="button" className="platform-button platform-button--secondary" onClick={() => navigate(`/platform/tenants/${encodeURIComponent(companyId)}`)}>
             返回租户应用
           </button>
         </div>
@@ -352,7 +352,7 @@ export default function PlatformTenantDetailPage() {
                 <div>
                   <p className="platform-section-label">当前租户</p>
                   <h2 className="platform-console__heading">{detail.tenant.name}</h2>
-                  <p className="skills-data-table__summary">{detail.tenant.orgId}</p>
+                  <p className="skills-data-table__summary">{detail.tenant.companyId}</p>
                 </div>
                 <div className="tenant-lifecycle__actions">
                   <button
@@ -613,7 +613,7 @@ export default function PlatformTenantDetailPage() {
               <div className="tenant-lifecycle__confirm-line">
                 <span>租户</span>
                 <strong>{detail.tenant.name}</strong>
-                <code>{detail.tenant.orgId}</code>
+                <code>{detail.tenant.companyId}</code>
               </div>
               <div className="tenant-lifecycle__confirm-line">
                 <span>来源预演</span>

@@ -5,11 +5,11 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyPhysicalObjectRepository extends Repository<OntologyPhysicalObjectEntity, Long> {
-    List<OntologyPhysicalObjectEntity> findByWorkspaceIdAndOrgIdOrderByIdAsc(Long workspaceId, String orgId);
-    List<OntologyPhysicalObjectEntity> findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-            Long dataSourceId, Long workspaceId, String orgId);
-    Optional<OntologyPhysicalObjectEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
-    long deleteByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
-    long deleteByDataSourceIdAndWorkspaceIdAndOrgId(Long dataSourceId, Long workspaceId, String orgId);
-    long deleteByWorkspaceIdAndOrgId(Long workspaceId, String orgId);
+    List<OntologyPhysicalObjectEntity> findByWorkspaceIdAndCompanyIdOrderByIdAsc(Long workspaceId, String companyId);
+    List<OntologyPhysicalObjectEntity> findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+            Long dataSourceId, Long workspaceId, String companyId);
+    Optional<OntologyPhysicalObjectEntity> findByIdAndWorkspaceIdAndCompanyId(Long id, Long workspaceId, String companyId);
+    long deleteByIdAndWorkspaceIdAndCompanyId(Long id, Long workspaceId, String companyId);
+    long deleteByDataSourceIdAndWorkspaceIdAndCompanyId(Long dataSourceId, Long workspaceId, String companyId);
+    long deleteByWorkspaceIdAndCompanyId(Long workspaceId, String companyId);
 }

@@ -6,7 +6,7 @@ import java.util.Optional;
 
 public final class TenantContext {
 
-    private static final ThreadLocal<String> ORG_ID_HOLDER = new ThreadLocal<>();
+    private static final ThreadLocal<String> COMPANY_ID_HOLDER = new ThreadLocal<>();
     private static final ThreadLocal<String> USER_ID_HOLDER = new ThreadLocal<>();
     private static final ThreadLocal<List<String>> ROLES_HOLDER = new ThreadLocal<>();
     private static final ThreadLocal<String> TOKEN_TYPE_HOLDER = new ThreadLocal<>();
@@ -14,16 +14,16 @@ public final class TenantContext {
     private TenantContext() {
     }
 
-    public static void setOrgId(String orgId) {
-        ORG_ID_HOLDER.set(orgId);
+    public static void setCompanyId(String companyId) {
+        COMPANY_ID_HOLDER.set(companyId);
     }
 
-    public static Optional<String> getOrgId() {
-        return Optional.ofNullable(ORG_ID_HOLDER.get());
+    public static Optional<String> getCompanyId() {
+        return Optional.ofNullable(COMPANY_ID_HOLDER.get());
     }
 
-    public static String requireOrgId() {
-        return getOrgId().orElseThrow(() -> new IllegalArgumentException("Missing organization context"));
+    public static String requireCompanyId() {
+        return getCompanyId().orElseThrow(() -> new IllegalArgumentException("Missing company context"));
     }
 
     public static void setUserId(String userId) {
@@ -60,7 +60,7 @@ public final class TenantContext {
     }
 
     public static void clear() {
-        ORG_ID_HOLDER.remove();
+        COMPANY_ID_HOLDER.remove();
         USER_ID_HOLDER.remove();
         ROLES_HOLDER.remove();
         TOKEN_TYPE_HOLDER.remove();

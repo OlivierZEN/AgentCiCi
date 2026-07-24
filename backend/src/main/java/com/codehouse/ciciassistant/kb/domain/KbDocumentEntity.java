@@ -16,8 +16,8 @@ public class KbDocumentEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "knowledge_base_id", nullable = false)
     private Long knowledgeBaseId;
@@ -64,12 +64,12 @@ public class KbDocumentEntity {
     protected KbDocumentEntity() {
     }
 
-    public KbDocumentEntity(String orgId, Long knowledgeBaseId, String name, String contentType, String storagePath) {
-        this(orgId, knowledgeBaseId, name, contentType, storagePath, null);
+    public KbDocumentEntity(String companyId, Long knowledgeBaseId, String name, String contentType, String storagePath) {
+        this(companyId, knowledgeBaseId, name, contentType, storagePath, null);
     }
 
-    public KbDocumentEntity(String orgId, Long knowledgeBaseId, String name, String contentType, String storagePath, Long fileSize) {
-        this.orgId = orgId;
+    public KbDocumentEntity(String companyId, Long knowledgeBaseId, String name, String contentType, String storagePath, Long fileSize) {
+        this.companyId = companyId;
         this.knowledgeBaseId = knowledgeBaseId;
         this.name = name;
         this.contentType = contentType;
@@ -87,8 +87,8 @@ public class KbDocumentEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public Long getKnowledgeBaseId() {

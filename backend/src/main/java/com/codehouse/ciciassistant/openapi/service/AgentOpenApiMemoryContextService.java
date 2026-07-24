@@ -20,7 +20,7 @@ public class AgentOpenApiMemoryContextService {
                 || conversationRef == null || conversationRef.isBlank()) return action.get();
         return bindings.findByCredentialIdAndEnabledTrue(auth.credential().getId()).map(binding -> {
             Set<String> namespaces=parseNamespaces(binding.getDomainNamespacesJson());
-            var context=new ExternalMemoryContextService.ExternalMemoryContext(auth.credential().getOrgId(), binding.getApplicationCode(), conversationRef.trim(), externalSubjectRef.trim(), binding.getSubjectType(), binding.getIdentityLevel());
+            var context=new ExternalMemoryContextService.ExternalMemoryContext(auth.credential().getCompanyId(), binding.getApplicationCode(), conversationRef.trim(), externalSubjectRef.trim(), binding.getSubjectType(), binding.getIdentityLevel());
             try (var ignored=runtime.enter(new TrustedMemoryRuntimeContextService.TrustedMemoryRequest(context, auth.credential().getAgentId(), namespaces))) { return action.get(); }
         }).orElseGet(action);
     }

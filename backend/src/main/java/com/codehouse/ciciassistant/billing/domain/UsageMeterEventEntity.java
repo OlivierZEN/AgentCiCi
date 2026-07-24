@@ -17,8 +17,8 @@ public class UsageMeterEventEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", length = 64)
     private String userId;
@@ -65,7 +65,7 @@ public class UsageMeterEventEntity {
     protected UsageMeterEventEntity() {
     }
 
-    public UsageMeterEventEntity(String orgId,
+    public UsageMeterEventEntity(String companyId,
                                  String userId,
                                  String agentId,
                                  String billableDomain,
@@ -79,7 +79,7 @@ public class UsageMeterEventEntity {
                                  String sourceId,
                                  Instant occurredAt,
                                  String metadataJson) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.agentId = agentId;
         this.billableDomain = billableDomain;
@@ -97,7 +97,7 @@ public class UsageMeterEventEntity {
 
     public Long getId() { return id; }
 
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
 
     public String getUserId() { return userId; }
 

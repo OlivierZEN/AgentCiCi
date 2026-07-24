@@ -5,9 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentEvalCaseRepository extends JpaRepository<AgentEvalCaseEntity, Long> {
 
-    List<AgentEvalCaseEntity> findByOrgIdAndSuiteIdAndStatusOrderByIdAsc(String orgId, Long suiteId, String status);
+    List<AgentEvalCaseEntity> findByCompanyIdAndSuiteIdAndStatusOrderByIdAsc(String companyId, Long suiteId, String status);
 
-    long countByOrgIdAndSuiteIdAndStatus(String orgId, Long suiteId, String status);
+    long countByCompanyIdAndSuiteIdAndStatus(String companyId, Long suiteId, String status);
 
     long countBySuiteIdAndStatus(Long suiteId, String status);
 

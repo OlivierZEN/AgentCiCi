@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, String> {
 
-    List<ChatSessionEntity> findByOrgIdOrderByUpdatedAtDesc(String orgId);
+    List<ChatSessionEntity> findByCompanyIdOrderByUpdatedAtDesc(String companyId);
 
-    List<ChatSessionEntity> findByOrgIdAndUserIdOrderByUpdatedAtDesc(String orgId, String userId);
+    List<ChatSessionEntity> findByCompanyIdAndUserIdOrderByUpdatedAtDesc(String companyId, String userId);
 
-    Optional<ChatSessionEntity> findByIdAndOrgId(String id, String orgId);
+    Optional<ChatSessionEntity> findByIdAndCompanyId(String id, String companyId);
 
-    Optional<ChatSessionEntity> findByIdAndOrgIdAndUserId(String id, String orgId, String userId);
+    Optional<ChatSessionEntity> findByIdAndCompanyIdAndUserId(String id, String companyId, String userId);
 }

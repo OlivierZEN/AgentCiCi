@@ -18,13 +18,13 @@ public class BuiltinSkillRuntimeConfigService {
 
     public ResolvedBuiltinSkillRuntimeConfig resolve(SkillResolverService.ResolvedSkillContext context,
                                                      BuiltinSkillDocumentService.ResolvedBuiltinSkillDocs builtinDocs,
-                                                     String orgId,
+                                                     String companyId,
                                                      String userId) {
         if (!shouldResolveCloudccRuntime(context, builtinDocs)) {
             return ResolvedBuiltinSkillRuntimeConfig.empty();
         }
         Optional<CloudccAccessTokenService.CloudccSessionContext> sessionContext =
-                cloudccAccessTokenService.getSessionContext(orgId, userId);
+                cloudccAccessTokenService.getSessionContext(companyId, userId);
         if (sessionContext.isEmpty()) {
             return new ResolvedBuiltinSkillRuntimeConfig(List.of(new RuntimeConfigSection(
                     CLOUDCC_CUSTOMIZATION_SKILL_CODE,

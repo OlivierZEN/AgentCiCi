@@ -13,15 +13,15 @@ import java.time.Instant;
 @Entity
 @Table(name = "memory_conversation_snapshot", uniqueConstraints = @UniqueConstraint(
         name = "uq_memory_conversation_snapshot",
-        columnNames = {"org_id", "application_code", "conversation_ref"}))
+        columnNames = {"company_id", "application_code", "conversation_ref"}))
 public class MemoryConversationSnapshotEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "application_code", nullable = false, length = 96)
     private String applicationCode;
@@ -51,10 +51,10 @@ public class MemoryConversationSnapshotEntity {
     protected MemoryConversationSnapshotEntity() {
     }
 
-    public MemoryConversationSnapshotEntity(String orgId, String applicationCode, String conversationRef,
+    public MemoryConversationSnapshotEntity(String companyId, String applicationCode, String conversationRef,
                                             Long subjectId, String activeAgentId, String summary,
                                             String stateJson) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.applicationCode = applicationCode;
         this.conversationRef = conversationRef;
         this.subjectId = subjectId;

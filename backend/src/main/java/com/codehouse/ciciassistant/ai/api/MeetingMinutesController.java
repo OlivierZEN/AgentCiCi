@@ -34,11 +34,11 @@ public class MeetingMinutesController {
 
     @PostMapping("/summary")
     public ApiResponse<Map<String, Object>> summarize(@Valid @RequestBody MeetingMinutesRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        MeetingMinutesResult result = meetingMinutesService.summarize(orgId, request.title(), request.transcript());
+        MeetingMinutesResult result = meetingMinutesService.summarize(companyId, request.title(), request.transcript());
         return ApiResponse.ok(Map.of(
-                "orgId", orgId,
+                "companyId", companyId,
                 "summary", result.summary(),
                 "skillCode", result.skillCode(),
                 "skillName", result.skillName(),
@@ -48,7 +48,7 @@ public class MeetingMinutesController {
 
     @PostMapping(value = "/transcribe-file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<Map<String, Object>> transcribeFile(@RequestParam("file") MultipartFile file) throws Exception {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("音频文件不能为空");
@@ -59,7 +59,7 @@ public class MeetingMinutesController {
                 file.getContentType()
         );
         return ApiResponse.ok(Map.of(
-                "orgId", orgId,
+                "companyId", companyId,
                 "transcript", result.transcript(),
                 "segmentCount", result.transcript().size(),
                 "file", Map.of(

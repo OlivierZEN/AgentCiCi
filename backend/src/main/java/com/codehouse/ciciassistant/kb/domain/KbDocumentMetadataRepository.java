@@ -6,13 +6,13 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbDocumentMetadataRepository extends JpaRepository<KbDocumentMetadataEntity, Long> {
 
-    List<KbDocumentMetadataEntity> findByOrgIdAndKnowledgeBaseIdAndDocumentId(String orgId, Long knowledgeBaseId, Long documentId);
+    List<KbDocumentMetadataEntity> findByCompanyIdAndKnowledgeBaseIdAndDocumentId(String companyId, Long knowledgeBaseId, Long documentId);
 
-    Optional<KbDocumentMetadataEntity> findByOrgIdAndKnowledgeBaseIdAndDocumentIdAndFieldKey(
-            String orgId,
+    Optional<KbDocumentMetadataEntity> findByCompanyIdAndKnowledgeBaseIdAndDocumentIdAndFieldKey(
+            String companyId,
             Long knowledgeBaseId,
             Long documentId,
             String fieldKey);
 
-    void deleteByOrgIdAndKnowledgeBaseIdAndDocumentId(String orgId, Long knowledgeBaseId, Long documentId);
+    void deleteByCompanyIdAndKnowledgeBaseIdAndDocumentId(String companyId, Long knowledgeBaseId, Long documentId);
 }

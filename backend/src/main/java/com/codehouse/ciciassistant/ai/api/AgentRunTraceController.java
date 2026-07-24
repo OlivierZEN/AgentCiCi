@@ -36,12 +36,12 @@ public class AgentRunTraceController {
             @RequestParam(name = "type", required = false) String type,
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "limit", defaultValue = "50") int limit) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         if (agentId != null && !agentId.isBlank()) {
-            accessControlService.require(orgId, userId, TenantContext.getRoles(), agentId, AgentPermission.LOG_VIEW);
+            accessControlService.require(companyId, userId, TenantContext.getRoles(), agentId, AgentPermission.LOG_VIEW);
         }
-        return ApiResponse.ok(traceService.listRunLogs(orgId, userId, new AgentRunTraceService.RunLogQuery(
+        return ApiResponse.ok(traceService.listRunLogs(companyId, userId, new AgentRunTraceService.RunLogQuery(
                 parseInstant(from),
                 parseInstant(to),
                 blankToNull(agentId),
@@ -54,9 +54,9 @@ public class AgentRunTraceController {
 
     @GetMapping("/{traceId}")
     public ApiResponse<Map<String, Object>> detail(@PathVariable String traceId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String userId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(traceService.traceDetail(orgId, userId, traceId));
+        return ApiResponse.ok(traceService.traceDetail(companyId, userId, traceId));
     }
 
     private Instant parseInstant(String value) {

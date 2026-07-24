@@ -39,7 +39,7 @@ class RbacProductionReadinessIntegrationTest {
                 .andExpect(jsonPath("$.message").value("Authentication required"));
 
         mockMvc.perform(get("/me/email-accounts")
-                        .header("X-Org-Id", "demo-org")
+                        .header("X-Company-Id", "demo-org")
                         .header("X-User-Id", "forged-user"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication required"));
@@ -56,7 +56,7 @@ class RbacProductionReadinessIntegrationTest {
                 .andExpect(jsonPath("$.status").exists());
 
         mockMvc.perform(get("/public/agents/avatars")
-                        .queryParam("orgId", "demo-org"))
+                        .queryParam("companyId", "demo-org"))
                 .andExpect(status().isOk());
 
         mockMvc.perform(get("/openapi/v1/parameters"))
@@ -69,7 +69,7 @@ class RbacProductionReadinessIntegrationTest {
     }
 
     @Test
-    void shouldKeepOrganizationAndPlatformTokensIsolated() throws Exception {
+    void shouldKeepCompanyAndPlatformTokensIsolated() throws Exception {
         String orgAdminToken = orgToken("13902406401");
         String platformToken = platformAdminToken();
 
@@ -136,7 +136,7 @@ class RbacProductionReadinessIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

@@ -88,11 +88,11 @@ class SkillResolverPinnedRuntimeBoundaryTest {
         when(skillDefinitionService.normalizeAgentId("agent-a")).thenReturn("agent-a");
         when(capabilityResolverService.resolve("org-a", "agent-a", List.of())).thenReturn(mutableCapability);
         when(definition.getPublishedVersionId()).thenReturn(42L);
-        when(agentDefinitionRepository.findByOrgIdAndAgentId("org-a", "agent-a"))
+        when(agentDefinitionRepository.findByCompanyIdAndAgentId("org-a", "agent-a"))
                 .thenReturn(Optional.of(definition));
         when(workflowVersionRepository.findById(42L)).thenReturn(Optional.of(publishedVersion));
         when(publishedVersion.getId()).thenReturn(42L);
-        when(publishedVersion.getOrgId()).thenReturn("org-a");
+        when(publishedVersion.getCompanyId()).thenReturn("org-a");
         when(publishedVersion.getAgentId()).thenReturn("agent-a");
         when(publishedVersion.getPublishStatus()).thenReturn("PUBLISHED");
         when(publishedVersion.getWorkflowManifest()).thenReturn("""
@@ -109,7 +109,7 @@ class SkillResolverPinnedRuntimeBoundaryTest {
                 }
                 """);
         when(workflowSkillRefService.listRuntimeSkillRefs("org-a", 42L)).thenReturn(List.of(missingVersion));
-        when(skillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc("org-a", "agent-a"))
+        when(skillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc("org-a", "agent-a"))
                 .thenReturn(List.of());
         when(sessionStateService.mergeAndGetActiveSkillCode(
                 anyString(), anyString(), anyString(), any(), anyList())).thenReturn(Optional.empty());

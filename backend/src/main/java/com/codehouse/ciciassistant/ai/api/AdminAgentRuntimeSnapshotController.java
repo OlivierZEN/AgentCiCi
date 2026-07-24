@@ -22,6 +22,6 @@ public class AdminAgentRuntimeSnapshotController {
 
     @GetMapping
     public ApiResponse<Map<String, Object>> list() {
-        return ApiResponse.ok(traceService.listOrgRuntimeSnapshots(TenantContext.requireOrgId()));
+        return ApiResponse.ok(traceService.listOrgRuntimeSnapshots(TenantContext.requireCompanyId()));
     }
 }

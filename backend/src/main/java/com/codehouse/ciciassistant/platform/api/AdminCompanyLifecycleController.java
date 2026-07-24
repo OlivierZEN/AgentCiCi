@@ -18,39 +18,39 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequireOrgAdmin
-@RequestMapping("/admin/organization")
-public class AdminOrganizationLifecycleController {
+@RequestMapping("/admin/company")
+public class AdminCompanyLifecycleController {
 
     private final PlatformTenantLifecycleService tenantLifecycleService;
 
-    public AdminOrganizationLifecycleController(PlatformTenantLifecycleService tenantLifecycleService) {
+    public AdminCompanyLifecycleController(PlatformTenantLifecycleService tenantLifecycleService) {
         this.tenantLifecycleService = tenantLifecycleService;
     }
 
     @PostMapping("/export-jobs")
     public ApiResponse<PlatformTenantLifecycleService.ExportJobView> createExportJob(
             @RequestBody(required = false) ExportJobRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String actorId = TenantContext.getUserId().orElse("org-admin");
         String actorRole = TenantContext.getRoles().stream().findFirst().orElse("ORG_ADMIN");
-        return ApiResponse.ok(tenantLifecycleService.createExportJob(orgId, actorId, actorRole,
+        return ApiResponse.ok(tenantLifecycleService.createExportJob(companyId, actorId, actorRole,
                 request == null ? null : request.reason()));
     }
 
     @GetMapping("/export-jobs")
     public ApiResponse<List<PlatformTenantLifecycleService.ExportJobView>> listExportJobs() {
-        return ApiResponse.ok(tenantLifecycleService.listExportJobs(TenantContext.requireOrgId(), true));
+        return ApiResponse.ok(tenantLifecycleService.listExportJobs(TenantContext.requireCompanyId(), true));
     }
 
     @GetMapping("/export-jobs/{jobId}")
     public ApiResponse<PlatformTenantLifecycleService.ExportJobView> getExportJob(@PathVariable Long jobId) {
-        return ApiResponse.ok(tenantLifecycleService.getExportJob(TenantContext.requireOrgId(), jobId, true));
+        return ApiResponse.ok(tenantLifecycleService.getExportJob(TenantContext.requireCompanyId(), jobId, true));
     }
 
     @GetMapping("/export-jobs/{jobId}/download")
     public ResponseEntity<byte[]> downloadExport(@PathVariable Long jobId) {
         PlatformTenantLifecycleService.ExportArtifact artifact = tenantLifecycleService.downloadExport(
-                TenantContext.requireOrgId(),
+                TenantContext.requireCompanyId(),
                 jobId
         );
         return ResponseEntity.ok()

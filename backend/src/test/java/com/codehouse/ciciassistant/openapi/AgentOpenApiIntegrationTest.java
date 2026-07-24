@@ -26,15 +26,15 @@ import com.codehouse.ciciassistant.ai.domain.AgentRunTraceEntity;
 import com.codehouse.ciciassistant.ai.domain.AgentRunTraceRepository;
 import com.codehouse.ciciassistant.ai.service.ChatOrchestratorService;
 import com.codehouse.ciciassistant.auth.RoleCodes;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
 import com.codehouse.ciciassistant.auth.domain.UserRepository;
 import com.codehouse.ciciassistant.billing.domain.BillingCreditLedgerRepository;
 import com.codehouse.ciciassistant.billing.domain.UsageMeterEventRepository;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigEntity;
-import com.codehouse.ciciassistant.model.domain.OrgModelConfigRepository;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigEntity;
+import com.codehouse.ciciassistant.model.domain.CompanyModelConfigRepository;
 import com.codehouse.ciciassistant.model.service.ModelProviderService;
 import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService;
 import com.codehouse.ciciassistant.integration.service.CloudccAccessTokenService.CloudccSessionContext;
@@ -104,7 +104,7 @@ class AgentOpenApiIntegrationTest {
     private UserAccountRepository userAccountRepository;
 
     @Autowired
-    private OrgRepository orgRepository;
+    private CompanyRepository companyRepository;
 
     @Autowired
     private AgentDefinitionRepository agentDefinitionRepository;
@@ -140,7 +140,7 @@ class AgentOpenApiIntegrationTest {
     private AgentRunTraceRepository traceRepository;
 
     @Autowired
-    private OrgModelConfigRepository orgModelConfigRepository;
+    private CompanyModelConfigRepository orgModelConfigRepository;
 
     @Autowired
     private ModelProviderService modelProviderService;
@@ -185,7 +185,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldCreateRotateRevokeApiKeyWithoutStoringPlainKey() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-key-agent";
         preparePublishedApiAgent(agentId);
 
@@ -277,7 +277,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldValidateOpenApiParametersWithoutTreatingApiKeyAsJwt() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-parameters-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId);
@@ -325,7 +325,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldRunOpenApiChatMessagesWithMappedSessionCallLogUsageAndTraceMetadata() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-chat-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId);
@@ -355,7 +355,7 @@ class AgentOpenApiIntegrationTest {
         String traceId = data.path("metadata").path("trace_id").asText();
         AgentApiCredentialEntity credential = credentialRepository.findByPublicId(plainKeyPublicId(plainKey)).orElseThrow();
         String internalSessionId = sessionMapRepository
-                .findByOrgIdAndCredentialIdAndAgentIdAndExternalSessionId("demo-org", credential.getId(), agentId, "crm-customer-001")
+                .findByCompanyIdAndCredentialIdAndAgentIdAndExternalSessionId("demo-org", credential.getId(), agentId, "crm-customer-001")
                 .orElseThrow()
                 .getInternalSessionId();
 
@@ -373,7 +373,7 @@ class AgentOpenApiIntegrationTest {
         assertThat(trace.getChannel()).isEqualTo("api");
         assertThat(trace.getSourceType()).isEqualTo("open_api");
         assertThat(trace.getExternalUserId()).isEqualTo("customer-001");
-        assertThat(usageDailyRepository.findByOrgIdAndCredentialIdAndUsageDate(
+        assertThat(usageDailyRepository.findByCompanyIdAndCredentialIdAndUsageDate(
                 "demo-org",
                 credential.getId(),
                 LocalDate.now(ZoneOffset.UTC))).isPresent()
@@ -382,7 +382,7 @@ class AgentOpenApiIntegrationTest {
                     assertThat(usage.getCallCount()).isEqualTo(1);
                     assertThat(usage.getSuccessCount()).isEqualTo(1);
                 });
-        var openApiUsage = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc("demo-org").stream()
+        var openApiUsage = usageMeterEventRepository.findTop100ByCompanyIdOrderByOccurredAtDesc("demo-org").stream()
                 .filter(item -> "open_api_chat".equals(item.getBillableDomain()))
                 .filter(item -> item.getMetadataJson().contains(traceId))
                 .toList();
@@ -392,7 +392,7 @@ class AgentOpenApiIntegrationTest {
             assertThat(event.getBillingType()).isEqualTo("platform_paid");
             assertThat(event.getMetadataJson()).contains("\"officialPricingItem\":\"Credits 包\"");
         });
-        assertThat(creditLedgerRepository.findByOrgIdOrderByIdAsc("demo-org")).anySatisfy(entry -> {
+        assertThat(creditLedgerRepository.findByCompanyIdOrderByIdAsc("demo-org")).anySatisfy(entry -> {
             assertThat(entry.getEntryType()).isEqualTo("usage_debit");
             assertThat(entry.getCreditsDelta()).isEqualByComparingTo("-2.00");
             assertThat(entry.getSourceEventId()).isEqualTo(openApiUsage.get(0).getId());
@@ -409,7 +409,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldRequireCloudccContextOnlyForCloudccOpenApiKeys() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-cloudcc-context-rules";
         preparePublishedApiAgent(agentId);
         String standardKey = createPlainKey(token, agentId, runAsUserId);
@@ -450,7 +450,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldUseCallerSuppliedCloudccTokenWithoutPersistingIt() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-cloudcc-runtime-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
@@ -499,7 +499,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldRejectCloudccCallerTokenWhenBaseUrlIsDenied() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-cloudcc-url-denied-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
@@ -543,7 +543,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldAcceptCloudccLightningDomainGatewayBaseUrl() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-cloudcc-lightning-domain-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId, "cloudcc");
@@ -576,7 +576,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldExposeConversationApiChatMessagesHistoryFeedbackAndFiles() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-conversation-agent";
         preparePublishedApiAgent(agentId);
         String plainKey = createPlainKey(token, agentId, runAsUserId);
@@ -777,16 +777,16 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldReplacePlaceholderChatRouteWithConfiguredBaseModelForOpenApiChatMessages() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-model-route-agent";
         modelProviderService.agentBaseModels("demo-org");
         modelProviderService.updateSelectedModels("demo-org", "aliyun-bailian", List.of("qwen3.6-plus"));
-        OrgModelConfigEntity route = orgModelConfigRepository.findByOrgIdAndSceneCode("demo-org", "chat")
-                .orElse(new OrgModelConfigEntity("demo-org", "chat", "mock", "cici-default"));
+        CompanyModelConfigEntity route = orgModelConfigRepository.findByCompanyIdAndSceneCode("demo-org", "chat")
+                .orElse(new CompanyModelConfigEntity("demo-org", "chat", "mock", "cici-default"));
         route.update("mock", "cici-default");
         orgModelConfigRepository.save(route);
         preparePublishedApiAgent(agentId);
-        agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", agentId)
+        agentDefinitionRepository.findByCompanyIdAndAgentId("demo-org", agentId)
                 .ifPresent(agent -> {
                     agent.update(
                             agent.getName(),
@@ -818,7 +818,7 @@ class AgentOpenApiIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.answer").value("模型路由已补齐"));
 
-        assertThat(orgModelConfigRepository.findByOrgIdAndSceneCode("demo-org", "chat")).isPresent()
+        assertThat(orgModelConfigRepository.findByCompanyIdAndSceneCode("demo-org", "chat")).isPresent()
                 .get()
                 .satisfies(saved -> {
                     assertThat(saved.getProvider()).isEqualTo("aliyun-bailian");
@@ -829,13 +829,13 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldRejectDisabledSkillBindingForOpenApiChatMessages() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-disabled-skill-agent";
         preparePublishedApiAgent(agentId);
         String skillCode = "openapi-disabled-skill-" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
         SkillDefinitionEntity skill = saveSkill(skillCode, true);
         transactionTemplate.executeWithoutResult(status -> {
-            agentSkillBindingRepository.deleteByOrgIdAndAgentId("demo-org", agentId);
+            agentSkillBindingRepository.deleteByCompanyIdAndAgentId("demo-org", agentId);
             agentSkillBindingRepository.save(new AgentSkillBindingEntity(
                     "demo-org",
                     agentId,
@@ -864,7 +864,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldRejectOpenApiChatMessagesWhenAnswerExceedsConfiguredLimit() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-response-limit-agent";
         preparePublishedApiAgent(agentId);
         MvcResult createResult = mockMvc.perform(post("/agents/{agentId}/api-keys", agentId)
@@ -901,7 +901,7 @@ class AgentOpenApiIntegrationTest {
     @Test
     void shouldRejectOpenApiChatMessagesWhenMinuteRateLimitIsExceeded() throws Exception {
         String token = loginToken("13800138111");
-        String runAsUserId = userRepository.findByOrgIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
+        String runAsUserId = userRepository.findByCompanyIdAndMobile("demo-org", "13800138111").orElseThrow().getId();
         String agentId = "openapi-rate-agent";
         preparePublishedApiAgent(agentId);
         MvcResult createResult = mockMvc.perform(post("/agents/{agentId}/api-keys", agentId)
@@ -967,13 +967,13 @@ class AgentOpenApiIntegrationTest {
 
     private String ensureOrgUser(String mobile) {
         return transactionTemplate.execute(status -> {
-            if (userRepository.findByOrgIdAndMobile("demo-org", mobile).isPresent()) {
-                return userRepository.findByOrgIdAndMobile("demo-org", mobile).orElseThrow().getId();
+            if (userRepository.findByCompanyIdAndMobile("demo-org", mobile).isPresent()) {
+                return userRepository.findByCompanyIdAndMobile("demo-org", mobile).orElseThrow().getId();
             }
             UserAccountEntity account = userAccountRepository.findByPrimaryMobile(mobile)
                     .orElseGet(() -> userAccountRepository.save(new UserAccountEntity(mobile)));
             UserEntity member = new UserEntity(
-                    orgRepository.findById("demo-org").orElseThrow(),
+                    companyRepository.findById("demo-org").orElseThrow(),
                     account,
                     RoleCodes.ORG_USER);
             return userRepository.save(member).getId();
@@ -986,14 +986,14 @@ class AgentOpenApiIntegrationTest {
 
     private void preparePublishedAgent(String agentId, boolean apiChannel) {
         transactionTemplate.executeWithoutResult(status -> {
-            credentialRepository.findByOrgIdAndAgentIdOrderByCreatedAtDesc("demo-org", agentId)
+            credentialRepository.findByCompanyIdAndAgentIdOrderByCreatedAtDesc("demo-org", agentId)
                     .forEach(credentialRepository::delete);
-            agentAccessGrantRepository.findByOrgIdAndAgentIdAndStatus("demo-org", agentId, "ACTIVE")
+            agentAccessGrantRepository.findByCompanyIdAndAgentIdAndStatus("demo-org", agentId, "ACTIVE")
                     .forEach(agentAccessGrantRepository::delete);
-            agentChannelBindingRepository.deleteByOrgIdAndAgentId("demo-org", agentId);
-            agentWorkflowVersionRepository.findByOrgIdAndAgentIdOrderByVersionNoDesc("demo-org", agentId)
+            agentChannelBindingRepository.deleteByCompanyIdAndAgentId("demo-org", agentId);
+            agentWorkflowVersionRepository.findByCompanyIdAndAgentIdOrderByVersionNoDesc("demo-org", agentId)
                     .forEach(agentWorkflowVersionRepository::delete);
-            agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", agentId)
+            agentDefinitionRepository.findByCompanyIdAndAgentId("demo-org", agentId)
                     .ifPresent(agentDefinitionRepository::delete);
             agentChannelBindingRepository.flush();
             agentWorkflowVersionRepository.flush();
@@ -1040,7 +1040,7 @@ class AgentOpenApiIntegrationTest {
 
     private SkillDefinitionEntity saveSkill(String skillCode, boolean enabled) {
         return transactionTemplate.execute(status -> {
-            skillDefinitionRepository.findByOrgIdAndSkillCode("demo-org", skillCode)
+            skillDefinitionRepository.findByCompanyIdAndSkillCode("demo-org", skillCode)
                     .ifPresent(skillDefinitionRepository::delete);
             skillDefinitionRepository.flush();
             SkillDefinitionEntity skill = new SkillDefinitionEntity(
@@ -1073,7 +1073,7 @@ class AgentOpenApiIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

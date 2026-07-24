@@ -5,7 +5,7 @@ import com.codehouse.ciciassistant.auth.service.JwtService;
 import com.codehouse.ciciassistant.common.error.ForbiddenException;
 import com.codehouse.ciciassistant.common.error.UnauthorizedException;
 import com.codehouse.ciciassistant.embed.domain.EmbedAppDefinitionEntity;
-import com.codehouse.ciciassistant.embed.domain.OrgEmbedAppConfigEntity;
+import com.codehouse.ciciassistant.embed.domain.CompanyEmbedAppConfigEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialEntity;
 import com.codehouse.ciciassistant.openapi.domain.AgentApiCredentialRepository;
 import com.codehouse.ciciassistant.openapi.service.AgentApiKeyGenerator;
@@ -55,7 +55,7 @@ public class EmbedTokenService {
         if (!EmbedAppDefinitionEntity.STATUS_ENABLED.equals(definition.getStatus())) {
             throw new ForbiddenException("嵌入式智能应用未启用");
         }
-        OrgEmbedAppConfigEntity config = embedAppService.ensureConfig(credential.getOrgId(), definition);
+        CompanyEmbedAppConfigEntity config = embedAppService.ensureConfig(credential.getCompanyId(), definition);
         if (!config.isEnabled()) {
             throw new ForbiddenException("当前组织未启用该嵌入式智能应用");
         }
@@ -81,8 +81,8 @@ public class EmbedTokenService {
         claims.put("typ", "embed_app");
         claims.put("aud", "agentcici-embed");
         claims.put("appCode", definition.getAppCode());
-        claims.put("org_id", credential.getOrgId());
-        claims.put("orgId", credential.getOrgId());
+        claims.put("company_id", credential.getCompanyId());
+        claims.put("companyId", credential.getCompanyId());
         claims.put("member_id", credential.getRunAsUserId());
         claims.put("userId", credential.getRunAsUserId());
         claims.put("source", source);
@@ -102,19 +102,19 @@ public class EmbedTokenService {
     }
 
     @Transactional
-    public TokenIssue issueAdminDebugToken(String orgId, String currentUserId, String appCode, TokenCommand command) {
+    public TokenIssue issueAdminDebugToken(String companyId, String currentUserId, String appCode, TokenCommand command) {
         EmbedAppDefinitionEntity definition = embedAppService.requireDefinition(appCode);
         if (!EmbedAppDefinitionEntity.STATUS_ENABLED.equals(definition.getStatus())) {
             throw new ForbiddenException("嵌入式智能应用未启用");
         }
-        OrgEmbedAppConfigEntity config = embedAppService.ensureConfig(orgId, definition);
+        CompanyEmbedAppConfigEntity config = embedAppService.ensureConfig(companyId, definition);
         if (!config.isEnabled()) {
             throw new ForbiddenException("当前组织未启用该嵌入式智能应用");
         }
         String runAsUserId = config.getRunAsUserId() == null || config.getRunAsUserId().isBlank()
                 ? requireText(currentUserId, "currentUserId")
                 : config.getRunAsUserId();
-        userRepository.findByIdAndOrg_Id(runAsUserId, orgId)
+        userRepository.findByIdAndCompany_Id(runAsUserId, companyId)
                 .orElseThrow(() -> new ForbiddenException("runAsUserId no longer belongs to the current org"));
         String parentOrigin = embedAppService.normalizeOrigin(command.parentOrigin());
         if (!embedAppService.originAllowed(embedAppService.allowedOrigins(config), parentOrigin)) {
@@ -139,8 +139,8 @@ public class EmbedTokenService {
         claims.put("aud", "agentcici-embed");
         claims.put("debug", true);
         claims.put("appCode", definition.getAppCode());
-        claims.put("org_id", orgId);
-        claims.put("orgId", orgId);
+        claims.put("company_id", companyId);
+        claims.put("companyId", companyId);
         claims.put("member_id", runAsUserId);
         claims.put("userId", runAsUserId);
         claims.put("source", source);
@@ -177,7 +177,7 @@ public class EmbedTokenService {
             Map<String, Object> context = claims.get("context", Map.class);
             return new AuthenticatedEmbedToken(
                     tokenAppCode,
-                    claims.get("orgId", String.class),
+                    claims.get("companyId", String.class),
                     claims.get("userId", String.class),
                     claims.get("externalUserId", String.class),
                     claims.get("source", String.class),
@@ -217,7 +217,7 @@ public class EmbedTokenService {
         if (!clientIpAllowed(credentialService.toView(credential).allowedIps(), clientIp(request))) {
             throw new ForbiddenException("Client IP is not allowed");
         }
-        userRepository.findByIdAndOrg_Id(credential.getRunAsUserId(), credential.getOrgId())
+        userRepository.findByIdAndCompany_Id(credential.getRunAsUserId(), credential.getCompanyId())
                 .orElseThrow(() -> new ForbiddenException("runAsUserId no longer belongs to the credential org"));
         return credential;
     }
@@ -271,7 +271,7 @@ public class EmbedTokenService {
         return request.getRemoteAddr() == null ? "" : request.getRemoteAddr();
     }
 
-    private List<String> permissions(List<String> requested, OrgEmbedAppConfigEntity config, EmbedAppDefinitionEntity definition) {
+    private List<String> permissions(List<String> requested, CompanyEmbedAppConfigEntity config, EmbedAppDefinitionEntity definition) {
         List<String> allowed = embedAppService.scopeOverrides(config).isEmpty()
                 ? embedAppService.requiredScopes(definition)
                 : embedAppService.scopeOverrides(config);
@@ -360,7 +360,7 @@ public class EmbedTokenService {
 
     public record AuthenticatedEmbedToken(
             String appCode,
-            String orgId,
+            String companyId,
             String userId,
             String externalUserId,
             String source,

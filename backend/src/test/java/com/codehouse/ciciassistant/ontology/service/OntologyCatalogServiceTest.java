@@ -43,7 +43,7 @@ class OntologyCatalogServiceTest {
 
     @BeforeEach
     void setUp() {
-        TenantContext.setOrgId("org-a");
+        TenantContext.setCompanyId("org-a");
         TenantContext.setUserId("user-a");
         service = new OntologyCatalogService(
                 transactions, List.of(adapter), new ObjectMapper());

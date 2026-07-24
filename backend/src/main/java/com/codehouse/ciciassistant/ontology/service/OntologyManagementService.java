@@ -109,15 +109,15 @@ public class OntologyManagementService {
     }
 
     public List<WorkspaceView> listWorkspaces() {
-        String orgId = TenantContext.requireOrgId();
-        return workspaces.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+        String companyId = TenantContext.requireCompanyId();
+        return workspaces.findByCompanyIdOrderByUpdatedAtDesc(companyId).stream()
                 .map(this::workspaceView)
                 .toList();
     }
 
     @Transactional
     public WorkspaceView createWorkspace(String userId, WorkspaceCreateRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String requestedKey = request == null ? null : request.key();
         String requestedName = request == null ? null : request.name();
         String requestedDescription = request == null ? null : request.description();
@@ -125,11 +125,11 @@ public class OntologyManagementService {
                 requestedKey, requestedName, requestedDescription);
         String key = requireKey(requestedKey);
         String name = requireName(requestedName);
-        if (workspaces.findByOrgIdAndKey(orgId, key).isPresent()) {
+        if (workspaces.findByCompanyIdAndKey(companyId, key).isPresent()) {
             throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
         }
         OntologyWorkspaceEntity saved = persistNewWorkspaceOrKeyConflict(
-                new OntologyWorkspaceEntity(orgId, key, name, requestedDescription, userId));
+                new OntologyWorkspaceEntity(companyId, key, name, requestedDescription, userId));
         return workspaceView(saved);
     }
 
@@ -149,7 +149,7 @@ public class OntologyManagementService {
             throw new ConflictException("ONTOLOGY_KEY_IMMUTABLE");
         }
         OntologyDocument current = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         OntologyDocument updated = new OntologyDocument(
                 current.key(),
                 requireName(request.name()),
@@ -161,7 +161,7 @@ public class OntologyManagementService {
                 current.dataSources(),
                 current.mappings());
         return workspaceView(drafts.saveDraft(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspaceId,
                 request.expectedRevision(),
@@ -173,9 +173,9 @@ public class OntologyManagementService {
             String userId,
             Long workspaceId,
             RevisionRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         OntologyWorkspaceEntity workspace = workspaces
-                .findForUpdateByIdAndOrgId(workspaceId, orgId)
+                .findForUpdateByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         requireRevision(workspace, request == null ? null : request.expectedRevision());
         workspace.archive(userId);
@@ -185,7 +185,7 @@ public class OntologyManagementService {
     public DraftView getDraft(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument document = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         return draftView(workspace, document);
     }
 
@@ -198,32 +198,32 @@ public class OntologyManagementService {
         }
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument current = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         OntologyDocument document = toDocument(request.document(), current, "MANUAL");
         draftSafety.validateDocument(document);
         OntologyWorkspaceEntity saved = drafts.saveDraft(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspaceId,
                 request.expectedRevision(),
                 document);
-        return draftView(saved, drafts.loadDraft(saved.getOrgId(), workspaceId, saved));
+        return draftView(saved, drafts.loadDraft(saved.getCompanyId(), workspaceId, saved));
     }
 
     public List<OntologyValidationService.ValidationIssue> validateDraft(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         return validation.validate(
-                drafts.loadDraft(workspace.getOrgId(), workspaceId, workspace), false);
+                drafts.loadDraft(workspace.getCompanyId(), workspaceId, workspace), false);
     }
 
     public DraftDiffView diffDraft(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument current = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         OntologyVersionEntity published = workspace.getPublishedVersion() == null
                 ? null
-                : versions.findByWorkspaceIdAndOrgIdAndVersionNo(
-                        workspaceId, workspace.getOrgId(), workspace.getPublishedVersion())
+                : versions.findByWorkspaceIdAndCompanyIdAndVersionNo(
+                        workspaceId, workspace.getCompanyId(), workspace.getPublishedVersion())
                         .orElse(null);
         boolean changed = published == null
                 || !Objects.equals(
@@ -245,21 +245,21 @@ public class OntologyManagementService {
                 request == null ? List.of() : safe(request.selectedSources()),
                 request == null ? null : request.mode());
         return aiProposals.propose(
-                workspace.getOrgId(), userId, workspaceId, command);
+                workspace.getCompanyId(), userId, workspaceId, command);
     }
 
     public List<ProposalRecordView> listProposals(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
-        return proposals.findByWorkspaceIdAndOrgIdOrderByCreatedAtDesc(
-                        workspaceId, workspace.getOrgId()).stream()
+        return proposals.findByWorkspaceIdAndCompanyIdOrderByCreatedAtDesc(
+                        workspaceId, workspace.getCompanyId()).stream()
                 .map(this::proposalRecordView)
                 .toList();
     }
 
     public ProposalRecordView getProposal(Long workspaceId, Long proposalId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
-        return proposals.findByIdAndWorkspaceIdAndOrgId(
-                        proposalId, workspaceId, workspace.getOrgId())
+        return proposals.findByIdAndWorkspaceIdAndCompanyId(
+                        proposalId, workspaceId, workspace.getCompanyId())
                 .map(this::proposalRecordView)
                 .orElseThrow(() -> new ResourceNotFoundException("AI_PROPOSAL_INVALID"));
     }
@@ -270,11 +270,11 @@ public class OntologyManagementService {
             Long proposalId,
             RevisionRequest request) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
-        proposals.findByIdAndWorkspaceIdAndOrgId(
-                        proposalId, workspaceId, workspace.getOrgId())
+        proposals.findByIdAndWorkspaceIdAndCompanyId(
+                        proposalId, workspaceId, workspace.getCompanyId())
                 .orElseThrow(() -> new ResourceNotFoundException("AI_PROPOSAL_INVALID"));
         return aiProposals.apply(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 proposalId,
                 request == null ? null : request.expectedRevision());
@@ -297,16 +297,16 @@ public class OntologyManagementService {
 
     @Transactional
     public WorkspaceView installReferencePackage(String userId, String packageId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         OntologyReferencePackageService.ReferencePackage value =
                 referencePackages.load(packageId);
         draftSafety.validateDocument(value.document());
-        if (workspaces.findByOrgIdAndKey(orgId, value.document().key()).isPresent()) {
+        if (workspaces.findByCompanyIdAndKey(companyId, value.document().key()).isPresent()) {
             throw new ConflictException("ONTOLOGY_KEY_CONFLICT");
         }
         OntologyWorkspaceEntity workspace = persistNewWorkspaceOrKeyConflict(
                 new OntologyWorkspaceEntity(
-                        orgId,
+                        companyId,
                         value.document().key(),
                         value.document().name(),
                         value.document().description(),
@@ -315,14 +315,14 @@ public class OntologyManagementService {
                         value.id(),
                         value.fingerprint()));
         OntologyWorkspaceEntity installed = drafts.saveDraft(
-                orgId, userId, workspace.getId(), 0L, value.document());
+                companyId, userId, workspace.getId(), 0L, value.document());
         return workspaceView(installed);
     }
 
     public List<SourceView> listDataSources(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
-        return dataSources.findByWorkspaceIdAndOrgIdOrderByIdAsc(
-                        workspaceId, workspace.getOrgId()).stream()
+        return dataSources.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        workspaceId, workspace.getCompanyId()).stream()
                 .map(this::sourceView)
                 .toList();
     }
@@ -333,7 +333,7 @@ public class OntologyManagementService {
             DataSourceMutationRequest request) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument current = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         DataSourceInput input = normalizedSourceInput(requireSourceInput(request));
         if (input.id() != null) {
             throw new IllegalArgumentException("ONTOLOGY_DATA_SOURCE_ID_SERVER_ASSIGNED");
@@ -358,7 +358,7 @@ public class OntologyManagementService {
             DataSourceMutationRequest request) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument current = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         DataSourceInput input = normalizedSourceInput(requireSourceInput(request));
         OntologyDocument.DataSource existing = current.dataSources().stream()
                 .filter(source -> Objects.equals(source.id(), dataSourceId))
@@ -397,7 +397,7 @@ public class OntologyManagementService {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         CatalogMutation<com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalObject>
                 discovered = catalog.discoverObjects(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspaceId,
                 dataSourceId,
@@ -418,7 +418,7 @@ public class OntologyManagementService {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         CatalogMutation<com.codehouse.ciciassistant.ontology.adapter.OntologyDataSourceAdapter.PhysicalField>
                 discovered = catalog.discoverFields(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspaceId,
                 dataSourceId,
@@ -441,10 +441,10 @@ public class OntologyManagementService {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         List<PhysicalObjectView> objectViews = new ArrayList<>();
         for (OntologyPhysicalObjectEntity object : objects
-                .findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, workspace.getOrgId())) {
+                .findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, workspace.getCompanyId())) {
             List<PhysicalFieldView> fieldViews = fields
-                    .findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                            object.getId(), workspaceId, workspace.getOrgId()).stream()
+                    .findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                            object.getId(), workspaceId, workspace.getCompanyId()).stream()
                     .map(this::physicalFieldView)
                     .toList();
             objectViews.add(new PhysicalObjectView(
@@ -461,8 +461,8 @@ public class OntologyManagementService {
 
     public List<MappingView> listMappings(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
-        return mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(
-                        workspaceId, workspace.getOrgId()).stream()
+        return mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
+                        workspaceId, workspace.getCompanyId()).stream()
                 .map(this::mappingView)
                 .toList();
     }
@@ -479,7 +479,7 @@ public class OntologyManagementService {
         }
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyDocument current = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         List<OntologyDocument.Mapping> replacements = request.mappings().stream()
                 .map(input -> toMapping(input, "MANUAL"))
                 .toList();
@@ -511,7 +511,7 @@ public class OntologyManagementService {
                 })
                 .toList();
         MappingBatchCommit committed = catalog.validateMappings(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspaceId,
                 request.expectedRevision(),
@@ -533,13 +533,13 @@ public class OntologyManagementService {
     public CompilePreviewView compilePreview(
             Long workspaceId,
             RevisionRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         OntologyWorkspaceEntity workspace = workspaces
-                .findForUpdateByIdAndOrgId(workspaceId, orgId)
+                .findForUpdateByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
         requireRevision(workspace, request == null ? null : request.expectedRevision());
         OntologyDocument document = drafts.loadDraft(
-                workspace.getOrgId(), workspaceId, workspace);
+                workspace.getCompanyId(), workspaceId, workspace);
         int nextVersion = workspace.getPublishedVersion() == null
                 ? 1 : workspace.getPublishedVersion() + 1;
         OntologyCompilerService.CompiledContracts compiled = compiler.compile(
@@ -559,7 +559,7 @@ public class OntologyManagementService {
             RevisionRequest request) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         return versionSummary(publisher.publish(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspaceId,
                 request == null ? null : request.expectedRevision()));
@@ -567,8 +567,8 @@ public class OntologyManagementService {
 
     public List<VersionSummaryView> listVersions(Long workspaceId) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
-        return versions.findByWorkspaceIdAndOrgIdOrderByVersionNoDesc(
-                        workspaceId, workspace.getOrgId()).stream()
+        return versions.findByWorkspaceIdAndCompanyIdOrderByVersionNoDesc(
+                        workspaceId, workspace.getCompanyId()).stream()
                 .map(this::versionSummary)
                 .toList();
     }
@@ -576,8 +576,8 @@ public class OntologyManagementService {
     public VersionDetailView getVersion(Long workspaceId, Integer versionNo) {
         OntologyWorkspaceEntity workspace = requireWorkspace(workspaceId);
         OntologyVersionEntity version = versions
-                .findByWorkspaceIdAndOrgIdAndVersionNo(
-                        workspaceId, workspace.getOrgId(), versionNo)
+                .findByWorkspaceIdAndCompanyIdAndVersionNo(
+                        workspaceId, workspace.getCompanyId(), versionNo)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_VERSION_NOT_FOUND"));
         OntologyDocument snapshot = readJson(
                 version.getSnapshotJson(), OntologyDocument.class, "ONTOLOGY_VERSION_INVALID");
@@ -597,14 +597,14 @@ public class OntologyManagementService {
             OntologyDocument document) {
         draftSafety.validateDocument(document);
         OntologyWorkspaceEntity saved = drafts.saveDraft(
-                workspace.getOrgId(),
+                workspace.getCompanyId(),
                 userId,
                 workspace.getId(),
                 expectedRevision,
                 document);
         return draftView(
                 saved,
-                drafts.loadDraft(saved.getOrgId(), saved.getId(), saved));
+                drafts.loadDraft(saved.getCompanyId(), saved.getId(), saved));
     }
 
     private DraftView draftView(OntologyWorkspaceEntity workspace, OntologyDocument document) {
@@ -616,8 +616,8 @@ public class OntologyManagementService {
                 workspace.getDraftRevision(),
                 workspace.getPublishedVersion(),
                 sanitizeDocument(document),
-                dataSources.findByWorkspaceIdAndOrgIdOrderByIdAsc(
-                                workspace.getId(), workspace.getOrgId()).stream()
+                dataSources.findByWorkspaceIdAndCompanyIdOrderByIdAsc(
+                                workspace.getId(), workspace.getCompanyId()).stream()
                         .map(this::sourceView)
                         .toList());
     }
@@ -685,7 +685,7 @@ public class OntologyManagementService {
             OntologyWorkspaceEntity workspace) {
         try {
             OntologyWorkspaceEntity saved = persistence.saveForCurrentOrg(workspace);
-            persistence.flushForCurrentOrg(workspace.getOrgId());
+            persistence.flushForCurrentOrg(workspace.getCompanyId());
             return saved;
         } catch (DataIntegrityViolationException exception) {
             if (isWorkspaceKeyUniqueViolation(exception)) {
@@ -887,8 +887,8 @@ public class OntologyManagementService {
     }
 
     private OntologyWorkspaceEntity requireWorkspace(Long workspaceId) {
-        String orgId = TenantContext.requireOrgId();
-        return workspaces.findByIdAndOrgId(workspaceId, orgId)
+        String companyId = TenantContext.requireCompanyId();
+        return workspaces.findByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("ONTOLOGY_NOT_FOUND"));
     }
 

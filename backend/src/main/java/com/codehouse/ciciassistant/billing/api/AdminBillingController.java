@@ -27,26 +27,26 @@ public class AdminBillingController {
 
     @GetMapping("/overview")
     public ApiResponse<AdminBillingOverviewView> overview() {
-        return ApiResponse.ok(adminBillingService.overview(TenantContext.requireOrgId()));
+        return ApiResponse.ok(adminBillingService.overview(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/subscription")
     public ApiResponse<AdminSubscriptionView> subscription() {
-        return ApiResponse.ok(adminBillingService.subscription(TenantContext.requireOrgId()));
+        return ApiResponse.ok(adminBillingService.subscription(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/usage-events")
     public ApiResponse<List<UsageEventView>> usageEvents() {
-        return ApiResponse.ok(adminBillingService.usageEvents(TenantContext.requireOrgId()));
+        return ApiResponse.ok(adminBillingService.usageEvents(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/ledger")
     public ApiResponse<List<LedgerEntryView>> ledger() {
-        return ApiResponse.ok(adminBillingService.ledger(TenantContext.requireOrgId()));
+        return ApiResponse.ok(adminBillingService.ledger(TenantContext.requireCompanyId()));
     }
 
     @GetMapping("/quota")
     public ApiResponse<List<QuotaWarningView>> quota() {
-        return ApiResponse.ok(adminBillingService.quota(TenantContext.requireOrgId()));
+        return ApiResponse.ok(adminBillingService.quota(TenantContext.requireCompanyId()));
     }
 }

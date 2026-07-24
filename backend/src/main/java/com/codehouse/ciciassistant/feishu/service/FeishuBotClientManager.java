@@ -36,14 +36,14 @@ public class FeishuBotClientManager {
                 feishuBotConfigService.listEnabledConfigs().forEach(this::startOrRefreshClient));
     }
 
-    public void refreshOrg(String orgId) {
-        feishuBotConfigService.getEnabledConfig(orgId)
-                .ifPresentOrElse(this::startOrRefreshClient, () -> stopClient(orgId));
+    public void refreshOrg(String companyId) {
+        feishuBotConfigService.getEnabledConfig(companyId)
+                .ifPresentOrElse(this::startOrRefreshClient, () -> stopClient(companyId));
     }
 
     private synchronized void startOrRefreshClient(FeishuBotConfigService.FeishuBotConfig config) {
         String signature = config.appId() + "::" + config.appSecret();
-        ManagedClient existing = managedClients.get(config.orgId());
+        ManagedClient existing = managedClients.get(config.companyId());
         if (existing != null && existing.signature().equals(signature)) {
             return;
         }
@@ -55,7 +55,7 @@ public class FeishuBotClientManager {
                 .onP2MessageReceiveV1(new ImService.P2MessageReceiveV1Handler() {
                     @Override
                     public void handle(P2MessageReceiveV1 event) {
-                        feishuBotEventBridgeService.acceptMessageEvent(config.orgId(), event);
+                        feishuBotEventBridgeService.acceptMessageEvent(config.companyId(), event);
                     }
                 })
                 .build();
@@ -64,15 +64,15 @@ public class FeishuBotClientManager {
                 .eventHandler(eventDispatcher)
                 .build();
         wsClient.start();
-        managedClients.put(config.orgId(), new ManagedClient(signature, wsClient));
-        log.info("Feishu long connection started for org {}", config.orgId());
+        managedClients.put(config.companyId(), new ManagedClient(signature, wsClient));
+        log.info("Feishu long connection started for org {}", config.companyId());
     }
 
-    private synchronized void stopClient(String orgId) {
-        ManagedClient removed = managedClients.remove(orgId);
+    private synchronized void stopClient(String companyId) {
+        ManagedClient removed = managedClients.remove(companyId);
         if (removed != null) {
             shutdownSdkClient(removed.client());
-            log.info("Feishu long connection stopped for org {}", orgId);
+            log.info("Feishu long connection stopped for org {}", companyId);
         }
     }
 

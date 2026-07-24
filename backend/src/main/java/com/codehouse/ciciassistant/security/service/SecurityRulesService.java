@@ -30,30 +30,30 @@ public class SecurityRulesService {
         this.safetyGatewayService = safetyGatewayService;
     }
 
-    public Map<String, Object> overview(String orgId) {
-        long totalEvents = eventRepository.countByOrgId(orgId);
+    public Map<String, Object> overview(String companyId) {
+        long totalEvents = eventRepository.countByCompanyId(companyId);
         return Map.of(
-                "totalRules", ruleRepository.findByOrgIdOrderByUpdatedAtDescIdDesc(orgId).size(),
-                "enabledRules", ruleRepository.findByOrgIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(orgId).size(),
+                "totalRules", ruleRepository.findByCompanyIdOrderByUpdatedAtDescIdDesc(companyId).size(),
+                "enabledRules", ruleRepository.findByCompanyIdAndEnabledTrueOrderByUpdatedAtDescIdDesc(companyId).size(),
                 "totalEvents", totalEvents,
-                "blockedEvents", eventRepository.countByOrgIdAndAction(orgId, "BLOCK"),
-                "reviewEvents", eventRepository.countByOrgIdAndAction(orgId, "REVIEW"),
-                "pendingReviews", eventRepository.countByOrgIdAndReviewedFalse(orgId),
+                "blockedEvents", eventRepository.countByCompanyIdAndAction(companyId, "BLOCK"),
+                "reviewEvents", eventRepository.countByCompanyIdAndAction(companyId, "REVIEW"),
+                "pendingReviews", eventRepository.countByCompanyIdAndReviewedFalse(companyId),
                 "policyVersion", "builtin-v1"
         );
     }
 
-    public List<RuleView> listRules(String orgId) {
-        return ruleRepository.findByOrgIdOrderByUpdatedAtDescIdDesc(orgId).stream()
+    public List<RuleView> listRules(String companyId) {
+        return ruleRepository.findByCompanyIdOrderByUpdatedAtDescIdDesc(companyId).stream()
                 .map(this::toRuleView)
                 .toList();
     }
 
     @Transactional
-    public RuleView createRule(String orgId, RuleCommand command) {
+    public RuleView createRule(String companyId, RuleCommand command) {
         NormalizedRule normalized = normalize(command);
         SecurityRuleEntity entity = new SecurityRuleEntity(
-                orgId,
+                companyId,
                 normalized.name(),
                 normalized.ruleType(),
                 normalized.category(),
@@ -68,8 +68,8 @@ public class SecurityRulesService {
     }
 
     @Transactional
-    public RuleView updateRule(String orgId, Long id, RuleCommand command) {
-        SecurityRuleEntity entity = ruleRepository.findByIdAndOrgId(id, orgId)
+    public RuleView updateRule(String companyId, Long id, RuleCommand command) {
+        SecurityRuleEntity entity = ruleRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Security rule not found"));
         NormalizedRule normalized = normalize(command);
         entity.update(
@@ -86,10 +86,10 @@ public class SecurityRulesService {
         return toRuleView(ruleRepository.save(entity));
     }
 
-    public TestResult testRule(String orgId, String text, RuleCommand command) {
+    public TestResult testRule(String companyId, String text, RuleCommand command) {
         NormalizedRule normalized = normalize(command);
         SecurityRuleEntity draft = new SecurityRuleEntity(
-                orgId,
+                companyId,
                 normalized.name(),
                 normalized.ruleType(),
                 normalized.category(),
@@ -101,21 +101,21 @@ public class SecurityRulesService {
                 normalized.description()
         );
         SafetyGatewayService.SafetyDecision decision =
-                safetyGatewayService.checkWithDraftRule(orgId, "rule-test", "RULE_TEST", text, draft);
+                safetyGatewayService.checkWithDraftRule(companyId, "rule-test", "RULE_TEST", text, draft);
         return new TestResult(decision.action(), decision.safeText(), decision.findings());
     }
 
-    public List<EventView> listEvents(String orgId, Boolean reviewed, int limit) {
+    public List<EventView> listEvents(String companyId, Boolean reviewed, int limit) {
         PageRequest pageRequest = PageRequest.of(0, Math.min(Math.max(limit, 1), 100));
         List<SecurityDetectionEventEntity> rows = reviewed == null
-                ? eventRepository.findByOrgIdOrderByCreatedAtDescIdDesc(orgId, pageRequest)
-                : eventRepository.findByOrgIdAndReviewedOrderByCreatedAtDescIdDesc(orgId, reviewed, pageRequest);
+                ? eventRepository.findByCompanyIdOrderByCreatedAtDescIdDesc(companyId, pageRequest)
+                : eventRepository.findByCompanyIdAndReviewedOrderByCreatedAtDescIdDesc(companyId, reviewed, pageRequest);
         return rows.stream().map(this::toEventView).toList();
     }
 
     @Transactional
-    public EventView reviewEvent(String orgId, Long id, ReviewCommand command, String reviewer) {
-        SecurityDetectionEventEntity event = eventRepository.findByIdAndOrgId(id, orgId)
+    public EventView reviewEvent(String companyId, Long id, ReviewCommand command, String reviewer) {
+        SecurityDetectionEventEntity event = eventRepository.findByIdAndCompanyId(id, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Security event not found"));
         event.review(normalized(command.result(), "APPROVED"), text(command.note(), 500), reviewer);
         return toEventView(eventRepository.save(event));

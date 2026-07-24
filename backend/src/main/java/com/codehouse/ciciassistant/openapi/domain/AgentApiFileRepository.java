@@ -7,14 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentApiFileRepository extends JpaRepository<AgentApiFileEntity, String> {
 
-    Optional<AgentApiFileEntity> findByFileIdAndOrgIdAndCredentialIdAndAgentId(
+    Optional<AgentApiFileEntity> findByFileIdAndCompanyIdAndCredentialIdAndAgentId(
             String fileId,
-            String orgId,
+            String companyId,
             Long credentialId,
             String agentId);
 
-    List<AgentApiFileEntity> findByOrgIdAndCredentialIdAndAgentIdAndFileIdIn(
-            String orgId,
+    List<AgentApiFileEntity> findByCompanyIdAndCredentialIdAndAgentIdAndFileIdIn(
+            String companyId,
             Long credentialId,
             String agentId,
             Collection<String> fileIds);

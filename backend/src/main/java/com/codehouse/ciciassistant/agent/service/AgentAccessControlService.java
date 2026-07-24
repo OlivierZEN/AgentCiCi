@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AgentAccessControlService {
 
-    private static final Set<String> PRINCIPAL_TYPES = Set.of("ORG", "USER", "SYSTEM_ROLE", "GROUP", "CUSTOM_ROLE", "DEPARTMENT");
+    private static final Set<String> PRINCIPAL_TYPES = Set.of("COMPANY", "USER", "SYSTEM_ROLE", "GROUP", "CUSTOM_ROLE", "DEPARTMENT");
 
     private final AgentAccessGrantRepository grantRepository;
     private final AgentPermissionAuditRepository auditRepository;
@@ -48,10 +48,10 @@ public class AgentAccessControlService {
         this.objectMapper = objectMapper;
     }
 
-    public boolean can(String orgId, String userId, List<String> roles, String agentId, AgentPermission permission) {
-        AgentDefinitionEntity agent = agentDefinitionRepository.findByOrgIdAndAgentIdAndEnabledTrue(orgId, normalizeAgentId(agentId))
+    public boolean can(String companyId, String userId, List<String> roles, String agentId, AgentPermission permission) {
+        AgentDefinitionEntity agent = agentDefinitionRepository.findByCompanyIdAndAgentIdAndEnabledTrue(companyId, normalizeAgentId(agentId))
                 .orElse(null);
-        UserEntity member = activeMember(orgId, userId);
+        UserEntity member = activeMember(companyId, userId);
         if (agent == null || member == null) {
             return false;
         }
@@ -61,48 +61,48 @@ public class AgentAccessControlService {
         }
         Set<String> permissionCandidates = permissionCandidates(permission);
         Instant now = Instant.now();
-        List<AgentAccessGrantEntity> grants = grantRepository.findByOrgIdAndAgentIdAndStatus(
-                orgId,
+        List<AgentAccessGrantEntity> grants = grantRepository.findByCompanyIdAndAgentIdAndStatus(
+                companyId,
                 agent.getAgentId(),
                 AgentAccessGrantEntity.STATUS_ACTIVE);
         for (AgentAccessGrantEntity grant : grants) {
             if (!grant.isCurrentlyActive(now) || !permissionCandidates.contains(grant.getPermission())) {
                 continue;
             }
-            if (principalMatches(grant, orgId, userId, effectiveRoles)) {
+            if (principalMatches(grant, companyId, userId, effectiveRoles)) {
                 return true;
             }
         }
         return false;
     }
 
-    public void require(String orgId, String userId, List<String> roles, String agentId, AgentPermission permission) {
-        if (!can(orgId, userId, roles, agentId, permission)) {
-            recordAudit(orgId, normalizeAgentId(agentId), userId, "RUNTIME_DENIED", null, null, permission.name(),
+    public void require(String companyId, String userId, List<String> roles, String agentId, AgentPermission permission) {
+        if (!can(companyId, userId, roles, agentId, permission)) {
+            recordAudit(companyId, normalizeAgentId(agentId), userId, "RUNTIME_DENIED", null, null, permission.name(),
                     null, null, "缺少 Agent " + permission.name() + " 权限", null);
             throw new ForbiddenException("缺少 Agent " + permission.name() + " 权限");
         }
     }
 
-    public void recordOpenApiRunAsDenied(String orgId, String agentId, String runAsUserId, String reason, String traceId) {
-        recordAudit(orgId, normalizeAgentId(agentId), runAsUserId, "OPENAPI_RUN_AS_DENIED", "USER", runAsUserId,
+    public void recordOpenApiRunAsDenied(String companyId, String agentId, String runAsUserId, String reason, String traceId) {
+        recordAudit(companyId, normalizeAgentId(agentId), runAsUserId, "OPENAPI_RUN_AS_DENIED", "USER", runAsUserId,
                 AgentPermission.RUN.name(), null, null, reason, traceId);
     }
 
-    public Set<AgentPermission> effectivePermissions(String orgId, String userId, List<String> roles, String agentId) {
+    public Set<AgentPermission> effectivePermissions(String companyId, String userId, List<String> roles, String agentId) {
         LinkedHashSet<AgentPermission> result = new LinkedHashSet<>();
         for (AgentPermission permission : AgentPermission.values()) {
-            if (can(orgId, userId, roles, agentId, permission)) {
+            if (can(companyId, userId, roles, agentId, permission)) {
                 result.add(permission);
             }
         }
         return result;
     }
 
-    public List<GrantView> listGrants(String orgId, String agentId) {
-        requireAgent(orgId, agentId);
-        return grantRepository.findByOrgIdAndAgentIdAndStatusOrderByPrincipalTypeAscPrincipalIdAscPermissionAsc(
-                        orgId,
+    public List<GrantView> listGrants(String companyId, String agentId) {
+        requireAgent(companyId, agentId);
+        return grantRepository.findByCompanyIdAndAgentIdAndStatusOrderByPrincipalTypeAscPrincipalIdAscPermissionAsc(
+                        companyId,
                         normalizeAgentId(agentId),
                         AgentAccessGrantEntity.STATUS_ACTIVE)
                 .stream()
@@ -112,15 +112,15 @@ public class AgentAccessControlService {
     }
 
     @Transactional
-    public List<GrantView> replaceGrants(String orgId, String agentId, String actorUserId, ReplaceGrantsCommand command) {
-        AgentDefinitionEntity agent = requireAgent(orgId, agentId);
-        List<GrantView> before = listGrants(orgId, agent.getAgentId());
-        grantRepository.findByOrgIdAndAgentIdAndStatus(orgId, agent.getAgentId(), AgentAccessGrantEntity.STATUS_ACTIVE)
+    public List<GrantView> replaceGrants(String companyId, String agentId, String actorUserId, ReplaceGrantsCommand command) {
+        AgentDefinitionEntity agent = requireAgent(companyId, agentId);
+        List<GrantView> before = listGrants(companyId, agent.getAgentId());
+        grantRepository.findByCompanyIdAndAgentIdAndStatus(companyId, agent.getAgentId(), AgentAccessGrantEntity.STATUS_ACTIVE)
                 .forEach(AgentAccessGrantEntity::revoke);
         List<GrantInput> inputs = command == null || command.grants() == null ? List.of() : command.grants();
         Set<String> seen = new LinkedHashSet<>();
         for (GrantInput input : inputs) {
-            NormalizedPrincipal principal = normalizePrincipal(orgId, input.principalType(), input.principalId());
+            NormalizedPrincipal principal = normalizePrincipal(companyId, input.principalType(), input.principalId());
             List<AgentPermission> permissions = normalizePermissions(input.permissions());
             for (AgentPermission permission : permissions) {
                 String key = principal.type() + "|" + (principal.id() == null ? "" : principal.id()) + "|" + permission.name();
@@ -128,7 +128,7 @@ public class AgentAccessControlService {
                     continue;
                 }
                 grantRepository.save(new AgentAccessGrantEntity(
-                        orgId,
+                        companyId,
                         agent.getAgentId(),
                         principal.type(),
                         principal.id(),
@@ -138,17 +138,17 @@ public class AgentAccessControlService {
                         input.expiresAt()));
             }
         }
-        List<GrantView> after = listGrants(orgId, agent.getAgentId());
-        recordAudit(orgId, agent.getAgentId(), actorUserId, "BULK_REPLACE", null, null, null,
+        List<GrantView> after = listGrants(companyId, agent.getAgentId());
+        recordAudit(companyId, agent.getAgentId(), actorUserId, "BULK_REPLACE", null, null, null,
                 toJson(before), toJson(after), "Agent access grants replaced", null);
         return after;
     }
 
-    private UserEntity activeMember(String orgId, String userId) {
+    private UserEntity activeMember(String companyId, String userId) {
         if (userId == null || userId.isBlank()) {
             return null;
         }
-        return userRepository.findByIdAndOrg_Id(userId, orgId)
+        return userRepository.findByIdAndCompany_Id(userId, companyId)
                 .filter(member -> UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus()))
                 .orElse(null);
     }
@@ -161,9 +161,9 @@ public class AgentAccessControlService {
         return userId != null && !userId.isBlank() && userId.equals(agent.getOwnerUserId());
     }
 
-    private boolean principalMatches(AgentAccessGrantEntity grant, String orgId, String userId, List<String> roles) {
+    private boolean principalMatches(AgentAccessGrantEntity grant, String companyId, String userId, List<String> roles) {
         return switch (grant.getPrincipalType()) {
-            case "ORG" -> grant.getPrincipalId() == null || grant.getPrincipalId().isBlank() || orgId.equals(grant.getPrincipalId());
+            case "COMPANY" -> grant.getPrincipalId() == null || grant.getPrincipalId().isBlank() || companyId.equals(grant.getPrincipalId());
             case "USER" -> userId.equals(grant.getPrincipalId());
             case "SYSTEM_ROLE" -> roles != null && roles.contains(grant.getPrincipalId());
             default -> false;
@@ -179,24 +179,24 @@ public class AgentAccessControlService {
         return candidates;
     }
 
-    private AgentDefinitionEntity requireAgent(String orgId, String agentId) {
+    private AgentDefinitionEntity requireAgent(String companyId, String agentId) {
         String normalized = normalizeAgentId(agentId);
-        return agentDefinitionRepository.findByOrgIdAndAgentIdAndEnabledTrue(orgId, normalized)
+        return agentDefinitionRepository.findByCompanyIdAndAgentIdAndEnabledTrue(companyId, normalized)
                 .orElseThrow(() -> new ResourceNotFoundException("Agent not found: " + normalized));
     }
 
-    private NormalizedPrincipal normalizePrincipal(String orgId, String principalType, String principalId) {
+    private NormalizedPrincipal normalizePrincipal(String companyId, String principalType, String principalId) {
         String type = normalizeUpper(principalType, "principalType");
         if (!PRINCIPAL_TYPES.contains(type)) {
             throw new IllegalArgumentException("Unsupported principalType: " + principalType);
         }
         String id = principalId == null || principalId.isBlank() ? null : principalId.trim();
-        if ("ORG".equals(type)) {
-            return new NormalizedPrincipal(type, id == null ? null : orgId);
+        if ("COMPANY".equals(type)) {
+            return new NormalizedPrincipal(type, id == null ? null : companyId);
         }
         if ("USER".equals(type)) {
             String userId = requireText(id, "principalId");
-            userRepository.findByIdAndOrg_Id(userId, orgId)
+            userRepository.findByIdAndCompany_Id(userId, companyId)
                     .filter(member -> UserEntity.STATUS_ACTIVE.equals(member.getMemberStatus()))
                     .orElseThrow(() -> new IllegalArgumentException("USER principal must be an active org member"));
             return new NormalizedPrincipal(type, userId);
@@ -238,7 +238,7 @@ public class AgentAccessControlService {
                 item.getUpdatedAt());
     }
 
-    private void recordAudit(String orgId,
+    private void recordAudit(String companyId,
                              String agentId,
                              String actorUserId,
                              String action,
@@ -251,7 +251,7 @@ public class AgentAccessControlService {
                              String traceId) {
         try {
             auditRepository.save(new AgentPermissionAuditEntity(
-                    orgId,
+                    companyId,
                     agentId,
                     actorUserId,
                     action,
@@ -295,8 +295,8 @@ public class AgentAccessControlService {
         }
     }
 
-    public Map<String, Object> permissionPayload(String orgId, String userId, List<String> roles, String agentId) {
-        Set<AgentPermission> permissions = effectivePermissions(orgId, userId, roles, agentId);
+    public Map<String, Object> permissionPayload(String companyId, String userId, List<String> roles, String agentId) {
+        Set<AgentPermission> permissions = effectivePermissions(companyId, userId, roles, agentId);
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("permissions", permissions.stream().map(AgentPermission::name).toList());
         payload.put("canManage", permissions.contains(AgentPermission.MANAGE));

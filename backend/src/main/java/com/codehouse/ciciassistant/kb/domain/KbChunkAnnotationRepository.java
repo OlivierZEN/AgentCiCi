@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbChunkAnnotationRepository extends JpaRepository<KbChunkAnnotationEntity, Long> {
 
-    List<KbChunkAnnotationEntity> findTop100ByOrgIdAndKnowledgeBaseIdOrderByUpdatedAtDesc(String orgId, Long knowledgeBaseId);
+    List<KbChunkAnnotationEntity> findTop100ByCompanyIdAndKnowledgeBaseIdOrderByUpdatedAtDesc(String companyId, Long knowledgeBaseId);
 
-    Optional<KbChunkAnnotationEntity> findByOrgIdAndChunkIdAndFieldKey(String orgId, Long chunkId, String fieldKey);
+    Optional<KbChunkAnnotationEntity> findByCompanyIdAndChunkIdAndFieldKey(String companyId, Long chunkId, String fieldKey);
 }

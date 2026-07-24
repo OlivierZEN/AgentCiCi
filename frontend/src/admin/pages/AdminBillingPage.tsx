@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAdminToken } from "../useAdminToken";
 
 type AdminSubscription = {
-  orgId: string;
+  companyId: string;
   deploymentMode: string;
   deploymentModeLabel: string;
   editionCode: string;

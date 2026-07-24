@@ -75,7 +75,7 @@ public class AgentOpenApiAuthService {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_api_ip_denied", "Client IP is not allowed");
         }
         AgentDefinitionEntity agent = agentDefinitionRepository
-                .findByOrgIdAndAgentId(credential.getOrgId(), credential.getAgentId())
+                .findByCompanyIdAndAgentId(credential.getCompanyId(), credential.getAgentId())
                 .orElseThrow(() -> new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found"));
         if (!agent.isEnabled()) {
             throw new AgentOpenApiException(HttpStatus.NOT_FOUND, "agent_not_found", "Agent not found");
@@ -83,20 +83,20 @@ public class AgentOpenApiAuthService {
         if (agent.getPublishedVersionId() == null) {
             throw new AgentOpenApiException(HttpStatus.CONFLICT, "agent_not_published", "Agent is not published");
         }
-        if (!channelBindingRepository.existsByOrgIdAndAgentIdAndChannelIdAndEnabledTrue(
-                credential.getOrgId(),
+        if (!channelBindingRepository.existsByCompanyIdAndAgentIdAndChannelIdAndEnabledTrue(
+                credential.getCompanyId(),
                 credential.getAgentId(),
                 "api")) {
             throw new AgentOpenApiException(HttpStatus.FORBIDDEN, "agent_channel_disabled", "Agent API channel is disabled");
         }
         if (!accessControlService.can(
-                credential.getOrgId(),
+                credential.getCompanyId(),
                 credential.getRunAsUserId(),
                 List.of(),
                 credential.getAgentId(),
                 AgentPermission.RUN)) {
             accessControlService.recordOpenApiRunAsDenied(
-                    credential.getOrgId(),
+                    credential.getCompanyId(),
                     credential.getAgentId(),
                     credential.getRunAsUserId(),
                     "run-as user lacks target Agent RUN permission",

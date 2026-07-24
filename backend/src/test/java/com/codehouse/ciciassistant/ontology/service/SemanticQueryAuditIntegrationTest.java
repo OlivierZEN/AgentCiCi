@@ -42,15 +42,15 @@ class SemanticQueryAuditIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private String orgId;
+    private String companyId;
 
     @AfterEach
     void cleanUp() {
-        if (orgId != null) {
+        if (companyId != null) {
             new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
-                jdbcTemplate.update("DELETE FROM ontology_query_audit WHERE org_id = ?", orgId);
-                jdbcTemplate.update("DELETE FROM ontology_version WHERE org_id = ?", orgId);
-                jdbcTemplate.update("DELETE FROM ontology_workspace WHERE org_id = ?", orgId);
+                jdbcTemplate.update("DELETE FROM ontology_query_audit WHERE company_id = ?", companyId);
+                jdbcTemplate.update("DELETE FROM ontology_version WHERE company_id = ?", companyId);
+                jdbcTemplate.update("DELETE FROM ontology_workspace WHERE company_id = ?", companyId);
             });
         }
         TenantContext.clear();
@@ -58,16 +58,16 @@ class SemanticQueryAuditIntegrationTest {
 
     @Test
     void failedAuditCommitsEvenWhenCallerTransactionRollsBackAndRethrows() throws Exception {
-        orgId = "org-audit-" + UUID.randomUUID();
+        companyId = "org-audit-" + UUID.randomUUID();
         String ontologyKey = "delivery-" + UUID.randomUUID();
-        TenantContext.setOrgId(orgId);
+        TenantContext.setCompanyId(companyId);
         TenantContext.setUserId("user-a");
         Long workspaceId = seedPublishedSnapshot(ontologyKey);
         TransactionTemplate callerTransaction = new TransactionTemplate(transactionManager);
 
         assertThatThrownBy(() -> callerTransaction.executeWithoutResult(status -> {
             try {
-                queries.execute(orgId, "user-a", new SemanticQueryService.SemanticQuery(
+                queries.execute(companyId, "user-a", new SemanticQueryService.SemanticQuery(
                         ontologyKey,
                         1,
                         "task",
@@ -82,8 +82,8 @@ class SemanticQueryAuditIntegrationTest {
         })).hasMessage("QUERY_FIELD_UNKNOWN");
 
         List<OntologyQueryAuditEntity> persisted = new TransactionTemplate(transactionManager)
-                .execute(status -> audits.findByWorkspaceIdAndOrgIdOrderByCreatedAtDesc(
-                        workspaceId, orgId));
+                .execute(status -> audits.findByWorkspaceIdAndCompanyIdOrderByCreatedAtDesc(
+                        workspaceId, companyId));
         assertThat(persisted).hasSize(1);
         assertThat(persisted.getFirst().getStatus()).isEqualTo("FAILED");
         assertThat(persisted.getFirst().getErrorCode()).isEqualTo("QUERY_FIELD_UNKNOWN");
@@ -96,11 +96,11 @@ class SemanticQueryAuditIntegrationTest {
         return seed.execute(status -> {
             OntologyWorkspaceEntity workspace = persistence.saveForCurrentOrg(
                     new OntologyWorkspaceEntity(
-                            orgId, ontologyKey, "审计测试", "", "user-a"));
+                            companyId, ontologyKey, "审计测试", "", "user-a"));
             OntologyDocument document = snapshot(ontologyKey);
             try {
                 persistence.saveForCurrentOrg(new OntologyVersionEntity(
-                        orgId,
+                        companyId,
                         workspace.getId(),
                         1,
                         1L,

@@ -19,10 +19,10 @@ public class SessionRealtimeEventService {
 
     private final ConcurrentMap<String, Subscription> subscriptions = new ConcurrentHashMap<>();
 
-    public SseEmitter subscribe(String orgId, String userId) {
+    public SseEmitter subscribe(String companyId, String userId) {
         String subscriptionId = UUID.randomUUID().toString();
         SseEmitter emitter = new SseEmitter(EMITTER_TIMEOUT_MS);
-        Subscription subscription = new Subscription(subscriptionId, orgId, userId, emitter);
+        Subscription subscription = new Subscription(subscriptionId, companyId, userId, emitter);
         subscriptions.put(subscriptionId, subscription);
 
         emitter.onCompletion(() -> remove(subscriptionId));
@@ -43,18 +43,18 @@ public class SessionRealtimeEventService {
         return emitter;
     }
 
-    public void publishSessionUpdated(String orgId, String userId, String sessionId, boolean orgScoped, String trigger) {
+    public void publishSessionUpdated(String companyId, String userId, String sessionId, boolean companyScoped, String trigger) {
         Map<String, Object> payload = Map.of(
                 "sessionId", sessionId,
-                "scope", orgScoped ? "org" : "user",
+                "scope", companyScoped ? "company" : "user",
                 "trigger", trigger,
                 "updatedAt", Instant.now().toString()
         );
         subscriptions.forEach((subscriptionId, subscription) -> {
-            if (!subscription.orgId().equals(orgId)) {
+            if (!subscription.companyId().equals(companyId)) {
                 return;
             }
-            if (!orgScoped && !subscription.userId().equals(userId)) {
+            if (!companyScoped && !subscription.userId().equals(userId)) {
                 return;
             }
             try {
@@ -72,6 +72,6 @@ public class SessionRealtimeEventService {
         subscriptions.remove(subscriptionId);
     }
 
-    private record Subscription(String id, String orgId, String userId, SseEmitter emitter) {
+    private record Subscription(String id, String companyId, String userId, SseEmitter emitter) {
     }
 }

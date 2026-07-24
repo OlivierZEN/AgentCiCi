@@ -6,18 +6,18 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface SkillVersionRepository extends JpaRepository<SkillVersionEntity, Long> {
 
-    Optional<SkillVersionEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<SkillVersionEntity> findByIdAndCompanyId(Long id, String companyId);
 
-    List<SkillVersionEntity> findByOrgIdAndIdIn(String orgId, List<Long> ids);
+    List<SkillVersionEntity> findByCompanyIdAndIdIn(String companyId, List<Long> ids);
 
-    Optional<SkillVersionEntity> findTopByOrgIdAndSkillIdOrderByVersionNoDesc(String orgId, Long skillId);
+    Optional<SkillVersionEntity> findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(String companyId, Long skillId);
 
-    Optional<SkillVersionEntity> findByOrgIdAndSkillIdAndVersionNo(String orgId, Long skillId, Integer versionNo);
+    Optional<SkillVersionEntity> findByCompanyIdAndSkillIdAndVersionNo(String companyId, Long skillId, Integer versionNo);
 
-    Optional<SkillVersionEntity> findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
-            String orgId, Long skillId, String publishStatus);
+    Optional<SkillVersionEntity> findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(
+            String companyId, Long skillId, String publishStatus);
 
-    List<SkillVersionEntity> findByOrgIdAndSkillIdAndRestoreVisibleTrueOrderByVersionNoDesc(String orgId, Long skillId);
+    List<SkillVersionEntity> findByCompanyIdAndSkillIdAndRestoreVisibleTrueOrderByVersionNoDesc(String companyId, Long skillId);
 
-    List<SkillVersionEntity> findByOrgIdAndSkillIdOrderByVersionNoDesc(String orgId, Long skillId);
+    List<SkillVersionEntity> findByCompanyIdAndSkillIdOrderByVersionNoDesc(String companyId, Long skillId);
 }

@@ -9,8 +9,8 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "organization_export_job")
-public class OrganizationExportJobEntity {
+@Table(name = "company_export_job")
+public class CompanyExportJobEntity {
 
     public static final String STATUS_RUNNING = "RUNNING";
     public static final String STATUS_SUCCEEDED = "SUCCEEDED";
@@ -20,8 +20,8 @@ public class OrganizationExportJobEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "status", nullable = false, length = 32)
     private String status;
@@ -53,12 +53,12 @@ public class OrganizationExportJobEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationExportJobEntity() {
+    protected CompanyExportJobEntity() {
     }
 
-    public OrganizationExportJobEntity(String orgId, String requestedBy, String reason) {
+    public CompanyExportJobEntity(String companyId, String requestedBy, String reason) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.status = STATUS_RUNNING;
         this.requestedBy = requestedBy == null || requestedBy.isBlank() ? "system" : requestedBy.trim();
         this.reason = reason == null || reason.isBlank() ? null : reason.trim();
@@ -90,8 +90,8 @@ public class OrganizationExportJobEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getStatus() {

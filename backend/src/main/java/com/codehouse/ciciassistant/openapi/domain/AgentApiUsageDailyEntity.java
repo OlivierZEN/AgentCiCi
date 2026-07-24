@@ -17,8 +17,8 @@ public class AgentApiUsageDailyEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "credential_id", nullable = false)
     private Long credentialId;
@@ -44,8 +44,8 @@ public class AgentApiUsageDailyEntity {
     protected AgentApiUsageDailyEntity() {
     }
 
-    public AgentApiUsageDailyEntity(String orgId, Long credentialId, LocalDate usageDate) {
-        this.orgId = orgId;
+    public AgentApiUsageDailyEntity(String companyId, Long credentialId, LocalDate usageDate) {
+        this.companyId = companyId;
         this.credentialId = credentialId;
         this.usageDate = usageDate;
         this.callCount = 0;
@@ -56,7 +56,7 @@ public class AgentApiUsageDailyEntity {
     }
 
     public Long getId() { return id; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public Long getCredentialId() { return credentialId; }
     public LocalDate getUsageDate() { return usageDate; }
     public int getCallCount() { return callCount; }

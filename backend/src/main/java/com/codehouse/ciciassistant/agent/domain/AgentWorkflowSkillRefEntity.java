@@ -16,8 +16,8 @@ public class AgentWorkflowSkillRefEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "workflow_version_id", nullable = false)
     private Long workflowVersionId;
@@ -43,14 +43,14 @@ public class AgentWorkflowSkillRefEntity {
     protected AgentWorkflowSkillRefEntity() {
     }
 
-    public AgentWorkflowSkillRefEntity(String orgId,
+    public AgentWorkflowSkillRefEntity(String companyId,
                                        Long workflowVersionId,
                                        Long skillId,
                                        Long skillVersionId,
                                        String templateCode,
                                        Integer templateVersionNo,
                                        String referenceMode) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.workflowVersionId = workflowVersionId;
         this.skillId = skillId;
         this.skillVersionId = skillVersionId;
@@ -64,8 +64,8 @@ public class AgentWorkflowSkillRefEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public Long getWorkflowVersionId() {

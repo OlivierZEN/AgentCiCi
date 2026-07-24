@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserWorkflowVersionRepository extends JpaRepository<UserWorkflowVersionEntity, Long> {
 
-    List<UserWorkflowVersionEntity> findByOrgIdAndUserIdAndAgentIdOrderByVersionNoDesc(String orgId, String userId, String agentId);
+    List<UserWorkflowVersionEntity> findByCompanyIdAndUserIdAndAgentIdOrderByVersionNoDesc(String companyId, String userId, String agentId);
 
-    Optional<UserWorkflowVersionEntity> findTopByOrgIdAndUserIdAndAgentIdOrderByVersionNoDesc(String orgId, String userId, String agentId);
+    Optional<UserWorkflowVersionEntity> findTopByCompanyIdAndUserIdAndAgentIdOrderByVersionNoDesc(String companyId, String userId, String agentId);
 
-    Optional<UserWorkflowVersionEntity> findByOrgIdAndUserIdAndAgentIdAndVersionNo(String orgId, String userId, String agentId, Integer versionNo);
+    Optional<UserWorkflowVersionEntity> findByCompanyIdAndUserIdAndAgentIdAndVersionNo(String companyId, String userId, String agentId, Integer versionNo);
 
-    Optional<UserWorkflowVersionEntity> findByOrgIdAndUserIdAndAgentIdAndPublishStatus(String orgId, String userId, String agentId, String publishStatus);
+    Optional<UserWorkflowVersionEntity> findByCompanyIdAndUserIdAndAgentIdAndPublishStatus(String companyId, String userId, String agentId, String publishStatus);
 }

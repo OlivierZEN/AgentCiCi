@@ -4,19 +4,19 @@ import { writeAuthPayload } from "../auth/authStorage";
 import { LS_ADMIN_TOKEN } from "../constants";
 import { safeFetchJson } from "../utils/http";
 
-type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
-type OrganizationOption = { orgId: string; orgName: string; roleCode: string };
-type LoginPayload = AuthPayload & { requiresOrganizationSelection?: boolean; organizations?: OrganizationOption[] };
+type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; roles: string[] };
+type CompanyOption = { companyId: string; companyName: string; roleCode: string };
+type LoginPayload = AuthPayload & { requiresCompanySelection?: boolean; companies?: CompanyOption[] };
 
 function hasOrgAdminRole(roles: string[]): boolean {
   return roles.includes("OWNER") || roles.includes("ORG_ADMIN");
 }
 
-function hasAdminOrganizationRole(roleCode: string): boolean {
+function hasAdminCompanyRole(roleCode: string): boolean {
   return hasOrgAdminRole([roleCode]);
 }
 
-function formatOrganizationRole(roleCode: string): string {
+function formatCompanyRole(roleCode: string): string {
   if (roleCode === "OWNER") {
     return "Owner";
   }
@@ -31,18 +31,18 @@ export default function AdminLogin() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [notice, setNotice] = useState("组织管理员专用入口");
-  const [pendingOrganizations, setPendingOrganizations] = useState<OrganizationOption[]>([]);
+  const [pendingCompanies, setPendingCompanies] = useState<CompanyOption[]>([]);
   const [loginSubmitting, setLoginSubmitting] = useState(false);
 
-  const resetPendingOrganizations = () => {
-    if (pendingOrganizations.length > 0) {
-      setPendingOrganizations([]);
+  const resetPendingCompanies = () => {
+    if (pendingCompanies.length > 0) {
+      setPendingCompanies([]);
       setNotice("组织管理员专用入口");
     }
   };
 
   const completeAdminLogin = (payload: AuthPayload, message = "登录成功。") => {
-    setPendingOrganizations([]);
+    setPendingCompanies([]);
     writeAuthPayload(LS_ADMIN_TOKEN, payload);
     setNotice(message);
     nav("/admin", { replace: true });
@@ -65,14 +65,14 @@ export default function AdminLogin() {
         setNotice(`登录失败：${body?.message ?? `HTTP ${res.status}`}`);
         return;
       }
-      if (body.data?.requiresOrganizationSelection) {
-        const adminOrganizations = (body.data.organizations ?? []).filter((item) => hasAdminOrganizationRole(item.roleCode));
-        if (adminOrganizations.length === 0) {
-          setPendingOrganizations([]);
+      if (body.data?.requiresCompanySelection) {
+        const adminCompanies = (body.data.companies ?? []).filter((item) => hasAdminCompanyRole(item.roleCode));
+        if (adminCompanies.length === 0) {
+          setPendingCompanies([]);
           setNotice("该账号没有可进入的管理组织，请联系 Owner 或组织管理员授权。");
           return;
         }
-        setPendingOrganizations(adminOrganizations);
+        setPendingCompanies(adminCompanies);
         setNotice("请选择要进入的组织。");
         return;
       }
@@ -97,7 +97,7 @@ export default function AdminLogin() {
     }
   };
 
-  const loginToOrganization = async (targetOrgId: string) => {
+  const loginToCompany = async (targetCompanyId: string) => {
     if (loginSubmitting) {
       return;
     }
@@ -107,7 +107,7 @@ export default function AdminLogin() {
       const res = await fetch("/auth/password/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orgId: targetOrgId, identifier, password }),
+        body: JSON.stringify({ companyId: targetCompanyId, identifier, password }),
       });
       const { body } = await safeFetchJson<AuthPayload>(res);
       if (!res.ok || !body?.success || !body.data?.token) {
@@ -143,7 +143,7 @@ export default function AdminLogin() {
             <input
               value={identifier}
               onChange={(e) => {
-                resetPendingOrganizations();
+                resetPendingCompanies();
                 setIdentifier(e.target.value);
               }}
               inputMode="email"
@@ -154,24 +154,24 @@ export default function AdminLogin() {
               type="password"
               value={password}
               onChange={(e) => {
-                resetPendingOrganizations();
+                resetPendingCompanies();
                 setPassword(e.target.value);
               }}
               autoComplete="off"
             />
-            {pendingOrganizations.length > 0 ? (
+            {pendingCompanies.length > 0 ? (
               <div className="admin-login__org-choice" role="group" aria-label="选择要进入的组织">
                 <p className="admin-login__org-choice-title">选择要进入的组织</p>
-                {pendingOrganizations.map((item) => (
+                {pendingCompanies.map((item) => (
                   <button
-                    key={item.orgId}
+                    key={item.companyId}
                     type="button"
                     className="admin-login__org-option"
-                    onClick={() => loginToOrganization(item.orgId)}
+                    onClick={() => loginToCompany(item.companyId)}
                     disabled={loginSubmitting}
                   >
-                    <strong>{item.orgName}</strong>
-                    <small>{formatOrganizationRole(item.roleCode)}</small>
+                    <strong>{item.companyName}</strong>
+                    <small>{formatCompanyRole(item.roleCode)}</small>
                   </button>
                 ))}
               </div>

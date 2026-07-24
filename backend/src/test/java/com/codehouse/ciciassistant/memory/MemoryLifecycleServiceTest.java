@@ -18,8 +18,8 @@ import com.codehouse.ciciassistant.memory.domain.MemorySubjectRepository;
 import com.codehouse.ciciassistant.memory.service.MemoryLifecycleService;
 import com.codehouse.ciciassistant.memory.service.MemorySemanticRetrievalService;
 import com.codehouse.ciciassistant.ops.service.AuditService;
-import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyEntity;
-import com.codehouse.ciciassistant.platform.domain.OrganizationRetentionPolicyRepository;
+import com.codehouse.ciciassistant.platform.domain.CompanyRetentionPolicyEntity;
+import com.codehouse.ciciassistant.platform.domain.CompanyRetentionPolicyRepository;
 import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -35,16 +35,16 @@ class MemoryLifecycleServiceTest {
         MemoryCandidateRepository candidates=mock(MemoryCandidateRepository.class);
         MemoryConversationSnapshotRepository snapshots=mock(MemoryConversationSnapshotRepository.class);
         MemorySemanticRetrievalService semantic=mock(MemorySemanticRetrievalService.class);
-        OrganizationRetentionPolicyRepository policies=mock(OrganizationRetentionPolicyRepository.class);
+        CompanyRetentionPolicyRepository policies=mock(CompanyRetentionPolicyRepository.class);
         JdbcTemplate evidenceJdbc=mock(JdbcTemplate.class);
         AuditService audit=mock(AuditService.class);
         MemorySubjectEntity subject=subject(7L, "subject-a");
         MemoryRecordEntity record=record(8L, Instant.now().plusSeconds(300));
-        when(subjects.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef("org-a", "app-a", "EXTERNAL_USER", "subject-a"))
+        when(subjects.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef("org-a", "app-a", "EXTERNAL_USER", "subject-a"))
                 .thenReturn(Optional.of(subject));
-        when(records.findByOrgIdAndSubjectId("org-a", 7L)).thenReturn(List.of(record));
-        when(candidates.findByOrgIdAndSubjectId("org-a", 7L)).thenReturn(List.of());
-        when(snapshots.deleteByOrgIdAndSubjectId("org-a", 7L)).thenReturn(2L);
+        when(records.findByCompanyIdAndSubjectId("org-a", 7L)).thenReturn(List.of(record));
+        when(candidates.findByCompanyIdAndSubjectId("org-a", 7L)).thenReturn(List.of());
+        when(snapshots.deleteByCompanyIdAndSubjectId("org-a", 7L)).thenReturn(2L);
         when(semantic.remove(record)).thenReturn(false);
         when(policies.findById("org-a")).thenReturn(Optional.empty());
         when(evidenceJdbc.update(anyString(), any(), any(), any(), any(), any())).thenReturn(3);
@@ -68,8 +68,8 @@ class MemoryLifecycleServiceTest {
         MemoryCandidateRepository candidates=mock(MemoryCandidateRepository.class);
         MemoryConversationSnapshotRepository snapshots=mock(MemoryConversationSnapshotRepository.class);
         MemorySemanticRetrievalService semantic=mock(MemorySemanticRetrievalService.class);
-        OrganizationRetentionPolicyRepository policies=mock(OrganizationRetentionPolicyRepository.class);
-        OrganizationRetentionPolicyEntity held=new OrganizationRetentionPolicyEntity("org-a");
+        CompanyRetentionPolicyRepository policies=mock(CompanyRetentionPolicyRepository.class);
+        CompanyRetentionPolicyEntity held=new CompanyRetentionPolicyEntity("org-a");
         held.update(null, null, null, null, true, "TEST", "hold", "auditor", Instant.now(), null);
         when(policies.findById("org-a")).thenReturn(Optional.of(held));
         MemoryLifecycleService service=service(subjects, records, candidates, snapshots, semantic, policies, mock(JdbcTemplate.class), mock(AuditService.class));
@@ -90,7 +90,7 @@ class MemoryLifecycleServiceTest {
         MemoryRecordEntity expired=record(8L, Instant.now().minusSeconds(30));
         when(records.findByStatusInAndValidToBefore(any(), any())).thenReturn(List.of(expired));
         when(semantic.remove(expired)).thenReturn(true);
-        OrganizationRetentionPolicyRepository policies=mock(OrganizationRetentionPolicyRepository.class);
+        CompanyRetentionPolicyRepository policies=mock(CompanyRetentionPolicyRepository.class);
         when(policies.findById("org-a")).thenReturn(Optional.empty());
         MemoryLifecycleService service=service(mock(MemorySubjectRepository.class), records, mock(MemoryCandidateRepository.class),
                 mock(MemoryConversationSnapshotRepository.class), semantic, policies, mock(JdbcTemplate.class), mock(AuditService.class));
@@ -109,16 +109,16 @@ class MemoryLifecycleServiceTest {
         MemoryRecordEntity owned=record(8L, Instant.now().plusSeconds(60)); owned.assignAgent("agent-a");
         MemoryRecordEntity other=record(9L, Instant.now().plusSeconds(60)); other.assignAgent("agent-b");
         MemorySubjectRepository subjects=mock(MemorySubjectRepository.class);
-        when(subjects.findByOrgIdAndApplicationCodeAndSubjectTypeAndExternalRef("org-a", "app-a", "EXTERNAL_USER", "subject-a"))
+        when(subjects.findByCompanyIdAndApplicationCodeAndSubjectTypeAndExternalRef("org-a", "app-a", "EXTERNAL_USER", "subject-a"))
                 .thenReturn(Optional.of(subject(7L, "subject-a")));
-        when(records.findByOrgIdAndSubjectId("org-a", 7L)).thenReturn(List.of(owned, other));
-        OrganizationRetentionPolicyRepository policies=mock(OrganizationRetentionPolicyRepository.class);
+        when(records.findByCompanyIdAndSubjectId("org-a", 7L)).thenReturn(List.of(owned, other));
+        CompanyRetentionPolicyRepository policies=mock(CompanyRetentionPolicyRepository.class);
         when(policies.findById("org-a")).thenReturn(Optional.empty());
         MemoryLifecycleService service=service(subjects, records, mock(MemoryCandidateRepository.class), mock(MemoryConversationSnapshotRepository.class), semantic, policies, mock(JdbcTemplate.class), mock(AuditService.class));
 
         assertThatThrownBy(() -> service.deleteSubject("org-a", "app-a", "EXTERNAL_USER", "subject-a", "agent-a", "actor-a", "delete"))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("exclusively owned");
-        when(records.findByIdAndOrgIdAndAgentId(8L, "org-a", "agent-a")).thenReturn(Optional.of(owned));
+        when(records.findByIdAndCompanyIdAndAgentId(8L, "org-a", "agent-a")).thenReturn(Optional.of(owned));
         when(semantic.remove(owned)).thenReturn(false);
 
         assertThat(service.revokeRecord("org-a", "agent-a", 8L, "actor-a", "incorrect")).isFalse();
@@ -128,7 +128,7 @@ class MemoryLifecycleServiceTest {
 
     private static MemoryLifecycleService service(MemorySubjectRepository subjects, MemoryRecordRepository records,
                                                   MemoryCandidateRepository candidates, MemoryConversationSnapshotRepository snapshots,
-                                                  MemorySemanticRetrievalService semantic, OrganizationRetentionPolicyRepository policies,
+                                                  MemorySemanticRetrievalService semantic, CompanyRetentionPolicyRepository policies,
                                                   JdbcTemplate evidenceJdbc, AuditService audit) {
         return new MemoryLifecycleService(subjects, records, candidates, snapshots, semantic, policies, evidenceJdbc, audit);
     }

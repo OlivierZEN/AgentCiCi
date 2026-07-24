@@ -27,9 +27,9 @@ public class AgentOpenApiRateLimitService {
         checkMinuteLimit(auth);
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         AgentApiUsageDailyEntity usage = usageDailyRepository
-                .findByOrgIdAndCredentialIdAndUsageDate(auth.credential().getOrgId(), auth.credential().getId(), today)
+                .findByCompanyIdAndCredentialIdAndUsageDate(auth.credential().getCompanyId(), auth.credential().getId(), today)
                 .orElseGet(() -> usageDailyRepository.save(new AgentApiUsageDailyEntity(
-                        auth.credential().getOrgId(),
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         today)));
         if (usage.getCallCount() >= auth.credential().getDailyQuota()) {
@@ -54,9 +54,9 @@ public class AgentOpenApiRateLimitService {
     private AgentApiUsageDailyEntity usageForToday(AgentOpenApiAuthService.AuthenticatedCredential auth) {
         LocalDate today = LocalDate.now(ZoneOffset.UTC);
         return usageDailyRepository
-                .findByOrgIdAndCredentialIdAndUsageDate(auth.credential().getOrgId(), auth.credential().getId(), today)
+                .findByCompanyIdAndCredentialIdAndUsageDate(auth.credential().getCompanyId(), auth.credential().getId(), today)
                 .orElseGet(() -> usageDailyRepository.save(new AgentApiUsageDailyEntity(
-                        auth.credential().getOrgId(),
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         today)));
     }

@@ -19,8 +19,8 @@ public class FeishuBotBindingEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -64,9 +64,9 @@ public class FeishuBotBindingEntity {
     protected FeishuBotBindingEntity() {
     }
 
-    public FeishuBotBindingEntity(String orgId, String userId, String tenantKey, String openId,
+    public FeishuBotBindingEntity(String companyId, String userId, String tenantKey, String openId,
                                   String unionId, String chatId, String agentCode) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.tenantKey = tenantKey;
         this.openId = openId;
@@ -82,8 +82,8 @@ public class FeishuBotBindingEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getUserId() {

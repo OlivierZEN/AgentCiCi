@@ -15,10 +15,10 @@ import {
 } from "./adminAuthScope";
 import { applyProductTheme } from "../theme/theme";
 
-type AuthPayload = { token: string; orgId: string; orgName?: string; userId: string; roles: string[] };
+type AuthPayload = { token: string; companyId: string; companyName?: string; userId: string; roles: string[] };
 type MePayload = { nickname?: string; avatarBase64?: string; mobile?: string; themeCode?: string };
 type CurrentUserUpdatedDetail = { userId: string; mobile?: string; nickname?: string; avatarBase64?: string };
-type OrganizationProfileUpdatedDetail = { orgId: string; name: string; shortName?: string };
+type CompanyProfileUpdatedDetail = { companyId: string; name: string; shortName?: string };
 
 type AdminNavLinkItem = { kind: "link"; to: string; label: string };
 type AdminNavGroupItem = { kind: "group"; label: string; children: AdminNavLinkItem[] };
@@ -30,7 +30,7 @@ const adminNavItems: AdminNavItem[] = [
     label: "组织架构",
     children: [
       { kind: "link", to: "/admin/users", label: "用户" },
-      { kind: "link", to: "/admin/organization", label: "组织简档" },
+      { kind: "link", to: "/admin/company", label: "组织简档" },
     ],
   },
   { kind: "link", to: "/admin/kb", label: "知识库" },
@@ -60,20 +60,20 @@ export default function AdminShell() {
   const [auth, setAuth] = useState<AuthPayload | null>(() => readAuth());
   const token = auth?.token ?? "";
   const [me, setMe] = useState<MePayload>({});
-  const [organizationName, setOrganizationName] = useState(auth?.orgName || auth?.orgId || "");
+  const [companyName, setCompanyName] = useState(auth?.companyName || auth?.companyId || "");
   const [collapsedNavGroups, setCollapsedNavGroups] = useState<string[]>([]);
   const [navigationGuard, setNavigationGuard] = useState<AdminNavigationGuard | null>(null);
   const navigationGuardIdRef = useRef(0);
   const profileRequestIdRef = useRef(0);
-  const organizationRequestIdRef = useRef(0);
-  const guardScope = createAdminAuthScopeKey(auth?.orgId ?? "", token);
+  const companyRequestIdRef = useRef(0);
+  const guardScope = createAdminAuthScopeKey(auth?.companyId ?? "", token);
   const authScopeRef = useRef(guardScope);
   const previousGuardScopeRef = useRef(guardScope);
 
   const invalidateAdminAuthRequests = useCallback((nextScope: string) => {
     authScopeRef.current = nextScope;
     profileRequestIdRef.current += 1;
-    organizationRequestIdRef.current += 1;
+    companyRequestIdRef.current += 1;
   }, []);
 
   if (authScopeRef.current !== guardScope) {
@@ -95,10 +95,10 @@ export default function AdminShell() {
 
   const ctx = useMemo<AdminOutletContext>(() => ({
     token,
-    orgId: auth?.orgId ?? "",
+    companyId: auth?.companyId ?? "",
     userId: auth?.userId ?? "",
     registerNavigationGuard,
-  }), [auth?.orgId, auth?.userId, registerNavigationGuard, token]);
+  }), [auth?.companyId, auth?.userId, registerNavigationGuard, token]);
 
   useEffect(() => {
     if (previousGuardScopeRef.current === guardScope) return;
@@ -107,11 +107,11 @@ export default function AdminShell() {
   }, [guardScope]);
 
   useAuthStorageSync<AuthPayload>(LS_ADMIN_TOKEN, (payload) => {
-    const nextScope = createAdminAuthScopeKey(payload?.orgId ?? "", payload?.token ?? "");
+    const nextScope = createAdminAuthScopeKey(payload?.companyId ?? "", payload?.token ?? "");
     if (authScopeRef.current !== nextScope) invalidateAdminAuthRequests(nextScope);
     setAuth(payload);
     setMe({});
-    setOrganizationName(payload?.orgName || payload?.orgId || "");
+    setCompanyName(payload?.companyName || payload?.companyId || "");
   });
 
   useEffect(() => {
@@ -153,16 +153,16 @@ export default function AdminShell() {
     if (!token || !auth) return;
     const authSnapshot = auth;
     const requestScope = guardScope;
-    const requestId = ++organizationRequestIdRef.current;
+    const requestId = ++companyRequestIdRef.current;
     const isCurrent = () => isAdminAsyncRequestCurrent(
       requestScope,
       requestId,
       authScopeRef.current,
-      organizationRequestIdRef.current,
+      companyRequestIdRef.current,
     );
     void (async () => {
       try {
-        const res = await authFetch(LS_ADMIN_TOKEN, "/admin/organization/profile", {}, {
+        const res = await authFetch(LS_ADMIN_TOKEN, "/admin/company/profile", {}, {
           onUnauthorized: () => {
             if (!isCurrent()) return;
             invalidateAdminAuthRequests(createAdminAuthScopeKey("", ""));
@@ -175,16 +175,16 @@ export default function AdminShell() {
         const json = await res.json();
         if (!isCurrent()) return;
         if (res.ok && json.success && json.data?.name) {
-          setOrganizationName(json.data.name);
-          const next = { ...authSnapshot, orgName: json.data.name };
+          setCompanyName(json.data.name);
+          const next = { ...authSnapshot, companyName: json.data.name };
           writeAuthPayload(LS_ADMIN_TOKEN, next);
           setAuth(next);
         }
       } catch {
-        // keep token payload organization fallback
+        // keep token payload company fallback
       }
     })();
-  }, [auth?.orgId, guardScope, invalidateAdminAuthRequests, token]);
+  }, [auth?.companyId, guardScope, invalidateAdminAuthRequests, token]);
 
   useEffect(() => {
     const onCurrentUserUpdated = (evt: Event) => {
@@ -203,17 +203,17 @@ export default function AdminShell() {
   }, [auth]);
 
   useEffect(() => {
-    const onOrganizationProfileUpdated = (evt: Event) => {
+    const onCompanyProfileUpdated = (evt: Event) => {
       if (!auth) return;
-      const detail = (evt as CustomEvent<OrganizationProfileUpdatedDetail>).detail;
-      if (!detail || detail.orgId !== auth.orgId) return;
-      setOrganizationName(detail.shortName || detail.name || auth.orgId);
-      const next = { ...auth, orgName: detail.name };
+      const detail = (evt as CustomEvent<CompanyProfileUpdatedDetail>).detail;
+      if (!detail || detail.companyId !== auth.companyId) return;
+      setCompanyName(detail.shortName || detail.name || auth.companyId);
+      const next = { ...auth, companyName: detail.name };
       writeAuthPayload(LS_ADMIN_TOKEN, next);
       setAuth(next);
     };
-    window.addEventListener("admin-organization-profile-updated", onOrganizationProfileUpdated);
-    return () => window.removeEventListener("admin-organization-profile-updated", onOrganizationProfileUpdated);
+    window.addEventListener("admin-company-profile-updated", onCompanyProfileUpdated);
+    return () => window.removeEventListener("admin-company-profile-updated", onCompanyProfileUpdated);
   }, [auth]);
 
   const logout = () => {
@@ -234,7 +234,7 @@ export default function AdminShell() {
     return <Navigate to="/admin/login" replace />;
   }
 
-  const displayOrganizationName = organizationName && organizationName !== auth.orgId ? organizationName : "组织名称未设置";
+  const displayCompanyName = companyName && companyName !== auth.companyId ? companyName : "组织名称未设置";
 
   return (
     <div className="admin-layout">
@@ -255,9 +255,9 @@ export default function AdminShell() {
           </span>
           <span className="admin-nav__identity-body">
             <strong className="admin-nav__identity-name">{me.nickname || me.mobile || "当前用户"}</strong>
-            <span className="admin-nav__identity-org" title={`${displayOrganizationName} · ${auth.orgId}`}>
-              {displayOrganizationName}
-              <small>{auth.orgId}</small>
+            <span className="admin-nav__identity-org" title={`${displayCompanyName} · ${auth.companyId}`}>
+              {displayCompanyName}
+              <small>{auth.companyId}</small>
             </span>
           </span>
         </div>

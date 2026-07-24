@@ -38,20 +38,20 @@ public class AgentTaskReflectService {
         if (command == null || !command.reflectRequired() || !properties.isEnabledFor(command == null ? "" : command.agentId())) {
             return ReflectResult.skipped();
         }
-        AgentTaskRunEntity run = runRepository.findByIdAndOrgId(command.runId(), command.orgId())
+        AgentTaskRunEntity run = runRepository.findByIdAndCompanyId(command.runId(), command.companyId())
                 .orElseThrow(() -> new IllegalArgumentException("Task run not found"));
-        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(command.orgId(), command.runId());
-        List<AgentTaskReviewEntity> previousReviews = reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc(
-                command.orgId(), command.runId());
+        List<AgentTaskStepEntity> steps = stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc(command.companyId(), command.runId());
+        List<AgentTaskReviewEntity> previousReviews = reviewRepository.findByCompanyIdAndRunIdOrderByReviewRoundAsc(
+                command.companyId(), command.runId());
         List<String> issues = gateIssues(run, steps, command, previousReviews.size());
         String gateStatus = issues.isEmpty() ? "PASS" : "BLOCKED";
         String reviewerStatus = issues.isEmpty() ? "PASS" : "HANDOFF";
         int round = previousReviews.size() + 1;
         Instant now = Instant.now();
         AgentTaskReviewEntity saved = reviewRepository.saveAndFlush(new AgentTaskReviewEntity(
-                command.orgId(), command.runId(), round, gateStatus, reviewerStatus, json(issues),
+                command.companyId(), command.runId(), round, gateStatus, reviewerStatus, json(issues),
                 summarize(command.output(), reviewerStatus), now));
-        eventRepository.save(new AgentTaskEventEntity(command.orgId(), command.runId(), null, "REFLECT_GATE", json(Map.of(
+        eventRepository.save(new AgentTaskEventEntity(command.companyId(), command.runId(), null, "REFLECT_GATE", json(Map.of(
                 "reviewId", saved.getId(), "gateStatus", gateStatus, "reviewerStatus", reviewerStatus,
                 "issueCodes", issues)), now));
         return new ReflectResult(true, saved.getId(), gateStatus, reviewerStatus, List.copyOf(issues));
@@ -79,7 +79,7 @@ public class AgentTaskReflectService {
         try { return objectMapper.writeValueAsString(value); }
         catch (Exception ex) { throw new IllegalStateException("Cannot serialize reflect evidence", ex); }
     }
-    public record ReflectCommand(String orgId, long runId, String agentId, boolean reflectRequired,
+    public record ReflectCommand(String companyId, long runId, String agentId, boolean reflectRequired,
                                  boolean requiresConfirmation, String output) { }
     public record ReflectResult(boolean selected, Long reviewId, String gateStatus, String reviewerStatus,
                                 List<String> issueCodes) {

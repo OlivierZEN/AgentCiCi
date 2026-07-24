@@ -16,8 +16,8 @@ public class CustomerCrmWriteAuditEntity {
     private Long id;
     @Column(name = "public_id", nullable = false, unique = true, length = 64)
     private String publicId;
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
     @Column(name = "recommendation_id", nullable = false, length = 64)
@@ -47,12 +47,12 @@ public class CustomerCrmWriteAuditEntity {
 
     protected CustomerCrmWriteAuditEntity() {}
 
-    public CustomerCrmWriteAuditEntity(String publicId, String orgId, String userId, String recommendationId,
+    public CustomerCrmWriteAuditEntity(String publicId, String companyId, String userId, String recommendationId,
                                        String idempotencyKey, String targetObject, String operation, String status,
                                        String requestHash, String remoteRecordId, String errorCode, String errorMessage,
                                        String requestSummary, String responseSummary) {
         this.publicId = publicId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.recommendationId = recommendationId;
         this.idempotencyKey = idempotencyKey;

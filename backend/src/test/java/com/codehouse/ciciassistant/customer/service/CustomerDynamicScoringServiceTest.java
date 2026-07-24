@@ -27,8 +27,8 @@ class CustomerDynamicScoringServiceTest {
         CustomerScoreSnapshotRepository snapshotRepository = mock(CustomerScoreSnapshotRepository.class);
         CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
         List<CustomerDynamicSignalEntity> stored = new ArrayList<>();
-        when(signalRepository.findByOrgIdAndSourceEventId("org-1", "event-1")).thenAnswer(invocation -> new ArrayList<>(stored));
-        when(signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
+        when(signalRepository.findByCompanyIdAndSourceEventId("org-1", "event-1")).thenAnswer(invocation -> new ArrayList<>(stored));
+        when(signalRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
                 .thenAnswer(invocation -> new ArrayList<>(stored));
         when(signalRepository.saveAll(anyList())).thenAnswer(invocation -> {
             List<CustomerDynamicSignalEntity> values = invocation.getArgument(0);
@@ -38,7 +38,7 @@ class CustomerDynamicScoringServiceTest {
             }
             return values;
         });
-        when(snapshotRepository.findByOrgIdAndCrmAccountId("org-1", "account-1")).thenReturn(Optional.empty());
+        when(snapshotRepository.findByCompanyIdAndCrmAccountId("org-1", "account-1")).thenReturn(Optional.empty());
         when(snapshotRepository.save(any(CustomerScoreSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         CustomerDynamicScoringService service = new CustomerDynamicScoringService(
@@ -73,10 +73,10 @@ class CustomerDynamicScoringServiceTest {
         CustomerScoreSnapshotRepository snapshotRepository = mock(CustomerScoreSnapshotRepository.class);
         CustomerInteractionEventRepository eventRepository = mock(CustomerInteractionEventRepository.class);
         List<CustomerDynamicSignalEntity> stored = new ArrayList<>();
-        when(signalRepository.findByOrgIdAndSourceEventId("org-1", "event-legacy"))
+        when(signalRepository.findByCompanyIdAndSourceEventId("org-1", "event-legacy"))
                 .thenAnswer(invocation -> stored.stream()
                         .filter(item -> "event-legacy".equals(item.getSourceEventId())).toList());
-        when(signalRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
+        when(signalRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
                 .thenAnswer(invocation -> new ArrayList<>(stored));
         when(signalRepository.saveAll(anyList())).thenAnswer(invocation -> {
             List<CustomerDynamicSignalEntity> values = invocation.getArgument(0);
@@ -86,7 +86,7 @@ class CustomerDynamicScoringServiceTest {
             }
             return values;
         });
-        when(snapshotRepository.findByOrgIdAndCrmAccountId("org-1", "account-1")).thenReturn(Optional.empty());
+        when(snapshotRepository.findByCompanyIdAndCrmAccountId("org-1", "account-1")).thenReturn(Optional.empty());
         when(snapshotRepository.save(any(CustomerScoreSnapshotEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
         CustomerInteractionEventEntity legacy = new CustomerInteractionEventEntity(
                 "event-legacy", "org-1", "account-1", null, "EMAIL", Instant.now(),
@@ -96,7 +96,7 @@ class CustomerDynamicScoringServiceTest {
                  "opportunities":["客户愿意讨论扩容"],
                  "commitments":["双方约定下周复盘"]}
                 """, 1, 1);
-        when(eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
+        when(eventRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc("org-1", "account-1"))
                 .thenReturn(List.of(legacy));
 
         CustomerDynamicScoringService service = new CustomerDynamicScoringService(

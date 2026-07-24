@@ -1,0 +1,46 @@
+task_id: TASK-242
+assignee: MANAGER-001
+assigned_by: MANAGER-001
+status: active
+assigned_at: 2026-07-24T01:35:00Z
+expires_at: none
+spec_path: docs/specs/FEAT-135-company-id-unification.md
+task_status_path: .claw/tasks/TASK-242.md
+branch: agent/TASK-242-company-id-unification
+pr_url: n/a
+scope_mode: task_bounded_broad_code
+allowed_write_roots:
+  - backend/src/main/java/com/codehouse/ciciassistant/**
+  - backend/src/main/resources/db/migration/**
+  - backend/src/test/java/com/codehouse/ciciassistant/**
+  - frontend/src/**
+  - docs/specs/**
+  - .claw/tasks/**
+  - .claw/assignments/**
+  - .claw/task-board.md
+  - .claw/current-status.md
+  - .claw/test-report.md
+protected_paths:
+  - backend/src/main/resources/application.yml
+  - backend/src/main/resources/application-local.yml
+  - deploy/**
+  - .claw/developers/**
+  - .github/workflows/**
+  - infra/**
+  - infrastructure/**
+touch_policy: exclusive
+shared_contracts:
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/domain/OrgEntity.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/domain/OrgRepository.java
+  - backend/src/main/java/com/codehouse/ciciassistant/auth/service/JwtService.java
+  - backend/src/main/java/com/codehouse/ciciassistant/semattice/SematticeProvisioningService.java
+  - frontend/src/auth/authStorage.ts
+task_boundary:
+  - "统一顶层租户 company_id；不得把未来 organization_id 用作公司身份。"
+  - "以 V94 无损重命名当前数据 schema；不修改历史 migration，不保留旧字段兼容。"
+  - "更新 AgentCiCi 与 Semattice 的受控开户契约文档和验证。"
+change_manifest_required: true
+preflight_required: true
+local_login_required: true
+identity_policy: ssh_challenge_response + git_platform_account + ssh_commit_signing
+signature: "MANAGER-001; user confirmed the full no-compatibility company_id unification on 2026-07-24."

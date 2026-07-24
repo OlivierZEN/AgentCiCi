@@ -13777,7 +13777,7 @@ td.skills-data-table__actions > * {
   overflow-wrap: anywhere;
 }
 
-.admin-organization-page {
+.admin-company-page {
   height: 100%;
   min-height: 0;
   display: grid;
@@ -13788,30 +13788,30 @@ td.skills-data-table__actions > * {
   padding: 18px 22px 20px;
 }
 
-.admin-main:has(.admin-organization-page) {
+.admin-main:has(.admin-company-page) {
   border: 0;
   box-shadow: none;
 }
 
-.admin-organization-header {
+.admin-company-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
 
-.admin-organization-header h1 {
+.admin-company-header h1 {
   margin: 0 0 4px;
 }
 
-.admin-organization-header__actions {
+.admin-company-header__actions {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-.admin-organization-edit-button,
-.admin-main .admin-page .admin-organization-edit-button {
+.admin-company-edit-button,
+.admin-main .admin-page .admin-company-edit-button {
   min-height: 34px;
   border: 1px solid #a67c2f;
   border-radius: 10px;
@@ -13824,10 +13824,10 @@ td.skills-data-table__actions > * {
   font-weight: 700;
 }
 
-.admin-organization-edit-button:hover,
-.admin-organization-edit-button:focus-visible,
-.admin-main .admin-page .admin-organization-edit-button:hover,
-.admin-main .admin-page .admin-organization-edit-button:focus-visible {
+.admin-company-edit-button:hover,
+.admin-company-edit-button:focus-visible,
+.admin-main .admin-page .admin-company-edit-button:hover,
+.admin-main .admin-page .admin-company-edit-button:focus-visible {
   border-color: #876223;
   background: #876223;
   color: #fffdf8;
@@ -13835,7 +13835,7 @@ td.skills-data-table__actions > * {
   transform: none;
 }
 
-.admin-organization-feedback {
+.admin-company-feedback {
   margin: 0;
   padding-top: 3px;
   color: #876223;
@@ -13844,11 +13844,11 @@ td.skills-data-table__actions > * {
   text-align: right;
 }
 
-.admin-organization-feedback.is-error {
+.admin-company-feedback.is-error {
   color: #b42318;
 }
 
-.admin-organization-panel {
+.admin-company-panel {
   min-width: 0;
   min-height: 0;
   border: 0;
@@ -13858,13 +13858,13 @@ td.skills-data-table__actions > * {
   box-shadow: none;
 }
 
-.admin-organization-panel--profile,
-.admin-organization-panel--usage {
+.admin-company-panel--profile,
+.admin-company-panel--usage {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
 }
 
-.admin-organization-panel--usage {
+.admin-company-panel--usage {
   border: 0;
   border-radius: 0;
   padding: 0;
@@ -13872,12 +13872,12 @@ td.skills-data-table__actions > * {
   overflow: visible;
 }
 
-.admin-organization-section {
+.admin-company-section {
   padding: 0;
   border-bottom: 0;
 }
 
-.admin-organization-section--intro {
+.admin-company-section--intro {
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -13885,21 +13885,21 @@ td.skills-data-table__actions > * {
   gap: 12px;
 }
 
-.admin-organization-section--intro span {
+.admin-company-section--intro span {
   color: #876223;
   font-size: 12px;
   font-weight: 700;
 }
 
-.admin-organization-section h2,
-.admin-organization-export__head h2 {
+.admin-company-section h2,
+.admin-company-export__head h2 {
   margin: 0;
   color: #2b2217;
   font-size: 14px;
   font-weight: 650;
 }
 
-.admin-organization-profile-list {
+.admin-company-profile-list {
   margin: 0;
   min-height: 0;
   padding: 14px 0 0;
@@ -13909,23 +13909,23 @@ td.skills-data-table__actions > * {
   align-items: center;
 }
 
-.admin-organization-profile-column {
+.admin-company-profile-column {
   min-width: 0;
   display: grid;
   gap: 12px;
 }
 
-.admin-organization-profile-item {
+.admin-company-profile-item {
   min-width: 0;
 }
 
-.admin-organization-profile-list dt {
+.admin-company-profile-list dt {
   color: #7c6d59;
   font-size: 11px;
   font-weight: 700;
 }
 
-.admin-organization-profile-list dd {
+.admin-company-profile-list dd {
   min-width: 0;
   margin: 4px 0 0;
   display: flex;
@@ -13937,25 +13937,25 @@ td.skills-data-table__actions > * {
   font-weight: 600;
 }
 
-.admin-organization-profile-list dd > span {
+.admin-company-profile-list dd > span {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.admin-organization-mono {
+.admin-company-mono {
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   font-size: 12px;
   color: #5f523f;
 }
 
-.admin-organization-usage-grid {
+.admin-company-usage-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   border: 0;
 }
 
-.admin-organization-usage-item {
+.admin-company-usage-item {
   min-width: 0;
   min-height: 112px;
   padding: 14px 16px;
@@ -13967,41 +13967,41 @@ td.skills-data-table__actions > * {
   gap: 8px;
 }
 
-.admin-organization-usage-item:nth-child(3n) {
+.admin-company-usage-item:nth-child(3n) {
   border-right: 1px solid #ded2bb;
 }
 
-.admin-organization-usage-item:nth-last-child(-n + 3) {
+.admin-company-usage-item:nth-last-child(-n + 3) {
   border-bottom: 1px solid #ded2bb;
 }
 
-.admin-organization-usage-item span {
+.admin-company-usage-item span {
   color: #5f523f;
   font-size: 12px;
   font-weight: 700;
 }
 
-.admin-organization-usage-item strong {
+.admin-company-usage-item strong {
   color: #2b2217;
   font-size: 22px;
   font-weight: 680;
   line-height: 1.15;
 }
 
-.admin-organization-usage-item small {
+.admin-company-usage-item small {
   color: #7c6d59;
   font-size: 12px;
   font-weight: 600;
 }
 
-.admin-organization-text-action,
-.admin-main .admin-page .admin-organization-text-action,
-.admin-organization-text-action:hover,
-.admin-organization-text-action:focus-visible,
-.admin-organization-text-action:active,
-.admin-main .admin-page .admin-organization-text-action:hover,
-.admin-main .admin-page .admin-organization-text-action:focus-visible,
-.admin-main .admin-page .admin-organization-text-action:active {
+.admin-company-text-action,
+.admin-main .admin-page .admin-company-text-action,
+.admin-company-text-action:hover,
+.admin-company-text-action:focus-visible,
+.admin-company-text-action:active,
+.admin-main .admin-page .admin-company-text-action:hover,
+.admin-main .admin-page .admin-company-text-action:focus-visible,
+.admin-main .admin-page .admin-company-text-action:active {
   border: 0;
   border-radius: 0;
   padding: 0;
@@ -14016,38 +14016,38 @@ td.skills-data-table__actions > * {
   text-underline-offset: 3px;
 }
 
-.admin-organization-text-action:disabled {
+.admin-company-text-action:disabled {
   color: #9b8b73;
   cursor: not-allowed;
   text-decoration: none;
 }
 
-.admin-organization-export {
+.admin-company-export {
   min-height: 0;
   overflow: hidden;
   padding: 16px 0 0;
 }
 
-.admin-organization-export__head {
+.admin-company-export__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
-.admin-organization-empty {
+.admin-company-empty {
   margin: 12px 0 0;
   color: #7c6d59;
   font-size: 12px;
 }
 
-.admin-organization-export-list {
+.admin-company-export-list {
   margin: 10px 0 0;
   padding: 0;
   list-style: none;
 }
 
-.admin-organization-export-list li {
+.admin-company-export-list li {
   min-width: 0;
   padding: 8px 0 0;
   border-top: 0;
@@ -14059,38 +14059,38 @@ td.skills-data-table__actions > * {
   font-size: 12px;
 }
 
-.admin-organization-export-list li:first-child {
+.admin-company-export-list li:first-child {
   border-top: 0;
 }
 
-.admin-organization-export-list strong {
+.admin-company-export-list strong {
   color: #2b2217;
   font-size: 12px;
 }
 
-.admin-organization-export-list time {
+.admin-company-export-list time {
   min-width: 0;
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.admin-organization-skeleton {
+.admin-company-skeleton {
   padding: 14px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px 14px;
 }
 
-.admin-organization-skeleton span {
+.admin-company-skeleton span {
   height: 34px;
   border-bottom: 1px solid #ded2bb;
   background: linear-gradient(90deg, rgba(244, 231, 199, 0.2), rgba(185, 150, 82, 0.16), rgba(244, 231, 199, 0.2));
   background-size: 180% 100%;
-  animation: admin-organization-skeleton 1.2s ease-out infinite;
+  animation: admin-company-skeleton 1.2s ease-out infinite;
 }
 
-@keyframes admin-organization-skeleton {
+@keyframes admin-company-skeleton {
   0% {
     background-position: 100% 0;
   }
@@ -14099,7 +14099,7 @@ td.skills-data-table__actions > * {
   }
 }
 
-.admin-organization-modal-backdrop {
+.admin-company-modal-backdrop {
   position: fixed;
   inset: 0;
   z-index: 130;
@@ -14110,7 +14110,7 @@ td.skills-data-table__actions > * {
   background: rgba(43, 34, 23, 0.34);
 }
 
-.admin-organization-modal {
+.admin-company-modal {
   width: min(720px, 100%);
   max-height: min(760px, calc(100vh - 48px));
   display: flex;
@@ -14123,22 +14123,22 @@ td.skills-data-table__actions > * {
   box-shadow: 0 18px 44px rgba(65, 47, 18, 0.18);
 }
 
-.admin-organization-modal__head,
-.admin-organization-modal__foot {
+.admin-company-modal__head,
+.admin-company-modal__foot {
   display: flex;
   align-items: center;
   border-color: #ded2bb;
   background: #fffdf8;
 }
 
-.admin-organization-modal__head {
+.admin-company-modal__head {
   justify-content: space-between;
   gap: 16px;
   padding: 16px 18px 12px;
   border-bottom: 1px solid #ded2bb;
 }
 
-.admin-organization-modal__head h2 {
+.admin-company-modal__head h2 {
   margin: 0;
   color: #2b2217;
   font-size: 16px;
@@ -14147,14 +14147,14 @@ td.skills-data-table__actions > * {
   line-height: 1.35;
 }
 
-.admin-organization-modal__head p {
+.admin-company-modal__head p {
   margin: 4px 0 0;
   color: #7c6d59;
   font-size: 12px;
   line-height: 1.45;
 }
 
-.admin-organization-modal__close {
+.admin-company-modal__close {
   width: 30px;
   height: 30px;
   display: inline-flex;
@@ -14170,29 +14170,29 @@ td.skills-data-table__actions > * {
   line-height: 1;
 }
 
-.admin-organization-modal__close:hover:not(:disabled),
-.admin-organization-modal__close:focus-visible {
+.admin-company-modal__close:hover:not(:disabled),
+.admin-company-modal__close:focus-visible {
   background: #faf4e8;
   color: #876223;
   box-shadow: none;
   transform: none;
 }
 
-.admin-organization-modal__body {
+.admin-company-modal__body {
   display: grid;
   gap: 14px;
   padding: 18px;
   overflow: auto;
 }
 
-.admin-organization-modal__error {
+.admin-company-modal__error {
   margin: 0;
   color: #b42318;
   font-size: 12px;
   font-weight: 700;
 }
 
-.admin-organization-modal__readonly {
+.admin-company-modal__readonly {
   min-width: 0;
   display: flex;
   align-items: baseline;
@@ -14202,39 +14202,39 @@ td.skills-data-table__actions > * {
   border-bottom: 1px solid #ded2bb;
 }
 
-.admin-organization-modal__readonly span {
+.admin-company-modal__readonly span {
   color: #7c6d59;
   font-size: 11px;
   font-weight: 700;
 }
 
-.admin-organization-modal__readonly strong {
+.admin-company-modal__readonly strong {
   min-width: 0;
   overflow-wrap: anywhere;
   text-align: right;
 }
 
-.admin-organization-form-grid {
+.admin-company-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 13px 14px;
 }
 
-.admin-organization-field {
+.admin-company-field {
   min-width: 0;
   display: grid;
   gap: 6px;
 }
 
-.admin-organization-field span {
+.admin-company-field span {
   color: #5f523f;
   font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
 }
 
-.admin-organization-field input,
-.admin-organization-field textarea {
+.admin-company-field input,
+.admin-company-field textarea {
   width: 100%;
   min-width: 0;
   border: 1px solid #ded2bb;
@@ -14245,43 +14245,43 @@ td.skills-data-table__actions > * {
   font-size: 13px;
 }
 
-.admin-organization-field input {
+.admin-company-field input {
   height: 36px;
   padding: 8px 11px;
 }
 
-.admin-organization-field textarea {
+.admin-company-field textarea {
   min-height: 96px;
   resize: vertical;
   padding: 10px 11px;
   line-height: 1.5;
 }
 
-.admin-organization-field input:focus,
-.admin-organization-field textarea:focus {
+.admin-company-field input:focus,
+.admin-company-field textarea:focus {
   border-color: #b99652;
   outline: 0;
   box-shadow: 0 0 0 3px rgba(166, 124, 47, 0.14);
 }
 
-.admin-organization-field input::placeholder,
-.admin-organization-field textarea::placeholder {
+.admin-company-field input::placeholder,
+.admin-company-field textarea::placeholder {
   color: #9b8b73;
 }
 
-.admin-organization-field--wide {
+.admin-company-field--wide {
   grid-column: 1 / -1;
 }
 
-.admin-organization-modal__foot {
+.admin-company-modal__foot {
   justify-content: flex-end;
   gap: 10px;
   padding: 12px 18px 16px;
   border-top: 1px solid #ded2bb;
 }
 
-.admin-organization-modal__secondary,
-.admin-organization-modal__primary {
+.admin-company-modal__secondary,
+.admin-company-modal__primary {
   min-height: 34px;
   padding: 7px 14px;
   border-radius: 10px;
@@ -14291,14 +14291,14 @@ td.skills-data-table__actions > * {
   font-weight: 700;
 }
 
-.admin-organization-modal__secondary {
+.admin-company-modal__secondary {
   border: 1px solid #ded2bb;
   background: #fffdf8;
   color: #2b2217;
 }
 
-.admin-organization-modal__secondary:hover:not(:disabled),
-.admin-organization-modal__secondary:focus-visible {
+.admin-company-modal__secondary:hover:not(:disabled),
+.admin-company-modal__secondary:focus-visible {
   border-color: #b99652;
   background: #faf4e8;
   color: #876223;
@@ -14306,14 +14306,14 @@ td.skills-data-table__actions > * {
   transform: none;
 }
 
-.admin-organization-modal__primary {
+.admin-company-modal__primary {
   border: 1px solid #a67c2f;
   background: #a67c2f;
   color: #fffdf8;
 }
 
-.admin-organization-modal__primary:hover:not(:disabled),
-.admin-organization-modal__primary:focus-visible {
+.admin-company-modal__primary:hover:not(:disabled),
+.admin-company-modal__primary:focus-visible {
   border-color: #876223;
   background: #876223;
   color: #fffdf8;
@@ -14321,8 +14321,8 @@ td.skills-data-table__actions > * {
   transform: none;
 }
 
-.admin-organization-modal__primary:disabled,
-.admin-organization-modal__secondary:disabled {
+.admin-company-modal__primary:disabled,
+.admin-company-modal__secondary:disabled {
   border-color: #ded2bb;
   background: #f3e8d3;
   color: #8b8172;
@@ -14330,101 +14330,101 @@ td.skills-data-table__actions > * {
 }
 
 @media (max-width: 980px) {
-  .admin-organization-usage-grid {
+  .admin-company-usage-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .admin-organization-usage-item:nth-child(3n) {
+  .admin-company-usage-item:nth-child(3n) {
     border-right: 1px solid #ded2bb;
   }
 
-  .admin-organization-usage-item:nth-child(2n) {
+  .admin-company-usage-item:nth-child(2n) {
     border-right: 1px solid #ded2bb;
   }
 
-  .admin-organization-usage-item:nth-last-child(-n + 3) {
+  .admin-company-usage-item:nth-last-child(-n + 3) {
     border-bottom: 1px solid #ded2bb;
   }
 
-  .admin-organization-usage-item:nth-last-child(-n + 2) {
+  .admin-company-usage-item:nth-last-child(-n + 2) {
     border-bottom: 1px solid #ded2bb;
   }
 }
 
 @media (max-width: 640px) {
-  .admin-organization-page {
+  .admin-company-page {
     height: auto;
     overflow: visible;
     grid-template-rows: auto;
     padding: 0;
   }
 
-  .admin-organization-header,
-  .admin-organization-section--intro {
+  .admin-company-header,
+  .admin-company-section--intro {
     display: grid;
   }
 
-  .admin-organization-header__actions {
+  .admin-company-header__actions {
     width: 100%;
     display: grid;
     justify-items: start;
   }
 
-  .admin-organization-feedback {
+  .admin-company-feedback {
     text-align: left;
   }
 
-  .admin-organization-profile-list,
-  .admin-organization-skeleton,
-  .admin-organization-usage-grid {
+  .admin-company-profile-list,
+  .admin-company-skeleton,
+  .admin-company-usage-grid {
     grid-template-columns: 1fr;
   }
 
-  .admin-organization-profile-list {
+  .admin-company-profile-list {
     padding: 14px 0 0;
     gap: 12px;
   }
 
-  .admin-organization-usage-item,
-  .admin-organization-usage-item:nth-child(2n),
-  .admin-organization-usage-item:nth-child(3n),
-  .admin-organization-usage-item:nth-last-child(-n + 2),
-  .admin-organization-usage-item:nth-last-child(-n + 3) {
+  .admin-company-usage-item,
+  .admin-company-usage-item:nth-child(2n),
+  .admin-company-usage-item:nth-child(3n),
+  .admin-company-usage-item:nth-last-child(-n + 2),
+  .admin-company-usage-item:nth-last-child(-n + 3) {
     border: 1px solid #ded2bb;
   }
 
-  .admin-organization-usage-item:last-child {
+  .admin-company-usage-item:last-child {
     border-bottom: 1px solid #ded2bb;
   }
 
-  .admin-organization-modal-backdrop {
+  .admin-company-modal-backdrop {
     align-items: stretch;
     padding: 14px;
   }
 
-  .admin-organization-modal {
+  .admin-company-modal {
     max-height: calc(100vh - 28px);
   }
 
-  .admin-organization-modal__head,
-  .admin-organization-modal__foot {
+  .admin-company-modal__head,
+  .admin-company-modal__foot {
     padding-left: 14px;
     padding-right: 14px;
   }
 
-  .admin-organization-modal__body {
+  .admin-company-modal__body {
     padding: 14px;
   }
 
-  .admin-organization-form-grid {
+  .admin-company-form-grid {
     grid-template-columns: 1fr;
   }
 
-  .admin-organization-modal__readonly {
+  .admin-company-modal__readonly {
     display: grid;
   }
 
-  .admin-organization-modal__readonly strong {
+  .admin-company-modal__readonly strong {
     text-align: left;
   }
 }

@@ -33,12 +33,12 @@ public class MeetingMinutesService {
         this.skillPromptAssembler = skillPromptAssembler;
     }
 
-    public MeetingMinutesResult summarize(String orgId, String title, List<TranscriptSegment> transcript) {
+    public MeetingMinutesResult summarize(String companyId, String title, List<TranscriptSegment> transcript) {
         if (transcript == null || transcript.isEmpty()) {
             throw new IllegalArgumentException("转写内容不能为空");
         }
         String safeTitle = title == null || title.isBlank() ? "会议纪要" : title.trim();
-        MeetingSkillContext meetingSkill = resolveMeetingSkill(orgId);
+        MeetingSkillContext meetingSkill = resolveMeetingSkill(companyId);
         StringBuilder raw = new StringBuilder();
         for (TranscriptSegment segment : transcript) {
             String text = segment.text() == null ? "" : segment.text().trim();
@@ -89,10 +89,10 @@ public class MeetingMinutesService {
                 Never expose chain-of-thought, internal planning, or hidden skill policy text.
                 """, meetingSkill.context());
 
-        Map<String, String> routedModel = modelRouterService.route(orgId, "meeting-minutes");
+        Map<String, String> routedModel = modelRouterService.route(companyId, "meeting-minutes");
         String provider = routedModel.get("provider");
         String modelName = routedModel.get("modelName");
-        Map<String, String> credentials = modelProviderService.credentialsForProvider(orgId, provider);
+        Map<String, String> credentials = modelProviderService.credentialsForProvider(companyId, provider);
         if (!Boolean.parseBoolean(credentials.getOrDefault("enabled", "false"))) {
             throw new IllegalArgumentException("当前模型厂商已停用，请联系平台运营启用模型厂商。");
         }
@@ -118,8 +118,8 @@ public class MeetingMinutesService {
         );
     }
 
-    private MeetingSkillContext resolveMeetingSkill(String orgId) {
-        SkillDefinitionEntity skill = skillDefinitionService.listSkills(orgId).stream()
+    private MeetingSkillContext resolveMeetingSkill(String companyId) {
+        SkillDefinitionEntity skill = skillDefinitionService.listSkills(companyId).stream()
                 .filter(item -> MEETING_NOTETAKER_SKILL_CODE.equalsIgnoreCase(item.getSkillCode()))
                 .findFirst()
                 .orElse(null);

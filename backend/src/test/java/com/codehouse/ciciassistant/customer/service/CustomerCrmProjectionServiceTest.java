@@ -61,11 +61,11 @@ class CustomerCrmProjectionServiceTest {
                             "zhuangtai", "已启用", "htjsrq", "2026-09-01", "htje", "120000"));
                     default -> List.of();
                 });
-        when(follows.findByOrgIdAndUserId("org", "user")).thenReturn(List.of());
-        when(follows.findByOrgIdAndUserIdAndCrmAccountId(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
-        when(events.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(anyString(), anyString())).thenReturn(List.of());
-        when(recommendations.countByOrgIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString())).thenReturn(0L);
-        when(signals.findByOrgIdAndPublicId(anyString(), anyString())).thenReturn(Optional.empty());
+        when(follows.findByCompanyIdAndUserId("org", "user")).thenReturn(List.of());
+        when(follows.findByCompanyIdAndUserIdAndCrmAccountId(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
+        when(events.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(anyString(), anyString())).thenReturn(List.of());
+        when(recommendations.countByCompanyIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString())).thenReturn(0L);
+        when(signals.findByCompanyIdAndPublicId(anyString(), anyString())).thenReturn(Optional.empty());
         when(signals.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         Map<String, Object> newQueue = awaitQueue(service,
@@ -105,8 +105,8 @@ class CustomerCrmProjectionServiceTest {
                             Map.of("id", "contract-2", "khmc", "001-old-recent"));
                     default -> List.of();
                 });
-        when(follows.findByOrgIdAndUserId("org", "user")).thenReturn(List.of());
-        when(recommendations.findByOrgIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
+        when(follows.findByCompanyIdAndUserId("org", "user")).thenReturn(List.of());
+        when(recommendations.findByCompanyIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 cloudcc, mock(CustomerInteractionEventRepository.class), recommendations,
                 mock(CustomerSignalRepository.class), follows, mock(CustomerDynamicScoringService.class), new ObjectMapper());
@@ -143,12 +143,12 @@ class CustomerCrmProjectionServiceTest {
         when(cloudcc.pageQueryRecords(eq("org"), eq("user"), eq("Account"), anyString(),
                 anyString(), anyInt(), anyInt()))
                 .thenReturn(new PageRecords(List.of(externalAccount), 1, 1, 1));
-        when(follows.findByOrgIdAndUserId("org", "user")).thenReturn(List.of());
-        when(follows.findByOrgIdAndUserIdAndCrmAccountId(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
-        when(recommendations.findByOrgIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
-        when(recommendations.countByOrgIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString())).thenReturn(0L);
-        when(events.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(anyString(), anyString())).thenReturn(List.of());
-        when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
+        when(follows.findByCompanyIdAndUserId("org", "user")).thenReturn(List.of());
+        when(follows.findByCompanyIdAndUserIdAndCrmAccountId(anyString(), anyString(), anyString())).thenReturn(Optional.empty());
+        when(recommendations.findByCompanyIdOrderByUpdatedAtDesc("org")).thenReturn(List.of());
+        when(recommendations.countByCompanyIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString())).thenReturn(0L);
+        when(events.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(anyString(), anyString())).thenReturn(List.of());
+        when(signals.findByCompanyIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
         CustomerCrmProjectionService service = new CustomerCrmProjectionService(
                 cloudcc, events, recommendations, signals, follows, mock(CustomerDynamicScoringService.class), new ObjectMapper());
 
@@ -231,8 +231,8 @@ class CustomerCrmProjectionServiceTest {
 
         assertThat(result).containsEntry("totalElements", 10_000).containsEntry("recordLimitReached", true);
         assertThat(items(result)).hasSize(12);
-        verify(recommendations, times(1)).findByOrgIdOrderByUpdatedAtDesc("org");
-        verify(recommendations, never()).countByOrgIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString());
+        verify(recommendations, times(1)).findByCompanyIdOrderByUpdatedAtDesc("org");
+        verify(recommendations, never()).countByCompanyIdAndCrmAccountIdAndStatus(anyString(), anyString(), anyString());
         service.shutdownExecutors();
     }
 
@@ -240,7 +240,7 @@ class CustomerCrmProjectionServiceTest {
     void usesAtomicSignalUpsertUnderConcurrentProjection() throws Exception {
         CustomerSignalRepository signals = mock(CustomerSignalRepository.class);
         AtomicInteger upserts = new AtomicInteger();
-        when(signals.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
+        when(signals.findByCompanyIdAndCrmAccountIdOrderByUpdatedAtDesc(anyString(), anyString())).thenReturn(List.of());
         when(signals.upsertSignal(anyString(), anyString(), anyString(), anyString(), anyString(),
                 anyString(), anyString(), anyString(), anyString(), any(), any()))
                 .thenAnswer(invocation -> upserts.incrementAndGet());

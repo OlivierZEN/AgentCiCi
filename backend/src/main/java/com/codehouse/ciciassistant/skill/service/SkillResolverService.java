@@ -75,35 +75,35 @@ public class SkillResolverService {
         this.skillApiToolService = skillApiToolService;
     }
 
-    public ResolvedSkillContext resolve(String orgId, String requestedAgentId, String sessionId) {
-        return resolve(orgId, requestedAgentId, sessionId, Optional.empty());
+    public ResolvedSkillContext resolve(String companyId, String requestedAgentId, String sessionId) {
+        return resolve(companyId, requestedAgentId, sessionId, Optional.empty());
     }
 
     /**
      * Resolves skills/tools for chat. Optional {@code activeSkillOverride} updates persisted {@code active_skill_code}
      * in session state before computing the effective tool list per skill activation rules.
      */
-    public ResolvedSkillContext resolve(String orgId, String requestedAgentId, String sessionId,
+    public ResolvedSkillContext resolve(String companyId, String requestedAgentId, String sessionId,
                                         Optional<String> activeSkillOverride) {
-        return resolveInternal(orgId, requestedAgentId, sessionId, activeSkillOverride, null, false);
+        return resolveInternal(companyId, requestedAgentId, sessionId, activeSkillOverride, null, false);
     }
 
-    public ResolvedSkillContext resolveForEvaluation(String orgId,
+    public ResolvedSkillContext resolveForEvaluation(String companyId,
                                                      String agentId,
                                                      Long workflowVersionId) {
         AgentWorkflowVersionEntity version = agentWorkflowVersionRepository.findById(workflowVersionId)
-                .filter(item -> orgId.equals(item.getOrgId()) && agentId.equals(item.getAgentId()))
+                .filter(item -> companyId.equals(item.getCompanyId()) && agentId.equals(item.getAgentId()))
                 .orElseThrow(() -> new IllegalArgumentException("Agent workflow version not found"));
         return resolveInternal(
-                orgId,
+                companyId,
                 agentId,
                 "evaluation-" + workflowVersionId,
                 Optional.empty(),
-                resolveRuntimeBinding(orgId, version),
+                resolveRuntimeBinding(companyId, version),
                 true);
     }
 
-    private ResolvedSkillContext resolveInternal(String orgId,
+    private ResolvedSkillContext resolveInternal(String companyId,
                                                  String requestedAgentId,
                                                  String sessionId,
                                                  Optional<String> activeSkillOverride,
@@ -111,15 +111,15 @@ public class SkillResolverService {
                                                  boolean evaluationMode) {
         String agentId = evaluationMode ? requestedAgentId : resolveAgentId(requestedAgentId, sessionId);
         AgentCapabilityResolverService.AgentCapabilityResolution capability = agentCapabilityResolverService.resolve(
-                orgId,
+                companyId,
                 agentId,
                 List.of()
         );
         PublishedRuntimeBinding publishedRuntimeBinding = runtimeBindingOverride == null
-                ? resolvePublishedRuntimeBinding(orgId, agentId)
+                ? resolvePublishedRuntimeBinding(companyId, agentId)
                 : runtimeBindingOverride;
         PlatformGovernanceService.RuntimePolicyBundle runtimePolicyBundle =
-                platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+                platformGovernanceService.resolvePublishedPolicyBundle(companyId);
         List<AgentWorkflowSkillRefService.RuntimeSkillRef> pinnedSkillRefs = publishedRuntimeBinding.skillRefs();
         List<String> effectiveSkillCodes = pinnedSkillRefs.isEmpty()
                 ? (publishedRuntimeBinding.skillCodes().isEmpty()
@@ -127,13 +127,13 @@ public class SkillResolverService {
                 : publishedRuntimeBinding.skillCodes())
                 : pinnedSkillRefs.stream().map(AgentWorkflowSkillRefService.RuntimeSkillRef::skillCode).toList();
         List<SkillDefinitionEntity> entities = pinnedSkillRefs.isEmpty()
-                ? resolveSkillEntities(orgId, agentId, effectiveSkillCodes)
+                ? resolveSkillEntities(companyId, agentId, effectiveSkillCodes)
                 : List.of();
         if (!evaluationMode && pinnedSkillRefs.isEmpty() && entities.isEmpty() && !"cici-system".equals(agentId)) {
             agentId = "cici-system";
-            capability = agentCapabilityResolverService.resolve(orgId, agentId, List.of());
-            publishedRuntimeBinding = resolvePublishedRuntimeBinding(orgId, agentId);
-            runtimePolicyBundle = platformGovernanceService.resolvePublishedPolicyBundle(orgId);
+            capability = agentCapabilityResolverService.resolve(companyId, agentId, List.of());
+            publishedRuntimeBinding = resolvePublishedRuntimeBinding(companyId, agentId);
+            runtimePolicyBundle = platformGovernanceService.resolvePublishedPolicyBundle(companyId);
             pinnedSkillRefs = publishedRuntimeBinding.skillRefs();
             effectiveSkillCodes = pinnedSkillRefs.isEmpty()
                     ? (publishedRuntimeBinding.skillCodes().isEmpty()
@@ -141,11 +141,11 @@ public class SkillResolverService {
                     : publishedRuntimeBinding.skillCodes())
                     : pinnedSkillRefs.stream().map(AgentWorkflowSkillRefService.RuntimeSkillRef::skillCode).toList();
             entities = pinnedSkillRefs.isEmpty()
-                    ? resolveSkillEntities(orgId, agentId, effectiveSkillCodes)
+                    ? resolveSkillEntities(companyId, agentId, effectiveSkillCodes)
                     : List.of();
         }
 
-        Optional<AgentDefinitionEntity> agentDef = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
+        Optional<AgentDefinitionEntity> agentDef = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId);
         String agentSystemPrompt = agentDef.map(AgentDefinitionEntity::getSystemPrompt)
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
@@ -153,9 +153,9 @@ public class SkillResolverService {
                 .filter(s -> s != null && !s.isBlank())
                 .orElse(null);
 
-        Map<Long, String> activationBySkillId = loadActivationModes(orgId, agentId);
+        Map<Long, String> activationBySkillId = loadActivationModes(companyId, agentId);
         List<ResolvedSkillVersionRef> resolvedSkillRefs = pinnedSkillRefs.isEmpty()
-                ? entities.stream().map(item -> buildCurrentSkillVersionRef(orgId, item, activationBySkillId)).toList()
+                ? entities.stream().map(item -> buildCurrentSkillVersionRef(companyId, item, activationBySkillId)).toList()
                 : pinnedSkillRefs.stream().map(this::toResolvedSkillVersionRef).toList();
         List<ResolvedSkill> skills = pinnedSkillRefs.isEmpty()
                 ? entities.stream()
@@ -196,7 +196,7 @@ public class SkillResolverService {
         Optional<String> activeSkillEffective = evaluationMode
                 ? Optional.empty()
                 : chatSessionStateService.mergeAndGetActiveSkillCode(
-                        orgId, sessionId, agentId, activeSkillOverride, boundSkillCodes);
+                        companyId, sessionId, agentId, activeSkillOverride, boundSkillCodes);
 
         LinkedHashSet<String> baselineUniversal = new LinkedHashSet<>(agentDirectToolNames);
         baselineUniversal.addAll(ToolNameNormalizer.canonicalizeAll(publishedRuntimeBinding.toolNames()));
@@ -225,7 +225,7 @@ public class SkillResolverService {
             }
         }
         List<SkillApiToolService.ResolvedSkillApiTool> skillApiTools =
-                skillApiToolService.findRuntimeTools(orgId, runtimeApiVersionIds);
+                skillApiToolService.findRuntimeTools(companyId, runtimeApiVersionIds);
         skillApiTools.stream().map(SkillApiToolService.ResolvedSkillApiTool::toolName).forEach(toolNames::add);
 
         boolean pinnedRuntime = !pinnedSkillRefs.isEmpty();
@@ -264,7 +264,7 @@ public class SkillResolverService {
         });
 
         List<String> runtimeAllowedToolNames = platformGovernanceService.filterRuntimeAllowedToolNames(
-                orgId,
+                companyId,
                 List.copyOf(toolNames)
         );
 
@@ -295,9 +295,9 @@ public class SkillResolverService {
         );
     }
 
-    private Map<Long, String> loadActivationModes(String orgId, String agentId) {
+    private Map<Long, String> loadActivationModes(String companyId, String agentId) {
         Map<Long, String> map = new LinkedHashMap<>();
-        for (AgentSkillBindingEntity binding : agentSkillBindingRepository.findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, agentId)) {
+        for (AgentSkillBindingEntity binding : agentSkillBindingRepository.findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, agentId)) {
             map.put(binding.getSkillId(), binding.getActivationMode());
         }
         return map;
@@ -359,21 +359,21 @@ public class SkillResolverService {
                 .toList();
     }
 
-    private PublishedRuntimeBinding resolvePublishedRuntimeBinding(String orgId, String agentId) {
-        Optional<AgentDefinitionEntity> definition = agentDefinitionRepository.findByOrgIdAndAgentId(orgId, agentId);
+    private PublishedRuntimeBinding resolvePublishedRuntimeBinding(String companyId, String agentId) {
+        Optional<AgentDefinitionEntity> definition = agentDefinitionRepository.findByCompanyIdAndAgentId(companyId, agentId);
         if (definition.isEmpty() || definition.get().getPublishedVersionId() == null) {
             return PublishedRuntimeBinding.EMPTY;
         }
         Optional<AgentWorkflowVersionEntity> version = agentWorkflowVersionRepository.findById(definition.get().getPublishedVersionId())
-                .filter(item -> orgId.equals(item.getOrgId()) && agentId.equals(item.getAgentId()))
+                .filter(item -> companyId.equals(item.getCompanyId()) && agentId.equals(item.getAgentId()))
                 .filter(item -> "PUBLISHED".equalsIgnoreCase(item.getPublishStatus()));
         if (version.isEmpty() || version.get().getWorkflowManifest() == null || version.get().getWorkflowManifest().isBlank()) {
             return PublishedRuntimeBinding.EMPTY;
         }
-        return resolveRuntimeBinding(orgId, version.get());
+        return resolveRuntimeBinding(companyId, version.get());
     }
 
-    private PublishedRuntimeBinding resolveRuntimeBinding(String orgId, AgentWorkflowVersionEntity version) {
+    private PublishedRuntimeBinding resolveRuntimeBinding(String companyId, AgentWorkflowVersionEntity version) {
         if (version.getWorkflowManifest() == null || version.getWorkflowManifest().isBlank()) {
             return PublishedRuntimeBinding.EMPTY;
         }
@@ -383,7 +383,7 @@ public class SkillResolverService {
             Map<String, Object> dependencies = getMap(manifest.get("dependencies"));
             Map<String, Object> policies = getMap(manifest.get("policies"));
             List<AgentWorkflowSkillRefService.RuntimeSkillRef> skillRefs =
-                    agentWorkflowSkillRefService.listRuntimeSkillRefs(orgId, version.getId());
+                    agentWorkflowSkillRefService.listRuntimeSkillRefs(companyId, version.getId());
             return new PublishedRuntimeBinding(
                     toStringList(dependencies.get("skills")),
                     toStringList(dependencies.get("tools")),
@@ -398,12 +398,12 @@ public class SkillResolverService {
         }
     }
 
-    private List<SkillDefinitionEntity> resolveSkillEntities(String orgId, String agentId, List<String> effectiveSkillCodes) {
+    private List<SkillDefinitionEntity> resolveSkillEntities(String companyId, String agentId, List<String> effectiveSkillCodes) {
         if (effectiveSkillCodes.isEmpty()) {
-            return skillDefinitionService.listSkillsForAgent(orgId, agentId);
+            return skillDefinitionService.listSkillsForAgent(companyId, agentId);
         }
         return effectiveSkillCodes.stream()
-                .map(code -> skillDefinitionService.listSkills(orgId).stream()
+                .map(code -> skillDefinitionService.listSkills(companyId).stream()
                         .filter(item -> code.equals(item.getSkillCode()))
                         .findFirst()
                         .orElse(null))
@@ -411,10 +411,10 @@ public class SkillResolverService {
                 .toList();
     }
 
-    private ResolvedSkillVersionRef buildCurrentSkillVersionRef(String orgId,
+    private ResolvedSkillVersionRef buildCurrentSkillVersionRef(String companyId,
                                                                 SkillDefinitionEntity skill,
                                                                 Map<Long, String> activationBySkillId) {
-        SkillVersionEntity version = resolveCurrentSkillVersion(orgId, skill).orElse(null);
+        SkillVersionEntity version = resolveCurrentSkillVersion(companyId, skill).orElse(null);
         return new ResolvedSkillVersionRef(
                 skill.getSkillCode(),
                 skill.getId(),
@@ -426,20 +426,20 @@ public class SkillResolverService {
         );
     }
 
-    private Optional<SkillVersionEntity> resolveCurrentSkillVersion(String orgId, SkillDefinitionEntity skill) {
+    private Optional<SkillVersionEntity> resolveCurrentSkillVersion(String companyId, SkillDefinitionEntity skill) {
         if (skill.getCurrentPublishedVersionId() != null) {
             Optional<SkillVersionEntity> currentPublished = skillVersionRepository.findById(skill.getCurrentPublishedVersionId())
-                    .filter(version -> orgId.equals(version.getOrgId()) && Objects.equals(skill.getId(), version.getSkillId()));
+                    .filter(version -> companyId.equals(version.getCompanyId()) && Objects.equals(skill.getId(), version.getSkillId()));
             if (currentPublished.isPresent()) {
                 return currentPublished;
             }
         }
         Optional<SkillVersionEntity> published = skillVersionRepository
-                .findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(orgId, skill.getId(), "PUBLISHED");
+                .findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(companyId, skill.getId(), "PUBLISHED");
         if (published.isPresent()) {
             return published;
         }
-        return skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, skill.getId());
+        return skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, skill.getId());
     }
 
     private ResolvedSkillVersionRef toResolvedSkillVersionRef(AgentWorkflowSkillRefService.RuntimeSkillRef item) {

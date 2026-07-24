@@ -14,8 +14,8 @@ public class AgentRunTraceEntity {
     @Column(name = "trace_id", nullable = false, length = 64)
     private String traceId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "user_id", nullable = false, length = 64)
     private String userId;
@@ -94,7 +94,7 @@ public class AgentRunTraceEntity {
 
     public AgentRunTraceEntity(
             String traceId,
-            String orgId,
+            String companyId,
             String userId,
             String sessionId,
             String agentId,
@@ -116,7 +116,7 @@ public class AgentRunTraceEntity {
             String detailJson,
             Instant createdAt) {
         this.traceId = traceId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.userId = userId;
         this.sessionId = sessionId;
         this.agentId = agentId;
@@ -141,7 +141,7 @@ public class AgentRunTraceEntity {
     }
 
     public String getTraceId() { return traceId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getUserId() { return userId; }
     public String getSessionId() { return sessionId; }
     public String getAgentId() { return agentId; }

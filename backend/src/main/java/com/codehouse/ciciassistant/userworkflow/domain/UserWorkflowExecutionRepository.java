@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface UserWorkflowExecutionRepository extends JpaRepository<UserWorkflowExecutionEntity, Long> {
 
-    List<UserWorkflowExecutionEntity> findTop20ByOrgIdAndUserIdAndAgentIdOrderByIdDesc(String orgId, String userId, String agentId);
+    List<UserWorkflowExecutionEntity> findTop20ByCompanyIdAndUserIdAndAgentIdOrderByIdDesc(String companyId, String userId, String agentId);
 
-    Optional<UserWorkflowExecutionEntity> findByIdAndOrgIdAndUserIdAndAgentId(Long id, String orgId, String userId, String agentId);
+    Optional<UserWorkflowExecutionEntity> findByIdAndCompanyIdAndUserIdAndAgentId(Long id, String companyId, String userId, String agentId);
 }

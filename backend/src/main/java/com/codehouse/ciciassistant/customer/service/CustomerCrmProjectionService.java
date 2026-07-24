@@ -81,33 +81,33 @@ public class CustomerCrmProjectionService {
         this.objectMapper = objectMapper;
     }
 
-    public Map<String, Object> queue(String orgId, String userId, QueueQuery query) {
-        String key = cacheKey(orgId, userId);
-        Dataset dataset = availableDataset(orgId, userId, query.refresh());
+    public Map<String, Object> queue(String companyId, String userId, QueueQuery query) {
+        String key = cacheKey(companyId, userId);
+        Dataset dataset = availableDataset(companyId, userId, query.refresh());
         if (query.query() != null && !query.query().isBlank()) {
-            Map<String, Object> result = searchQueue(orgId, userId, query, dataset);
+            Map<String, Object> result = searchQueue(companyId, userId, query, dataset);
             result.putAll(syncMetadata(key, dataset));
             return result;
         }
         if (dataset == null) return emptyQueue(query, key);
-        List<Map<String, Object>> all = accountViews(orgId, userId, dataset);
+        List<Map<String, Object>> all = accountViews(companyId, userId, dataset);
         Map<String, Object> result = queueFromViews(all, query, dataset.loadedAt());
         result.putAll(syncMetadata(key, dataset));
         return result;
     }
 
-    private Map<String, Object> searchQueue(String orgId, String userId, QueueQuery query, Dataset dataset) {
+    private Map<String, Object> searchQueue(String companyId, String userId, QueueQuery query, Dataset dataset) {
         int size = Math.max(1, Math.min(100, query.size()));
         int page = Math.max(1, query.page());
         String term = normalizedSearchTerm(query.query());
-        PageRecords result = cloudcc.pageQueryRecords(orgId, userId, "Account",
+        PageRecords result = cloudcc.pageQueryRecords(companyId, userId, "Account",
                 "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays",
                 "name like '%" + escapeExpressionLiteral(term) + "%'", page, size);
         Map<String, Map<String, Object>> cachedAccounts = dataset == null ? Map.of() : dataset.accounts().stream()
                 .collect(java.util.stream.Collectors.toMap(item -> text(item, "id"), item -> item, (left, right) -> left));
-        Set<String> followed = followRepository.findByOrgIdAndUserId(orgId, userId).stream()
+        Set<String> followed = followRepository.findByCompanyIdAndUserId(companyId, userId).stream()
                 .map(CustomerFollowSubscriptionEntity::getCrmAccountId).collect(java.util.stream.Collectors.toSet());
-        Map<String, Long> pendingCounts = recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+        Map<String, Long> pendingCounts = recommendationRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId).stream()
                 .filter(item -> CustomerWorkbenchRecommendationEntity.STATUS_PENDING.equals(item.getStatus()))
                 .collect(java.util.stream.Collectors.groupingBy(
                         CustomerWorkbenchRecommendationEntity::getCrmAccountId,
@@ -119,7 +119,7 @@ public class CustomerCrmProjectionService {
                     ? accountView(cached, dataset, followed.contains(accountId), pendingCounts.getOrDefault(accountId, 0L))
                     : searchAccountView(account);
         }).toList());
-        dynamicScoringService.overlayScores(orgId, items);
+        dynamicScoringService.overlayScores(companyId, items);
         items.sort(queueComparator("interaction", "desc"));
         return mapOf(
                 "items", items,
@@ -165,10 +165,10 @@ public class CustomerCrmProjectionService {
         );
     }
 
-    private List<Map<String, Object>> accountViews(String orgId, String userId, Dataset dataset) {
-        Set<String> followed = followRepository.findByOrgIdAndUserId(orgId, userId).stream()
+    private List<Map<String, Object>> accountViews(String companyId, String userId, Dataset dataset) {
+        Set<String> followed = followRepository.findByCompanyIdAndUserId(companyId, userId).stream()
                 .map(CustomerFollowSubscriptionEntity::getCrmAccountId).collect(java.util.stream.Collectors.toSet());
-        Map<String, Long> pendingCounts = recommendationRepository.findByOrgIdOrderByUpdatedAtDesc(orgId).stream()
+        Map<String, Long> pendingCounts = recommendationRepository.findByCompanyIdOrderByUpdatedAtDesc(companyId).stream()
                 .filter(item -> CustomerWorkbenchRecommendationEntity.STATUS_PENDING.equals(item.getStatus()))
                 .collect(java.util.stream.Collectors.groupingBy(
                         CustomerWorkbenchRecommendationEntity::getCrmAccountId,
@@ -177,7 +177,7 @@ public class CustomerCrmProjectionService {
                 .map(account -> accountView(account, dataset, followed.contains(text(account, "id")),
                         pendingCounts.getOrDefault(text(account, "id"), 0L)))
                 .toList());
-        dynamicScoringService.overlayScores(orgId, views);
+        dynamicScoringService.overlayScores(companyId, views);
         return views;
     }
 
@@ -207,14 +207,14 @@ public class CustomerCrmProjectionService {
         );
     }
 
-    public Map<String, Object> detail(String orgId, String userId, String accountId, boolean refresh) {
-        Dataset dataset = requireAccountDataset(orgId, userId, accountId, refresh);
+    public Map<String, Object> detail(String companyId, String userId, String accountId, boolean refresh) {
+        Dataset dataset = requireAccountDataset(companyId, userId, accountId, refresh);
         Map<String, Object> account = dataset.accounts().stream()
                 .filter(item -> accountId.equals(text(item, "id"))).findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("当前用户无权访问该客户或客户不存在"));
-        boolean followed = followRepository.findByOrgIdAndUserIdAndCrmAccountId(orgId, userId, accountId).isPresent();
-        long pendingCount = recommendationRepository.countByOrgIdAndCrmAccountIdAndStatus(
-                orgId, accountId, CustomerWorkbenchRecommendationEntity.STATUS_PENDING);
+        boolean followed = followRepository.findByCompanyIdAndUserIdAndCrmAccountId(companyId, userId, accountId).isPresent();
+        long pendingCount = recommendationRepository.countByCompanyIdAndCrmAccountIdAndStatus(
+                companyId, accountId, CustomerWorkbenchRecommendationEntity.STATUS_PENDING);
         Map<String, Object> view = new LinkedHashMap<>(accountView(account, dataset, followed, pendingCount));
         List<Map<String, Object>> opportunities = dataset.opportunitiesFor(accountId);
         List<Map<String, Object>> contacts = dataset.contactsFor(accountId);
@@ -222,9 +222,9 @@ public class CustomerCrmProjectionService {
         List<Map<String, Object>> events = dataset.eventsFor(accountId);
         List<Map<String, Object>> cases = dataset.casesFor(accountId);
         List<Map<String, Object>> contracts = dataset.contractsFor(accountId);
-        List<Map<String, Object>> timeline = timeline(orgId, accountId, tasks, events);
+        List<Map<String, Object>> timeline = timeline(companyId, accountId, tasks, events);
         List<Map<String, Object>> signals = signals(account, opportunities, contacts, tasks, cases, contracts, timeline);
-        persistSignals(orgId, accountId, signals);
+        persistSignals(companyId, accountId, signals);
 
         view.put("industry", text(account, "hangye"));
         view.put("contact", contacts.isEmpty() ? "" : contactLabel(contacts.get(0)));
@@ -251,17 +251,17 @@ public class CustomerCrmProjectionService {
         return view;
     }
 
-    public List<Map<String, Object>> timeline(String orgId, String userId, String accountId, boolean refresh) {
-        Dataset dataset = requireAccountDataset(orgId, userId, accountId, refresh);
+    public List<Map<String, Object>> timeline(String companyId, String userId, String accountId, boolean refresh) {
+        Dataset dataset = requireAccountDataset(companyId, userId, accountId, refresh);
         if (dataset.accounts().stream().noneMatch(item -> accountId.equals(text(item, "id")))) {
             throw new IllegalArgumentException("当前用户无权访问该客户或客户不存在");
         }
-        return timeline(orgId, accountId, dataset.tasksFor(accountId), dataset.eventsFor(accountId));
+        return timeline(companyId, accountId, dataset.tasksFor(accountId), dataset.eventsFor(accountId));
     }
 
-    public Map<String, Object> integrationStatus(String orgId, String userId) {
-        String key = cacheKey(orgId, userId);
-        Dataset value = availableDataset(orgId, userId, false);
+    public Map<String, Object> integrationStatus(String companyId, String userId) {
+        String key = cacheKey(companyId, userId);
+        Dataset value = availableDataset(companyId, userId, false);
         SyncState state = syncStates.get(key);
         if (value == null) {
             boolean failed = state != null && "FAILED".equals(state.status());
@@ -283,24 +283,24 @@ public class CustomerCrmProjectionService {
     }
 
     @Transactional
-    public Map<String, Object> follow(String orgId, String userId, String accountId, boolean followed) {
-        Dataset dataset = requireAccountDataset(orgId, userId, accountId, false);
+    public Map<String, Object> follow(String companyId, String userId, String accountId, boolean followed) {
+        Dataset dataset = requireAccountDataset(companyId, userId, accountId, false);
         if (dataset.accounts().stream().noneMatch(item -> accountId.equals(text(item, "id")))) {
             throw new IllegalArgumentException("当前用户无权关注该客户");
         }
         if (followed) {
-            followRepository.findByOrgIdAndUserIdAndCrmAccountId(orgId, userId, accountId)
-                    .orElseGet(() -> followRepository.save(new CustomerFollowSubscriptionEntity(orgId, userId, accountId, "RISK_AND_ACTION")));
+            followRepository.findByCompanyIdAndUserIdAndCrmAccountId(companyId, userId, accountId)
+                    .orElseGet(() -> followRepository.save(new CustomerFollowSubscriptionEntity(companyId, userId, accountId, "RISK_AND_ACTION")));
         } else {
-            followRepository.deleteByOrgIdAndUserIdAndCrmAccountId(orgId, userId, accountId);
+            followRepository.deleteByCompanyIdAndUserIdAndCrmAccountId(companyId, userId, accountId);
         }
         return mapOf("accountId", accountId, "followed", followed);
     }
 
-    public List<Map<String, Object>> notifications(String orgId, String userId) {
-        Dataset dataset = availableDataset(orgId, userId, false);
+    public List<Map<String, Object>> notifications(String companyId, String userId) {
+        Dataset dataset = availableDataset(companyId, userId, false);
         if (dataset == null) return List.of();
-        List<Map<String, Object>> items = accountViews(orgId, userId, dataset);
+        List<Map<String, Object>> items = accountViews(companyId, userId, dataset);
         return items.stream().filter(item -> bool(item, "followed") || number(item, "riskCount") > 0)
                 .sorted(queueComparator("risk", "desc"))
                 .limit(20)
@@ -312,38 +312,38 @@ public class CustomerCrmProjectionService {
                 .toList();
     }
 
-    public void invalidate(String orgId, String userId) {
-        cache.remove(cacheKey(orgId, userId));
+    public void invalidate(String companyId, String userId) {
+        cache.remove(cacheKey(companyId, userId));
     }
 
-    public List<Map<String, Object>> visibleAccountViews(String orgId, String userId) {
-        Dataset dataset = availableDataset(orgId, userId, false);
-        return dataset == null ? List.of() : accountViews(orgId, userId, dataset);
+    public List<Map<String, Object>> visibleAccountViews(String companyId, String userId) {
+        Dataset dataset = availableDataset(companyId, userId, false);
+        return dataset == null ? List.of() : accountViews(companyId, userId, dataset);
     }
 
-    private Dataset availableDataset(String orgId, String userId, boolean refresh) {
-        String key = cacheKey(orgId, userId);
+    private Dataset availableDataset(String companyId, String userId, boolean refresh) {
+        String key = cacheKey(companyId, userId);
         CacheEntry current = cache.get(key);
-        if (refresh || current == null || current.expiresAt().isBefore(Instant.now())) scheduleDatasetLoad(key, orgId, userId);
+        if (refresh || current == null || current.expiresAt().isBefore(Instant.now())) scheduleDatasetLoad(key, companyId, userId);
         return current == null ? null : current.dataset();
     }
 
-    private Dataset requireDataset(String orgId, String userId, boolean refresh) {
-        Dataset dataset = availableDataset(orgId, userId, refresh);
+    private Dataset requireDataset(String companyId, String userId, boolean refresh) {
+        Dataset dataset = availableDataset(companyId, userId, refresh);
         if (dataset == null) throw new ConflictException("CRM 数据正在同步，请稍后重试");
         return dataset;
     }
 
-    private Dataset requireAccountDataset(String orgId, String userId, String accountId, boolean refresh) {
-        Dataset dataset = availableDataset(orgId, userId, refresh);
+    private Dataset requireAccountDataset(String companyId, String userId, String accountId, boolean refresh) {
+        Dataset dataset = availableDataset(companyId, userId, refresh);
         if (dataset != null && dataset.accounts().stream().anyMatch(item -> accountId.equals(text(item, "id")))) return dataset;
-        Dataset focused = loadFocusedDataset(orgId, userId, accountId);
+        Dataset focused = loadFocusedDataset(companyId, userId, accountId);
         Dataset merged = dataset == null ? focused : dataset.merge(focused);
-        cache.put(cacheKey(orgId, userId), new CacheEntry(merged, Instant.now().plus(CACHE_TTL)));
+        cache.put(cacheKey(companyId, userId), new CacheEntry(merged, Instant.now().plus(CACHE_TTL)));
         return merged;
     }
 
-    private void scheduleDatasetLoad(String key, String orgId, String userId) {
+    private void scheduleDatasetLoad(String key, String companyId, String userId) {
         if (activeLoads.containsKey(key)) return;
         SyncState previous = syncStates.get(key);
         if (previous != null && "FAILED".equals(previous.status()) && previous.completedAt() != null
@@ -354,12 +354,12 @@ public class CustomerCrmProjectionService {
         syncStates.put(key, new SyncState("SYNCING", startedAt, null, "正在同步 CRM 数据"));
         syncExecutor.execute(() -> {
             try {
-                Dataset loaded = loadDataset(orgId, userId);
+                Dataset loaded = loadDataset(companyId, userId);
                 cache.put(key, new CacheEntry(loaded, Instant.now().plus(CACHE_TTL)));
                 syncStates.put(key, new SyncState("READY", startedAt, Instant.now(), "CRM 数据同步完成"));
                 marker.complete(loaded);
                 log.info("CloudCC dataset sync completed: org={}, user={}, accounts={}, limited={}, durationMs={}",
-                        orgId, userId, loaded.accounts().size(), loaded.recordLimitReached(),
+                        companyId, userId, loaded.accounts().size(), loaded.recordLimitReached(),
                         Duration.between(startedAt, Instant.now()).toMillis());
             } catch (RuntimeException ex) {
                 String technicalMessage = ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage();
@@ -369,45 +369,45 @@ public class CustomerCrmProjectionService {
                 syncStates.put(key, new SyncState("FAILED", startedAt, Instant.now(), userMessage));
                 marker.completeExceptionally(ex);
                 log.warn("CloudCC dataset sync failed: org={}, user={}, durationMs={}, message={}",
-                        orgId, userId, Duration.between(startedAt, Instant.now()).toMillis(), technicalMessage);
+                        companyId, userId, Duration.between(startedAt, Instant.now()).toMillis(), technicalMessage);
             } finally {
                 activeLoads.remove(key, marker);
             }
         });
     }
 
-    private Dataset loadDataset(String orgId, String userId) {
-        CompletableFuture<List<Map<String, Object>>> accounts = queryAsync(() -> queryRequired(orgId, userId, "Account", "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays"));
-        CompletableFuture<List<Map<String, Object>>> contacts = queryAsync(() -> queryOptional(orgId, userId, "Contact", "id,name,khmc,ownerid,zhiwu,contactrole,scbclxbcrq"));
-        CompletableFuture<List<Map<String, Object>>> opportunities = queryAsync(() -> queryOptional(orgId, userId, "Opportunity", "id,name,khmc,ownerid,jieduan,jine,jsrq,xyb,latestcontact,lastmodifydate"));
-        CompletableFuture<List<Map<String, Object>>> tasks = queryAsync(() -> queryOptional(orgId, userId, "Task", "id,name,subject,relateid,relateobj,status,priority,expiredate,ownerid,remark,lastmodifydate"));
-        CompletableFuture<List<Map<String, Object>>> events = queryAsync(() -> queryOptional(orgId, userId, "Event", "id,name,subject,relateid,relateobj,status,type,begintime,endtime,ownerid,remark,lastmodifydate"));
-        CompletableFuture<List<Map<String, Object>>> cases = queryAsync(() -> queryOptional(orgId, userId, "cloudcccase", "id,name,khmc,ownerid,zhuangtai,yxj,duedate,zhuti,problemdescription,lastmodifydate"));
-        CompletableFuture<List<Map<String, Object>>> contracts = queryAsync(() -> queryOptional(orgId, userId, "contract", "id,name,khmc,ownerid,zhuangtai,htksrq,htjsrq,htje,lastmodifydate"));
+    private Dataset loadDataset(String companyId, String userId) {
+        CompletableFuture<List<Map<String, Object>>> accounts = queryAsync(() -> queryRequired(companyId, userId, "Account", "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays"));
+        CompletableFuture<List<Map<String, Object>>> contacts = queryAsync(() -> queryOptional(companyId, userId, "Contact", "id,name,khmc,ownerid,zhiwu,contactrole,scbclxbcrq"));
+        CompletableFuture<List<Map<String, Object>>> opportunities = queryAsync(() -> queryOptional(companyId, userId, "Opportunity", "id,name,khmc,ownerid,jieduan,jine,jsrq,xyb,latestcontact,lastmodifydate"));
+        CompletableFuture<List<Map<String, Object>>> tasks = queryAsync(() -> queryOptional(companyId, userId, "Task", "id,name,subject,relateid,relateobj,status,priority,expiredate,ownerid,remark,lastmodifydate"));
+        CompletableFuture<List<Map<String, Object>>> events = queryAsync(() -> queryOptional(companyId, userId, "Event", "id,name,subject,relateid,relateobj,status,type,begintime,endtime,ownerid,remark,lastmodifydate"));
+        CompletableFuture<List<Map<String, Object>>> cases = queryAsync(() -> queryOptional(companyId, userId, "cloudcccase", "id,name,khmc,ownerid,zhuangtai,yxj,duedate,zhuti,problemdescription,lastmodifydate"));
+        CompletableFuture<List<Map<String, Object>>> contracts = queryAsync(() -> queryOptional(companyId, userId, "contract", "id,name,khmc,ownerid,zhuangtai,htksrq,htjsrq,htje,lastmodifydate"));
         CompletableFuture.allOf(accounts, contacts, opportunities, tasks, events, cases, contracts).join();
         return Dataset.create(accounts.join(), contacts.join(), opportunities.join(), tasks.join(), events.join(), cases.join(), contracts.join());
     }
 
-    private Dataset loadFocusedDataset(String orgId, String userId, String accountId) {
+    private Dataset loadFocusedDataset(String companyId, String userId, String accountId) {
         if (accountId == null || !accountId.matches("[A-Za-z0-9_-]{3,128}")) {
             throw new IllegalArgumentException("客户标识无效");
         }
         String accountExpression = "id = '" + accountId + "'";
         String relationExpression = "khmc = '" + accountId + "'";
         String activityExpression = "relateid = '" + accountId + "'";
-        CompletableFuture<List<Map<String, Object>>> accounts = detailQueryAsync(() -> queryRequiredFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> accounts = detailQueryAsync(() -> queryRequiredFiltered(companyId, userId,
                 "Account", "id,name,ownerid,lastcontactdate,lastmodifydate,hangye,fenji,unconnecteddays", accountExpression));
-        CompletableFuture<List<Map<String, Object>>> contacts = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> contacts = detailQueryAsync(() -> queryOptionalFiltered(companyId, userId,
                 "Contact", "id,name,khmc,ownerid,zhiwu,contactrole,scbclxbcrq", relationExpression));
-        CompletableFuture<List<Map<String, Object>>> opportunities = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> opportunities = detailQueryAsync(() -> queryOptionalFiltered(companyId, userId,
                 "Opportunity", "id,name,khmc,ownerid,jieduan,jine,jsrq,xyb,latestcontact,lastmodifydate", relationExpression));
-        CompletableFuture<List<Map<String, Object>>> tasks = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> tasks = detailQueryAsync(() -> queryOptionalFiltered(companyId, userId,
                 "Task", "id,name,subject,relateid,relateobj,status,priority,expiredate,ownerid,remark,lastmodifydate", activityExpression));
-        CompletableFuture<List<Map<String, Object>>> events = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> events = detailQueryAsync(() -> queryOptionalFiltered(companyId, userId,
                 "Event", "id,name,subject,relateid,relateobj,status,type,begintime,endtime,ownerid,remark,lastmodifydate", activityExpression));
-        CompletableFuture<List<Map<String, Object>>> cases = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> cases = detailQueryAsync(() -> queryOptionalFiltered(companyId, userId,
                 "cloudcccase", "id,name,khmc,ownerid,zhuangtai,yxj,duedate,zhuti,problemdescription,lastmodifydate", relationExpression));
-        CompletableFuture<List<Map<String, Object>>> contracts = detailQueryAsync(() -> queryOptionalFiltered(orgId, userId,
+        CompletableFuture<List<Map<String, Object>>> contracts = detailQueryAsync(() -> queryOptionalFiltered(companyId, userId,
                 "contract", "id,name,khmc,ownerid,zhuangtai,htksrq,htjsrq,htje,lastmodifydate", relationExpression));
         CompletableFuture.allOf(accounts, contacts, opportunities, tasks, events, cases, contracts).join();
         if (accounts.join().isEmpty()) throw new IllegalArgumentException("当前用户无权访问该客户或客户不存在");
@@ -422,44 +422,44 @@ public class CustomerCrmProjectionService {
         return CompletableFuture.supplyAsync(query, detailQueryExecutor);
     }
 
-    private List<Map<String, Object>> queryRequired(String orgId, String userId, String objectApiName, String fields) {
+    private List<Map<String, Object>> queryRequired(String companyId, String userId, String objectApiName, String fields) {
         try {
-            return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, "");
+            return cloudcc.queryAllRecords(companyId, userId, objectApiName, fields, "");
         } catch (RuntimeException ex) {
             log.warn("CloudCC required object query failed: org={}, user={}, object={}, message={}",
-                    orgId, userId, objectApiName, ex.getMessage());
-            return cloudcc.queryAllRecords(orgId, userId, objectApiName, "id,name", "");
+                    companyId, userId, objectApiName, ex.getMessage());
+            return cloudcc.queryAllRecords(companyId, userId, objectApiName, "id,name", "");
         }
     }
 
-    private List<Map<String, Object>> queryOptional(String orgId, String userId, String objectApiName, String fields) {
+    private List<Map<String, Object>> queryOptional(String companyId, String userId, String objectApiName, String fields) {
         try {
-            return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, "");
+            return cloudcc.queryAllRecords(companyId, userId, objectApiName, fields, "");
         } catch (RuntimeException ex) {
             log.info("CloudCC optional object unavailable for current user: org={}, user={}, object={}, message={}",
-                    orgId, userId, objectApiName, ex.getMessage());
+                    companyId, userId, objectApiName, ex.getMessage());
             return List.of();
         }
     }
 
-    private List<Map<String, Object>> queryRequiredFiltered(String orgId, String userId, String objectApiName,
+    private List<Map<String, Object>> queryRequiredFiltered(String companyId, String userId, String objectApiName,
                                                             String fields, String expressions) {
         try {
-            return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, expressions);
+            return cloudcc.queryAllRecords(companyId, userId, objectApiName, fields, expressions);
         } catch (RuntimeException ex) {
             log.warn("CloudCC filtered required query failed: org={}, user={}, object={}, message={}",
-                    orgId, userId, objectApiName, ex.getMessage());
-            return cloudcc.queryAllRecords(orgId, userId, objectApiName, "id,name", expressions);
+                    companyId, userId, objectApiName, ex.getMessage());
+            return cloudcc.queryAllRecords(companyId, userId, objectApiName, "id,name", expressions);
         }
     }
 
-    private List<Map<String, Object>> queryOptionalFiltered(String orgId, String userId, String objectApiName,
+    private List<Map<String, Object>> queryOptionalFiltered(String companyId, String userId, String objectApiName,
                                                             String fields, String expressions) {
         try {
-            return cloudcc.queryAllRecords(orgId, userId, objectApiName, fields, expressions);
+            return cloudcc.queryAllRecords(companyId, userId, objectApiName, fields, expressions);
         } catch (RuntimeException ex) {
             log.info("CloudCC filtered optional object unavailable: org={}, user={}, object={}, message={}",
-                    orgId, userId, objectApiName, ex.getMessage());
+                    companyId, userId, objectApiName, ex.getMessage());
             return List.of();
         }
     }
@@ -540,13 +540,13 @@ public class CustomerCrmProjectionService {
                 "recordLimit", RECORD_LIMIT);
     }
 
-    private List<Map<String, Object>> timeline(String orgId, String accountId,
+    private List<Map<String, Object>> timeline(String companyId, String accountId,
                                                List<Map<String, Object>> tasks,
                                                List<Map<String, Object>> events) {
         List<Map<String, Object>> out = new ArrayList<>();
         for (Map<String, Object> item : tasks) out.add(interactionView(item, "CRM_TASK", "NEW_CUSTOMER"));
         for (Map<String, Object> item : events) out.add(interactionView(item, "CRM_EVENT", "MIXED"));
-        for (CustomerInteractionEventEntity item : eventRepository.findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(orgId, accountId)) {
+        for (CustomerInteractionEventEntity item : eventRepository.findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(companyId, accountId)) {
             out.add(mapOf("eventId", item.getPublicId(), "accountId", accountId, "sourceType", item.getSourceType(),
                     "occurredAt", item.getOccurredAt().toString(), "subject", item.getSubject(), "summary", item.getAiSummary(),
                     "sentiment", item.getSentiment(), "intentTags", readList(item.getIntentTags()),
@@ -600,17 +600,17 @@ public class CustomerCrmProjectionService {
     }
 
     @Transactional
-    protected void persistSignals(String orgId, String accountId, List<Map<String, Object>> signals) {
+    protected void persistSignals(String companyId, String accountId, List<Map<String, Object>> signals) {
         Set<String> activeIds = new LinkedHashSet<>();
         for (Map<String, Object> signal : signals) {
-            String publicId = stableId("sig", orgId, accountId, text(signal, "type"));
+            String publicId = stableId("sig", companyId, accountId, text(signal, "type"));
             activeIds.add(publicId);
             Instant now = Instant.now();
-            signalRepository.upsertSignal(publicId, orgId, accountId, text(signal, "mode"), text(signal, "type"),
+            signalRepository.upsertSignal(publicId, companyId, accountId, text(signal, "mode"), text(signal, "type"),
                     text(signal, "title"), text(signal, "detail"), text(signal, "severity"),
                     toJson(signal.get("evidence")), now, now);
         }
-        for (CustomerSignalEntity existing : signalRepository.findByOrgIdAndCrmAccountIdOrderByUpdatedAtDesc(orgId, accountId)) {
+        for (CustomerSignalEntity existing : signalRepository.findByCompanyIdAndCrmAccountIdOrderByUpdatedAtDesc(companyId, accountId)) {
             if (!activeIds.contains(existing.getPublicId())) {
                 existing.resolve();
                 signalRepository.save(existing);
@@ -874,7 +874,7 @@ public class CustomerCrmProjectionService {
         return "new";
     }
 
-    private String cacheKey(String orgId, String userId) { return orgId + ":" + userId; }
+    private String cacheKey(String companyId, String userId) { return companyId + ":" + userId; }
 
     private static Thread daemonThread(Runnable runnable, String name) {
         Thread thread = new Thread(runnable, name);

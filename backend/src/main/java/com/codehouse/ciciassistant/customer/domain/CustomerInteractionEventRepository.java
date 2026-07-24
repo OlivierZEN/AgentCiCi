@@ -6,11 +6,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerInteractionEventRepository extends JpaRepository<CustomerInteractionEventEntity, Long> {
 
-    List<CustomerInteractionEventEntity> findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(String orgId, String crmAccountId);
+    List<CustomerInteractionEventEntity> findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(String companyId, String crmAccountId);
 
-    List<CustomerInteractionEventEntity> findByOrgIdOrderByOccurredAtDesc(String orgId);
+    List<CustomerInteractionEventEntity> findByCompanyIdOrderByOccurredAtDesc(String companyId);
 
-    Optional<CustomerInteractionEventEntity> findByOrgIdAndPublicId(String orgId, String publicId);
+    Optional<CustomerInteractionEventEntity> findByCompanyIdAndPublicId(String companyId, String publicId);
 
-    long countByOrgId(String orgId);
+    long countByCompanyId(String companyId);
 }

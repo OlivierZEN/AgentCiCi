@@ -5,9 +5,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentApiTaskRepository extends JpaRepository<AgentApiTaskEntity, String> {
 
-    Optional<AgentApiTaskEntity> findByTaskIdAndOrgIdAndCredentialIdAndAgentId(
+    Optional<AgentApiTaskEntity> findByTaskIdAndCompanyIdAndCredentialIdAndAgentId(
             String taskId,
-            String orgId,
+            String companyId,
             Long credentialId,
             String agentId);
 }

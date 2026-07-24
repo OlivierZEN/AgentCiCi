@@ -132,7 +132,7 @@ describe("CloudCC embedded workbench SSO recovery contract", () => {
       ...component.data(),
       elePropObj: {},
       workspaceUrl: "https://x.agentcici.com/app?aiApp=customer-workbench&embed=crm",
-      agentOrgId: "agent-org",
+      agentCompanyId: "agent-org",
       enableSso: true,
       ssoEndpoint: "https://x.agentcici.com/auth/cloudcc-sso/ticket",
     };

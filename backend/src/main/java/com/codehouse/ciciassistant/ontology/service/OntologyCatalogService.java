@@ -46,18 +46,18 @@ public class OntologyCatalogService {
     }
 
     public CatalogMutation<PhysicalObject> discoverObjects(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             Long dataSourceId,
             Long expectedRevision) {
-        requireCurrentContext(orgId, userId);
+        requireCurrentContext(companyId, userId);
         SourcePreparation prepared = transactions.prepareSource(
-                orgId, workspaceId, dataSourceId, expectedRevision, null);
+                companyId, workspaceId, dataSourceId, expectedRevision, null);
         OntologyDataSourceAdapter adapter = requireAdapter(prepared.source());
         List<PhysicalObject> discovered = adapterProtocol(() -> {
             List<PhysicalObject> values = List.copyOf(adapter.discoverObjects(
-                    new AdapterContext(orgId, userId), prepared.source()));
+                    new AdapterContext(companyId, userId), prepared.source()));
             validateObjects(values);
             return values;
         });
@@ -66,19 +66,19 @@ public class OntologyCatalogService {
     }
 
     public CatalogMutation<PhysicalField> discoverFields(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             Long dataSourceId,
             String objectKey,
             Long expectedRevision) {
-        requireCurrentContext(orgId, userId);
+        requireCurrentContext(companyId, userId);
         SourcePreparation prepared = transactions.prepareSource(
-                orgId, workspaceId, dataSourceId, expectedRevision, objectKey);
+                companyId, workspaceId, dataSourceId, expectedRevision, objectKey);
         OntologyDataSourceAdapter adapter = requireAdapter(prepared.source());
         List<PhysicalField> discovered = adapterProtocol(() -> {
             List<PhysicalField> values = List.copyOf(adapter.discoverFields(
-                    new AdapterContext(orgId, userId), prepared.source(), objectKey));
+                    new AdapterContext(companyId, userId), prepared.source(), objectKey));
             validateFields(objectKey, values);
             return values;
         });
@@ -87,36 +87,36 @@ public class OntologyCatalogService {
     }
 
     public MappingCommit validateMapping(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             Long expectedRevision,
             MappingKey key) {
-        requireCurrentContext(orgId, userId);
+        requireCurrentContext(companyId, userId);
         MappingPreparation prepared = transactions.prepareMapping(
-                orgId, workspaceId, expectedRevision, key);
+                companyId, workspaceId, expectedRevision, key);
         OntologyDataSourceAdapter adapter = requireAdapter(prepared.source());
         MappingValidation safeValidation = validatePreparedMapping(
-                adapter, new AdapterContext(orgId, userId), prepared);
+                adapter, new AdapterContext(companyId, userId), prepared);
         return transactions.commitMappingValidation(prepared, userId, safeValidation);
     }
 
     public MappingBatchCommit validateMappings(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             Long expectedRevision,
             List<MappingKey> keys) {
-        requireCurrentContext(orgId, userId);
+        requireCurrentContext(companyId, userId);
         if (keys == null || keys.isEmpty() || keys.size() > 500
                 || new LinkedHashSet<>(keys).size() != keys.size()) {
             throw new IllegalArgumentException("MAPPING_IDENTITY_REQUIRED");
         }
         List<MappingPreparation> preparedMappings = keys.stream()
                 .map(key -> transactions.prepareMapping(
-                        orgId, workspaceId, expectedRevision, key))
+                        companyId, workspaceId, expectedRevision, key))
                 .toList();
-        AdapterContext context = new AdapterContext(orgId, userId);
+        AdapterContext context = new AdapterContext(companyId, userId);
         List<MappingValidation> validations = preparedMappings.stream()
                 .map(prepared -> validatePreparedMapping(
                         requireAdapter(prepared.source()), context, prepared))
@@ -279,10 +279,10 @@ public class OntologyCatalogService {
         }
     }
 
-    private void requireCurrentContext(String orgId, String userId) {
+    private void requireCurrentContext(String companyId, String userId) {
         if (userId == null
                 || userId.isBlank()
-                || !Objects.equals(TenantContext.requireOrgId(), orgId)
+                || !Objects.equals(TenantContext.requireCompanyId(), companyId)
                 || TenantContext.getUserId().filter(userId::equals).isEmpty()) {
             throw new ForbiddenException("ONTOLOGY_CATALOG_CONTEXT_MISMATCH");
         }

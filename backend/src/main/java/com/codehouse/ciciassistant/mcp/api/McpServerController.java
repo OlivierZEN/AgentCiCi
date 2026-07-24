@@ -29,15 +29,15 @@ public class McpServerController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        String orgId = TenantContext.requireOrgId();
-        List<McpServerEntity> servers = service.list(orgId);
+        String companyId = TenantContext.requireCompanyId();
+        List<McpServerEntity> servers = service.list(companyId);
         return ApiResponse.ok(servers.stream().map(this::toMap).toList());
     }
 
     @PostMapping
     public ApiResponse<Map<String, Object>> create(@Valid @RequestBody CreateRequest req) {
-        String orgId = TenantContext.requireOrgId();
-        McpServerEntity entity = service.create(orgId, req.name(), req.description(),
+        String companyId = TenantContext.requireCompanyId();
+        McpServerEntity entity = service.create(companyId, req.name(), req.description(),
                 req.transportType(), req.url(), req.headers(), req.timeoutSeconds());
         return ApiResponse.ok(toMap(entity));
     }
@@ -45,27 +45,27 @@ public class McpServerController {
     @PutMapping("/{id}")
     public ApiResponse<Map<String, Object>> update(@PathVariable Long id,
                                                    @Valid @RequestBody UpdateRequest req) {
-        String orgId = TenantContext.requireOrgId();
-        McpServerEntity entity = service.update(orgId, id, req.name(), req.description(),
+        String companyId = TenantContext.requireCompanyId();
+        McpServerEntity entity = service.update(companyId, id, req.name(), req.description(),
                 req.transportType(), req.url(), req.headers(), req.timeoutSeconds(), req.enabled());
         return ApiResponse.ok(toMap(entity));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Map<String, String>> delete(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        service.delete(orgId, id);
+        String companyId = TenantContext.requireCompanyId();
+        service.delete(companyId, id);
         return ApiResponse.ok(Map.of("status", "deleted"));
     }
 
     @PostMapping("/{id}/discover")
     public ApiResponse<?> discoverTools(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         try {
-            McpServerService.ToolCacheSnapshot snapshot = service.refreshToolCache(orgId, id);
+            McpServerService.ToolCacheSnapshot snapshot = service.refreshToolCache(companyId, id);
             return ApiResponse.ok(toToolCachePayload(snapshot));
         } catch (Exception e) {
-            log.error("MCP discover failed, orgId={}, serverId={}", orgId, id, e);
+            log.error("MCP discover failed, companyId={}, serverId={}", companyId, id, e);
             String reason = e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : e.toString();
             return ApiResponse.fail("工具发现失败: " + reason);
         }
@@ -73,12 +73,12 @@ public class McpServerController {
 
     @GetMapping("/{id}/tools")
     public ApiResponse<?> getToolCache(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         try {
-            McpServerService.ToolCacheSnapshot snapshot = service.getToolCacheSnapshot(orgId, id);
+            McpServerService.ToolCacheSnapshot snapshot = service.getToolCacheSnapshot(companyId, id);
             return ApiResponse.ok(toToolCachePayload(snapshot));
         } catch (Exception e) {
-            log.error("MCP tool cache read failed, orgId={}, serverId={}", orgId, id, e);
+            log.error("MCP tool cache read failed, companyId={}, serverId={}", companyId, id, e);
             String reason = e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : e.toString();
             return ApiResponse.fail("读取工具缓存失败: " + reason);
         }
@@ -86,12 +86,12 @@ public class McpServerController {
 
     @PostMapping("/{id}/health")
     public ApiResponse<?> healthCheck(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         try {
-            Map<String, Object> result = service.healthCheck(orgId, id);
+            Map<String, Object> result = service.healthCheck(companyId, id);
             return ApiResponse.ok(result);
         } catch (Exception e) {
-            log.error("MCP health check failed, orgId={}, serverId={}", orgId, id, e);
+            log.error("MCP health check failed, companyId={}, serverId={}", companyId, id, e);
             String reason = e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : e.toString();
             return ApiResponse.fail("连接失败: " + reason);
         }

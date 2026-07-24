@@ -5,11 +5,11 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BillingCreditLedgerRepository extends JpaRepository<BillingCreditLedgerEntity, Long> {
 
-    List<BillingCreditLedgerEntity> findByOrgIdOrderByOccurredAtAsc(String orgId);
+    List<BillingCreditLedgerEntity> findByCompanyIdOrderByOccurredAtAsc(String companyId);
 
-    List<BillingCreditLedgerEntity> findByOrgIdOrderByIdAsc(String orgId);
+    List<BillingCreditLedgerEntity> findByCompanyIdOrderByIdAsc(String companyId);
 
-    List<BillingCreditLedgerEntity> findTop50ByOrgIdOrderByOccurredAtDesc(String orgId);
+    List<BillingCreditLedgerEntity> findTop50ByCompanyIdOrderByOccurredAtDesc(String companyId);
 
-    List<BillingCreditLedgerEntity> findTop50ByOrgIdOrderByIdDesc(String orgId);
+    List<BillingCreditLedgerEntity> findTop50ByCompanyIdOrderByIdDesc(String companyId);
 }

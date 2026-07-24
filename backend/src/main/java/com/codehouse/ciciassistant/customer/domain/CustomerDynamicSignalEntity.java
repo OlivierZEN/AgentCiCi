@@ -21,8 +21,8 @@ public class CustomerDynamicSignalEntity {
     private Long id;
     @Column(name = "public_id", nullable = false, unique = true, length = 64)
     private String publicId;
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
     @Column(name = "crm_account_id", nullable = false, length = 128)
     private String crmAccountId;
     @Column(name = "source_event_id", nullable = false, length = 64)
@@ -62,14 +62,14 @@ public class CustomerDynamicSignalEntity {
 
     protected CustomerDynamicSignalEntity() {}
 
-    public CustomerDynamicSignalEntity(String publicId, String orgId, String crmAccountId,
+    public CustomerDynamicSignalEntity(String publicId, String companyId, String crmAccountId,
                                        String sourceEventId, String sourceBatchId, String sourceType,
                                        String dimension, String direction, int impact, double confidence,
                                        String title, String rationale, String evidenceQuote,
                                        Instant occurredAt, Instant validUntil, String contentFingerprint,
                                        String modelVersion) {
         this.publicId = publicId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.crmAccountId = crmAccountId;
         this.sourceEventId = sourceEventId;
         this.sourceBatchId = sourceBatchId;
@@ -101,7 +101,7 @@ public class CustomerDynamicSignalEntity {
     public void expire() { this.status = STATUS_EXPIRED; this.updatedAt = Instant.now(); }
 
     public String getPublicId() { return publicId; }
-    public String getOrgId() { return orgId; }
+    public String getCompanyId() { return companyId; }
     public String getCrmAccountId() { return crmAccountId; }
     public String getSourceEventId() { return sourceEventId; }
     public String getSourceBatchId() { return sourceBatchId; }

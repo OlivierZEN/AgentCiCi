@@ -5,12 +5,12 @@ import java.util.Optional;
 import org.springframework.data.repository.Repository;
 
 public interface OntologyMappingRepository extends Repository<OntologyMappingEntity, Long> {
-    List<OntologyMappingEntity> findByWorkspaceIdAndOrgIdOrderByIdAsc(Long workspaceId, String orgId);
-    Optional<OntologyMappingEntity> findByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
-    List<OntologyMappingEntity> findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKey(
-            Long workspaceId, String orgId, String targetType, String targetKey);
-    Optional<OntologyMappingEntity> findByWorkspaceIdAndOrgIdAndTargetTypeAndTargetKeyAndDataSourceId(
-            Long workspaceId, String orgId, String targetType, String targetKey, Long dataSourceId);
-    long deleteByIdAndWorkspaceIdAndOrgId(Long id, Long workspaceId, String orgId);
-    long deleteByWorkspaceIdAndOrgId(Long workspaceId, String orgId);
+    List<OntologyMappingEntity> findByWorkspaceIdAndCompanyIdOrderByIdAsc(Long workspaceId, String companyId);
+    Optional<OntologyMappingEntity> findByIdAndWorkspaceIdAndCompanyId(Long id, Long workspaceId, String companyId);
+    List<OntologyMappingEntity> findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKey(
+            Long workspaceId, String companyId, String targetType, String targetKey);
+    Optional<OntologyMappingEntity> findByWorkspaceIdAndCompanyIdAndTargetTypeAndTargetKeyAndDataSourceId(
+            Long workspaceId, String companyId, String targetType, String targetKey, Long dataSourceId);
+    long deleteByIdAndWorkspaceIdAndCompanyId(Long id, Long workspaceId, String companyId);
+    long deleteByWorkspaceIdAndCompanyId(Long workspaceId, String companyId);
 }

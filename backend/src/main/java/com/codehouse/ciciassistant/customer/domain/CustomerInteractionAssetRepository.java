@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerInteractionAssetRepository extends JpaRepository<CustomerInteractionAssetEntity, Long> {
     List<CustomerInteractionAssetEntity> findByBatchIdOrderBySortOrderAsc(Long batchId);
-    Optional<CustomerInteractionAssetEntity> findByOrgIdAndPublicId(String orgId, String publicId);
-    boolean existsByOrgIdAndSha256(String orgId, String sha256);
+    Optional<CustomerInteractionAssetEntity> findByCompanyIdAndPublicId(String companyId, String publicId);
+    boolean existsByCompanyIdAndSha256(String companyId, String sha256);
 }

@@ -25,7 +25,7 @@ public class AgentOpenApiSessionService {
                                      String requestId) {
         String externalSessionId = normalizeSessionId(requestedSessionId, requestId);
         String internalSessionId = internalSessionId(
-                auth.credential().getOrgId(),
+                auth.credential().getCompanyId(),
                 auth.credential().getId(),
                 auth.credential().getAgentId(),
                 auth.credential().getPublicId(),
@@ -35,13 +35,13 @@ public class AgentOpenApiSessionService {
             return new SessionResolution(externalSessionId, internalSessionId, false);
         }
         AgentApiSessionMapEntity entity = sessionMapRepository
-                .findByOrgIdAndCredentialIdAndAgentIdAndExternalSessionId(
-                        auth.credential().getOrgId(),
+                .findByCompanyIdAndCredentialIdAndAgentIdAndExternalSessionId(
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId(),
                         externalSessionId)
                 .orElseGet(() -> sessionMapRepository.save(new AgentApiSessionMapEntity(
-                        auth.credential().getOrgId(),
+                        auth.credential().getCompanyId(),
                         auth.credential().getId(),
                         auth.credential().getAgentId(),
                         externalSessionId,
@@ -69,13 +69,13 @@ public class AgentOpenApiSessionService {
         return text;
     }
 
-    private String internalSessionId(String orgId,
+    private String internalSessionId(String companyId,
                                      Long credentialId,
                                      String agentId,
                                      String publicId,
                                      String externalSessionId) {
         String publicPart = safePrefix(publicId, 12);
-        String hashInput = orgId + "|" + credentialId + "|" + agentId + "|" + externalSessionId;
+        String hashInput = companyId + "|" + credentialId + "|" + agentId + "|" + externalSessionId;
         return "api:" + publicPart + ":" + sha256Base64(hashInput).substring(0, 20);
     }
 

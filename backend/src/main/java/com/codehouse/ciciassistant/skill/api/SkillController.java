@@ -65,36 +65,36 @@ public class SkillController {
     @RequireOrgAdmin
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> listSkills() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillDefinitionService.listSkills(orgId).stream()
-                .map(item -> toPayload(orgId, item))
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillDefinitionService.listSkills(companyId).stream()
+                .map(item -> toPayload(companyId, item))
                 .toList());
     }
 
     @RequireOrgAdmin
     @PostMapping
     public ApiResponse<Map<String, Object>> createSkill(@Valid @RequestBody UpsertSkillRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity created = skillDefinitionService.createSkill(orgId, toUpsertCommand(request));
-        return ApiResponse.ok(toPayload(orgId, created));
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity created = skillDefinitionService.createSkill(companyId, toUpsertCommand(request));
+        return ApiResponse.ok(toPayload(companyId, created));
     }
 
     @RequireOrgAdmin
     @GetMapping("/{id}")
     public ApiResponse<Map<String, Object>> getSkill(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity skill = skillDefinitionService.getSkill(orgId, id);
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity skill = skillDefinitionService.getSkill(companyId, id);
         if (!skill.isVisibleToTenant()) {
             throw new IllegalArgumentException("Skill not found");
         }
-        return ApiResponse.ok(toPayload(orgId, skill));
+        return ApiResponse.ok(toPayload(companyId, skill));
     }
 
     @RequireOrgAdmin
     @GetMapping("/{id}/builtin-docs")
     public ApiResponse<Map<String, Object>> getBuiltinDocsSummary(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity skill = skillDefinitionService.getSkill(orgId, id);
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity skill = skillDefinitionService.getSkill(companyId, id);
         if (!skill.isVisibleToTenant()) {
             throw new IllegalArgumentException("Skill not found");
         }
@@ -132,16 +132,16 @@ public class SkillController {
     @PutMapping("/{id}")
     public ApiResponse<Map<String, Object>> updateSkill(@PathVariable Long id,
                                                         @Valid @RequestBody UpsertSkillRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity updated = skillDefinitionService.updateSkill(orgId, id, toUpsertCommand(request));
-        return ApiResponse.ok(toPayload(orgId, updated));
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity updated = skillDefinitionService.updateSkill(companyId, id, toUpsertCommand(request));
+        return ApiResponse.ok(toPayload(companyId, updated));
     }
 
     @RequireOrgAdmin
     @GetMapping("/{id}/versions")
     public ApiResponse<List<Map<String, Object>>> listVersions(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillDefinitionService.listRestoreVersions(orgId, id, 3).stream()
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillDefinitionService.listRestoreVersions(companyId, id, 3).stream()
                 .map(this::toVersionPayload)
                 .toList());
     }
@@ -151,41 +151,41 @@ public class SkillController {
     public ApiResponse<Map<String, Object>> restoreVersion(@PathVariable Long id,
                                                            @PathVariable Long versionId,
                                                            @RequestBody(required = false) VersionActionRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity restored = skillDefinitionService.restoreVersion(orgId, id, versionId,
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity restored = skillDefinitionService.restoreVersion(companyId, id, versionId,
                 new SkillDefinitionService.RestoreCommand(
                         request == null ? null : request.changeLog(),
                         TenantContext.getUserId().orElse("system")
                 ));
-        return ApiResponse.ok(toPayload(orgId, restored));
+        return ApiResponse.ok(toPayload(companyId, restored));
     }
 
     @RequireOrgAdmin
     @PostMapping("/{id}/publish")
     public ApiResponse<Map<String, Object>> publishSkill(@PathVariable Long id,
                                                          @RequestBody(required = false) VersionActionRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity published = skillDefinitionService.publishSkill(orgId, id,
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity published = skillDefinitionService.publishSkill(companyId, id,
                 new SkillDefinitionService.PublishCommand(
                         request == null ? null : request.changeLog(),
                         TenantContext.getUserId().orElse("system")
                 ));
-        return ApiResponse.ok(toPayload(orgId, published));
+        return ApiResponse.ok(toPayload(companyId, published));
     }
 
     @RequireOrgAdmin
     @GetMapping("/{id}/delete-impact")
     public ApiResponse<SkillDefinitionService.DeleteImpact> deleteImpact(@PathVariable Long id) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillDefinitionService.deleteImpact(orgId, id));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillDefinitionService.deleteImpact(companyId, id));
     }
 
     @RequireOrgAdmin
     @DeleteMapping("/{id}")
     public ApiResponse<Map<String, Object>> deleteSkill(@PathVariable Long id,
                                                         @RequestBody(required = false) DeleteSkillRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        skillDefinitionService.deleteSkill(orgId, id, TenantContext.getUserId().orElse("system"),
+        String companyId = TenantContext.requireCompanyId();
+        skillDefinitionService.deleteSkill(companyId, id, TenantContext.getUserId().orElse("system"),
                 request == null ? null : request.reason());
         return ApiResponse.ok(Map.of("id", id, "status", "DELETED"));
     }
@@ -194,8 +194,8 @@ public class SkillController {
     @PostMapping("/{id}/exports")
     public ApiResponse<SkillPackageService.ExportJob> exportSkill(@PathVariable Long id,
                                                                   @RequestBody(required = false) ExportSkillRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillPackageService.exportSkill(orgId, id, new SkillPackageService.ExportCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillPackageService.exportSkill(companyId, id, new SkillPackageService.ExportCommand(
                 request == null ? false : Boolean.TRUE.equals(request.allowDraft()),
                 TenantContext.getUserId().orElse("system")
         )));
@@ -216,16 +216,16 @@ public class SkillController {
     @RequireOrgAdmin
     @PostMapping(value = "/imports", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<SkillPackageService.ImportPreview> importSkill(@RequestParam("file") MultipartFile file) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillPackageService.importPackage(orgId, file));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillPackageService.importPackage(companyId, file));
     }
 
     @RequireOrgAdmin
     @PostMapping("/imports/{importId}/create")
     public ApiResponse<Map<String, Object>> createImportedSkill(@PathVariable String importId,
                                                                  @RequestBody(required = false) ImportCreateRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity created = skillPackageService.createImportedSkill(orgId, importId,
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity created = skillPackageService.createImportedSkill(companyId, importId,
                 TenantContext.getUserId().orElse("system"),
                 new SkillPackageService.ImportCreateCommand(
                         request == null || request.draftOverride() == null
@@ -243,27 +243,27 @@ public class SkillController {
                                 request.draftOverride().riskLevel()
                         )
                 ));
-        return ApiResponse.ok(toPayload(orgId, created));
+        return ApiResponse.ok(toPayload(companyId, created));
     }
 
     @RequireOrgAdmin
     @PostMapping("/{id}/derive")
     public ApiResponse<Map<String, Object>> deriveSkill(@PathVariable Long id,
                                                         @Valid @RequestBody DeriveSkillRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        SkillDefinitionEntity derived = skillDefinitionService.deriveSkill(orgId, id, new SkillDefinitionService.DeriveCommand(
+        String companyId = TenantContext.requireCompanyId();
+        SkillDefinitionEntity derived = skillDefinitionService.deriveSkill(companyId, id, new SkillDefinitionService.DeriveCommand(
                 request.skillCode(),
                 request.name(),
                 request.description()
         ));
-        return ApiResponse.ok(toPayload(orgId, derived));
+        return ApiResponse.ok(toPayload(companyId, derived));
     }
 
     @RequireOrgAdmin
     @PostMapping("/preview")
     public ApiResponse<SkillDefinitionService.PreviewResult> preview(@Valid @RequestBody SkillPreviewRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillDefinitionService.previewCompile(orgId, new SkillDefinitionService.PreviewCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillDefinitionService.previewCompile(companyId, new SkillDefinitionService.PreviewCommand(
                 request.skillCode(),
                 request.name(),
                 request.specText(),
@@ -281,8 +281,8 @@ public class SkillController {
     @PostMapping("/authoring/generate")
     public ApiResponse<SkillAuthoringService.GenerateResult> generateSkillDraft(
             @Valid @RequestBody SkillAuthoringGenerateRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillAuthoringService.generate(orgId, new SkillAuthoringService.GenerateCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillAuthoringService.generate(companyId, new SkillAuthoringService.GenerateCommand(
                 request.sourceText(),
                 request.preferredName(),
                 request.preferredSkillCode(),
@@ -295,8 +295,8 @@ public class SkillController {
     @PostMapping("/authoring/refine")
     public ApiResponse<SkillAuthoringService.GenerateResult> refineSkillDraft(
             @Valid @RequestBody SkillAuthoringRefineRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillAuthoringService.refine(orgId, new SkillAuthoringService.RefineCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillAuthoringService.refine(companyId, new SkillAuthoringService.RefineCommand(
                 request.sessionId(),
                 request.sourceText(),
                 toGeneratedDraft(request.currentSkillSpec()),
@@ -310,8 +310,8 @@ public class SkillController {
     @PostMapping("/authoring/create")
     public ApiResponse<SkillAuthoringService.CreateResult> createSkillFromAuthoring(
             @Valid @RequestBody SkillAuthoringCreateRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillAuthoringService.create(orgId, new SkillAuthoringService.CreateCommand(
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillAuthoringService.create(companyId, new SkillAuthoringService.CreateCommand(
                 request.sourceText(),
                 request.sessionId(),
                 toGeneratedDraft(request.skillSpec()),
@@ -323,9 +323,9 @@ public class SkillController {
     @RequireOrgAdmin
     @GetMapping("/agents/{agentId}")
     public ApiResponse<List<Map<String, Object>>> listAgentSkills(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(skillDefinitionService.listSkillsForAgent(orgId, agentId).stream()
-                .map(item -> toPayload(orgId, item))
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(skillDefinitionService.listSkillsForAgent(companyId, agentId).stream()
+                .map(item -> toPayload(companyId, item))
                 .toList());
     }
 
@@ -336,9 +336,9 @@ public class SkillController {
     @RequireOrgAdmin
     @GetMapping("/agents/{agentId}/bindings")
     public ApiResponse<List<Map<String, Object>>> listAgentBindings(@PathVariable String agentId) {
-        String orgId = TenantContext.requireOrgId();
-        List<AgentSkillBindingEntity> bindings = skillDefinitionService.listBindings(orgId, agentId);
-        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionService.listSkills(orgId).stream()
+        String companyId = TenantContext.requireCompanyId();
+        List<AgentSkillBindingEntity> bindings = skillDefinitionService.listBindings(companyId, agentId);
+        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionService.listSkills(companyId).stream()
                 .collect(java.util.stream.Collectors.toMap(SkillDefinitionEntity::getId, item -> item));
         return ApiResponse.ok(bindings.stream().map(binding -> {
             SkillDefinitionEntity skill = skillById.get(binding.getSkillId());
@@ -364,9 +364,9 @@ public class SkillController {
     @PutMapping("/agents/{agentId}/bindings")
     public ApiResponse<List<Map<String, Object>>> replaceAgentBindings(@PathVariable String agentId,
                                                                        @Valid @RequestBody ReplaceBindingsRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         List<AgentSkillBindingEntity> saved = skillDefinitionService.replaceBindings(
-                orgId,
+                companyId,
                 agentId,
                 request.bindings() == null ? List.of() : request.bindings().stream().map(item ->
                         new SkillDefinitionService.BindingInput(
@@ -378,7 +378,7 @@ public class SkillController {
                                 item.enabled()
                         )).toList()
         );
-        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionService.listSkills(orgId).stream()
+        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionService.listSkills(companyId).stream()
                 .collect(java.util.stream.Collectors.toMap(SkillDefinitionEntity::getId, item -> item));
         return ApiResponse.ok(saved.stream().map(binding -> {
             SkillDefinitionEntity skill = skillById.get(binding.getSkillId());
@@ -417,15 +417,15 @@ public class SkillController {
         );
     }
 
-    private Map<String, Object> toPayload(String orgId, SkillDefinitionEntity item) {
+    private Map<String, Object> toPayload(String companyId, SkillDefinitionEntity item) {
         Map<String, Object> payload = toPayload(item);
-        skillVersionRepository.findTopByOrgIdAndSkillIdOrderByVersionNoDesc(orgId, item.getId()).ifPresent(v -> {
+        skillVersionRepository.findTopByCompanyIdAndSkillIdOrderByVersionNoDesc(companyId, item.getId()).ifPresent(v -> {
             payload.put("latestVersionNo", v.getVersionNo());
             payload.put("latestVersionPublishStatus", v.getPublishStatus());
             payload.put("latestVersionCreatedAt", v.getCreatedAt().toString());
         });
         skillVersionRepository
-                .findTopByOrgIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(orgId, item.getId(), "PUBLISHED")
+                .findTopByCompanyIdAndSkillIdAndPublishStatusOrderByVersionNoDesc(companyId, item.getId(), "PUBLISHED")
                 .ifPresent(v -> payload.put("lastPublishedAt", v.getCreatedAt().toString()));
         return payload;
     }
@@ -452,7 +452,7 @@ public class SkillController {
         payload.put("templateCode", item.getTemplateCode());
         payload.put("baseTemplateVersion", item.getBaseTemplateVersion());
         if (item.getTemplateCode() != null && !item.getTemplateCode().isBlank()) {
-            platformSkillTemplateRepository.findByOrgIdAndTemplateCode(item.getOrgId(), item.getTemplateCode())
+            platformSkillTemplateRepository.findByCompanyIdAndTemplateCode(item.getCompanyId(), item.getTemplateCode())
                     .ifPresent(template -> {
                         payload.put("resourceType", template.getResourceType());
                         payload.put("resourceUri", template.getResourceUri());

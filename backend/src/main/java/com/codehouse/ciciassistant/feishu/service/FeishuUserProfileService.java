@@ -32,11 +32,11 @@ public class FeishuUserProfileService {
         this.objectMapper = objectMapper;
     }
 
-    public Optional<Profile> fetchProfile(String orgId, String openId) {
+    public Optional<Profile> fetchProfile(String companyId, String openId) {
         if (openId == null || openId.isBlank()) {
             return Optional.empty();
         }
-        FeishuBotConfigService.FeishuBotConfig config = feishuBotConfigService.getEnabledConfig(orgId).orElse(null);
+        FeishuBotConfigService.FeishuBotConfig config = feishuBotConfigService.getEnabledConfig(companyId).orElse(null);
         if (config == null) {
             return Optional.empty();
         }
@@ -55,8 +55,8 @@ public class FeishuUserProfileService {
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode root = objectMapper.readTree(resp.body());
             if (resp.statusCode() != 200 || root.path("code").asInt(-1) != 0) {
-                log.warn("Feishu profile query failed, orgId={}, openId={}, status={}, code={}, msg={}",
-                        orgId, openId, resp.statusCode(), root.path("code").asText(""), root.path("msg").asText(""));
+                log.warn("Feishu profile query failed, companyId={}, openId={}, status={}, code={}, msg={}",
+                        companyId, openId, resp.statusCode(), root.path("code").asText(""), root.path("msg").asText(""));
                 return Optional.empty();
             }
             JsonNode user = root.path("data").path("user");
@@ -67,13 +67,13 @@ public class FeishuUserProfileService {
             }
             return Optional.of(new Profile(name, avatar));
         } catch (Exception ex) {
-            log.warn("Failed to fetch Feishu profile, orgId={}, openId={}", orgId, openId, ex);
+            log.warn("Failed to fetch Feishu profile, companyId={}, openId={}", companyId, openId, ex);
             return Optional.empty();
         }
     }
 
     private Optional<String> resolveTenantToken(FeishuBotConfigService.FeishuBotConfig config) {
-        CachedToken cached = tokenCache.get(config.orgId());
+        CachedToken cached = tokenCache.get(config.companyId());
         if (cached != null && cached.expiresAt().isAfter(Instant.now().plusSeconds(60))) {
             return Optional.of(cached.token());
         }
@@ -89,8 +89,8 @@ public class FeishuUserProfileService {
             HttpResponse<String> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString());
             JsonNode root = objectMapper.readTree(resp.body());
             if (resp.statusCode() != 200 || root.path("code").asInt(-1) != 0) {
-                log.warn("Feishu tenant token query failed, orgId={}, status={}, code={}, msg={}",
-                        config.orgId(), resp.statusCode(), root.path("code").asText(""), root.path("msg").asText(""));
+                log.warn("Feishu tenant token query failed, companyId={}, status={}, code={}, msg={}",
+                        config.companyId(), resp.statusCode(), root.path("code").asText(""), root.path("msg").asText(""));
                 return Optional.empty();
             }
             String token = root.path("tenant_access_token").asText("").trim();
@@ -98,10 +98,10 @@ public class FeishuUserProfileService {
             if (token.isBlank()) {
                 return Optional.empty();
             }
-            tokenCache.put(config.orgId(), new CachedToken(token, Instant.now().plusSeconds(Math.max(60L, expireSeconds))));
+            tokenCache.put(config.companyId(), new CachedToken(token, Instant.now().plusSeconds(Math.max(60L, expireSeconds))));
             return Optional.of(token);
         } catch (Exception ex) {
-            log.warn("Failed to fetch Feishu tenant token, orgId={}", config.orgId(), ex);
+            log.warn("Failed to fetch Feishu tenant token, companyId={}", config.companyId(), ex);
             return Optional.empty();
         }
     }

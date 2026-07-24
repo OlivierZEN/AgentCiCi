@@ -22,17 +22,17 @@ public class UserMemoryService {
 
     /** 获取用户全部记忆（含禁用），用于 UI 管理页 */
     @Transactional(readOnly = true)
-    public List<UserMemoryEntity> listAll(String orgId, String userId, String agentId) {
-        return repository.findByOrgIdAndUserIdAndAgentIdOrderByPinnedDescUpdatedAtDesc(
-                orgId, userId, agentId);
+    public List<UserMemoryEntity> listAll(String companyId, String userId, String agentId) {
+        return repository.findByCompanyIdAndUserIdAndAgentIdOrderByPinnedDescUpdatedAtDesc(
+                companyId, userId, agentId);
     }
 
     /** 获取 enabled 记忆，用于 system prompt 注入，最多 MAX_INJECTION_LIMIT 条 */
     @Transactional(readOnly = true)
-    public List<UserMemoryEntity> listForInjection(String orgId, String userId, String agentId) {
+    public List<UserMemoryEntity> listForInjection(String companyId, String userId, String agentId) {
         List<UserMemoryEntity> all = repository
-                .findByOrgIdAndUserIdAndAgentIdAndEnabledTrueOrderByPinnedDescUpdatedAtDesc(
-                        orgId, userId, agentId);
+                .findByCompanyIdAndUserIdAndAgentIdAndEnabledTrueOrderByPinnedDescUpdatedAtDesc(
+                        companyId, userId, agentId);
         if (all.size() <= MAX_INJECTION_LIMIT) {
             return all;
         }
@@ -41,40 +41,40 @@ public class UserMemoryService {
 
     /** 手动新增记忆 */
     @Transactional
-    public UserMemoryEntity create(String orgId, String userId, String agentId,
+    public UserMemoryEntity create(String companyId, String userId, String agentId,
                                    String category, String content, String memoryKey) {
         validateCategory(category);
         if (memoryKey != null && !memoryKey.isBlank()) {
             // 若已有相同 key 的记忆则覆盖内容
-            var existing = repository.findByOrgIdAndUserIdAndAgentIdAndMemoryKey(
-                    orgId, userId, agentId, memoryKey.trim());
+            var existing = repository.findByCompanyIdAndUserIdAndAgentIdAndMemoryKey(
+                    companyId, userId, agentId, memoryKey.trim());
             if (existing.isPresent()) {
                 UserMemoryEntity e = existing.get();
                 e.updateContent(content.trim(), category, e.isEnabled(), e.isPinned());
                 return repository.save(e);
             }
         }
-        var entity = new UserMemoryEntity(orgId, userId, agentId, category, "MANUAL",
+        var entity = new UserMemoryEntity(companyId, userId, agentId, category, "MANUAL",
                 content.trim(), memoryKey != null ? memoryKey.trim() : null, BigDecimal.ONE);
         return repository.save(entity);
     }
 
     /** AI 通过工具写入记忆（source=EXTRACTED）*/
     @Transactional
-    public UserMemoryEntity upsertExtracted(String orgId, String userId, String agentId,
+    public UserMemoryEntity upsertExtracted(String companyId, String userId, String agentId,
                                              String category, String content, String memoryKey,
                                              BigDecimal confidence) {
         validateCategory(category);
         if (memoryKey != null && !memoryKey.isBlank()) {
-            var existing = repository.findByOrgIdAndUserIdAndAgentIdAndMemoryKey(
-                    orgId, userId, agentId, memoryKey.trim());
+            var existing = repository.findByCompanyIdAndUserIdAndAgentIdAndMemoryKey(
+                    companyId, userId, agentId, memoryKey.trim());
             if (existing.isPresent()) {
                 UserMemoryEntity e = existing.get();
                 e.updateContent(content.trim(), category, e.isEnabled(), e.isPinned());
                 return repository.save(e);
             }
         }
-        var entity = new UserMemoryEntity(orgId, userId, agentId, category, "EXTRACTED",
+        var entity = new UserMemoryEntity(companyId, userId, agentId, category, "EXTRACTED",
                 content.trim(), memoryKey != null ? memoryKey.trim() : null,
                 confidence != null ? confidence : BigDecimal.ONE);
         return repository.save(entity);
@@ -82,26 +82,26 @@ public class UserMemoryService {
 
     /** 更新记忆内容 */
     @Transactional
-    public UserMemoryEntity update(String orgId, String userId, Long id,
+    public UserMemoryEntity update(String companyId, String userId, Long id,
                                     String category, String content,
                                     boolean enabled, boolean pinned) {
         validateCategory(category);
-        UserMemoryEntity entity = requireOwned(orgId, userId, id);
+        UserMemoryEntity entity = requireOwned(companyId, userId, id);
         entity.updateContent(content.trim(), category, enabled, pinned);
         return repository.save(entity);
     }
 
     /** 删除单条记忆 */
     @Transactional
-    public void delete(String orgId, String userId, Long id) {
-        UserMemoryEntity entity = requireOwned(orgId, userId, id);
+    public void delete(String companyId, String userId, Long id) {
+        UserMemoryEntity entity = requireOwned(companyId, userId, id);
         repository.delete(entity);
     }
 
     /** 清空指定 agent 的全部记忆 */
     @Transactional
-    public void deleteAll(String orgId, String userId, String agentId) {
-        repository.deleteAllByOrgIdAndUserIdAndAgentId(orgId, userId, agentId);
+    public void deleteAll(String companyId, String userId, String agentId) {
+        repository.deleteAllByCompanyIdAndUserIdAndAgentId(companyId, userId, agentId);
     }
 
     /** 将记忆列表格式化为注入 system prompt 的文本块 */
@@ -134,8 +134,8 @@ public class UserMemoryService {
         sb.append("\n");
     }
 
-    private UserMemoryEntity requireOwned(String orgId, String userId, Long id) {
-        return repository.findByIdAndOrgIdAndUserId(id, orgId, userId)
+    private UserMemoryEntity requireOwned(String companyId, String userId, Long id) {
+        return repository.findByIdAndCompanyIdAndUserId(id, companyId, userId)
                 .orElseThrow(() -> new IllegalArgumentException("记忆不存在或无权访问: " + id));
     }
 

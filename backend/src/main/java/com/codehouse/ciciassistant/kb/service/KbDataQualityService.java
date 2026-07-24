@@ -87,8 +87,8 @@ public class KbDataQualityService {
         this.auditService = auditService;
     }
 
-    public List<Map<String, Object>> listSources(String orgId) {
-        Map<Long, KnowledgeBaseEntity> kbById = kbRepository.findByOrgIdAndStatusNotOrderByIdDesc(orgId, "DELETED")
+    public List<Map<String, Object>> listSources(String companyId) {
+        Map<Long, KnowledgeBaseEntity> kbById = kbRepository.findByCompanyIdAndStatusNotOrderByIdDesc(companyId, "DELETED")
                 .stream()
                 .collect(Collectors.toMap(KnowledgeBaseEntity::getId, item -> item, (left, right) -> left));
         ArrayList<Map<String, Object>> rows = new ArrayList<>();
@@ -103,7 +103,7 @@ public class KbDataQualityService {
             row.put("lastSyncedAt", "");
             rows.add(row);
         }
-        for (KbDataSourceEntity source : dataSourceRepository.findByOrgIdOrderByIdDesc(orgId)) {
+        for (KbDataSourceEntity source : dataSourceRepository.findByCompanyIdOrderByIdDesc(companyId)) {
             KnowledgeBaseEntity kb = kbById.get(source.getKnowledgeBaseId());
             LinkedHashMap<String, Object> row = new LinkedHashMap<>();
             row.put("sourceKey", "kb-source:" + source.getId());
@@ -120,23 +120,23 @@ public class KbDataQualityService {
     }
 
     @Transactional
-    public Map<String, Object> startScan(String orgId, Long kbId, String actorUserId, QualityScanCommand command) {
-        requireKb(orgId, kbId);
+    public Map<String, Object> startScan(String companyId, Long kbId, String actorUserId, QualityScanCommand command) {
+        requireKb(companyId, kbId);
         KbQualityRunEntity run = runRepository.save(new KbQualityRunEntity(
-                orgId,
+                companyId,
                 kbId,
                 command == null || command.triggerType() == null || command.triggerType().isBlank()
                         ? "MANUAL"
                         : command.triggerType().trim().toUpperCase(Locale.ROOT),
                 actorUserId));
         try {
-            List<KbChunkEntity> chunks = activeChunks(orgId, kbId);
-            List<KbQualityRuleEntity> rules = ruleRepository.findByOrgIdAndKnowledgeBaseIdAndEnabledTrueOrderByIdAsc(orgId, kbId);
-            int duplicates = scanDuplicates(orgId, kbId, run.getId(), chunks);
-            int invalids = scanInvalidChunks(orgId, kbId, run.getId(), chunks);
-            int regex = scanRegexRules(orgId, kbId, run.getId(), chunks, rules);
+            List<KbChunkEntity> chunks = activeChunks(companyId, kbId);
+            List<KbQualityRuleEntity> rules = ruleRepository.findByCompanyIdAndKnowledgeBaseIdAndEnabledTrueOrderByIdAsc(companyId, kbId);
+            int duplicates = scanDuplicates(companyId, kbId, run.getId(), chunks);
+            int invalids = scanInvalidChunks(companyId, kbId, run.getId(), chunks);
+            int regex = scanRegexRules(companyId, kbId, run.getId(), chunks, rules);
             run.complete(chunks.size(), duplicates, invalids, regex);
-            auditService.log(orgId, actorUserId, "kb.quality.scan",
+            auditService.log(companyId, actorUserId, "kb.quality.scan",
                     "kbId=" + kbId + ",runId=" + run.getId() + ",issues=" + run.getTotalIssueCount());
         } catch (RuntimeException ex) {
             run.fail(ex.getMessage());
@@ -147,25 +147,25 @@ public class KbDataQualityService {
         return runPayload(run);
     }
 
-    public List<Map<String, Object>> listRuns(String orgId, Long kbId) {
-        requireKb(orgId, kbId);
-        return runRepository.findTop20ByOrgIdAndKnowledgeBaseIdOrderByCreatedAtDesc(orgId, kbId).stream()
+    public List<Map<String, Object>> listRuns(String companyId, Long kbId) {
+        requireKb(companyId, kbId);
+        return runRepository.findTop20ByCompanyIdAndKnowledgeBaseIdOrderByCreatedAtDesc(companyId, kbId).stream()
                 .map(this::runPayload)
                 .toList();
     }
 
-    public List<Map<String, Object>> listIssues(String orgId, Long kbId, String status) {
-        requireKb(orgId, kbId);
+    public List<Map<String, Object>> listIssues(String companyId, Long kbId, String status) {
+        requireKb(companyId, kbId);
         String normalized = status == null || status.isBlank() ? "OPEN" : status.trim().toUpperCase(Locale.ROOT);
-        return issueRepository.findTop100ByOrgIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(orgId, kbId, normalized)
+        return issueRepository.findTop100ByCompanyIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(companyId, kbId, normalized)
                 .stream()
                 .map(this::issuePayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> markIssue(String orgId, Long issueId, String actorUserId, String status) {
-        KbQualityIssueEntity issue = issueRepository.findByIdAndOrgId(issueId, orgId)
+    public Map<String, Object> markIssue(String companyId, Long issueId, String actorUserId, String status) {
+        KbQualityIssueEntity issue = issueRepository.findByIdAndCompanyId(issueId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Quality issue not found"));
         String normalized = switch ((status == null ? "" : status).trim().toUpperCase(Locale.ROOT)) {
             case "IGNORED" -> "IGNORED";
@@ -174,20 +174,20 @@ public class KbDataQualityService {
         };
         issue.mark(normalized, actorUserId);
         issueRepository.save(issue);
-        auditService.log(orgId, actorUserId, "kb.quality.issue." + normalized.toLowerCase(Locale.ROOT),
+        auditService.log(companyId, actorUserId, "kb.quality.issue." + normalized.toLowerCase(Locale.ROOT),
                 "kbId=" + issue.getKnowledgeBaseId() + ",issueId=" + issue.getId());
         return issuePayload(issue);
     }
 
     @Transactional
-    public Map<String, Object> createRule(String orgId, Long kbId, String actorUserId, QualityRuleCommand command) {
-        requireKb(orgId, kbId);
+    public Map<String, Object> createRule(String companyId, Long kbId, String actorUserId, QualityRuleCommand command) {
+        requireKb(companyId, kbId);
         String name = required(command == null ? null : command.name(), "Rule name is required");
         String type = normalizeRuleType(command.ruleType());
         String pattern = command.pattern() == null ? "" : command.pattern().trim();
         validatePatternIfNeeded(type, pattern);
         KbQualityRuleEntity rule = ruleRepository.save(new KbQualityRuleEntity(
-                orgId,
+                companyId,
                 kbId,
                 name,
                 type,
@@ -195,20 +195,20 @@ public class KbDataQualityService {
                 command.replacement(),
                 command.enabled() == null || command.enabled(),
                 actorUserId));
-        auditService.log(orgId, actorUserId, "kb.quality.rule.create", "kbId=" + kbId + ",ruleId=" + rule.getId());
+        auditService.log(companyId, actorUserId, "kb.quality.rule.create", "kbId=" + kbId + ",ruleId=" + rule.getId());
         return rulePayload(rule);
     }
 
-    public List<Map<String, Object>> listRules(String orgId, Long kbId) {
-        requireKb(orgId, kbId);
-        return ruleRepository.findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(orgId, kbId).stream()
+    public List<Map<String, Object>> listRules(String companyId, Long kbId) {
+        requireKb(companyId, kbId);
+        return ruleRepository.findByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(companyId, kbId).stream()
                 .map(this::rulePayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> updateRule(String orgId, Long ruleId, String actorUserId, QualityRuleCommand command) {
-        KbQualityRuleEntity rule = ruleRepository.findByIdAndOrgId(ruleId, orgId)
+    public Map<String, Object> updateRule(String companyId, Long ruleId, String actorUserId, QualityRuleCommand command) {
+        KbQualityRuleEntity rule = ruleRepository.findByIdAndCompanyId(ruleId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Quality rule not found"));
         String name = required(command == null ? null : command.name(), "Rule name is required");
         String type = normalizeRuleType(command.ruleType());
@@ -216,15 +216,15 @@ public class KbDataQualityService {
         validatePatternIfNeeded(type, pattern);
         rule.update(name, type, pattern, command.replacement(), command.enabled() == null || command.enabled());
         ruleRepository.save(rule);
-        auditService.log(orgId, actorUserId, "kb.quality.rule.update",
+        auditService.log(companyId, actorUserId, "kb.quality.rule.update",
                 "kbId=" + rule.getKnowledgeBaseId() + ",ruleId=" + rule.getId());
         return rulePayload(rule);
     }
 
-    public Map<String, Object> previewRule(String orgId, Long ruleId, QualityApplyCommand command) {
-        KbQualityRuleEntity rule = ruleRepository.findByIdAndOrgId(ruleId, orgId)
+    public Map<String, Object> previewRule(String companyId, Long ruleId, QualityApplyCommand command) {
+        KbQualityRuleEntity rule = ruleRepository.findByIdAndCompanyId(ruleId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Quality rule not found"));
-        List<KbChunkEntity> chunks = targetChunks(orgId, rule.getKnowledgeBaseId(), command);
+        List<KbChunkEntity> chunks = targetChunks(companyId, rule.getKnowledgeBaseId(), command);
         int limit = sanitizeLimit(command == null ? null : command.limit(), 50);
         List<Map<String, Object>> items = new ArrayList<>();
         for (KbChunkEntity chunk : chunks) {
@@ -249,10 +249,10 @@ public class KbDataQualityService {
     }
 
     @Transactional
-    public Map<String, Object> applyRule(String orgId, Long ruleId, String actorUserId, QualityApplyCommand command) {
-        KbQualityRuleEntity rule = ruleRepository.findByIdAndOrgId(ruleId, orgId)
+    public Map<String, Object> applyRule(String companyId, Long ruleId, String actorUserId, QualityApplyCommand command) {
+        KbQualityRuleEntity rule = ruleRepository.findByIdAndCompanyId(ruleId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Quality rule not found"));
-        List<KbChunkEntity> chunks = targetChunks(orgId, rule.getKnowledgeBaseId(), command);
+        List<KbChunkEntity> chunks = targetChunks(companyId, rule.getKnowledgeBaseId(), command);
         Map<Long, String> expectedHashes = command == null || command.expectedContentHashes() == null
                 ? Map.of()
                 : command.expectedContentHashes();
@@ -269,20 +269,20 @@ public class KbDataQualityService {
                 skipped++;
                 continue;
             }
-            knowledgeBaseService.updateChunk(orgId, chunk.getId(), after);
+            knowledgeBaseService.updateChunk(companyId, chunk.getId(), after);
             updated++;
             updatedChunkIds.add(chunk.getId());
         }
         if (command != null && command.issueIds() != null && !command.issueIds().isEmpty()) {
-            for (KbQualityIssueEntity issue : issueRepository.findByIdInAndOrgIdAndKnowledgeBaseId(
-                    command.issueIds(), orgId, rule.getKnowledgeBaseId())) {
+            for (KbQualityIssueEntity issue : issueRepository.findByIdInAndCompanyIdAndKnowledgeBaseId(
+                    command.issueIds(), companyId, rule.getKnowledgeBaseId())) {
                 if (updatedChunkIds.contains(issue.getChunkId())) {
                     issue.mark("APPLIED", actorUserId);
                     issueRepository.save(issue);
                 }
             }
         }
-        auditService.log(orgId, actorUserId, "kb.quality.rule.apply",
+        auditService.log(companyId, actorUserId, "kb.quality.rule.apply",
                 "kbId=" + rule.getKnowledgeBaseId() + ",ruleId=" + rule.getId() + ",updated=" + updated);
         return Map.of(
                 "ruleId", rule.getId(),
@@ -292,91 +292,91 @@ public class KbDataQualityService {
     }
 
     @Transactional
-    public Map<String, Object> suggestAnnotations(String orgId, Long kbId, String actorUserId, AnnotationSuggestCommand command) {
-        requireKb(orgId, kbId);
+    public Map<String, Object> suggestAnnotations(String companyId, Long kbId, String actorUserId, AnnotationSuggestCommand command) {
+        requireKb(companyId, kbId);
         String targetType = command == null || command.targetType() == null || command.targetType().isBlank()
                 ? "CHUNK"
                 : command.targetType().trim().toUpperCase(Locale.ROOT);
         String fieldKey = normalizeFieldKey(command == null ? null : command.fieldKey(), "topic");
-        ensureMetadataField(orgId, kbId, fieldKey, fieldKey);
+        ensureMetadataField(companyId, kbId, fieldKey, fieldKey);
         int limit = sanitizeLimit(command == null ? null : command.limit(), 50);
         List<KbAnnotationSuggestionEntity> created = new ArrayList<>();
         if ("DOCUMENT".equals(targetType)) {
-            for (KbDocumentEntity doc : documentRepository.findByOrgIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(orgId, kbId, "DELETED")) {
+            for (KbDocumentEntity doc : documentRepository.findByCompanyIdAndKnowledgeBaseIdAndStatusNotOrderByIdDesc(companyId, kbId, "DELETED")) {
                 Optional<LabelSuggestion> label = suggestLabel(doc.getName(), fieldKey);
                 label.ifPresent(value -> created.add(suggestionRepository.save(new KbAnnotationSuggestionEntity(
-                        orgId, kbId, "DOCUMENT", doc.getId(), doc.getId(), null, fieldKey,
+                        companyId, kbId, "DOCUMENT", doc.getId(), doc.getId(), null, fieldKey,
                         value.value(), value.confidence(), "HEURISTIC", value.rationale()))));
                 if (created.size() >= limit) {
                     break;
                 }
             }
         } else {
-            for (KbChunkEntity chunk : activeChunks(orgId, kbId)) {
+            for (KbChunkEntity chunk : activeChunks(companyId, kbId)) {
                 Optional<LabelSuggestion> label = suggestLabel(chunk.getContent(), fieldKey);
                 label.ifPresent(value -> created.add(suggestionRepository.save(new KbAnnotationSuggestionEntity(
-                        orgId, kbId, "CHUNK", chunk.getId(), chunk.getDocumentId(), chunk.getId(), fieldKey,
+                        companyId, kbId, "CHUNK", chunk.getId(), chunk.getDocumentId(), chunk.getId(), fieldKey,
                         value.value(), value.confidence(), "HEURISTIC", value.rationale()))));
                 if (created.size() >= limit) {
                     break;
                 }
             }
         }
-        auditService.log(orgId, actorUserId, "kb.annotation.suggest",
+        auditService.log(companyId, actorUserId, "kb.annotation.suggest",
                 "kbId=" + kbId + ",targetType=" + targetType + ",count=" + created.size());
         return Map.of(
                 "createdCount", created.size(),
                 "items", created.stream().map(this::suggestionPayload).toList());
     }
 
-    public List<Map<String, Object>> listSuggestions(String orgId, Long kbId, String status) {
-        requireKb(orgId, kbId);
+    public List<Map<String, Object>> listSuggestions(String companyId, Long kbId, String status) {
+        requireKb(companyId, kbId);
         String normalized = status == null || status.isBlank() ? "PENDING" : status.trim().toUpperCase(Locale.ROOT);
-        return suggestionRepository.findTop100ByOrgIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(orgId, kbId, normalized)
+        return suggestionRepository.findTop100ByCompanyIdAndKnowledgeBaseIdAndStatusOrderByCreatedAtDesc(companyId, kbId, normalized)
                 .stream()
                 .map(this::suggestionPayload)
                 .toList();
     }
 
     @Transactional
-    public Map<String, Object> acceptSuggestion(String orgId, Long suggestionId, String actorUserId, AnnotationReviewCommand command) {
-        KbAnnotationSuggestionEntity suggestion = suggestionRepository.findByIdAndOrgId(suggestionId, orgId)
+    public Map<String, Object> acceptSuggestion(String companyId, Long suggestionId, String actorUserId, AnnotationReviewCommand command) {
+        KbAnnotationSuggestionEntity suggestion = suggestionRepository.findByIdAndCompanyId(suggestionId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Annotation suggestion not found"));
         String value = command == null || command.value() == null || command.value().isBlank()
                 ? suggestion.getSuggestedValue()
                 : command.value().trim();
         if ("DOCUMENT".equals(suggestion.getTargetType())) {
-            upsertDocumentMetadata(orgId, suggestion.getKnowledgeBaseId(), suggestion.getDocumentId(), suggestion.getFieldKey(), value);
+            upsertDocumentMetadata(companyId, suggestion.getKnowledgeBaseId(), suggestion.getDocumentId(), suggestion.getFieldKey(), value);
         } else {
-            upsertChunkAnnotation(orgId, suggestion, value, actorUserId);
+            upsertChunkAnnotation(companyId, suggestion, value, actorUserId);
         }
         suggestion.accept(actorUserId, value);
         suggestionRepository.save(suggestion);
-        auditService.log(orgId, actorUserId, "kb.annotation.accept",
+        auditService.log(companyId, actorUserId, "kb.annotation.accept",
                 "kbId=" + suggestion.getKnowledgeBaseId() + ",suggestionId=" + suggestion.getId());
         return suggestionPayload(suggestion);
     }
 
     @Transactional
-    public Map<String, Object> rejectSuggestion(String orgId, Long suggestionId, String actorUserId) {
-        KbAnnotationSuggestionEntity suggestion = suggestionRepository.findByIdAndOrgId(suggestionId, orgId)
+    public Map<String, Object> rejectSuggestion(String companyId, Long suggestionId, String actorUserId) {
+        KbAnnotationSuggestionEntity suggestion = suggestionRepository.findByIdAndCompanyId(suggestionId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Annotation suggestion not found"));
         suggestion.reject(actorUserId);
         suggestionRepository.save(suggestion);
-        auditService.log(orgId, actorUserId, "kb.annotation.reject",
+        auditService.log(companyId, actorUserId, "kb.annotation.reject",
                 "kbId=" + suggestion.getKnowledgeBaseId() + ",suggestionId=" + suggestion.getId());
         return suggestionPayload(suggestion);
     }
 
-    public List<Map<String, Object>> listChunkAnnotations(String orgId, Long kbId) {
-        requireKb(orgId, kbId);
-        return chunkAnnotationRepository.findTop100ByOrgIdAndKnowledgeBaseIdOrderByUpdatedAtDesc(orgId, kbId)
+    public List<Map<String, Object>> listChunkAnnotations(String companyId, Long kbId) {
+        requireKb(companyId, kbId);
+        return chunkAnnotationRepository.findTop100ByCompanyIdAndKnowledgeBaseIdOrderByUpdatedAtDesc(companyId, kbId)
                 .stream()
                 .map(this::chunkAnnotationPayload)
                 .toList();
     }
 
-    private int scanDuplicates(String orgId, Long kbId, Long runId, List<KbChunkEntity> chunks) {
+    private int scanDuplicates(String companyId, Long kbId, Long runId, List<KbChunkEntity> chunks) {
         Map<String, List<KbChunkEntity>> byHash = chunks.stream()
                 .filter(chunk -> chunk.getContentHash() != null && !chunk.getContentHash().isBlank())
                 .collect(Collectors.groupingBy(KbChunkEntity::getContentHash));
@@ -388,7 +388,7 @@ public class KbDataQualityService {
             List<Long> ids = duplicates.stream().map(KbChunkEntity::getId).sorted().toList();
             for (KbChunkEntity chunk : duplicates) {
                 issueRepository.save(new KbQualityIssueEntity(
-                        orgId, kbId, runId, "DUPLICATE", "MEDIUM", chunk.getId(), chunk.getDocumentId(), null,
+                        companyId, kbId, runId, "DUPLICATE", "MEDIUM", chunk.getId(), chunk.getDocumentId(), null,
                         chunk.getContentHash(), "Same content hash appears in chunks " + ids));
                 count++;
             }
@@ -396,12 +396,12 @@ public class KbDataQualityService {
         return count;
     }
 
-    private int scanInvalidChunks(String orgId, Long kbId, Long runId, List<KbChunkEntity> chunks) {
+    private int scanInvalidChunks(String companyId, Long kbId, Long runId, List<KbChunkEntity> chunks) {
         int count = 0;
         for (KbChunkEntity chunk : chunks) {
             for (String reason : invalidReasons(chunk.getContent())) {
                 issueRepository.save(new KbQualityIssueEntity(
-                        orgId, kbId, runId, reason, "HIGH", chunk.getId(), chunk.getDocumentId(), null,
+                        companyId, kbId, runId, reason, "HIGH", chunk.getId(), chunk.getDocumentId(), null,
                         chunk.getContentHash(), "Detected invalid content reason: " + reason));
                 count++;
             }
@@ -409,7 +409,7 @@ public class KbDataQualityService {
         return count;
     }
 
-    private int scanRegexRules(String orgId, Long kbId, Long runId, List<KbChunkEntity> chunks, List<KbQualityRuleEntity> rules) {
+    private int scanRegexRules(String companyId, Long kbId, Long runId, List<KbChunkEntity> chunks, List<KbQualityRuleEntity> rules) {
         int count = 0;
         for (KbQualityRuleEntity rule : rules) {
             if (!requiresPattern(rule.getRuleType()) || rule.getPattern() == null || rule.getPattern().isBlank()) {
@@ -419,7 +419,7 @@ public class KbDataQualityService {
             for (KbChunkEntity chunk : chunks) {
                 if (pattern.matcher(chunk.getContent()).find()) {
                     issueRepository.save(new KbQualityIssueEntity(
-                            orgId, kbId, runId, "REGEX_MATCH", "MEDIUM", chunk.getId(), chunk.getDocumentId(), rule.getId(),
+                            companyId, kbId, runId, "REGEX_MATCH", "MEDIUM", chunk.getId(), chunk.getDocumentId(), rule.getId(),
                             chunk.getContentHash(), "Rule `" + rule.getName() + "` matched chunk content."));
                     count++;
                 }
@@ -428,30 +428,30 @@ public class KbDataQualityService {
         return count;
     }
 
-    private List<KbChunkEntity> activeChunks(String orgId, Long kbId) {
-        return chunkRepository.findByOrgIdAndKnowledgeBaseIdAndStatusNot(orgId, String.valueOf(kbId), "DELETED").stream()
+    private List<KbChunkEntity> activeChunks(String companyId, Long kbId) {
+        return chunkRepository.findByCompanyIdAndKnowledgeBaseIdAndStatusNot(companyId, String.valueOf(kbId), "DELETED").stream()
                 .filter(KbChunkEntity::isSearchable)
                 .toList();
     }
 
-    private List<KbChunkEntity> targetChunks(String orgId, Long kbId, QualityApplyCommand command) {
+    private List<KbChunkEntity> targetChunks(String companyId, Long kbId, QualityApplyCommand command) {
         if (command != null && command.issueIds() != null && !command.issueIds().isEmpty()) {
-            List<Long> chunkIds = issueRepository.findByIdInAndOrgIdAndKnowledgeBaseId(command.issueIds(), orgId, kbId)
+            List<Long> chunkIds = issueRepository.findByIdInAndCompanyIdAndKnowledgeBaseId(command.issueIds(), companyId, kbId)
                     .stream()
                     .filter(issue -> "OPEN".equals(issue.getStatus()))
                     .map(KbQualityIssueEntity::getChunkId)
                     .filter(Objects::nonNull)
                     .distinct()
                     .toList();
-            return chunkRepository.findByIdInAndOrgId(chunkIds, orgId).stream().filter(KbChunkEntity::isSearchable).toList();
+            return chunkRepository.findByIdInAndCompanyId(chunkIds, companyId).stream().filter(KbChunkEntity::isSearchable).toList();
         }
         if (command != null && command.chunkIds() != null && !command.chunkIds().isEmpty()) {
-            return chunkRepository.findByIdInAndOrgId(command.chunkIds(), orgId).stream()
+            return chunkRepository.findByIdInAndCompanyId(command.chunkIds(), companyId).stream()
                     .filter(chunk -> String.valueOf(kbId).equals(chunk.getKnowledgeBaseId()))
                     .filter(KbChunkEntity::isSearchable)
                     .toList();
         }
-        return activeChunks(orgId, kbId);
+        return activeChunks(companyId, kbId);
     }
 
     private List<String> invalidReasons(String content) {
@@ -518,20 +518,20 @@ public class KbDataQualityService {
         return Optional.empty();
     }
 
-    private void upsertDocumentMetadata(String orgId, Long kbId, Long documentId, String fieldKey, String value) {
-        ensureMetadataField(orgId, kbId, fieldKey, fieldKey);
+    private void upsertDocumentMetadata(String companyId, Long kbId, Long documentId, String fieldKey, String value) {
+        ensureMetadataField(companyId, kbId, fieldKey, fieldKey);
         KbDocumentMetadataEntity item = documentMetadataRepository
-                .findByOrgIdAndKnowledgeBaseIdAndDocumentIdAndFieldKey(orgId, kbId, documentId, fieldKey)
-                .orElseGet(() -> new KbDocumentMetadataEntity(orgId, kbId, documentId, fieldKey, value));
+                .findByCompanyIdAndKnowledgeBaseIdAndDocumentIdAndFieldKey(companyId, kbId, documentId, fieldKey)
+                .orElseGet(() -> new KbDocumentMetadataEntity(companyId, kbId, documentId, fieldKey, value));
         item.setStringValue(value);
         documentMetadataRepository.save(item);
     }
 
-    private void upsertChunkAnnotation(String orgId, KbAnnotationSuggestionEntity suggestion, String value, String actor) {
+    private void upsertChunkAnnotation(String companyId, KbAnnotationSuggestionEntity suggestion, String value, String actor) {
         KbChunkAnnotationEntity item = chunkAnnotationRepository
-                .findByOrgIdAndChunkIdAndFieldKey(orgId, suggestion.getChunkId(), suggestion.getFieldKey())
+                .findByCompanyIdAndChunkIdAndFieldKey(companyId, suggestion.getChunkId(), suggestion.getFieldKey())
                 .orElseGet(() -> new KbChunkAnnotationEntity(
-                        orgId,
+                        companyId,
                         suggestion.getKnowledgeBaseId(),
                         suggestion.getChunkId(),
                         suggestion.getDocumentId(),
@@ -543,14 +543,14 @@ public class KbDataQualityService {
         chunkAnnotationRepository.save(item);
     }
 
-    private void ensureMetadataField(String orgId, Long kbId, String fieldKey, String fieldName) {
-        metadataFieldRepository.findByOrgIdAndKnowledgeBaseIdAndFieldKey(orgId, kbId, fieldKey)
+    private void ensureMetadataField(String companyId, Long kbId, String fieldKey, String fieldName) {
+        metadataFieldRepository.findByCompanyIdAndKnowledgeBaseIdAndFieldKey(companyId, kbId, fieldKey)
                 .orElseGet(() -> metadataFieldRepository.save(new KbMetadataFieldEntity(
-                        orgId, kbId, fieldKey, fieldName == null || fieldName.isBlank() ? fieldKey : fieldName, "STRING")));
+                        companyId, kbId, fieldKey, fieldName == null || fieldName.isBlank() ? fieldKey : fieldName, "STRING")));
     }
 
-    private KnowledgeBaseEntity requireKb(String orgId, Long kbId) {
-        return kbRepository.findByIdAndOrgId(kbId, orgId)
+    private KnowledgeBaseEntity requireKb(String companyId, Long kbId) {
+        return kbRepository.findByIdAndCompanyId(kbId, companyId)
                 .orElseThrow(() -> new IllegalArgumentException("Knowledge base not found"));
     }
 

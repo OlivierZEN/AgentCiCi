@@ -32,7 +32,7 @@ class AutoServiceDemoRequestIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }

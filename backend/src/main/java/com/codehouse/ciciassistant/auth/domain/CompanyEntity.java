@@ -6,8 +6,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "org")
-public class OrgEntity {
+@Table(name = "company")
+public class CompanyEntity {
 
     @Id
     @Column(name = "id", nullable = false, length = 64)
@@ -19,10 +19,10 @@ public class OrgEntity {
     @Column(name = "status", nullable = false, length = 32)
     private String status;
 
-    protected OrgEntity() {
+    protected CompanyEntity() {
     }
 
-    public OrgEntity(String id, String name, String status) {
+    public CompanyEntity(String id, String name, String status) {
         this.id = id;
         this.name = name;
         this.status = status;

@@ -5,12 +5,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentRuntimeScheduleTriggerRepository extends JpaRepository<AgentRuntimeScheduleTriggerEntity, Long> {
 
-    List<AgentRuntimeScheduleTriggerEntity> findByOrgIdAndAgentIdAndActiveTrueOrderByIdAsc(String orgId, String agentId);
+    List<AgentRuntimeScheduleTriggerEntity> findByCompanyIdAndAgentIdAndActiveTrueOrderByIdAsc(String companyId, String agentId);
 
-    java.util.Optional<AgentRuntimeScheduleTriggerEntity> findByOrgIdAndAgentIdAndTriggerKeyAndActiveTrue(
-            String orgId,
+    java.util.Optional<AgentRuntimeScheduleTriggerEntity> findByCompanyIdAndAgentIdAndTriggerKeyAndActiveTrue(
+            String companyId,
             String agentId,
             String triggerKey);
 
-    long deleteByOrgIdAndAgentIdAndSource(String orgId, String agentId, String source);
+    long deleteByCompanyIdAndAgentIdAndSource(String companyId, String agentId, String source);
 }

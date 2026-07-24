@@ -6,9 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbQualityRuleRepository extends JpaRepository<KbQualityRuleEntity, Long> {
 
-    List<KbQualityRuleEntity> findByOrgIdAndKnowledgeBaseIdOrderByIdDesc(String orgId, Long knowledgeBaseId);
+    List<KbQualityRuleEntity> findByCompanyIdAndKnowledgeBaseIdOrderByIdDesc(String companyId, Long knowledgeBaseId);
 
-    List<KbQualityRuleEntity> findByOrgIdAndKnowledgeBaseIdAndEnabledTrueOrderByIdAsc(String orgId, Long knowledgeBaseId);
+    List<KbQualityRuleEntity> findByCompanyIdAndKnowledgeBaseIdAndEnabledTrueOrderByIdAsc(String companyId, Long knowledgeBaseId);
 
-    Optional<KbQualityRuleEntity> findByIdAndOrgId(Long id, String orgId);
+    Optional<KbQualityRuleEntity> findByIdAndCompanyId(Long id, String companyId);
 }

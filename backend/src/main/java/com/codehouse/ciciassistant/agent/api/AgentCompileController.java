@@ -41,9 +41,9 @@ public class AgentCompileController {
     @PostMapping("/{agentId}/debug")
     public ApiResponse<DebugResult> debugForAgent(@PathVariable String agentId,
                                                   @Valid @RequestBody DebugRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         AgentWorkflowRuntimeService.DebugRuntimeResult runtimeResult = agentWorkflowRuntimeService.debug(
-                orgId,
+                companyId,
                 agentId,
                 request.input(),
                 request.requestedKnowledgeBaseIds(),
@@ -73,8 +73,8 @@ public class AgentCompileController {
     }
 
     private ApiResponse<AgentCompileService.CompileResult> doCompile(String agentId, CompileRequest request) {
-        String orgId = TenantContext.requireOrgId();
-        AgentCompileService.CompileResult result = agentCompileService.compile(orgId, new AgentCompileService.CompileCommand(
+        String companyId = TenantContext.requireCompanyId();
+        AgentCompileService.CompileResult result = agentCompileService.compile(companyId, new AgentCompileService.CompileCommand(
                 agentId,
                 request.name(),
                 request.summary(),

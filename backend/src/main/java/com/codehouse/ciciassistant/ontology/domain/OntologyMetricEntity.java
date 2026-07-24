@@ -36,7 +36,7 @@ public class OntologyMetricEntity extends AbstractOntologyWorkspaceEntity {
     }
 
     public OntologyMetricEntity(
-            String orgId,
+            String companyId,
             Long workspaceId,
             String key,
             String name,
@@ -46,7 +46,7 @@ public class OntologyMetricEntity extends AbstractOntologyWorkspaceEntity {
             String groupByPropertyKeysJson,
             String timePropertyKey,
             String filtersJson) {
-        super(orgId, workspaceId);
+        super(companyId, workspaceId);
         this.key = key;
         this.name = name;
         this.conceptId = conceptId;

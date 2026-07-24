@@ -4,5 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WecomKfMessageRepository extends JpaRepository<WecomKfMessageEntity, Long> {
 
-    boolean existsByOrgIdAndMsgId(String orgId, String msgId);
+    boolean existsByCompanyIdAndMsgId(String companyId, String msgId);
 }

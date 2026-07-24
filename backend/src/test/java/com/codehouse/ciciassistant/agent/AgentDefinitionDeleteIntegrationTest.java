@@ -62,7 +62,7 @@ class AgentDefinitionDeleteIntegrationTest {
                 .andExpect(jsonPath("$.data.deleted").value(true))
                 .andExpect(jsonPath("$.data.retentionMessage").value("Agent 已从构建列表隐藏；历史运行、审计、OpenAPI 调用和版本证据仍会保留。"));
 
-        AgentDefinitionEntity stored = agentDefinitionRepository.findByOrgIdAndAgentId("demo-org", agentId).orElseThrow();
+        AgentDefinitionEntity stored = agentDefinitionRepository.findByCompanyIdAndAgentId("demo-org", agentId).orElseThrow();
         assertThat(stored.isEnabled()).isFalse();
 
         MvcResult listResult = mockMvc.perform(get("/agents")
@@ -87,7 +87,7 @@ class AgentDefinitionDeleteIntegrationTest {
     }
 
     @Test
-    void shouldNotDeleteAgentFromAnotherOrganization() throws Exception {
+    void shouldNotDeleteAgentFromAnotherCompany() throws Exception {
         String token = loginToken("13800138111");
         String agentId = "other-org-agent-" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         agentDefinitionRepository.saveAndFlush(new AgentDefinitionEntity(
@@ -110,7 +110,7 @@ class AgentDefinitionDeleteIntegrationTest {
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isNotFound());
 
-        AgentDefinitionEntity stored = agentDefinitionRepository.findByOrgIdAndAgentId("other-org", agentId).orElseThrow();
+        AgentDefinitionEntity stored = agentDefinitionRepository.findByCompanyIdAndAgentId("other-org", agentId).orElseThrow();
         assertThat(stored.isEnabled()).isTrue();
     }
 
@@ -119,7 +119,7 @@ class AgentDefinitionDeleteIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "%s",
                                   "password": "szyd1234"
                                 }

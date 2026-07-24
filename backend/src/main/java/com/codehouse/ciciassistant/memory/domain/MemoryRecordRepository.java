@@ -6,14 +6,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface MemoryRecordRepository extends JpaRepository<MemoryRecordEntity, Long> {
 
-    List<MemoryRecordEntity> findByOrgIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(
-            String orgId, Long subjectId, Collection<String> statuses);
+    List<MemoryRecordEntity> findByCompanyIdAndSubjectIdAndStatusInOrderByUpdatedAtDesc(
+            String companyId, Long subjectId, Collection<String> statuses);
 
-    List<MemoryRecordEntity> findByOrgIdAndSubjectId(String orgId, Long subjectId);
+    List<MemoryRecordEntity> findByCompanyIdAndSubjectId(String companyId, Long subjectId);
 
-    List<MemoryRecordEntity> findByOrgIdAndAgentIdOrderByUpdatedAtDesc(String orgId, String agentId);
+    List<MemoryRecordEntity> findByCompanyIdAndAgentIdOrderByUpdatedAtDesc(String companyId, String agentId);
 
-    java.util.Optional<MemoryRecordEntity> findByIdAndOrgIdAndAgentId(Long id, String orgId, String agentId);
+    java.util.Optional<MemoryRecordEntity> findByIdAndCompanyIdAndAgentId(Long id, String companyId, String agentId);
 
     List<MemoryRecordEntity> findByStatusInAndValidToBefore(Collection<String> statuses, java.time.Instant cutoff);
 }

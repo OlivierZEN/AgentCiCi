@@ -37,17 +37,17 @@ class SkillDagHttpSecurityIntegrationTest {
     }
 
     @Test
-    void shouldKeepOrganizationAndPlatformGraphSurfacesIsolated() throws Exception {
-        String organizationToken = organizationToken();
+    void shouldKeepCompanyAndPlatformGraphSurfacesIsolated() throws Exception {
+        String companyToken = companyToken();
         String platformToken = platformToken();
 
         mockMvc.perform(get("/agents/cici-system/skill-dag")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizationToken))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + companyToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.scope.id").value("cici-system"));
 
         mockMvc.perform(get("/platform/skills/1/dependency-graph")
-                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + organizationToken))
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + companyToken))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").value("需要平台账号权限"));
 
@@ -76,12 +76,12 @@ class SkillDagHttpSecurityIntegrationTest {
                 .andExpect(jsonPath("$.data.scope.type").value("SKILL_IMPACT"));
     }
 
-    private String organizationToken() throws Exception {
+    private String companyToken() throws Exception {
         MvcResult result = mockMvc.perform(post("/auth/password/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "orgId": "demo-org",
+                                  "companyId": "demo-org",
                                   "mobile": "13800138111",
                                   "password": "szyd1234"
                                 }

@@ -36,16 +36,16 @@ public class AgentSkillDagController {
         if (TenantContext.getTokenType().filter("platform"::equals).isPresent()) {
             throw new ForbiddenException("需要组织账号权限");
         }
-        String orgId = TenantContext.requireOrgId();
-        agentDefinitionService.warmupBuiltinAgents(orgId);
+        String companyId = TenantContext.requireCompanyId();
+        agentDefinitionService.warmupBuiltinAgents(companyId);
         String userId = TenantContext.getUserId()
                 .orElseThrow(() -> new IllegalArgumentException("Missing user context"));
         accessControlService.require(
-                orgId,
+                companyId,
                 userId,
                 TenantContext.getRoles(),
                 agentId,
                 AgentPermission.VIEW);
-        return ApiResponse.ok(graphService.getAgentGraph(orgId, agentId, versionNo));
+        return ApiResponse.ok(graphService.getAgentGraph(companyId, agentId, versionNo));
     }
 }

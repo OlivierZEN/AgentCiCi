@@ -29,15 +29,15 @@ public class AdminUserController {
 
     @GetMapping
     public ApiResponse<List<Map<String, Object>>> list() {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(adminUserService.listUsers(orgId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(adminUserService.listUsers(companyId));
     }
 
     @PostMapping("/invitations")
     public ApiResponse<Map<String, Object>> inviteMember(@Valid @RequestBody InviteMemberRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(adminUserService.inviteMember(
-                orgId,
+                companyId,
                 request.mobile(),
                 request.nickname(),
                 request.roleCode()));
@@ -47,38 +47,38 @@ public class AdminUserController {
     public ApiResponse<Map<String, Object>> updateRole(
             @PathVariable String userId,
             @Valid @RequestBody UpdateUserRoleRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String actorId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(adminUserService.updateRole(orgId, actorId, userId, request.roleCode()));
+        return ApiResponse.ok(adminUserService.updateRole(companyId, actorId, userId, request.roleCode()));
     }
 
     @PostMapping("/{userId}/suspend")
     public ApiResponse<Map<String, Object>> suspendMember(@PathVariable String userId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String actorId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(adminUserService.suspendMember(orgId, actorId, userId));
+        return ApiResponse.ok(adminUserService.suspendMember(companyId, actorId, userId));
     }
 
     @PostMapping("/{userId}/restore")
     public ApiResponse<Map<String, Object>> restoreMember(@PathVariable String userId) {
-        String orgId = TenantContext.requireOrgId();
-        return ApiResponse.ok(adminUserService.restoreMember(orgId, userId));
+        String companyId = TenantContext.requireCompanyId();
+        return ApiResponse.ok(adminUserService.restoreMember(companyId, userId));
     }
 
     @PostMapping("/{userId}/transfer-owner")
     public ApiResponse<Map<String, Object>> transferOwner(@PathVariable String userId) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         String actorId = TenantContext.getUserId().orElseThrow(() -> new IllegalArgumentException("Missing user context"));
-        return ApiResponse.ok(adminUserService.transferOwner(orgId, actorId, userId));
+        return ApiResponse.ok(adminUserService.transferOwner(companyId, actorId, userId));
     }
 
     @PutMapping("/{userId}/profile")
     public ApiResponse<Map<String, Object>> updateProfile(
             @PathVariable String userId,
             @Valid @RequestBody UpdateUserProfileRequest request) {
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         return ApiResponse.ok(adminUserService.updateProfile(
-                orgId,
+                companyId,
                 userId,
                 request.mobile(),
                 request.nickname(),

@@ -86,14 +86,14 @@ public class OntologyDraftService {
 
     @Transactional
     public OntologyWorkspaceEntity saveDraft(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             Long expectedRevision,
             OntologyDocument document) {
-        requireCurrentOrg(orgId);
+        requireCurrentOrg(companyId);
         draftSafety.validateDocument(document);
-        OntologyWorkspaceEntity workspace = requireWorkspace(orgId, workspaceId);
+        OntologyWorkspaceEntity workspace = requireWorkspace(companyId, workspaceId);
         if (!Objects.equals(workspace.getDraftRevision(), expectedRevision)) {
             throw new ConflictException("ONTOLOGY_REVISION_CONFLICT");
         }
@@ -105,18 +105,18 @@ public class OntologyDraftService {
         }
 
         List<OntologyMappingEntity> existingMappings =
-                mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId);
-        Set<String> changedRelationKeys = changedRelationKeys(orgId, workspaceId, document);
-        deleteDraftChildren(workspaceId, orgId);
-        Map<String, Long> conceptIds = saveConcepts(orgId, workspaceId, document);
+                mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId);
+        Set<String> changedRelationKeys = changedRelationKeys(companyId, workspaceId, document);
+        deleteDraftChildren(workspaceId, companyId);
+        Map<String, Long> conceptIds = saveConcepts(companyId, workspaceId, document);
         SavedDataSources savedSources = saveDataSources(
-                orgId, userId, workspaceId, document);
-        clearChangedCatalog(orgId, workspaceId, savedSources.changedIds());
-        saveRelations(orgId, workspaceId, document, conceptIds);
-        saveMetrics(orgId, workspaceId, document, conceptIds);
-        saveActions(orgId, workspaceId, document, conceptIds);
+                companyId, userId, workspaceId, document);
+        clearChangedCatalog(companyId, workspaceId, savedSources.changedIds());
+        saveRelations(companyId, workspaceId, document, conceptIds);
+        saveMetrics(companyId, workspaceId, document, conceptIds);
+        saveActions(companyId, workspaceId, document, conceptIds);
         saveMappings(
-                orgId,
+                companyId,
                 userId,
                 workspaceId,
                 document,
@@ -131,25 +131,25 @@ public class OntologyDraftService {
     }
 
     OntologyDocument loadDraft(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyWorkspaceEntity workspace) {
-        requireCurrentOrg(orgId);
+        requireCurrentOrg(companyId);
         if (workspace == null
                 || !Objects.equals(workspace.getId(), workspaceId)
-                || !Objects.equals(workspace.getOrgId(), orgId)) {
+                || !Objects.equals(workspace.getCompanyId(), companyId)) {
             throw new ResourceNotFoundException("Ontology workspace not found");
         }
 
         List<OntologyConceptEntity> conceptEntities =
-                concepts.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId);
+                concepts.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId);
         Map<Long, String> conceptKeys = new HashMap<>();
         List<OntologyDocument.Concept> conceptDocuments = conceptEntities.stream()
                 .map(entity -> {
                     conceptKeys.put(entity.getId(), entity.getKey());
                     List<OntologyDocument.Property> propertyDocuments =
-                            properties.findByConceptIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
-                                            entity.getId(), workspaceId, orgId).stream()
+                            properties.findByConceptIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
+                                            entity.getId(), workspaceId, companyId).stream()
                                     .map(this::toDocumentProperty)
                                     .toList();
                     return new OntologyDocument.Concept(
@@ -168,7 +168,7 @@ public class OntologyDraftService {
                 .toList();
 
         List<OntologyDocument.Relation> relationDocuments =
-                relations.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
+                relations.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId).stream()
                         .map(entity -> new OntologyDocument.Relation(
                                 entity.getKey(),
                                 entity.getName(),
@@ -182,7 +182,7 @@ public class OntologyDraftService {
                                 entity.isEnabled()))
                         .toList();
         List<OntologyDocument.Metric> metricDocuments =
-                metrics.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
+                metrics.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId).stream()
                         .map(entity -> new OntologyDocument.Metric(
                                 entity.getKey(),
                                 entity.getName(),
@@ -194,7 +194,7 @@ public class OntologyDraftService {
                                 readList(entity.getFiltersJson(), new TypeReference<>() { })))
                         .toList();
         List<OntologyDocument.Action> actionDocuments =
-                actions.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
+                actions.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId).stream()
                         .map(entity -> new OntologyDocument.Action(
                                 entity.getKey(),
                                 entity.getName(),
@@ -203,7 +203,7 @@ public class OntologyDraftService {
                                 readList(entity.getParametersJson(), new TypeReference<>() { })))
                         .toList();
         List<OntologyDocument.DataSource> dataSourceDocuments =
-                dataSources.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
+                dataSources.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId).stream()
                         .map(entity -> new OntologyDocument.DataSource(
                                 entity.getId(),
                                 entity.getKey(),
@@ -213,7 +213,7 @@ public class OntologyDraftService {
                                 entity.getSampleDataJson()))
                         .toList();
         List<OntologyDocument.Mapping> mappingDocuments =
-                mappings.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId).stream()
+                mappings.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId).stream()
                         .map(entity -> new OntologyDocument.Mapping(
                                 entity.getTargetType(),
                                 entity.getTargetKey(),
@@ -238,23 +238,23 @@ public class OntologyDraftService {
                 mappingDocuments);
     }
 
-    private void deleteDraftChildren(Long workspaceId, String orgId) {
-        properties.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
-        relations.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
-        metrics.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
-        actions.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
-        concepts.deleteByWorkspaceIdAndOrgId(workspaceId, orgId);
-        persistence.flushForCurrentOrg(orgId);
+    private void deleteDraftChildren(Long workspaceId, String companyId) {
+        properties.deleteByWorkspaceIdAndCompanyId(workspaceId, companyId);
+        relations.deleteByWorkspaceIdAndCompanyId(workspaceId, companyId);
+        metrics.deleteByWorkspaceIdAndCompanyId(workspaceId, companyId);
+        actions.deleteByWorkspaceIdAndCompanyId(workspaceId, companyId);
+        concepts.deleteByWorkspaceIdAndCompanyId(workspaceId, companyId);
+        persistence.flushForCurrentOrg(companyId);
     }
 
     private Map<String, Long> saveConcepts(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document) {
         Map<String, Long> conceptIds = new HashMap<>();
         for (OntologyDocument.Concept concept : safe(document.concepts())) {
             OntologyConceptEntity saved = persistence.saveForCurrentOrg(new OntologyConceptEntity(
-                    orgId,
+                    companyId,
                     workspaceId,
                     concept.key(),
                     concept.name(),
@@ -269,7 +269,7 @@ public class OntologyDraftService {
             conceptIds.put(concept.key(), saved.getId());
             for (OntologyDocument.Property property : safe(concept.properties())) {
                 persistence.saveForCurrentOrg(new OntologyPropertyEntity(
-                        orgId,
+                        companyId,
                         workspaceId,
                         saved.getId(),
                         property.key(),
@@ -289,7 +289,7 @@ public class OntologyDraftService {
     }
 
     private SavedDataSources saveDataSources(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             OntologyDocument document) {
@@ -299,15 +299,15 @@ public class OntologyDraftService {
             dataSourcePolicy.validate(source);
             OntologyDataSourceEntity entity = source.id() == null
                     ? null
-                    : dataSources.findByIdAndWorkspaceIdAndOrgId(
-                            source.id(), workspaceId, orgId).orElse(null);
+                    : dataSources.findByIdAndWorkspaceIdAndCompanyId(
+                            source.id(), workspaceId, companyId).orElse(null);
             if (entity == null) {
-                entity = dataSources.findByWorkspaceIdAndOrgIdAndKey(
-                        workspaceId, orgId, source.key()).orElse(null);
+                entity = dataSources.findByWorkspaceIdAndCompanyIdAndKey(
+                        workspaceId, companyId, source.key()).orElse(null);
             }
             if (entity == null) {
                 entity = new OntologyDataSourceEntity(
-                        orgId,
+                        companyId,
                         workspaceId,
                         source.key(),
                         source.name(),
@@ -341,13 +341,13 @@ public class OntologyDraftService {
     }
 
     private void saveRelations(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document,
             Map<String, Long> conceptIds) {
         for (OntologyDocument.Relation relation : safe(document.relations())) {
             persistence.saveForCurrentOrg(new OntologyRelationEntity(
-                    orgId,
+                    companyId,
                     workspaceId,
                     relation.key(),
                     relation.name(),
@@ -363,13 +363,13 @@ public class OntologyDraftService {
     }
 
     private void saveMetrics(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document,
             Map<String, Long> conceptIds) {
         for (OntologyDocument.Metric metric : safe(document.metrics())) {
             persistence.saveForCurrentOrg(new OntologyMetricEntity(
-                    orgId,
+                    companyId,
                     workspaceId,
                     metric.key(),
                     metric.name(),
@@ -383,13 +383,13 @@ public class OntologyDraftService {
     }
 
     private void saveActions(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document,
             Map<String, Long> conceptIds) {
         for (OntologyDocument.Action action : safe(document.actions())) {
             persistence.saveForCurrentOrg(new OntologyActionEntity(
-                    orgId,
+                    companyId,
                     workspaceId,
                     action.key(),
                     action.name(),
@@ -400,7 +400,7 @@ public class OntologyDraftService {
     }
 
     private void saveMappings(
-            String orgId,
+            String companyId,
             String userId,
             Long workspaceId,
             OntologyDocument document,
@@ -431,7 +431,7 @@ public class OntologyDraftService {
             OntologyMappingEntity existing = existingByIdentity.get(identity);
             if (existing == null) {
                 persistence.saveForCurrentOrg(new OntologyMappingEntity(
-                        orgId,
+                        companyId,
                         workspaceId,
                         targetType,
                         mapping.targetKey(),
@@ -473,34 +473,34 @@ public class OntologyDraftService {
         existingByIdentity.forEach((identity, entity) -> {
             if (!seen.contains(identity)) {
                 persistence.deleteForCurrentOrg(
-                        orgId,
-                        () -> mappings.deleteByIdAndWorkspaceIdAndOrgId(
-                                entity.getId(), workspaceId, orgId));
+                        companyId,
+                        () -> mappings.deleteByIdAndWorkspaceIdAndCompanyId(
+                                entity.getId(), workspaceId, companyId));
             }
         });
     }
 
     private void clearChangedCatalog(
-            String orgId,
+            String companyId,
             Long workspaceId,
             Set<Long> changedDataSourceIds) {
         for (Long dataSourceId : changedDataSourceIds) {
             persistence.deleteForCurrentOrg(
-                    orgId,
-                    () -> physicalObjects.deleteByDataSourceIdAndWorkspaceIdAndOrgId(
-                            dataSourceId, workspaceId, orgId));
+                    companyId,
+                    () -> physicalObjects.deleteByDataSourceIdAndWorkspaceIdAndCompanyId(
+                            dataSourceId, workspaceId, companyId));
         }
     }
 
     private Set<String> changedRelationKeys(
-            String orgId,
+            String companyId,
             Long workspaceId,
             OntologyDocument document) {
         Map<Long, String> conceptKeys = new HashMap<>();
-        concepts.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId)
+        concepts.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId)
                 .forEach(concept -> conceptKeys.put(concept.getId(), concept.getKey()));
         Map<String, String> existingEndpoints = new HashMap<>();
-        relations.findByWorkspaceIdAndOrgIdOrderByIdAsc(workspaceId, orgId)
+        relations.findByWorkspaceIdAndCompanyIdOrderByIdAsc(workspaceId, companyId)
                 .forEach(relation -> existingEndpoints.put(
                         relation.getKey(),
                         conceptKeys.get(relation.getSourceConceptId())
@@ -552,14 +552,14 @@ public class OntologyDraftService {
                 readList(entity.getEnumValuesJson(), new TypeReference<>() { }));
     }
 
-    private OntologyWorkspaceEntity requireWorkspace(String orgId, Long workspaceId) {
-        return workspaces.findForUpdateByIdAndOrgId(workspaceId, orgId)
+    private OntologyWorkspaceEntity requireWorkspace(String companyId, Long workspaceId) {
+        return workspaces.findForUpdateByIdAndCompanyId(workspaceId, companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Ontology workspace not found"));
     }
 
-    private void requireCurrentOrg(String orgId) {
-        if (!Objects.equals(TenantContext.requireOrgId(), orgId)) {
-            throw new ForbiddenException("Ontology organization does not match current organization");
+    private void requireCurrentOrg(String companyId) {
+        if (!Objects.equals(TenantContext.requireCompanyId(), companyId)) {
+            throw new ForbiddenException("Ontology company does not match current company");
         }
     }
 

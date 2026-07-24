@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlatformToolDefinitionRepository extends JpaRepository<PlatformToolDefinitionEntity, Long> {
 
-    List<PlatformToolDefinitionEntity> findByOrgIdOrderByCategoryAscDisplayNameAsc(String orgId);
+    List<PlatformToolDefinitionEntity> findByCompanyIdOrderByCategoryAscDisplayNameAsc(String companyId);
 
-    Optional<PlatformToolDefinitionEntity> findByOrgIdAndToolName(String orgId, String toolName);
+    Optional<PlatformToolDefinitionEntity> findByCompanyIdAndToolName(String companyId, String toolName);
 }

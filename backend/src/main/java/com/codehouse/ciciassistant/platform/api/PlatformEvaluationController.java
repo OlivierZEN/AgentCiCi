@@ -112,7 +112,7 @@ public class PlatformEvaluationController {
         return ApiResponse.ok(service.bindPlatformSuite(
                 suiteId,
                 new AgentEvaluationControlPlaneService.BindingCommand(
-                        request.orgId(), request.agentId(), request.appCode(), request.industryCode()),
+                        request.companyId(), request.agentId(), request.appCode(), request.industryCode()),
                 actorId(), actorRole()));
     }
 
@@ -177,5 +177,5 @@ public class PlatformEvaluationController {
             boolean hiddenCase
     ) {}
 
-    public record BindingRequest(String orgId, String agentId, String appCode, String industryCode) {}
+    public record BindingRequest(String companyId, String agentId, String appCode, String industryCode) {}
 }

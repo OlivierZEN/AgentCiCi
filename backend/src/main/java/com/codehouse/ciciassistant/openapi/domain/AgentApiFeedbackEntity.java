@@ -19,8 +19,8 @@ public class AgentApiFeedbackEntity {
     @Column(name = "message_id", nullable = false, length = 64)
     private String messageId;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "credential_id", nullable = false)
     private Long credentialId;
@@ -41,13 +41,13 @@ public class AgentApiFeedbackEntity {
     }
 
     public AgentApiFeedbackEntity(String messageId,
-                                  String orgId,
+                                  String companyId,
                                   Long credentialId,
                                   String agentId,
                                   String rating,
                                   String content) {
         this.messageId = messageId;
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.credentialId = credentialId;
         this.agentId = agentId;
         this.rating = rating;

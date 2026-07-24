@@ -55,9 +55,9 @@ public class IntegrationAppService {
     }
 
     @Transactional
-    public List<Map<String, Object>> list(String orgId) {
-        ensureBuiltinRows(orgId);
-        return repository.findByOrgIdOrderByIdAsc(orgId).stream()
+    public List<Map<String, Object>> list(String companyId) {
+        ensureBuiltinRows(companyId);
+        return repository.findByCompanyIdOrderByIdAsc(companyId).stream()
                 .filter(entity -> !isPlatformManagedApp(entity.getAppCode()))
                 .map(this::toView)
                 .toList();
@@ -67,7 +67,7 @@ public class IntegrationAppService {
     public List<Map<String, Object>> listPlatformManaged() {
         String scopeId = platformScopeId();
         ensurePlatformManagedRows(scopeId);
-        return repository.findByOrgIdOrderByIdAsc(scopeId).stream()
+        return repository.findByCompanyIdOrderByIdAsc(scopeId).stream()
                 .filter(entity -> isPlatformManagedApp(entity.getAppCode()))
                 .map(this::toView)
                 .toList();
@@ -75,7 +75,7 @@ public class IntegrationAppService {
 
     @Transactional
     public Map<String, Object> update(
-            String orgId,
+            String companyId,
             String appCode,
             boolean enabled,
             String description,
@@ -83,7 +83,7 @@ public class IntegrationAppService {
         if (isPlatformManagedApp(appCode)) {
             throw new ForbiddenException(PLATFORM_MANAGED_MESSAGE);
         }
-        return updateInternal(orgId, appCode, enabled, description, config);
+        return updateInternal(companyId, appCode, enabled, description, config);
     }
 
     @Transactional
@@ -101,7 +101,7 @@ public class IntegrationAppService {
     }
 
     private Map<String, Object> updateInternal(
-            String orgId,
+            String companyId,
             String appCode,
             boolean enabled,
             String description,
@@ -111,9 +111,9 @@ public class IntegrationAppService {
             throw new IllegalArgumentException("Unknown built-in integration app: " + appCode);
         }
 
-        IntegrationAppEntity entity = repository.findByOrgIdAndAppCode(orgId, appCode)
+        IntegrationAppEntity entity = repository.findByCompanyIdAndAppCode(companyId, appCode)
                 .orElseGet(() -> repository.save(new IntegrationAppEntity(
-                        orgId,
+                        companyId,
                         def.appCode(),
                         def.appName(),
                         def.description(),
@@ -130,7 +130,7 @@ public class IntegrationAppService {
 
         IntegrationAppEntity saved = repository.save(entity);
         if (APP_CODE_FEISHU_BOT.equals(appCode)) {
-            feishuBotClientManagerProvider.ifAvailable(manager -> manager.refreshOrg(orgId));
+            feishuBotClientManagerProvider.ifAvailable(manager -> manager.refreshOrg(companyId));
         }
         return toView(saved);
     }
@@ -141,14 +141,14 @@ public class IntegrationAppService {
      * — <b>not</b> for returning to HTTP clients, because the map may include encrypted
      * secret envelopes.
      */
-    public Optional<Map<String, Object>> findRawConfig(String orgId, String appCode) {
-        return repository.findByOrgIdAndAppCode(configScopeId(orgId, appCode), appCode)
+    public Optional<Map<String, Object>> findRawConfig(String companyId, String appCode) {
+        return repository.findByCompanyIdAndAppCode(configScopeId(companyId, appCode), appCode)
                 .filter(IntegrationAppEntity::isEnabled)
                 .map(e -> readJsonToMap(e.getConfigJson()));
     }
 
-    public Optional<Boolean> isEnabled(String orgId, String appCode) {
-        return repository.findByOrgIdAndAppCode(configScopeId(orgId, appCode), appCode)
+    public Optional<Boolean> isEnabled(String companyId, String appCode) {
+        return repository.findByCompanyIdAndAppCode(configScopeId(companyId, appCode), appCode)
                 .map(IntegrationAppEntity::isEnabled);
     }
 
@@ -196,12 +196,12 @@ public class IntegrationAppService {
         return Optional.empty();
     }
 
-    private void ensureBuiltinRows(String orgId) {
+    private void ensureBuiltinRows(String companyId) {
         for (BuiltinAppDef def : BUILTIN_APPS.values()) {
-            boolean exists = repository.findByOrgIdAndAppCode(orgId, def.appCode()).isPresent();
+            boolean exists = repository.findByCompanyIdAndAppCode(companyId, def.appCode()).isPresent();
             if (!exists) {
                 repository.save(new IntegrationAppEntity(
-                        orgId,
+                        companyId,
                         def.appCode(),
                         def.appName(),
                         def.description(),
@@ -212,13 +212,13 @@ public class IntegrationAppService {
         }
     }
 
-    private void ensurePlatformManagedRows(String orgId) {
+    private void ensurePlatformManagedRows(String companyId) {
         for (String appCode : PLATFORM_MANAGED_APP_CODES) {
             BuiltinAppDef def = BUILTIN_APPS.get(appCode);
-            boolean exists = repository.findByOrgIdAndAppCode(orgId, def.appCode()).isPresent();
+            boolean exists = repository.findByCompanyIdAndAppCode(companyId, def.appCode()).isPresent();
             if (!exists) {
                 repository.save(new IntegrationAppEntity(
-                        orgId,
+                        companyId,
                         def.appCode(),
                         def.appName(),
                         def.description(),
@@ -229,12 +229,12 @@ public class IntegrationAppService {
         }
     }
 
-    private String configScopeId(String orgId, String appCode) {
-        return isPlatformManagedApp(appCode) ? platformScopeId() : orgId;
+    private String configScopeId(String companyId, String appCode) {
+        return isPlatformManagedApp(appCode) ? platformScopeId() : companyId;
     }
 
     private String platformScopeId() {
-        String configured = platformAccountProperties.getGovernanceOrgId();
+        String configured = platformAccountProperties.getGovernanceCompanyId();
         return configured == null || configured.isBlank() ? "demo-org" : configured.trim();
     }
 
@@ -361,7 +361,7 @@ public class IntegrationAppService {
                 APP_CODE_CLOUDCC_CRM,
                 "CloudCC CRM",
                 "接入 CloudCC CRM 系统，获取并处理业务数据与业务功能",
-                List.of("orgId", "orgapi_switch_address", "clientId", "secretKey"),
+                List.of("companyId", "orgapi_switch_address", "clientId", "secretKey"),
                 true));
         apps.put(APP_CODE_FEISHU_BOT, new BuiltinAppDef(
                 APP_CODE_FEISHU_BOT,

@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerDynamicSignalRepository extends JpaRepository<CustomerDynamicSignalEntity, Long> {
-    List<CustomerDynamicSignalEntity> findByOrgIdAndCrmAccountIdOrderByOccurredAtDesc(String orgId, String crmAccountId);
-    List<CustomerDynamicSignalEntity> findByOrgIdAndSourceEventId(String orgId, String sourceEventId);
-    Optional<CustomerDynamicSignalEntity> findByOrgIdAndPublicId(String orgId, String publicId);
+    List<CustomerDynamicSignalEntity> findByCompanyIdAndCrmAccountIdOrderByOccurredAtDesc(String companyId, String crmAccountId);
+    List<CustomerDynamicSignalEntity> findByCompanyIdAndSourceEventId(String companyId, String sourceEventId);
+    Optional<CustomerDynamicSignalEntity> findByCompanyIdAndPublicId(String companyId, String publicId);
 }

@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface KbSyncJobRepository extends JpaRepository<KbSyncJobEntity, Long> {
 
-    List<KbSyncJobEntity> findTop20ByOrgIdAndDataSourceIdOrderByIdDesc(String orgId, Long dataSourceId);
+    List<KbSyncJobEntity> findTop20ByCompanyIdAndDataSourceIdOrderByIdDesc(String companyId, Long dataSourceId);
 }

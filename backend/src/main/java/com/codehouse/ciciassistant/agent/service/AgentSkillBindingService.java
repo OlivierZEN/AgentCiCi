@@ -28,15 +28,15 @@ public class AgentSkillBindingService {
         this.skillDefinitionService = skillDefinitionService;
     }
 
-    public List<AgentSkillBindingView> listBindings(String orgId, String agentId) {
-        skillDefinitionService.ensurePhaseOneDefaults(orgId);
+    public List<AgentSkillBindingView> listBindings(String companyId, String agentId) {
+        skillDefinitionService.ensurePhaseOneDefaults(companyId);
         List<AgentSkillBindingEntity> bindings = agentSkillBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizeAgentId(agentId));
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, normalizeAgentId(agentId));
         if (bindings.isEmpty()) {
             return List.of();
         }
         List<Long> skillIds = bindings.stream().map(AgentSkillBindingEntity::getSkillId).distinct().toList();
-        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionRepository.findByOrgIdAndIdInAndEnabledTrue(orgId, skillIds)
+        Map<Long, SkillDefinitionEntity> skillById = skillDefinitionRepository.findByCompanyIdAndIdInAndEnabledTrue(companyId, skillIds)
                 .stream()
                 .collect(java.util.stream.Collectors.toMap(SkillDefinitionEntity::getId, item -> item));
         List<AgentSkillBindingView> result = new ArrayList<>();
@@ -63,29 +63,29 @@ public class AgentSkillBindingService {
     }
 
     @Transactional
-    public List<AgentSkillBindingView> replaceBindings(String orgId, String agentId, List<ReplaceBindingInput> inputs) {
-        skillDefinitionService.ensurePhaseOneDefaults(orgId);
+    public List<AgentSkillBindingView> replaceBindings(String companyId, String agentId, List<ReplaceBindingInput> inputs) {
+        skillDefinitionService.ensurePhaseOneDefaults(companyId);
         String normalizedAgentId = normalizeAgentId(agentId);
         List<AgentSkillBindingEntity> existing = agentSkillBindingRepository
-                .findByOrgIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(orgId, normalizedAgentId);
+                .findByCompanyIdAndAgentIdAndEnabledTrueOrderByPriorityAscIdAsc(companyId, normalizedAgentId);
         Map<Long, SkillDefinitionEntity> existingSkills = new LinkedHashMap<>();
         for (AgentSkillBindingEntity item : existing) {
             existingSkills.computeIfAbsent(
                     item.getSkillId(),
-                    id -> skillDefinitionRepository.findByIdAndOrgId(id, orgId).orElse(null)
+                    id -> skillDefinitionRepository.findByIdAndCompanyId(id, companyId).orElse(null)
             );
         }
-        agentSkillBindingRepository.deleteByOrgIdAndAgentId(orgId, normalizedAgentId);
+        agentSkillBindingRepository.deleteByCompanyIdAndAgentId(companyId, normalizedAgentId);
         agentSkillBindingRepository.flush();
         Map<Long, SkillDefinitionEntity> skillById = new LinkedHashMap<>();
         List<AgentSkillBindingEntity> entities = new ArrayList<>();
         List<Long> selectedSkillIds = new ArrayList<>();
         int fallbackPriority = 10;
         for (ReplaceBindingInput input : inputs == null ? List.<ReplaceBindingInput>of() : inputs) {
-            Long skillId = resolveSkillId(orgId, input);
+            Long skillId = resolveSkillId(companyId, input);
             SkillDefinitionEntity skill = skillById.computeIfAbsent(
                     skillId,
-                    id -> skillDefinitionRepository.findByIdAndOrgId(id, orgId)
+                    id -> skillDefinitionRepository.findByIdAndCompanyId(id, companyId)
                             .orElseThrow(() -> new IllegalArgumentException("skill not found: " + id))
             );
             if (!skill.isEnabled()) {
@@ -96,7 +96,7 @@ public class AgentSkillBindingService {
             }
             selectedSkillIds.add(skillId);
             entities.add(new AgentSkillBindingEntity(
-                    orgId,
+                    companyId,
                     normalizedAgentId,
                     skillId,
                     normalizeActivationMode(input.activationMode()),
@@ -116,7 +116,7 @@ public class AgentSkillBindingService {
                     continue;
                 }
                 entities.add(new AgentSkillBindingEntity(
-                        orgId,
+                        companyId,
                         normalizedAgentId,
                         binding.getSkillId(),
                         binding.getActivationMode(),
@@ -130,10 +130,10 @@ public class AgentSkillBindingService {
             return List.of();
         }
         agentSkillBindingRepository.saveAll(entities);
-        return listBindings(orgId, normalizedAgentId);
+        return listBindings(companyId, normalizedAgentId);
     }
 
-    private Long resolveSkillId(String orgId, ReplaceBindingInput input) {
+    private Long resolveSkillId(String companyId, ReplaceBindingInput input) {
         if (input.skillId() != null) {
             return input.skillId();
         }
@@ -141,7 +141,7 @@ public class AgentSkillBindingService {
         if (code.isBlank()) {
             throw new IllegalArgumentException("skillId or skillCode is required");
         }
-        return skillDefinitionRepository.findByOrgIdAndSkillCode(orgId, code)
+        return skillDefinitionRepository.findByCompanyIdAndSkillCode(companyId, code)
                 .map(SkillDefinitionEntity::getId)
                 .orElseThrow(() -> new IllegalArgumentException("skill not found for code: " + code));
     }

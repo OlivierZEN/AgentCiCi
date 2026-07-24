@@ -80,7 +80,7 @@ class OntologyAiProposalServiceTest {
         objectMapper = new ObjectMapper().findAndRegisterModules();
         savedProposals = new LinkedHashMap<>();
         org.mockito.Mockito.lenient()
-                .when(proposals.findForUpdateByIdAndOrgId(any(), eq("org-a")))
+                .when(proposals.findForUpdateByIdAndCompanyId(any(), eq("org-a")))
                 .thenAnswer(invocation -> Optional.ofNullable(
                         savedProposals.get(invocation.getArgument(0))));
         OntologyAiProposalStateService proposalState = new OntologyAiProposalStateService(
@@ -102,7 +102,7 @@ class OntologyAiProposalServiceTest {
                 persistence,
                 proposalState,
                 objectMapper);
-        TenantContext.setOrgId("org-a");
+        TenantContext.setCompanyId("org-a");
         TenantContext.setUserId("user-a");
     }
 
@@ -116,7 +116,7 @@ class OntologyAiProposalServiceTest {
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         when(modelRouter.route("org-a", "ontology-modeling")).thenReturn(Map.of(
@@ -189,7 +189,7 @@ class OntologyAiProposalServiceTest {
         verify(modelRouter).route("org-a", "ontology-modeling");
         verify(modelProviders).credentialsForProvider("org-a", "provider-a");
         verify(workspaces, org.mockito.Mockito.atLeast(2))
-                .findForUpdateByIdAndOrgId(41L, "org-a");
+                .findForUpdateByIdAndCompanyId(41L, "org-a");
 
         @SuppressWarnings("unchecked")
         ArgumentCaptor<List<Map<String, Object>>> messages = ArgumentCaptor.forClass(List.class);
@@ -223,7 +223,7 @@ class OntologyAiProposalServiceTest {
     void rejectsArchivedWorkspaceBeforeDraftLoadProposalSaveOrModelCall() {
         OntologyWorkspaceEntity archived = workspace(41L, 3L);
         ReflectionTestUtils.setField(archived, "status", "ARCHIVED");
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(archived));
 
         assertThatThrownBy(() -> service.propose(
@@ -337,7 +337,7 @@ class OntologyAiProposalServiceTest {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         when(modelRouter.route("org-a", "ontology-modeling"))
@@ -520,9 +520,9 @@ class OntologyAiProposalServiceTest {
                 false,
                 "{\"sample\":\"private-field-value\"}");
         ReflectionTestUtils.setField(field, "id", 72L);
-        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 1L, 41L, "org-a")).thenReturn(List.of(object));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 71L, 41L, "org-a")).thenReturn(List.of(field));
 
         OntologyDocument generated = new OntologyDocument(
@@ -598,7 +598,7 @@ class OntologyAiProposalServiceTest {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
@@ -622,14 +622,14 @@ class OntologyAiProposalServiceTest {
         OntologyDocument current = withSecretConfig(
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         List<OntologyPhysicalObjectEntity> objects = java.util.stream.IntStream.range(0, 6)
                 .mapToObj(index -> physicalObject(
                         200L + index, "object-" + index, "对象 " + index))
                 .toList();
-        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 1L, 41L, "org-a")).thenReturn(objects);
         List<OntologyAiProposalService.SourceSelection> selections = new java.util.ArrayList<>();
         for (int objectIndex = 0; objectIndex < objects.size(); objectIndex++) {
@@ -644,7 +644,7 @@ class OntologyAiProposalServiceTest {
                             "字段 " + fieldIndex))
                     .toList();
             if (objectIndex < 5) {
-                when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+                when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                         objectId, 41L, "org-a")).thenReturn(fields);
             }
             selections.add(new OntologyAiProposalService.SourceSelection(
@@ -673,7 +673,7 @@ class OntologyAiProposalServiceTest {
                 base.concepts(), base.relations(), base.metrics(), base.actions(),
                 base.dataSources(), base.mappings());
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
@@ -696,9 +696,9 @@ class OntologyAiProposalServiceTest {
         OntologyPhysicalFieldEntity field = new OntologyPhysicalFieldEntity(
                 "org-a", 41L, 81L, "name", "项目名称", "TEXT", false, false, "{}");
         ReflectionTestUtils.setField(field, "id", 82L);
-        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 1L, 41L, "org-a")).thenReturn(List.of(object));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 81L, 41L, "org-a")).thenReturn(List.of(field));
         OntologyDocument generated = new OntologyDocument(
                 current.key(), current.name(), current.description(), current.concepts(),
@@ -740,15 +740,15 @@ class OntologyAiProposalServiceTest {
         OntologyPhysicalObjectEntity projects = physicalObject(91L, "projects", "项目");
         OntologyPhysicalObjectEntity tasks = physicalObject(92L, "tasks", "任务");
         OntologyPhysicalObjectEntity unrelated = physicalObject(93L, "audit-log", "无关审计");
-        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 1L, 41L, "org-a")).thenReturn(List.of(projects, tasks, unrelated));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 91L, 41L, "org-a")).thenReturn(List.of(
                         physicalField(911L, 91L, "task_id", "任务编号")));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 92L, 41L, "org-a")).thenReturn(List.of(
                         physicalField(921L, 92L, "project_id", "项目编号")));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 93L, 41L, "org-a")).thenReturn(List.of(
                         physicalField(931L, 93L, "task_id", "同名任务编号"),
                         physicalField(932L, 93L, "audit_id", "不同名审计编号"),
@@ -898,11 +898,11 @@ class OntologyAiProposalServiceTest {
         OntologyDocument sanitizedCandidate = sanitizedAssets(current);
         OntologyAiProposalEntity proposal = readyProposal(1_401L, sanitizedCandidate, 3L);
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_401L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_401L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(proposals.findForUpdateByIdAndOrgId(1_401L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_401L, "org-a"))
                 .thenReturn(Optional.of(proposal));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         stubValidProjectTaskRelationCatalog();
@@ -928,9 +928,9 @@ class OntologyAiProposalServiceTest {
         verify(persistence).saveForCurrentOrg(proposal);
 
         InOrder order = org.mockito.Mockito.inOrder(proposals, workspaces, drafts, persistence);
-        order.verify(proposals).findWorkspaceIdByIdAndOrgId(1_401L, "org-a");
-        order.verify(workspaces).findForUpdateByIdAndOrgId(41L, "org-a");
-        order.verify(proposals).findForUpdateByIdAndOrgId(1_401L, "org-a");
+        order.verify(proposals).findWorkspaceIdByIdAndCompanyId(1_401L, "org-a");
+        order.verify(workspaces).findForUpdateByIdAndCompanyId(41L, "org-a");
+        order.verify(proposals).findForUpdateByIdAndCompanyId(1_401L, "org-a");
         order.verify(drafts).loadDraft("org-a", 41L, workspace);
         order.verify(drafts).saveDraft("org-a", "user-a", 41L, 3L, current);
         order.verify(persistence).saveForCurrentOrg(proposal);
@@ -943,11 +943,11 @@ class OntologyAiProposalServiceTest {
         OntologyDocument candidate = sanitizedAssets(current);
         OntologyAiProposalEntity proposal = readyProposal(1_409L, candidate, 3L);
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_409L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_409L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(proposals.findForUpdateByIdAndOrgId(1_409L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_409L, "org-a"))
                 .thenReturn(Optional.of(proposal));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
@@ -966,11 +966,11 @@ class OntologyAiProposalServiceTest {
                 OntologyCompilerServiceTest.projectDeliveryDocument());
         OntologyAiProposalEntity proposal = readyProposal(1_402L, current, 3L);
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_402L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_402L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(proposals.findForUpdateByIdAndOrgId(1_402L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_402L, "org-a"))
                 .thenReturn(Optional.of(proposal));
 
         assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_402L, 2L))
@@ -992,11 +992,11 @@ class OntologyAiProposalServiceTest {
                 tampered,
                 "payloadJson",
                 objectMapper.writeValueAsString(withoutAssets(current)));
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_403L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_403L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(proposals.findForUpdateByIdAndOrgId(1_403L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_403L, "org-a"))
                 .thenReturn(Optional.of(tampered));
 
         assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_403L, 3L))
@@ -1006,9 +1006,9 @@ class OntologyAiProposalServiceTest {
 
         OntologyAiProposalEntity applied = readyProposal(1_404L, current, 3L);
         applied.markApplied("user-a");
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_404L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_404L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(proposals.findForUpdateByIdAndOrgId(1_404L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_404L, "org-a"))
                 .thenReturn(Optional.of(applied));
         assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_404L, 3L))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -1033,11 +1033,11 @@ class OntologyAiProposalServiceTest {
                 objectMapper.writeValueAsString(new OntologyAiProposalService.ProposalDiff(
                         3L, hash, List.of("concept:forged"), List.of(), List.of())));
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_406L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_406L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(proposals.findForUpdateByIdAndOrgId(1_406L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_406L, "org-a"))
                 .thenReturn(Optional.of(proposal));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
 
@@ -1057,22 +1057,22 @@ class OntologyAiProposalServiceTest {
         OntologyDocument candidate = sanitizedAssets(current);
         OntologyAiProposalEntity proposal = readyProposal(1_408L, candidate, 3L);
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_408L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_408L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
-        when(proposals.findForUpdateByIdAndOrgId(1_408L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_408L, "org-a"))
                 .thenReturn(Optional.of(proposal));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         OntologyPhysicalObjectEntity projects = physicalObject(301L, "projects", "项目");
         OntologyPhysicalObjectEntity tasks = physicalObject(302L, "tasks", "任务");
-        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 1L, 41L, "org-a")).thenReturn(List.of(projects, tasks));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 301L, 41L, "org-a")).thenReturn(
                         List.of(physicalField(3_011L, 301L, "task_id", "任务编号")),
                         List.of());
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 302L, 41L, "org-a")).thenReturn(List.of());
 
         assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_408L, 3L))
@@ -1104,11 +1104,11 @@ class OntologyAiProposalServiceTest {
                 1_407L, sanitizedAssets(current), 3L);
         OntologyWorkspaceEntity archived = workspace(41L, 3L);
         ReflectionTestUtils.setField(archived, "status", "ARCHIVED");
-        when(proposals.findWorkspaceIdByIdAndOrgId(1_407L, "org-a"))
+        when(proposals.findWorkspaceIdByIdAndCompanyId(1_407L, "org-a"))
                 .thenReturn(Optional.of(41L));
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(archived));
-        when(proposals.findForUpdateByIdAndOrgId(1_407L, "org-a"))
+        when(proposals.findForUpdateByIdAndCompanyId(1_407L, "org-a"))
                 .thenReturn(Optional.of(proposal));
 
         assertThatThrownBy(() -> service.apply("org-a", "user-a", 1_407L, 3L))
@@ -1376,7 +1376,7 @@ class OntologyAiProposalServiceTest {
 
     private void stubWorkspaceAndRoute(OntologyDocument current, AtomicLong ids) {
         OntologyWorkspaceEntity workspace = workspace(41L, 3L);
-        when(workspaces.findForUpdateByIdAndOrgId(41L, "org-a"))
+        when(workspaces.findForUpdateByIdAndCompanyId(41L, "org-a"))
                 .thenReturn(Optional.of(workspace));
         when(drafts.loadDraft("org-a", 41L, workspace)).thenReturn(current);
         when(modelRouter.route("org-a", "ontology-modeling")).thenReturn(Map.of(
@@ -1503,12 +1503,12 @@ class OntologyAiProposalServiceTest {
     private void stubValidProjectTaskRelationCatalog() {
         OntologyPhysicalObjectEntity projects = physicalObject(301L, "projects", "项目");
         OntologyPhysicalObjectEntity tasks = physicalObject(302L, "tasks", "任务");
-        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalObjects.findByDataSourceIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 1L, 41L, "org-a")).thenReturn(List.of(projects, tasks));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 301L, 41L, "org-a")).thenReturn(List.of(
                         physicalField(3_011L, 301L, "task_id", "任务编号")));
-        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndOrgIdOrderByIdAsc(
+        when(physicalFields.findByPhysicalObjectIdAndWorkspaceIdAndCompanyIdOrderByIdAsc(
                 302L, 41L, "org-a")).thenReturn(List.of(
                         physicalField(3_021L, 302L, "project_id", "项目编号")));
     }

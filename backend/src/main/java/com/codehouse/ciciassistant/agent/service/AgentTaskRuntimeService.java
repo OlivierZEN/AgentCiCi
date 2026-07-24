@@ -63,7 +63,7 @@ public class AgentTaskRuntimeService {
 
     @Transactional
     public RunView createRun(CreateRunCommand command) {
-        String orgId = required(command.orgId(), "orgId");
+        String companyId = required(command.companyId(), "companyId");
         String agentId = required(command.agentId(), "agentId");
         String mode = required(command.mode(), "mode").toUpperCase(Locale.ROOT);
         if (!Set.of("DIRECT", "REACT", "PLAN_EXEC").contains(mode)) {
@@ -75,26 +75,26 @@ public class AgentTaskRuntimeService {
         }
         Instant now = Instant.now();
         AgentTaskRunEntity run = runRepository.saveAndFlush(new AgentTaskRunEntity(
-                orgId, emptyToNull(command.sessionId()), agentId, defaulted(command.channel(), "web"),
+                companyId, emptyToNull(command.sessionId()), agentId, defaulted(command.channel(), "web"),
                 mode, bounded(command.goalSummary(), 512, "goalSummary"), maxSteps, now));
         event(run, null, "RUN_CREATED", Map.of("mode", mode, "status", run.getStatus()), now);
         return toRunView(run);
     }
 
     @Transactional
-    public PlanView attachInitialPlan(String orgId, long runId, String planJson) {
-        AgentTaskRunEntity run = requireRun(orgId, runId);
+    public PlanView attachInitialPlan(String companyId, long runId, String planJson) {
+        AgentTaskRunEntity run = requireRun(companyId, runId);
         if (!AgentTaskRunEntity.STATUS_CREATED.equals(run.getStatus())) {
             throw new IllegalStateException("A plan can only be attached to a newly created run");
         }
         ValidatedPlan validated = validatePlan(planJson, run.getMaxSteps());
         Instant now = Instant.now();
         AgentTaskPlanEntity plan = planRepository.saveAndFlush(new AgentTaskPlanEntity(
-                run.getOrgId(), run.getId(), 1, validated.goalSummary(), validated.canonicalJson(), sha256(validated.canonicalJson()), now));
+                run.getCompanyId(), run.getId(), 1, validated.goalSummary(), validated.canonicalJson(), sha256(validated.canonicalJson()), now));
         List<AgentTaskStepEntity> steps = new ArrayList<>();
         for (int index = 0; index < validated.steps().size(); index++) {
             PlanStep step = validated.steps().get(index);
-            steps.add(new AgentTaskStepEntity(run.getOrgId(), run.getId(), plan.getId(), step.key(), index,
+            steps.add(new AgentTaskStepEntity(run.getCompanyId(), run.getId(), plan.getId(), step.key(), index,
                     step.kind(), json(step.dependsOn()), json(step.allowedToolNames()), json(step.expectedEvidence()),
                     step.dependsOn().isEmpty(), now));
         }
@@ -111,11 +111,11 @@ public class AgentTaskRuntimeService {
     }
 
     @Transactional
-    public Optional<ClaimedStep> claimNextReadyStep(String orgId, long runId, String leaseOwner, int leaseSeconds) {
+    public Optional<ClaimedStep> claimNextReadyStep(String companyId, long runId, String leaseOwner, int leaseSeconds) {
         if (leaseSeconds < 1 || leaseSeconds > 300) {
             throw new IllegalArgumentException("leaseSeconds must be between 1 and 300");
         }
-        AgentTaskRunEntity run = requireRun(orgId, runId);
+        AgentTaskRunEntity run = requireRun(companyId, runId);
         Instant now = Instant.now();
         if (!run.leaseAvailableTo(required(leaseOwner, "leaseOwner"), now)) {
             throw new IllegalStateException("Task run is leased by another executor");
@@ -123,7 +123,7 @@ public class AgentTaskRuntimeService {
         if (!Set.of(AgentTaskRunEntity.STATUS_READY, AgentTaskRunEntity.STATUS_RUNNING).contains(run.getStatus())) {
             throw new IllegalStateException("Task run is not ready to execute");
         }
-        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(orgId, runId);
+        List<AgentTaskStepEntity> steps = stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc(companyId, runId);
         AgentTaskStepEntity next = steps.stream()
                 .filter(item -> AgentTaskStepEntity.STATUS_READY.equals(item.getStatus()))
                 .findFirst().orElse(null);
@@ -141,17 +141,17 @@ public class AgentTaskRuntimeService {
     }
 
     @Transactional
-    public StepView completeStep(String orgId, long runId, long stepId, String leaseOwner,
+    public StepView completeStep(String companyId, long runId, long stepId, String leaseOwner,
                                  long expectedStepVersion, String resultSummary) {
-        AgentTaskRunEntity run = requireRun(orgId, runId);
-        AgentTaskStepEntity step = requireStep(orgId, runId, stepId);
+        AgentTaskRunEntity run = requireRun(companyId, runId);
+        AgentTaskStepEntity step = requireStep(companyId, runId, stepId);
         Instant now = Instant.now();
         requireClaim(run, step, leaseOwner, now);
         requireVersion(step.getVersion(), expectedStepVersion);
         step.succeed(bounded(resultSummary == null ? "" : resultSummary, 1024, "resultSummary"), now);
         stepRepository.saveAndFlush(step);
         event(run, step, "STEP_SUCCEEDED", Map.of("stepKey", step.getStepKey()), now);
-        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(orgId, runId);
+        List<AgentTaskStepEntity> steps = stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc(companyId, runId);
         promoteSatisfiedSteps(run, steps, now);
         finalizeRunWhenComplete(run, steps, now);
         runRepository.saveAndFlush(run);
@@ -159,10 +159,10 @@ public class AgentTaskRuntimeService {
     }
 
     @Transactional
-    public StepView failStep(String orgId, long runId, long stepId, String leaseOwner,
+    public StepView failStep(String companyId, long runId, long stepId, String leaseOwner,
                              long expectedStepVersion, String errorCode) {
-        AgentTaskRunEntity run = requireRun(orgId, runId);
-        AgentTaskStepEntity step = requireStep(orgId, runId, stepId);
+        AgentTaskRunEntity run = requireRun(companyId, runId);
+        AgentTaskStepEntity step = requireStep(companyId, runId, stepId);
         Instant now = Instant.now();
         requireClaim(run, step, leaseOwner, now);
         requireVersion(step.getVersion(), expectedStepVersion);
@@ -176,12 +176,12 @@ public class AgentTaskRuntimeService {
     }
 
     @Transactional
-    public boolean recoverExpiredLease(String orgId, long runId, Instant now) {
-        AgentTaskRunEntity run = requireRun(orgId, runId);
+    public boolean recoverExpiredLease(String companyId, long runId, Instant now) {
+        AgentTaskRunEntity run = requireRun(companyId, runId);
         if (run.getLeaseExpiresAt() == null || run.getLeaseExpiresAt().isAfter(now)) {
             return false;
         }
-        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(orgId, runId);
+        List<AgentTaskStepEntity> steps = stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc(companyId, runId);
         boolean recovered = false;
         for (AgentTaskStepEntity step : steps) {
             if (AgentTaskStepEntity.STATUS_RUNNING.equals(step.getStatus())
@@ -201,28 +201,28 @@ public class AgentTaskRuntimeService {
     }
 
     @Transactional(readOnly = true)
-    public RunSnapshot snapshot(String orgId, long runId) {
-        AgentTaskRunEntity run = requireRun(orgId, runId);
-        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(orgId, runId);
+    public RunSnapshot snapshot(String companyId, long runId) {
+        AgentTaskRunEntity run = requireRun(companyId, runId);
+        List<AgentTaskStepEntity> steps = stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc(companyId, runId);
         return new RunSnapshot(toRunView(run), steps.stream().map(this::toStepView).toList(),
-                eventRepository.findByOrgIdAndRunIdOrderByOccurredAtAscIdAsc(orgId, runId).stream()
+                eventRepository.findByCompanyIdAndRunIdOrderByOccurredAtAscIdAsc(companyId, runId).stream()
                         .map(item -> new EventView(item.getEventType(), item.getStepId(), item.getPayloadRedactedJson(), item.getOccurredAt())).toList());
     }
 
     /**
      * Returns only stable, administrator-safe execution facts for a Trace that already holds an exact run id.
-     * Every repository access includes orgId, so a trace association never becomes a cross-tenant lookup key.
+     * Every repository access includes companyId, so a trace association never becomes a cross-tenant lookup key.
      */
     @Transactional(readOnly = true)
-    public Optional<TraceExecutionView> traceExecution(String orgId, long runId) {
-        AgentTaskRunEntity run = runRepository.findByIdAndOrgId(runId, required(orgId, "orgId")).orElse(null);
+    public Optional<TraceExecutionView> traceExecution(String companyId, long runId) {
+        AgentTaskRunEntity run = runRepository.findByIdAndCompanyId(runId, required(companyId, "companyId")).orElse(null);
         if (run == null) return Optional.empty();
-        List<AgentTaskStepEntity> steps = stepRepository.findByOrgIdAndRunIdOrderByStepOrderAsc(orgId, runId);
-        int planRevision = planRepository.findTopByOrgIdAndRunIdOrderByRevisionNoDesc(orgId, runId)
+        List<AgentTaskStepEntity> steps = stepRepository.findByCompanyIdAndRunIdOrderByStepOrderAsc(companyId, runId);
+        int planRevision = planRepository.findTopByCompanyIdAndRunIdOrderByRevisionNoDesc(companyId, runId)
                 .map(AgentTaskPlanEntity::getRevisionNo).orElse(0);
-        List<AgentTaskReviewEntity> reviews = reviewRepository.findByOrgIdAndRunIdOrderByReviewRoundAsc(orgId, runId);
+        List<AgentTaskReviewEntity> reviews = reviewRepository.findByCompanyIdAndRunIdOrderByReviewRoundAsc(companyId, runId);
         AgentTaskReviewEntity latestReview = reviews.isEmpty() ? null : reviews.get(reviews.size() - 1);
-        List<TraceEventView> events = eventRepository.findByOrgIdAndRunIdOrderByOccurredAtAscIdAsc(orgId, runId).stream()
+        List<TraceEventView> events = eventRepository.findByCompanyIdAndRunIdOrderByOccurredAtAscIdAsc(companyId, runId).stream()
                 .map(event -> new TraceEventView(event.getEventType(), event.getOccurredAt())).toList();
         String partialReason = steps.stream()
                 .filter(step -> AgentTaskStepEntity.STATUS_FAILED.equals(step.getStatus()))
@@ -330,16 +330,16 @@ public class AgentTaskRuntimeService {
     private void requireVersion(Long actual, long expected) {
         if (actual == null || actual.longValue() != expected) throw new IllegalStateException("Step version is stale");
     }
-    private AgentTaskRunEntity requireRun(String orgId, long runId) {
-        return runRepository.findByIdAndOrgId(runId, required(orgId, "orgId"))
+    private AgentTaskRunEntity requireRun(String companyId, long runId) {
+        return runRepository.findByIdAndCompanyId(runId, required(companyId, "companyId"))
                 .orElseThrow(() -> new IllegalArgumentException("Task run not found"));
     }
-    private AgentTaskStepEntity requireStep(String orgId, long runId, long stepId) {
-        return stepRepository.findByIdAndOrgIdAndRunId(stepId, orgId, runId)
+    private AgentTaskStepEntity requireStep(String companyId, long runId, long stepId) {
+        return stepRepository.findByIdAndCompanyIdAndRunId(stepId, companyId, runId)
                 .orElseThrow(() -> new IllegalArgumentException("Task step not found"));
     }
     private void event(AgentTaskRunEntity run, AgentTaskStepEntity step, String type, Map<String, Object> payload, Instant now) {
-        try { eventRepository.save(new AgentTaskEventEntity(run.getOrgId(), run.getId(), step == null ? null : step.getId(), type, json(payload), now)); }
+        try { eventRepository.save(new AgentTaskEventEntity(run.getCompanyId(), run.getId(), step == null ? null : step.getId(), type, json(payload), now)); }
         catch (RuntimeException ex) { throw ex; }
     }
     private String json(Object value) { try { return objectMapper.writeValueAsString(value); } catch (Exception ex) { throw new IllegalStateException("Cannot serialize runtime event", ex); } }
@@ -363,13 +363,13 @@ public class AgentTaskRuntimeService {
     }
     private static String sha256(String value) { try { byte[] bytes = MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)); StringBuilder out = new StringBuilder(64); for (byte item : bytes) out.append(String.format("%02x", item)); return out.toString(); } catch (Exception ex) { throw new IllegalStateException("SHA-256 unavailable", ex); } }
 
-    private RunView toRunView(AgentTaskRunEntity item) { return new RunView(item.getId(), item.getOrgId(), item.getAgentId(), item.getMode(), item.getStatus(), item.getGoalSummary(), item.getCurrentPlanId(), item.getVersion()); }
+    private RunView toRunView(AgentTaskRunEntity item) { return new RunView(item.getId(), item.getCompanyId(), item.getAgentId(), item.getMode(), item.getStatus(), item.getGoalSummary(), item.getCurrentPlanId(), item.getVersion()); }
     private PlanView toPlanView(AgentTaskPlanEntity plan, List<AgentTaskStepEntity> steps) { return new PlanView(plan.getId(), plan.getRevisionNo(), plan.getGoalSummary(), plan.getPlanHash(), steps.stream().map(this::toStepView).toList()); }
     private StepView toStepView(AgentTaskStepEntity item) { return new StepView(item.getId(), item.getStepKey(), item.getStepKind(), item.getStatus(), item.getAttemptNo(), item.getVersion(), item.getResultSummary(), item.getErrorCode()); }
     private ClaimedStep toClaimedStep(AgentTaskStepEntity step, AgentTaskRunEntity run) { return new ClaimedStep(toStepView(step), run.getLeaseExpiresAt()); }
 
-    public record CreateRunCommand(String orgId, String sessionId, String agentId, String channel, String mode, String goalSummary, int maxSteps) { }
-    public record RunView(Long id, String orgId, String agentId, String mode, String status, String goalSummary, Long currentPlanId, Long version) { }
+    public record CreateRunCommand(String companyId, String sessionId, String agentId, String channel, String mode, String goalSummary, int maxSteps) { }
+    public record RunView(Long id, String companyId, String agentId, String mode, String status, String goalSummary, Long currentPlanId, Long version) { }
     public record PlanView(Long id, int revisionNo, String goalSummary, String planHash, List<StepView> steps) { }
     public record StepView(Long id, String key, String kind, String status, int attemptNo, Long version, String resultSummary, String errorCode) { }
     public record ClaimedStep(StepView step, Instant leaseExpiresAt) { }

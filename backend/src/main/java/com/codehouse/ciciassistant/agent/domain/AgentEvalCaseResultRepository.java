@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AgentEvalCaseResultRepository extends JpaRepository<AgentEvalCaseResultEntity, Long> {
 
-    List<AgentEvalCaseResultEntity> findByOrgIdAndRunIdOrderByIdAsc(String orgId, Long runId);
+    List<AgentEvalCaseResultEntity> findByCompanyIdAndRunIdOrderByIdAsc(String companyId, Long runId);
 }

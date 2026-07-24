@@ -15,8 +15,8 @@ public class AgentPermissionAuditEntity {
     @Column(name = "id", nullable = false, length = 64)
     private String id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "agent_id", nullable = false, length = 64)
     private String agentId;
@@ -54,7 +54,7 @@ public class AgentPermissionAuditEntity {
     protected AgentPermissionAuditEntity() {
     }
 
-    public AgentPermissionAuditEntity(String orgId,
+    public AgentPermissionAuditEntity(String companyId,
                                       String agentId,
                                       String actorUserId,
                                       String action,
@@ -66,7 +66,7 @@ public class AgentPermissionAuditEntity {
                                       String reason,
                                       String traceId) {
         this.id = UUID.randomUUID().toString();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.agentId = agentId;
         this.actorUserId = actorUserId;
         this.action = action;

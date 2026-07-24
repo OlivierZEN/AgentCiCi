@@ -23,7 +23,7 @@ function sematticeStateLabel(state: SematticeProvisioningState): string {
 export default function PlatformTenantApplicationsPage() {
   const token = readPlatformToken();
   const navigate = useNavigate();
-  const { orgId = "" } = useParams();
+  const { companyId = "" } = useParams();
   const [detail, setDetail] = useState<TenantDetail | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -31,21 +31,21 @@ export default function PlatformTenantApplicationsPage() {
   const [sematticeProvisioningState, setSematticeProvisioningState] = useState<SematticeProvisioningState>("NOT_PROVISIONED");
 
   useEffect(() => {
-    if (!token || !orgId) return;
-    void fetchTenantDetail(token, orgId)
+    if (!token || !companyId) return;
+    void fetchTenantDetail(token, companyId)
       .then(setDetail)
       .catch((err) => setError(err instanceof Error ? err.message : "加载租户应用失败"));
-  }, [token, orgId]);
+  }, [token, companyId]);
 
   async function provisionSemattice() {
-    if (!orgId || !detail || sematticeProvisioningState === "PROVISIONING") return;
+    if (!companyId || !detail || sematticeProvisioningState === "PROVISIONING") return;
     setBusy(true);
     setError("");
     setMessage("");
     setSematticeProvisioningState("PROVISIONING");
     try {
-      const idempotencyKey = `platform-${orgId}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
-      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(orgId)}/semattice-provisionings`, {
+      const idempotencyKey = `platform-${companyId}-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
+      const response = await fetch(`${PLATFORM_API_BASE}/tenants/${encodeURIComponent(companyId)}/semattice-provisionings`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -97,7 +97,7 @@ export default function PlatformTenantApplicationsPage() {
                 <div>
                   <p className="platform-section-label">当前租户</p>
                   <h2 className="platform-console__heading">{detail.tenant.name}</h2>
-                  <p className="skills-data-table__summary">{detail.tenant.orgId}</p>
+                  <p className="skills-data-table__summary">{detail.tenant.companyId}</p>
                 </div>
               </div>
 
@@ -120,11 +120,11 @@ export default function PlatformTenantApplicationsPage() {
                     aria-labelledby="agentcici-application-title"
                     role="link"
                     tabIndex={0}
-                    onClick={() => navigate(`/platform/tenants/${encodeURIComponent(detail.tenant.orgId)}/applications/agentcici`)}
+                    onClick={() => navigate(`/platform/tenants/${encodeURIComponent(detail.tenant.companyId)}/applications/agentcici`)}
                     onKeyDown={(event) => {
                       if (event.key === "Enter" || event.key === " ") {
                         event.preventDefault();
-                        navigate(`/platform/tenants/${encodeURIComponent(detail.tenant.orgId)}/applications/agentcici`);
+                        navigate(`/platform/tenants/${encodeURIComponent(detail.tenant.companyId)}/applications/agentcici`);
                       }
                     }}
                   >
@@ -137,7 +137,7 @@ export default function PlatformTenantApplicationsPage() {
                       <span className="tenant-application-card__state tenant-application-card__state--healthy"><CheckCircle2 size={14} aria-hidden="true" />运行中</span>
                     </div>
                     <dl className="tenant-application-card__facts">
-                      <div><dt>租户标识</dt><dd>{detail.tenant.orgId}</dd></div>
+                      <div><dt>租户标识</dt><dd>{detail.tenant.companyId}</dd></div>
                       <div><dt>成员</dt><dd>{detail.tenant.memberCount}</dd></div>
                       <div><dt>应用状态</dt><dd>{statusLabel(detail.tenant.status)}</dd></div>
                       <div><dt>开通方式</dt><dd>租户基础应用</dd></div>
@@ -160,7 +160,7 @@ export default function PlatformTenantApplicationsPage() {
                       </span>
                     </div>
                     <dl className="tenant-application-card__facts">
-                      <div><dt>Company ID</dt><dd>{detail.tenant.orgId}</dd></div>
+                      <div><dt>Company ID</dt><dd>{detail.tenant.companyId}</dd></div>
                       <div><dt>开户来源</dt><dd>AgentCiCi 运营端</dd></div>
                       <div><dt>身份校验</dt><dd>AgentCiCi 受控校验</dd></div>
                       <div><dt>接入方式</dt><dd>HTTP API · MCP · CLI</dd></div>

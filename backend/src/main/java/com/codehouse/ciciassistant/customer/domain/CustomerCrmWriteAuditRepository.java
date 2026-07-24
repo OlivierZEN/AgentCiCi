@@ -5,7 +5,7 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface CustomerCrmWriteAuditRepository extends JpaRepository<CustomerCrmWriteAuditEntity, Long> {
-    Optional<CustomerCrmWriteAuditEntity> findByOrgIdAndUserIdAndIdempotencyKey(String orgId, String userId, String idempotencyKey);
-    List<CustomerCrmWriteAuditEntity> findByOrgIdAndRecommendationIdOrderByCreatedAtDesc(String orgId, String recommendationId);
-    List<CustomerCrmWriteAuditEntity> findByOrgIdAndUserIdOrderByCreatedAtDesc(String orgId, String userId);
+    Optional<CustomerCrmWriteAuditEntity> findByCompanyIdAndUserIdAndIdempotencyKey(String companyId, String userId, String idempotencyKey);
+    List<CustomerCrmWriteAuditEntity> findByCompanyIdAndRecommendationIdOrderByCreatedAtDesc(String companyId, String recommendationId);
+    List<CustomerCrmWriteAuditEntity> findByCompanyIdAndUserIdOrderByCreatedAtDesc(String companyId, String userId);
 }

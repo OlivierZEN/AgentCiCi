@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { getOrganizationMonogram, getThemeSeriesClass } from "./avatar";
+import { getCompanyMonogram, getThemeSeriesClass } from "./avatar";
 
-describe("getOrganizationMonogram", () => {
-  it("uses the first visible organization character", () => {
-    expect(getOrganizationMonogram("智能体平台演示环境")).toBe("智");
-    expect(getOrganizationMonogram(" demo organization")).toBe("D");
-    expect(getOrganizationMonogram("2号组织")).toBe("2");
-    expect(getOrganizationMonogram("   ")).toBe("组");
+describe("getCompanyMonogram", () => {
+  it("uses the first visible company character", () => {
+    expect(getCompanyMonogram("智能体平台演示环境")).toBe("智");
+    expect(getCompanyMonogram(" demo company")).toBe("D");
+    expect(getCompanyMonogram("2号组织")).toBe("2");
+    expect(getCompanyMonogram("   ")).toBe("组");
   });
 });
 

@@ -175,7 +175,7 @@ describe("Agent Builder avatar editing", () => {
     try {
       html = renderToStaticMarkup(createElement(AgentBuilderShell, {
         kbs: [],
-        orgId: "org-test",
+        companyId: "org-test",
         token: "",
       }));
     } finally {

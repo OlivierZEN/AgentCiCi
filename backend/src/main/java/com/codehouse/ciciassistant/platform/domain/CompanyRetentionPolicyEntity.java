@@ -7,12 +7,12 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 
 @Entity
-@Table(name = "organization_retention_policy")
-public class OrganizationRetentionPolicyEntity {
+@Table(name = "company_retention_policy")
+public class CompanyRetentionPolicyEntity {
 
     @Id
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "grace_until")
     private Instant graceUntil;
@@ -50,12 +50,12 @@ public class OrganizationRetentionPolicyEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    protected OrganizationRetentionPolicyEntity() {
+    protected CompanyRetentionPolicyEntity() {
     }
 
-    public OrganizationRetentionPolicyEntity(String orgId) {
+    public CompanyRetentionPolicyEntity(String companyId) {
         Instant now = Instant.now();
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.legalHold = false;
         this.policySource = "PLATFORM_MANUAL";
         this.createdAt = now;
@@ -85,8 +85,8 @@ public class OrganizationRetentionPolicyEntity {
         this.updatedAt = Instant.now();
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public Instant getGraceUntil() {

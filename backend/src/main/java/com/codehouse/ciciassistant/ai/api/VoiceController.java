@@ -23,13 +23,13 @@ public class VoiceController {
     @PostMapping("/asr")
     public ApiResponse<Map<String, Object>> asr(@RequestParam("audio") MultipartFile audio) throws Exception {
         // Keep same auth boundary as chat APIs.
-        String orgId = TenantContext.requireOrgId();
+        String companyId = TenantContext.requireCompanyId();
         if (audio == null || audio.isEmpty()) {
             throw new IllegalArgumentException("音频文件不能为空");
         }
         String text = aliyunAsrService.transcribe(audio.getBytes(), audio.getContentType());
         return ApiResponse.ok(Map.of(
-                "orgId", orgId,
+                "companyId", companyId,
                 "text", text == null ? "" : text
         ));
     }

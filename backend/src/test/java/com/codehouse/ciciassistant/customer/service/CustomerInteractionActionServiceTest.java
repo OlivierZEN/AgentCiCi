@@ -105,7 +105,7 @@ class CustomerInteractionActionServiceTest {
         private final CustomerInteractionActionService service;
 
         private Fixture() {
-            when(repository.findByOrgIdAndCrmAccountIdAndRecommendationTypeAndActionKeyOrderByUpdatedAtDesc(
+            when(repository.findByCompanyIdAndCrmAccountIdAndRecommendationTypeAndActionKeyOrderByUpdatedAtDesc(
                     any(), any(), any(), any()))
                     .thenAnswer(invocation -> stored.stream()
                             .filter(item -> invocation.getArgument(2).equals(item.getRecommendationType()))

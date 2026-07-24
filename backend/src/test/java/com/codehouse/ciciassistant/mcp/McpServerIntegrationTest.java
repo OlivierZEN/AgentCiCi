@@ -11,8 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.codehouse.ciciassistant.auth.RoleCodes;
-import com.codehouse.ciciassistant.auth.domain.OrgEntity;
-import com.codehouse.ciciassistant.auth.domain.OrgRepository;
+import com.codehouse.ciciassistant.auth.domain.CompanyEntity;
+import com.codehouse.ciciassistant.auth.domain.CompanyRepository;
 import com.codehouse.ciciassistant.auth.domain.UserAccountEntity;
 import com.codehouse.ciciassistant.auth.domain.UserAccountRepository;
 import com.codehouse.ciciassistant.auth.domain.UserEntity;
@@ -55,7 +55,7 @@ class McpServerIntegrationTest {
     private UserRepository userRepository;
 
     @Autowired
-    private OrgRepository orgRepository;
+    private CompanyRepository companyRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -198,8 +198,8 @@ class McpServerIntegrationTest {
     }
 
     private String loginTokenExpectingRole(String mobile, String expectedRole) throws Exception {
-        OrgEntity org = orgRepository.findById("demo-org").orElseThrow();
-        UserEntity user = userRepository.findByOrgIdAndMobile("demo-org", mobile)
+        CompanyEntity org = companyRepository.findById("demo-org").orElseThrow();
+        UserEntity user = userRepository.findByCompanyIdAndMobile("demo-org", mobile)
                 .orElseGet(() -> {
                     UserAccountEntity account = userAccountRepository.findByPrimaryMobile(mobile)
                             .orElseGet(() -> userAccountRepository.save(new UserAccountEntity(mobile)));

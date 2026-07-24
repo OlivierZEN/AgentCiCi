@@ -21,8 +21,8 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "org_id", nullable = false, length = 64)
-    private String orgId;
+    @Column(name = "company_id", nullable = false, length = 64)
+    private String companyId;
 
     @Column(name = "key", nullable = false, length = 128)
     private String key;
@@ -68,13 +68,13 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
     }
 
     public OntologyWorkspaceEntity(
-            String orgId,
+            String companyId,
             String key,
             String name,
             String description,
             String createdBy) {
         this(
-                orgId,
+                companyId,
                 key,
                 name,
                 description,
@@ -85,7 +85,7 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
     }
 
     public OntologyWorkspaceEntity(
-            String orgId,
+            String companyId,
             String key,
             String name,
             String description,
@@ -93,7 +93,7 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
             String creationSource,
             String referencePackageId,
             String referencePackageFingerprint) {
-        this.orgId = orgId;
+        this.companyId = companyId;
         this.key = key;
         this.name = name;
         this.description = description;
@@ -112,8 +112,8 @@ public class OntologyWorkspaceEntity implements OntologyTenantEntity {
         return id;
     }
 
-    public String getOrgId() {
-        return orgId;
+    public String getCompanyId() {
+        return companyId;
     }
 
     public String getKey() {

@@ -73,22 +73,22 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldDeleteDocumentChunksAndVectorsAndStopRag() {
         Fixture fixture = createPublishedDocument("obsolete policy clause alpha");
 
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "alpha clause"))
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "alpha clause"))
                 .anyMatch(item -> item.contains("obsolete policy"));
-        assertThat(chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
-                fixture.orgId(), fixture.documentId(), "ACTIVE")).isEqualTo(1);
+        assertThat(chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(
+                fixture.companyId(), fixture.documentId(), "ACTIVE")).isEqualTo(1);
 
-        Map<String, Object> deleted = knowledgeBaseService.deleteDocument(fixture.orgId(), fixture.documentId());
+        Map<String, Object> deleted = knowledgeBaseService.deleteDocument(fixture.companyId(), fixture.documentId());
 
         assertThat(deleted.get("status")).isEqualTo("DELETED");
         assertThat(deleted.get("cleanupStatus")).isEqualTo("COMPLETED");
-        assertThat(chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
-                fixture.orgId(), fixture.documentId(), "ACTIVE")).isZero();
-        assertThat(documentRepository.findByIdAndOrgId(fixture.documentId(), fixture.orgId()))
+        assertThat(chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(
+                fixture.companyId(), fixture.documentId(), "ACTIVE")).isZero();
+        assertThat(documentRepository.findByIdAndCompanyId(fixture.documentId(), fixture.companyId()))
                 .get()
                 .extracting("status")
                 .isEqualTo("DELETED");
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "alpha clause"))
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "alpha clause"))
                 .isEmpty();
     }
 
@@ -96,13 +96,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldUnpublishDocumentFromRetrieval() {
         Fixture fixture = createPublishedDocument("temporary launch playbook beta");
 
-        Map<String, Object> unpublished = knowledgeBaseService.unpublishDocument(fixture.orgId(), fixture.documentId());
+        Map<String, Object> unpublished = knowledgeBaseService.unpublishDocument(fixture.companyId(), fixture.documentId());
 
         assertThat(unpublished.get("status")).isEqualTo("UNPUBLISHED");
         assertThat(unpublished.get("cleanupStatus")).isEqualTo("COMPLETED");
-        assertThat(chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
-                fixture.orgId(), fixture.documentId(), "ACTIVE")).isZero();
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "launch beta"))
+        assertThat(chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(
+                fixture.companyId(), fixture.documentId(), "ACTIVE")).isZero();
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "launch beta"))
                 .isEmpty();
     }
 
@@ -110,17 +110,17 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldReindexDocumentIdempotently() {
         Fixture fixture = createPublishedDocument("stable support policy gamma");
 
-        knowledgeBaseService.reindexDocument(fixture.orgId(), fixture.documentId());
+        knowledgeBaseService.reindexDocument(fixture.companyId(), fixture.documentId());
 
-        assertThat(chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
-                fixture.orgId(), fixture.documentId(), "ACTIVE")).isEqualTo(1);
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "support gamma"))
+        assertThat(chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(
+                fixture.companyId(), fixture.documentId(), "ACTIVE")).isEqualTo(1);
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "support gamma"))
                 .hasSize(1)
                 .first()
                 .asString()
                 .contains("stable support policy");
         RagService.RetrievalResult detailed = ragService.retrieveDetailed(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.kbIdText()),
                 "support gamma");
         assertThat(detailed.context()).isNotEmpty();
@@ -139,19 +139,19 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldFilterRetrievalByDocumentAccessGrant() {
         Fixture fixture = createPublishedDocument("restricted payroll policy theta");
         knowledgeBaseService.replaceDocumentAccessGrants(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.documentId(),
                 "admin-user",
                 List.of(new KbAccessControlService.GrantInput("USER", "allowed-user", null)));
 
         RagService.RetrievalResult allowed = ragService.retrieveDetailed(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.kbIdText()),
                 "payroll theta",
                 Map.of(),
                 KbAccessControlService.AccessPrincipal.user("allowed-user", List.of("ORG_USER")));
         RagService.RetrievalResult denied = ragService.retrieveDetailed(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.kbIdText()),
                 "payroll theta",
                 Map.of(),
@@ -167,7 +167,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldAuditIndexDriftForHealthyKnowledgeBase() {
         Fixture fixture = createPublishedDocument("healthy drift baseline iota");
 
-        Map<String, Object> audit = knowledgeBaseService.auditIndexDrift(fixture.orgId(), false);
+        Map<String, Object> audit = knowledgeBaseService.auditIndexDrift(fixture.companyId(), false);
 
         assertThat(audit).containsEntry("status", "OK");
         assertThat(audit).containsEntry("repairRequested", false);
@@ -183,8 +183,8 @@ class KnowledgeBaseLifecycleIntegrationTest {
 
     @Test
     void shouldRecordCreditsForDocumentAndManualChunkIndexing() {
-        String orgId = "kb-billing-" + UUID.randomUUID();
-        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Billing KB", "test");
+        String companyId = "kb-billing-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "Billing KB", "test");
         Long kbId = ((Number) kb.get("id")).longValue();
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -192,13 +192,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 "text/plain",
                 "credits billing policy document".getBytes(StandardCharsets.UTF_8));
 
-        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(companyId, kbId, file);
         Long documentId = ((Number) document.get("id")).longValue();
-        knowledgeBaseService.publishDocument(orgId, documentId);
-        knowledgeBaseService.reindexDocument(orgId, documentId);
-        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "manual billing chunk", "");
+        knowledgeBaseService.publishDocument(companyId, documentId);
+        knowledgeBaseService.reindexDocument(companyId, documentId);
+        knowledgeBaseService.addChunk(companyId, String.valueOf(kbId), "manual billing chunk", "");
 
-        var indexingEvents = usageMeterEventRepository.findTop100ByOrgIdOrderByOccurredAtDesc(orgId).stream()
+        var indexingEvents = usageMeterEventRepository.findTop100ByCompanyIdOrderByOccurredAtDesc(companyId).stream()
                 .filter(item -> "kb_indexing".equals(item.getBillableDomain()))
                 .toList();
         assertThat(indexingEvents).hasSize(3);
@@ -211,15 +211,15 @@ class KnowledgeBaseLifecycleIntegrationTest {
                     assertThat(event.getBillingType()).isEqualTo("platform_paid");
                     assertThat(event.getMetadataJson()).contains("\"officialPricingItem\":\"Credits 包\"");
                 });
-        assertThat(creditLedgerRepository.findByOrgIdOrderByIdAsc(orgId).stream()
+        assertThat(creditLedgerRepository.findByCompanyIdOrderByIdAsc(companyId).stream()
                 .filter(entry -> "usage_debit".equals(entry.getEntryType()))
                 .toList()).hasSize(3);
     }
 
     @Test
     void shouldExposeUploadPolicyAndIndexTextPdf() throws Exception {
-        String orgId = "kb-policy-" + UUID.randomUUID();
-        Map<String, Object> policy = knowledgeBaseService.uploadPolicy(orgId);
+        String companyId = "kb-policy-" + UUID.randomUUID();
+        Map<String, Object> policy = knowledgeBaseService.uploadPolicy(companyId);
         @SuppressWarnings("unchecked")
         List<String> allowedExtensions = (List<String>) policy.get("allowedExtensions");
         @SuppressWarnings("unchecked")
@@ -233,7 +233,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat((String) policy.get("pdfPolicy")).contains("Text-based PDF parsing is enabled");
         assertThat(serviceApi).containsEntry("apiAccessEnabled", false);
 
-        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Policy KB", "test");
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "Policy KB", "test");
         Long kbId = ((Number) kb.get("id")).longValue();
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -241,11 +241,11 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 "application/pdf",
                 textPdf("pdf parser readiness omega"));
 
-        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(companyId, kbId, file);
         Long documentId = ((Number) document.get("id")).longValue();
-        knowledgeBaseService.publishDocument(orgId, documentId);
+        knowledgeBaseService.publishDocument(companyId, documentId);
 
-        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "omega"))
+        assertThat(ragService.retrieveContext(companyId, List.of(String.valueOf(kbId)), "omega"))
                 .anyMatch(item -> item.contains("pdf parser readiness"));
     }
 
@@ -253,7 +253,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldAuditRegisteredVectorsWithoutOrphans() {
         Fixture fixture = createPublishedDocument("vector audit readiness epsilon");
 
-        Map<String, Object> audit = knowledgeBaseService.auditVectorStore(fixture.orgId());
+        Map<String, Object> audit = knowledgeBaseService.auditVectorStore(fixture.companyId());
 
         assertThat(audit).containsEntry("success", true);
         assertThat(audit).containsEntry("status", "OK");
@@ -266,28 +266,28 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldDeleteKnowledgeBaseCascadeDataAndRuntimeBindings() {
         Fixture fixture = createPublishedDocument("retired operating guide delta");
         agentKnowledgeBindingRepository.save(new AgentKnowledgeBindingEntity(
-                fixture.orgId(),
+                fixture.companyId(),
                 "agent-" + UUID.randomUUID(),
                 fixture.kbId(),
                 1,
                 true));
 
-        Map<String, Object> deleted = knowledgeBaseService.deleteKnowledgeBase(fixture.orgId(), fixture.kbId());
+        Map<String, Object> deleted = knowledgeBaseService.deleteKnowledgeBase(fixture.companyId(), fixture.kbId());
 
         assertThat(deleted.get("status")).isEqualTo("DELETED");
         assertThat(deleted.get("cleanupStatus")).isEqualTo("COMPLETED");
-        assertThat(agentKnowledgeBindingRepository.countByOrgIdAndKnowledgeBaseId(fixture.orgId(), fixture.kbId()))
+        assertThat(agentKnowledgeBindingRepository.countByCompanyIdAndKnowledgeBaseId(fixture.companyId(), fixture.kbId()))
                 .isZero();
-        assertThat(chunkRepository.countByOrgIdAndKnowledgeBaseIdAndStatusAndEnabledTrue(
-                fixture.orgId(), fixture.kbIdText(), "ACTIVE")).isZero();
-        assertThat(knowledgeBaseRepository.findByIdAndOrgId(fixture.kbId(), fixture.orgId()))
+        assertThat(chunkRepository.countByCompanyIdAndKnowledgeBaseIdAndStatusAndEnabledTrue(
+                fixture.companyId(), fixture.kbIdText(), "ACTIVE")).isZero();
+        assertThat(knowledgeBaseRepository.findByIdAndCompanyId(fixture.kbId(), fixture.companyId()))
                 .get()
                 .extracting("status")
                 .isEqualTo("DELETED");
-        assertThat(knowledgeBaseService.listKnowledgeBases(fixture.orgId()))
+        assertThat(knowledgeBaseService.listKnowledgeBases(fixture.companyId()))
                 .extracting(item -> item.get("id"))
                 .doesNotContain(fixture.kbId());
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "operating delta"))
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "operating delta"))
                 .isEmpty();
     }
 
@@ -296,14 +296,14 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Fixture fixture = createPublishedDocument("customer onboarding handbook version alpha beta gamma");
 
         Map<String, Object> settings = knowledgeBaseService.updateKnowledgeBaseSettings(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.KbSettingsCommand(120, 20, "\\n", "VECTOR", 3, 0.0, "local", "local-hash", 1024));
         assertThat(settings.get("chunkSize")).isEqualTo(120);
         assertThat(settings.get("topK")).isEqualTo(3);
 
         Map<String, Object> preview = knowledgeBaseService.previewChunking(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.ChunkPreviewCommand(
                         "line1\nline2\nline3\nline4",
@@ -315,13 +315,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat((List<?>) preview.get("previewChunks")).isNotEmpty();
 
         Map<String, Object> retrieval = knowledgeBaseService.testRetrieval(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.RetrievalTestCommand("onboarding alpha", null, null, null, null));
         assertThat(retrieval.get("topK")).isEqualTo(3);
         assertThat((Integer) retrieval.get("hitCount")).isGreaterThanOrEqualTo(1);
 
-        List<Map<String, Object>> logs = knowledgeBaseService.listRetrievalLogs(fixture.orgId(), fixture.kbId(), 5);
+        List<Map<String, Object>> logs = knowledgeBaseService.listRetrievalLogs(fixture.companyId(), fixture.kbId(), 5);
         assertThat(logs).isNotEmpty();
         assertThat(logs.get(0)).containsEntry("query", "onboarding alpha");
     }
@@ -331,13 +331,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Fixture fixture = createPublishedDocument("evaluation recall handbook omega source");
 
         Map<String, Object> suite = knowledgeBaseService.createEvalSuite(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.EvalSuiteCommand("Recall Smoke", "expected source recall"));
         Long suiteId = ((Number) suite.get("id")).longValue();
 
         Map<String, Object> evalCase = knowledgeBaseService.addEvalCase(
-                fixture.orgId(),
+                fixture.companyId(),
                 suiteId,
                 new KnowledgeBaseService.EvalCaseCommand(
                         "recall omega",
@@ -348,10 +348,10 @@ class KnowledgeBaseLifecycleIntegrationTest {
                         fixture.documentId() + 1000,
                         Map.of()));
 
-        Map<String, Object> run = knowledgeBaseService.runEvalSuite(fixture.orgId(), suiteId);
-        List<Map<String, Object>> runs = knowledgeBaseService.listEvalRuns(fixture.orgId(), suiteId);
+        Map<String, Object> run = knowledgeBaseService.runEvalSuite(fixture.companyId(), suiteId);
+        List<Map<String, Object>> runs = knowledgeBaseService.listEvalRuns(fixture.companyId(), suiteId);
         List<Map<String, Object>> results = knowledgeBaseService.listEvalRunResults(
-                fixture.orgId(),
+                fixture.companyId(),
                 ((Number) run.get("id")).longValue());
 
         assertThat(evalCase).containsEntry("query", "recall omega");
@@ -367,12 +367,12 @@ class KnowledgeBaseLifecycleIntegrationTest {
 
     @Test
     void shouldSyncExternalApiDataSourceIntoPublishedDocument() {
-        String orgId = "kb-sync-" + UUID.randomUUID();
-        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Sync KB", "test");
+        String companyId = "kb-sync-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "Sync KB", "test");
         Long kbId = ((Number) kb.get("id")).longValue();
 
         Map<String, Object> source = knowledgeBaseService.createDataSource(
-                orgId,
+                companyId,
                 kbId,
                 new KnowledgeBaseService.DataSourceCommand(
                         "EXTERNAL_API",
@@ -383,13 +383,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
                                 "content", "connector sync lambda policy")));
         Long sourceId = ((Number) source.get("id")).longValue();
 
-        Map<String, Object> job = knowledgeBaseService.syncDataSource(orgId, sourceId, "MANUAL");
-        List<Map<String, Object>> jobs = knowledgeBaseService.listSyncJobs(orgId, sourceId);
+        Map<String, Object> job = knowledgeBaseService.syncDataSource(companyId, sourceId, "MANUAL");
+        List<Map<String, Object>> jobs = knowledgeBaseService.listSyncJobs(companyId, sourceId);
 
         assertThat(job).containsEntry("status", "SUCCEEDED");
         assertThat(job).containsEntry("documentCount", 1);
         assertThat(jobs).isNotEmpty();
-        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "lambda policy"))
+        assertThat(ragService.retrieveContext(companyId, List.of(String.valueOf(kbId)), "lambda policy"))
                 .anyMatch(item -> item.contains("connector sync"));
     }
 
@@ -398,20 +398,20 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Fixture fixture = createPublishedDocument("sales policy for east region only");
 
         knowledgeBaseService.createMetadataField(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.MetadataFieldCommand("region", "区域", "string"));
         knowledgeBaseService.updateDocumentMetadata(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.documentId(),
                 Map.of("region", "east"));
 
-        List<Map<String, Object>> chunks = knowledgeBaseService.listDocumentChunks(fixture.orgId(), fixture.documentId());
+        List<Map<String, Object>> chunks = knowledgeBaseService.listDocumentChunks(fixture.companyId(), fixture.documentId());
         assertThat(chunks).isNotEmpty();
         Long chunkId = ((Number) chunks.get(0).get("id")).longValue();
 
         Map<String, Object> filtered = knowledgeBaseService.testRetrieval(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.RetrievalTestCommand(
                         "sales policy",
@@ -422,7 +422,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(filtered.get("hitCount")).isEqualTo(1);
 
         RagService.RetrievalResult runtimeFiltered = ragService.retrieveDetailed(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.kbIdText()),
                 "sales policy",
                 Map.of("region", "east"));
@@ -431,16 +431,16 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(runtimeFiltered.metadataFilters()).containsEntry("region", "east");
 
         RagService.RetrievalResult runtimeMiss = ragService.retrieveDetailed(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.kbIdText()),
                 "sales policy",
                 Map.of("region", "west"));
         assertThat(runtimeMiss.context()).isEmpty();
         assertThat(runtimeMiss.sources()).isEmpty();
 
-        knowledgeBaseService.setChunkEnabled(fixture.orgId(), chunkId, false);
+        knowledgeBaseService.setChunkEnabled(fixture.companyId(), chunkId, false);
         Map<String, Object> afterDisable = knowledgeBaseService.testRetrieval(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.RetrievalTestCommand(
                         "sales policy",
@@ -453,24 +453,24 @@ class KnowledgeBaseLifecycleIntegrationTest {
 
     @Test
     void shouldScanCleanAndAnnotateKnowledgeBaseData() {
-        String orgId = "kb-quality-" + UUID.randomUUID();
-        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Quality KB", "test");
+        String companyId = "kb-quality-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "Quality KB", "test");
         Long kbId = ((Number) kb.get("id")).longValue();
-        assertThat(kbDataQualityService.listSources(orgId))
+        assertThat(kbDataQualityService.listSources(companyId))
                 .extracting(item -> item.get("sourceKey"))
                 .contains("kb:" + kbId);
-        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "duplicate deployment policy content", "");
-        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "duplicate deployment policy content", "");
-        knowledgeBaseService.addChunk(orgId, String.valueOf(kbId), "tiny", "");
+        knowledgeBaseService.addChunk(companyId, String.valueOf(kbId), "duplicate deployment policy content", "");
+        knowledgeBaseService.addChunk(companyId, String.valueOf(kbId), "duplicate deployment policy content", "");
+        knowledgeBaseService.addChunk(companyId, String.valueOf(kbId), "tiny", "");
         Map<String, Object> dirtyChunk = knowledgeBaseService.addChunk(
-                orgId,
+                companyId,
                 String.valueOf(kbId),
                 "private cloud deployment guide\nDISCLAIMER: remove this footer",
                 "");
         Long dirtyChunkId = ((Number) dirtyChunk.get("id")).longValue();
 
         Map<String, Object> rule = kbDataQualityService.createRule(
-                orgId,
+                companyId,
                 kbId,
                 "admin-user",
                 new KbDataQualityService.QualityRuleCommand(
@@ -482,11 +482,11 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Long ruleId = ((Number) rule.get("id")).longValue();
 
         Map<String, Object> scan = kbDataQualityService.startScan(
-                orgId,
+                companyId,
                 kbId,
                 "admin-user",
                 new KbDataQualityService.QualityScanCommand("MANUAL"));
-        List<Map<String, Object>> issues = kbDataQualityService.listIssues(orgId, kbId, "OPEN");
+        List<Map<String, Object>> issues = kbDataQualityService.listIssues(companyId, kbId, "OPEN");
         assertThat((Integer) scan.get("duplicateIssueCount")).isEqualTo(2);
         assertThat((Integer) scan.get("invalidIssueCount")).isGreaterThanOrEqualTo(1);
         assertThat((Integer) scan.get("regexIssueCount")).isEqualTo(1);
@@ -494,7 +494,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 .contains("DUPLICATE", "TOO_SHORT", "REGEX_MATCH");
 
         Map<String, Object> preview = kbDataQualityService.previewRule(
-                orgId,
+                companyId,
                 ruleId,
                 new KbDataQualityService.QualityApplyCommand(List.of(dirtyChunkId), List.of(), Map.of(), 10));
         @SuppressWarnings("unchecked")
@@ -504,7 +504,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat((String) previewItems.get(0).get("after")).doesNotContain("DISCLAIMER");
 
         Map<String, Object> apply = kbDataQualityService.applyRule(
-                orgId,
+                companyId,
                 ruleId,
                 "admin-user",
                 new KbDataQualityService.QualityApplyCommand(
@@ -513,13 +513,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
                         Map.of(dirtyChunkId, (String) previewItems.get(0).get("contentHash")),
                         10));
         assertThat(apply).containsEntry("updatedCount", 1);
-        assertThat(chunkRepository.findByIdAndOrgId(dirtyChunkId, orgId)).get()
+        assertThat(chunkRepository.findByIdAndCompanyId(dirtyChunkId, companyId)).get()
                 .extracting("content")
                 .asString()
                 .doesNotContain("DISCLAIMER");
 
         Map<String, Object> suggestions = kbDataQualityService.suggestAnnotations(
-                orgId,
+                companyId,
                 kbId,
                 "admin-user",
                 new KbDataQualityService.AnnotationSuggestCommand("CHUNK", "topic", 10));
@@ -528,13 +528,13 @@ class KnowledgeBaseLifecycleIntegrationTest {
         assertThat(suggestionItems).isNotEmpty();
         Long suggestionId = ((Number) suggestionItems.get(0).get("id")).longValue();
         Map<String, Object> accepted = kbDataQualityService.acceptSuggestion(
-                orgId,
+                companyId,
                 suggestionId,
                 "admin-user",
                 new KbDataQualityService.AnnotationReviewCommand(null));
 
         assertThat(accepted).containsEntry("status", "ACCEPTED");
-        assertThat(kbDataQualityService.listChunkAnnotations(orgId, kbId))
+        assertThat(kbDataQualityService.listChunkAnnotations(companyId, kbId))
                 .extracting(item -> item.get("fieldKey"))
                 .contains("topic");
     }
@@ -544,19 +544,19 @@ class KnowledgeBaseLifecycleIntegrationTest {
         Fixture fixture = createPublishedDocument("batch operation handbook zeta");
 
         Map<String, Object> disableResult = knowledgeBaseService.batchSetDocumentEnabled(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.documentId()),
                 false);
         assertThat(disableResult.get("successCount")).isEqualTo(1);
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "handbook zeta"))
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "handbook zeta"))
                 .isEmpty();
 
         Map<String, Object> enableResult = knowledgeBaseService.batchSetDocumentEnabled(
-                fixture.orgId(),
+                fixture.companyId(),
                 List.of(fixture.documentId()),
                 true);
         assertThat(enableResult.get("successCount")).isEqualTo(1);
-        assertThat(ragService.retrieveContext(fixture.orgId(), List.of(fixture.kbIdText()), "handbook zeta"))
+        assertThat(ragService.retrieveContext(fixture.companyId(), List.of(fixture.kbIdText()), "handbook zeta"))
                 .isNotEmpty();
     }
 
@@ -564,7 +564,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
     void shouldRejectUnknownMetadataFilterField() {
         Fixture fixture = createPublishedDocument("quality assurance playbook theta");
         assertThatThrownBy(() -> knowledgeBaseService.testRetrieval(
-                fixture.orgId(),
+                fixture.companyId(),
                 fixture.kbId(),
                 new KnowledgeBaseService.RetrievalTestCommand(
                         "quality assurance",
@@ -578,8 +578,8 @@ class KnowledgeBaseLifecycleIntegrationTest {
 
     @Test
     void shouldIndexDocxUpload() throws Exception {
-        String orgId = "kb-docx-" + UUID.randomUUID();
-        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "DOCX KB", "test");
+        String companyId = "kb-docx-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "DOCX KB", "test");
         Long kbId = ((Number) kb.get("id")).longValue();
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -587,31 +587,31 @@ class KnowledgeBaseLifecycleIntegrationTest {
                 "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                 docxBytes("CloudCC 运维千问 包含巡检流程和告警处置。"));
 
-        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(companyId, kbId, file);
         Long documentId = ((Number) document.get("id")).longValue();
-        Map<String, Object> published = knowledgeBaseService.publishDocument(orgId, documentId);
+        Map<String, Object> published = knowledgeBaseService.publishDocument(companyId, documentId);
 
         assertThat(published.get("status")).isEqualTo("PUBLISHED");
-        assertThat(chunkRepository.countByOrgIdAndDocumentIdAndStatusAndEnabledTrue(
-                orgId, documentId, "ACTIVE")).isEqualTo(1);
-        assertThat(ragService.retrieveContext(orgId, List.of(String.valueOf(kbId)), "巡检流程"))
+        assertThat(chunkRepository.countByCompanyIdAndDocumentIdAndStatusAndEnabledTrue(
+                companyId, documentId, "ACTIVE")).isEqualTo(1);
+        assertThat(ragService.retrieveContext(companyId, List.of(String.valueOf(kbId)), "巡检流程"))
                 .anyMatch(item -> item.contains("告警处置"));
     }
 
     private Fixture createPublishedDocument(String content) {
-        String orgId = "kb-life-" + UUID.randomUUID();
-        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(orgId, "Lifecycle KB", "test");
+        String companyId = "kb-life-" + UUID.randomUUID();
+        Map<String, Object> kb = knowledgeBaseService.createKnowledgeBase(companyId, "Lifecycle KB", "test");
         Long kbId = ((Number) kb.get("id")).longValue();
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "policy.txt",
                 "text/plain",
                 content.getBytes(StandardCharsets.UTF_8));
-        Map<String, Object> document = knowledgeBaseService.uploadDocument(orgId, kbId, file);
+        Map<String, Object> document = knowledgeBaseService.uploadDocument(companyId, kbId, file);
         Long documentId = ((Number) document.get("id")).longValue();
-        Map<String, Object> published = knowledgeBaseService.publishDocument(orgId, documentId);
+        Map<String, Object> published = knowledgeBaseService.publishDocument(companyId, documentId);
         assertThat(published.get("status")).isEqualTo("PUBLISHED");
-        return new Fixture(orgId, kbId, documentId);
+        return new Fixture(companyId, kbId, documentId);
     }
 
     private byte[] docxBytes(String text) throws IOException {
@@ -655,7 +655,7 @@ class KnowledgeBaseLifecycleIntegrationTest {
         }
     }
 
-    private record Fixture(String orgId, Long kbId, Long documentId) {
+    private record Fixture(String companyId, Long kbId, Long documentId) {
 
         String kbIdText() {
             return String.valueOf(kbId);

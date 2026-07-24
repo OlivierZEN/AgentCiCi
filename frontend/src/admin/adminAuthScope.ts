@@ -1,5 +1,5 @@
-export function createAdminAuthScopeKey(orgId: string, token: string): string {
-  return JSON.stringify([orgId.trim(), token.trim()]);
+export function createAdminAuthScopeKey(companyId: string, token: string): string {
+  return JSON.stringify([companyId.trim(), token.trim()]);
 }
 
 export function isAdminAsyncRequestCurrent(
