@@ -18,6 +18,13 @@ type RegisteredUserPage = {
   pageSize: number;
 };
 
+export const registeredUserDirectoryCopy = {
+  subtitle: "查看平台中的全部个人用户；已加入组织的用户同样显示，同一用户仅保留一条记录。",
+  sectionLabel: "全平台个人用户目录",
+  searchAriaLabel: "搜索全平台个人用户",
+  emptyMessage: "暂无符合条件的个人用户。",
+};
+
 function readToken(): string {
   const raw = localStorage.getItem(LS_PLATFORM_TOKEN);
   if (!raw) return "";
@@ -96,7 +103,7 @@ export default function PlatformRegisteredUsersPage() {
       <header className="skills-catalog__header platform-page-head">
         <div className="platform-page-head__main">
           <h1 className="skills-catalog__title">注册用户</h1>
-          <p className="subtle skills-catalog__subtitle">查看系统中的个人注册用户；已加入任何组织的用户不会显示在此处。</p>
+          <p className="subtle skills-catalog__subtitle">{registeredUserDirectoryCopy.subtitle}</p>
         </div>
         <div className="platform-page-head__aside">
           <span className="platform-inline-stat">共 {result.total}</span>
@@ -108,13 +115,13 @@ export default function PlatformRegisteredUsersPage() {
 
       <section className="platform-console__panel registered-users-page__panel" aria-label="注册用户列表">
         <div className="registered-users-page__panel-head">
-          <p className="platform-section-label">个人用户目录</p>
+          <p className="platform-section-label">{registeredUserDirectoryCopy.sectionLabel}</p>
           <form className="registered-users-page__search" onSubmit={submitSearch}>
             <input
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               placeholder="搜索昵称、手机号或邮箱"
-              aria-label="搜索注册用户"
+              aria-label={registeredUserDirectoryCopy.searchAriaLabel}
             />
             <button type="submit" className="platform-button platform-button--secondary">搜索</button>
           </form>
@@ -147,7 +154,7 @@ export default function PlatformRegisteredUsersPage() {
                 </tr>
               ))}
               {!loading && result.items.length === 0 ? (
-                <tr><td colSpan={5} className="skills-data-table__summary">暂无符合条件的个人注册用户。</td></tr>
+                <tr><td colSpan={5} className="skills-data-table__summary">{registeredUserDirectoryCopy.emptyMessage}</td></tr>
               ) : null}
               {loading ? (
                 <tr><td colSpan={5} className="skills-data-table__summary">正在加载注册用户列表。</td></tr>

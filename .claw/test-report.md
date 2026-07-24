@@ -4,14 +4,21 @@ Total output lines: 6804
 ---
 kind: test-report
 version: 3
-updated_at: 2026-07-24T13:31:00Z
+updated_at: 2026-07-24T13:42:30Z
 updated_by: MANAGER-001
 status: active
-last_run_at: 2026-07-24T13:31:00Z
+last_run_at: 2026-07-24T13:42:30Z
 last_run_status: passed
 ---
 
 # Test Report
+
+## TASK-247 - 平台全量个人用户目录
+
+- `backend-focused`：`mvn -q -Dtest=PlatformRegisteredUserServiceTest test` 通过（2 tests）；覆盖全局账户目录查询、关键词裁剪和分页参数，服务仅调用不联结成员表的 `searchRegisteredAccounts`。
+- `frontend-focused`：`npm test -- --run src/platform/pages/PlatformRegisteredUsersPage.test.ts src/platform/pages/platformTenantsShared.test.ts` 通过（2 files / 4 tests）；覆盖全平台目录文案与既有租户路由回归。
+- `frontend-build/static`：`npm run build` 与 `git diff --check` 通过；构建仅有既有 Vite chunk-size warning。
+- `browser-limit`：本地路由会按预期进入平台登录边界；本会话没有受权平台账号，未使用或伪造凭据，因此真实受保护目录桌面交互待后续复核。
 
 ## TASK-245 - 前台会话内置组织管理入口
 

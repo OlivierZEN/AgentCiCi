@@ -19,9 +19,9 @@ public class PlatformRegisteredUserService {
     }
 
     @Transactional(readOnly = true)
-    public RegisteredUserPage listPersonalUsers(String query, int page, int pageSize) {
+    public RegisteredUserPage listRegisteredUsers(String query, int page, int pageSize) {
         String keyword = query == null ? "" : query.trim();
-        Page<UserAccountEntity> result = userAccountRepository.searchPersonalAccounts(
+        Page<UserAccountEntity> result = userAccountRepository.searchRegisteredAccounts(
                 keyword,
                 PageRequest.of(page, pageSize));
         List<RegisteredUserView> users = result.getContent().stream()

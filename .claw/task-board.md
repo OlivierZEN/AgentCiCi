@@ -1,7 +1,7 @@
 ---
 kind: task-board
 version: 4
-updated_at: 2026-07-24T13:37:58Z
+updated_at: 2026-07-24T13:42:30Z
 updated_by: MANAGER-001
 board_status: active
 ---
@@ -17,13 +17,13 @@ Recommended priorities: `critical` / `high` / `medium` / `low`
 
 ### TASK-247 - 平台全量个人用户目录
 
-- status: `in_progress`
+- status: `done`
 - priority: `high`
 - owner_role: `platform-governance-agent`
 - spec_path: `docs/specs/FEAT-140-platform-user-directory.md`
 - task_status_path: `.claw/tasks/TASK-247.md`
 - assignment_path: `.claw/assignments/TASK-247.yaml`
-- next_action: 以全局账户为唯一数据源，实现全量用户查询与定向回归；不发布生产。
+- next_action: 已完成定向验证，等待合并；不发布生产。
 
 ### TASK-246 - 租户详情路由标识兼容修复
 
